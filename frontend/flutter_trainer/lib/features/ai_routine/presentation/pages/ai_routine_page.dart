@@ -58,9 +58,11 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
 
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
-  // In-flight guard: set before the await so a second tap can't create a
-  // duplicate session while the first is still saving (review PR 220).
-  bool _registering = false;
+  // The client whose registration is in flight (null when none). Tracked
+  // per-client — not a plain bool — so switching away and back can't let
+  // the SAME client's registration be triggered twice while the first is
+  // still saving (review PR 220).
+  String? _registeringClientId;
   Timer? _registerTimer;
 
   @override
@@ -83,10 +85,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       _showAddForm = false;
       _sent = false;
       _registered = false;
-      // Also drop the in-flight guard: a registration still saving for
-      // the PREVIOUS client must not leave this one stuck disabled — its
-      // late result is ignored in _registerToSchedule (review PR 220).
-      _registering = false;
+      // NOTE: _registeringClientId is intentionally NOT cleared — a
+      // registration in flight for another client keeps being tracked,
+      // so returning to it still blocks a duplicate (review PR 220).
     });
     _sentTimer?.cancel();
     _registerTimer?.cancel();
@@ -147,7 +148,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     TrainerClient client,
     List<AiRoutineItem> items,
   ) async {
-    if (_registered || _registering) return;
+    // Block a duplicate for THIS client — either just registered, or one
+    // is already in flight for them.
+    if (_registered || _registeringClientId == client.id) return;
     final messenger = ScaffoldMessenger.of(context);
     final program = _composeProgram(items);
     if (program.isEmpty) {
@@ -158,28 +161,33 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       );
       return;
     }
-    // Remember who this write is for — the trainer can switch clients
-    // while it saves, and the result must not be attributed to the new
-    // one (review PR 220).
     final registeredFor = client.id;
-    setState(() => _registering = true);
+    setState(() => _registeringClientId = registeredFor);
     try {
       await ref
           .read(aiRoutineRepositoryProvider)
           .registerToTodaySchedule(clientName: client.name, program: program);
     } catch (_) {
-      if (!mounted || !_isStillSelected(registeredFor)) return;
-      setState(() => _registering = false);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
-      );
+      if (!mounted) return;
+      // Clear the guard for this client so it can be retried.
+      if (_registeringClientId == registeredFor) {
+        setState(() => _registeringClientId = null);
+      }
+      // Only surface the error if that client is still on screen.
+      if (_isStillSelected(registeredFor)) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
+        );
+      }
       return;
     }
-    if (!mounted || !_isStillSelected(registeredFor)) return;
-    setState(() {
-      _registering = false;
-      _registered = true;
-    });
+    if (!mounted) return;
+    if (_registeringClientId == registeredFor) {
+      setState(() => _registeringClientId = null);
+    }
+    // Attribute the success flash only to the client it was started for.
+    if (!_isStillSelected(registeredFor)) return;
+    setState(() => _registered = true);
     _registerTimer?.cancel();
     _registerTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _registered = false);
@@ -446,9 +454,10 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
               ),
             const SizedBox(height: AppSpacing.sm),
             _RegisterButton(
-              // Disabled while registering (or after) so a second tap
-              // can't queue a duplicate session.
-              registered: _registered || _registering,
+              // Disabled just after registering, or while THIS client's
+              // registration is in flight, so a second tap can't queue a
+              // duplicate session.
+              registered: _registered || _registeringClientId == client.id,
               onTap: () => _registerToSchedule(client, items),
             ),
             if (_registered)
