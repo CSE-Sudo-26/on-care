@@ -131,7 +131,10 @@ class ScheduleRepository {
           .into(_db.clientRoutineHistory)
           .insert(
             ClientRoutineHistoryCompanion.insert(
-              id: 'hist-${now.microsecondsSinceEpoch}',
+              // Include the session id: on web (JS Date) microseconds have
+              // only ms resolution, so two same-ms completions would
+              // otherwise collide on this PK (review PR 237).
+              id: 'hist-$id-${now.microsecondsSinceEpoch}',
               clientId: client.id,
               dateLabel: '${now.month}/${now.day} (오늘)',
               label: 'PT 세션 · 트레이너 지도',

@@ -37,6 +37,10 @@ class _ThrowingScheduleRepository extends ScheduleRepository {
 
   @override
   Future<void> deleteSession(String id) async => throw Exception('del failed');
+
+  @override
+  Future<void> completeSession(String id, {String note = ''}) async =>
+      throw Exception('complete failed');
 }
 
 void main() {
@@ -567,6 +571,42 @@ void main() {
       expect(find.text('일정 저장에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
       // Sheet stays open (its title is still present) so input isn't lost.
       expect(find.text('새 일정 추가'), findsOneWidget);
+    });
+
+    testWidgets('a failed completion keeps the session 예정 and shows an error', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          scheduleRepositoryProvider.overrideWith(
+            (ref) =>
+                _ThrowingScheduleRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('스케줄'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(find.text('박성호'), 120); // 예정 session
+      await tester.ensureVisible(find.text('박성호'));
+      await tester.pump();
+      await tester.tap(find.text('박성호'));
+      await tester.pump();
+
+      await tester.scrollUntilVisible(find.text('✓ 완료'), 120);
+      await tester.ensureVisible(find.text('✓ 완료'));
+      await tester.pump();
+      await tester.tap(find.text('✓ 완료'));
+      await settle(tester);
+      await tester.tap(find.text('완료 처리'));
+      await settle(tester);
+
+      // The exception is caught: an error snackbar shows and the card is
+      // still 예정 (its ✓ 완료 action remains) (review PR 237).
+      expect(find.text('완료 처리에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('a failed delete shows a snackbar', (tester) async {
