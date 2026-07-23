@@ -109,14 +109,21 @@ class ScheduleRepository {
   /// when this call is the one that flipped 예정 → 완료. Two concurrent
   /// completions would otherwise both observe 예정 and insert duplicate
   /// history rows (review PR 237).
+  ///
+  /// A session dated in the FUTURE can't be completed — it hasn't
+  /// happened yet. The UI hides the 완료 action for future days, and this
+  /// guard rejects it even if reached another way (review PR 245).
   Future<void> completeSession(String id, {String note = ''}) async {
     final table = _db.trainerScheduleEntries;
+    final today = ymd(DateTime.now());
 
     await _db.transaction(() async {
       final session = await (_db.select(
         table,
       )..where((t) => t.id.equals(id))).getSingleOrNull();
       if (session == null || session.status != '예정') return;
+      // `YYYY-MM-DD` sorts lexicographically, so a plain compare works.
+      if (session.date.compareTo(today) > 0) return;
 
       // Conditional update: `changed` is 0 when a concurrent call already
       // completed this session, in which case we must not log again.

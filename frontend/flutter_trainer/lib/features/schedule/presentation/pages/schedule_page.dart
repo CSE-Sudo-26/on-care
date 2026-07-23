@@ -217,22 +217,18 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: schedule.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => const Center(
-            child: Text(
-              '스케줄을 불러오지 못했어요',
-              style: TextStyle(color: AppColors.mutedForeground),
-            ),
-          ),
-          data: (sessions) => LayoutBuilder(
-            builder: (context, constraints) {
-              final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
-              return wide
-                  ? _buildWide(sessions)
-                  : ContentFrame(child: _buildTimeline(sessions, true));
-            },
-          ),
+        // The date header, week strip and add button live OUTSIDE the
+        // async `when()`: switching days spins up a new provider that
+        // starts in `loading`, and blanking the whole page to a spinner
+        // each tap made the strip flicker. Only the timeline reacts to
+        // the async state now (review PR 245).
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
+            return wide
+                ? _buildWide(schedule)
+                : ContentFrame(child: _buildTimeline(schedule, true));
+          },
         ),
       ),
     );
@@ -240,7 +236,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   /// Wide viewports: the date/week overview docks left and the timeline
   /// gets its own scrollable column.
-  Widget _buildWide(List<ScheduleSession> sessions) {
+  Widget _buildWide(AsyncValue<List<ScheduleSession>> schedule) {
     return ContentFrame(
       maxWidth: AppLayout.wideMaxWidth,
       child: Row(
@@ -262,7 +258,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             ),
           ),
           const VerticalDivider(width: 1, color: AppColors.borderStrong),
-          Expanded(child: _buildTimeline(sessions, false)),
+          Expanded(child: _buildTimeline(schedule, false)),
         ],
       ),
     );
@@ -311,8 +307,13 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   /// The scrollable timeline; [withOverview] prepends the header, week
-  /// strip, and add button (single-column layout).
-  Widget _buildTimeline(List<ScheduleSession> sessions, bool withOverview) {
+  /// strip, and add button (single-column layout). The overview is always
+  /// rendered — only the session list swaps on the async [schedule] state,
+  /// so switching days never blanks the strip (review PR 245).
+  Widget _buildTimeline(
+    AsyncValue<List<ScheduleSession>> schedule,
+    bool withOverview,
+  ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -325,45 +326,77 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           ..._overviewChildren(),
           const SizedBox(height: AppSpacing.lg),
         ],
-        if (sessions.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xl,
+        ...schedule.when(
+          loading: () => const <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+              child: Center(child: CircularProgressIndicator()),
             ),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.all(AppRadius.card),
-              border: Border.all(color: AppColors.borderStrong),
-            ),
-            child: const Text(
-              '이 날짜에는 일정이 없어요.\n아래에서 새 일정을 추가해 보세요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.mutedForeground,
-                height: 1.5,
+          ],
+          error: (e, _) => const <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+              child: Center(
+                child: Text(
+                  '스케줄을 불러오지 못했어요',
+                  style: TextStyle(color: AppColors.mutedForeground),
+                ),
               ),
             ),
-          ),
-        for (final s in sessions) ...<Widget>[
-          _TimelineRow(
-            session: s,
-            expanded: _expanded.contains(s.id),
-            sent: _sent.contains(s.id),
-            flashing: _flash == s.id,
-            onToggle: () => _toggle(s),
-            onSend: () => _send(s),
-            onEdit: () => _openSessionSheet(existing: s),
-            onDelete: () => _confirmDelete(s),
-            onChat: () => _openChat(s),
-            onComplete: s.isUpcoming ? () => _confirmComplete(s) : null,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+          ],
+          data: _timelineChildren,
+        ),
       ],
     );
+  }
+
+  /// The empty-state box or the session rows for [sessions].
+  List<Widget> _timelineChildren(List<ScheduleSession> sessions) {
+    // 완료 is offered only for 예정 sessions that aren't dated in the
+    // future — you can't complete a class that hasn't happened yet. The
+    // repository enforces the same rule (review PR 245).
+    final isFuture = _selectedDay.isAfter(_dateOnly(DateTime.now()));
+    return <Widget>[
+      if (sessions.isEmpty)
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xl,
+          ),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(AppRadius.card),
+            border: Border.all(color: AppColors.borderStrong),
+          ),
+          child: const Text(
+            '이 날짜에는 일정이 없어요.\n아래에서 새 일정을 추가해 보세요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.mutedForeground,
+              height: 1.5,
+            ),
+          ),
+        ),
+      for (final s in sessions) ...<Widget>[
+        _TimelineRow(
+          session: s,
+          expanded: _expanded.contains(s.id),
+          sent: _sent.contains(s.id),
+          flashing: _flash == s.id,
+          onToggle: () => _toggle(s),
+          onSend: () => _send(s),
+          onEdit: () => _openSessionSheet(existing: s),
+          onDelete: () => _confirmDelete(s),
+          onChat: () => _openChat(s),
+          onComplete: (s.isUpcoming && !isFuture)
+              ? () => _confirmComplete(s)
+              : null,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+      ],
+    ];
   }
 }
 

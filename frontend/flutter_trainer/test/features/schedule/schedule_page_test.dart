@@ -240,6 +240,28 @@ void main() {
 
     test('completing a non-today session labels its own date', () async {
       final repo = ScheduleRepository(db);
+      // A PAST session — completing it retro-logs the class. Future
+      // sessions can't be completed (see the next test).
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      await repo.addSession(
+        date: ymd(yesterday),
+        clientName: '이지수',
+        time: '11:00',
+        type: '1:1 PT',
+        durationMinutes: 60,
+      );
+      final slot = (await repo.watchDate(ymd(yesterday)).first).single;
+
+      await repo.completeSession(slot.id, note: '어제 세션 뒤늦게 기록');
+
+      final history = await db.select(db.clientRoutineHistory).get();
+      final logged = history.firstWhere((h) => h.id.startsWith('hist-'));
+      expect(logged.dateLabel, '${yesterday.month}/${yesterday.day}');
+      expect(logged.dateLabel.contains('(오늘)'), isFalse);
+    });
+
+    test('completeSession refuses a future-dated session', () async {
+      final repo = ScheduleRepository(db);
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       await repo.addSession(
         date: ymd(tomorrow),
@@ -250,12 +272,14 @@ void main() {
       );
       final slot = (await repo.watchDate(ymd(tomorrow)).first).single;
 
-      await repo.completeSession(slot.id, note: '내일 세션 선기록');
+      // You can't complete a class that hasn't happened yet — the call is
+      // a no-op, the session stays 예정 and nothing is logged (review 245).
+      await repo.completeSession(slot.id, note: '미리 완료 시도');
 
+      final after = (await repo.watchDate(ymd(tomorrow)).first).single;
+      expect(after.status, '예정');
       final history = await db.select(db.clientRoutineHistory).get();
-      final logged = history.firstWhere((h) => h.id.startsWith('hist-'));
-      expect(logged.dateLabel, '${tomorrow.month}/${tomorrow.day}');
-      expect(logged.dateLabel.contains('(오늘)'), isFalse);
+      expect(history.where((h) => h.id.startsWith('hist-')), isEmpty);
     });
 
     test('deleteSession removes the slot', () async {
@@ -488,6 +512,29 @@ void main() {
       await settle(tester);
       expect(find.textContaining('(오늘)'), findsWidgets);
       expect(find.text('벤치 폼 안정적'), findsOneWidget);
+    });
+
+    testWidgets('a future session offers no ✓ 완료 action', (tester) async {
+      await openSchedule(tester);
+
+      // Browse to tomorrow and book a session there.
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      await tester.tap(find.text('${tomorrow.day}').first);
+      await settle(tester);
+      await tester.tap(find.text('＋ 새 일정 추가'));
+      await settle(tester);
+      await tester.tap(find.text('추가하기'));
+      await settle(tester);
+
+      // Expand the freshly booked 예정 card.
+      await tester.tap(find.text('김민수'));
+      await tester.pump();
+
+      // Manage actions are there, but 완료 is not — the class is in the
+      // future (review PR 245).
+      expect(find.text('✎ 수정'), findsOneWidget);
+      expect(find.text('💬 채팅'), findsOneWidget);
+      expect(find.text('✓ 완료'), findsNothing);
     });
 
     testWidgets('picking another day browses it; 오늘로 returns to today', (
