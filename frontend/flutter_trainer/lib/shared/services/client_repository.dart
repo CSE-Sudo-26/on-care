@@ -69,12 +69,30 @@ class ClientRepository {
   }
 
   /// Whether a client with this display name already exists
-  /// (whitespace- and case-insensitive).
+  /// (whitespace- and case-insensitive). Counts in SQL rather than
+  /// loading every row into memory (review PR 243).
   Future<bool> clientNameExists(String name) async {
     final key = name.trim().toLowerCase();
     if (key.isEmpty) return false;
-    final rows = await _db.select(_db.trainerClients).get();
-    return rows.any((r) => r.name.trim().toLowerCase() == key);
+    return _nameTaken(key);
+  }
+
+  /// SQL `COUNT(*)` of clients whose normalised name matches [key]
+  /// (already trimmed + lower-cased). Runs inside the caller's
+  /// transaction when there is one, so `addClient` can check-then-insert
+  /// atomically.
+  Future<bool> _nameTaken(String key) async {
+    final row = await _db
+        .customSelect(
+          'SELECT COUNT(*) AS c FROM trainer_clients '
+          'WHERE lower(trim(name)) = ?1',
+          variables: <Variable<Object>>[Variable<String>(key)],
+          readsFrom: <ResultSetImplementation<Object?, Object?>>{
+            _db.trainerClients,
+          },
+        )
+        .getSingle();
+    return row.read<int>('c') > 0;
   }
 
   /// Registers a new client (e.g. after a 상담) with a fresh, empty
@@ -86,34 +104,40 @@ class ClientRepository {
   /// duplicate name would attribute one client's chat/운동기록 to
   /// another. Keeping names unique closes that path until schedules
   /// carry a clientId (review PR 243).
+  ///
+  /// The duplicate check and the insert run in ONE transaction, so two
+  /// concurrent adds of the same name can't both pass the check and both
+  /// insert — exactly one wins, the other returns `false` (review 243).
   Future<bool> addClient({required String name, required String goal}) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) return false;
-    if (await clientNameExists(trimmedName)) return false;
-    final now = DateTime.now();
-    await _db
-        .into(_db.trainerClients)
-        .insert(
-          TrainerClientsCompanion.insert(
-            id: 'client-${now.microsecondsSinceEpoch}',
-            name: trimmedName,
-            // runes.first survives surrogate pairs without pulling the
-            // characters package into this pure-Dart service.
-            avatar: String.fromCharCode(trimmedName.runes.first),
-            goal: goal.trim().isEmpty ? '목표 설정 전' : goal.trim(),
-            lastMessage: '아직 대화가 없어요',
-            lastTime: '-',
-            active: const Value(true),
-            caloriesToday: 0,
-            sodiumMg: 0,
-            sugarG: 0,
-            lastRoutine: '-',
-            weekCompletionJson: '[0,0,0,0,0,0,0]',
-            // Large key appends new clients after the seeded roster.
-            sortOrder: Value(now.millisecondsSinceEpoch),
-          ),
-        );
-    return true;
+    return _db.transaction(() async {
+      if (await _nameTaken(trimmedName.toLowerCase())) return false;
+      final now = DateTime.now();
+      await _db
+          .into(_db.trainerClients)
+          .insert(
+            TrainerClientsCompanion.insert(
+              id: 'client-${now.microsecondsSinceEpoch}',
+              name: trimmedName,
+              // runes.first survives surrogate pairs without pulling the
+              // characters package into this pure-Dart service.
+              avatar: String.fromCharCode(trimmedName.runes.first),
+              goal: goal.trim().isEmpty ? '목표 설정 전' : goal.trim(),
+              lastMessage: '아직 대화가 없어요',
+              lastTime: '-',
+              active: const Value(true),
+              caloriesToday: 0,
+              sodiumMg: 0,
+              sugarG: 0,
+              lastRoutine: '-',
+              weekCompletionJson: '[0,0,0,0,0,0,0]',
+              // Large key appends new clients after the seeded roster.
+              sortOrder: Value(now.millisecondsSinceEpoch),
+            ),
+          );
+      return true;
+    });
   }
 
   /// Flips a client between 활성 and 휴면.
