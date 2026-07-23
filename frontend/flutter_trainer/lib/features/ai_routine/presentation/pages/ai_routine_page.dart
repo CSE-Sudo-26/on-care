@@ -16,7 +16,6 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
-import 'package:oncare_trainer/shared/widgets/outlined_action_button.dart';
 
 /// Minute options offered for every routine item (mock: 10~45분 chips).
 const List<int> _minuteOptions = <int>[10, 15, 20, 30, 45];
@@ -64,9 +63,11 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
 
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
-  // In-flight guard: set before the await so a second tap can't create a
-  // duplicate session while the first is still saving (review PR 220).
-  bool _registering = false;
+  // The client whose registration is in flight (null when none). Tracked
+  // per-client — not a plain bool — so switching away and back can't let
+  // the SAME client's registration be triggered twice while the first is
+  // still saving (review PR 220).
+  String? _registeringClientId;
   Timer? _registerTimer;
 
   /// Day offset (0 = 오늘 … 6) the routine gets registered on.
@@ -94,10 +95,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       _sending = false;
       _registered = false;
       _registerOffset = 0;
-      // Also drop the in-flight guard: a registration still saving for
-      // the PREVIOUS client must not leave this one stuck disabled — its
-      // late result is ignored in _registerToSchedule (review PR 220).
-      _registering = false;
+      // NOTE: _registeringClientId is intentionally NOT cleared — a
+      // registration in flight for another client keeps being tracked,
+      // so returning to it still blocks a duplicate (review PR 220).
     });
     _sentTimer?.cancel();
     _registerTimer?.cancel();
@@ -117,6 +117,12 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     // AWAIT the chat write before claiming success — firing it off with
     // unawaited() showed '전송 완료' even when the insert failed, and
     // swallowed the error (review PR 239).
+    //
+    // Capture who this send is for: the trainer can switch clients while
+    // it saves, and the '전송 완료' flash + edit-reset timer must land on
+    // the starting client, not whoever is on screen when it resolves
+    // (review PR 239).
+    final sentFor = client.id;
     setState(() => _sending = true);
     try {
       await ref
@@ -128,14 +134,14 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                 '총 ${total + custom}분',
           );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
       messenger.showSnackBar(
         const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
       );
       return;
     }
-    if (!mounted) return;
+    if (!mounted || !_isStillSelected(sentFor)) return;
     setState(() {
       _sending = false;
       _sent = true;
@@ -192,7 +198,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     TrainerClient client,
     List<AiRoutineItem> items,
   ) async {
-    if (_registered || _registering) return;
+    // Block a duplicate for THIS client — either just registered, or one
+    // is already in flight for them.
+    if (_registered || _registeringClientId == client.id) return;
     final messenger = ScaffoldMessenger.of(context);
     final program = _composeProgram(items);
     if (program.isEmpty) {
@@ -208,7 +216,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     // while it saves, and the result must not be attributed to the new
     // one (review PR 220).
     final registeredFor = client.id;
-    setState(() => _registering = true);
+    setState(() => _registeringClientId = registeredFor);
     try {
       await ref
           .read(aiRoutineRepositoryProvider)
@@ -218,18 +226,26 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
             program: program,
           );
     } catch (_) {
-      if (!mounted || !_isStillSelected(registeredFor)) return;
-      setState(() => _registering = false);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
-      );
+      if (!mounted) return;
+      // Clear the guard for this client so it can be retried.
+      if (_registeringClientId == registeredFor) {
+        setState(() => _registeringClientId = null);
+      }
+      // Only surface the error if that client is still on screen.
+      if (_isStillSelected(registeredFor)) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
+        );
+      }
       return;
     }
-    if (!mounted || !_isStillSelected(registeredFor)) return;
-    setState(() {
-      _registering = false;
-      _registered = true;
-    });
+    if (!mounted) return;
+    if (_registeringClientId == registeredFor) {
+      setState(() => _registeringClientId = null);
+    }
+    // Attribute the success flash only to the client it was started for.
+    if (!_isStillSelected(registeredFor)) return;
+    setState(() => _registered = true);
     _registerTimer?.cancel();
     _registerTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _registered = false);
@@ -521,16 +537,15 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedActionButton(
+            _RegisterButton(
+              // Disabled just after registering, or while THIS client's
+              // registration is in flight, so a second tap can't queue a
+              // duplicate session (review PR 220).
+              registered: _registered || _registeringClientId == client.id,
               label: _registered
                   ? '✓ ${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
                   : '📅 ${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
-              color: _registered ? AppColors.success : AppColors.accent,
-              // Disabled while a registration is in flight (or after) so
-              // a second tap can't queue a duplicate session.
-              onTap: (_registered || _registering)
-                  ? null
-                  : () => _registerToSchedule(client, items),
+              onTap: () => _registerToSchedule(client, items),
             ),
             if (_registered)
               const Padding(
@@ -1228,6 +1243,49 @@ class _DateChip extends StatelessWidget {
             color: selected
                 ? AppColors.primaryForeground
                 : AppColors.subtleForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Secondary action — registers the routine as the chosen day's PT
+/// session program on the 스케줄 tab.
+class _RegisterButton extends StatelessWidget {
+  const _RegisterButton({
+    required this.registered,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool registered;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = registered ? AppColors.success : AppColors.accent;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(AppRadius.card),
+      child: InkWell(
+        onTap: registered ? null : onTap,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(AppRadius.card),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ),
       ),
