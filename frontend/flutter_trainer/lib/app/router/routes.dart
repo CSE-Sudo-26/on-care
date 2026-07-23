@@ -26,4 +26,10 @@ class AppRoutes {
 
   /// Builds the client detail path for [id].
   static String clientDetail(String id) => '/client/$id';
+
+  /// Builds the 고객 tab location with [id] preselected (wide split
+  /// panel). Routed through [Uri] so the id is percent-encoded — string
+  /// concatenation would break on a `?`/`&`/non-ASCII id.
+  static String clientsWithSelection(String id) =>
+      Uri(path: clients, queryParameters: <String, String>{'c': id}).toString();
 }

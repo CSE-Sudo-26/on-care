@@ -365,6 +365,64 @@ void main() {
       expect(find.text('📅 오늘 PT 스케줄에 등록'), findsOneWidget);
     });
 
+    testWidgets('A → B → A cannot double-register while A is still saving', (
+      tester,
+    ) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          aiRoutineRepositoryProvider.overrideWith(
+            (ref) =>
+                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      // Matches both the idle '📅 …등록' and the in-flight/disabled
+      // '✓ …등록됨' label so it works before and during a save.
+      Future<void> tapRegister() async {
+        final f = find.textContaining('스케줄에 등록');
+        await tester.scrollUntilVisible(
+          f,
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(f);
+        await tester.pump();
+        await tester.tap(f, warnIfMissed: false);
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+
+      Future<void> selectClient(String name) async {
+        await tester.scrollUntilVisible(
+          find.text(name),
+          -150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(find.text(name));
+        await tester.pump();
+        await tester.tap(find.text(name));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+
+      // Start 김민수's (slow) registration, hop to 이지수 and back.
+      await tapRegister();
+      await selectClient('이지수');
+      await selectClient('김민수');
+      // Back on 김민수 while the first write is still in flight — the
+      // button stays disabled, so this tap must NOT start a second one.
+      await tapRegister();
+      await settle(tester);
+
+      final repo =
+          container.read(aiRoutineRepositoryProvider)
+              as _SlowCountingRoutineRepository;
+      expect(repo.registerCalls, 1);
+    });
+
     testWidgets('registering with every exercise removed shows a hint', (
       tester,
     ) async {

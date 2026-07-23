@@ -130,7 +130,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final id = match.first.id;
     final wide = MediaQuery.sizeOf(context).width >= AppLayout.splitBreakpoint;
     if (wide) {
-      context.go('${AppRoutes.clients}?c=$id');
+      context.go(AppRoutes.clientsWithSelection(id));
     } else {
       context.go(AppRoutes.clients);
       context.push(AppRoutes.clientDetail(id));
