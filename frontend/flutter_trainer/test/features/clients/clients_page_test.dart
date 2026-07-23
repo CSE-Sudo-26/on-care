@@ -84,6 +84,24 @@ void main() {
       expect(await repo.clientNameExists('없는사람'), isFalse);
     });
 
+    test('concurrent addClient of the same name inserts exactly one', () async {
+      final repo = ClientRepository(db);
+
+      // Fire both adds without awaiting between them: the check and the
+      // insert share one transaction, so only one can pass the duplicate
+      // guard even when they race (review PR 243).
+      final results = await Future.wait(<Future<bool>>[
+        repo.addClient(name: '한지민', goal: 'A'),
+        repo.addClient(name: '한지민', goal: 'B'),
+      ]);
+
+      expect(results.where((r) => r).length, 1); // exactly one succeeded
+      final matches = (await repo.watchClients().first)
+          .where((c) => c.name == '한지민')
+          .toList();
+      expect(matches.length, 1); // and only one row exists
+    });
+
     test('setClientActive flips the 활성/휴면 state', () async {
       final repo = ClientRepository(db);
       await repo.setClientActive('seed-client-1', false);
