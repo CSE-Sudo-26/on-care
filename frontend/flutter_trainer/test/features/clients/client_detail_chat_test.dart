@@ -142,7 +142,7 @@ void main() {
 
       Future<String?> marker() => db.readValue('chat_read_seed-client-1');
 
-      // First call stores the newest client message's timestamp.
+      // First call stores the newest client message's rowid.
       await repo.markThreadRead('seed-client-1');
       final first = await marker();
       expect(first, isNotNull);
@@ -181,6 +181,50 @@ void main() {
       await repo.markThreadRead('seed-client-1');
       expect(await marker(), second);
     });
+
+    test(
+      'a same-second reply after markThreadRead still counts as unread',
+      () async {
+        final repo = ChatRepository(db);
+        // A fresh client with no seeded messages, so the count is only
+        // what this test inserts.
+        const cid = 'rowid-test-client';
+        final sameSecond = DateTime(2026, 1, 1, 9, 0, 0);
+
+        // First client message, then mark the thread read.
+        await db
+            .into(db.clientChatMessages)
+            .insert(
+              ClientChatMessagesCompanion.insert(
+                id: 'chat-ss-1',
+                clientId: cid,
+                sender: 'client',
+                body: '첫 메시지',
+                timeLabel: '09:00',
+                createdAt: sameSecond,
+              ),
+            );
+        await repo.markThreadRead(cid);
+        expect((await repo.watchUnreadCounts().first)[cid], isNull);
+
+        // A SECOND reply lands in the very same second. An epoch-second
+        // marker (created_at > marker) would miss it because both share
+        // the same second; the rowid marker still flags it (review 241).
+        await db
+            .into(db.clientChatMessages)
+            .insert(
+              ClientChatMessagesCompanion.insert(
+                id: 'chat-ss-2',
+                clientId: cid,
+                sender: 'client',
+                body: '같은 초에 온 두 번째 메시지',
+                timeLabel: '09:00',
+                createdAt: sameSecond,
+              ),
+            );
+        expect((await repo.watchUnreadCounts().first)[cid], 1);
+      },
+    );
 
     test(
       'markThreadRead on a thread with no client message writes nothing',

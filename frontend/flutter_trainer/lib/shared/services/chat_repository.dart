@@ -56,18 +56,21 @@ class ChatRepository {
     });
   }
 
-  /// Per-client unread counts — client-sent messages newer than the
-  /// trainer's last-read marker (an `AppKeyValues` row per client, so
-  /// no schema migration). Clients with zero unread are absent.
+  /// Per-client unread counts — client-sent messages after the trainer's
+  /// last-read marker (an `AppKeyValues` row per client, so no schema
+  /// migration). Clients with zero unread are absent.
   Stream<Map<String, int>> watchUnreadCounts() {
-    // drift stores DateTime columns as unix epoch seconds; the read
-    // marker persists the same unit for a plain integer comparison.
+    // The marker is a monotonic `rowid`, not an epoch second: two client
+    // messages that land in the same second share a `created_at` value,
+    // so a timestamp marker can't tell them apart — after reading the
+    // first, the second would look already-read. `rowid` is unique and
+    // increasing, so it distinguishes same-second messages (review 241).
     final query = _db.customSelect(
       'SELECT m.client_id AS cid, COUNT(*) AS cnt '
       'FROM client_chat_messages m '
       "LEFT JOIN app_key_values k ON k.\"key\" = '$_readKeyPrefix' || m.client_id "
       "WHERE m.sender = 'client' "
-      'AND (k.value IS NULL OR m.created_at > CAST(k.value AS INTEGER)) '
+      'AND (k.value IS NULL OR m.rowid > CAST(k.value AS INTEGER)) '
       'GROUP BY m.client_id',
       readsFrom: <ResultSetImplementation<Object?, Object?>>{
         _db.clientChatMessages,
@@ -84,30 +87,27 @@ class ChatRepository {
   /// Marks a client's thread read up to its newest client message.
   ///
   /// Idempotent and write-free when there is nothing new: the marker is
-  /// the newest client message's timestamp (not `now()`), so calling this
+  /// the newest client message's `rowid` (not `now()`), so calling this
   /// again with no new messages computes the same value and skips the
   /// write entirely. That matters because `watchUnreadCounts` watches
   /// `app_key_values` — an unconditional write would emit on that stream
   /// and rebuild the list on every call (review PR 241).
   Future<void> markThreadRead(String clientId) async {
-    final newest =
-        await (_db.select(_db.clientChatMessages)
-              ..where(
-                (t) => t.clientId.equals(clientId) & t.sender.equals('client'),
-              )
-              ..orderBy(<OrderingTerm Function($ClientChatMessagesTable)>[
-                (t) => OrderingTerm(
-                  expression: t.createdAt,
-                  mode: OrderingMode.desc,
-                ),
-              ])
-              ..limit(1))
+    final row =
+        await _db
+            .customSelect(
+              'SELECT MAX(rowid) AS r FROM client_chat_messages '
+              "WHERE client_id = ?1 AND sender = 'client'",
+              variables: <Variable<Object>>[Variable<String>(clientId)],
+              readsFrom: <ResultSetImplementation<Object?, Object?>>{
+                _db.clientChatMessages,
+              },
+            )
             .getSingleOrNull();
-    // No client message at all — nothing could be unread.
-    if (newest == null) return;
+    // MAX over no client message returns NULL — nothing could be unread.
+    final marker = row?.read<int?>('r');
+    if (marker == null) return;
 
-    // Same unit as the unread query's comparison (epoch seconds).
-    final marker = newest.createdAt.millisecondsSinceEpoch ~/ 1000;
     final key = '$_readKeyPrefix$clientId';
     final stored = int.tryParse(await _db.readValue(key) ?? '');
     if (stored != null && stored >= marker) return; // already read
