@@ -156,9 +156,19 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       builder: (context) => _CompleteDialog(session: s),
     );
     if (note == null || !mounted) return;
-    await ref
-        .read(scheduleRepositoryProvider)
-        .completeSession(s.id, note: note);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .completeSession(s.id, note: note);
+    } catch (_) {
+      // A DB or programJson-decode failure must not escape to the UI —
+      // the session stays 예정 and the trainer is told (review PR 237).
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('완료 처리에 실패했어요. 다시 시도해 주세요')),
+      );
+    }
   }
 
   /// Jumps to the client's 채팅 — the split panel on wide viewports,
@@ -174,7 +184,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final id = match.first.id;
     final wide = MediaQuery.sizeOf(context).width >= AppLayout.splitBreakpoint;
     if (wide) {
-      context.go('${AppRoutes.clients}?c=$id');
+      context.go(AppRoutes.clientsWithSelection(id));
     } else {
       context.go(AppRoutes.clients);
       context.push(AppRoutes.clientDetail(id));
