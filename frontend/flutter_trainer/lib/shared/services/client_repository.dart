@@ -213,7 +213,9 @@ class ClientRepository {
         .map((e) => e as int)
         .toList();
     final sodiumWeek = (jsonDecode(row.sodiumWeekJson) as List<Object?>)
-        .map((e) => e as int)
+        // On web, JSON numbers can decode as double — `as int` would
+        // throw, so normalise through num (review PR 247).
+        .map((e) => (e as num).toInt())
         .toList();
     return TrainerClient(
       id: row.id,

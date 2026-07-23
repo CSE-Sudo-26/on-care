@@ -7,7 +7,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v1']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v2']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Behaviour mirrors the user
 /// app's date-aware seeder (see the user app's `seed_data.dart`):
 ///
@@ -15,6 +15,14 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 /// - otherwise (first boot or date rolled over) → wipe every
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
+///
+/// The flag is `_v2` (was `_v1`): the schema-v2 migration adds
+/// `sodiumWeekJson` with an empty default, so a client who upgrades and
+/// re-opens the SAME day would keep blank sodium trends until the date
+/// rolled over (`_v1` flag already == today ⇒ re-seed skipped). Bumping
+/// the key forces exactly one re-seed on upgrade, backfilling the seed
+/// clients' real weekly sodium while runtime rows are preserved (245→247,
+/// review PR 247).
 ///
 /// **User data is preserved.** Only rows whose `id` starts with `seed-`
 /// are wiped, so anything added at runtime (e.g. a trainer's chat reply,
@@ -25,7 +33,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v1') == today) return;
+  if (await db.readValue('trainer_seeded_v2') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -162,7 +170,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v1', today);
+    await db.putValue('trainer_seeded_v2', today);
   });
 }
 
