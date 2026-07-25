@@ -31,6 +31,12 @@ class TrainerClients extends Table {
   IntColumn get sugarG => integer()();
   TextColumn get lastRoutine => text()();
   TextColumn get weekCompletionJson => text()(); // [100, 67, ...] length 7
+  // Last 7 days of daily sodium (mg), oldest→today (last == today).
+  // Added in schema v2; the default keeps pre-v2 rows valid until the
+  // next re-seed backfills it.
+  TextColumn get sodiumWeekJson => text().withDefault(
+    const Constant('[]'),
+  )(); // [.., 2100] len 7, ends today
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -154,12 +160,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      // v2: 7-day sodium trend on the client row (defaults keep old rows
+      // valid; the next re-seed backfills real values).
+      if (from < 2) {
+        await m.addColumn(trainerClients, trainerClients.sodiumWeekJson);
+      }
     },
   );
 

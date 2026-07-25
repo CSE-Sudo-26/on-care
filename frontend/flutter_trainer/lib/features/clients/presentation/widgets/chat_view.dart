@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/clients/data/repositories/chat_repository.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/client_chat_message.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 /// The 채팅 sub-tab: an AI-received system banner, the message thread
@@ -113,6 +113,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
               if (list.length != _lastCount) {
                 _lastCount = list.length;
                 _scrollToBottom();
+                // Viewing the thread clears its unread badge — also for
+                // messages that arrive while it stays open. Deferred so
+                // the write never runs inside build.
+                final repo = ref.read(chatRepositoryProvider);
+                Future<void>.microtask(
+                  () => repo.markThreadRead(widget.clientId),
+                );
               }
               return ListView(
                 controller: _scroll,

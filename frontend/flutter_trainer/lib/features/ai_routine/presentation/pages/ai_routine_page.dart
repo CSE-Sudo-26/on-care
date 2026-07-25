@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -10,6 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/content_frame.dart';
@@ -56,6 +58,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   bool _sent = false;
   Timer? _sentTimer;
 
+  /// A homework send is in flight (blocks re-entry, disables the button).
+  bool _sending = false;
+
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
   // The client whose registration is in flight (null when none). Tracked
@@ -64,6 +69,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   // still saving (review PR 220).
   String? _registeringClientId;
   Timer? _registerTimer;
+
+  /// Day offset (0 = 오늘 … 6) the routine gets registered on.
+  int _registerOffset = 0;
 
   @override
   void dispose() {
@@ -84,7 +92,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       _custom.clear();
       _showAddForm = false;
       _sent = false;
+      _sending = false;
       _registered = false;
+      _registerOffset = 0;
       // NOTE: _registeringClientId is intentionally NOT cleared — a
       // registration in flight for another client keeps being tracked,
       // so returning to it still blocks a duplicate (review PR 220).
@@ -93,9 +103,49 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     _registerTimer?.cancel();
   }
 
-  void _send() {
-    if (_sent) return;
-    setState(() => _sent = true);
+  Future<void> _send(TrainerClient client, List<AiRoutineItem> items) async {
+    if (_sent || _sending) return;
+    final program = _composeProgram(items);
+    if (program.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final total = items
+        .where((i) => !_removed.contains(i.id))
+        .fold<int>(0, (sum, i) => sum + (_minuteEdits[i.id] ?? i.minutes));
+    final custom = _custom.fold<int>(0, (sum, c) => sum + c.minutes);
+
+    // AWAIT the chat write before claiming success — firing it off with
+    // unawaited() showed '전송 완료' even when the insert failed, and
+    // swallowed the error (review PR 239).
+    //
+    // Capture who this send is for: the trainer can switch clients while
+    // it saves, and the '전송 완료' flash + edit-reset timer must land on
+    // the starting client, not whoever is on screen when it resolves
+    // (review PR 239).
+    final sentFor = client.id;
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .sendTrainerMessage(
+            clientId: client.id,
+            text:
+                '📋 AI 루틴 숙제를 보냈어요 · ${program.length}개 운동 · '
+                '총 ${total + custom}분',
+          );
+    } catch (_) {
+      if (!mounted || !_isStillSelected(sentFor)) return;
+      setState(() => _sending = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted || !_isStillSelected(sentFor)) return;
+    setState(() {
+      _sending = false;
+      _sent = true;
+    });
     _sentTimer?.cancel();
     // Mock: after the confirmation, reset the edits for the next round.
     _sentTimer = Timer(const Duration(seconds: 3), () {
@@ -161,12 +211,20 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       );
       return;
     }
+    final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
+    // Remember who this write is for — the trainer can switch clients
+    // while it saves, and the result must not be attributed to the new
+    // one (review PR 220).
     final registeredFor = client.id;
     setState(() => _registeringClientId = registeredFor);
     try {
       await ref
           .read(aiRoutineRepositoryProvider)
-          .registerToTodaySchedule(clientName: client.name, program: program);
+          .registerToSchedule(
+            date: date,
+            clientName: client.name,
+            program: program,
+          );
     } catch (_) {
       if (!mounted) return;
       // Clear the guard for this client so it can be retried.
@@ -438,7 +496,13 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
             // Two destinations: homework to the client's app (mock),
             // or today's PT session program (real drift write that the
             // 스케줄 탭 picks up live).
-            _SendButton(clientName: client.name, sent: _sent, onSend: _send),
+            _SendButton(
+              clientName: client.name,
+              // Disabled while the chat write is in flight so a second
+              // tap can't queue a duplicate message.
+              sent: _sent || _sending,
+              onSend: () => _send(client, items),
+            ),
             if (_sent)
               const Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
@@ -453,20 +517,47 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                 ),
               ),
             const SizedBox(height: AppSpacing.sm),
+            // Which day the routine lands on (오늘 … +6일).
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  for (var i = 0; i < 7; i++) ...<Widget>[
+                    _DateChip(
+                      offset: i,
+                      selected: _registerOffset == i,
+                      onTap: () => setState(() {
+                        _registerOffset = i;
+                        _registered = false;
+                      }),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             _RegisterButton(
               // Disabled just after registering, or while THIS client's
               // registration is in flight, so a second tap can't queue a
-              // duplicate session.
+              // duplicate session (review PR 220).
               registered: _registered || _registeringClientId == client.id,
+              label: _registered
+                  ? '✓ ${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
+                  : '📅 ${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
               onTap: () => _registerToSchedule(client, items),
             ),
             if (_registered)
-              const Padding(
-                padding: EdgeInsets.only(top: AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
-                  '스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요',
+                  // Match the button's day label — '오늘'/'내일'/'M/D' —
+                  // so a future-day registration isn't described as '오늘'
+                  // (CodeRabbit review).
+                  '스케줄 탭에서 ${_dateChipLabel(_registerOffset)} '
+                  '세션의 프로그램으로 확인할 수 있어요',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.success,
@@ -1115,12 +1206,65 @@ class _FormButton extends StatelessWidget {
   }
 }
 
-/// Secondary action — registers the routine as today's PT session
-/// program on the 스케줄 tab.
+/// Label for a register-day offset (오늘/내일/M/D).
+String _dateChipLabel(int offset) {
+  if (offset == 0) return '오늘';
+  if (offset == 1) return '내일';
+  final d = DateTime.now().add(Duration(days: offset));
+  return '${d.month}/${d.day}';
+}
+
+/// One selectable register-day chip.
+class _DateChip extends StatelessWidget {
+  const _DateChip({
+    required this.offset,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int offset;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.inputBackground,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+        ),
+        child: Text(
+          _dateChipLabel(offset),
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: selected
+                ? AppColors.primaryForeground
+                : AppColors.subtleForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Secondary action — registers the routine as the chosen day's PT
+/// session program on the 스케줄 tab.
 class _RegisterButton extends StatelessWidget {
-  const _RegisterButton({required this.registered, required this.onTap});
+  const _RegisterButton({
+    required this.registered,
+    required this.label,
+    required this.onTap,
+  });
 
   final bool registered;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -1140,7 +1284,7 @@ class _RegisterButton extends StatelessWidget {
             border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
           child: Text(
-            registered ? '✓ 오늘 스케줄에 등록됨' : '📅 오늘 PT 스케줄에 등록',
+            label,
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,

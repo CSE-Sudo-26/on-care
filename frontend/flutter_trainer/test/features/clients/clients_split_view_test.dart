@@ -87,17 +87,18 @@ void main() {
     await tester.tap(find.text('김민수'));
     await settle(tester);
 
-    // Open 식단 for 김민수 (2100mg)…
+    // Open 식단 for 김민수 (2100mg — appears on the summary tile and as
+    // the last sodium-trend bar label, so match ≥1)…
     await tester.tap(find.text('식단'));
     await settle(tester);
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('2100'), findsOneWidget);
+    expect(find.text('2100'), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2400mg).
     await tester.tap(find.text('박성호'));
     await settle(tester);
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('2400'), findsOneWidget);
+    expect(find.text('2400'), findsWidgets);
   });
 
   testWidgets('the list is ordered by priority: sodium-over first, then '

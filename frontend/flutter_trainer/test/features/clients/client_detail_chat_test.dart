@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
-import 'package:oncare_trainer/features/clients/data/repositories/chat_repository.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/client_chat_message.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -84,6 +84,153 @@ void main() {
         expect(last.sender, ChatSender.trainer);
         expect(last.body, '안녕하세요'); // trimmed
         expect(last.id.startsWith('seed-'), isFalse); // survives re-seed
+      },
+    );
+
+    test('sendTrainerMessage refreshes the client list preview', () async {
+      final repo = ChatRepository(db);
+      await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '내일 봬요!');
+      final row = await (db.select(
+        db.trainerClients,
+      )..where((t) => t.id.equals('seed-client-2'))).getSingle();
+      expect(row.lastMessage, '내일 봬요!');
+      expect(row.lastTime, '방금');
+    });
+
+    test(
+      'watchUnreadCounts counts client messages until marked read',
+      () async {
+        final repo = ChatRepository(db);
+
+        // Seeded client replies: 김민수 2 · 이지수 1 · 박성호 1.
+        var counts = await repo.watchUnreadCounts().first;
+        expect(counts['seed-client-1'], 2);
+        expect(counts['seed-client-2'], 1);
+        expect(counts['seed-client-3'], 1);
+
+        // Opening 김민수's thread clears his badge only.
+        await repo.markThreadRead('seed-client-1');
+        counts = await repo.watchUnreadCounts().first;
+        expect(counts.containsKey('seed-client-1'), isFalse);
+        expect(counts['seed-client-2'], 1);
+
+        // A trainer message never counts as unread.
+        await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
+        counts = await repo.watchUnreadCounts().first;
+        expect(counts.containsKey('seed-client-1'), isFalse);
+
+        // A NEW client reply after the marker counts again.
+        await db
+            .into(db.clientChatMessages)
+            .insert(
+              ClientChatMessagesCompanion.insert(
+                id: 'chat-reply-1',
+                clientId: 'seed-client-1',
+                sender: 'client',
+                body: '네 감사합니다!',
+                timeLabel: '09:00',
+                createdAt: DateTime.now().add(const Duration(seconds: 2)),
+              ),
+            );
+        counts = await repo.watchUnreadCounts().first;
+        expect(counts['seed-client-1'], 1);
+      },
+    );
+
+    test('markThreadRead is idempotent and skips redundant writes', () async {
+      final repo = ChatRepository(db);
+
+      Future<String?> marker() => db.readValue('chat_read_seed-client-1');
+
+      // First call stores the newest client message's rowid.
+      await repo.markThreadRead('seed-client-1');
+      final first = await marker();
+      expect(first, isNotNull);
+      expect((await repo.watchUnreadCounts().first)['seed-client-1'], isNull);
+
+      // Repeat calls must produce the SAME value — an unconditional
+      // write would emit on app_key_values and rebuild the list, which
+      // is what the write→watch→build concern was about (review PR 241).
+      for (var i = 0; i < 3; i++) {
+        await repo.markThreadRead('seed-client-1');
+      }
+      expect(await marker(), first);
+
+      // A trainer message doesn't move the marker (only client messages
+      // can be unread).
+      await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
+      await repo.markThreadRead('seed-client-1');
+      expect(await marker(), first);
+
+      // A NEW client reply advances it exactly once.
+      await db
+          .into(db.clientChatMessages)
+          .insert(
+            ClientChatMessagesCompanion.insert(
+              id: 'chat-reply-x',
+              clientId: 'seed-client-1',
+              sender: 'client',
+              body: '넵!',
+              timeLabel: '09:00',
+              createdAt: DateTime.now().add(const Duration(seconds: 5)),
+            ),
+          );
+      await repo.markThreadRead('seed-client-1');
+      final second = await marker();
+      expect(second, isNot(first));
+      await repo.markThreadRead('seed-client-1');
+      expect(await marker(), second);
+    });
+
+    test(
+      'a same-second reply after markThreadRead still counts as unread',
+      () async {
+        final repo = ChatRepository(db);
+        // A fresh client with no seeded messages, so the count is only
+        // what this test inserts.
+        const cid = 'rowid-test-client';
+        final sameSecond = DateTime(2026, 1, 1, 9, 0, 0);
+
+        // First client message, then mark the thread read.
+        await db
+            .into(db.clientChatMessages)
+            .insert(
+              ClientChatMessagesCompanion.insert(
+                id: 'chat-ss-1',
+                clientId: cid,
+                sender: 'client',
+                body: '첫 메시지',
+                timeLabel: '09:00',
+                createdAt: sameSecond,
+              ),
+            );
+        await repo.markThreadRead(cid);
+        expect((await repo.watchUnreadCounts().first)[cid], isNull);
+
+        // A SECOND reply lands in the very same second. An epoch-second
+        // marker (created_at > marker) would miss it because both share
+        // the same second; the rowid marker still flags it (review 241).
+        await db
+            .into(db.clientChatMessages)
+            .insert(
+              ClientChatMessagesCompanion.insert(
+                id: 'chat-ss-2',
+                clientId: cid,
+                sender: 'client',
+                body: '같은 초에 온 두 번째 메시지',
+                timeLabel: '09:00',
+                createdAt: sameSecond,
+              ),
+            );
+        expect((await repo.watchUnreadCounts().first)[cid], 1);
+      },
+    );
+
+    test(
+      'markThreadRead on a thread with no client message writes nothing',
+      () async {
+        await ChatRepository(db).markThreadRead('no-such-client');
+        expect(await db.readValue('chat_read_no-such-client'), isNull);
       },
     );
 

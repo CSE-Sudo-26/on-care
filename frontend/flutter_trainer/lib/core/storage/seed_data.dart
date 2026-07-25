@@ -7,7 +7,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v1']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v2']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Behaviour mirrors the user
 /// app's date-aware seeder (see the user app's `seed_data.dart`):
 ///
@@ -15,6 +15,14 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 /// - otherwise (first boot or date rolled over) → wipe every
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
+///
+/// The flag is `_v2` (was `_v1`): the schema-v2 migration adds
+/// `sodiumWeekJson` with an empty default, so a client who upgrades and
+/// re-opens the SAME day would keep blank sodium trends until the date
+/// rolled over (`_v1` flag already == today ⇒ re-seed skipped). Bumping
+/// the key forces exactly one re-seed on upgrade, backfilling the seed
+/// clients' real weekly sodium while runtime rows are preserved (245→247,
+/// review PR 247).
 ///
 /// **User data is preserved.** Only rows whose `id` starts with `seed-`
 /// are wiped, so anything added at runtime (e.g. a trainer's chat reply,
@@ -25,7 +33,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v1') == today) return;
+  if (await db.readValue('trainer_seeded_v2') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -78,6 +86,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               sugarG: client.sugarG,
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(client.weekCompletion),
+              sodiumWeekJson: Value(jsonEncode(client.sodiumWeek)),
               sortOrder: Value(client.id),
             ),
           );
@@ -161,7 +170,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v1', today);
+    await db.putValue('trainer_seeded_v2', today);
   });
 }
 
@@ -224,6 +233,7 @@ class _Client {
     required this.sugarG,
     required this.lastRoutine,
     required this.weekCompletion,
+    required this.sodiumWeek,
     required this.diet,
     required this.aiRoutine,
     required this.history,
@@ -241,6 +251,7 @@ class _Client {
   final int sugarG;
   final String lastRoutine;
   final List<int> weekCompletion;
+  final List<int> sodiumWeek;
   final List<_Meal> diet;
   final List<_Routine> aiRoutine;
   final List<_History> history;
@@ -280,6 +291,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 45,
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
+    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 2100],
     diet: <_Meal>[
       _Meal('아침', '오트밀, 바나나', 315, 380),
       _Meal('점심', '닭가슴살 샐러드, 현미밥', 620, 890),
@@ -345,6 +357,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 38,
     lastRoutine: '어제',
     weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
+    sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
     diet: <_Meal>[
       _Meal('아침', '그릭요거트, 과일', 280, 200),
       _Meal('점심', '현미밥, 불고기, 나물', 750, 980),
@@ -408,6 +421,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 55,
     lastRoutine: '5일 전',
     weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
+    sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
     diet: <_Meal>[
       _Meal('아침', '계란 3개, 토스트', 480, 520),
       _Meal('점심', '짜장면', 890, 1200),

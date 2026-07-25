@@ -15,6 +15,7 @@ class ClientCard extends StatelessWidget {
     required this.client,
     required this.onTap,
     this.selected = false,
+    this.unread = 0,
   });
 
   /// The client to render.
@@ -26,6 +27,9 @@ class ClientCard extends StatelessWidget {
   /// Highlighted in the wide-viewport split layout when this client's
   /// detail panel is open.
   final bool selected;
+
+  /// Unread chat messages — shows a count badge next to the preview.
+  final int unread;
 
   @override
   Widget build(BuildContext context) {
@@ -91,15 +95,49 @@ class ClientCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          client.lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.mutedForeground,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                client.lastMessage,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: unread > 0
+                                      ? AppColors.foreground
+                                      : AppColors.mutedForeground,
+                                  fontWeight: unread > 0
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            if (unread > 0)
+                              Container(
+                                margin: const EdgeInsets.only(
+                                  left: AppSpacing.xs,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.accent,
+                                  borderRadius: BorderRadius.all(
+                                    AppRadius.pill,
+                                  ),
+                                ),
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.accentForeground,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),

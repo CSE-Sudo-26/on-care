@@ -81,6 +81,9 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
               client: client,
               showBack: widget.showBack,
               onClose: widget.onClose,
+              onToggleActive: () => ref
+                  .read(clientRepositoryProvider)
+                  .setClientActive(client.id, !client.active),
             ),
             _SubTabs(current: _tab, onChanged: (i) => setState(() => _tab = i)),
             Expanded(child: _body(client)),
@@ -160,11 +163,15 @@ class _Header extends StatelessWidget {
     required this.client,
     required this.showBack,
     required this.onClose,
+    required this.onToggleActive,
   });
 
   final TrainerClient client;
   final bool showBack;
   final VoidCallback? onClose;
+
+  /// Flips the client between 활성 and 휴면.
+  final VoidCallback onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -214,14 +221,33 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: client.active
-                  ? AppColors.success
-                  : AppColors.disabledForeground,
+          // Tappable status chip — toggles 활성/휴면.
+          Material(
+            color:
+                (client.active
+                        ? AppColors.success
+                        : AppColors.disabledForeground)
+                    .withValues(alpha: 0.12),
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            child: InkWell(
+              onTap: onToggleActive,
+              borderRadius: const BorderRadius.all(AppRadius.pill),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 3,
+                ),
+                child: Text(
+                  client.active ? '● 활성' : '○ 휴면',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: client.active
+                        ? AppColors.success
+                        : AppColors.disabledForeground,
+                  ),
+                ),
+              ),
             ),
           ),
           if (onClose != null)

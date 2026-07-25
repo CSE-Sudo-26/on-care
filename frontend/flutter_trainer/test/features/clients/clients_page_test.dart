@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
@@ -33,6 +34,83 @@ void main() {
         clients.where((c) => c.sodiumOverBudget).map((c) => c.name).toSet(),
         <String>{'김민수', '박성호'}, // 2100, 2400; 이지수 1800 is under
       );
+    });
+
+    test('addClient appends a fresh profile after the seeded roster', () async {
+      final repo = ClientRepository(db);
+      await repo.addClient(name: '  최수진  ', goal: '체중 감량');
+
+      final clients = await repo.watchClients().first;
+      expect(clients.length, 4);
+      final added = clients.last; // large sortOrder appends
+      expect(added.name, '최수진'); // trimmed
+      expect(added.avatar, '최');
+      expect(added.goal, '체중 감량');
+      expect(added.active, isTrue);
+      expect(added.sodiumMg, 0);
+      expect(added.weekCompletion, List<int>.filled(7, 0));
+      expect(added.id.startsWith('seed-'), isFalse); // survives re-seed
+    });
+
+    test(
+      'addClient ignores an empty name and defaults an empty goal',
+      () async {
+        final repo = ClientRepository(db);
+        expect(await repo.addClient(name: '   ', goal: '아무거나'), isFalse);
+        expect((await repo.watchClients().first).length, 3);
+
+        expect(await repo.addClient(name: '박도윤', goal: '  '), isTrue);
+        final clients = await repo.watchClients().first;
+        expect(clients.last.goal, '목표 설정 전');
+      },
+    );
+
+    test('addClient rejects a duplicate name', () async {
+      final repo = ClientRepository(db);
+
+      // Schedules resolve their client by NAME, so a second 김민수 could
+      // receive the first one's chat/운동기록 (review PR 243).
+      expect(await repo.addClient(name: '김민수', goal: '중복'), isFalse);
+      expect(await repo.addClient(name: '  김민수  ', goal: '공백 차이'), isFalse);
+      expect(await repo.addClient(name: '김민수 ', goal: '후행 공백'), isFalse);
+      expect((await repo.watchClients().first).length, 3); // nothing added
+
+      // A genuinely new name still registers, and is then itself taken.
+      expect(await repo.addClient(name: '최수진', goal: '체중 감량'), isTrue);
+      expect(await repo.addClient(name: '최수진', goal: '또'), isFalse);
+      expect((await repo.watchClients().first).length, 4);
+
+      expect(await repo.clientNameExists('김민수'), isTrue);
+      expect(await repo.clientNameExists('없는사람'), isFalse);
+    });
+
+    test('concurrent addClient of the same name inserts exactly one', () async {
+      final repo = ClientRepository(db);
+
+      // Fire both adds without awaiting between them: the check and the
+      // insert share one transaction, so only one can pass the duplicate
+      // guard even when they race (review PR 243).
+      final results = await Future.wait(<Future<bool>>[
+        repo.addClient(name: '한지민', goal: 'A'),
+        repo.addClient(name: '한지민', goal: 'B'),
+      ]);
+
+      expect(results.where((r) => r).length, 1); // exactly one succeeded
+      final matches = (await repo.watchClients().first)
+          .where((c) => c.name == '한지민')
+          .toList();
+      expect(matches.length, 1); // and only one row exists
+    });
+
+    test('setClientActive flips the 활성/휴면 state', () async {
+      final repo = ClientRepository(db);
+      await repo.setClientActive('seed-client-1', false);
+      var clients = await repo.watchClients().first;
+      expect(clients.firstWhere((c) => c.name == '김민수').active, isFalse);
+
+      await repo.setClientActive('seed-client-1', true);
+      clients = await repo.watchClients().first;
+      expect(clients.firstWhere((c) => c.name == '김민수').active, isTrue);
     });
 
     test('reservation count excludes 공백 slots', () async {
@@ -89,6 +167,23 @@ void main() {
       expect(find.text('이지수'), findsOneWidget);
     });
 
+    testWidgets('unread badges show and clear after reading the thread', (
+      tester,
+    ) async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+
+      // 김민수 has 2 unseen client replies in the seed.
+      expect(find.text('2'), findsOneWidget);
+
+      // Open his chat, then come back — badge cleared.
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      await settle(tester);
+
+      expect(find.text('2'), findsNothing);
+    });
+
     testWidgets('tapping a client card opens the detail screen', (
       tester,
     ) async {
@@ -100,6 +195,62 @@ void main() {
       // Detail screen opened — its 채팅/식단/운동기록 sub-tabs are unique to it.
       expect(find.text('채팅'), findsOneWidget);
       expect(find.text('운동기록'), findsOneWidget);
+    });
+
+    testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+
+      await tester.scrollUntilVisible(find.text('＋ 신규 고객 등록'), 150);
+      await tester.ensureVisible(find.text('＋ 신규 고객 등록'));
+      await tester.pump();
+      await tester.tap(find.text('＋ 신규 고객 등록'));
+      await settle(tester);
+
+      await tester.enterText(find.byType(TextField).first, '최수진');
+      await tester.enterText(find.byType(TextField).last, '체중 감량');
+      await tester.tap(find.text('등록하기'));
+      await settle(tester);
+
+      // New client appended at the end of the list (0 data, no badge).
+      await tester.scrollUntilVisible(find.text('최수진'), 150);
+      expect(find.text('최수진'), findsOneWidget);
+      expect(find.text('아직 대화가 없어요'), findsOneWidget);
+    });
+
+    testWidgets('registering a duplicate name is blocked with an error', (
+      tester,
+    ) async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+
+      await tester.scrollUntilVisible(find.text('＋ 신규 고객 등록'), 150);
+      await tester.ensureVisible(find.text('＋ 신규 고객 등록'));
+      await tester.pump();
+      await tester.tap(find.text('＋ 신규 고객 등록'));
+      await settle(tester);
+
+      await tester.enterText(find.byType(TextField).first, '김민수');
+      await tester.tap(find.text('등록하기'));
+      await settle(tester);
+
+      // Sheet stays open with an inline error; no second 김민수 created.
+      expect(find.text('이미 같은 이름의 고객이 있어요'), findsOneWidget);
+      expect(find.text('신규 고객 등록'), findsOneWidget);
+    });
+
+    testWidgets('the detail header chip toggles 활성/휴면', (tester) async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+      expect(find.text('● 활성'), findsOneWidget);
+
+      await tester.tap(find.text('● 활성'));
+      await settle(tester);
+      expect(find.text('○ 휴면'), findsOneWidget);
+
+      await tester.tap(find.text('○ 휴면'));
+      await settle(tester);
+      expect(find.text('● 활성'), findsOneWidget);
     });
   });
 }

@@ -32,6 +32,21 @@ void main() {
       expect(jisu.first.items, '그릭요거트, 과일');
       expect(seongho[1].items, '짜장면'); // 점심
     });
+
+    test('client rows carry a 7-day sodium history ending at today', () async {
+      final clients = await ClientRepository(db).watchClients().first;
+      for (final c in clients) {
+        expect(c.sodiumWeek.length, 7);
+        // The last entry mirrors today's total shown elsewhere.
+        expect(c.sodiumWeek.last, c.sodiumMg);
+      }
+      final minsu = clients.firstWhere((c) => c.name == '김민수');
+      expect(minsu.sodiumOverDays, greaterThan(0)); // 2400/2200/2300… over
+      expect(minsu.sodiumWeekAvg, isNotNull);
+
+      final jisu = clients.firstWhere((c) => c.name == '이지수');
+      expect(jisu.sodiumOverDays, 1); // only the 2100 day is over
+    });
   });
 
   group('DietView', () {
@@ -53,15 +68,19 @@ void main() {
       await openDiet(tester, '김민수');
 
       expect(find.text('오늘 영양 요약'), findsOneWidget);
-      // Summary totals from the client row.
-      expect(find.text('2100'), findsOneWidget);
+      // Summary totals from the client row (also appears as the last
+      // trend bar's label, so match ≥1).
+      expect(find.text('2100'), findsWidgets);
       expect(find.text('mg ⚠ 초과'), findsOneWidget);
-      // 3 meals from the seed.
+      // 아침 is above the fold; the 7-day trend card pushes 점심/저녁
+      // lower, so reach them by scrolling.
       expect(find.text('아침'), findsOneWidget);
-      expect(find.text('점심'), findsOneWidget);
-      expect(find.text('저녁'), findsOneWidget);
       expect(find.text('오트밀, 바나나'), findsOneWidget);
       expect(find.text('315 kcal'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('점심'), 150);
+      expect(find.text('점심'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('저녁'), 150);
+      expect(find.text('저녁'), findsOneWidget);
       // Over-target AI comment (2100 − 2000 = 100mg) — last list item,
       // built lazily, so scroll it into view first.
       await tester.scrollUntilVisible(
@@ -69,6 +88,19 @@ void main() {
         150,
       );
       expect(find.textContaining('나트륨이 목표치를 100mg 초과했어요'), findsOneWidget);
+    });
+
+    testWidgets('식단 shows the 7-day sodium trend with over-days count', (
+      tester,
+    ) async {
+      await openDiet(tester, '김민수');
+
+      // The trend card renders with 김민수's weekly average and a
+      // pattern summary (his week has several over-target days).
+      await tester.scrollUntilVisible(find.text('최근 7일 나트륨 추이'), 120);
+      expect(find.text('최근 7일 나트륨 추이'), findsOneWidget);
+      expect(find.textContaining('평균'), findsOneWidget);
+      expect(find.textContaining('목표(2000mg)를 초과했어요'), findsOneWidget);
     });
 
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (

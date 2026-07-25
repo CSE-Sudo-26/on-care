@@ -5,9 +5,38 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// A chat repository whose sends always fail.
+class _FailingChatRepository extends ChatRepository {
+  const _FailingChatRepository(super.db);
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async => throw Exception('chat write failed');
+}
+
+/// A chat repository whose sends resolve slowly, so a client switch can
+/// land while a send is still in flight (review PR 239).
+class _SlowChatRepository extends ChatRepository {
+  const _SlowChatRepository(super.db);
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return super.sendTrainerMessage(clientId: clientId, text: text);
+  }
+}
 
 /// Counts registration calls and delays them, to test the in-flight
 /// double-tap guard.
@@ -17,13 +46,15 @@ class _SlowCountingRoutineRepository extends AiRoutineRepository {
   int registerCalls = 0;
 
   @override
-  Future<bool> registerToTodaySchedule({
+  Future<bool> registerToSchedule({
+    required String date,
     required String clientName,
     required List<Map<String, Object?>> program,
   }) async {
     registerCalls++;
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    return super.registerToTodaySchedule(
+    return super.registerToSchedule(
+      date: date,
       clientName: clientName,
       program: program,
     );
@@ -57,7 +88,8 @@ void main() {
       () async {
         final repo = AiRoutineRepository(db);
         // 박성호 has a seeded 15:00 예정 session.
-        final attached = await repo.registerToTodaySchedule(
+        final attached = await repo.registerToSchedule(
+          date: ymd(DateTime.now()),
           clientName: '박성호',
           program: <Map<String, Object?>>[
             <String, Object?>{
@@ -82,7 +114,8 @@ void main() {
       () async {
         final repo = AiRoutineRepository(db);
         // 김민수's only session today is 완료 — a new slot gets booked.
-        final attached = await repo.registerToTodaySchedule(
+        final attached = await repo.registerToSchedule(
+          date: ymd(DateTime.now()),
           clientName: '김민수',
           program: <Map<String, Object?>>[
             <String, Object?>{
@@ -264,6 +297,70 @@ void main() {
       expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
     });
 
+    testWidgets('homework send leaves a trace in the client chat', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      await tester.scrollUntilVisible(
+        find.textContaining('님에게 전송'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.pump();
+      await tester.tap(find.textContaining('님에게 전송'));
+      await settle(tester);
+
+      // The 고객 tab's chat thread now shows the homework message.
+      await tester.tap(find.text('고객'));
+      await settle(tester);
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsOneWidget);
+    });
+
+    testWidgets('내일 chip registers the routine on the next day', (
+      tester,
+    ) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('내일'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('내일'));
+      await tester.pump();
+      await tester.tap(find.text('내일'));
+      await tester.pump();
+
+      await tester.tap(find.textContaining('내일 PT 스케줄에 등록'));
+      await settle(tester);
+      expect(find.text('✓ 내일 스케줄에 등록됨'), findsOneWidget);
+
+      // Booked under tomorrow's date, not today's. Reading a drift stream
+      // must run outside the fake-async zone (`runAsync`), otherwise the
+      // subscription never flushes and the test hangs.
+      final tomorrow = ymd(DateTime.now().add(const Duration(days: 1)));
+      final rows = await tester.runAsync(
+        () => container
+            .read(scheduleRepositoryProvider)
+            .watchDate(tomorrow)
+            .first,
+      );
+      expect(rows!.single.clientName, '김민수');
+      expect(rows.single.program, isNotEmpty);
+
+      // Drain the 3s confirmation timer so it isn't left pending.
+      await tester.pump(const Duration(seconds: 3));
+    });
+
     testWidgets('send shows confirmation then resets edits', (tester) async {
       await openTab(tester);
 
@@ -365,6 +462,38 @@ void main() {
       expect(find.text('📅 오늘 PT 스케줄에 등록'), findsOneWidget);
     });
 
+    testWidgets('a failed chat write does not show the send confirmation', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWith(
+            (ref) => _FailingChatRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.textContaining('님에게 전송'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.pump();
+      await tester.tap(find.textContaining('님에게 전송'));
+      await settle(tester);
+
+      // The homework write failed — no success flash, and the button is
+      // still actionable (review PR 239).
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsNothing);
+      expect(find.textContaining('검토 완료'), findsOneWidget);
+    });
+
     testWidgets('A → B → A cannot double-register while A is still saving', (
       tester,
     ) async {
@@ -421,6 +550,71 @@ void main() {
           container.read(aiRoutineRepositoryProvider)
               as _SlowCountingRoutineRepository;
       expect(repo.registerCalls, 1);
+    });
+
+    testWidgets('switching clients mid-send does not flash send success '
+        'on the new client and keeps their edits', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWith(
+            (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
+      await tester.scrollUntilVisible(
+        find.textContaining('님에게 전송'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.pump();
+      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        -150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('이지수'));
+      await tester.pump();
+      await tester.tap(find.text('이지수'));
+      await tester.pump(const Duration(milliseconds: 30));
+
+      // Make a fresh edit on 이지수 while 김민수's send is still in flight.
+      await tester.scrollUntilVisible(
+        find.text('＋ 운동 직접 추가'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
+      await tester.pump();
+      await tester.tap(find.text('＋ 운동 직접 추가'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '레그프레스 5세트');
+      await tester.ensureVisible(find.text('추가하기'));
+      await tester.pump();
+      await tester.tap(find.text('추가하기'));
+      await tester.pump();
+      await settle(tester); // let 김민수's send + reset window elapse
+
+      // 김민수's send resolved while 이지수 is on screen: no success flash
+      // lands on 이지수, and her edit survives — 김민수's reset timer must
+      // not fire against her (review PR 239).
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsNothing);
+      expect(find.text('✓ 이지수님에게 전송 완료!'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('레그프레스 5세트'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('레그프레스 5세트'), findsOneWidget);
     });
 
     testWidgets('registering with every exercise removed shows a hint', (
