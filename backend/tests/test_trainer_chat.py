@@ -127,3 +127,53 @@ def test_chat_routine_ownership_and_role(client):
         "/v1/auth/login", data={"username": email, "password": "pw!"}
     ).json()["access_token"]
     assert client.get("/v1/trainer/clients/user-jisu/chat", headers=_h(mtok)).status_code == 403
+
+
+def test_routine_assign_input_validation(client):
+    token = _tok(client)
+    url = "/v1/trainer/clients/user-jisu/routines"
+    base = {"name": "테스트 루틴", "minutes": 10, "type": "근력", "reason": "x"}
+    # 잘못된 type / source → 422 (DB 500 아님)
+    assert client.post(url, json={**base, "type": "파워"}, headers=_h(token)).status_code == 422
+    assert client.post(url, json={**base, "source": "bot"}, headers=_h(token)).status_code == 422
+    # minutes 음수/과대 → 422
+    assert client.post(url, json={**base, "minutes": -5}, headers=_h(token)).status_code == 422
+    assert client.post(url, json={**base, "minutes": 9999}, headers=_h(token)).status_code == 422
+    # name 100자 초과 / reason 200자 초과 → 422
+    assert client.post(url, json={**base, "name": "가" * 101}, headers=_h(token)).status_code == 422
+    assert client.post(url, json={**base, "reason": "가" * 201}, headers=_h(token)).status_code == 422
+    # 정상 입력은 201
+    assert client.post(url, json=base, headers=_h(token)).status_code == 201
+
+
+def test_chat_thread_is_paginated(client, db_session):
+    from datetime import datetime, timedelta, timezone
+
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import ChatMessage
+
+    # 오래된 메시지 60건 삽입(하루 전, 초 간격)
+    base = datetime.now(timezone.utc) - timedelta(days=1)
+    ids = [f"chat-page-{i}" for i in range(60)]
+    for i, cid in enumerate(ids):
+        db_session.add(ChatMessage(
+            id=cid, trainer_id=TRAINER_ID, member_id="user-demo",
+            sender="member", body=f"m{i}", created_at=base + timedelta(seconds=i),
+        ))
+    db_session.commit()
+    try:
+        token = _tok(client)
+        # 기본 제한 50 이하 — 오래된 메시지가 60건 있어도 한 번에 다 오지 않는다
+        msgs = client.get("/v1/trainer/clients/user-demo/chat", headers=_h(token)).json()
+        assert len(msgs) <= 50
+        # limit 쿼리 존중
+        r10 = client.get("/v1/trainer/clients/user-demo/chat?limit=10", headers=_h(token))
+        assert len(r10.json()) == 10
+        # 잘못된 before → 422
+        bad = client.get("/v1/trainer/clients/user-demo/chat?before=notadate", headers=_h(token))
+        assert bad.status_code == 422
+    finally:
+        db_session.query(ChatMessage).filter(
+            ChatMessage.id.in_(ids)
+        ).delete(synchronize_session=False)
+        db_session.commit()

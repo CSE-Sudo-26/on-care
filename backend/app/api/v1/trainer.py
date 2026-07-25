@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -125,10 +126,24 @@ def trainer_client_chat(
     member_id: str,
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(50, ge=1, le=100, description="한 번에 가져올 최신 메시지 수"),
+    before: str | None = Query(
+        None, description="ISO datetime 커서 — 이보다 오래된 메시지만(페이지네이션)"
+    ),
 ) -> list[ChatMessageOut]:
-    """담당 고객과의 채팅 스레드(오래된→최신)."""
+    """담당 고객과의 채팅 스레드(오래된→최신). 기본 최신 50건, before 로 이전 페이지."""
     _require_client(db, trainer.id, member_id)
-    return trainer_service.build_chat_thread(db, trainer.id, member_id)
+    before_dt: datetime | None = None
+    if before:
+        try:
+            before_dt = datetime.fromisoformat(before)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=422, detail="before 는 ISO datetime 형식이어야 합니다."
+            ) from e
+    return trainer_service.build_chat_thread(
+        db, trainer.id, member_id, limit=limit, before=before_dt
+    )
 
 
 @router.post("/trainer/clients/{member_id}/chat", response_model=ChatMessageOut, status_code=201)
@@ -180,11 +195,12 @@ def trainer_assign_routine(
 ) -> RoutineOut:
     """담당 고객에게 루틴 배정(트레이너 직접 또는 AI 추천)."""
     _require_client(db, trainer.id, member_id)
+    # type/source/길이·범위는 RoutineAssignRequest(Field/Literal)가 이미 422 로 거른다.
+    # 공백만 있는 이름은 trim 후 400.
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="루틴 이름이 필요합니다.")
-    source = payload.source if payload.source in ("trainer", "ai") else "trainer"
     return trainer_service.assign_routine(
         db, trainer.id, member_id,
         name=payload.name.strip(), minutes=payload.minutes,
-        type_=payload.type, reason=payload.reason, source=source,
+        type_=payload.type, reason=payload.reason, source=payload.source,
     )

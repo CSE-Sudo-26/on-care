@@ -6,7 +6,9 @@ GET /trainer/me 응답:
 """
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class TrainerGymOut(BaseModel):
@@ -79,7 +81,11 @@ class ChatMessageOut(BaseModel):
 
 
 class ChatSendRequest(BaseModel):
-    text: str
+    # 상한만 둔다(빈/공백은 라우터에서 trim 후 400). 과도한 길이는 여기서 422.
+    text: str = Field(max_length=2000)
+
+
+RoutineType = Literal["유산소", "근력", "스트레칭"]
 
 
 class RoutineOut(BaseModel):
@@ -93,8 +99,12 @@ class RoutineOut(BaseModel):
 
 
 class RoutineAssignRequest(BaseModel):
-    name: str
-    minutes: int = 0
-    type: str          # 유산소|근력|스트레칭
-    reason: str = ""
-    source: str = "trainer"   # trainer|ai
+    """루틴 배정 입력. 잘못된 값은 DB 500 이 아니라 422 로 거른다.
+
+    type/source 는 허용값(Literal)만, 길이·범위는 Field 로 제한한다.
+    """
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(default=0, ge=0, le=600)   # 0..600분(현실적 상한)
+    type: RoutineType
+    reason: str = Field(default="", max_length=200)
+    source: Literal["trainer", "ai"] = "trainer"

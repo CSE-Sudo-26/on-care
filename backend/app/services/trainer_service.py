@@ -295,13 +295,25 @@ def _sender_out(sender: str) -> str:
     return "client" if sender == "member" else "trainer"
 
 
-def build_chat_thread(db: Session, trainer_id: str, member_id: str) -> list[ChatMessageOut]:
-    """(trainer, member) 스레드 메시지(오래된→최신)."""
-    rows = db.scalars(
-        select(ChatMessage)
-        .where(ChatMessage.trainer_id == trainer_id, ChatMessage.member_id == member_id)
-        .order_by(ChatMessage.created_at, ChatMessage.id)
-    ).all()
+def build_chat_thread(
+    db: Session, trainer_id: str, member_id: str,
+    limit: int = 50, before: datetime | None = None,
+) -> list[ChatMessageOut]:
+    """(trainer, member) 스레드 메시지(오래된→최신).
+
+    무제한 로드를 막기 위해 기본 최신 `limit`건만 가져온다(리뷰 PR 251-#3). `before`
+    (created_at 커서)를 주면 그보다 오래된 이전 페이지를 반환한다. DB 에서는 최신순으로
+    limit 만큼 조회한 뒤, 화면 표시용으로 오래된→최신으로 뒤집어 반환한다.
+    """
+    q = select(ChatMessage).where(
+        ChatMessage.trainer_id == trainer_id, ChatMessage.member_id == member_id
+    )
+    if before is not None:
+        q = q.where(ChatMessage.created_at < before)
+    rows = list(db.scalars(
+        q.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(limit)
+    ).all())
+    rows.reverse()  # 최신 limit건을 오래된→최신 순으로
     return [
         ChatMessageOut(
             id=r.id, sender=_sender_out(r.sender), body=r.body, time_label=_hhmm(r.created_at),
