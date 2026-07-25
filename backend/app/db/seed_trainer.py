@@ -68,9 +68,18 @@ def seed_trainer_domain() -> None:
 
 
 def _seed_trainer_account(db: Session) -> None:
-    """트레이너 User + TrainerProfile(멱등, 이메일 충돌 안전)."""
+    """트레이너 User + TrainerProfile(멱등, 이메일·역할 충돌 안전)."""
     trainer = db.scalar(select(models.User).where(models.User.id == TRAINER_ID))
-    if trainer is None:
+    if trainer is not None:
+        # 기존 ID 가 트레이너 데모와 역할/이메일이 다르면(예: 회원 계정이 선점) 프로필을
+        # 붙이지 않는다 — 남의 계정을 트레이너로 오염시키지 않도록.
+        if trainer.role != "trainer" or trainer.email != TRAINER_EMAIL:
+            logger.warning(
+                "기존 %s 계정이 트레이너 데모와 역할/이메일 불일치(role=%s) — 프로필 시드 스킵.",
+                TRAINER_ID, trainer.role,
+            )
+            return
+    else:
         if _email_taken_by_other(db, TRAINER_EMAIL, TRAINER_ID):
             logger.warning(
                 "트레이너 데모 이메일 %s 가 다른 계정에 선점됨 — 트레이너 시드 스킵.",
@@ -139,15 +148,24 @@ def _seed_member_accounts(db: Session) -> None:
 
 
 def _seed_client_links(db: Session) -> None:
-    """트레이너↔회원 담당 링크(멱등). 회원 계정이 없으면(시드 스킵됨) 링크도 건너뛴다."""
+    """트레이너↔회원 담당 링크(멱등). 트레이너/회원 역할이 맞아야만 링크한다."""
+    trainer = db.scalar(select(models.User).where(models.User.id == TRAINER_ID))
+    if trainer is None or trainer.role != "trainer":
+        # 트레이너 계정이 없거나(시드 스킵) 역할이 트레이너가 아니면 링크를 만들지 않는다.
+        return
     for user_id, _email, _name, goal, active, order in _MEMBERS:
         link_id = f"tc-{TRAINER_ID}-{user_id}"
         if db.scalar(select(models.TrainerClient.id).where(models.TrainerClient.id == link_id)):
             continue
-        # 트레이너/회원 계정이 모두 있어야 FK 가 성립한다.
-        if db.scalar(select(models.User.id).where(models.User.id == TRAINER_ID)) is None:
+        member = db.scalar(select(models.User).where(models.User.id == user_id))
+        if member is None:
             continue
-        if db.scalar(select(models.User.id).where(models.User.id == user_id)) is None:
+        # 기존 ID 가 회원이 아니면(예: 트레이너 역할) 담당 링크를 만들지 않는다.
+        if member.role != "member":
+            logger.warning(
+                "기존 %s 계정이 회원이 아님(role=%s) — 담당 링크 시드 스킵.",
+                user_id, member.role,
+            )
             continue
         db.add(models.TrainerClient(
             id=link_id,

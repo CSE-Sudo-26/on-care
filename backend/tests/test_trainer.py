@@ -82,10 +82,14 @@ def test_prod_demo_seed_requires_strong_password():
         jwt_secret="a-strong-enough-production-secret-value-01234567",
         cors_allow_origins="https://app.example.com",
     )
-    # 기본 데모 비번 + prod + 데모 시드 → 기동 거부
+    # 기본값 + 데모 시드 → 기동 거부
     with pytest.raises(ValueError):
         Settings(**common, seed_demo_data=True)
-    # 강한 데모 비번이면 데이터 든 데모 계정을 운영에도 둘 수 있음
+    # 빈 문자열·짧은 문자열·기본값 모두 거부(강도 검증)
+    for weak in ("", "short", "oncare123", "abc12345678"):  # 마지막은 11자(<12)
+        with pytest.raises(ValueError):
+            Settings(**common, seed_demo_data=True, demo_login_password=weak)
+    # 기본값이 아니고 12자 이상이면 데이터 든 데모 계정을 운영에도 둘 수 있음
     ok = Settings(**common, seed_demo_data=True, demo_login_password="Str0ng!Demo#Pass")
     assert ok.demo_login_password == "Str0ng!Demo#Pass"
     # 데모 시드를 끄면(운영 기본 권장) 당연히 통과
