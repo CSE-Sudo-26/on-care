@@ -445,6 +445,10 @@ class ScheduleError(ValueError):
     """스케줄 도메인 오류(라우터가 400 으로 변환)."""
 
 
+class ScheduleConflict(Exception):
+    """완료 세션 수정 등 상태 충돌(라우터가 409 로 변환)."""
+
+
 def _program_items(program_json: str) -> list[ProgramItem]:
     try:
         raw = json.loads(program_json) if program_json else []
@@ -526,10 +530,16 @@ def create_session(
 def update_session(
     db: Session, trainer_id: str, session_id: str, fields: dict
 ) -> ScheduleSessionOut | None:
-    """예약 부분 수정. 소유 슬롯이 아니면 None(라우터 404)."""
+    """예약 부분 수정. 소유 슬롯이 아니면 None(라우터 404).
+
+    완료된 세션은 이미 회원 운동기록(RoutineHistory)으로 적재됐다. 이후 member_id·program·
+    note 등을 바꾸면 스케줄과 기록이 어긋나므로(리뷰 재-#2), 완료 세션 수정은 409 로 거부한다.
+    """
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return None
+    if s.status == "완료":
+        raise ScheduleConflict("완료된 세션은 수정할 수 없습니다.")
     if "time" in fields:
         s.time = fields["time"]
     if "client_name" in fields:

@@ -6,9 +6,26 @@ GET /trainer/me 응답:
 """
 from __future__ import annotations
 
+from datetime import date as _date, datetime as _datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _validate_ymd(v: str) -> str:
+    try:
+        _date.fromisoformat(v)  # 2026-99-99 / 2026-02-31 등 달력상 불가능한 값 거부
+    except ValueError as e:
+        raise ValueError("유효한 날짜(YYYY-MM-DD)가 아닙니다.") from e
+    return v
+
+
+def _validate_hhmm(v: str) -> str:
+    try:
+        _datetime.strptime(v, "%H:%M")  # 25:99 / 빈 문자열 등 거부
+    except ValueError as e:
+        raise ValueError("유효한 시간(HH:MM)이 아닙니다.") from e
+    return v
 
 
 class TrainerGymOut(BaseModel):
@@ -140,7 +157,7 @@ class ScheduleSessionOut(BaseModel):
 
 
 class ScheduleCreateRequest(BaseModel):
-    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    date: str = Field(max_length=10)
     time: str = Field(max_length=10)
     client_name: str = Field(default="", max_length=100)
     member_id: str | None = Field(default=None, max_length=64)
@@ -148,6 +165,9 @@ class ScheduleCreateRequest(BaseModel):
     duration_minutes: int = Field(default=0, ge=0, le=600)
     note: str = Field(default="", max_length=500)
     program: list[ProgramItem] = Field(default_factory=list, max_length=30)
+
+    _v_date = field_validator("date")(_validate_ymd)
+    _v_time = field_validator("time")(_validate_hhmm)
 
 
 class ScheduleUpdateRequest(BaseModel):
@@ -159,6 +179,11 @@ class ScheduleUpdateRequest(BaseModel):
     duration_minutes: int | None = Field(default=None, ge=0, le=600)
     note: str | None = Field(default=None, max_length=500)
     program: list[ProgramItem] | None = Field(default=None, max_length=30)
+
+    @field_validator("time")
+    @classmethod
+    def _v_time(cls, v: str | None) -> str | None:
+        return _validate_hhmm(v) if v is not None else v
 
 
 class ScheduleCompleteRequest(BaseModel):

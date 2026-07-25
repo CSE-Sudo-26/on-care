@@ -159,3 +159,50 @@ def test_booked_dates(client):
     assert r.status_code == 200, r.text
     dates = r.json()
     assert _today() in dates  # 오늘 시드에 예약(공백 아님)이 있음
+
+
+def test_completed_session_cannot_be_edited(client):
+    """완료된 세션 수정은 409 — 스케줄과 운동기록이 어긋나지 않게 한다(리뷰 재-#2)."""
+    token = _tok(client)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(), "time": "08:30", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT",
+            "program": [{"name": "스쿼트", "sets": 3, "reps": "10회", "weight": "40kg"}],
+        },
+        headers=_h(token),
+    )
+    sid = c.json()["id"]
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={"note": "완료"}, headers=_h(token))
+
+    # 완료 후 다른 회원으로 재배정 시도 → 409(데이터 분리 방지)
+    r = client.put(
+        f"/v1/trainer/schedule/{sid}", json={"member_id": "user-sungho"}, headers=_h(token)
+    )
+    assert r.status_code == 409
+    # note 등 다른 필드 수정도 409
+    assert client.put(
+        f"/v1/trainer/schedule/{sid}", json={"note": "바꿈"}, headers=_h(token)
+    ).status_code == 409
+    # 기록은 여전히 원래 회원(user-jisu)에 남아 있고 sungho 로 옮겨가지 않았다
+    jisu_hist = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
+    assert any(h["label"] == "PT 세션 · 트레이너 지도" for h in jisu_hist)
+
+
+def test_schedule_invalid_date_time_422(client):
+    """달력상 불가능한 날짜/시간은 create·update 모두 422(DB 저장 방지, 리뷰 재-#4)."""
+    token = _tok(client)
+    base = {"date": _today(), "time": "10:00", "type": "1:1 PT"}
+    url = "/v1/trainer/schedule"
+    # 잘못된 날짜
+    assert client.post(url, json={**base, "date": "2026-99-99"}, headers=_h(token)).status_code == 422
+    assert client.post(url, json={**base, "date": "2026-02-31"}, headers=_h(token)).status_code == 422
+    # 잘못된/빈 시간
+    assert client.post(url, json={**base, "time": "25:99"}, headers=_h(token)).status_code == 422
+    assert client.post(url, json={**base, "time": ""}, headers=_h(token)).status_code == 422
+    # update 도 잘못된 시간 422
+    sid = client.post(url, json=base, headers=_h(token)).json()["id"]
+    assert client.put(
+        f"{url}/{sid}", json={"time": "99:99"}, headers=_h(token)
+    ).status_code == 422

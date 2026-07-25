@@ -257,11 +257,15 @@ def trainer_update_session(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> ScheduleSessionOut:
-    """예약 수정(제공된 필드만). member_id 변경 시 담당 고객이어야 한다."""
+    """예약 수정(제공된 필드만). member_id 변경 시 담당 고객이어야 한다.
+    완료된 세션은 기록과의 정합성을 위해 수정 불가(409)."""
     fields = payload.model_dump(exclude_unset=True)
     if fields.get("member_id"):
         _require_client(db, trainer.id, fields["member_id"])
-    out = trainer_service.update_session(db, trainer.id, session_id, fields)
+    try:
+        out = trainer_service.update_session(db, trainer.id, session_id, fields)
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     if out is None:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return out
