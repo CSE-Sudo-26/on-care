@@ -1454,6 +1454,54 @@ abstract class AppLocalizations {
   /// **'Find a Trainer'**
   String get exFindTrainer;
 
+  /// No description provided for @exGymDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Details'**
+  String get exGymDetailTitle;
+
+  /// No description provided for @exTrainerDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer Details'**
+  String get exTrainerDetailTitle;
+
+  /// No description provided for @exDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exDistance;
+
+  /// No description provided for @exRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exRating;
+
+  /// No description provided for @exAffiliatedTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Affiliated Trainer'**
+  String get exAffiliatedTrainer;
+
+  /// No description provided for @exRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why we recommend this trainer'**
+  String get exRecommendationReason;
+
+  /// No description provided for @exGymNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this gym.'**
+  String get exGymNotFound;
+
+  /// No description provided for @exTrainerNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this trainer.'**
+  String get exTrainerNotFound;
+
   /// No description provided for @exGymSearchPlaceholder.
   ///
   /// In en, this message translates to:

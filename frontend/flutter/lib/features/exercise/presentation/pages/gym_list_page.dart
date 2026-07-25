@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -105,7 +107,11 @@ class _GymListPageState extends ConsumerState<GymListPage> {
                                           (BuildContext context, int index) {
                                             return _GymListCard(
                                               gym: visible[index],
-                                              onTap: null,
+                                              onTap: () => context.push(
+                                                AppRoutes.gymDetailPath(
+                                                  visible[index].id,
+                                                ),
+                                              ),
                                             );
                                           },
                                     ),

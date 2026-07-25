@@ -710,6 +710,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exFindTrainer => '트레이너 찾기';
 
   @override
+  String get exGymDetailTitle => '헬스장 상세';
+
+  @override
+  String get exTrainerDetailTitle => '트레이너 상세';
+
+  @override
+  String get exDistance => '거리';
+
+  @override
+  String get exRating => '평점';
+
+  @override
+  String get exAffiliatedTrainer => '소속 트레이너';
+
+  @override
+  String get exRecommendationReason => '추천 이유';
+
+  @override
+  String get exGymNotFound => '헬스장 정보를 찾을 수 없어요.';
+
+  @override
+  String get exTrainerNotFound => '트레이너 정보를 찾을 수 없어요.';
+
+  @override
   String get exGymSearchPlaceholder => '지역이나 헬스장 이름 검색';
 
   @override

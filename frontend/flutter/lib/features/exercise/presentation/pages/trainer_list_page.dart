@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -25,6 +27,7 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
         .where((Gym gym) => gym.trainerName?.isNotEmpty ?? false)
         .map(
           (Gym gym) => _TrainerListItem(
+            gymId: gym.id,
             name: gym.trainerName!,
             role: gym.trainerRole,
             gymName: gym.name,
@@ -114,7 +117,11 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
                                           (BuildContext context, int index) {
                                             return _TrainerListCard(
                                               trainer: visible[index],
-                                              onTap: null,
+                                              onTap: () => context.push(
+                                                AppRoutes.trainerDetailPath(
+                                                  visible[index].gymId,
+                                                ),
+                                              ),
                                             );
                                           },
                                     ),
@@ -136,11 +143,13 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
 
 class _TrainerListItem {
   const _TrainerListItem({
+    required this.gymId,
     required this.name,
     required this.role,
     required this.gymName,
   });
 
+  final String gymId;
   final String name;
   final String? role;
   final String gymName;

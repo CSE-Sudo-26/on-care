@@ -85,6 +85,10 @@ class _MyGymTrainerSection extends StatelessWidget {
               gym: gym,
               selectedSlot: selectedSlot,
               onSlot: onSlot,
+              onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+              onTrainerTap: gym.trainerName == null
+                  ? null
+                  : () => context.push(AppRoutes.trainerDetailPath(gym.id)),
             ),
     );
   }
@@ -95,11 +99,15 @@ class _MyGymTrainerCard extends StatelessWidget {
     required this.gym,
     required this.selectedSlot,
     required this.onSlot,
+    required this.onGymTap,
+    required this.onTrainerTap,
   });
 
   final Gym gym;
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
+  final VoidCallback onGymTap;
+  final VoidCallback? onTrainerTap;
 
   @override
   Widget build(BuildContext context) {
@@ -145,25 +153,51 @@ class _MyGymTrainerCard extends StatelessWidget {
           const SizedBox(height: 14),
           _InfoLabel(icon: Icons.place_outlined, label: l.exMyGym),
           const SizedBox(height: 7),
-          Text(
-            gym.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.ink,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: FigmaColors.textMuted,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onGymTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            gym.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: FigmaColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: FigmaColors.textFaint,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           if (gym.trainerName != null) ...<Widget>[
@@ -172,50 +206,65 @@ class _MyGymTrainerCard extends StatelessWidget {
             const SizedBox(height: 14),
             _InfoLabel(icon: Icons.person_outline, label: l.exMyTrainer),
             const SizedBox(height: 9),
-            Row(
-              children: <Widget>[
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: FigmaColors.iconTint,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.person_outline,
-                    size: 20,
-                    color: FigmaColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTrainerTap,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
                     children: <Widget>[
-                      Text(
-                        gym.trainerName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.ink,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: FigmaColors.iconTint,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.person_outline,
+                          size: 20,
+                          color: FigmaColors.primary,
                         ),
                       ),
-                      Text(
-                        gym.trainerRole ?? l.exTrainerDedicated,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: FigmaColors.textMuted,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              gym.trainerName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                            Text(
+                              gym.trainerRole ?? l.exTrainerDedicated,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: FigmaColors.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: FigmaColors.textFaint,
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ],
           const SizedBox(height: 16),
@@ -423,7 +472,9 @@ class _RecommendedGymSection extends StatelessWidget {
                     itemBuilder: (BuildContext context, int index) {
                       return _GymRecommendationCard(
                         gym: gyms[index],
-                        onTap: null,
+                        onTap: () => context.push(
+                          AppRoutes.gymDetailPath(gyms[index].id),
+                        ),
                       );
                     },
                   ),
@@ -571,7 +622,9 @@ class _RecommendedTrainerSection extends StatelessWidget {
                 itemBuilder: (BuildContext context, int index) {
                   return _TrainerRecommendationCard(
                     gym: trainerGyms[index],
-                    onTap: null,
+                    onTap: () => context.push(
+                      AppRoutes.trainerDetailPath(trainerGyms[index].id),
+                    ),
                   );
                 },
               ),

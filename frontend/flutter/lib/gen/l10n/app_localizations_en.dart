@@ -720,6 +720,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exFindTrainer => 'Find a Trainer';
 
   @override
+  String get exGymDetailTitle => 'Gym Details';
+
+  @override
+  String get exTrainerDetailTitle => 'Trainer Details';
+
+  @override
+  String get exDistance => 'Distance';
+
+  @override
+  String get exRating => 'Rating';
+
+  @override
+  String get exAffiliatedTrainer => 'Affiliated Trainer';
+
+  @override
+  String get exRecommendationReason => 'Why we recommend this trainer';
+
+  @override
+  String get exGymNotFound => 'Couldn\'t find this gym.';
+
+  @override
+  String get exTrainerNotFound => 'Couldn\'t find this trainer.';
+
+  @override
   String get exGymSearchPlaceholder => 'Search by area or gym name';
 
   @override
