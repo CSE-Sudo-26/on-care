@@ -99,8 +99,21 @@ def require_admin(
     return user
 
 
+def require_trainer(
+    user: Annotated[User, Depends(require_auth)],
+) -> User:
+    """트레이너 전용: 유효 토큰 + role == 'trainer'. 데모 폴백 없음(회원 데모 사용자가
+    트레이너 엔드포인트에 새어 들어가지 않도록). 미인증은 require_auth 가 401,
+    회원 계정이면 403."""
+    if user.role != "trainer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="트레이너 권한이 필요합니다.")
+    return user
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
 # 엄격 인증(쓰기/삭제 등 보호 엔드포인트용) — 데모 폴백 없음
 RequireUser = Annotated[User, Depends(require_auth)]
 # 관리자 전용(공공문서 업로드 등)
 RequireAdmin = Annotated[User, Depends(require_admin)]
+# 트레이너 전용(트레이너 앱 엔드포인트)
+RequireTrainer = Annotated[User, Depends(require_trainer)]

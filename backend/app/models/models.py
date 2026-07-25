@@ -37,6 +37,11 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # 관리자 권한(공공문서 업로드 등 민감 엔드포인트 접근). 기본 False.
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 계정 역할: 'member'(회원 앱) | 'trainer'(트레이너 앱). 두 앱은 완전히 분리된
+    # 계정이지만 users 테이블은 공유하고 role 로 구분한다(트레이너↔회원 데이터 공유의 축).
+    role: Mapped[str] = mapped_column(
+        String(20), default="member", server_default="member", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     health_profile: Mapped["HealthProfile | None"] = relationship(
@@ -244,6 +249,170 @@ class Place(Base):
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     kakao_place_id: Mapped[str] = mapped_column(String(50), default="")
+
+
+#
+# ---------------------------------------------------------------------------
+# 트레이너 도메인 — 트레이너↔회원 데이터 공유의 뼈대.
+#
+# 핵심 설계(진짜 공유): "고객"은 별도 복제 테이블이 아니라 실제 회원 User 다.
+# TrainerClient 링크로 트레이너와 회원을 잇고, 트레이너가 보는 고객 식단/운동/
+# 바이탈은 회원이 회원 앱에서 직접 남긴 그 레코드(DietEntry/ExerciseSession/Vital)
+# 를 읽는다. 아래 테이블은 "공유되는 상호작용"(루틴 배정·완료기록·채팅·스케줄)만
+# 담는다. 응답 형태는 트레이너 프론트 drift 계약(TrainerClients/ClientAiRoutines/
+# ClientRoutineHistory/ClientChatMessages/TrainerScheduleEntries)에 정렬한다.
+# ---------------------------------------------------------------------------
+
+
+class TrainerProfile(Base):
+    """트레이너 전용 프로필 — 프론트 seedTrainerProfile / Figma MY 화면 대응.
+
+    회원의 HealthProfile 과 별개(역할이 다른 계정). 이름/이메일은 User 에 있고,
+    여기엔 전문분야·경력·자격증·소속 헬스장 정보만 둔다.
+    """
+    __tablename__ = "trainer_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    phone: Mapped[str] = mapped_column(String(20), default="")
+    specialty: Mapped[str] = mapped_column(String(50), default="")     # 퍼스널 트레이너
+    career_years: Mapped[int] = mapped_column(Integer, default=0)       # 7 → "7년"
+    intro: Mapped[str] = mapped_column(Text, default="")
+    certifications_json: Mapped[str] = mapped_column(Text, default="[]")  # ["생활스포츠지도사 2급", ...]
+    gym_name: Mapped[str] = mapped_column(String(100), default="")
+    gym_address: Mapped[str] = mapped_column(String(300), default="")
+    gym_hours: Mapped[str] = mapped_column(String(50), default="")
+    gym_phone: Mapped[str] = mapped_column(String(20), default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TrainerClient(Base):
+    """트레이너↔회원 담당 링크. 트레이너의 '고객 목록'은 이 링크로 정의된다.
+
+    goal 은 트레이너가 설정한 코칭 목표(예: '혈압 관리 · 체중 감량'). active 는
+    활성/휴면. 한 회원이 한 트레이너에게 중복 배정되지 않도록 (trainer, member) 유일.
+    """
+    __tablename__ = "trainer_clients"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    goal: Mapped[str] = mapped_column(String(200), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("trainer_id", "member_id", name="uq_trainer_client"),
+    )
+
+
+class TrainerRoutine(Base):
+    """트레이너/AI가 회원에게 배정한 루틴 — 프론트 ClientAiRoutines 대응.
+
+    source: 'ai'(AI 추천) | 'trainer'(트레이너 직접 배정). 회원 앱에서 '받은 루틴'
+    으로도 읽힌다(양쪽에서 보이는 공유 데이터).
+    """
+    __tablename__ = "trainer_routines"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    minutes: Mapped[int] = mapped_column(Integer, default=0)
+    type: Mapped[str] = mapped_column(String(20))       # 유산소|근력|스트레칭
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class RoutineHistory(Base):
+    """회원의 운동 완료 기록 — 프론트 ClientRoutineHistory 대응.
+
+    회원이 자율 운동을 완료하거나(회원 앱), 트레이너가 PT 세션을 완료 처리하면
+    (스케줄 완료 루프) 생성된다. date_label 은 저장하지 않고 date 로부터 파생한다.
+    """
+    __tablename__ = "routine_history"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # 트레이너 지도 세션이면 트레이너, 자율 운동이면 NULL.
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    kind_label: Mapped[str] = mapped_column(String(50), default="")  # 'PT 세션 · 트레이너 지도'
+    completion_rate: Mapped[int] = mapped_column(Integer, default=0)  # 0..100
+    exercises_json: Mapped[str] = mapped_column(Text, default="[]")   # ["레그프레스 3세트", ...]
+    client_feedback: Mapped[str] = mapped_column(Text, default="")
+    trainer_note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ChatMessage(Base):
+    """트레이너↔회원 채팅 메시지 — 프론트 ClientChatMessages 대응.
+
+    스레드는 (trainer_id, member_id) 로 식별. sender 는 백엔드 진실값 'trainer'|'member'
+    로 저장하고, 트레이너 API 응답에선 프론트 계약에 맞춰 'client' 로 노출한다.
+    read_at 으로 양쪽 미확인 수를 계산.
+    """
+    __tablename__ = "chat_messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    sender: Mapped[str] = mapped_column(String(20))  # trainer|member
+    body: Mapped[str] = mapped_column(Text)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class TrainerSchedule(Base):
+    """트레이너의 일일 타임라인 슬롯 — 프론트 TrainerScheduleEntries 대응.
+
+    회원과 매칭된 슬롯은 member_id 를 갖고, 상담/신규/공백은 client_name(표시용)만
+    갖는다. status: 예정|완료|공백. program_json: [{name,sets,reps,weight}].
+    """
+    __tablename__ = "trainer_schedule"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    time: Mapped[str] = mapped_column(String(10), default="")  # "10:00"
+    client_name: Mapped[str] = mapped_column(String(100), default="")  # 표시용(상담/신규 포함)
+    type: Mapped[str] = mapped_column(String(30), default="")  # 1:1 PT|상담|...
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(10), default="예정")  # 예정|완료|공백
+    note: Mapped[str] = mapped_column(Text, default="")
+    program_json: Mapped[str] = mapped_column(Text, default="[]")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AuditLog(Base):

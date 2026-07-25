@@ -42,6 +42,10 @@ def init_db() -> None:
         _seed_demo_user()
         _seed_demo_places()
         _seed_demo_notifications()
+        # 트레이너 데모(계정·프로필·담당 회원·링크). 데모 사용자 시드 뒤에 호출해야
+        # 김민수(user-demo) 링크가 성립한다.
+        from app.db.seed_trainer import seed_trainer_domain
+        seed_trainer_domain()
 
     _promote_admins()  # ADMIN_EMAILS 사용자를 관리자로 승격(멱등)
 
