@@ -99,3 +99,19 @@ def test_trainer_token_rejected_on_member_coach(client):
     # 회원 전용 API — 트레이너 토큰은 403(CurrentUser 가 트레이너 차단)
     assert client.get("/v1/me/coach", headers=_h(tt)).status_code == 403
     assert client.get("/v1/me/coach/routines", headers=_h(tt)).status_code == 403
+
+
+def test_inactive_link_member_has_no_current_coach(client):
+    """비활성(휴면) 링크만 가진 회원은 현재 담당 코치가 없다(리뷰 재-#3).
+
+    user-sungho 는 시드가 active=False 로 생성한다(트레이너 로스터엔 휴면으로 보이지만,
+    회원측 '내 코치'로는 선택되지 않아야 한다).
+    """
+    tok = client.post(
+        "/v1/auth/login", data={"username": "sungho@oncare.com", "password": "oncare123"}
+    ).json()["access_token"]
+    assert client.get("/v1/me/coach", headers=_h(tok)).status_code == 404
+    assert client.get("/v1/me/coach/routines", headers=_h(tok)).json() == []
+    assert client.post(
+        "/v1/me/coach/chat", json={"text": "안녕하세요"}, headers=_h(tok)
+    ).status_code == 404

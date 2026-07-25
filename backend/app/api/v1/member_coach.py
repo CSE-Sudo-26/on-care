@@ -68,7 +68,8 @@ def my_chat(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
     limit: int = Query(50, ge=1, le=100),
-    before: str | None = Query(None, description="ISO datetime 커서(이전 페이지)"),
+    before: str | None = Query(None, description="ISO datetime 커서(이전 페이지, 응답 created_at)"),
+    before_id: str | None = Query(None, description="복합 커서 tie-break — 이전 페이지 가장 오래된 id"),
 ) -> list[ChatMessageOut]:
     """담당 트레이너와의 채팅(오래된→최신). 발신자는 회원 관점(me|trainer)."""
     trainer_id = _my_trainer_or_404(db, current_user.id)
@@ -79,7 +80,8 @@ def my_chat(
         except ValueError as e:
             raise HTTPException(status_code=422, detail="before 는 ISO datetime 이어야 합니다.") from e
     return trainer_service.build_chat_thread(
-        db, trainer_id, current_user.id, limit=limit, before=before_dt, viewer="member",
+        db, trainer_id, current_user.id,
+        limit=limit, before=before_dt, before_id=before_id, viewer="member",
     )
 
 

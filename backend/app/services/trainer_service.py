@@ -638,21 +638,25 @@ def complete_session(
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅 / 내 세션) ----
 
 def get_member_trainer_id(db: Session, member_id: str) -> str | None:
-    """회원의 담당 트레이너 id(활성 링크 우선, 없으면 None)."""
+    """회원의 현재 담당 트레이너 id. 활성(active) 링크만 인정하며 없으면 None.
+
+    휴면(비활성) 링크는 '현재 담당'이 아니므로 제외한다(리뷰 재-#3) — 비활성 링크만
+    가진 회원은 코치 조회/발신이 불가(404/빈 목록)해야 한다.
+    """
     return db.scalar(
         select(TrainerClient.trainer_id)
-        .where(TrainerClient.member_id == member_id)
-        .order_by(TrainerClient.active.desc(), TrainerClient.created_at)
+        .where(TrainerClient.member_id == member_id, TrainerClient.active.is_(True))
+        .order_by(TrainerClient.created_at)
         .limit(1)
     )
 
 
 def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
-    """회원의 '내 담당 코치' 요약. 담당이 없으면 None."""
+    """회원의 '내 담당 코치' 요약. 활성 담당이 없으면 None(라우터 404)."""
     link = db.scalar(
         select(TrainerClient)
-        .where(TrainerClient.member_id == member_id)
-        .order_by(TrainerClient.active.desc(), TrainerClient.created_at)
+        .where(TrainerClient.member_id == member_id, TrainerClient.active.is_(True))
+        .order_by(TrainerClient.created_at)
         .limit(1)
     )
     if link is None:
