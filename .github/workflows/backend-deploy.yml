@@ -1,0 +1,56 @@
+name: Backend Deploy (ECR + App Runner)
+
+# main 에 backend 변경이 push 되면 이미지를 빌드→ECR push→App Runner 재배포.
+# 필요한 GitHub Secrets:
+#   AWS_DEPLOY_ROLE_ARN   OIDC 로 assume 할 IAM 역할 ARN(ECR push + App Runner 배포 권한)
+#   APPRUNNER_SERVICE_ARN 배포 대상 App Runner 서비스 ARN
+# 리전/리포명은 아래 env 에서 조정.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # OIDC 로 AWS 자격 취득
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: oncare-backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        working-directory: backend
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${{ github.sha }}"
+          LATEST="$REGISTRY/$ECR_REPOSITORY:latest"
+          docker build -t "$IMAGE" -t "$LATEST" .
+          docker push "$IMAGE"
+          docker push "$LATEST"
+
+      - name: Trigger App Runner deployment
+        run: |
+          aws apprunner start-deployment \
+            --service-arn "${{ secrets.APPRUNNER_SERVICE_ARN }}"
