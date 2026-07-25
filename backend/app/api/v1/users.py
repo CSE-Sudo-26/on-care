@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser, RequireUser
+from app.api.deps import CurrentUser, RequireMember
 from app.core.rate_limit import rate_limit
 from app.services.audit import client_ip, record as audit
 from app.core.security import (
@@ -120,7 +120,7 @@ def get_my_profile(current_user: CurrentUser) -> ProfileView:
 @router.post("/users/me/onboarding", response_model=ProfileView)
 def submit_onboarding(
     payload: OnboardingRequest,
-    user: RequireUser,
+    user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileView:
     """최초 온보딩 저장. 제공된 필드만 반영하고 onboarded=True 로 표시."""
@@ -143,7 +143,7 @@ def submit_onboarding(
 @router.put("/users/me", response_model=ProfileView)
 def update_me(
     payload: ProfileUpdate,
-    user: RequireUser,
+    user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileView:
     """내 프로필 모달 저장: 이름/이메일(중복검사)/전화/생년월일."""
@@ -172,7 +172,7 @@ def update_me(
 @router.put("/users/me/health-goals", response_model=ProfileView)
 def update_health_goals(
     payload: HealthGoalsUpdate,
-    user: RequireUser,
+    user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileView:
     """건강 목표 모달 저장: 목표 체중/혈압/혈당/일일 칼로리·나트륨·당류."""
@@ -186,7 +186,7 @@ def update_health_goals(
 
 @router.delete("/users/me")
 def delete_me(
-    user: RequireUser,
+    user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """회원 탈퇴. FK(ondelete=CASCADE)로 프로필·식단·운동·바이탈·일정·알림·

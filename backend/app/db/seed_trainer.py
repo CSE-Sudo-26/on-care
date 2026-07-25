@@ -8,27 +8,31 @@
 이 회원들이 회원 앱으로 남긴 식단/운동/바이탈을 트레이너가 그대로 읽는다.
 따라서 고객 식단 등을 여기서 복제하지 않는다.
 
-멱등: 모든 삽입은 존재 검사 후 스킵. seed_demo_data 가 켜졌을 때만 호출된다.
-데모 로그인 비밀번호는 아래 DEMO_PASSWORD(운영 시드에는 사용하지 않음).
+멱등: 모든 삽입은 id·이메일 존재 검사 후 스킵한다. 같은 이메일을 가진 다른 id 의
+사용자가 이미 있으면(users.email 유니크) 삽입을 건너뛰어 기동 실패를 막는다.
+seed_demo_data 가 켜졌을 때만 호출된다. 데모 로그인 비밀번호는 설정값
+(DEMO_LOGIN_PASSWORD)에서 읽는다 — 운영에서 데모 시드를 켜면 강한 값이 강제된다.
 """
 from __future__ import annotations
 
 import json
+import logging
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import models
+
+logger = logging.getLogger(__name__)
 
 # 트레이너 데모 계정
 TRAINER_ID = "trainer-demo"
 TRAINER_EMAIL = "trainer@oncare.com"
 TRAINER_NAME = "김트레이너"
-
-# 데모 계정 공통 비밀번호(트레이너 앱 실서버 로그인 데모용). 운영 시드엔 미사용.
-DEMO_PASSWORD = "oncare123"
 
 # 담당 회원: (user_id, email, name, goal, active, sort_order)
 # 김민수는 회원 앱 데모 사용자(user-demo)와 동일 계정을 공유한다.
@@ -39,6 +43,18 @@ _MEMBERS: list[tuple[str, str, str, str, bool, int]] = [
 ]
 
 _CERTIFICATIONS = ["생활스포츠지도사 2급", "퍼스널트레이닝 CPT", "스포츠 영양사"]
+
+
+def _demo_password_hash() -> str:
+    return hash_password(get_settings().demo_login_password)
+
+
+def _email_taken_by_other(db: Session, email: str, user_id: str) -> bool:
+    """이 이메일을 가진 '다른 id' 의 사용자가 이미 있으면 True(유니크 충돌 예방)."""
+    other = db.scalar(
+        select(models.User.id).where(models.User.email == email, models.User.id != user_id)
+    )
+    return other is not None
 
 
 def seed_trainer_domain() -> None:
@@ -52,14 +68,20 @@ def seed_trainer_domain() -> None:
 
 
 def _seed_trainer_account(db: Session) -> None:
-    """트레이너 User + TrainerProfile(멱등)."""
+    """트레이너 User + TrainerProfile(멱등, 이메일 충돌 안전)."""
     trainer = db.scalar(select(models.User).where(models.User.id == TRAINER_ID))
     if trainer is None:
+        if _email_taken_by_other(db, TRAINER_EMAIL, TRAINER_ID):
+            logger.warning(
+                "트레이너 데모 이메일 %s 가 다른 계정에 선점됨 — 트레이너 시드 스킵.",
+                TRAINER_EMAIL,
+            )
+            return
         trainer = models.User(
             id=TRAINER_ID,
             email=TRAINER_EMAIL,
             name=TRAINER_NAME,
-            hashed_password=hash_password(DEMO_PASSWORD),
+            hashed_password=_demo_password_hash(),
             role="trainer",
         )
         db.add(trainer)
@@ -84,33 +106,48 @@ def _seed_trainer_account(db: Session) -> None:
             gym_hours="06:00 – 23:00",
             gym_phone="02-1234-5678",
         ))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 동시 기동/이메일 경합 등 — 부분 커밋 없이 안전하게 롤백(기동은 계속).
+        db.rollback()
+        logger.warning("트레이너 데모 계정 시드 충돌 — 롤백 후 스킵.", exc_info=True)
 
 
 def _seed_member_accounts(db: Session) -> None:
-    """담당 회원 User(멱등). user-demo 는 기존 데모 시드가 만들어 두므로 건너뛴다."""
+    """담당 회원 User(멱등, 이메일 충돌 안전). user-demo 는 기존 데모 시드가 만든다."""
     for user_id, email, name, _goal, _active, _order in _MEMBERS:
-        existing = db.scalar(select(models.User).where(models.User.id == user_id))
-        if existing is not None:
+        if db.scalar(select(models.User.id).where(models.User.id == user_id)) is not None:
+            continue
+        if _email_taken_by_other(db, email, user_id):
+            logger.warning(
+                "회원 데모 이메일 %s 가 다른 계정에 선점됨 — %s 시드 스킵.", email, user_id,
+            )
             continue
         db.add(models.User(
             id=user_id,
             email=email,
             name=name,
-            hashed_password=hash_password(DEMO_PASSWORD),
+            hashed_password=_demo_password_hash(),
             role="member",
         ))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        logger.warning("회원 데모 계정 시드 충돌 — 롤백 후 스킵.", exc_info=True)
 
 
 def _seed_client_links(db: Session) -> None:
-    """트레이너↔회원 담당 링크(멱등)."""
+    """트레이너↔회원 담당 링크(멱등). 회원 계정이 없으면(시드 스킵됨) 링크도 건너뛴다."""
     for user_id, _email, _name, goal, active, order in _MEMBERS:
         link_id = f"tc-{TRAINER_ID}-{user_id}"
-        existing = db.scalar(
-            select(models.TrainerClient).where(models.TrainerClient.id == link_id)
-        )
-        if existing is not None:
+        if db.scalar(select(models.TrainerClient.id).where(models.TrainerClient.id == link_id)):
+            continue
+        # 트레이너/회원 계정이 모두 있어야 FK 가 성립한다.
+        if db.scalar(select(models.User.id).where(models.User.id == TRAINER_ID)) is None:
+            continue
+        if db.scalar(select(models.User.id).where(models.User.id == user_id)) is None:
             continue
         db.add(models.TrainerClient(
             id=link_id,
@@ -120,4 +157,8 @@ def _seed_client_links(db: Session) -> None:
             active=active,
             sort_order=order,
         ))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        logger.warning("담당 링크 시드 충돌 — 롤백 후 스킵.", exc_info=True)

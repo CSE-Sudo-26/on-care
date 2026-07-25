@@ -68,3 +68,82 @@ def test_demo_trainer_client_links_seeded(client, db_session):
     assert len(links) == 3
     member_ids = {l.member_id for l in links}
     assert {"user-demo", "user-jisu", "user-sungho"} <= member_ids
+
+
+# ---- 리뷰 반영: prod 데모 시드 안전장치(순수, DB 불필요) ----
+
+def test_prod_demo_seed_requires_strong_password():
+    import pytest
+
+    from app.core.config import Settings
+
+    common = dict(
+        _env_file=None, env="prod",
+        jwt_secret="a-strong-enough-production-secret-value-01234567",
+        cors_allow_origins="https://app.example.com",
+    )
+    # 기본 데모 비번 + prod + 데모 시드 → 기동 거부
+    with pytest.raises(ValueError):
+        Settings(**common, seed_demo_data=True)
+    # 강한 데모 비번이면 데이터 든 데모 계정을 운영에도 둘 수 있음
+    ok = Settings(**common, seed_demo_data=True, demo_login_password="Str0ng!Demo#Pass")
+    assert ok.demo_login_password == "Str0ng!Demo#Pass"
+    # 데모 시드를 끄면(운영 기본 권장) 당연히 통과
+    off = Settings(**common, seed_demo_data=False)
+    assert off.seed_demo_data is False
+
+
+# ---- 리뷰 반영: 역할 분리(트레이너 토큰의 회원 API 접근 차단) ----
+
+def test_trainer_token_rejected_by_member_api(client):
+    token = _trainer_token(client)
+    h = {"Authorization": f"Bearer {token}"}
+    # 회원 읽기(CurrentUser)와 회원 쓰기(RequireMember) 모두 403
+    assert client.get("/v1/users/me", headers=h).status_code == 403
+    assert client.get("/v1/diet/days/today", headers=h).status_code == 403
+
+
+def test_member_api_still_works_without_token(client):
+    # 데모 폴백(회원)은 그대로 동작 — 미인증 읽기는 회원 데모로 200
+    assert client.get("/v1/users/me").status_code == 200
+
+
+# ---- 리뷰 반영: 시드 멱등성(이메일 충돌·재실행) ----
+
+def test_trainer_seed_is_idempotent(client, db_session):
+    from sqlalchemy import func, select
+
+    from app.db.seed_trainer import TRAINER_ID, seed_trainer_domain
+    from app.models.models import TrainerClient, User
+
+    # 여러 번 재실행해도 계정/링크 수가 늘지 않는다
+    seed_trainer_domain()
+    seed_trainer_domain()
+    links = db_session.scalar(
+        select(func.count()).select_from(TrainerClient)
+        .where(TrainerClient.trainer_id == TRAINER_ID)
+    )
+    assert links == 3
+    trainers = db_session.scalar(
+        select(func.count()).select_from(User).where(User.role == "trainer")
+    )
+    assert trainers >= 1
+
+
+def test_email_conflict_is_detected(client, db_session):
+    """이메일 충돌 감지 로직(시드가 이걸로 안전 스킵). 비파괴 — 임시행만 쓰고 정리."""
+    from app.db.seed_trainer import _email_taken_by_other
+    from app.models.models import User
+
+    db_session.add(User(
+        id="tmp-squatter", email="conflict-test@oncare.com", name="x", role="member",
+    ))
+    db_session.commit()
+    try:
+        # 다른 id 가 같은 이메일을 쓰려 하면 충돌로 감지 → 시드는 스킵한다
+        assert _email_taken_by_other(db_session, "conflict-test@oncare.com", "other-id") is True
+        # 본인 id 는 충돌 아님
+        assert _email_taken_by_other(db_session, "conflict-test@oncare.com", "tmp-squatter") is False
+    finally:
+        db_session.query(User).filter(User.id == "tmp-squatter").delete()
+        db_session.commit()

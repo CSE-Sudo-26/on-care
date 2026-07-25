@@ -50,6 +50,12 @@ def get_current_user(
             user_id = decode_access_token(token)
             user = db.scalar(select(User).where(User.id == user_id))
             if user is not None:
+                # 회원 전용 API. 트레이너 계정은 /trainer/* 를 쓴다(역할 분리).
+                if user.role == "trainer":
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="회원 전용 API 입니다.",
+                    )
                 return user
         except jwt.InvalidTokenError:
             pass
@@ -110,9 +116,22 @@ def require_trainer(
     return user
 
 
+def require_member(
+    user: Annotated[User, Depends(require_auth)],
+) -> User:
+    """회원 전용(쓰기/삭제 등): 유효 토큰 + role == 'member'. 트레이너 계정이면 403.
+    데모 폴백 없음(require_auth 기반). 읽기 폴백이 필요한 엔드포인트는 CurrentUser
+    (get_current_user)가 이미 트레이너를 403 처리한다."""
+    if user.role != "member":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="회원 전용 API 입니다.")
+    return user
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
 # 엄격 인증(쓰기/삭제 등 보호 엔드포인트용) — 데모 폴백 없음
 RequireUser = Annotated[User, Depends(require_auth)]
+# 회원 전용(트레이너 계정 접근 차단) — 데모 폴백 없음
+RequireMember = Annotated[User, Depends(require_member)]
 # 관리자 전용(공공문서 업로드 등)
 RequireAdmin = Annotated[User, Depends(require_admin)]
 # 트레이너 전용(트레이너 앱 엔드포인트)
