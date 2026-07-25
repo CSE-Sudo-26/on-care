@@ -717,6 +717,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exFindGym => 'Find a Gym';
 
   @override
+  String get exFindTrainer => 'Find a Trainer';
+
+  @override
+  String get exGymSearchPlaceholder => 'Search by area or gym name';
+
+  @override
+  String get exTrainerSearchPlaceholder =>
+      'Search by specialty or trainer name';
+
+  @override
+  String get exSortRecommended => 'Recommended';
+
+  @override
+  String get exSortDistance => 'Distance';
+
+  @override
+  String get exSortRating => 'Rating';
+
+  @override
+  String get exSortName => 'Name';
+
+  @override
+  String exResultCount(int count) {
+    return '$count results';
+  }
+
+  @override
+  String get exNoSearchResults => 'No search results.';
+
+  @override
+  String get exTrainersLoadError => 'Couldn\'t load trainers.';
+
+  @override
   String get exGymSearchHint => 'Search by gym or area';
 
   @override

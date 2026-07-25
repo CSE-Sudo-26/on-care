@@ -1448,6 +1448,66 @@ abstract class AppLocalizations {
   /// **'Find a Gym'**
   String get exFindGym;
 
+  /// No description provided for @exFindTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a Trainer'**
+  String get exFindTrainer;
+
+  /// No description provided for @exGymSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by area or gym name'**
+  String get exGymSearchPlaceholder;
+
+  /// No description provided for @exTrainerSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by specialty or trainer name'**
+  String get exTrainerSearchPlaceholder;
+
+  /// No description provided for @exSortRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get exSortRecommended;
+
+  /// No description provided for @exSortDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exSortDistance;
+
+  /// No description provided for @exSortRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exSortRating;
+
+  /// No description provided for @exSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get exSortName;
+
+  /// No description provided for @exResultCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} results'**
+  String exResultCount(int count);
+
+  /// No description provided for @exNoSearchResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No search results.'**
+  String get exNoSearchResults;
+
+  /// No description provided for @exTrainersLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load trainers.'**
+  String get exTrainersLoadError;
+
   /// No description provided for @exGymSearchHint.
   ///
   /// In en, this message translates to:

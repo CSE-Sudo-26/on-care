@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -42,13 +44,13 @@ class GymTab extends ConsumerWidget {
           const SizedBox(height: 28),
           _RecommendedGymSection(
             gymsAsync: nearbyAsync,
-            onMore: onFind,
+            onMore: () => context.push(AppRoutes.gyms),
             onRetry: () => ref.invalidate(nearbyGymsProvider),
           ),
           const SizedBox(height: 28),
           _RecommendedTrainerSection(
             gymsAsync: nearbyAsync,
-            onMore: onFind,
+            onMore: () => context.push(AppRoutes.trainers),
             onRetry: () => ref.invalidate(nearbyGymsProvider),
           ),
         ],
@@ -419,7 +421,10 @@ class _RecommendedGymSection extends StatelessWidget {
                     itemCount: gyms.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (BuildContext context, int index) {
-                      return _GymRecommendationCard(gym: gyms[index]);
+                      return _GymRecommendationCard(
+                        gym: gyms[index],
+                        onTap: null,
+                      );
                     },
                   ),
                 ),
@@ -430,21 +435,17 @@ class _RecommendedGymSection extends StatelessWidget {
 }
 
 class _GymRecommendationCard extends StatelessWidget {
-  const _GymRecommendationCard({required this.gym});
+  const _GymRecommendationCard({required this.gym, required this.onTap});
 
   final Gym gym;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
+    return _RecommendationSurface(
       width: 236,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.hairline),
-      ),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -568,7 +569,10 @@ class _RecommendedTrainerSection extends StatelessWidget {
                 itemCount: trainerGyms.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (BuildContext context, int index) {
-                  return _TrainerRecommendationCard(gym: trainerGyms[index]);
+                  return _TrainerRecommendationCard(
+                    gym: trainerGyms[index],
+                    onTap: null,
+                  );
                 },
               ),
             );
@@ -580,21 +584,17 @@ class _RecommendedTrainerSection extends StatelessWidget {
 }
 
 class _TrainerRecommendationCard extends StatelessWidget {
-  const _TrainerRecommendationCard({required this.gym});
+  const _TrainerRecommendationCard({required this.gym, required this.onTap});
 
   final Gym gym;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
+    return _RecommendationSurface(
       width: 252,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.hairline),
-      ),
+      onTap: onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -663,6 +663,42 @@ class _TrainerRecommendationCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RecommendationSurface extends StatelessWidget {
+  const _RecommendationSurface({
+    required this.width,
+    required this.onTap,
+    required this.child,
+  });
+
+  final double width;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius radius = BorderRadius.circular(16);
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.white,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(color: FigmaColors.hairline),
+            ),
+            child: child,
+          ),
+        ),
       ),
     );
   }

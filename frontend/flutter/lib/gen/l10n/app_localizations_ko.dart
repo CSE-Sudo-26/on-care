@@ -707,6 +707,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exFindGym => '헬스장 찾기';
 
   @override
+  String get exFindTrainer => '트레이너 찾기';
+
+  @override
+  String get exGymSearchPlaceholder => '지역이나 헬스장 이름 검색';
+
+  @override
+  String get exTrainerSearchPlaceholder => '전문 분야나 트레이너 이름 검색';
+
+  @override
+  String get exSortRecommended => '추천순';
+
+  @override
+  String get exSortDistance => '거리순';
+
+  @override
+  String get exSortRating => '평점순';
+
+  @override
+  String get exSortName => '이름순';
+
+  @override
+  String exResultCount(int count) {
+    return '$count개 결과';
+  }
+
+  @override
+  String get exNoSearchResults => '검색 결과가 없어요.';
+
+  @override
+  String get exTrainersLoadError => '트레이너 정보를 불러오지 못했어요.';
+
+  @override
   String get exGymSearchHint => '헬스장, 지역으로 검색';
 
   @override

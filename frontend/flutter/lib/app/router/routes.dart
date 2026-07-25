@@ -13,6 +13,8 @@ class AppRoutes {
   static const String aiCoach = '/ai-coach';
   static const String notification = '/notification';
   static const String place = '/place';
+  static const String gyms = '/gyms';
+  static const String trainers = '/trainers';
 
   // Auth
   static const String signIn = '/auth/sign-in';

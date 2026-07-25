@@ -323,6 +323,23 @@
   "exLogged": "Exercise logged",
   "exSaveFailed": "Couldn't save. Please try again in a moment",
   "exFindGym": "Find a Gym",
+  "exFindTrainer": "Find a Trainer",
+  "exGymSearchPlaceholder": "Search by area or gym name",
+  "exTrainerSearchPlaceholder": "Search by specialty or trainer name",
+  "exSortRecommended": "Recommended",
+  "exSortDistance": "Distance",
+  "exSortRating": "Rating",
+  "exSortName": "Name",
+  "exResultCount": "{count} results",
+  "@exResultCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exNoSearchResults": "No search results.",
+  "exTrainersLoadError": "Couldn't load trainers.",
   "exGymSearchHint": "Search by gym or area",
   "exNearbyGyms": "Nearby Gyms · O2O",
   "exAiAnalysis": "✦ AI analysis",
