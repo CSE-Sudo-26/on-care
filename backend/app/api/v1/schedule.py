@@ -10,16 +10,24 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
 from app.db.session import get_db
 from app.models.models import ScheduleEvent
-from app.schemas.misc_api import ScheduleEventCreate, ScheduleEventOut
+from app.schemas.misc_api import ScheduleEventCreate, ScheduleEventOut, ScheduleEventUpdate
 
 router = APIRouter(tags=["schedule"])
+
+
+def _owned_event(db: Session, user_id: str, event_id: str) -> ScheduleEvent:
+    """본인 소유 일정을 가져오거나 404."""
+    row = db.scalar(select(ScheduleEvent).where(ScheduleEvent.id == event_id))
+    if row is None or row.user_id != user_id:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return row
 
 
 @router.get("/schedule/events", response_model=list[ScheduleEventOut])
@@ -61,3 +69,43 @@ def create_event(
     db.commit()
     db.refresh(row)
     return row
+
+
+@router.get("/schedule/events/{event_id}", response_model=ScheduleEventOut)
+def get_event(
+    event_id: str,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleEvent:
+    """일정 상세(본인 소유만)."""
+    return _owned_event(db, current_user.id, event_id)
+
+
+@router.put("/schedule/events/{event_id}", response_model=ScheduleEventOut)
+def update_event(
+    event_id: str,
+    payload: ScheduleEventUpdate,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleEvent:
+    """일정 상세 수정(제공된 필드만)."""
+    row = _owned_event(db, current_user.id, event_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(row, field, value)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.delete("/schedule/events/{event_id}")
+def delete_event(
+    event_id: str,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """일정 삭제(본인 소유만)."""
+    row = _owned_event(db, current_user.id, event_id)
+    db.delete(row)
+    db.commit()
+    return {"status": "deleted"}

@@ -29,7 +29,23 @@ class ScheduleEventCreate(BaseModel):
     color_hex: str = "#E0F2F7"
 
 
+class ScheduleEventUpdate(BaseModel):
+    """일정 상세 수정(부분). 제공된 필드만 반영."""
+    date: str | None = None
+    time: str | None = None
+    title: str | None = None
+    category: str | None = None
+    emoji: str | None = None
+    color_hex: str | None = None
+
+
 # ---- 알림 ----
+class NotificationAction(BaseModel):
+    """알림에서 바로 갈 수 있는 액션(카테고리에서 파생). 프론트가 target 으로 이동."""
+    label: str         # "기록하러 가기"
+    target: str        # 프론트 라우트 힌트: vitals|schedule|dashboard
+
+
 class NotificationOut(BaseModel):
     id: str
     title: str
@@ -38,6 +54,7 @@ class NotificationOut(BaseModel):
     read: bool
     created_at: datetime
     time_ago: str
+    action: NotificationAction | None = None
 
 
 # ---- 장소 ----
