@@ -51,24 +51,46 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    final clients = ref.watch(clientsProvider).valueOrNull ?? const [];
-    final match = clients.where((c) => c.id == widget.clientId);
-    final client = match.isNotEmpty ? match.first : null;
+    // Distinguish loading / error / loaded instead of flattening them
+    // into an empty list (an unknown id used to render a nameless
+    // "고객" chat and never-ending 식단/운동 spinners — codex review).
+    final clientsAsync = ref.watch(clientsProvider);
+    return clientsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => _StatusView(
+        message: '고객 정보를 불러오지 못했어요',
+        showBack: widget.showBack,
+        // Re-subscribes the stream for a fresh attempt.
+        onRetry: () => ref.invalidate(clientsProvider),
+      ),
+      data: (clients) {
+        final match = clients.where((c) => c.id == widget.clientId);
+        if (match.isEmpty) {
+          // Stale deep link / removed client.
+          return _StatusView(
+            message: '고객을 찾을 수 없어요',
+            showBack: widget.showBack,
+            onRetry: null,
+          );
+        }
+        final client = match.first;
 
-    return Column(
-      children: <Widget>[
-        _Header(
-          client: client,
-          showBack: widget.showBack,
-          onClose: widget.onClose,
-        ),
-        _SubTabs(current: _tab, onChanged: (i) => setState(() => _tab = i)),
-        Expanded(child: _body(client)),
-      ],
+        return Column(
+          children: <Widget>[
+            _Header(
+              client: client,
+              showBack: widget.showBack,
+              onClose: widget.onClose,
+            ),
+            _SubTabs(current: _tab, onChanged: (i) => setState(() => _tab = i)),
+            Expanded(child: _body(client)),
+          ],
+        );
+      },
     );
   }
 
-  Widget _body(TrainerClient? client) {
+  Widget _body(TrainerClient client) {
     // Key the sub-views by client so per-client state (chat draft,
     // scroll position) resets when the split view swaps clients —
     // otherwise a message drafted for one client would linger in
@@ -79,18 +101,57 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
         return ChatView(
           key: key,
           clientId: widget.clientId,
-          clientAvatar: client?.avatar ?? '',
-          clientName: client?.name ?? '고객',
+          clientAvatar: client.avatar,
+          clientName: client.name,
         );
       case 1:
-        return client == null
-            ? const Center(child: CircularProgressIndicator())
-            : DietView(key: key, client: client);
+        return DietView(key: key, client: client);
       default:
-        return client == null
-            ? const Center(child: CircularProgressIndicator())
-            : WorkoutView(key: key, client: client);
+        return WorkoutView(key: key, client: client);
     }
+  }
+}
+
+/// Fallback body for the error and not-found states: a message, an
+/// optional 다시 시도 button, and a way back to the 고객 list.
+class _StatusView extends StatelessWidget {
+  const _StatusView({
+    required this.message,
+    required this.showBack,
+    required this.onRetry,
+  });
+
+  final String message;
+  final bool showBack;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (onRetry != null)
+            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+          if (showBack)
+            TextButton(
+              onPressed: () => context.canPop()
+                  ? context.pop()
+                  : context.go(AppRoutes.clients),
+              child: const Text('고객 목록으로'),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -101,7 +162,7 @@ class _Header extends StatelessWidget {
     required this.onClose,
   });
 
-  final TrainerClient? client;
+  final TrainerClient client;
   final bool showBack;
   final VoidCallback? onClose;
 
@@ -128,29 +189,28 @@ class _Header extends StatelessWidget {
                   ? context.pop()
                   : context.go(AppRoutes.clients),
             ),
-          ClientAvatar(label: client?.avatar ?? '', size: 36),
+          ClientAvatar(label: client.avatar, size: 36),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  client?.name ?? '고객',
+                  client.name,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
                   ),
                 ),
-                if (client != null)
-                  Text(
-                    client!.goal,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      color: AppColors.subtleForeground,
-                      fontWeight: FontWeight.w500,
-                    ),
+                Text(
+                  client.goal,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.subtleForeground,
+                    fontWeight: FontWeight.w500,
                   ),
+                ),
               ],
             ),
           ),
@@ -159,7 +219,7 @@ class _Header extends StatelessWidget {
             height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: (client?.active ?? false)
+              color: client.active
                   ? AppColors.success
                   : AppColors.disabledForeground,
             ),
@@ -199,25 +259,40 @@ class _SubTabs extends StatelessWidget {
         children: <Widget>[
           for (var i = 0; i < _labels.length; i++) ...<Widget>[
             Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(i),
-                child: Container(
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
+              // InkWell (over a Material) instead of GestureDetector so the
+              // sub-tabs are keyboard-focusable and activate on Enter/Space
+              // — desktop/web users can traverse them (CodeRabbit review).
+              //
+              // MergeSemantics folds this into the InkWell's own tap/focus
+              // node so a screen reader announces the selected state on the
+              // node it actually reads (review PR 216).
+              child: MergeSemantics(
+                child: Semantics(
+                  button: true,
+                  selected: current == i,
+                  inMutuallyExclusiveGroup: true,
+                  child: Material(
                     color: current == i
                         ? AppColors.accent
                         : AppColors.inputBackground,
                     borderRadius: const BorderRadius.all(AppRadius.md),
-                  ),
-                  child: Text(
-                    _labels[i],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: current == i
-                          ? AppColors.accentForeground
-                          : AppColors.subtleForeground,
+                    child: InkWell(
+                      onTap: () => onChanged(i),
+                      borderRadius: const BorderRadius.all(AppRadius.md),
+                      child: Container(
+                        height: 34,
+                        alignment: Alignment.center,
+                        child: Text(
+                          _labels[i],
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: current == i
+                                ? AppColors.accentForeground
+                                : AppColors.subtleForeground,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
