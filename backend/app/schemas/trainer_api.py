@@ -65,3 +65,36 @@ class RoutineHistoryOut(BaseModel):
     exercises: list[str]
     client_feedback: str
     trainer_note: str
+
+
+class ChatMessageOut(BaseModel):
+    """채팅 메시지 — 프론트 ClientChatMessage 계약 정렬.
+
+    sender 는 프론트 계약에 맞춰 'trainer'|'client' 로 노출(백엔드 저장값 member→client).
+    """
+    id: str
+    sender: str        # trainer|client
+    body: str
+    time_label: str    # "18:10"
+
+
+class ChatSendRequest(BaseModel):
+    text: str
+
+
+class RoutineOut(BaseModel):
+    """배정 루틴 — 프론트 ClientAiRoutine 계약 정렬."""
+    id: str
+    name: str
+    minutes: int
+    type: str          # 유산소|근력|스트레칭
+    reason: str
+    source: str        # ai|trainer
+
+
+class RoutineAssignRequest(BaseModel):
+    name: str
+    minutes: int = 0
+    type: str          # 유산소|근력|스트레칭
+    reason: str = ""
+    source: str = "trainer"   # trainer|ai

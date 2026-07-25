@@ -8,17 +8,18 @@
 from __future__ import annotations
 
 import json
+import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
     ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerRoutine, User,
 )
 from app.schemas.trainer_api import (
-    ClientDietEntryOut, RoutineHistoryOut, TrainerClientOut,
+    ChatMessageOut, ClientDietEntryOut, RoutineHistoryOut, RoutineOut, TrainerClientOut,
 )
 
 
@@ -278,3 +279,133 @@ def build_client_history(
             trainer_note=r.trainer_note,
         ))
     return out
+
+
+# ---- 채팅 (트레이너↔회원, 양방향 공유 스레드) ----
+
+def _hhmm(ts: datetime) -> str:
+    """created_at → 로컬 HH:MM (KST 서버면 KST)."""
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone().strftime("%H:%M")
+
+
+def _sender_out(sender: str) -> str:
+    """저장값(trainer|member) → 프론트 계약(trainer|client)."""
+    return "client" if sender == "member" else "trainer"
+
+
+def build_chat_thread(db: Session, trainer_id: str, member_id: str) -> list[ChatMessageOut]:
+    """(trainer, member) 스레드 메시지(오래된→최신)."""
+    rows = db.scalars(
+        select(ChatMessage)
+        .where(ChatMessage.trainer_id == trainer_id, ChatMessage.member_id == member_id)
+        .order_by(ChatMessage.created_at, ChatMessage.id)
+    ).all()
+    return [
+        ChatMessageOut(
+            id=r.id, sender=_sender_out(r.sender), body=r.body, time_label=_hhmm(r.created_at),
+        )
+        for r in rows
+    ]
+
+
+def send_message(
+    db: Session, trainer_id: str, member_id: str, sender: str, text: str
+) -> ChatMessageOut:
+    """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
+    build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다."""
+    msg = ChatMessage(
+        id=f"chat-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        sender=sender,
+        body=text,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return ChatMessageOut(
+        id=msg.id, sender=_sender_out(msg.sender), body=msg.body, time_label=_hhmm(msg.created_at),
+    )
+
+
+def mark_thread_read(db: Session, trainer_id: str, member_id: str, reader: str) -> int:
+    """reader 가 상대방이 보낸 미확인 메시지를 읽음 처리. 반환: 읽음 처리된 건수.
+
+    reader='trainer' → 상대(member)가 보낸 미확인 메시지에 read_at 을 채운다.
+    reader='member'  → 상대(trainer)가 보낸 미확인 메시지에 read_at 을 채운다.
+    """
+    other = "member" if reader == "trainer" else "trainer"
+    result = db.execute(
+        update(ChatMessage)
+        .where(
+            ChatMessage.trainer_id == trainer_id,
+            ChatMessage.member_id == member_id,
+            ChatMessage.sender == other,
+            ChatMessage.read_at.is_(None),
+        )
+        .values(read_at=datetime.now(timezone.utc))
+    )
+    db.commit()
+    return result.rowcount or 0
+
+
+def unread_counts_for_trainer(db: Session, trainer_id: str) -> dict[str, int]:
+    """트레이너 기준 회원별 미확인(회원이 보낸 read_at NULL) 메시지 수."""
+    rows = db.execute(
+        select(ChatMessage.member_id, func.count())
+        .where(
+            ChatMessage.trainer_id == trainer_id,
+            ChatMessage.sender == "member",
+            ChatMessage.read_at.is_(None),
+        )
+        .group_by(ChatMessage.member_id)
+    ).all()
+    return {member_id: count for member_id, count in rows}
+
+
+# ---- 루틴 배정 (트레이너/AI → 회원, 양쪽에서 보이는 공유 데이터) ----
+
+def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
+    """이 트레이너가 회원에게 배정한 루틴(정렬순)."""
+    rows = db.scalars(
+        select(TrainerRoutine)
+        .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
+        .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
+    ).all()
+    return [
+        RoutineOut(
+            id=r.id, name=r.name, minutes=r.minutes, type=r.type,
+            reason=r.reason, source=r.source,
+        )
+        for r in rows
+    ]
+
+
+def assign_routine(
+    db: Session, trainer_id: str, member_id: str,
+    name: str, minutes: int, type_: str, reason: str, source: str,
+) -> RoutineOut:
+    """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영."""
+    rt = TrainerRoutine(
+        id=f"rt-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        name=name,
+        minutes=minutes,
+        type=type_,
+        reason=reason,
+        source=source,
+        # 새 루틴을 목록 끝에 붙인다(기존 시드는 0..n).
+        sort_order=int(datetime.now(timezone.utc).timestamp()),
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(rt)
+    db.commit()
+    db.refresh(rt)
+    return RoutineOut(
+        id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
+        reason=rt.reason, source=rt.source,
+    )

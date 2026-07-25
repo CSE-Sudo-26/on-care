@@ -13,8 +13,9 @@ def test_latest_by_member_returns_one_row_per_member(client, db_session):
     from app.models.models import ChatMessage
     from app.services.trainer_service import _latest_by_member
 
-    # user-jisu 스레드에 메시지 5건을 서로 다른 시각으로 삽입(오래된 것 다수)
-    base = datetime.now(timezone.utc) - timedelta(hours=5)
+    # user-jisu 스레드에 메시지 5건을 삽입. 다른 테스트가 남긴 런타임 메시지보다 확실히
+    # 최신이 되도록 미래 시각으로 두어(순서 독립) 마지막(msg4)이 선택되는지 검증한다.
+    base = datetime.now(timezone.utc) + timedelta(minutes=10)
     ids = [f"chat-test-{i}" for i in range(5)]
     for i, cid in enumerate(ids):
         db_session.add(ChatMessage(

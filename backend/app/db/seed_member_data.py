@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -101,6 +101,50 @@ def _valid_member_ids(db: Session) -> set[str]:
     return {r[0] for r in rows}
 
 
+# 회원별 채팅 스레드 (sender: trainer|client, text) — 프론트 seed_data 정렬.
+_CHAT: dict[str, list[tuple[str, str]]] = {
+    "user-demo": [
+        ("trainer", "민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?"),
+        ("client", "찌개 먹을 때 국물을 많이 마셨나봐요 😅"),
+        ("trainer", "그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?"),
+        ("client", "무릎이 가볍게 당기긴 했는데 괜찮아요"),
+        ("trainer", "확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 "
+                    "런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪"),
+    ],
+    "user-jisu": [
+        ("trainer", "지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?"),
+        ("client", "생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨"),
+        ("trainer", "심폐 지구력 올라가는 과정이에요 💪 AI 분석 보니까 당류는 목표 안에 있고, "
+                    "루틴 다음 주부터 근력 비중 늘려볼게요. 식단도 AI 추천 참고해서 업데이트해 드릴게요"),
+    ],
+    "user-sungho": [
+        ("trainer", "성호님, 이번 주 운동 기록이 AI 쪽에서 안 잡히는데 몸은 괜찮으세요?"),
+        ("client", "이번 주 일이 너무 많아서 못 갔어요 😓"),
+        ("trainer", "이해해요! 대신 AI 식단 분석 보니까 나트륨이 좀 높더라고요. 주말에 30분 걷기라도 하면 "
+                    "도움 돼요. AI가 그에 맞는 루틴 다시 짜줬으니까 앱에서 확인해보세요 🙂"),
+    ],
+}
+
+# 회원별 AI 배정 루틴 (name, minutes, type, reason) — 프론트 aiRoutine 정렬.
+_ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
+    "user-demo": [
+        ("저강도 유산소 (걷기)", 30, "유산소", "혈압 안정에 효과적"),
+        ("하체 스트레칭", 15, "스트레칭", "혈액순환 개선"),
+        ("코어 강화", 10, "근력", "기초대사량 향상"),
+    ],
+    "user-jisu": [
+        ("인터벌 런닝", 25, "유산소", "체지방 연소 효율↑"),
+        ("스쿼트 3세트", 15, "근력", "하체 근력 강화"),
+        ("플랭크", 10, "근력", "코어 안정화"),
+    ],
+    "user-sungho": [
+        ("벤치프레스 4세트", 20, "근력", "상체 근력 목표"),
+        ("데드리프트 3세트", 15, "근력", "전신 근력 향상"),
+        ("유산소 쿨다운", 10, "유산소", "나트륨 배출 지원"),
+    ],
+}
+
+
 def seed_member_health_data() -> None:
     db: Session = SessionLocal()
     try:
@@ -111,8 +155,55 @@ def seed_member_health_data() -> None:
                 continue
             _seed_diet(db, user_id)
             _seed_history(db, user_id)
+            _seed_chat(db, user_id)
+            _seed_routines(db, user_id)
     finally:
         db.close()
+
+
+def _seed_chat(db: Session, member_id: str) -> None:
+    """트레이너↔회원 채팅 스레드(멱등, 결정론적 id). 최근 시각으로 정렬되게 시드."""
+    thread = _CHAT.get(member_id)
+    if not thread:
+        return
+    # 스레드가 최근으로 보이도록 base 를 몇 시간 전으로 두고 2분 간격.
+    base = datetime.now(timezone.utc) - timedelta(hours=2)
+    for i, (sender, text) in enumerate(thread):
+        cid = f"seed-chat-{member_id}-{i}"
+        if db.get(models.ChatMessage, cid) is not None:
+            continue
+        db.add(models.ChatMessage(
+            id=cid,
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            sender="member" if sender == "client" else "trainer",
+            body=text,
+            created_at=base + timedelta(minutes=i * 2),
+        ))
+    db.commit()
+
+
+def _seed_routines(db: Session, member_id: str) -> None:
+    """AI 배정 루틴 시드(멱등, 결정론적 id)."""
+    routines = _ROUTINES.get(member_id)
+    if not routines:
+        return
+    for i, (name, minutes, rtype, reason) in enumerate(routines):
+        rid = f"seed-routine-{member_id}-{i}"
+        if db.get(models.TrainerRoutine, rid) is not None:
+            continue
+        db.add(models.TrainerRoutine(
+            id=rid,
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            name=name,
+            minutes=minutes,
+            type=rtype,
+            reason=reason,
+            source="ai",
+            sort_order=i,
+        ))
+    db.commit()
 
 
 def _has_diet_on(db: Session, member_id: str, day: str) -> bool:

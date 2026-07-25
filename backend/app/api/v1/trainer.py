@@ -20,7 +20,8 @@ from app.api.deps import RequireTrainer
 from app.db.session import get_db
 from app.models.models import TrainerClient, TrainerProfile
 from app.schemas.trainer_api import (
-    ClientDietEntryOut, RoutineHistoryOut, TrainerClientOut, TrainerGymOut, TrainerMe,
+    ChatMessageOut, ChatSendRequest, ClientDietEntryOut, RoutineAssignRequest, RoutineOut,
+    RoutineHistoryOut, TrainerClientOut, TrainerGymOut, TrainerMe,
 )
 from app.services import trainer_service
 
@@ -106,3 +107,84 @@ def trainer_client_history(
     """담당 고객의 운동 완료 기록(최신순). 타 트레이너 기록/메모는 제외한다."""
     _require_client(db, trainer.id, member_id)
     return trainer_service.build_client_history(db, member_id, trainer.id)
+
+
+# ---- 채팅 (트레이너↔회원) ----
+
+@router.get("/trainer/chat/unread", response_model=dict[str, int])
+def trainer_chat_unread(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, int]:
+    """회원별 미확인 메시지 수(회원 발신·미읽음). 고객 목록 배지용."""
+    return trainer_service.unread_counts_for_trainer(db, trainer.id)
+
+
+@router.get("/trainer/clients/{member_id}/chat", response_model=list[ChatMessageOut])
+def trainer_client_chat(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[ChatMessageOut]:
+    """담당 고객과의 채팅 스레드(오래된→최신)."""
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_chat_thread(db, trainer.id, member_id)
+
+
+@router.post("/trainer/clients/{member_id}/chat", response_model=ChatMessageOut, status_code=201)
+def trainer_send_chat(
+    member_id: str,
+    payload: ChatSendRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ChatMessageOut:
+    """트레이너가 담당 고객에게 메시지 발신."""
+    _require_client(db, trainer.id, member_id)
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="빈 메시지는 보낼 수 없습니다.")
+    return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)
+
+
+@router.post("/trainer/clients/{member_id}/chat/read")
+def trainer_mark_chat_read(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """트레이너가 해당 고객 스레드를 읽음 처리."""
+    _require_client(db, trainer.id, member_id)
+    n = trainer_service.mark_thread_read(db, trainer.id, member_id, "trainer")
+    return {"marked_read": n}
+
+
+# ---- 루틴 배정 (트레이너/AI → 회원) ----
+
+@router.get("/trainer/clients/{member_id}/routines", response_model=list[RoutineOut])
+def trainer_client_routines(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RoutineOut]:
+    """담당 고객에게 배정된 루틴 목록."""
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_routines(db, member_id, trainer.id)
+
+
+@router.post("/trainer/clients/{member_id}/routines", response_model=RoutineOut, status_code=201)
+def trainer_assign_routine(
+    member_id: str,
+    payload: RoutineAssignRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """담당 고객에게 루틴 배정(트레이너 직접 또는 AI 추천)."""
+    _require_client(db, trainer.id, member_id)
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="루틴 이름이 필요합니다.")
+    source = payload.source if payload.source in ("trainer", "ai") else "trainer"
+    return trainer_service.assign_routine(
+        db, trainer.id, member_id,
+        name=payload.name.strip(), minutes=payload.minutes,
+        type_=payload.type, reason=payload.reason, source=source,
+    )
