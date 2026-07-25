@@ -159,6 +159,8 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+# 고정 수치 검증은 test_diet 가 건드리지 않는 회원(user-jisu)으로 한다 — user-demo 는
+# 데모 폴백 대상이라 다른 테스트가 오늘 식단을 추가해 합계가 흔들린다(리뷰 PR 250-#2).
 def test_trainer_clients_roster_aggregates_real_diet(client):
     token = _trainer_token(client)
     r = client.get("/v1/trainer/clients", headers=_auth(token))
@@ -166,36 +168,70 @@ def test_trainer_clients_roster_aggregates_real_diet(client):
     clients = {c["id"]: c for c in r.json()}
     assert {"user-demo", "user-jisu", "user-sungho"} <= set(clients)
 
-    minsu = clients["user-demo"]
-    # 오늘 3끼 합(회원 실데이터에서 집계): 315+620+485=1420, 380+890+830=2100, 당류 45
-    assert minsu["calories"] == 1420
-    assert minsu["sodium_mg"] == 2100
-    assert minsu["sugar_g"] == 45
-    assert minsu["name"] == "김민수"
-    assert len(minsu["sodium_week"]) == 7
-    assert minsu["sodium_week"][-1] == 2100  # 오늘 = 3끼 나트륨 합
-    assert len(minsu["week_completion"]) == 7
+    jisu = clients["user-jisu"]
+    # 오늘 3끼 합(회원 실데이터 집계): 280+750+650=1680, 200+980+620=1800, 당류 38
+    assert jisu["calories"] == 1680
+    assert jisu["sodium_mg"] == 1800
+    assert jisu["sugar_g"] == 38
+    assert jisu["name"] == "이지수"
+    assert len(jisu["sodium_week"]) == 7
+    assert jisu["sodium_week"][-1] == 1800  # 오늘 = 3끼 나트륨 합
+    assert len(jisu["week_completion"]) == 7
 
 
 def test_trainer_client_diet_maps_member_meals(client):
     token = _trainer_token(client)
-    r = client.get("/v1/trainer/clients/user-demo/diet", headers=_auth(token))
+    r = client.get("/v1/trainer/clients/user-jisu/diet", headers=_auth(token))
     assert r.status_code == 200, r.text
     meals = r.json()
     assert len(meals) == 3
     assert meals[0]["meal"] == "아침"
-    assert "오트밀" in meals[0]["items"]
-    assert meals[0]["calories"] == 315
+    assert "그릭요거트" in meals[0]["items"]
+    assert meals[0]["calories"] == 280
 
 
 def test_trainer_client_history_newest_first(client):
     token = _trainer_token(client)
-    r = client.get("/v1/trainer/clients/user-demo/history", headers=_auth(token))
+    r = client.get("/v1/trainer/clients/user-jisu/history", headers=_auth(token))
     assert r.status_code == 200, r.text
     hist = r.json()
     assert len(hist) >= 1
-    assert hist[0]["label"] == "PT 세션 · 트레이너 지도"
+    assert hist[0]["label"] == "AI 루틴 · 자율 운동"
     assert "(오늘)" in hist[0]["date_label"]
+
+
+def test_history_excludes_other_trainers_records(client, db_session):
+    """다른 트레이너가 작성한 기록/메모는 이 트레이너의 조회에 노출되지 않는다(PR 250-#1)."""
+    from datetime import date
+
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import RoutineHistory, User
+    from app.services.trainer_service import build_client_history
+
+    db_session.add(User(
+        id="trainer-other", email="other-t@oncare.com", name="타트레이너", role="trainer",
+    ))
+    db_session.flush()  # RoutineHistory.trainer_id FK 성립을 위해 User 를 먼저 반영
+    db_session.add(RoutineHistory(
+        id="hist-other-secret", member_id="user-jisu", trainer_id="trainer-other",
+        date=date.today().isoformat(), kind_label="PT 세션 · 타트레이너",
+        completion_rate=100, exercises_json="[]",
+        client_feedback="", trainer_note="비밀 메모",
+    ))
+    db_session.commit()
+    try:
+        mine = build_client_history(db_session, "user-jisu", TRAINER_ID)
+        assert all(h.trainer_note != "비밀 메모" for h in mine)
+        assert all(h.label != "PT 세션 · 타트레이너" for h in mine)
+        # 타 트레이너 본인 조회에는 보인다(격리 확인)
+        theirs = build_client_history(db_session, "user-jisu", "trainer-other")
+        assert any(h.trainer_note == "비밀 메모" for h in theirs)
+    finally:
+        db_session.query(RoutineHistory).filter(
+            RoutineHistory.id == "hist-other-secret"
+        ).delete()
+        db_session.query(User).filter(User.id == "trainer-other").delete()
+        db_session.commit()
 
 
 def test_trainer_cannot_read_unassigned_client(client):

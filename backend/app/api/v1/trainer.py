@@ -103,6 +103,6 @@ def trainer_client_history(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> list[RoutineHistoryOut]:
-    """담당 고객의 운동 완료 기록(최신순)."""
+    """담당 고객의 운동 완료 기록(최신순). 타 트레이너 기록/메모는 제외한다."""
     _require_client(db, trainer.id, member_id)
-    return trainer_service.build_client_history(db, member_id)
+    return trainer_service.build_client_history(db, member_id, trainer.id)

@@ -8,9 +8,10 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.models import (
@@ -113,51 +114,76 @@ def _week_completion(hist_rows: list[RoutineHistory], monday: date) -> list[int]
     return out
 
 
+def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]):
+    """(trainer, member) 스레드별 최신 1건을 member_id → row 로. 배치 1쿼리."""
+    rows = db.scalars(
+        select(model)
+        .where(model.trainer_id == trainer_id, model.member_id.in_(member_ids))
+        .order_by(model.created_at.desc())
+    ).all()
+    latest: dict = {}
+    for r in rows:
+        latest.setdefault(r.member_id, r)  # 최신순 정렬 → 첫 등장이 최신
+    return latest
+
+
 def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
-    """트레이너의 담당 고객 로스터. 각 카드의 영양 지표는 회원 실데이터에서 집계."""
+    """트레이너의 담당 고객 로스터. 각 카드의 영양 지표는 회원 실데이터에서 집계.
+
+    쿼리는 고객 수와 무관하게 상수개(배치)로 유지하고, 식단/기록은 필요한 창(최근 7일 /
+    이번 주)만 로드한다(N+1·무제한 이력 로드 방지, 리뷰 PR 250-#3).
+    """
     links = db.scalars(
         select(TrainerClient)
         .where(TrainerClient.trainer_id == trainer_id)
         .order_by(TrainerClient.sort_order, TrainerClient.created_at)
     ).all()
+    if not links:
+        return []
+    member_ids = [l.member_id for l in links]
 
     today = _today()
     today_str = today.isoformat()
     monday = today - timedelta(days=today.weekday())
+    week_ago_str = (today - timedelta(days=6)).isoformat()
+    monday_str = monday.isoformat()
+
+    # 최근 7일 식단(오늘 합계 + 나트륨 추세) — 전 고객 배치, 날짜 한정
+    diet_by_member: dict[str, list[DietEntry]] = defaultdict(list)
+    for e in db.scalars(
+        select(DietEntry).where(
+            DietEntry.user_id.in_(member_ids), DietEntry.date >= week_ago_str
+        )
+    ).all():
+        diet_by_member[e.user_id].append(e)
+
+    # 이번 주 운동기록(완료율용) — 트레이너 소유(PT) or 자율(NULL)만, 날짜 한정.
+    # 타 트레이너의 기록은 제외한다(메모 노출 방지, 리뷰 PR 250-#1).
+    hist_by_member: dict[str, list[RoutineHistory]] = defaultdict(list)
+    for h in db.scalars(
+        select(RoutineHistory).where(
+            RoutineHistory.member_id.in_(member_ids),
+            RoutineHistory.date >= monday_str,
+            or_(RoutineHistory.trainer_id.is_(None), RoutineHistory.trainer_id == trainer_id),
+        )
+    ).all():
+        hist_by_member[h.member_id].append(h)
+
+    last_msg_by = _latest_by_member(db, ChatMessage, trainer_id, member_ids)
+    last_rt_by = _latest_by_member(db, TrainerRoutine, trainer_id, member_ids)
+    members = {
+        m.id: m for m in db.scalars(select(User).where(User.id.in_(member_ids))).all()
+    }
 
     out: list[TrainerClientOut] = []
     for link in links:
-        member = db.get(User, link.member_id)
+        member = members.get(link.member_id)
         if member is None:
             continue
-
-        diet_rows = db.scalars(
-            select(DietEntry).where(DietEntry.user_id == link.member_id)
-        ).all()
-        hist_rows = db.scalars(
-            select(RoutineHistory).where(RoutineHistory.member_id == link.member_id)
-        ).all()
-
+        diet_rows = diet_by_member.get(link.member_id, [])
         cal, na, sugar = _today_totals(diet_rows, today_str)
-
-        last_msg = db.scalar(
-            select(ChatMessage)
-            .where(
-                ChatMessage.trainer_id == trainer_id,
-                ChatMessage.member_id == link.member_id,
-            )
-            .order_by(ChatMessage.created_at.desc())
-            .limit(1)
-        )
-        last_rt = db.scalar(
-            select(TrainerRoutine)
-            .where(
-                TrainerRoutine.trainer_id == trainer_id,
-                TrainerRoutine.member_id == link.member_id,
-            )
-            .order_by(TrainerRoutine.created_at.desc())
-            .limit(1)
-        )
+        last_msg = last_msg_by.get(link.member_id)
+        last_rt = last_rt_by.get(link.member_id)
 
         out.append(TrainerClientOut(
             id=link.member_id,
@@ -174,7 +200,7 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
                 relative_day_label(last_rt.created_at.date().isoformat())
                 if last_rt else "-"
             ),
-            week_completion=_week_completion(hist_rows, monday),
+            week_completion=_week_completion(hist_by_member.get(link.member_id, []), monday),
             sodium_week=_sodium_week(diet_rows, today),
         ))
     return out
@@ -204,12 +230,23 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
     return out
 
 
-def build_client_history(db: Session, member_id: str) -> list[RoutineHistoryOut]:
-    """회원의 운동 완료 기록(최신순)."""
+def build_client_history(
+    db: Session, member_id: str, trainer_id: str, limit: int = 60
+) -> list[RoutineHistoryOut]:
+    """회원의 운동 완료 기록(최신순).
+
+    이 트레이너에게 보이는 기록만 반환한다: 자율 운동(trainer_id NULL) + 이 트레이너가
+    지도한 세션(trainer_id == 본인). 타 트레이너가 작성한 메모(trainer_note)는 노출하지
+    않는다(리뷰 PR 250-#1). 오래된 이력 무제한 로드를 막기 위해 limit 로 제한.
+    """
     rows = db.scalars(
         select(RoutineHistory)
-        .where(RoutineHistory.member_id == member_id)
+        .where(
+            RoutineHistory.member_id == member_id,
+            or_(RoutineHistory.trainer_id.is_(None), RoutineHistory.trainer_id == trainer_id),
+        )
         .order_by(RoutineHistory.date.desc(), RoutineHistory.created_at.desc())
+        .limit(limit)
     ).all()
 
     out: list[RoutineHistoryOut] = []
