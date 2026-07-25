@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     # 토큰 없이 접근 시 데모 사용자로 폴백(개발 편의). 운영(prod)에서는 항상 비활성.
     allow_demo_fallback: bool = True
 
+    # --- 장소(O2O) ---
+    # 카카오 Local REST 키. 있으면 실검색, 없으면 시드 폴백(recognizer 팩토리와 같은 철학).
+    kakao_rest_api_key: str = ""
+    # auto: 키 있으면 kakao, 없으면 seed. 강제하려면 kakao|seed.
+    places_provider: str = "auto"     # auto | kakao | seed
+    kakao_timeout_seconds: float = 3.0
+
     # --- AI 엔진 ---
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo
     # 인식 후 공공 식품영양성분 DB 로 영양 수치 보강(정확도↑). 순수 LLM 비교실험 시 false.
