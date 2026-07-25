@@ -73,11 +73,14 @@ class ChatMessageOut(BaseModel):
     """채팅 메시지 — 프론트 ClientChatMessage 계약 정렬.
 
     sender 는 프론트 계약에 맞춰 'trainer'|'client' 로 노출(백엔드 저장값 member→client).
+    created_at(ISO)은 프론트 createdAt 이자 페이지네이션 커서다. 이전 페이지는 이 스레드
+    가장 오래된 메시지의 (created_at, id)를 before/before_id 로 넘겨 요청한다.
     """
     id: str
     sender: str        # trainer|client
     body: str
     time_label: str    # "18:10"
+    created_at: str    # ISO datetime — 커서/정렬용
 
 
 class ChatSendRequest(BaseModel):

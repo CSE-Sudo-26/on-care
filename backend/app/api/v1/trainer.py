@@ -128,10 +128,13 @@ def trainer_client_chat(
     db: Annotated[Session, Depends(get_db)],
     limit: int = Query(50, ge=1, le=100, description="한 번에 가져올 최신 메시지 수"),
     before: str | None = Query(
-        None, description="ISO datetime 커서 — 이보다 오래된 메시지만(페이지네이션)"
+        None, description="ISO datetime 커서 — 이전 페이지 요청(응답 created_at 사용)"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 이전 페이지 가장 오래된 메시지의 id"
     ),
 ) -> list[ChatMessageOut]:
-    """담당 고객과의 채팅 스레드(오래된→최신). 기본 최신 50건, before 로 이전 페이지."""
+    """담당 고객과의 채팅 스레드(오래된→최신). 기본 최신 50건, (before, before_id)로 이전 페이지."""
     _require_client(db, trainer.id, member_id)
     before_dt: datetime | None = None
     if before:
@@ -142,7 +145,7 @@ def trainer_client_chat(
                 status_code=422, detail="before 는 ISO datetime 형식이어야 합니다."
             ) from e
     return trainer_service.build_chat_thread(
-        db, trainer.id, member_id, limit=limit, before=before_dt
+        db, trainer.id, member_id, limit=limit, before=before_dt, before_id=before_id
     )
 
 

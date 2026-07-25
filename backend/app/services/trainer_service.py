@@ -12,7 +12,7 @@ import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
@@ -295,28 +295,42 @@ def _sender_out(sender: str) -> str:
     return "client" if sender == "member" else "trainer"
 
 
+def _iso(ts: datetime) -> str:
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc).isoformat()
+
+
 def build_chat_thread(
     db: Session, trainer_id: str, member_id: str,
-    limit: int = 50, before: datetime | None = None,
+    limit: int = 50, before: datetime | None = None, before_id: str | None = None,
 ) -> list[ChatMessageOut]:
     """(trainer, member) 스레드 메시지(오래된→최신).
 
-    무제한 로드를 막기 위해 기본 최신 `limit`건만 가져온다(리뷰 PR 251-#3). `before`
-    (created_at 커서)를 주면 그보다 오래된 이전 페이지를 반환한다. DB 에서는 최신순으로
-    limit 만큼 조회한 뒤, 화면 표시용으로 오래된→최신으로 뒤집어 반환한다.
+    무제한 로드를 막기 위해 기본 최신 `limit`건만 가져온다(리뷰 PR 251-#3). 이전 페이지는
+    가장 오래된 메시지의 (created_at, id)를 (before, before_id) 커서로 넘겨 요청한다.
+    같은 created_at 이 여러 건이어도 누락되지 않도록 (created_at, id) 복합 커서를 쓴다
+    (리뷰 재-#1). 응답의 created_at 으로 클라이언트가 다음 커서를 만든다.
     """
     q = select(ChatMessage).where(
         ChatMessage.trainer_id == trainer_id, ChatMessage.member_id == member_id
     )
     if before is not None:
-        q = q.where(ChatMessage.created_at < before)
+        if before_id is not None:
+            # (created_at, id) < (before, before_id) — 동일 created_at 경계도 안전하게 통과
+            q = q.where(
+                tuple_(ChatMessage.created_at, ChatMessage.id) < (before, before_id)
+            )
+        else:
+            q = q.where(ChatMessage.created_at < before)
     rows = list(db.scalars(
         q.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(limit)
     ).all())
     rows.reverse()  # 최신 limit건을 오래된→최신 순으로
     return [
         ChatMessageOut(
-            id=r.id, sender=_sender_out(r.sender), body=r.body, time_label=_hhmm(r.created_at),
+            id=r.id, sender=_sender_out(r.sender), body=r.body,
+            time_label=_hhmm(r.created_at), created_at=_iso(r.created_at),
         )
         for r in rows
     ]
@@ -339,7 +353,8 @@ def send_message(
     db.commit()
     db.refresh(msg)
     return ChatMessageOut(
-        id=msg.id, sender=_sender_out(msg.sender), body=msg.body, time_label=_hhmm(msg.created_at),
+        id=msg.id, sender=_sender_out(msg.sender), body=msg.body,
+        time_label=_hhmm(msg.created_at), created_at=_iso(msg.created_at),
     )
 
 

@@ -177,3 +177,58 @@ def test_chat_thread_is_paginated(client, db_session):
             ChatMessage.id.in_(ids)
         ).delete(synchronize_session=False)
         db_session.commit()
+
+
+def test_chat_pagination_two_pages_contiguous(client, db_session):
+    """(created_at, id) 복합 커서로 연속 페이지 조회 시 중복·누락 없이 전체가 이어진다."""
+    from datetime import datetime, timedelta, timezone
+    from uuid import uuid4
+
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import ChatMessage, TrainerClient, User
+
+    mid = f"pgmember-{uuid4().hex[:6]}"
+    db_session.add(User(id=mid, email=f"{mid}@oncare.com", name="페이지회원", role="member"))
+    db_session.flush()
+    db_session.add(TrainerClient(
+        id=f"tc-pg-{mid}", trainer_id=TRAINER_ID, member_id=mid,
+        goal="x", active=True, sort_order=999,
+    ))
+    base = datetime(2021, 1, 1, tzinfo=timezone.utc)
+    ids = [f"pgc-{mid}-{i:03d}" for i in range(60)]
+    for i, cid in enumerate(ids):
+        db_session.add(ChatMessage(
+            id=cid, trainer_id=TRAINER_ID, member_id=mid, sender="member",
+            body=f"m{i}", created_at=base + timedelta(minutes=i // 2),  # 짝수쌍은 같은 created_at
+        ))
+    db_session.commit()
+    try:
+        token = _tok(client)
+        url = f"/v1/trainer/clients/{mid}/chat"
+        p1 = client.get(url, params={"limit": 25}, headers=_h(token)).json()
+        assert len(p1) == 25
+        # 이전 페이지 커서 = 이번 페이지 가장 오래된 메시지(p1[0]) 의 (created_at, id).
+        # params= 로 넘겨야 타임존 오프셋 '+' 가 올바로 인코딩된다.
+        cur = p1[0]
+        p2 = client.get(
+            url,
+            params={"limit": 25, "before": cur["created_at"], "before_id": cur["id"]},
+            headers=_h(token),
+        ).json()
+        assert len(p2) == 25
+        cur2 = p2[0]
+        p3 = client.get(
+            url,
+            params={"limit": 25, "before": cur2["created_at"], "before_id": cur2["id"]},
+            headers=_h(token),
+        ).json()
+        assert len(p3) == 10  # 60 = 25 + 25 + 10
+
+        got = [m["id"] for m in p3] + [m["id"] for m in p2] + [m["id"] for m in p1]
+        assert len(set(got)) == 60          # 중복 없음
+        assert set(got) == set(ids)          # 누락 없음
+    finally:
+        db_session.query(ChatMessage).filter(ChatMessage.member_id == mid).delete()
+        db_session.query(TrainerClient).filter(TrainerClient.member_id == mid).delete()
+        db_session.query(User).filter(User.id == mid).delete()
+        db_session.commit()
