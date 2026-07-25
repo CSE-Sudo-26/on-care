@@ -151,3 +151,60 @@ def test_email_conflict_is_detected(client, db_session):
     finally:
         db_session.query(User).filter(User.id == "tmp-squatter").delete()
         db_session.commit()
+
+
+# ---- #250: 로스터 + 회원 실데이터 공유 ----
+
+def _auth(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_trainer_clients_roster_aggregates_real_diet(client):
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/clients", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    clients = {c["id"]: c for c in r.json()}
+    assert {"user-demo", "user-jisu", "user-sungho"} <= set(clients)
+
+    minsu = clients["user-demo"]
+    # 오늘 3끼 합(회원 실데이터에서 집계): 315+620+485=1420, 380+890+830=2100, 당류 45
+    assert minsu["calories"] == 1420
+    assert minsu["sodium_mg"] == 2100
+    assert minsu["sugar_g"] == 45
+    assert minsu["name"] == "김민수"
+    assert len(minsu["sodium_week"]) == 7
+    assert minsu["sodium_week"][-1] == 2100  # 오늘 = 3끼 나트륨 합
+    assert len(minsu["week_completion"]) == 7
+
+
+def test_trainer_client_diet_maps_member_meals(client):
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/clients/user-demo/diet", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    meals = r.json()
+    assert len(meals) == 3
+    assert meals[0]["meal"] == "아침"
+    assert "오트밀" in meals[0]["items"]
+    assert meals[0]["calories"] == 315
+
+
+def test_trainer_client_history_newest_first(client):
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/clients/user-demo/history", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    hist = r.json()
+    assert len(hist) >= 1
+    assert hist[0]["label"] == "PT 세션 · 트레이너 지도"
+    assert "(오늘)" in hist[0]["date_label"]
+
+
+def test_trainer_cannot_read_unassigned_client(client):
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/clients/user-nobody/diet", headers=_auth(token))
+    assert r.status_code == 404
+
+
+def test_member_cannot_read_roster(client):
+    token = _member_token(client)
+    r = client.get("/v1/trainer/clients", headers=_auth(token))
+    assert r.status_code == 403
