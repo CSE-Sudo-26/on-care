@@ -1541,7 +1541,7 @@ abstract class AppLocalizations {
   /// No description provided for @exResultCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} results'**
+  /// **'{count, plural, =1{1 result} other{{count} results}}'**
   String exResultCount(int count);
 
   /// No description provided for @exNoSearchResults.

@@ -764,7 +764,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String exResultCount(int count) {
-    return '$count results';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return '$_temp0';
   }
 
   @override

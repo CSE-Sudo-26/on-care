@@ -192,7 +192,7 @@ class _GymDetails extends StatelessWidget {
                 ),
               ),
             ],
-            if (gym.trainerName != null) ...<Widget>[
+            if (gym.trainerName?.isNotEmpty ?? false) ...<Widget>[
               const SizedBox(height: 12),
               _DetailSection(
                 icon: Icons.person_outline,

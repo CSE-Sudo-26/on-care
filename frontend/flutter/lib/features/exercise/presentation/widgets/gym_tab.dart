@@ -86,9 +86,9 @@ class _MyGymTrainerSection extends StatelessWidget {
               selectedSlot: selectedSlot,
               onSlot: onSlot,
               onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
-              onTrainerTap: gym.trainerName == null
-                  ? null
-                  : () => context.push(AppRoutes.trainerDetailPath(gym.id)),
+              onTrainerTap: gym.trainerName?.isNotEmpty ?? false
+                  ? () => context.push(AppRoutes.trainerDetailPath(gym.id))
+                  : null,
             ),
     );
   }
@@ -200,7 +200,7 @@ class _MyGymTrainerCard extends StatelessWidget {
               ),
             ),
           ),
-          if (gym.trainerName != null) ...<Widget>[
+          if (gym.trainerName?.isNotEmpty ?? false) ...<Widget>[
             const SizedBox(height: 16),
             const Divider(height: 1, color: FigmaColors.hairline),
             const SizedBox(height: 14),
