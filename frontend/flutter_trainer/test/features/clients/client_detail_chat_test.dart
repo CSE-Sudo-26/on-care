@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
@@ -8,6 +10,35 @@ import 'package:oncare_trainer/features/clients/data/repositories/chat_repositor
 import 'package:oncare_trainer/features/clients/domain/entities/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// Delays every insert so tests can act while a send is in flight.
+class _SlowChatRepository extends ChatRepository {
+  const _SlowChatRepository(super.db);
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    return super.sendTrainerMessage(clientId: clientId, text: text);
+  }
+}
+
+/// Blocks on a caller-controlled future so the test can decide exactly
+/// when (and whether) the send fails — used to fail AFTER the widget is
+/// disposed, deterministically exercising the catch path.
+class _ControllableChatRepository extends ChatRepository {
+  const _ControllableChatRepository(super.db, this.gate);
+
+  final Future<void> gate;
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) => gate;
+}
 
 void main() {
   group('ChatRepository', () {
@@ -96,6 +127,100 @@ void main() {
       await settle(tester);
 
       expect(find.text('다음 세션 때 봐요!'), findsOneWidget);
+    });
+
+    testWidgets('mashing send while an insert is in flight stores one '
+        'message', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWith(
+            (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+
+      await tester.enterText(find.byType(TextField), '중복 방지 확인');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Second tap lands while the first insert is still awaiting.
+      await tester.tap(
+        find.byIcon(Icons.send),
+        warnIfMissed: false, // button is disabled mid-flight
+      );
+      await settle(tester);
+
+      expect(find.text('중복 방지 확인'), findsOneWidget);
+    });
+
+    testWidgets('leaving the screen during a slow send does not throw', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWith(
+            (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+
+      await tester.enterText(find.byType(TextField), '이탈 중 전송');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Navigate back while the insert is still in flight — the widget
+      // is disposed before the await completes.
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      await settle(tester);
+
+      // Back on the list without a disposed-controller exception.
+      expect(find.text('고객 관리'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a send that FAILS after the screen is disposed does not '
+        'touch a disposed messenger', (tester) async {
+      final gate = Completer<void>();
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWith(
+            (ref) => _ControllableChatRepository(
+              ref.watch(appDatabaseProvider),
+              gate.future,
+            ),
+          ),
+        ],
+      );
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+
+      await tester.enterText(find.byType(TextField), '이탈 중 실패');
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Fully leave the chat (route popped + ChatView disposed) BEFORE
+      // the send resolves.
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      await settle(tester);
+      expect(find.text('고객 관리'), findsOneWidget);
+
+      // Now fail — the catch must bail on !mounted, not show a snackbar.
+      gate.completeError(Exception('send failed'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
     });
 
     testWidgets('switching sub-tabs shows the 식단 and 운동기록 views', (
