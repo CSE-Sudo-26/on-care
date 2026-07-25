@@ -84,10 +84,31 @@ _HISTORY: dict[str, list[tuple[int, str, list[str], str, str]]] = {
 }
 
 
+def _valid_member_ids(db: Session) -> set[str]:
+    """트레이너 데모에 실제로 링크되고 회원 역할인 member_id 집합.
+
+    이메일 충돌 등으로 회원 계정/링크가 만들어지지 않았으면(#249 시드가 스킵) 그 회원의
+    건강 데이터를 넣으면 FK 오류로 기동이 죽는다. 유효한 회원만 시드 대상으로 삼는다.
+    """
+    rows = db.execute(
+        select(models.TrainerClient.member_id)
+        .join(models.User, models.User.id == models.TrainerClient.member_id)
+        .where(
+            models.TrainerClient.trainer_id == TRAINER_ID,
+            models.User.role == "member",
+        )
+    ).all()
+    return {r[0] for r in rows}
+
+
 def seed_member_health_data() -> None:
     db: Session = SessionLocal()
     try:
+        valid = _valid_member_ids(db)
         for user_id, *_ in _MEMBERS:
+            if user_id not in valid:
+                # 계정/링크 없음(이메일 충돌 등) → FK 오류 방지 위해 건너뛴다.
+                continue
             _seed_diet(db, user_id)
             _seed_history(db, user_id)
     finally:
