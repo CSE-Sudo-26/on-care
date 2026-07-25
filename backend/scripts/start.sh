@@ -5,8 +5,8 @@
 # App Runner/프록시 뒤이므로 --proxy-headers 로 X-Forwarded-Proto 를 신뢰(HTTPS 판정).
 set -euo pipefail
 
-echo "[start] alembic upgrade head"
-alembic upgrade head
+echo "[start] migrate (advisory-lock serialized)"
+python scripts/migrate.py
 
 echo "[start] launching uvicorn on :8000"
 exec uvicorn app.main:app \

@@ -10,8 +10,14 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
                                                         └── RDS PostgreSQL 15+ (CREATE EXTENSION vector)
 ```
 
-기동 흐름: 컨테이너가 `scripts/start.sh` 로 **`alembic upgrade head` → uvicorn(--proxy-headers)**.
+기동 흐름: 컨테이너가 `scripts/start.sh` 로 **마이그레이션 → uvicorn(--proxy-headers)**.
+마이그레이션은 `scripts/migrate.py` 가 **PostgreSQL advisory lock 으로 직렬화**하므로, App Runner
+가 여러 인스턴스를 동시에 띄워도 하나만 마이그레이션하고 나머지는 대기 후 no-op 이다(리뷰 #3).
 운영은 `AUTO_CREATE_TABLES=false` 로 두고 Alembic 을 스키마의 유일한 소스로 삼는다.
+
+**배포 게이팅**: `.github/workflows/backend-deploy.yml` 은 **"Backend CI" 가 성공**했을 때만
+(workflow_run) 실행되어, 테스트/마이그레이션 실패 커밋이 운영에 배포되지 않는다. Backend CI 는
+`alembic heads` 가 **정확히 1개**인지 검사해 마이그레이션 head 분기(선형화 누락)를 막는다.
 
 ---
 

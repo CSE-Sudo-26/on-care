@@ -53,6 +53,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Assert single Alembic head (no branched migrations)
+        run: |
+          set -euo pipefail
+          HEADS=$(alembic heads | grep -c '(head)' || true)
+          echo "alembic heads count: $HEADS"
+          if [ "$HEADS" -ne 1 ]; then
+            echo "::error::Alembic 마이그레이션 head 가 1개가 아닙니다($HEADS). down_revision 선형화 필요."
+            alembic heads
+            exit 1
+          fi
+
       - name: Run migrations (validates baseline)
         run: alembic upgrade head
 
