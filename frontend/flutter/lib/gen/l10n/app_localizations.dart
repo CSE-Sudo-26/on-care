@@ -1172,6 +1172,72 @@ abstract class AppLocalizations {
   /// **'Gym'**
   String get exGymTab;
 
+  /// No description provided for @exMyGymTrainerSection.
+  ///
+  /// In en, this message translates to:
+  /// **'My Gym & Trainer'**
+  String get exMyGymTrainerSection;
+
+  /// No description provided for @exConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get exConnected;
+
+  /// No description provided for @exMyTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'My Trainer'**
+  String get exMyTrainer;
+
+  /// No description provided for @exRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Gyms'**
+  String get exRecommendedGyms;
+
+  /// No description provided for @exRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Trainers'**
+  String get exRecommendedTrainers;
+
+  /// No description provided for @exSeeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'See more'**
+  String get exSeeMore;
+
+  /// No description provided for @exNoGymTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have a connected gym or trainer yet.'**
+  String get exNoGymTrainer;
+
+  /// No description provided for @exNoRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'No gym recommendations yet.'**
+  String get exNoRecommendedGyms;
+
+  /// No description provided for @exNoRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer recommendations yet.'**
+  String get exNoRecommendedTrainers;
+
+  /// No description provided for @exTrainerAffiliation.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym'**
+  String get exTrainerAffiliation;
+
+  /// No description provided for @exTrainerRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'A good fit for your health goals'**
+  String get exTrainerRecommendationReason;
+
   /// No description provided for @exWeekSummary.
   ///
   /// In en, this message translates to:

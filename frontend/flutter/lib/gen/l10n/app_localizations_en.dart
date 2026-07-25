@@ -572,6 +572,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymTab => 'Gym';
 
   @override
+  String get exMyGymTrainerSection => 'My Gym & Trainer';
+
+  @override
+  String get exConnected => 'Connected';
+
+  @override
+  String get exMyTrainer => 'My Trainer';
+
+  @override
+  String get exRecommendedGyms => 'Recommended Gyms';
+
+  @override
+  String get exRecommendedTrainers => 'Recommended Trainers';
+
+  @override
+  String get exSeeMore => 'See more';
+
+  @override
+  String get exNoGymTrainer =>
+      'You don\'t have a connected gym or trainer yet.';
+
+  @override
+  String get exNoRecommendedGyms => 'No gym recommendations yet.';
+
+  @override
+  String get exNoRecommendedTrainers => 'No trainer recommendations yet.';
+
+  @override
+  String get exTrainerAffiliation => 'Gym';
+
+  @override
+  String get exTrainerRecommendationReason =>
+      'A good fit for your health goals';
+
+  @override
   String get exWeekSummary => 'This Week\'s Summary';
 
   @override

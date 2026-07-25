@@ -565,6 +565,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymTab => '헬스장';
 
   @override
+  String get exMyGymTrainerSection => '내 헬스장·트레이너';
+
+  @override
+  String get exConnected => '연결됨';
+
+  @override
+  String get exMyTrainer => '내 트레이너';
+
+  @override
+  String get exRecommendedGyms => '추천 헬스장';
+
+  @override
+  String get exRecommendedTrainers => '추천 트레이너';
+
+  @override
+  String get exSeeMore => '더보기';
+
+  @override
+  String get exNoGymTrainer => '아직 연결된 헬스장이나 트레이너가 없어요.';
+
+  @override
+  String get exNoRecommendedGyms => '추천할 헬스장이 아직 없어요.';
+
+  @override
+  String get exNoRecommendedTrainers => '추천할 트레이너가 아직 없어요.';
+
+  @override
+  String get exTrainerAffiliation => '소속 헬스장';
+
+  @override
+  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+
+  @override
   String get exWeekSummary => '이번 주 운동 요약';
 
   @override
