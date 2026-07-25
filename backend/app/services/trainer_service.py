@@ -115,16 +115,20 @@ def _week_completion(hist_rows: list[RoutineHistory], monday: date) -> list[int]
 
 
 def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]):
-    """(trainer, member) 스레드별 최신 1건을 member_id → row 로. 배치 1쿼리."""
+    """(trainer, member) 스레드별 최신 1건을 member_id → row 로.
+
+    Postgres DISTINCT ON 으로 회원당 1행만 DB 에서 반환한다 — 오래된 메시지/루틴이
+    아무리 많아도 반환 행 수는 회원 수 이하다(전체 로드 후 Python 선별 금지, 리뷰 PR 250-#2).
+    """
     rows = db.scalars(
         select(model)
         .where(model.trainer_id == trainer_id, model.member_id.in_(member_ids))
-        .order_by(model.created_at.desc())
+        # DISTINCT ON (member_id) + 최신순 → 회원별 최신 1건. ORDER BY 선두는
+        # distinct 컬럼(member_id)이어야 한다.
+        .order_by(model.member_id, model.created_at.desc())
+        .distinct(model.member_id)
     ).all()
-    latest: dict = {}
-    for r in rows:
-        latest.setdefault(r.member_id, r)  # 최신순 정렬 → 첫 등장이 최신
-    return latest
+    return {r.member_id: r for r in rows}
 
 
 def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
