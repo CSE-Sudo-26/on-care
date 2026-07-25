@@ -16,11 +16,12 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerRoutine, TrainerSchedule, User,
+    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerProfile,
+    TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ClientDietEntryOut, ProgramItem, RoutineHistoryOut, RoutineOut,
-    ScheduleSessionOut, TrainerClientOut,
+    ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
+    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut,
 )
 
 
@@ -291,8 +292,13 @@ def _hhmm(ts: datetime) -> str:
     return ts.astimezone().strftime("%H:%M")
 
 
-def _sender_out(sender: str) -> str:
-    """저장값(trainer|member) → 프론트 계약(trainer|client)."""
+def _sender_out(sender: str, viewer: str = "trainer") -> str:
+    """저장값(trainer|member) → 뷰어 관점 라벨.
+
+    트레이너 앱: 상대(member)는 'client'. 회원 앱: 자신(member)은 'me', 트레이너는 'trainer'.
+    """
+    if viewer == "member":
+        return "me" if sender == "member" else "trainer"
     return "client" if sender == "member" else "trainer"
 
 
@@ -305,6 +311,7 @@ def _iso(ts: datetime) -> str:
 def build_chat_thread(
     db: Session, trainer_id: str, member_id: str,
     limit: int = 50, before: datetime | None = None, before_id: str | None = None,
+    viewer: str = "trainer",
 ) -> list[ChatMessageOut]:
     """(trainer, member) 스레드 메시지(오래된→최신).
 
@@ -330,7 +337,7 @@ def build_chat_thread(
     rows.reverse()  # 최신 limit건을 오래된→최신 순으로
     return [
         ChatMessageOut(
-            id=r.id, sender=_sender_out(r.sender), body=r.body,
+            id=r.id, sender=_sender_out(r.sender, viewer), body=r.body,
             time_label=_hhmm(r.created_at), created_at=_iso(r.created_at),
         )
         for r in rows
@@ -338,7 +345,8 @@ def build_chat_thread(
 
 
 def send_message(
-    db: Session, trainer_id: str, member_id: str, sender: str, text: str
+    db: Session, trainer_id: str, member_id: str, sender: str, text: str,
+    viewer: str = "trainer",
 ) -> ChatMessageOut:
     """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
     build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다."""
@@ -354,7 +362,7 @@ def send_message(
     db.commit()
     db.refresh(msg)
     return ChatMessageOut(
-        id=msg.id, sender=_sender_out(msg.sender), body=msg.body,
+        id=msg.id, sender=_sender_out(msg.sender, viewer), body=msg.body,
         time_label=_hhmm(msg.created_at), created_at=_iso(msg.created_at),
     )
 
@@ -625,3 +633,77 @@ def complete_session(
     db.commit()
     db.refresh(s)
     return _schedule_out(s)
+
+
+# ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅 / 내 세션) ----
+
+def get_member_trainer_id(db: Session, member_id: str) -> str | None:
+    """회원의 담당 트레이너 id(활성 링크 우선, 없으면 None)."""
+    return db.scalar(
+        select(TrainerClient.trainer_id)
+        .where(TrainerClient.member_id == member_id)
+        .order_by(TrainerClient.active.desc(), TrainerClient.created_at)
+        .limit(1)
+    )
+
+
+def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
+    """회원의 '내 담당 코치' 요약. 담당이 없으면 None."""
+    link = db.scalar(
+        select(TrainerClient)
+        .where(TrainerClient.member_id == member_id)
+        .order_by(TrainerClient.active.desc(), TrainerClient.created_at)
+        .limit(1)
+    )
+    if link is None:
+        return None
+    trainer = db.get(User, link.trainer_id)
+    profile = db.scalar(
+        select(TrainerProfile).where(TrainerProfile.trainer_id == link.trainer_id)
+    )
+    if trainer is None or profile is None:
+        return None
+    return MemberCoachOut(
+        trainer_id=trainer.id,
+        name=trainer.name,
+        specialty=profile.specialty,
+        career=f"{profile.career_years}년",
+        intro=profile.intro,
+        gym=TrainerGymOut(
+            name=profile.gym_name, address=profile.gym_address,
+            hours=profile.gym_hours, phone=profile.gym_phone,
+        ),
+        goal=link.goal,
+    )
+
+
+def build_member_routines(db: Session, member_id: str) -> list[RoutineOut]:
+    """회원이 받은 루틴(담당 트레이너 배정). 담당 없으면 빈 목록."""
+    trainer_id = get_member_trainer_id(db, member_id)
+    if trainer_id is None:
+        return []
+    return build_routines(db, member_id, trainer_id)
+
+
+def build_member_sessions(db: Session, member_id: str) -> list[ScheduleSessionOut]:
+    """회원의 PT 세션(담당 트레이너 스케줄에서 나와 매칭된 것), 최신 날짜/시간 순."""
+    rows = db.scalars(
+        select(TrainerSchedule)
+        .where(TrainerSchedule.member_id == member_id)
+        .order_by(TrainerSchedule.date.desc(), TrainerSchedule.time.desc())
+    ).all()
+    return [_schedule_out(s) for s in rows]
+
+
+def member_unread_count(db: Session, trainer_id: str, member_id: str) -> int:
+    """회원 기준 미확인(트레이너가 보낸 read_at NULL) 메시지 수."""
+    return db.scalar(
+        select(func.count())
+        .select_from(ChatMessage)
+        .where(
+            ChatMessage.trainer_id == trainer_id,
+            ChatMessage.member_id == member_id,
+            ChatMessage.sender == "trainer",
+            ChatMessage.read_at.is_(None),
+        )
+    ) or 0

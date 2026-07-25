@@ -188,3 +188,16 @@ class ScheduleUpdateRequest(BaseModel):
 
 class ScheduleCompleteRequest(BaseModel):
     note: str = Field(default="", max_length=500)
+
+
+# ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅) ----
+
+class MemberCoachOut(BaseModel):
+    """회원 앱의 '내 담당 트레이너' 요약."""
+    trainer_id: str
+    name: str
+    specialty: str
+    career: str          # "7년"
+    intro: str
+    gym: TrainerGymOut
+    goal: str            # 트레이너가 설정한 내 코칭 목표(TrainerClient.goal)
