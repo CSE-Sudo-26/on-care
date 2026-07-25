@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
 import time
 
@@ -81,8 +82,9 @@ class LiteLLMVisionRecognizer(FoodRecognizer):
                 foods.append(RecognizedFood(
                     name=str(f.get("name", "알 수 없음")),
                     calories=_i(f.get("calories")), sodium_mg=_i(f.get("sodium_mg")),
-                    carbs_g=_f(f.get("carbs_g")), protein_g=_f(f.get("protein_g")),
-                    fat_g=_f(f.get("fat_g")), sugar_g=_i(f.get("sugar_g")),
+                    carbs_g=_macro_f(f.get("carbs_g")),
+                    protein_g=_macro_f(f.get("protein_g")),
+                    fat_g=_macro_f(f.get("fat_g")), sugar_g=_i(f.get("sugar_g")),
                     confidence=_f(f.get("confidence")),
                 ))
         except (json.JSONDecodeError, AttributeError):
@@ -109,3 +111,13 @@ def _f(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _macro_f(v):
+    if v is None:
+        return None
+    try:
+        value = float(v)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value >= 0 else None

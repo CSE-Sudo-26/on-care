@@ -52,7 +52,7 @@ def test_recognized_food_allows_optional_and_positive_macros(field):
     assert getattr(RecognizedFood(name="test", **{field: 1.25}), field) == 1.25
 
 
-def test_gemini_parser_parses_and_totals_optional_macros():
+def test_gemini_parser_sanitizes_and_totals_optional_macros():
     from app.services.recognizer.gemini import GeminiVisionRecognizer
 
     raw = json.dumps({
@@ -69,6 +69,18 @@ def test_gemini_parser_parses_and_totals_optional_macros():
                 "protein_g": 2.5,
                 "fat_g": None,
             },
+            {
+                "name": "잘못된 값",
+                "carbs_g": -1,
+                "protein_g": "NaN",
+                "fat_g": "Infinity",
+            },
+            {
+                "name": "일부 정상 값",
+                "carbs_g": "-Infinity",
+                "protein_g": 3,
+                "fat_g": 1,
+            },
         ],
     })
 
@@ -80,18 +92,26 @@ def test_gemini_parser_parses_and_totals_optional_macros():
     assert (analysis.foods[1].carbs_g, analysis.foods[1].protein_g, analysis.foods[1].fat_g) == (
         None, 2.5, None,
     )
+    assert (analysis.foods[2].carbs_g, analysis.foods[2].protein_g, analysis.foods[2].fat_g) == (
+        None, None, None,
+    )
+    assert (analysis.foods[3].carbs_g, analysis.foods[3].protein_g, analysis.foods[3].fat_g) == (
+        None, 3.0, 1.0,
+    )
     assert (analysis.total_carbs_g, analysis.total_protein_g, analysis.total_fat_g) == (
-        68.5, 20.5, 12.25,
+        68.5, 23.5, 13.25,
     )
 
 
-def test_litellm_parser_parses_and_totals_optional_macros():
+def test_litellm_parser_sanitizes_and_totals_optional_macros():
     from app.services.recognizer.litellm_vision import LiteLLMVisionRecognizer
 
     raw = """```json
 {"foods":[
   {"name":"비빔밥","carbs_g":68.5,"protein_g":18,"fat_g":12.25},
-  {"name":"김치","carbs_g":null,"protein_g":2.5,"fat_g":null}
+  {"name":"김치","carbs_g":null,"protein_g":2.5,"fat_g":null},
+  {"name":"잘못된 값","carbs_g":-1,"protein_g":"NaN","fat_g":"Infinity"},
+  {"name":"일부 정상 값","carbs_g":"-Infinity","protein_g":3,"fat_g":1}
 ]}
 ```"""
 
@@ -103,8 +123,14 @@ def test_litellm_parser_parses_and_totals_optional_macros():
     assert (analysis.foods[1].carbs_g, analysis.foods[1].protein_g, analysis.foods[1].fat_g) == (
         None, 2.5, None,
     )
+    assert (analysis.foods[2].carbs_g, analysis.foods[2].protein_g, analysis.foods[2].fat_g) == (
+        None, None, None,
+    )
+    assert (analysis.foods[3].carbs_g, analysis.foods[3].protein_g, analysis.foods[3].fat_g) == (
+        None, 3.0, 1.0,
+    )
     assert (analysis.total_carbs_g, analysis.total_protein_g, analysis.total_fat_g) == (
-        68.5, 20.5, 12.25,
+        68.5, 23.5, 13.25,
     )
 
 

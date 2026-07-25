@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import time
 
 from google import genai
@@ -87,9 +88,9 @@ class GeminiVisionRecognizer(FoodRecognizer):
                     RecognizedFood(
                         name=str(f.get("name", "알 수 없음")),
                         calories=_as_int(f.get("calories")),
-                        carbs_g=_as_float(f.get("carbs_g")),
-                        protein_g=_as_float(f.get("protein_g")),
-                        fat_g=_as_float(f.get("fat_g")),
+                        carbs_g=_as_macro_float(f.get("carbs_g")),
+                        protein_g=_as_macro_float(f.get("protein_g")),
+                        fat_g=_as_macro_float(f.get("fat_g")),
                         sodium_mg=_as_int(f.get("sodium_mg")),
                         sugar_g=_as_int(f.get("sugar_g")),
                         confidence=_as_float(f.get("confidence")),
@@ -123,3 +124,13 @@ def _as_float(v) -> float | None:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _as_macro_float(v) -> float | None:
+    if v is None:
+        return None
+    try:
+        value = float(v)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value >= 0 else None
