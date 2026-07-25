@@ -41,7 +41,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // date rollover).
   await db.transaction(() async {
     // ---- Wipe existing seed rows (seed-% only; user rows survive) ----
-    await (db.delete(db.trainerClients)..where((t) => t.id.like('seed-%'))).go();
+    await (db.delete(
+      db.trainerClients,
+    )..where((t) => t.id.like('seed-%'))).go();
     await (db.delete(
       db.clientDietEntries,
     )..where((t) => t.id.like('seed-%'))).go();
@@ -162,7 +164,6 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     await db.putValue('trainer_seeded_v1', today);
   });
 }
-
 
 // ---------------------------------------------------------------------------
 // Seed data (from On-Care_figma/src/app/App.tsx — TRAINER_CLIENTS /
@@ -316,7 +317,11 @@ const List<_Client> _clients = <_Client>[
       ),
     ],
     chat: <_Chat>[
-      _Chat('trainer', '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?', '18:10'),
+      _Chat(
+        'trainer',
+        '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?',
+        '18:10',
+      ),
       _Chat('client', '찌개 먹을 때 국물을 많이 마셨나봐요 😅', '18:13'),
       _Chat('trainer', '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?', '18:14'),
       _Chat('client', '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16'),
@@ -377,7 +382,11 @@ const List<_Client> _clients = <_Client>[
       ),
     ],
     chat: <_Chat>[
-      _Chat('trainer', '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?', '20:05'),
+      _Chat(
+        'trainer',
+        '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?',
+        '20:05',
+      ),
       _Chat('client', '생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨', '20:08'),
       _Chat(
         'trainer',
@@ -456,10 +465,30 @@ const List<_Slot> _schedule = <_Slot>[
     status: '완료',
     note: '무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '레그프레스', 'sets': 3, 'reps': '12회', 'weight': '80kg'},
-      <String, Object?>{'name': '레그컬', 'sets': 3, 'reps': '12회', 'weight': '40kg'},
-      <String, Object?>{'name': '카프레이즈', 'sets': 3, 'reps': '20회', 'weight': '자체중량'},
-      <String, Object?>{'name': '하체 스트레칭', 'sets': 1, 'reps': '10분', 'weight': '-'},
+      <String, Object?>{
+        'name': '레그프레스',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '80kg',
+      },
+      <String, Object?>{
+        'name': '레그컬',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '40kg',
+      },
+      <String, Object?>{
+        'name': '카프레이즈',
+        'sets': 3,
+        'reps': '20회',
+        'weight': '자체중량',
+      },
+      <String, Object?>{
+        'name': '하체 스트레칭',
+        'sets': 1,
+        'reps': '10분',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(
@@ -470,10 +499,25 @@ const List<_Slot> _schedule = <_Slot>[
     status: '완료',
     note: '데드리프트 자세 안정적. 다음 세션 60kg 도전.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '데드리프트', 'sets': 4, 'reps': '8회', 'weight': '55kg'},
-      <String, Object?>{'name': '루마니안 데드리프트', 'sets': 3, 'reps': '10회', 'weight': '40kg'},
+      <String, Object?>{
+        'name': '데드리프트',
+        'sets': 4,
+        'reps': '8회',
+        'weight': '55kg',
+      },
+      <String, Object?>{
+        'name': '루마니안 데드리프트',
+        'sets': 3,
+        'reps': '10회',
+        'weight': '40kg',
+      },
       <String, Object?>{'name': '플랭크', 'sets': 3, 'reps': '45초', 'weight': '-'},
-      <String, Object?>{'name': '코어 서킷', 'sets': 2, 'reps': '12회', 'weight': '-'},
+      <String, Object?>{
+        'name': '코어 서킷',
+        'sets': 2,
+        'reps': '12회',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(
@@ -493,9 +537,24 @@ const List<_Slot> _schedule = <_Slot>[
     status: '예정',
     note: '',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '벤치프레스', 'sets': 4, 'reps': '8회', 'weight': '65kg'},
-      <String, Object?>{'name': '인클라인 덤벨 프레스', 'sets': 3, 'reps': '10회', 'weight': '26kg'},
-      <String, Object?>{'name': '트라이셉스 딥', 'sets': 3, 'reps': '12회', 'weight': '-'},
+      <String, Object?>{
+        'name': '벤치프레스',
+        'sets': 4,
+        'reps': '8회',
+        'weight': '65kg',
+      },
+      <String, Object?>{
+        'name': '인클라인 덤벨 프레스',
+        'sets': 3,
+        'reps': '10회',
+        'weight': '26kg',
+      },
+      <String, Object?>{
+        'name': '트라이셉스 딥',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(

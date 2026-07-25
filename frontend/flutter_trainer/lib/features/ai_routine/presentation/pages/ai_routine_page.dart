@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 
 /// Minute options offered for every routine item (mock: 10~45분 chips).
@@ -97,29 +98,31 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: clientsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => const Center(
-            child: Text(
-              '고객 정보를 불러오지 못했어요',
-              style: TextStyle(color: AppColors.mutedForeground),
+        child: ContentFrame(
+          child: clientsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => const Center(
+              child: Text(
+                '고객 정보를 불러오지 못했어요',
+                style: TextStyle(color: AppColors.mutedForeground),
+              ),
             ),
-          ),
-          data: (clients) {
-            if (clients.isEmpty) {
-              return const Center(
-                child: Text(
-                  '등록된 고객이 없어요',
-                  style: TextStyle(color: AppColors.mutedForeground),
-                ),
+            data: (clients) {
+              if (clients.isEmpty) {
+                return const Center(
+                  child: Text(
+                    '등록된 고객이 없어요',
+                    style: TextStyle(color: AppColors.mutedForeground),
+                  ),
+                );
+              }
+              final selected = clients.firstWhere(
+                (c) => c.id == _clientId,
+                orElse: () => clients.first,
               );
-            }
-            final selected = clients.firstWhere(
-              (c) => c.id == _clientId,
-              orElse: () => clients.first,
-            );
-            return _buildBody(clients, selected);
-          },
+              return _buildBody(clients, selected);
+            },
+          ),
         ),
       ),
     );
@@ -262,11 +265,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                       onTap: () => setState(() => _showAddForm = true),
                     ),
               const SizedBox(height: AppSpacing.lg),
-              _SendButton(
-                clientName: client.name,
-                sent: _sent,
-                onSend: _send,
-              ),
+              _SendButton(clientName: client.name, sent: _sent, onSend: _send),
               if (_sent)
                 const Padding(
                   padding: EdgeInsets.only(top: AppSpacing.sm),
@@ -609,9 +608,9 @@ class _NameEditField extends StatefulWidget {
 }
 
 class _NameEditFieldState extends State<_NameEditField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initial)
-        ..selection = TextSelection.collapsed(offset: widget.initial.length);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initial,
+  )..selection = TextSelection.collapsed(offset: widget.initial.length);
 
   @override
   void dispose() {
@@ -708,9 +707,7 @@ class _AddExerciseButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(
-              color: AppColors.warning.withValues(alpha: 0.4),
-            ),
+            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
           ),
           child: const Text(
             '＋ 운동 직접 추가',

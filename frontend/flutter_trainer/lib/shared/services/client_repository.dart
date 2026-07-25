@@ -24,9 +24,48 @@ class ClientRepository {
       ..orderBy(<OrderingTerm Function($TrainerClientsTable)>[
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map(
-      (rows) => rows.map(_toEntity).toList(),
-    );
+    return query.watch().map((rows) => rows.map(_toEntity).toList());
+  }
+
+  /// Clients ordered by coaching priority for the 고객 관리 list:
+  /// sodium-over-target clients first, ties broken by the most recent
+  /// chat activity, then by the seeded order.
+  Stream<List<TrainerClient>> watchClientsPrioritized() {
+    final t = _db.trainerClients;
+    final chat = _db.clientChatMessages;
+    final lastChatAt = chat.createdAt.max();
+    final query =
+        _db.select(t).join(<Join>[
+            leftOuterJoin(
+              chat,
+              chat.clientId.equalsExp(t.id),
+              useColumns: false,
+            ),
+          ])
+          ..addColumns(<Expression<Object>>[lastChatAt])
+          ..groupBy(<Expression<Object>>[t.id]);
+    return query.watch().map((rows) {
+      final entries = rows.map((r) {
+        final row = r.readTable(t);
+        return (
+          client: _toEntity(row),
+          lastChatAt: r.read(lastChatAt),
+          sortOrder: row.sortOrder,
+        );
+      }).toList();
+      entries.sort((a, b) {
+        final over = (b.client.sodiumOverBudget ? 1 : 0).compareTo(
+          a.client.sodiumOverBudget ? 1 : 0,
+        );
+        if (over != 0) return over;
+        final chatCmp = (b.lastChatAt ?? DateTime.utc(1970)).compareTo(
+          a.lastChatAt ?? DateTime.utc(1970),
+        );
+        if (chatCmp != 0) return chatCmp;
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+      return entries.map((e) => e.client).toList();
+    });
   }
 
   /// Count of today's booked sessions — every schedule slot dated today
@@ -89,7 +128,6 @@ class ClientRepository {
     );
   }
 
-
   TrainerClient _toEntity(TrainerClientRow row) {
     final week = (jsonDecode(row.weekCompletionJson) as List<Object?>)
         .map((e) => e as int)
@@ -121,16 +159,23 @@ final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   return ref.watch(clientRepositoryProvider).watchClients();
 });
 
+/// Streams the coaching-priority ordering of the client list (sodium
+/// over-target first, then most recent chat) for the 고객 관리 tab.
+final prioritizedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
+  return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
+});
+
 /// Streams today's booked-session count for the header badge.
 final todayReservationCountProvider = StreamProvider<int>((ref) {
   return ref.watch(clientRepositoryProvider).watchTodayReservationCount();
 });
 
 /// Streams a client's meals for the 식단 sub-tab.
-final clientDietProvider =
-    StreamProvider.family<List<ClientDietEntry>, String>((ref, clientId) {
-      return ref.watch(clientRepositoryProvider).watchDiet(clientId);
-    });
+final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
+  (ref, clientId) {
+    return ref.watch(clientRepositoryProvider).watchDiet(clientId);
+  },
+);
 
 /// Streams a client's workout history for the 운동기록 sub-tab.
 final clientHistoryProvider =

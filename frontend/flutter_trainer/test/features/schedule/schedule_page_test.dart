@@ -20,10 +20,14 @@ void main() {
     test('returns the 6 seeded slots in timeline order', () async {
       final slots = await ScheduleRepository(db).watchToday().first;
       expect(slots.length, 6);
-      expect(
-        slots.map((s) => s.time).toList(),
-        <String>['10:00', '12:00', '14:00', '15:00', '17:00', '19:00'],
-      );
+      expect(slots.map((s) => s.time).toList(), <String>[
+        '10:00',
+        '12:00',
+        '14:00',
+        '15:00',
+        '17:00',
+        '19:00',
+      ]);
       expect(slots.where((s) => s.isGap).length, 2);
     });
 
@@ -80,10 +84,7 @@ void main() {
       expect(find.text('레그프레스'), findsOneWidget);
       expect(find.text('카프레이즈'), findsOneWidget);
       expect(find.text('트레이너 메모'), findsOneWidget);
-      expect(
-        find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'),
-        findsOneWidget,
-      );
+      expect(find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'), findsOneWidget);
 
       // Send → confirmation flash → persistent sent state, no re-send.
       // Make sure the button is FULLY on-screen (a partially clipped

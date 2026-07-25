@@ -20,7 +20,11 @@ void main() {
 
     test('watchClients returns the 3 seeded clients in order', () async {
       final clients = await ClientRepository(db).watchClients().first;
-      expect(clients.map((c) => c.name).toList(), <String>['김민수', '이지수', '박성호']);
+      expect(clients.map((c) => c.name).toList(), <String>[
+        '김민수',
+        '이지수',
+        '박성호',
+      ]);
     });
 
     test('sodiumOverBudget flags only clients above 2000mg', () async {
@@ -32,14 +36,17 @@ void main() {
     });
 
     test('reservation count excludes 공백 slots', () async {
-      final count =
-          await ClientRepository(db).watchTodayReservationCount().first;
+      final count = await ClientRepository(
+        db,
+      ).watchTodayReservationCount().first;
       expect(count, 4); // 6 slots − 2 공백
     });
 
     test('reservation count excludes non-today schedule rows', () async {
       // A booked session on a different date must NOT inflate today's badge.
-      await db.into(db.trainerScheduleEntries).insert(
+      await db
+          .into(db.trainerScheduleEntries)
+          .insert(
             TrainerScheduleEntriesCompanion.insert(
               id: 'schedule-other-day',
               date: '2020-01-01',
@@ -49,8 +56,9 @@ void main() {
             ),
           );
 
-      final count =
-          await ClientRepository(db).watchTodayReservationCount().first;
+      final count = await ClientRepository(
+        db,
+      ).watchTodayReservationCount().first;
       expect(count, 4); // still 4 — the 2020 row is excluded
     });
   });
@@ -73,10 +81,12 @@ void main() {
       // 4 booked sessions today (6 slots − 2 gaps).
       expect(find.text('오늘 4명 예약'), findsOneWidget);
 
+      // Priority order: sodium-over clients (김민수, 박성호) come first;
+      // 이지수 is last and lazily built, so scroll to reach her.
       expect(find.text('김민수'), findsOneWidget);
-      expect(find.text('이지수'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('박성호'), 150);
       expect(find.text('박성호'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('이지수'), 150);
+      expect(find.text('이지수'), findsOneWidget);
     });
 
     testWidgets('tapping a client card opens the detail screen', (

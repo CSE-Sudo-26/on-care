@@ -42,14 +42,8 @@ class SessionController extends StateNotifier<SessionState> {
   /// Logs in with email/password (mock: any non-empty credentials
   /// succeed). Persists the token and attaches the seed profile.
   /// Throws [AuthException] on failure.
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    final token = await _authRepository.login(
-      email: email,
-      password: password,
-    );
+  Future<void> login({required String email, required String password}) async {
+    final token = await _authRepository.login(email: email, password: password);
     await _tokenStore.saveToken(token);
     state = const SessionState(
       status: SessionStatus.authenticated,

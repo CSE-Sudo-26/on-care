@@ -22,9 +22,7 @@ class BrandHeader extends StatelessWidget implements PreferredSizeWidget {
       toolbarHeight: 44,
       titleSpacing: AppSpacing.lg,
       automaticallyImplyLeading: false,
-      shape: const Border(
-        bottom: BorderSide(color: AppColors.borderStrong),
-      ),
+      shape: const Border(bottom: BorderSide(color: AppColors.borderStrong)),
       title: Row(
         children: <Widget>[
           Container(

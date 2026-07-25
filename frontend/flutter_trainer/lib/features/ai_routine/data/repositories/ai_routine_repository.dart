@@ -40,7 +40,9 @@ final aiRoutineRepositoryProvider = Provider<AiRoutineRepository>((ref) {
 });
 
 /// Streams a client's AI routine suggestions.
-final aiRoutineProvider =
-    StreamProvider.family<List<AiRoutineItem>, String>((ref, clientId) {
-      return ref.watch(aiRoutineRepositoryProvider).watchRoutine(clientId);
-    });
+final aiRoutineProvider = StreamProvider.family<List<AiRoutineItem>, String>((
+  ref,
+  clientId,
+) {
+  return ref.watch(aiRoutineRepositoryProvider).watchRoutine(clientId);
+});

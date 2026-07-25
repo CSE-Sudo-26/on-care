@@ -45,10 +45,7 @@ void main() {
 
       expect(find.text('AI 루틴 생성'), findsOneWidget);
       // 김민수 (2100mg, over) → cardio-boost verdict.
-      expect(
-        find.text('✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'),
-        findsOneWidget,
-      );
+      expect(find.text('✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       expect(find.text('💡 혈압 안정에 효과적'), findsOneWidget);
     });
@@ -62,10 +59,7 @@ void main() {
       await settle(tester);
 
       // 이지수 (1800mg, under) → balanced verdict + her routine.
-      expect(
-        find.text('✦ AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지'),
-        findsOneWidget,
-      );
+      expect(find.text('✦ AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지'), findsOneWidget);
       expect(find.text('인터벌 런닝'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
     });
@@ -96,9 +90,7 @@ void main() {
       expect(find.text('레그프레스 5세트'), findsNothing);
     });
 
-    testWidgets('send reset also closes the add-exercise form', (
-      tester,
-    ) async {
+    testWidgets('send reset also closes the add-exercise form', (tester) async {
       await openTab(tester);
 
       // Open the add form, then send with it still open.
@@ -131,10 +123,7 @@ void main() {
     testWidgets('send shows confirmation then resets edits', (tester) async {
       await openTab(tester);
 
-      await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
-        150,
-      );
+      await tester.scrollUntilVisible(find.textContaining('님에게 전송'), 150);
       await tester.ensureVisible(find.textContaining('님에게 전송'));
       await tester.pump();
       await tester.tap(find.textContaining('님에게 전송'));

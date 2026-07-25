@@ -178,9 +178,7 @@ class _SentBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.success.withValues(alpha: 0.08),
           borderRadius: const BorderRadius.all(AppRadius.card),
-          border: Border.all(
-            color: AppColors.success.withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.25)),
         ),
         child: Column(
           children: <Widget>[
@@ -220,8 +218,9 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final fromTrainer = message.fromTrainer;
     final bubble = Column(
-      crossAxisAlignment:
-          fromTrainer ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: fromTrainer
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: <Widget>[
         Container(
           padding: const EdgeInsets.symmetric(
@@ -230,7 +229,9 @@ class _Bubble extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: fromTrainer ? AppColors.accent : AppColors.card,
-            border: fromTrainer ? null : Border.all(color: AppColors.borderStrong),
+            border: fromTrainer
+                ? null
+                : Border.all(color: AppColors.borderStrong),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -262,8 +263,9 @@ class _Bubble extends StatelessWidget {
     );
 
     return Row(
-      mainAxisAlignment:
-          fromTrainer ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: fromTrainer
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         if (!fromTrainer) ...<Widget>[
@@ -327,7 +329,11 @@ class _InputBar extends StatelessWidget {
               onTap: onSend,
               child: const Padding(
                 padding: EdgeInsets.all(AppSpacing.sm),
-                child: Icon(Icons.send, size: 18, color: AppColors.accentForeground),
+                child: Icon(
+                  Icons.send,
+                  size: 18,
+                  color: AppColors.accentForeground,
+                ),
               ),
             ),
           ),

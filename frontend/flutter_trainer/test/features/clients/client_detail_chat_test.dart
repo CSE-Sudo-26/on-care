@@ -19,34 +19,42 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('watchThread returns a client thread in chronological order',
-        () async {
-      final thread =
-          await ChatRepository(db).watchThread('seed-client-1').first;
-      expect(thread, isNotEmpty);
-      // Seeded 김민수 thread opens with the trainer's sodium question.
-      expect(thread.first.sender, ChatSender.trainer);
-      expect(thread.first.body, contains('AI 식단 분석'));
-      // Sorted ascending by createdAt.
-      for (var i = 1; i < thread.length; i++) {
-        expect(
-          thread[i].createdAt.isBefore(thread[i - 1].createdAt),
-          isFalse,
+    test(
+      'watchThread returns a client thread in chronological order',
+      () async {
+        final thread = await ChatRepository(
+          db,
+        ).watchThread('seed-client-1').first;
+        expect(thread, isNotEmpty);
+        // Seeded 김민수 thread opens with the trainer's sodium question.
+        expect(thread.first.sender, ChatSender.trainer);
+        expect(thread.first.body, contains('AI 식단 분석'));
+        // Sorted ascending by createdAt.
+        for (var i = 1; i < thread.length; i++) {
+          expect(
+            thread[i].createdAt.isBefore(thread[i - 1].createdAt),
+            isFalse,
+          );
+        }
+      },
+    );
+
+    test(
+      'sendTrainerMessage appends a trainer message that sorts last',
+      () async {
+        final repo = ChatRepository(db);
+        await repo.sendTrainerMessage(
+          clientId: 'seed-client-1',
+          text: '  안녕하세요  ',
         );
-      }
-    });
 
-    test('sendTrainerMessage appends a trainer message that sorts last',
-        () async {
-      final repo = ChatRepository(db);
-      await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '  안녕하세요  ');
-
-      final thread = await repo.watchThread('seed-client-1').first;
-      final last = thread.last;
-      expect(last.sender, ChatSender.trainer);
-      expect(last.body, '안녕하세요'); // trimmed
-      expect(last.id.startsWith('seed-'), isFalse); // survives re-seed
-    });
+        final thread = await repo.watchThread('seed-client-1').first;
+        final last = thread.last;
+        expect(last.sender, ChatSender.trainer);
+        expect(last.body, '안녕하세요'); // trimmed
+        expect(last.id.startsWith('seed-'), isFalse); // survives re-seed
+      },
+    );
 
     test('sendTrainerMessage ignores empty/whitespace input', () async {
       final repo = ChatRepository(db);
@@ -75,10 +83,7 @@ void main() {
       // the lazily-built top of the thread (banner + early replies) exists.
       await tester.drag(find.byType(ListView), const Offset(0, 600));
       await tester.pump();
-      expect(
-        find.textContaining('AI가 김민수님의'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
       // A seeded client reply is present.
       expect(find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅'), findsOneWidget);
     });

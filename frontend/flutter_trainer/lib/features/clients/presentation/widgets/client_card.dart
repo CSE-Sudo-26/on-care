@@ -10,7 +10,12 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 /// last message, and a quick-metric footer (칼로리 / 나트륨 / 마지막 루틴).
 class ClientCard extends StatelessWidget {
   /// Creates a card for [client]; [onTap] opens the detail screen.
-  const ClientCard({super.key, required this.client, required this.onTap});
+  const ClientCard({
+    super.key,
+    required this.client,
+    required this.onTap,
+    this.selected = false,
+  });
 
   /// The client to render.
   final TrainerClient client;
@@ -18,10 +23,14 @@ class ClientCard extends StatelessWidget {
   /// Called when the card is tapped.
   final VoidCallback onTap;
 
+  /// Highlighted in the wide-viewport split layout when this client's
+  /// detail panel is open.
+  final bool selected;
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card,
+      color: selected ? AppColors.accentSurface : AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.card),
       child: InkWell(
         onTap: onTap,
@@ -30,7 +39,12 @@ class ClientCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(
+              color: selected
+                  ? AppColors.accent.withValues(alpha: 0.5)
+                  : AppColors.border,
+              width: selected ? 1.5 : 1,
+            ),
           ),
           child: Column(
             children: <Widget>[

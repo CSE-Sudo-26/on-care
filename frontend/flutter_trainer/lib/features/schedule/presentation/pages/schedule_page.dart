@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 
 /// 스케줄 tab — today's PT timeline. Completed sessions expand to show
 /// the program + trainer note and can be sent to the client (mock:
@@ -62,38 +63,40 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: schedule.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => const Center(
-            child: Text(
-              '스케줄을 불러오지 못했어요',
-              style: TextStyle(color: AppColors.mutedForeground),
+        child: ContentFrame(
+          child: schedule.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => const Center(
+              child: Text(
+                '스케줄을 불러오지 못했어요',
+                style: TextStyle(color: AppColors.mutedForeground),
+              ),
             ),
-          ),
-          data: (sessions) => ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.xl,
-              AppSpacing.xxl,
-            ),
-            children: <Widget>[
-              const _Header(),
-              const SizedBox(height: AppSpacing.lg),
-              _WeekStrip(hasScheduleToday: sessions.isNotEmpty),
-              const SizedBox(height: AppSpacing.lg),
-              for (final s in sessions) ...<Widget>[
-                _TimelineRow(
-                  session: s,
-                  expanded: _expanded.contains(s.id),
-                  sent: _sent.contains(s.id),
-                  flashing: _flash == s.id,
-                  onToggle: () => _toggle(s),
-                  onSend: () => _send(s),
-                ),
-                const SizedBox(height: AppSpacing.sm),
+            data: (sessions) => ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xl,
+                AppSpacing.xxl,
+              ),
+              children: <Widget>[
+                const _Header(),
+                const SizedBox(height: AppSpacing.lg),
+                _WeekStrip(hasScheduleToday: sessions.isNotEmpty),
+                const SizedBox(height: AppSpacing.lg),
+                for (final s in sessions) ...<Widget>[
+                  _TimelineRow(
+                    session: s,
+                    expanded: _expanded.contains(s.id),
+                    sent: _sent.contains(s.id),
+                    flashing: _flash == s.id,
+                    onToggle: () => _toggle(s),
+                    onSend: () => _send(s),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

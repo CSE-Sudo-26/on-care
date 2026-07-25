@@ -18,8 +18,7 @@ void main() {
     tearDown(() => db.close());
 
     test('returns the 3 meals in seeded order for a client', () async {
-      final meals =
-          await ClientRepository(db).watchDiet('seed-client-1').first;
+      final meals = await ClientRepository(db).watchDiet('seed-client-1').first;
       expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '저녁']);
       expect(meals.first.items, '오트밀, 바나나');
       expect(meals.first.calories, 315);
@@ -38,6 +37,10 @@ void main() {
   group('DietView', () {
     Future<void> openDiet(WidgetTester tester, String clientName) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      // Lower-priority clients sit below the fold in the lazy list.
+      await tester.scrollUntilVisible(find.text(clientName), 150);
+      await tester.ensureVisible(find.text(clientName));
+      await tester.pump();
       await tester.tap(find.text(clientName));
       await settle(tester);
       await tester.tap(find.text('식단'));
@@ -65,10 +68,7 @@ void main() {
         find.textContaining('나트륨이 목표치를 100mg 초과했어요'),
         150,
       );
-      expect(
-        find.textContaining('나트륨이 목표치를 100mg 초과했어요'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('나트륨이 목표치를 100mg 초과했어요'), findsOneWidget);
     });
 
     testWidgets('이지수 (sodium under target) shows the balanced AI comment', (
@@ -82,10 +82,7 @@ void main() {
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
         150,
       );
-      expect(
-        find.textContaining('오늘 식단은 균형이 잘 맞아요'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('오늘 식단은 균형이 잘 맞아요'), findsOneWidget);
     });
   });
 }
