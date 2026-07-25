@@ -81,6 +81,16 @@ def relative_time_label(ts: datetime) -> str:
     return f"{int(secs // 86400)}일 전"
 
 
+def _local_date_iso(ts: datetime) -> str:
+    """tz-aware(또는 naive=UTC 가정) 시각 → 로컬(서버 TZ) 날짜 YYYY-MM-DD.
+
+    created_at 은 UTC 로 저장되므로, 로컬 '오늘/어제' 판정과 맞추려면 로컬 날짜로 변환해야
+    한다(안 그러면 KST 새벽엔 UTC 가 전날이라 '어제'로 어긋난다)."""
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone().date().isoformat()
+
+
 def _today_totals(diet_rows: list[DietEntry], today_str: str) -> tuple[int, int, int]:
     cal = na = sugar = 0
     for e in diet_rows:
@@ -201,7 +211,7 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
             sodium_mg=na,
             sugar_g=sugar,
             last_routine=(
-                relative_day_label(last_rt.created_at.date().isoformat())
+                relative_day_label(_local_date_iso(last_rt.created_at))
                 if last_rt else "-"
             ),
             week_completion=_week_completion(hist_by_member.get(link.member_id, []), monday),
