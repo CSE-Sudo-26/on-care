@@ -30,6 +30,9 @@ _PROMPT = """당신은 전문 영양사입니다. 업로드된 음식 사진을 
     {
       "name": "음식 이름(한국어)",
       "calories": 예상 칼로리 정수(kcal),
+      "carbs_g": 예상 탄수화물(g),
+      "protein_g": 예상 단백질(g),
+      "fat_g": 예상 지방(g),
       "sodium_mg": 예상 나트륨 정수(mg),
       "sugar_g": 예상 당류 정수(g),
       "confidence": 0.0~1.0 인식 확신도
@@ -84,6 +87,9 @@ class GeminiVisionRecognizer(FoodRecognizer):
                     RecognizedFood(
                         name=str(f.get("name", "알 수 없음")),
                         calories=_as_int(f.get("calories")),
+                        carbs_g=_as_float(f.get("carbs_g")),
+                        protein_g=_as_float(f.get("protein_g")),
+                        fat_g=_as_float(f.get("fat_g")),
                         sodium_mg=_as_int(f.get("sodium_mg")),
                         sugar_g=_as_int(f.get("sugar_g")),
                         confidence=_as_float(f.get("confidence")),

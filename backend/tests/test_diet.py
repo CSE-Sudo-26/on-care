@@ -52,6 +52,62 @@ def test_recognized_food_allows_optional_and_positive_macros(field):
     assert getattr(RecognizedFood(name="test", **{field: 1.25}), field) == 1.25
 
 
+def test_gemini_parser_parses_and_totals_optional_macros():
+    from app.services.recognizer.gemini import GeminiVisionRecognizer
+
+    raw = json.dumps({
+        "foods": [
+            {
+                "name": "비빔밥",
+                "carbs_g": 68.5,
+                "protein_g": 18,
+                "fat_g": 12.25,
+            },
+            {
+                "name": "김치",
+                "carbs_g": None,
+                "protein_g": 2.5,
+                "fat_g": None,
+            },
+        ],
+    })
+
+    analysis = GeminiVisionRecognizer.__new__(GeminiVisionRecognizer)._parse(raw, 10)
+
+    assert (analysis.foods[0].carbs_g, analysis.foods[0].protein_g, analysis.foods[0].fat_g) == (
+        68.5, 18.0, 12.25,
+    )
+    assert (analysis.foods[1].carbs_g, analysis.foods[1].protein_g, analysis.foods[1].fat_g) == (
+        None, 2.5, None,
+    )
+    assert (analysis.total_carbs_g, analysis.total_protein_g, analysis.total_fat_g) == (
+        68.5, 20.5, 12.25,
+    )
+
+
+def test_litellm_parser_parses_and_totals_optional_macros():
+    from app.services.recognizer.litellm_vision import LiteLLMVisionRecognizer
+
+    raw = """```json
+{"foods":[
+  {"name":"비빔밥","carbs_g":68.5,"protein_g":18,"fat_g":12.25},
+  {"name":"김치","carbs_g":null,"protein_g":2.5,"fat_g":null}
+]}
+```"""
+
+    analysis = LiteLLMVisionRecognizer.__new__(LiteLLMVisionRecognizer)._parse(raw, 10)
+
+    assert (analysis.foods[0].carbs_g, analysis.foods[0].protein_g, analysis.foods[0].fat_g) == (
+        68.5, 18.0, 12.25,
+    )
+    assert (analysis.foods[1].carbs_g, analysis.foods[1].protein_g, analysis.foods[1].fat_g) == (
+        None, 2.5, None,
+    )
+    assert (analysis.total_carbs_g, analysis.total_protein_g, analysis.total_fat_g) == (
+        68.5, 20.5, 12.25,
+    )
+
+
 @pytest.mark.parametrize("field", ["carbs_g", "protein_g", "fat_g"])
 @pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
 def test_entry_update_rejects_non_finite_macros(field, value):
