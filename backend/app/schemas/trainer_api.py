@@ -111,3 +111,55 @@ class RoutineAssignRequest(BaseModel):
     type: RoutineType
     reason: str = Field(default="", max_length=200)
     source: Literal["trainer", "ai"] = "trainer"
+
+
+# ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 루프) ----
+
+ScheduleStatus = Literal["예정", "완료", "공백"]
+
+
+class ProgramItem(BaseModel):
+    """세션 프로그램 한 항목 — 프론트 ProgramItem 계약({name,sets,reps,weight})."""
+    name: str = Field(min_length=1, max_length=100)
+    sets: int = Field(default=0, ge=0, le=99)
+    reps: str = Field(default="", max_length=30)
+    weight: str = Field(default="", max_length=30)
+
+
+class ScheduleSessionOut(BaseModel):
+    """스케줄 슬롯 — 프론트 ScheduleSession 계약 정렬."""
+    id: str
+    date: str
+    time: str
+    client_name: str
+    type: str
+    duration_minutes: int
+    status: str          # 예정|완료|공백
+    note: str
+    program: list[ProgramItem]
+
+
+class ScheduleCreateRequest(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    time: str = Field(max_length=10)
+    client_name: str = Field(default="", max_length=100)
+    member_id: str | None = Field(default=None, max_length=64)
+    type: str = Field(default="", max_length=30)
+    duration_minutes: int = Field(default=0, ge=0, le=600)
+    note: str = Field(default="", max_length=500)
+    program: list[ProgramItem] = Field(default_factory=list, max_length=30)
+
+
+class ScheduleUpdateRequest(BaseModel):
+    """부분 수정 — 제공된 필드만 반영."""
+    time: str | None = Field(default=None, max_length=10)
+    client_name: str | None = Field(default=None, max_length=100)
+    member_id: str | None = Field(default=None, max_length=64)
+    type: str | None = Field(default=None, max_length=30)
+    duration_minutes: int | None = Field(default=None, ge=0, le=600)
+    note: str | None = Field(default=None, max_length=500)
+    program: list[ProgramItem] | None = Field(default=None, max_length=30)
+
+
+class ScheduleCompleteRequest(BaseModel):
+    note: str = Field(default="", max_length=500)

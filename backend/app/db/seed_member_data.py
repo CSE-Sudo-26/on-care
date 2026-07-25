@@ -145,6 +145,32 @@ _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
 }
 
 
+# 트레이너 오늘 타임라인 (time, client, member_id, type, duration, status, note, program).
+# member_id 는 유효 회원일 때만 연결(아니면 표시용 이름만). 프론트 TRAINER_SCHEDULE 정렬.
+_SCHEDULE: list[tuple[str, str, str | None, str, int, str, str, list[dict]]] = [
+    ("10:00", "김민수", "user-demo", "1:1 PT", 60, "완료", "무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.", [
+        {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
+        {"name": "레그컬", "sets": 3, "reps": "12회", "weight": "40kg"},
+        {"name": "카프레이즈", "sets": 3, "reps": "20회", "weight": "자체중량"},
+        {"name": "하체 스트레칭", "sets": 1, "reps": "10분", "weight": "-"},
+    ]),
+    ("12:00", "이지수", "user-jisu", "1:1 PT", 50, "완료", "데드리프트 자세 안정적. 다음 세션 60kg 도전.", [
+        {"name": "데드리프트", "sets": 4, "reps": "8회", "weight": "55kg"},
+        {"name": "루마니안 데드리프트", "sets": 3, "reps": "10회", "weight": "40kg"},
+        {"name": "플랭크", "sets": 3, "reps": "45초", "weight": "-"},
+        {"name": "코어 서킷", "sets": 2, "reps": "12회", "weight": "-"},
+    ]),
+    ("14:00", "", None, "", 0, "공백", "", []),
+    ("15:00", "박성호", "user-sungho", "1:1 PT", 60, "예정", "", [
+        {"name": "벤치프레스", "sets": 4, "reps": "8회", "weight": "65kg"},
+        {"name": "인클라인 덤벨 프레스", "sets": 3, "reps": "10회", "weight": "26kg"},
+        {"name": "트라이셉스 딥", "sets": 3, "reps": "12회", "weight": "-"},
+    ]),
+    ("17:00", "신규 회원", None, "상담", 30, "예정", "", []),
+    ("19:00", "", None, "", 0, "공백", "", []),
+]
+
+
 def seed_member_health_data() -> None:
     db: Session = SessionLocal()
     try:
@@ -157,8 +183,47 @@ def seed_member_health_data() -> None:
             _seed_history(db, user_id)
             _seed_chat(db, user_id)
             _seed_routines(db, user_id)
+        _seed_schedule(db, valid)
     finally:
         db.close()
+
+
+def _seed_schedule(db: Session, valid: set[str]) -> None:
+    """트레이너 오늘 타임라인 시드(멱등, 날짜 인식). 트레이너 계정이 없으면 스킵."""
+    if db.scalar(
+        select(models.User.id).where(
+            models.User.id == TRAINER_ID, models.User.role == "trainer"
+        )
+    ) is None:
+        return
+    today = date.today().isoformat()
+    # 오늘 스케줄이 이미 있으면 스킵(날짜 넘어가면 새로 시드)
+    if db.scalar(
+        select(models.TrainerSchedule.id)
+        .where(
+            models.TrainerSchedule.trainer_id == TRAINER_ID,
+            models.TrainerSchedule.date == today,
+        )
+        .limit(1)
+    ) is not None:
+        return
+    for i, (time, cname, mid, typ, dur, status, note, program) in enumerate(_SCHEDULE):
+        member_id = mid if (mid and mid in valid) else None
+        db.add(models.TrainerSchedule(
+            id=f"seed-schedule-{today}-{i}",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            date=today,
+            time=time,
+            client_name=cname,
+            type=typ,
+            duration_minutes=dur,
+            status=status,
+            note=note,
+            program_json=json.dumps(program, ensure_ascii=False),
+            sort_order=i,
+        ))
+    db.commit()
 
 
 def _seed_chat(db: Session, member_id: str) -> None:

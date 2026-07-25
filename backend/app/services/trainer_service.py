@@ -16,10 +16,11 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerRoutine, User,
+    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ClientDietEntryOut, RoutineHistoryOut, RoutineOut, TrainerClientOut,
+    ChatMessageOut, ClientDietEntryOut, ProgramItem, RoutineHistoryOut, RoutineOut,
+    ScheduleSessionOut, TrainerClientOut,
 )
 
 
@@ -436,3 +437,181 @@ def assign_routine(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
     )
+
+
+# ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----
+
+class ScheduleError(ValueError):
+    """스케줄 도메인 오류(라우터가 400 으로 변환)."""
+
+
+def _program_items(program_json: str) -> list[ProgramItem]:
+    try:
+        raw = json.loads(program_json) if program_json else []
+    except json.JSONDecodeError:
+        raw = []
+    out: list[ProgramItem] = []
+    for m in raw:
+        if not isinstance(m, dict):
+            continue
+        out.append(ProgramItem(
+            name=str(m.get("name", "") or "-"),
+            sets=int(m.get("sets", 0) or 0),
+            reps=str(m.get("reps", "")),
+            weight=str(m.get("weight", "")),
+        ))
+    return out
+
+
+def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
+    return ScheduleSessionOut(
+        id=s.id, date=s.date, time=s.time, client_name=s.client_name,
+        type=s.type, duration_minutes=s.duration_minutes, status=s.status,
+        note=s.note, program=_program_items(s.program_json),
+    )
+
+
+def build_schedule(db: Session, trainer_id: str, day: str) -> list[ScheduleSessionOut]:
+    """하루 타임라인(시간순, 공백 포함)."""
+    rows = db.scalars(
+        select(TrainerSchedule)
+        .where(TrainerSchedule.trainer_id == trainer_id, TrainerSchedule.date == day)
+        .order_by(TrainerSchedule.time, TrainerSchedule.sort_order)
+    ).all()
+    return [_schedule_out(s) for s in rows]
+
+
+def booked_dates(db: Session, trainer_id: str) -> list[str]:
+    """예약이 있는(공백 아닌) 날짜 목록 — 주간 스트립 도트용."""
+    rows = db.scalars(
+        select(TrainerSchedule.date)
+        .where(TrainerSchedule.trainer_id == trainer_id, TrainerSchedule.status != "공백")
+        .distinct()
+    ).all()
+    return sorted(rows)
+
+
+def _get_owned_session(db: Session, trainer_id: str, session_id: str) -> TrainerSchedule | None:
+    s = db.get(TrainerSchedule, session_id)
+    if s is None or s.trainer_id != trainer_id:
+        return None
+    return s
+
+
+def create_session(
+    db: Session, trainer_id: str, *, date: str, time: str, client_name: str,
+    member_id: str | None, type_: str, duration_minutes: int, note: str,
+    program: list[ProgramItem],
+) -> ScheduleSessionOut:
+    s = TrainerSchedule(
+        id=f"sched-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        date=date,
+        time=time,
+        client_name=client_name,
+        type=type_,
+        duration_minutes=duration_minutes,
+        status="예정",
+        note=note,
+        program_json=json.dumps([p.model_dump() for p in program], ensure_ascii=False),
+        sort_order=0,
+    )
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
+
+
+def update_session(
+    db: Session, trainer_id: str, session_id: str, fields: dict
+) -> ScheduleSessionOut | None:
+    """예약 부분 수정. 소유 슬롯이 아니면 None(라우터 404)."""
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if "time" in fields:
+        s.time = fields["time"]
+    if "client_name" in fields:
+        s.client_name = fields["client_name"]
+    if "member_id" in fields:
+        s.member_id = fields["member_id"]
+    if "type" in fields:
+        s.type = fields["type"]
+    if "duration_minutes" in fields:
+        s.duration_minutes = fields["duration_minutes"]
+    if "note" in fields:
+        s.note = fields["note"]
+    if "program" in fields and fields["program"] is not None:
+        s.program_json = json.dumps(
+            [p.model_dump() for p in fields["program"]], ensure_ascii=False
+        )
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
+
+
+def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return False
+    db.delete(s)
+    db.commit()
+    return True
+
+
+def complete_session(
+    db: Session, trainer_id: str, session_id: str, note: str
+) -> ScheduleSessionOut | None:
+    """예정→완료. 매칭된 회원이 있으면 운동기록(RoutineHistory)으로 적재해
+    '예약→수업→기록' 루프를 닫는다.
+
+    - 소유 슬롯 아님 → None(404).
+    - 공백/미래 일정 → ScheduleError(400).
+    - 이미 완료 → 그대로 반환(멱등, 중복 기록 없음).
+    기록 id 는 슬롯 기준 결정론적(sched-hist-{id})이라 동시/재호출에도 중복되지 않는다.
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if s.status == "공백":
+        raise ScheduleError("빈 슬롯은 완료할 수 없습니다.")
+    if s.date > _today().isoformat():
+        raise ScheduleError("미래 일정은 완료할 수 없습니다.")
+    if s.status == "완료":
+        return _schedule_out(s)  # 멱등 no-op
+
+    # 조건부 전환(예정 → 완료). rowcount==1 인 호출만 '방금 전환한' 것이므로 그 호출만
+    # 운동기록을 쓴다 — 동시 완료 요청이 둘 다 예정을 보고 중복 기록하는 것을 막는다.
+    values: dict = {"status": "완료"}
+    if note:
+        values["note"] = note
+    changed = db.execute(
+        update(TrainerSchedule)
+        .where(TrainerSchedule.id == session_id, TrainerSchedule.status == "예정")
+        .values(**values)
+    ).rowcount
+    if changed != 1:
+        db.commit()
+        db.refresh(s)
+        return _schedule_out(s)  # 동시 호출이 먼저 완료 처리함 — 기록 없이 현재 상태 반환
+
+    if s.member_id:
+        program = _program_items(s.program_json)
+        exercises = [
+            f"{p.name} {p.sets}세트" if p.sets > 1 else f"{p.name} {p.reps}".strip()
+            for p in program
+        ]
+        db.add(RoutineHistory(
+            id=f"sched-hist-{s.id}",
+            member_id=s.member_id,
+            trainer_id=trainer_id,
+            date=s.date,
+            kind_label="PT 세션 · 트레이너 지도",
+            completion_rate=100,
+            exercises_json=json.dumps(exercises, ensure_ascii=False),
+            trainer_note=note,
+        ))
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)

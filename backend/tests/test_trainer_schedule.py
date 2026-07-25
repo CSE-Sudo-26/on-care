@@ -1,0 +1,161 @@
+"""트레이너 스케줄 CRUD + 예약→수업→기록 완료 루프(#252). DB 필요."""
+from __future__ import annotations
+
+
+def _tok(client) -> str:
+    return client.post(
+        "/v1/auth/login",
+        data={"username": "trainer@oncare.com", "password": "oncare123"},
+    ).json()["access_token"]
+
+
+def _h(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _today() -> str:
+    from datetime import date
+    return date.today().isoformat()
+
+
+def test_schedule_seeded_timeline(client):
+    token = _tok(client)
+    r = client.get("/v1/trainer/schedule", headers=_h(token))
+    assert r.status_code == 200, r.text
+    slots = r.json()
+    assert len(slots) >= 6
+    # 시간순 정렬
+    times = [s["time"] for s in slots]
+    assert times == sorted(times)
+    # 공백 슬롯 + program 포함 슬롯 존재
+    assert any(s["status"] == "공백" for s in slots)
+    assert any(len(s["program"]) > 0 for s in slots)
+
+
+def test_schedule_crud(client):
+    token = _tok(client)
+    # 생성(예정)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(), "time": "16:00", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT", "duration_minutes": 45,
+            "program": [{"name": "스쿼트", "sets": 3, "reps": "10회", "weight": "40kg"}],
+        },
+        headers=_h(token),
+    )
+    assert c.status_code == 201, c.text
+    sid = c.json()["id"]
+    assert c.json()["status"] == "예정"
+
+    # 수정
+    u = client.put(
+        f"/v1/trainer/schedule/{sid}",
+        json={"time": "16:30", "duration_minutes": 50},
+        headers=_h(token),
+    )
+    assert u.status_code == 200, u.text
+    assert u.json()["time"] == "16:30"
+    assert u.json()["duration_minutes"] == 50
+
+    # 삭제
+    d = client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
+    assert d.status_code == 200
+    # 삭제 후 다시 삭제 → 404
+    assert client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token)).status_code == 404
+
+
+def test_schedule_create_with_unlinked_member_404(client):
+    token = _tok(client)
+    r = client.post(
+        "/v1/trainer/schedule",
+        json={"date": _today(), "time": "11:00", "member_id": "user-nobody"},
+        headers=_h(token),
+    )
+    assert r.status_code == 404
+
+
+def test_complete_session_logs_history_and_is_idempotent(client):
+    token = _tok(client)
+    # 오늘 예정 세션 생성(user-jisu 매칭)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(), "time": "18:30", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT", "duration_minutes": 40,
+            "program": [
+                {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
+                {"name": "카프레이즈", "sets": 1, "reps": "20회", "weight": "-"},
+            ],
+        },
+        headers=_h(token),
+    )
+    sid = c.json()["id"]
+
+    before = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
+    n_before = len(before)
+
+    # 완료 처리 → 완료 상태 + 운동기록 1건 추가
+    done = client.post(
+        f"/v1/trainer/schedule/{sid}/complete",
+        json={"note": "잘 마쳤어요"}, headers=_h(token),
+    )
+    assert done.status_code == 200, done.text
+    assert done.json()["status"] == "완료"
+
+    after = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
+    assert len(after) == n_before + 1
+    assert after[0]["label"] == "PT 세션 · 트레이너 지도"
+    assert after[0]["trainer_note"] == "잘 마쳤어요"
+    assert "레그프레스 3세트" in after[0]["exercises"]
+
+    # 재호출(멱등) → 상태 유지, 기록 중복 없음
+    again = client.post(
+        f"/v1/trainer/schedule/{sid}/complete", json={"note": "x"}, headers=_h(token)
+    )
+    assert again.status_code == 200
+    after2 = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
+    assert len(after2) == n_before + 1  # 중복 기록 없음
+
+
+def test_complete_future_session_rejected(client):
+    from datetime import date, timedelta
+
+    token = _tok(client)
+    future = (date.today() + timedelta(days=3)).isoformat()
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={"date": future, "time": "10:00", "member_id": "user-jisu", "type": "1:1 PT"},
+        headers=_h(token),
+    )
+    sid = c.json()["id"]
+    r = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    assert r.status_code == 400  # 미래 일정 완료 불가
+
+
+def test_schedule_ownership_and_role(client):
+    token = _tok(client)
+    # 없는 일정 완료/수정 → 404
+    assert client.post(
+        "/v1/trainer/schedule/nope/complete", json={}, headers=_h(token)
+    ).status_code == 404
+    assert client.put(
+        "/v1/trainer/schedule/nope", json={"time": "09:00"}, headers=_h(token)
+    ).status_code == 404
+
+    # 회원 계정 → 403
+    from uuid import uuid4
+    email = f"m-{uuid4().hex[:8]}@oncare.com"
+    client.post("/v1/auth/register", json={"email": email, "password": "pw!", "name": "u"})
+    mtok = client.post(
+        "/v1/auth/login", data={"username": email, "password": "pw!"}
+    ).json()["access_token"]
+    assert client.get("/v1/trainer/schedule", headers=_h(mtok)).status_code == 403
+
+
+def test_booked_dates(client):
+    token = _tok(client)
+    r = client.get("/v1/trainer/schedule/booked-dates", headers=_h(token))
+    assert r.status_code == 200, r.text
+    dates = r.json()
+    assert _today() in dates  # 오늘 시드에 예약(공백 아님)이 있음

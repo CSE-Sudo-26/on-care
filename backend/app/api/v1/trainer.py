@@ -22,7 +22,8 @@ from app.db.session import get_db
 from app.models.models import TrainerClient, TrainerProfile
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientDietEntryOut, RoutineAssignRequest, RoutineOut,
-    RoutineHistoryOut, TrainerClientOut, TrainerGymOut, TrainerMe,
+    RoutineHistoryOut, ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut,
+    ScheduleUpdateRequest, TrainerClientOut, TrainerGymOut, TrainerMe,
 )
 from app.services import trainer_service
 
@@ -207,3 +208,89 @@ def trainer_assign_routine(
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
     )
+
+
+# ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----
+
+@router.get("/trainer/schedule/booked-dates", response_model=list[str])
+def trainer_booked_dates(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[str]:
+    """예약이 있는(공백 아닌) 날짜 목록 — 주간 스트립 도트용."""
+    return trainer_service.booked_dates(db, trainer.id)
+
+
+@router.get("/trainer/schedule", response_model=list[ScheduleSessionOut])
+def trainer_schedule(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    date: str | None = Query(None, description="YYYY-MM-DD (기본: 오늘)"),
+) -> list[ScheduleSessionOut]:
+    """하루 타임라인(시간순, 공백 포함)."""
+    day = date or trainer_service.today_iso()
+    return trainer_service.build_schedule(db, trainer.id, day)
+
+
+@router.post("/trainer/schedule", response_model=ScheduleSessionOut, status_code=201)
+def trainer_create_session(
+    payload: ScheduleCreateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """예약 추가(status 예정). member_id 를 주면 담당 고객이어야 한다(아니면 404)."""
+    if payload.member_id:
+        _require_client(db, trainer.id, payload.member_id)
+    return trainer_service.create_session(
+        db, trainer.id,
+        date=payload.date, time=payload.time, client_name=payload.client_name,
+        member_id=payload.member_id, type_=payload.type,
+        duration_minutes=payload.duration_minutes, note=payload.note,
+        program=payload.program,
+    )
+
+
+@router.put("/trainer/schedule/{session_id}", response_model=ScheduleSessionOut)
+def trainer_update_session(
+    session_id: str,
+    payload: ScheduleUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """예약 수정(제공된 필드만). member_id 변경 시 담당 고객이어야 한다."""
+    fields = payload.model_dump(exclude_unset=True)
+    if fields.get("member_id"):
+        _require_client(db, trainer.id, fields["member_id"])
+    out = trainer_service.update_session(db, trainer.id, session_id, fields)
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.delete("/trainer/schedule/{session_id}")
+def trainer_delete_session(
+    session_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """예약 삭제."""
+    if not trainer_service.delete_session(db, trainer.id, session_id):
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return {"status": "deleted"}
+
+
+@router.post("/trainer/schedule/{session_id}/complete", response_model=ScheduleSessionOut)
+def trainer_complete_session(
+    session_id: str,
+    payload: ScheduleCompleteRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
+    try:
+        out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
