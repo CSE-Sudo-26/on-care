@@ -132,6 +132,7 @@ class ClientRepository {
               sugarG: 0,
               lastRoutine: '-',
               weekCompletionJson: '[0,0,0,0,0,0,0]',
+              sodiumWeekJson: const Value('[]'),
               // Large key appends new clients after the seeded roster.
               sortOrder: Value(now.millisecondsSinceEpoch),
             ),
@@ -211,6 +212,11 @@ class ClientRepository {
     final week = (jsonDecode(row.weekCompletionJson) as List<Object?>)
         .map((e) => e as int)
         .toList();
+    final sodiumWeek = (jsonDecode(row.sodiumWeekJson) as List<Object?>)
+        // On web, JSON numbers can decode as double — `as int` would
+        // throw, so normalise through num (review PR 247).
+        .map((e) => (e as num).toInt())
+        .toList();
     return TrainerClient(
       id: row.id,
       name: row.name,
@@ -224,6 +230,7 @@ class ClientRepository {
       sugarG: row.sugarG,
       lastRoutine: row.lastRoutine,
       weekCompletion: week,
+      sodiumWeek: sodiumWeek,
     );
   }
 }

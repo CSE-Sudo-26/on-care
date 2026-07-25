@@ -34,6 +34,10 @@ class DietView extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: <Widget>[
           _NutritionSummary(client: client),
+          if (client.sodiumWeek.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            _SodiumTrendCard(client: client),
+          ],
           const SizedBox(height: AppSpacing.md),
           for (final meal in meals) ...<Widget>[
             _MealCard(entry: meal),
@@ -106,6 +110,165 @@ class _NutritionSummary extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "최근 7일 나트륨 추이" — a mini bar chart of the last week's daily
+/// sodium (월→일) with the target line, average, and over-days count so
+/// the trainer sees the pattern, not just today.
+class _SodiumTrendCard extends StatelessWidget {
+  const _SodiumTrendCard({required this.client});
+
+  final TrainerClient client;
+
+  static const List<String> _weekdayShort = <String>[
+    '월',
+    '화',
+    '수',
+    '목',
+    '금',
+    '토',
+    '일',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final week = client.sodiumWeek;
+    final maxMg = <int>[
+      ...week,
+      sodiumTargetMg,
+    ].reduce((a, b) => a > b ? a : b);
+    final overDays = client.sodiumOverDays;
+    final avg = client.sodiumWeekAvg;
+
+    // The series ends at today (last entry == today's total), so label
+    // each bar with its own weekday counting back from today — a fixed
+    // 월→일 axis would mislabel every day the tab is opened on a
+    // non-Sunday.
+    final today = DateTime.now();
+    final labels = <String>[
+      for (var i = week.length - 1; i >= 0; i--)
+        _weekdayShort[today.subtract(Duration(days: i)).weekday - 1],
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Expanded(
+                child: Text(
+                  '최근 7일 나트륨 추이',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+              if (avg != null)
+                Text(
+                  '평균 ${avg}mg',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 84,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                for (var i = 0; i < week.length; i++)
+                  Expanded(
+                    child: _TrendBar(
+                      label: labels[i],
+                      value: week[i],
+                      maxValue: maxMg,
+                      over: week[i] > sodiumTargetMg,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            overDays > 0
+                ? '지난 7일 중 $overDays일 목표(${sodiumTargetMg}mg)를 초과했어요.'
+                : '지난 7일 모두 목표(${sodiumTargetMg}mg) 이내예요. 좋아요!',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: overDays > 0 ? AppColors.warning : AppColors.success,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendBar extends StatelessWidget {
+  const _TrendBar({
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.over,
+  });
+
+  final String label;
+  final int value;
+  final int maxValue;
+  final bool over;
+
+  @override
+  Widget build(BuildContext context) {
+    // Reserve room for the two text rows; the bar fills the rest.
+    const barMax = 52.0;
+    final h = maxValue == 0 ? 0.0 : (value / maxValue) * barMax;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Text(
+          '$value',
+          style: const TextStyle(
+            fontSize: 7.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Container(
+          width: 12,
+          height: h,
+          decoration: BoxDecoration(
+            color: over ? AppColors.warning : AppColors.accent,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
+        ),
+      ],
     );
   }
 }

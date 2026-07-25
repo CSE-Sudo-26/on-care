@@ -46,7 +46,7 @@ void main() {
       final minsu = clients.firstWhere((c) => c.name == '김민수');
       expect((jsonDecode(minsu.weekCompletionJson) as List<Object?>).length, 7);
 
-      expect(await db.readValue('trainer_seeded_v1'), _todayString());
+      expect(await db.readValue('trainer_seeded_v2'), _todayString());
     });
 
     test('schedule seeds onto today (never empty on a later day)', () async {
@@ -76,13 +76,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v1', '2020-01-01');
+      await db.putValue('trainer_seeded_v2', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v1'), _todayString());
+      expect(await db.readValue('trainer_seeded_v2'), _todayString());
     });
 
     test(
@@ -150,6 +150,48 @@ void main() {
       }
     });
 
+    test('a same-day v1→v2 upgrade re-seeds to backfill sodium trends', () async {
+      final today = _todayString();
+
+      // Simulate the pre-v2 world: already seeded TODAY under the old
+      // `_v1` flag, plus a runtime (non-seed) client that must survive.
+      await db.putValue('trainer_seeded_v1', today);
+      await db
+          .into(db.trainerClients)
+          .insert(
+            TrainerClientsCompanion.insert(
+              id: 'client-runtime-1',
+              name: '최수진',
+              avatar: '최',
+              goal: '체중 감량',
+              lastMessage: '아직 대화가 없어요',
+              lastTime: '-',
+              caloriesToday: 0,
+              sodiumMg: 0,
+              sugarG: 0,
+              lastRoutine: '-',
+              weekCompletionJson: '[0,0,0,0,0,0,0]',
+              // sodiumWeekJson stays at its blank v2 default.
+            ),
+          );
+
+      // The `_v2` flag is absent, so this upgrade re-seeds exactly once
+      // even though `_v1 == today` — the old flag alone would skip it and
+      // leave sodium trends blank all day (review PR 247).
+      await seedIfEmpty(db);
+
+      final clients = await db.select(db.trainerClients).get();
+      // The runtime client survived.
+      expect(clients.any((c) => c.id == 'client-runtime-1'), isTrue);
+      // The seed clients were (re-)inserted with a real 7-day trend.
+      final minsu = clients.firstWhere((c) => c.id == 'seed-client-1');
+      final week = jsonDecode(minsu.sodiumWeekJson) as List<Object?>;
+      expect(week.length, 7);
+      expect(week.any((v) => (v as num) > 0), isTrue);
+
+      expect(await db.readValue('trainer_seeded_v2'), today);
+    });
+
     test('user-added (non-seed) chat messages survive a re-seed', () async {
       await seedIfEmpty(db);
 
@@ -168,7 +210,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v1', '2020-01-01');
+      await db.putValue('trainer_seeded_v2', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();
