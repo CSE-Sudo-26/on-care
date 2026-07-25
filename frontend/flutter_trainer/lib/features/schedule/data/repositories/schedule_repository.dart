@@ -22,10 +22,65 @@ class ScheduleRepository {
   Stream<List<ScheduleSession>> watchToday() {
     final query = _db.select(_db.trainerScheduleEntries)
       ..where((t) => t.date.equals(ymd(DateTime.now())))
+      // Time first (zero-padded HH:MM sorts lexicographically) so
+      // trainer-added sessions land at the right timeline position;
+      // sortOrder only breaks ties between seed rows.
       ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
+        (t) => OrderingTerm(expression: t.time),
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
     return query.watch().map((rows) => rows.map(_toEntity).toList());
+  }
+
+  /// Books a new session on today's timeline (status 예정). The
+  /// non-`seed-` id survives the daily re-seed.
+  Future<void> addSession({
+    required String clientName,
+    required String time,
+    required String type,
+    required int durationMinutes,
+  }) async {
+    await _db
+        .into(_db.trainerScheduleEntries)
+        .insert(
+          TrainerScheduleEntriesCompanion.insert(
+            id: 'sched-${DateTime.now().microsecondsSinceEpoch}',
+            date: ymd(DateTime.now()),
+            time: time,
+            clientName: Value(clientName),
+            type: Value(type),
+            durationMinutes: Value(durationMinutes),
+            status: '예정',
+            programJson: const Value('[]'),
+          ),
+        );
+  }
+
+  /// Edits a booked session's time/client/type/duration.
+  Future<void> updateSession(
+    String id, {
+    required String clientName,
+    required String time,
+    required String type,
+    required int durationMinutes,
+  }) async {
+    await (_db.update(
+      _db.trainerScheduleEntries,
+    )..where((t) => t.id.equals(id))).write(
+      TrainerScheduleEntriesCompanion(
+        clientName: Value(clientName),
+        time: Value(time),
+        type: Value(type),
+        durationMinutes: Value(durationMinutes),
+      ),
+    );
+  }
+
+  /// Removes a session from the timeline.
+  Future<void> deleteSession(String id) async {
+    await (_db.delete(
+      _db.trainerScheduleEntries,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   ScheduleSession _toEntity(TrainerScheduleRow row) {
