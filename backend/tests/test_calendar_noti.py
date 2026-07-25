@@ -46,6 +46,26 @@ def test_schedule_event_detail_not_found(client):
     assert client.delete("/v1/schedule/events/nope").status_code == 404
 
 
+def test_schedule_event_input_validation(client):
+    """잘못된 날짜·시간·카테고리·색상은 DB 500 이 아니라 422(리뷰 재-#4)."""
+    base = {"date": _today(), "title": "검진"}
+    url = "/v1/schedule/events"
+    assert client.post(url, json={**base, "date": "2026-99-99"}).status_code == 422
+    assert client.post(url, json={**base, "date": "2026-02-31"}).status_code == 422
+    assert client.post(url, json={**base, "time": "25:99"}).status_code == 422
+    assert client.post(url, json={**base, "category": "invalid"}).status_code == 422
+    assert client.post(url, json={**base, "color_hex": "red"}).status_code == 422
+    assert client.post(url, json={**base, "title": ""}).status_code == 422
+    # 유효 입력은 201 (time 은 빈 값=종일 허용)
+    ok = client.post(url, json={**base, "time": "", "category": "hospital", "color_hex": "#E0F2F7"})
+    assert ok.status_code == 201
+    eid = ok.json()["id"]
+    # 수정도 잘못된 값 422
+    assert client.put(f"{url}/{eid}", json={"time": "99:99"}).status_code == 422
+    assert client.put(f"{url}/{eid}", json={"category": "nope"}).status_code == 422
+    client.delete(f"{url}/{eid}")
+
+
 # ---- 알림 액션 ----
 
 def test_notification_action_derived(client):
