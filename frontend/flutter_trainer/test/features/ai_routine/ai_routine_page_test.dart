@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
@@ -7,6 +8,27 @@ import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// Counts registration calls and delays them, to test the in-flight
+/// double-tap guard.
+class _SlowCountingRoutineRepository extends AiRoutineRepository {
+  _SlowCountingRoutineRepository(super.db);
+
+  int registerCalls = 0;
+
+  @override
+  Future<bool> registerToTodaySchedule({
+    required String clientName,
+    required List<Map<String, Object?>> program,
+  }) async {
+    registerCalls++;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return super.registerToTodaySchedule(
+      clientName: clientName,
+      program: program,
+    );
+  }
+}
 
 void main() {
   group('AiRoutineRepository.watchRoutine', () {
@@ -29,6 +51,58 @@ void main() {
       final jisu = await repo.watchRoutine('seed-client-2').first;
       expect(jisu.first.name, '인터벌 런닝');
     });
+
+    test(
+      'registerToTodaySchedule attaches to an existing 예정 session',
+      () async {
+        final repo = AiRoutineRepository(db);
+        // 박성호 has a seeded 15:00 예정 session.
+        final attached = await repo.registerToTodaySchedule(
+          clientName: '박성호',
+          program: <Map<String, Object?>>[
+            <String, Object?>{
+              'name': '저강도 유산소',
+              'sets': 1,
+              'reps': '30분',
+              'weight': '-',
+            },
+          ],
+        );
+        expect(attached, isTrue);
+
+        final rows = await db.select(db.trainerScheduleEntries).get();
+        final his = rows.where((r) => r.clientName == '박성호').toList();
+        expect(his.length, 1); // no extra slot booked
+        expect(his.single.programJson, contains('저강도 유산소'));
+      },
+    );
+
+    test(
+      'registerToTodaySchedule books a new slot when no 예정 exists',
+      () async {
+        final repo = AiRoutineRepository(db);
+        // 김민수's only session today is 완료 — a new slot gets booked.
+        final attached = await repo.registerToTodaySchedule(
+          clientName: '김민수',
+          program: <Map<String, Object?>>[
+            <String, Object?>{
+              'name': '코어 강화',
+              'sets': 1,
+              'reps': '10분',
+              'weight': '-',
+            },
+          ],
+        );
+        expect(attached, isFalse);
+
+        final rows = await db.select(db.trainerScheduleEntries).get();
+        final his = rows.where((r) => r.clientName == '김민수').toList();
+        expect(his.length, 2);
+        final booked = his.firstWhere((r) => r.status == '예정');
+        expect(booked.programJson, contains('코어 강화'));
+        expect(booked.id.startsWith('seed-'), isFalse);
+      },
+    );
   });
 
   group('AiRoutinePage', () {
@@ -67,7 +141,11 @@ void main() {
     testWidgets('adding and deleting a custom exercise', (tester) async {
       await openTab(tester);
 
-      await tester.scrollUntilVisible(find.text('＋ 운동 직접 추가'), 150);
+      await tester.scrollUntilVisible(
+        find.text('＋ 운동 직접 추가'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
       await tester.pump();
       await tester.tap(find.text('＋ 운동 직접 추가'));
@@ -79,13 +157,17 @@ void main() {
       await tester.tap(find.text('추가하기'));
       await tester.pump();
       // The new custom card may land below the fold.
-      await tester.scrollUntilVisible(find.text('레그프레스 5세트'), 150);
+      await tester.scrollUntilVisible(
+        find.text('레그프레스 5세트'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       expect(find.text('레그프레스 5세트'), findsOneWidget);
       expect(find.text('💡 트레이너 추가'), findsOneWidget);
 
       // Delete it again.
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(Icons.close).last);
       await tester.pump();
       expect(find.text('레그프레스 5세트'), findsNothing);
     });
@@ -94,7 +176,11 @@ void main() {
       await openTab(tester);
 
       // Open the add form, then send with it still open.
-      await tester.scrollUntilVisible(find.text('＋ 운동 직접 추가'), 150);
+      await tester.scrollUntilVisible(
+        find.text('＋ 운동 직접 추가'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
       await tester.pump();
       await tester.tap(find.text('＋ 운동 직접 추가'));
@@ -116,14 +202,76 @@ void main() {
       await tester.pump(const Duration(seconds: 4)); // reset window
       // The add form must be closed again after the reset.
       expect(find.text('운동 추가'), findsNothing);
-      await tester.scrollUntilVisible(find.text('＋ 운동 직접 추가'), 150);
+      await tester.scrollUntilVisible(
+        find.text('＋ 운동 직접 추가'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('＋ 운동 직접 추가'), findsOneWidget);
+    });
+
+    testWidgets('an AI suggestion can be removed for this round', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+      // Every card carries an X now — the first belongs to the first
+      // AI suggestion.
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pump();
+      expect(find.text('저강도 유산소 (걷기)'), findsNothing);
+
+      // Switching clients and back restores the full suggestion list.
+      await tester.tap(find.text('이지수'));
+      await settle(tester);
+      await tester.tap(find.text('김민수'));
+      await settle(tester);
+      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+    });
+
+    testWidgets('오늘 스케줄에 등록 writes the routine onto the schedule tab', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      // 박성호 → his 15:00 예정 session receives the program.
+      await tester.tap(find.text('박성호'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('📅 오늘 PT 스케줄에 등록'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump();
+      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await settle(tester);
+
+      expect(find.text('✓ 오늘 스케줄에 등록됨'), findsOneWidget);
+      expect(find.text('스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요'), findsOneWidget);
+
+      // The 스케줄 tab shows the registered plan on his 예정 session.
+      await tester.tap(find.text('스케줄'));
+      await settle(tester);
+      await tester.scrollUntilVisible(find.text('박성호'), 120);
+      await tester.ensureVisible(find.text('박성호'));
+      await tester.pump();
+      await tester.tap(find.text('박성호'));
+      await tester.pump();
+      await tester.scrollUntilVisible(find.text('벤치프레스 4세트'), 120);
+      expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
     });
 
     testWidgets('send shows confirmation then resets edits', (tester) async {
       await openTab(tester);
 
-      await tester.scrollUntilVisible(find.textContaining('님에게 전송'), 150);
+      await tester.scrollUntilVisible(
+        find.textContaining('님에게 전송'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(find.textContaining('님에게 전송'));
       await tester.pump();
       await tester.tap(find.textContaining('님에게 전송'));
@@ -134,6 +282,169 @@ void main() {
 
       await tester.pump(const Duration(seconds: 4)); // reset window
       expect(find.textContaining('검토 완료'), findsOneWidget);
+    });
+
+    testWidgets('mashing 스케줄 등록 registers only once', (tester) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          // Shares the app's seeded DB so the AI suggestions load.
+          aiRoutineRepositoryProvider.overrideWith(
+            (ref) =>
+                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('📅 오늘 PT 스케줄에 등록'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump();
+      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Second tap lands mid-flight — the button is now disabled and its
+      // label has flipped, so this must NOT trigger a second register.
+      await tester.tap(
+        find.textContaining('스케줄에 등록').first,
+        warnIfMissed: false,
+      );
+      await settle(tester);
+
+      final repo =
+          container.read(aiRoutineRepositoryProvider)
+              as _SlowCountingRoutineRepository;
+      expect(repo.registerCalls, 1);
+    });
+
+    testWidgets('switching clients mid-registration does not flash success '
+        'on the new client', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          aiRoutineRepositoryProvider.overrideWith(
+            (ref) =>
+                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('📅 오늘 PT 스케줄에 등록'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump();
+      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Switch client while the write for 김민수 is still in flight —
+      // the picker is above the button, so scroll back up to it.
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        -150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('이지수'));
+      await tester.pump();
+      await tester.tap(find.text('이지수'));
+      await settle(tester);
+
+      // 이지수's card must not claim the registration, and her button
+      // must not be left disabled by the previous client's guard.
+      expect(find.text('✓ 오늘 스케줄에 등록됨'), findsNothing);
+      expect(find.text('📅 오늘 PT 스케줄에 등록'), findsOneWidget);
+    });
+
+    testWidgets('A → B → A cannot double-register while A is still saving', (
+      tester,
+    ) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: <Override>[
+          aiRoutineRepositoryProvider.overrideWith(
+            (ref) =>
+                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+      await tester.tap(find.text('AI루틴'));
+      await settle(tester);
+
+      // Matches both the idle '📅 …등록' and the in-flight/disabled
+      // '✓ …등록됨' label so it works before and during a save.
+      Future<void> tapRegister() async {
+        final f = find.textContaining('스케줄에 등록');
+        await tester.scrollUntilVisible(
+          f,
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(f);
+        await tester.pump();
+        await tester.tap(f, warnIfMissed: false);
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+
+      Future<void> selectClient(String name) async {
+        await tester.scrollUntilVisible(
+          find.text(name),
+          -150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(find.text(name));
+        await tester.pump();
+        await tester.tap(find.text(name));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+
+      // Start 김민수's (slow) registration, hop to 이지수 and back.
+      await tapRegister();
+      await selectClient('이지수');
+      await selectClient('김민수');
+      // Back on 김민수 while the first write is still in flight — the
+      // button stays disabled, so this tap must NOT start a second one.
+      await tapRegister();
+      await settle(tester);
+
+      final repo =
+          container.read(aiRoutineRepositoryProvider)
+              as _SlowCountingRoutineRepository;
+      expect(repo.registerCalls, 1);
+    });
+
+    testWidgets('registering with every exercise removed shows a hint', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      // Remove all three seeded AI suggestions for 김민수.
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byIcon(Icons.close).first);
+        await tester.pump();
+      }
+
+      await tester.scrollUntilVisible(
+        find.text('📅 오늘 PT 스케줄에 등록'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump();
+      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.pump();
+
+      expect(find.text('운동을 하나 이상 추가해 주세요'), findsOneWidget);
     });
   });
 }

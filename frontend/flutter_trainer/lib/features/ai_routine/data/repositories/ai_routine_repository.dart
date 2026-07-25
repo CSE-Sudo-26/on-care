@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
 
 /// Reads a client's AI-suggested routine from the local drift DB.
@@ -31,6 +34,68 @@ class AiRoutineRepository {
           )
           .toList(),
     );
+  }
+
+  /// Registers the composed routine as [clientName]'s PT program on
+  /// today's schedule (스케줄 탭 watches the same table, so it updates
+  /// live). Attaches to the client's earliest 예정 session when one
+  /// exists; otherwise books a new one-hour 예정 slot at the next full
+  /// hour. Returns `true` when attached to an existing session.
+  ///
+  /// [program] entries follow the schedule programJson shape
+  /// (`{name, sets, reps, weight}`).
+  Future<bool> registerToTodaySchedule({
+    required String clientName,
+    required List<Map<String, Object?>> program,
+  }) async {
+    final table = _db.trainerScheduleEntries;
+    final today = ymd(DateTime.now());
+    final existing =
+        await (_db.select(table)
+              ..where(
+                (t) =>
+                    t.date.equals(today) &
+                    t.clientName.equals(clientName) &
+                    t.status.equals('예정'),
+              )
+              ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
+                (t) => OrderingTerm(expression: t.time),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      await (_db.update(table)..where((t) => t.id.equals(existing.id))).write(
+        TrainerScheduleEntriesCompanion(
+          programJson: Value(jsonEncode(program)),
+        ),
+      );
+      return true;
+    }
+
+    final now = DateTime.now();
+    // Next full hour, capped at the 23:00 slot. This keeps an evening
+    // registration in the future (22:xx → 23:00) where the previous cap
+    // of 22 produced a past 22:00. It does NOT cover 23:00–23:59: there
+    // is no later slot today, so that books at an already-past 23:00 —
+    // register after 23:00 against the next day via the date picker.
+    // A complete fix needs a server clock (review PR 220).
+    final hour = (now.hour + 1).clamp(6, 23);
+    await _db
+        .into(table)
+        .insert(
+          TrainerScheduleEntriesCompanion.insert(
+            id: 'sched-${now.microsecondsSinceEpoch}',
+            date: today,
+            time: '${hour.toString().padLeft(2, '0')}:00',
+            clientName: Value(clientName),
+            type: const Value('1:1 PT'),
+            durationMinutes: const Value(60),
+            status: '예정',
+            programJson: Value(jsonEncode(program)),
+          ),
+        );
+    return false;
   }
 }
 
