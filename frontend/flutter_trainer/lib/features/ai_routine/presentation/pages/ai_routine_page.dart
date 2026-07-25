@@ -548,12 +548,16 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
               onTap: () => _registerToSchedule(client, items),
             ),
             if (_registered)
-              const Padding(
-                padding: EdgeInsets.only(top: AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
-                  '스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요',
+                  // Match the button's day label — '오늘'/'내일'/'M/D' —
+                  // so a future-day registration isn't described as '오늘'
+                  // (CodeRabbit review).
+                  '스케줄 탭에서 ${_dateChipLabel(_registerOffset)} '
+                  '세션의 프로그램으로 확인할 수 있어요',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.success,

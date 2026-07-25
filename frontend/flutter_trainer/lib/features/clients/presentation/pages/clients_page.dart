@@ -269,6 +269,12 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
       added = await ref
           .read(clientRepositoryProvider)
           .addClient(name: name, goal: _goal.text);
+    } catch (_) {
+      // An unexpected DB failure must not leave the sheet silently stuck —
+      // surface it inline like the duplicate case. `finally` clears the
+      // saving flag on every path (CodeRabbit review).
+      if (mounted) setState(() => _nameError = '등록에 실패했어요. 다시 시도해 주세요');
+      return;
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -72,7 +72,7 @@ void main() {
       // receive the first one's chat/운동기록 (review PR 243).
       expect(await repo.addClient(name: '김민수', goal: '중복'), isFalse);
       expect(await repo.addClient(name: '  김민수  ', goal: '공백 차이'), isFalse);
-      expect(await repo.addClient(name: '김민수 ', goal: '대소문자'), isFalse);
+      expect(await repo.addClient(name: '김민수 ', goal: '후행 공백'), isFalse);
       expect((await repo.watchClients().first).length, 3); // nothing added
 
       // A genuinely new name still registers, and is then itself taken.
