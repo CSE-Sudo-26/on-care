@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
@@ -52,9 +52,11 @@ def _haversine_m(lat1, lng1, lat2, lng2) -> int:
 async def places_nearby(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
-    lat: float = Query(37.5665, description="기준 위도(기본: 서울시청)"),
-    lng: float = Query(126.9780, description="기준 경도"),
-    category: str | None = Query(None, description="medical|fitness|healthy_food|pharmacy"),
+    lat: float = Query(37.5665, ge=-90, le=90, description="기준 위도(기본: 서울시청)"),
+    lng: float = Query(126.9780, ge=-180, le=180, description="기준 경도"),
+    category: Literal["medical", "fitness", "healthy_food", "pharmacy"] | None = Query(
+        None, description="medical|fitness|healthy_food|pharmacy"
+    ),
     radius_m: int = Query(3000, ge=100, le=20000),
 ) -> list[PlaceOut]:
     """주변 장소(거리순). 카카오 키가 있으면 실검색, 없거나 실패하면 시드 폴백.

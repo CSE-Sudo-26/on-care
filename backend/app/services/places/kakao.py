@@ -11,11 +11,24 @@
 """
 from __future__ import annotations
 
+import time
+
 import httpx
 
 from app.schemas.misc_api import PlaceOut
 
 _KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
+
+# 간단한 인메모리 TTL 캐시 — 동일 위치·카테고리 반복 조회 시 카카오 호출을 줄여
+# 요청 폭주/요금을 완화한다(운영은 인스턴스별 캐시라 근사적 완화). 좌표는 소수 3자리
+# (~110m) 버킷으로 묶는다.
+_CACHE_TTL_SECONDS = 60.0
+_CACHE_MAX = 500
+_cache: dict[tuple, tuple[float, list[PlaceOut]]] = {}
+
+
+def _cache_key(lat: float, lng: float, category: str | None, radius_m: int) -> tuple:
+    return (round(lat, 3), round(lng, 3), category or "", radius_m)
 
 # 계약 카테고리 → 카카오 키워드
 _CATEGORY_QUERY = {
@@ -61,7 +74,14 @@ async def search_nearby(
     lat: float, lng: float, category: str | None, radius_m: int,
     api_key: str, timeout: float = 3.0,
 ) -> list[PlaceOut]:
-    """카카오 Local 키워드 검색으로 주변 장소를 거리순 조회. 실패 시 예외(라우터가 폴백)."""
+    """카카오 Local 키워드 검색으로 주변 장소를 거리순 조회. 실패 시 예외(라우터가 폴백).
+    TTL 캐시 히트 시 호출을 건너뛴다."""
+    key = _cache_key(lat, lng, category, radius_m)
+    now = time.monotonic()
+    hit = _cache.get(key)
+    if hit is not None and hit[0] > now:
+        return hit[1]
+
     params = {
         "query": _query_for(category),
         "x": str(lng),      # 카카오는 x=경도, y=위도
@@ -75,4 +95,9 @@ async def search_nearby(
         resp = await client.get(_KAKAO_KEYWORD_URL, params=params, headers=headers)
         resp.raise_for_status()
         docs = resp.json().get("documents", [])
-    return docs_to_places(docs, category)
+    result = docs_to_places(docs, category)
+
+    if len(_cache) >= _CACHE_MAX:
+        _cache.clear()  # 단순 상한 — 무한 증식 방지
+    _cache[key] = (now + _CACHE_TTL_SECONDS, result)
+    return result

@@ -83,6 +83,63 @@ def test_places_uses_kakao_when_configured(client, monkeypatch):
     assert body[0]["name"] == "카카오헬스장"
 
 
+def test_places_input_validation(client):
+    """좌표 범위·category 허용값 밖은 DB 500 이 아니라 422(리뷰 재-#5)."""
+    assert client.get("/v1/places/nearby", params={"lat": 100}).status_code == 422
+    assert client.get("/v1/places/nearby", params={"lat": -100}).status_code == 422
+    assert client.get("/v1/places/nearby", params={"lng": 200}).status_code == 422
+    assert client.get("/v1/places/nearby", params={"category": "gym"}).status_code == 422
+    # 유효 카테고리는 정상
+    assert client.get("/v1/places/nearby", params={"category": "fitness"}).status_code == 200
+
+
+def test_kakao_cache_reduces_calls(monkeypatch):
+    """동일 위치·카테고리 반복 조회는 TTL 캐시로 카카오 호출을 한 번만 한다."""
+    import asyncio
+
+    import app.services.places.kakao as kk
+
+    kk._cache.clear()
+    calls = {"n": 0}
+
+    class _FakeResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"documents": [
+                {"id": "1", "place_name": "P", "x": "127.0", "y": "37.5", "distance": "10"}
+            ]}
+
+    class _FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, *a, **k):
+            calls["n"] += 1
+            return _FakeResp()
+
+    monkeypatch.setattr(kk.httpx, "AsyncClient", _FakeClient)
+
+    async def _run():
+        a = await kk.search_nearby(37.5, 127.0, "fitness", 3000, api_key="k")
+        b = await kk.search_nearby(37.5, 127.0, "fitness", 3000, api_key="k")
+        return a, b
+
+    try:
+        a, b = asyncio.run(_run())
+        assert calls["n"] == 1  # 두 번째는 캐시 히트
+        assert a[0].name == "P" and b[0].name == "P"
+    finally:
+        kk._cache.clear()
+
+
 def test_places_falls_back_when_kakao_raises(client, monkeypatch):
     """카카오 호출이 실패해도 요청은 시드로 폴백해 성공한다."""
     import app.api.v1.places as places_mod
