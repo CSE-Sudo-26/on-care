@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -19,7 +20,10 @@ Widget _shell(
     child: ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
-        maxWidth: 560,
+        // Match the main content width so the sheet scales with the viewport
+        // like the tab pages. The theme lifts the modal route cap to this
+        // width too (see AppTheme._bottomSheetTheme); this centres the child.
+        maxWidth: AppBreakpoints.contentMaxWidth,
       ),
       child: Container(
         decoration: const BoxDecoration(

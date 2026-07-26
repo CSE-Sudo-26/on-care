@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/typography.dart';
 
@@ -9,6 +10,15 @@ import 'package:oncare/design_system/tokens/typography.dart';
 /// be tightened in a later phase.
 class AppTheme {
   AppTheme._();
+
+  /// Material 3 caps modal bottom sheets at 640dp by default, so an inner
+  /// `ConstrainedBox` alone can never widen them. Lifting the route-level
+  /// cap to [AppBreakpoints.contentMaxWidth] lets sheets reach the same
+  /// width as the tab pages on wide viewports; their own inner constraints
+  /// then centre the content.
+  static const BottomSheetThemeData _bottomSheetTheme = BottomSheetThemeData(
+    constraints: BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+  );
 
   static ThemeData light() {
     const ColorScheme scheme = ColorScheme(
@@ -56,6 +66,7 @@ class AppTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.primary,
       ),
+      bottomSheetTheme: _bottomSheetTheme,
     );
   }
 
@@ -72,6 +83,7 @@ class AppTheme {
     );
     return base.copyWith(
       textTheme: AppTypography.buildTextTheme(base.textTheme),
+      bottomSheetTheme: _bottomSheetTheme,
     );
   }
 }

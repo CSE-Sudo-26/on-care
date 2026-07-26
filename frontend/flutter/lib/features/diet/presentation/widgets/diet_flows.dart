@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -76,7 +77,10 @@ Widget _sheetShell(BuildContext context, Widget child) {
     child: ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
-        maxWidth: 480,
+        // Match the main content width so the sheet scales with the viewport
+        // like the tab pages. The theme lifts the modal route cap to this
+        // width too (see AppTheme._bottomSheetTheme); this centres the child.
+        maxWidth: AppBreakpoints.contentMaxWidth,
       ),
       child: Container(
         decoration: const BoxDecoration(
