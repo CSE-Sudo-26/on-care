@@ -15,7 +15,7 @@
 
 ## STEP 1 에서 동작하는 것
 - `GET /v1/ping` · `GET /v1/healthz` · `GET /v1/version` — 프론트 계약과 정확히 일치
-- 9개 테이블 생성 (프론트 drift 스키마 정렬: diet_entries 에 sodium_mg/sugar_g 포함)
+- 테이블 생성 (프론트 drift 스키마 정렬: diet_entries 에 sodium_mg/sugar_g 포함) — 베이스라인 9테이블(places 포함), 이후 마이그레이션으로 현재 12테이블(social_accounts·food_nutrients·audit_logs 추가)
 - 사용자 id = 문자열, 데모 유저 'user-demo'(김민수) 시드
 
 ## 실행
@@ -26,7 +26,7 @@ docker compose up --build
 → http://localhost:8000/docs  (경로는 모두 /v1/...)
 
 ## DB 마이그레이션 (Alembic)
-스키마는 **Alembic 마이그레이션**으로 관리합니다(베이스라인: `migrations/versions/0001_baseline.py`, 9테이블 + pgvector).
+스키마는 **Alembic 마이그레이션**으로 관리합니다(베이스라인: `migrations/versions/0001_baseline.py`, 9테이블 + pgvector; 이후 마이그레이션으로 현재 12테이블).
 DB URL 은 `.env` 의 `DATABASE_URL` 을 그대로 사용합니다(`migrations/env.py` 가 app 설정에서 읽음).
 
 ```bash

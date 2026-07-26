@@ -227,19 +227,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeVsLastWeek => '지난주 대비';
 
   @override
-  String get homeSodiumInsightPre => '나트륨 섭취가 ';
+  String homeSodiumInsight(String trend, String alert) {
+    return '나트륨 섭취가 $trend 추세예요. 소금 사용량을 줄이고, $alert을 켜볼까요?';
+  }
 
   @override
   String get homeSodiumInsightTrend => '2주 연속 증가';
 
   @override
-  String get homeSodiumInsightMid => ' 추세예요. 소금 사용량을 줄이고, ';
-
-  @override
   String get homeSodiumInsightAlert => '고염분 식단 알림';
-
-  @override
-  String get homeSodiumInsightPost => '을 켜볼까요?';
 
   @override
   String get homeAiPill => '✦ AI';
@@ -287,6 +283,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealTagLowCal => '저칼로리';
 
   @override
+  String get homeMealNamulBibimbap => '나물 비빔밥';
+
+  @override
+  String get homeMealReasonFiber => '식이섬유가 풍부해요';
+
+  @override
+  String get homeMealTagHighFiber => '고식이섬유';
+
+  @override
   String get homeRecMealsTitle => '이번 주 AI 추천 식단';
 
   @override
@@ -311,6 +316,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unitMinutes => '분';
+
+  @override
+  String unitKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
+
+  @override
+  String unitMinutesValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString분';
+  }
 
   @override
   String get unitKg => 'kg';
@@ -415,13 +438,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAddSheetTitle => '식단 추가하기';
+  String get dietAddSheetTitle => '식단 추가';
 
   @override
   String get dietAddSheetSubtitle => '사진으로 음식을 분석해요';
 
   @override
-  String get dietPickPhoto => '사진 선택하기';
+  String get dietPickPhoto => '사진 선택';
 
   @override
   String get dietPickPhotoSub => '갤러리에서 음식 사진 선택';
@@ -917,6 +940,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myGoalSodium => '나트륨 제한';
+
+  @override
+  String get myGoalSugar => '당류 제한';
 
   @override
   String get myNotifDietLog => '식단 기록 알림';

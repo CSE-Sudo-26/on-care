@@ -6,6 +6,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- **Figma 리디자인**: 사용자 앱 전 화면(홈·식단·운동·MY·코칭)을 figma_kit 기준으로
+  재구성하고, 하드코딩 데모 대신 핵심 데이터 흐름을 실 provider로 재연결 (#189, #200).
+
 ## [0.3.0+3] — 2026-05-20
 
 Stage 9 — Local backend via drift + LocalApiInterceptor. The

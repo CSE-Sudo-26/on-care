@@ -110,11 +110,19 @@
   "homeLastWeekAvg": "Last week avg",
   "homeGoal": "Goal",
   "homeVsLastWeek": "vs last week",
-  "homeSodiumInsightPre": "Sodium intake has been ",
+  "homeSodiumInsight": "Sodium intake has been {trend}. Cut back on salt and turn on {alert}?",
+  "@homeSodiumInsight": {
+    "placeholders": {
+      "trend": {
+        "type": "String"
+      },
+      "alert": {
+        "type": "String"
+      }
+    }
+  },
   "homeSodiumInsightTrend": "rising for 2 weeks",
-  "homeSodiumInsightMid": ". Cut back on salt and turn on ",
   "homeSodiumInsightAlert": "high-sodium meal alerts",
-  "homeSodiumInsightPost": "?",
   "homeAiPill": "✦ AI",
   "homeLegendThisWeek": "This week",
   "homeLegendLastWeek": "Last week",
@@ -130,6 +138,9 @@
   "homeMealTofu": "Stir-fried tofu & veggies",
   "homeMealReasonLowCal": "Low calorie, keeps you full",
   "homeMealTagLowCal": "Low calorie",
+  "homeMealNamulBibimbap": "Namul bibimbap",
+  "homeMealReasonFiber": "Rich in dietary fiber",
+  "homeMealTagHighFiber": "High fiber",
   "homeRecMealsTitle": "This week's AI meal picks",
   "homeViewAll": "View all",
   "homeScheduleDate": "{weekday}, {month}/{day}",
@@ -151,6 +162,24 @@
   "homeScheduleWalkDetail": "Around home · 20 min",
   "unitKcal": "kcal",
   "unitMinutes": "min",
+  "unitKcalValue": "{count} kcal",
+  "@unitKcalValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "unitMinutesValue": "{count} min",
+  "@unitMinutesValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "unitKg": "kg",
   "dietTitle": "Diet",
   "dietToday": "Today",
@@ -485,6 +514,7 @@
   "myGoalBloodSugar": "Target blood sugar",
   "myGoalCalories": "Daily calories",
   "myGoalSodium": "Sodium limit",
+  "myGoalSugar": "Sugar limit",
   "myNotifDietLog": "Diet log reminder",
   "myNotifExercise": "Exercise reminder",
   "myNotifTrainer": "Trainer message",

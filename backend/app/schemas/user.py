@@ -103,6 +103,7 @@ class ProfileView(BaseModel):
     goal_blood_sugar: Optional[int] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
+    daily_sugar_g: Optional[int] = None
     onboarded: bool = False
 
 
@@ -123,6 +124,7 @@ class OnboardingRequest(BaseModel):
     goal_blood_sugar: Optional[int] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
+    daily_sugar_g: Optional[int] = None
 
 
 class ProfileUpdate(BaseModel):
@@ -140,3 +142,4 @@ class HealthGoalsUpdate(BaseModel):
     goal_blood_sugar: Optional[int] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
+    daily_sugar_g: Optional[int] = None

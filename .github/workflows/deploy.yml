@@ -45,11 +45,25 @@ jobs:
         working-directory: frontend/flutter
         run: flutter build web --release --base-href "/frontend/"
 
+      - name: Install Flutter dependencies (trainer)
+        working-directory: frontend/flutter_trainer
+        run: flutter pub get
+
+      - name: Download drift WASM (trainer)
+        working-directory: frontend/flutter_trainer
+        run: bash tool/fetch_drift_wasm.sh
+
+      - name: Build Flutter web (trainer)
+        working-directory: frontend/flutter_trainer
+        run: flutter build web --release --base-href "/trainer/"
+
       - name: Prepare GitHub Pages files
         run: |
           mkdir -p public/frontend
           cp index.html public/index.html
           cp -R frontend/flutter/build/web/* public/frontend/
+          mkdir -p public/trainer
+          cp -R frontend/flutter_trainer/build/web/* public/trainer/
           touch public/.nojekyll
 
       - name: Configure GitHub Pages

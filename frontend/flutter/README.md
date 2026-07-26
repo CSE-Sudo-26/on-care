@@ -1,9 +1,9 @@
 # oncare-flutter
 
-[Oncare Prototype (React/TS)](https://github.com/subin21cc/Oncareprototype) 를 Flutter로 재구성하는 프로젝트입니다.
+[Oncare Prototype (React/TS)](https://github.com/subin21cc/Oncareprototype) 에서 출발해 이후 **Figma 디자인 기준으로 재구성**한 On-Care 사용자 앱입니다.
 **Android / iOS / Web** 3개 타깃을 단일 코드베이스로 빌드하며, 웹은 GitHub Pages에 CI 배포됩니다.
 
-> 현재 상태: **Stage 9 — Local Backend 완료** — v0.3.0+3
+> 현재 상태: **Stage 10 — Figma 리디자인 · 실데이터 재연결 반영** (기반: Stage 9 로컬 백엔드, v0.3.0+3)
 > (drift + LocalApiInterceptor 기반 로컬 백엔드 — `--dart-define=USE_MOCK_API=false` 한 줄로 FastAPI 전환 가능)
 
 ## 문서
@@ -72,3 +72,4 @@ flutter build ios --release      # Xcode에서 archive
 - [x] **Stage 7 — Release** (RELEASE.md guides, CHANGELOG v0.1.0+1, web Pages live)
 - [x] **Stage 8 — UX Alignment** (shadcn tokens / 홈·식단·운동·My / OncareHeader / Dashboard 5-card / Calendar·QuickInput·AddEvent modals / Notification·AI-coach right-slide panels)
 - [x] **Stage 9 — Local Backend** (drift schema v2 6-table / `LocalApiInterceptor` dio dispatcher / seed bootstrap / `USE_MOCK_API` 플래그로 FastAPI 단일 전환)
+- [x] **Stage 10 — Figma 리디자인** (figma_kit 기준 홈·식단·운동·MY·코칭 재구성 / 핵심 데이터 흐름을 실 provider로 재연결)

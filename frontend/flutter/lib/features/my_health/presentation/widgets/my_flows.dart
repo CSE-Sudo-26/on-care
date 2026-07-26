@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -19,7 +20,10 @@ Widget _shell(
     child: ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
-        maxWidth: 560,
+        // Match the main content width so the sheet scales with the viewport
+        // like the tab pages. The theme lifts the modal route cap to this
+        // width too (see AppTheme._bottomSheetTheme); this centres the child.
+        maxWidth: AppBreakpoints.contentMaxWidth,
       ),
       child: Container(
         decoration: const BoxDecoration(
@@ -454,30 +458,22 @@ class _GoalsForm extends ConsumerStatefulWidget {
 }
 
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
-  late final TextEditingController _weight = TextEditingController(
-    text: '${(widget.initial.goalWeightKg ?? 70).round()}',
-  );
-  late final TextEditingController _bp = TextEditingController(
-    text: '${widget.initial.goalBpSystolic ?? 120}',
-  );
-  late final TextEditingController _sugar = TextEditingController(
-    text: '${widget.initial.goalBloodSugar ?? 100}',
-  );
   late final TextEditingController _kcal = TextEditingController(
     text: '${widget.initial.dailyCalories ?? 2000}',
   );
   late final TextEditingController _sodium = TextEditingController(
     text: '${widget.initial.dailySodiumMg ?? 2000}',
   );
+  late final TextEditingController _sugarLimit = TextEditingController(
+    text: '${widget.initial.dailySugarG ?? 50}',
+  );
   bool _saving = false;
 
   @override
   void dispose() {
-    _weight.dispose();
-    _bp.dispose();
-    _sugar.dispose();
     _kcal.dispose();
     _sodium.dispose();
+    _sugarLimit.dispose();
     super.dispose();
   }
 
@@ -489,11 +485,9 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     setState(() => _saving = true);
     try {
       await ref.read(accountRepositoryProvider).updateHealthGoals(
-        goalWeightKg: int.tryParse(_weight.text.trim()),
-        goalBpSystolic: int.tryParse(_bp.text.trim()),
-        goalBloodSugar: int.tryParse(_sugar.text.trim()),
         dailyCalories: int.tryParse(_kcal.text.trim()),
         dailySodiumMg: int.tryParse(_sodium.text.trim()),
+        dailySugarG: int.tryParse(_sugarLimit.text.trim()),
       );
       // Sheet dismissed mid-save → don't touch ref/pop the page below.
       if (!mounted) return;
@@ -524,32 +518,6 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       const SizedBox(height: 12),
       _card(<Widget>[
         _SheetField(
-          label: l.myGoalWeight,
-          controller: _weight,
-          suffix: l.unitKg,
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalBp,
-          controller: _bp,
-          suffix: 'mmHg',
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalBloodSugar,
-          controller: _sugar,
-          suffix: 'mg/dL',
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
-        ),
-      ]),
-      const SizedBox(height: 12),
-      _card(<Widget>[
-        _SheetField(
           label: l.myGoalCalories,
           controller: _kcal,
           suffix: l.unitKcal,
@@ -561,6 +529,14 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           label: l.myGoalSodium,
           controller: _sodium,
           suffix: 'mg',
+          keyboardType: TextInputType.number,
+          inputFormatters: digitsOnly,
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          label: l.myGoalSugar,
+          controller: _sugarLimit,
+          suffix: l.dietUnitG,
           keyboardType: TextInputType.number,
           inputFormatters: digitsOnly,
         ),

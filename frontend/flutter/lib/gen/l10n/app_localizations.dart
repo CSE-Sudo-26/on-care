@@ -518,11 +518,11 @@ abstract class AppLocalizations {
   /// **'vs last week'**
   String get homeVsLastWeek;
 
-  /// No description provided for @homeSodiumInsightPre.
+  /// No description provided for @homeSodiumInsight.
   ///
   /// In en, this message translates to:
-  /// **'Sodium intake has been '**
-  String get homeSodiumInsightPre;
+  /// **'Sodium intake has been {trend}. Cut back on salt and turn on {alert}?'**
+  String homeSodiumInsight(String trend, String alert);
 
   /// No description provided for @homeSodiumInsightTrend.
   ///
@@ -530,23 +530,11 @@ abstract class AppLocalizations {
   /// **'rising for 2 weeks'**
   String get homeSodiumInsightTrend;
 
-  /// No description provided for @homeSodiumInsightMid.
-  ///
-  /// In en, this message translates to:
-  /// **'. Cut back on salt and turn on '**
-  String get homeSodiumInsightMid;
-
   /// No description provided for @homeSodiumInsightAlert.
   ///
   /// In en, this message translates to:
   /// **'high-sodium meal alerts'**
   String get homeSodiumInsightAlert;
-
-  /// No description provided for @homeSodiumInsightPost.
-  ///
-  /// In en, this message translates to:
-  /// **'?'**
-  String get homeSodiumInsightPost;
 
   /// No description provided for @homeAiPill.
   ///
@@ -638,6 +626,24 @@ abstract class AppLocalizations {
   /// **'Low calorie'**
   String get homeMealTagLowCal;
 
+  /// No description provided for @homeMealNamulBibimbap.
+  ///
+  /// In en, this message translates to:
+  /// **'Namul bibimbap'**
+  String get homeMealNamulBibimbap;
+
+  /// No description provided for @homeMealReasonFiber.
+  ///
+  /// In en, this message translates to:
+  /// **'Rich in dietary fiber'**
+  String get homeMealReasonFiber;
+
+  /// No description provided for @homeMealTagHighFiber.
+  ///
+  /// In en, this message translates to:
+  /// **'High fiber'**
+  String get homeMealTagHighFiber;
+
   /// No description provided for @homeRecMealsTitle.
   ///
   /// In en, this message translates to:
@@ -685,6 +691,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'min'**
   String get unitMinutes;
+
+  /// No description provided for @unitKcalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} kcal'**
+  String unitKcalValue(int count);
+
+  /// No description provided for @unitMinutesValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String unitMinutesValue(int count);
 
   /// No description provided for @unitKg.
   ///
@@ -1819,6 +1837,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sodium limit'**
   String get myGoalSodium;
+
+  /// No description provided for @myGoalSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar limit'**
+  String get myGoalSugar;
 
   /// No description provided for @myNotifDietLog.
   ///
