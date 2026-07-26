@@ -8,6 +8,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// A single logged food item.
 class DietFood {
@@ -27,7 +28,7 @@ class DietTag {
 /// not-yet-persisted draft) and is required to edit or delete the entry.
 class DietMeal {
   const DietMeal({
-    required this.badge,
+    required this.mealType,
     required this.time,
     required this.total,
     required this.emoji,
@@ -39,7 +40,7 @@ class DietMeal {
     this.id,
   });
 
-  final String badge;
+  final MealType mealType;
   final String time;
   final int total;
   final String emoji;
@@ -51,12 +52,13 @@ class DietMeal {
   final String? id;
 }
 
-/// Korean meal badge → backend `meal_type` string used by the diet API.
-const Map<String, String> _mealTypeByBadge = <String, String>{
-  '아침': 'breakfast',
-  '점심': 'lunch',
-  '저녁': 'dinner',
-  '간식': 'snack',
+/// Localized meal-type badge label. The API `meal_type` string is always
+/// derived from [MealType.name], never from this display label.
+String mealBadge(AppLocalizations l, MealType t) => switch (t) {
+  MealType.breakfast => l.dietMealBreakfast,
+  MealType.lunch => l.dietMealLunch,
+  MealType.dinner => l.dietMealDinner,
+  MealType.snack => l.dietMealSnack,
 };
 
 /// Best-guess meal type for a new entry, based on the current time of day.
@@ -118,7 +120,7 @@ Future<void> _pickAndAnalyze(
     // Permission denied / platform error / unreadable file — don't crash.
     if (sheetContext.mounted) {
       ScaffoldMessenger.of(sheetContext).showSnackBar(
-        const SnackBar(content: Text('사진을 불러오지 못했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError)),
       );
     }
     return;
@@ -135,68 +137,75 @@ Future<void> showDietAddSheet(BuildContext context) {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _sheetShell(
-      ctx,
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Center(child: _sheetHandle()),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    const Expanded(
-                      child: Text(
-                        '식단 추가하기',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
+    builder: (BuildContext ctx) {
+      final AppLocalizations l = AppLocalizations.of(ctx);
+      return _sheetShell(
+        ctx,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Center(child: _sheetHandle()),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          l.dietAddSheetTitle,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.ink,
+                          ),
                         ),
                       ),
+                      _CircleClose(onTap: () => Navigator.of(ctx).pop()),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l.dietAddSheetSubtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: FigmaColors.textMuted,
                     ),
-                    _CircleClose(onTap: () => Navigator.of(ctx).pop()),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  '사진으로 음식을 분석해요',
-                  style: TextStyle(fontSize: 12, color: FigmaColors.textMuted),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(
-              children: <Widget>[
-                _SourceOption(
-                  icon: Icons.image_outlined,
-                  iconBg: FigmaColors.primaryA(0.12),
-                  iconColor: FigmaColors.primary,
-                  title: '사진 선택하기',
-                  subtitle: '갤러리에서 음식 사진 선택',
-                  onTap: () =>
-                      _pickAndAnalyze(ctx, context, ImageSource.gallery),
-                ),
-                const SizedBox(height: 12),
-                _SourceOption(
-                  icon: Icons.photo_camera_outlined,
-                  iconBg: FigmaColors.greenA(0.12),
-                  iconColor: FigmaColors.greenText,
-                  title: '사진 찍기',
-                  subtitle: '카메라로 음식 촬영',
-                  onTap: () => _pickAndAnalyze(ctx, context, ImageSource.camera),
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                children: <Widget>[
+                  _SourceOption(
+                    icon: Icons.image_outlined,
+                    iconBg: FigmaColors.primaryA(0.12),
+                    iconColor: FigmaColors.primary,
+                    title: l.dietPickPhoto,
+                    subtitle: l.dietPickPhotoSub,
+                    onTap: () =>
+                        _pickAndAnalyze(ctx, context, ImageSource.gallery),
+                  ),
+                  const SizedBox(height: 12),
+                  _SourceOption(
+                    icon: Icons.photo_camera_outlined,
+                    iconBg: FigmaColors.greenA(0.12),
+                    iconColor: FigmaColors.greenText,
+                    title: l.dietTakePhoto,
+                    subtitle: l.dietTakePhotoSub,
+                    onTap: () =>
+                        _pickAndAnalyze(ctx, context, ImageSource.camera),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    ),
+          ],
+        ),
+      );
+    },
   );
 }
 
@@ -314,6 +323,11 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
   bool _loading = true;
   bool _failed = false;
 
+  // One key per capture, reused across retries so a lost response followed by
+  // 「다시 시도」 doesn't record the same meal twice (server dedupes on it).
+  late final String _idempotencyKey =
+      'diet-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(this)}';
+
   @override
   void initState() {
     super.initState();
@@ -332,6 +346,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             imageBytes: widget.imageBytes,
             filename: 'meal.jpg',
             mealType: widget.mealType,
+            idempotencyKey: _idempotencyKey,
           );
       if (!mounted) return;
       // analyze() already persisted the entry → refresh the day's summary/list.
@@ -351,6 +366,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _sheetShell(
       context,
       Column(
@@ -369,19 +385,19 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                     children: <Widget>[
                       Text(
                         _loading
-                            ? '분석 중…'
+                            ? l.dietAnalyzing
                             : _failed
-                            ? '분석 실패'
-                            : '분석 완료!',
+                            ? l.dietAnalysisFailed
+                            : l.dietAnalysisDone,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.ink,
                         ),
                       ),
-                      const Text(
-                        'AI 영양 분석 결과',
-                        style: TextStyle(
+                      Text(
+                        l.dietAiNutritionResult,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: FigmaColors.primary,
                           fontWeight: FontWeight.w600,
@@ -404,20 +420,21 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
   }
 
   Widget _body() {
+    final AppLocalizations l = AppLocalizations.of(context);
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
         child: Column(
           children: <Widget>[
-            SizedBox(
+            const SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(strokeWidth: 3),
             ),
-            SizedBox(height: 14),
+            const SizedBox(height: 14),
             Text(
-              '사진 속 음식을 분석하고 있어요',
-              style: TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              l.dietAnalyzingBody,
+              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
             ),
           ],
         ),
@@ -428,9 +445,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: <Widget>[
-            const Text(
-              '분석에 실패했어요. 잠시 후 다시 시도해 주세요.',
-              style: TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+            Text(
+              l.dietAnalysisFailedBody,
+              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -444,9 +461,12 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  '다시 시도',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                child: Text(
+                  l.actionRetry,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -469,9 +489,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
-                '인식된 음식',
-                style: TextStyle(
+              Text(
+                l.dietRecognizedFood,
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.primary,
@@ -479,7 +499,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                recognized.isEmpty ? '인식된 음식이 없어요' : recognized,
+                recognized.isEmpty ? l.dietNoRecognizedFood : recognized,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -490,11 +510,11 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           ),
         ),
         const SizedBox(height: 12),
-        const Align(
+        Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            '영양 분석 결과',
-            style: TextStyle(
+            l.dietNutritionResult,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: FigmaColors.textMuted,
@@ -502,11 +522,23 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        _ResultRow(label: '칼로리', value: '${r.totalCalories}', unit: 'kcal'),
+        _ResultRow(
+          label: l.dietCalories,
+          value: '${r.totalCalories}',
+          unit: l.unitKcal,
+        ),
         const SizedBox(height: 8),
-        _ResultRow(label: '나트륨', value: '${r.totalSodiumMg}', unit: 'mg'),
+        _ResultRow(
+          label: l.dietSodium,
+          value: '${r.totalSodiumMg}',
+          unit: l.dietUnitMg,
+        ),
         const SizedBox(height: 8),
-        _ResultRow(label: '당류', value: '${r.totalSugarG}', unit: 'g'),
+        _ResultRow(
+          label: l.dietSugar,
+          value: '${r.totalSugarG}',
+          unit: l.dietUnitG,
+        ),
         if (r.coachComment.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           Container(
@@ -534,7 +566,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             onPressed: () {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('식단이 저장되었어요')),
+                SnackBar(content: Text(l.dietSaved)),
               );
             },
             style: FilledButton.styleFrom(
@@ -545,9 +577,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               ),
             ),
             icon: const Icon(Icons.check, size: 16),
-            label: const Text(
-              '완료',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            label: Text(
+              l.dietDone,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -622,8 +654,8 @@ class _MealEditSheet extends ConsumerStatefulWidget {
 }
 
 class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
-  static const List<String> _types = <String>['아침', '점심', '저녁', '간식'];
-  late String _type = widget.meal.badge;
+  static const List<MealType> _types = MealType.values;
+  late MealType _type = widget.meal.mealType;
   late List<DietFood> _foods = List<DietFood>.of(widget.meal.items);
   bool _busy = false;
 
@@ -631,6 +663,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
 
   Future<void> _save() async {
     final String? id = widget.meal.id;
+    final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     if (id == null) {
@@ -639,28 +672,35 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
     }
     setState(() => _busy = true);
     try {
+      // Drop empty draft rows (see `dietNewFood` placeholder) so a
+      // translation string never lands in stored food names.
+      final List<FoodItem> foods = <FoodItem>[
+        for (final DietFood f in _foods)
+          if (f.name.trim().isNotEmpty)
+            FoodItem(name: f.name.trim(), calories: f.kcal),
+      ];
       await ref
           .read(dietRepositoryProvider)
           .updateEntry(
             id: id,
-            mealType: _mealTypeByBadge[_type],
-            foods: <FoodItem>[
-              for (final DietFood f in _foods)
-                FoodItem(name: f.name, calories: f.kcal),
-            ],
-            totalCalories: _total,
+            mealType: _type.name,
+            foods: foods,
+            totalCalories: foods.fold<int>(
+              0,
+              (int a, FoodItem f) => a + f.calories,
+            ),
           );
       // Sheet dismissed mid-save → don't pop the page below.
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
       navigator.pop();
       messenger.showSnackBar(
-        const SnackBar(content: Text('식단이 저장되었어요')),
+        SnackBar(content: Text(l.dietSaved)),
       );
     } catch (_) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.dietSaveFailed)),
       );
     }
   }
@@ -671,23 +711,24 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       Navigator.of(context).pop();
       return;
     }
+    final AppLocalizations l = AppLocalizations.of(context);
     final bool ok =
         await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
-            title: const Text('식단 기록 삭제'),
-            content: const Text('이 식단 기록을 삭제할까요?'),
+            title: Text(l.dietDeleteTitle),
+            content: Text(l.dietDeleteConfirm),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('취소'),
+                child: Text(l.dietCancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFF3B30),
                 ),
-                child: const Text('삭제'),
+                child: Text(l.dietDelete),
               ),
             ],
           ),
@@ -705,18 +746,19 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       ref.invalidate(dietTodayProvider);
       navigator.pop();
       messenger.showSnackBar(
-        const SnackBar(content: Text('식단이 삭제되었어요')),
+        SnackBar(content: Text(l.dietDeleted)),
       );
     } catch (_) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('삭제에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.dietDeleteFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // Block back/drag dismiss while a save/delete request is in flight.
     final Widget sheet = _sheetShell(
       context,
@@ -734,7 +776,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                 ),
                 Expanded(
                   child: Text(
-                    '${widget.meal.badge} 식단',
+                    l.dietMealSheetTitle(mealBadge(l, widget.meal.mealType)),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 16,
@@ -745,9 +787,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                 ),
                 TextButton(
                   onPressed: _busy ? null : _save,
-                  child: const Text(
-                    '저장',
-                    style: TextStyle(
+                  child: Text(
+                    l.dietSave,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
@@ -763,11 +805,11 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: <Widget>[
                 _card(<Widget>[
-                  const _FieldLabel('식사 정보'),
+                  _FieldLabel(l.dietMealInfo),
                   const SizedBox(height: 10),
                   Row(
                     children: <Widget>[
-                      for (final String t in _types) ...<Widget>[
+                      for (final MealType t in _types) ...<Widget>[
                         Expanded(
                           child: GestureDetector(
                             onTap: () => setState(() => _type = t),
@@ -786,7 +828,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                                 ),
                               ),
                               child: Text(
-                                t,
+                                mealBadge(l, t),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -806,7 +848,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      const _FieldLabel('먹은 시간'),
+                      _FieldLabel(l.dietEatenTime),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
@@ -843,17 +885,19 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                 _card(<Widget>[
                   Row(
                     children: <Widget>[
-                      const Expanded(child: _FieldLabel('먹은 음식')),
+                      Expanded(child: _FieldLabel(l.dietEatenFood)),
                       GestureDetector(
                         onTap: () => setState(
                           () => _foods = <DietFood>[
                             ..._foods,
-                            const DietFood('새 음식', 0),
+                            // Empty draft name; the localized label is shown
+                            // only as a placeholder and is validated out on save.
+                            const DietFood('', 0),
                           ],
                         ),
-                        child: const Text(
-                          '+ 음식 추가',
-                          style: TextStyle(
+                        child: Text(
+                          l.dietAddFood,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: FigmaColors.primary,
@@ -863,9 +907,12 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '음식명과 칼로리를 수정할 수 있어요',
-                    style: TextStyle(fontSize: 11, color: FigmaColors.textMuted),
+                  Text(
+                    l.dietEditFoodHint,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: FigmaColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   for (int i = 0; i < _foods.length; i++) ...<Widget>[
@@ -880,9 +927,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   const Divider(height: 16, color: FigmaColors.hairline),
                   Row(
                     children: <Widget>[
-                      const Text(
-                        '총 칼로리',
-                        style: TextStyle(
+                      Text(
+                        l.dietTotalCalories,
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: FigmaColors.textSub,
@@ -890,7 +937,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                       ),
                       const Spacer(),
                       Text(
-                        '$_total kcal',
+                        '$_total ${l.unitKcal}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -902,25 +949,28 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                 ]),
                 const SizedBox(height: 12),
                 _card(<Widget>[
-                  const _FieldLabel('영양 정보'),
+                  _FieldLabel(l.dietNutritionInfo),
                   const SizedBox(height: 4),
-                  const Text(
-                    '분석된 값을 직접 수정할 수 있어요',
-                    style: TextStyle(fontSize: 11, color: FigmaColors.textMuted),
+                  Text(
+                    l.dietEditNutritionHint,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: FigmaColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _NutrientRow(
-                    label: '나트륨',
-                    hint: '하루 권장 2,000mg 이하',
+                    label: l.dietSodium,
+                    hint: l.dietSodiumHint,
                     value: '${widget.meal.sodium}',
-                    unit: 'mg',
+                    unit: l.dietUnitMg,
                   ),
                   const SizedBox(height: 10),
                   _NutrientRow(
-                    label: '당류',
-                    hint: '하루 권장 50g 이하',
+                    label: l.dietSugar,
+                    hint: l.dietSugarHint,
                     value: '${widget.meal.sugar}',
-                    unit: 'g',
+                    unit: l.dietUnitG,
                   ),
                 ]),
               ],
@@ -941,9 +991,12 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   ),
                 ),
                 icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text(
-                  '식단 삭제',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                label: Text(
+                  l.dietDeleteMeal,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -990,6 +1043,7 @@ class _FoodRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1019,7 +1073,7 @@ class _FoodRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              food.name,
+              food.name.trim().isEmpty ? l.dietNewFood : food.name,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -1036,9 +1090,9 @@ class _FoodRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          const Text(
-            'kcal',
-            style: TextStyle(fontSize: 11, color: FigmaColors.textMuted),
+          Text(
+            l.unitKcal,
+            style: const TextStyle(fontSize: 11, color: FigmaColors.textMuted),
           ),
           const SizedBox(width: 8),
           GestureDetector(

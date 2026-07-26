@@ -7,17 +7,18 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
-/// Korean label for a workout type badge.
-String _typeLabel(ExerciseType t) => switch (t) {
-  ExerciseType.cardio => '유산소',
-  ExerciseType.strength => '근력',
-  ExerciseType.yoga => '요가',
-  ExerciseType.walking => '걷기',
-  ExerciseType.stretching => '스트레칭',
-  ExerciseType.other => '운동',
+/// Localized label for a workout type badge.
+String _typeLabel(AppLocalizations l, ExerciseType t) => switch (t) {
+  ExerciseType.cardio => l.exTypeCardio,
+  ExerciseType.strength => l.exTypeStrength,
+  ExerciseType.yoga => l.exTypeYoga,
+  ExerciseType.walking => l.exTypeWalking,
+  ExerciseType.stretching => l.exTypeStretching,
+  ExerciseType.other => l.exTypeOther,
 };
 
 /// 운동 tab, rebuilt to the On-Care Figma redesign — a 운동 기록 / 헬스장
@@ -36,6 +37,7 @@ class _ExercisePageState extends State<ExercisePage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -47,7 +49,7 @@ class _ExercisePageState extends State<ExercisePage> {
               padding: const EdgeInsets.only(bottom: 108),
               children: <Widget>[
                 FigmaTabHeader(
-                  title: '운동',
+                  title: l.pageExerciseTitle,
                   onBell: () => showRightSlidePanel<void>(
                     context,
                     content: const NotificationPanelBody(),
@@ -84,6 +86,7 @@ class _SubTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
@@ -94,8 +97,8 @@ class _SubTabs extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            _tab(0, Icons.event_note_outlined, '운동 기록'),
-            _tab(1, Icons.place_outlined, '헬스장'),
+            _tab(0, Icons.event_note_outlined, l.exExerciseLog),
+            _tab(1, Icons.place_outlined, l.exGymTab),
           ],
         ),
       ),
@@ -151,6 +154,7 @@ class _RecordTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(exerciseWeekProvider);
     return weekAsync.when(
       loading: () => const Padding(
@@ -167,9 +171,9 @@ class _RecordTab extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: Column(
           children: <Widget>[
-            const Text(
-              '운동 정보를 불러오지 못했어요.',
-              style: TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+            Text(
+              l.exLoadError,
+              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
             ),
             const SizedBox(height: 14),
             OutlinedButton(
@@ -178,7 +182,7 @@ class _RecordTab extends ConsumerWidget {
                 foregroundColor: FigmaColors.primary,
                 side: BorderSide(color: FigmaColors.primaryA(0.4)),
               ),
-              child: const Text('다시 시도'),
+              child: Text(l.actionRetry),
             ),
           ],
         ),
@@ -186,11 +190,11 @@ class _RecordTab extends ConsumerWidget {
       data: (ExerciseWeek week) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: Text(
-              '이번 주 운동 요약',
-              style: TextStyle(
+              l.exWeekSummary,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.ink,
@@ -203,34 +207,34 @@ class _RecordTab extends ConsumerWidget {
               children: <Widget>[
                 Expanded(
                   child: _StatCard(
-                    label: '이번 주',
+                    label: l.exThisWeek,
                     value: '${week.sessions.length}',
-                    unit: '회',
+                    unit: l.exUnitCount,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _StatCard(
-                    label: '시간',
+                    label: l.exStatTime,
                     value: '${week.totalMinutes}',
-                    unit: '분',
+                    unit: l.unitMinutes,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _StatCard(
-                    label: '칼로리',
+                    label: l.exStatCalories,
                     value: '${week.totalCalories}',
-                    unit: 'kcal',
+                    unit: l.unitKcal,
                     accent: true,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _StatCard(
-                    label: '연속',
+                    label: l.exStatStreak,
                     value: '${week.streakDays}',
-                    unit: '일 연속',
+                    unit: l.exUnitStreakDays,
                     streak: true,
                   ),
                 ),
@@ -238,22 +242,22 @@ class _RecordTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: Row(
               children: <Widget>[
                 Text(
-                  '운동 현황',
-                  style: TextStyle(
+                  l.exActivityTitle,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.ink,
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
-                  '이번 주',
-                  style: TextStyle(
+                  l.exThisWeek,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.textMuted,
@@ -394,6 +398,7 @@ class _ActivityChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final int n = week.dailyMinutes.length;
     final bool hasBreakdown =
         n > 0 &&
@@ -411,9 +416,19 @@ class _ActivityChart extends StatelessWidget {
         else
           _Bar(week.dailyMinutes[i], 0, 0),
     ];
+    // Localized weekday fallback (월~일) for when the backend sends no labels.
+    final List<String> fallbackDays = <String>[
+      l.dietWeekdayMon,
+      l.dietWeekdayTue,
+      l.dietWeekdayWed,
+      l.dietWeekdayThu,
+      l.dietWeekdayFri,
+      l.dietWeekdaySat,
+      l.dietWeekdaySun,
+    ];
     final List<String> dayLabels = week.dayLabels.length == n
         ? week.dayLabels
-        : _barDays;
+        : fallbackDays;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -439,18 +454,22 @@ class _ActivityChart extends StatelessWidget {
                 bars: bars,
                 dayLabels: dayLabels,
                 todayIndex: n - 1,
+                todayLabel: l.exToday,
               ),
             ),
           ),
           const SizedBox(height: 6),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              _Legend(color: FigmaColors.primary, label: '유산소'),
-              SizedBox(width: 16),
-              _Legend(color: Color(0xFF1B6FA8), label: '근력'),
-              SizedBox(width: 16),
-              _Legend(color: Color(0xFFD4EEF8), label: '스트레칭'),
+              _Legend(color: FigmaColors.primary, label: l.exTypeCardio),
+              const SizedBox(width: 16),
+              _Legend(color: const Color(0xFF1B6FA8), label: l.exTypeStrength),
+              const SizedBox(width: 16),
+              _Legend(
+                color: const Color(0xFFD4EEF8),
+                label: l.exTypeStretching,
+              ),
             ],
           ),
         ],
@@ -497,18 +516,20 @@ class _Bar {
   final double stretch;
 }
 
-const List<String> _barDays = <String>['월', '화', '수', '목', '금', '토', '일'];
-
 class _StackedBarPainter extends CustomPainter {
   const _StackedBarPainter({
     required this.bars,
     required this.dayLabels,
     required this.todayIndex,
+    required this.todayLabel,
   });
 
   final List<_Bar> bars;
   final List<String> dayLabels;
   final int todayIndex;
+
+  /// Resolved in the widget's build (CustomPainter has no BuildContext).
+  final String todayLabel;
 
   /// Round the busiest day up to the next 20-minute step so bars never clip;
   /// falls back to 90 when there's no data yet.
@@ -608,9 +629,9 @@ class _StackedBarPainter extends CustomPainter {
       tp.paint(canvas, Offset(cx - tp.width / 2, chartH + 5));
       if (isToday) {
         final TextPainter t2 = TextPainter(
-          text: const TextSpan(
-            text: '오늘',
-            style: TextStyle(
+          text: TextSpan(
+            text: todayLabel,
+            style: const TextStyle(
               fontSize: 7.5,
               fontWeight: FontWeight.w600,
               color: FigmaColors.primary,
@@ -644,7 +665,8 @@ class _StackedBarPainter extends CustomPainter {
   bool shouldRepaint(covariant _StackedBarPainter oldDelegate) =>
       oldDelegate.bars != bars ||
       oldDelegate.dayLabels != dayLabels ||
-      oldDelegate.todayIndex != todayIndex;
+      oldDelegate.todayIndex != todayIndex ||
+      oldDelegate.todayLabel != todayLabel;
 }
 
 class _ExerciseFeedback extends StatelessWidget {
@@ -654,6 +676,7 @@ class _ExerciseFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     if (message.trim().isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(14),
@@ -671,9 +694,9 @@ class _ExerciseFeedback extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
-                  'AI 피드백',
-                  style: TextStyle(
+                Text(
+                  l.exAiFeedback,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.primary,
@@ -704,14 +727,15 @@ class _AiRoutine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Text(
-              'AI 맞춤 루틴 · 오늘',
-              style: TextStyle(
+            Text(
+              l.exAiRoutineToday,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.ink,
@@ -733,16 +757,19 @@ class _AiRoutine extends StatelessWidget {
               child: InkWell(
                 onTap: onAdd,
                 borderRadius: BorderRadius.circular(999),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Icon(Icons.add, size: 12, color: Colors.white),
-                      SizedBox(width: 4),
+                      const Icon(Icons.add, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
                       Text(
-                        '운동 추가',
-                        style: TextStyle(
+                        l.exAddExercise,
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -758,22 +785,22 @@ class _AiRoutine extends StatelessWidget {
         const SizedBox(height: 12),
         _Fill33(),
         const SizedBox(height: 16),
-        const _RoutineCard(
-          title: '빠르게 걷기 30분',
-          subtitle: '유산소 · 혈압 관리',
+        _RoutineCard(
+          title: l.exRoutineBriskTitle,
+          subtitle: l.exRoutineBriskSub,
           done: true,
         ),
         const SizedBox(height: 10),
-        const _RoutineCard(
-          title: '하체 스트레칭',
-          subtitle: '스트레칭 · 유연성',
-          minutes: '10분',
+        _RoutineCard(
+          title: l.exRoutineStretchTitle,
+          subtitle: l.exRoutineStretchSub,
+          minutes: l.exDurationMinutes(10),
         ),
         const SizedBox(height: 10),
-        const _RoutineCard(
-          title: '저강도 근력',
-          subtitle: '근력 · 근지구력',
-          minutes: '15분',
+        _RoutineCard(
+          title: l.exRoutineStrengthTitle,
+          subtitle: l.exRoutineStrengthSub,
+          minutes: l.exDurationMinutes(15),
         ),
       ],
     );
@@ -819,6 +846,7 @@ class _RoutineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -890,14 +918,14 @@ class _RoutineCard extends StatelessWidget {
                 color: FigmaColors.statusGreen,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Icon(Icons.check, size: 9, color: Colors.white),
-                  SizedBox(width: 3),
+                  const Icon(Icons.check, size: 9, color: Colors.white),
+                  const SizedBox(width: 3),
                   Text(
-                    '미션 완료!',
-                    style: TextStyle(
+                    l.exMissionComplete,
+                    style: const TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -928,12 +956,13 @@ class _TodayLogs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          '운동 기록',
-          style: TextStyle(
+        Text(
+          l.exExerciseLog,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
@@ -941,13 +970,13 @@ class _TodayLogs extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (sessions.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: Text(
-                '이번 주 운동 기록이 없어요.\n운동을 추가해 기록을 남겨 보세요!',
+                l.exEmptyLog,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12.5,
                   height: 1.5,
                   fontWeight: FontWeight.w500,
@@ -959,12 +988,12 @@ class _TodayLogs extends StatelessWidget {
         else
           for (final ExerciseSession s in sessions) ...<Widget>[
             _LogCard(
-              tag: _typeLabel(s.type),
+              tag: _typeLabel(l, s.type),
               time: s.timeLabel ?? s.dateLabel ?? s.dayLabel,
               kcal: s.calories,
               items: s.items.isNotEmpty
                   ? s.items
-                  : <String>['${s.minutes}분 운동'],
+                  : <String>[l.exMinutesExercise(s.minutes)],
               session: s,
             ),
             const SizedBox(height: 12),
@@ -991,6 +1020,7 @@ class _LogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1039,7 +1069,7 @@ class _LogCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '$kcal kcal',
+                '$kcal ${l.unitKcal}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -1110,6 +1140,7 @@ class _GymTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> gymAsync = ref.watch(myGymProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1128,9 +1159,12 @@ class _GymTab extends ConsumerWidget {
                 ),
               ),
               icon: const Icon(Icons.search, size: 16),
-              label: const Text(
-                '헬스장 찾기',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              label: Text(
+                l.exFindGym,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -1168,7 +1202,8 @@ class _MyGymCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String trainer = gym.trainerName ?? '트레이너';
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String trainer = gym.trainerName ?? l.exTrainer;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1186,17 +1221,17 @@ class _MyGymCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(
+              const Icon(
                 Icons.place_outlined,
                 size: 15,
                 color: FigmaColors.primary,
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
-                '내 헬스장',
-                style: TextStyle(
+                l.exMyGym,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.textMuted,
@@ -1225,8 +1260,8 @@ class _MyGymCard extends StatelessWidget {
           if (gym.weekdayHours != null) ...<Widget>[
             const SizedBox(height: 2),
             Text(
-              '🕐 평일 ${gym.weekdayHours}'
-              '${gym.weekendHours != null ? ' · 주말 ${gym.weekendHours}' : ''}',
+              '🕐 ${l.exGymWeekdayHours(gym.weekdayHours!)}'
+              '${gym.weekendHours != null ? ' · ${l.exGymWeekendHours(gym.weekendHours!)}' : ''}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -1275,7 +1310,7 @@ class _MyGymCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      gym.trainerRole ?? '전담 트레이너',
+                      gym.trainerRole ?? l.exTrainerDedicated,
                       style: const TextStyle(
                         fontSize: 11,
                         color: FigmaColors.textMuted,
@@ -1334,9 +1369,9 @@ class _MyGymCard extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const Text(
-                      '✦ AI 추천 예약 시간',
-                      style: TextStyle(
+                    Text(
+                      l.exAiSlotTitle,
+                      style: const TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.primary,
@@ -1344,7 +1379,7 @@ class _MyGymCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '$trainer 빈 시간',
+                      l.exTrainerAvailability(trainer),
                       style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w500,
@@ -1358,10 +1393,10 @@ class _MyGymCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: <Widget>[
-                    for (final List<String> s in const <List<String>>[
-                      <String>['오늘 19:00', '잔여 1자리'],
-                      <String>['내일 07:30', '여유 있음'],
-                      <String>['내일 20:00', '잔여 2자리'],
+                    for (final List<String> s in <List<String>>[
+                      <String>[l.exSlotToday19, l.exSlot1Left],
+                      <String>[l.exSlotTomorrow0730, l.exSlotAvailable],
+                      <String>[l.exSlotTomorrow20, l.exSlot2Left],
                     ])
                       _SlotChip(
                         label: s[0],
@@ -1380,7 +1415,10 @@ class _MyGymCard extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              '$selectedSlot · ${gym.name} 예약이 확정됐어요',
+                              l.exReserveConfirmedSlotGym(
+                                selectedSlot!,
+                                gym.name,
+                              ),
                             ),
                           ),
                         );
@@ -1393,7 +1431,7 @@ class _MyGymCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        '$selectedSlot 예약 확정',
+                        l.exReserveConfirm(selectedSlot!),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -1422,9 +1460,12 @@ class _MyGymCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '헬스장 정보',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  child: Text(
+                    l.exGymInfo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -1439,9 +1480,12 @@ class _MyGymCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '💬 1:1 상담',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  child: Text(
+                    l.exConsultButton,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -1480,13 +1524,14 @@ class _GymError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: <Widget>[
-          const Text(
-            '헬스장 정보를 불러오지 못했어요.',
-            style: TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+          Text(
+            l.exGymLoadError,
+            style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -1495,7 +1540,7 @@ class _GymError extends StatelessWidget {
               foregroundColor: FigmaColors.primary,
               side: BorderSide(color: FigmaColors.primaryA(0.4)),
             ),
-            child: const Text('다시 시도'),
+            child: Text(l.actionRetry),
           ),
         ],
       ),
@@ -1509,6 +1554,7 @@ class _GymEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
@@ -1541,18 +1587,18 @@ class _GymEmpty extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            '등록된 헬스장이 없어요',
-            style: TextStyle(
+          Text(
+            l.exNoGymTitle,
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            '헬스장 찾기로 주변 헬스장을 등록해 보세요',
-            style: TextStyle(
+          Text(
+            l.exNoGymSub,
+            style: const TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: FigmaColors.textMuted,

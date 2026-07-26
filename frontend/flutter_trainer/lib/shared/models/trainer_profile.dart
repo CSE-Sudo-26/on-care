@@ -73,13 +73,10 @@ const TrainerProfile seedTrainerProfile = TrainerProfile(
   phone: '010-1234-5678',
   specialty: '퍼스널 트레이너',
   career: '7년',
-  intro: '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 '
+  intro:
+      '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 '
       '안전하고 효과적인 운동을 도와드려요.',
-  certifications: <String>[
-    '생활스포츠지도사 2급',
-    '퍼스널트레이닝 CPT',
-    '스포츠 영양사',
-  ],
+  certifications: <String>['생활스포츠지도사 2급', '퍼스널트레이닝 CPT', '스포츠 영양사'],
   gym: TrainerGym(
     name: '온케어짐 신촌점',
     address: '서울 서대문구 신촌로 120',

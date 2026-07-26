@@ -17,14 +17,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.models import DietEntry
+from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
-    DietAnalyzeResponse, DietEntryOut, DietEntryUpdate, DietTodayResponse, Macros,
+    DietAnalyzeResponse, DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
 from app.services.coach.personal_ingest import record_diet
 from app.services.nutrition.enrich import enrich_analysis
@@ -34,10 +36,40 @@ router = APIRouter(tags=["diet"])
 logger = logging.getLogger(__name__)
 
 _ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
+_FOOD_STORAGE_FIELDS = ("name", "calories", "sodium_mg", "sugar_g", "source")
 
 
 def _today_str() -> str:
     return datetime.now().strftime("%Y-%m-%d")
+
+
+def _load_foods(foods_json: str) -> list[dict]:
+    foods = json.loads(foods_json) if foods_json else []
+    # Meal-level DietEntry macros are authoritative. Ignore legacy per-food macro keys.
+    return [
+        {field: food[field] for field in _FOOD_STORAGE_FIELDS if field in food}
+        for food in foods
+    ]
+
+
+def _entry_to_analysis(entry: DietEntry) -> DietAnalysis:
+    """저장된 DietEntry → 분석 응답용 DietAnalysis 재구성(멱등 재시도 응답용).
+
+    coach_comment 는 저장하지 않으므로 재시도 응답에선 비운다(엔트리는 이미 존재).
+    끼니 매크로 합계는 DietEntry 를 단일 원본으로 삼아 그대로 반영한다.
+    """
+    foods_raw = json.loads(entry.foods_json) if entry.foods_json else []
+    return DietAnalysis(
+        engine=entry.engine or "",
+        foods=[RecognizedFood(**f) for f in foods_raw],
+        total_calories=entry.total_calories,
+        total_carbs_g=entry.carbs_g,
+        total_protein_g=entry.protein_g,
+        total_fat_g=entry.fat_g,
+        total_sodium_mg=entry.sodium_mg,
+        total_sugar_g=entry.sugar_g,
+        coach_comment="",
+    )
 
 
 @router.get("/diet/days/today", response_model=DietTodayResponse)
@@ -55,14 +87,19 @@ def diet_today(
 
     entries: list[DietEntryOut] = []
     total_cal = total_na = total_sugar = 0
+    total_carbs = total_protein = total_fat = 0.0
     for r in rows:
-        foods = json.loads(r.foods_json) if r.foods_json else []
+        foods = _load_foods(r.foods_json)
         entries.append(DietEntryOut(
             id=r.id, meal_type=r.meal_type, time_label=r.time_label,
             foods=foods, total_calories=r.total_calories,
+            carbs_g=r.carbs_g, protein_g=r.protein_g, fat_g=r.fat_g,
             sodium_mg=r.sodium_mg, sugar_g=r.sugar_g,
         ))
         total_cal += r.total_calories
+        total_carbs += r.carbs_g
+        total_protein += r.protein_g
+        total_fat += r.fat_g
         total_na += r.sodium_mg
         total_sugar += r.sugar_g
 
@@ -79,7 +116,7 @@ def diet_today(
         total_calories=total_cal,
         total_sodium_mg=total_na,
         total_sugar_g=total_sugar,
-        macros=Macros(),  # 끼니별 매크로 추적 전까지 데모 분할(계약과 동일)
+        macros=calculate_macros(total_carbs, total_protein, total_fat),
         ai_coach_message=msg,
     )
 
@@ -90,6 +127,11 @@ async def diet_analyze(
     db: Annotated[Session, Depends(get_db)],
     image: UploadFile = File(..., description="음식 사진"),
     meal_type: str = Form("lunch", description="breakfast|lunch|dinner|snack"),
+    idempotency_key: str | None = Form(
+        None,
+        max_length=64,  # DietEntry.idempotency_key 컬럼(String(64)) 경계와 일치 — 초과 시 DB 500 방지
+        description="재시도 중복 저장 방지 키(선택). 클라 요청당 1회 생성해 재시도 시 재사용.",
+    ),
     engine: str | None = Query(None, description="엔진 강제('gemini'|'yolo'). 비교실험용."),
 ) -> DietAnalyzeResponse:
     if image.content_type not in _ALLOWED_MIME:
@@ -97,6 +139,16 @@ async def diet_analyze(
     image_bytes = await image.read()
     if not image_bytes:
         raise HTTPException(status_code=400, detail="빈 파일입니다.")
+
+    # 멱등키가 있고 이미 저장된 요청이면 인식·저장을 건너뛰고 기존 결과 반환(재시도 중복 방지)
+    if idempotency_key:
+        existing = db.scalar(
+            select(DietEntry)
+            .where(DietEntry.user_id == current_user.id)
+            .where(DietEntry.idempotency_key == idempotency_key)
+        )
+        if existing is not None:
+            return DietAnalyzeResponse(entry_id=existing.id, analysis=_entry_to_analysis(existing))
 
     try:
         recognizer = get_recognizer(engine)
@@ -117,7 +169,7 @@ async def diet_analyze(
     # 공공 식품영양성분 DB 매핑으로 영양 수치 보강(매칭 시 신뢰값으로 교체 → 합계 재계산)
     enrich_analysis(db, analysis, enabled=get_settings().nutrition_db_enrich)
 
-    # diet_entries 저장 (foods 는 {name, calories, sodium_mg, sugar_g, source})
+    # Per-food macros are used only to calculate meal totals; DietEntry is the single source of truth.
     foods_for_storage = [
         {"name": f.name, "calories": f.calories,
          "sodium_mg": f.sodium_mg, "sugar_g": f.sugar_g, "source": f.source}
@@ -131,12 +183,28 @@ async def diet_analyze(
         time_label=datetime.now().strftime("%H:%M"),
         foods_json=json.dumps(foods_for_storage, ensure_ascii=False),
         total_calories=analysis.total_calories,
+        carbs_g=analysis.total_carbs_g,
+        protein_g=analysis.total_protein_g,
+        fat_g=analysis.total_fat_g,
         sodium_mg=analysis.total_sodium_mg,
         sugar_g=analysis.total_sugar_g,
         engine=analysis.engine,
+        idempotency_key=idempotency_key,
     )
     db.add(entry)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 동시 재시도가 유니크 제약에 걸리면 이미 저장된 엔트리를 반환(중복 저장·재적재 방지)
+        db.rollback()
+        existing = db.scalar(
+            select(DietEntry)
+            .where(DietEntry.user_id == current_user.id)
+            .where(DietEntry.idempotency_key == idempotency_key)
+        ) if idempotency_key else None
+        if existing is not None:
+            return DietAnalyzeResponse(entry_id=existing.id, analysis=_entry_to_analysis(existing))
+        raise
     db.refresh(entry)
 
     # 개인 RAG 문서로 적재(코치가 내 최근 식단을 검색하도록). best-effort.
@@ -169,12 +237,19 @@ def update_entry(
         row.meal_type = payload.meal_type
     if payload.time_label is not None:
         row.time_label = payload.time_label
+    for field in (
+        "total_calories", "carbs_g", "protein_g", "fat_g", "sodium_mg", "sugar_g"
+    ):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(row, field, value)
     db.commit()
     db.refresh(row)
-    foods = json.loads(row.foods_json) if row.foods_json else []
+    foods = _load_foods(row.foods_json)
     return DietEntryOut(
         id=row.id, meal_type=row.meal_type, time_label=row.time_label,
         foods=foods, total_calories=row.total_calories,
+        carbs_g=row.carbs_g, protein_g=row.protein_g, fat_g=row.fat_g,
         sodium_mg=row.sodium_mg, sugar_g=row.sugar_g,
     )
 

@@ -312,7 +312,11 @@ class _CompletionDonut extends StatelessWidget {
 
 /// Left-bordered note box ("고객 피드백" blue / "트레이너 메모" orange).
 class _NoteBox extends StatelessWidget {
-  const _NoteBox({required this.title, required this.body, required this.color});
+  const _NoteBox({
+    required this.title,
+    required this.body,
+    required this.color,
+  });
 
   final String title;
   final String body;
@@ -329,7 +333,9 @@ class _NoteBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border(left: BorderSide(color: color.withValues(alpha: 0.4), width: 3)),
+        border: Border(
+          left: BorderSide(color: color.withValues(alpha: 0.4), width: 3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

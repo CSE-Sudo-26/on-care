@@ -9,6 +9,7 @@ class ExerciseSessionOut(BaseModel):
     type: str  # cardio|strength|yoga|walking
     minutes: int
     calories: int
+    intensity: str  # light|moderate|high
     date_label: str
     time_label: str
     items: list[str]
@@ -32,4 +33,5 @@ class ExerciseSessionCreate(BaseModel):
     type: str  # cardio|strength|yoga|walking
     minutes: int = Field(..., gt=0)
     calories: int = Field(0, ge=0)
+    intensity: str = "moderate"  # light|moderate|high
     day_label: str | None = None

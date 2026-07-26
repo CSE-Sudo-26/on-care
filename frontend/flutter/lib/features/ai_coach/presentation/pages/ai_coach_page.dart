@@ -7,6 +7,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/ai_coach/domain/entities/chat_message.dart';
 import 'package:oncare/features/ai_coach/presentation/controllers/chat_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// The AI 코치 chat screen, rebuilt to the On-Care Figma design. Opened from the
 /// coaching sheet's "AI와 대화하기" CTA. Replies are served by
@@ -19,10 +20,10 @@ class AICoachPage extends ConsumerStatefulWidget {
   ConsumerState<AICoachPage> createState() => _AICoachPageState();
 }
 
-const List<String> _quickReplies = <String>[
-  '오늘 저녁 메뉴 추천해줘',
-  '오늘 운동은 얼마나 하면 좋을까?',
-  '내 혈당 기록은 괜찮아?',
+List<String> _quickReplies(AppLocalizations l) => <String>[
+  l.aicQuickReply1,
+  l.aicQuickReply2,
+  l.aicQuickReply3,
 ];
 
 class _AICoachPageState extends ConsumerState<AICoachPage> {
@@ -58,6 +59,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final ChatState chat = ref.watch(chatControllerProvider);
     // Auto-scroll whenever the conversation grows / the typing bubble toggles.
     ref.listen<ChatState>(chatControllerProvider, (_, _) => _scrollToBottom());
@@ -90,9 +92,9 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                             color: const Color(0xFFE8EEF4),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: const Text(
-                            '오늘',
-                            style: TextStyle(
+                          child: Text(
+                            l.aicDatePillToday,
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: FigmaColors.textSub,
@@ -119,6 +121,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
   }
 
   Widget _header(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -154,21 +157,21 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                   ],
                 ),
                 const SizedBox(width: 10),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      'AI 코치',
-                      style: TextStyle(
+                      l.pageAiCoachTitle,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
                     ),
                     Text(
-                      '언제든 물어보세요',
-                      style: TextStyle(
+                      l.aicHeaderSubtitle,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: FigmaColors.primary,
@@ -332,21 +335,22 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
   }
 
   Widget _quickReplySection() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            '이런 걸 물어보세요',
-            style: TextStyle(
+            l.aicQuickRepliesLabel,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: FigmaColors.textSub,
             ),
           ),
         ),
-        for (final String q in _quickReplies) ...<Widget>[
+        for (final String q in _quickReplies(l)) ...<Widget>[
           Material(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -384,6 +388,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
   }
 
   Widget _inputBar({required bool sending}) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -415,11 +420,11 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                 controller: _controller,
                 onSubmitted: sending ? null : (_) => _send(),
                 style: const TextStyle(fontSize: 14, color: FigmaColors.ink),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
-                  hintText: 'AI에게 무엇이든 물어보세요',
-                  hintStyle: TextStyle(
+                  hintText: l.aicInputHint,
+                  hintStyle: const TextStyle(
                     fontSize: 13,
                     color: FigmaColors.textFaint,
                   ),

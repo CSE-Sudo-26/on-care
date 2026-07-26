@@ -153,6 +153,7 @@ class LocalApiInterceptor extends Interceptor {
     final type = (body['type'] as String? ?? existing.type).trim();
     final minutes = (body['minutes'] as num?)?.toInt() ?? existing.minutes;
     final calories = (body['calories'] as num?)?.toInt() ?? existing.calories;
+    final intensity = (body['intensity'] as String? ?? existing.intensity).trim();
     final dayRaw = (body['day_label'] as String? ?? '').trim();
     final dayLabel = dayRaw.isEmpty ? existing.dayLabel : dayRaw;
     await (_db.update(
@@ -162,6 +163,7 @@ class LocalApiInterceptor extends Interceptor {
         type: Value(type),
         minutes: Value(minutes),
         calories: Value(calories),
+        intensity: Value(intensity),
         dayLabel: Value(dayLabel),
       ),
     );
@@ -171,6 +173,7 @@ class LocalApiInterceptor extends Interceptor {
       'type': type,
       'minutes': minutes,
       'calories': calories,
+      'intensity': intensity,
       'date_label': _dateLabelForDayLabel(dayLabel),
       'time_label': _defaultTimeLabel(type),
       'items': _defaultItems(type),
@@ -368,15 +371,42 @@ class LocalApiInterceptor extends Interceptor {
   /// drift so it shows up in GET /diet/days/today. `diet-` id (not
   /// `seed-`) means seedIfEmpty never wipes it.
   Future<Response<Object?>> _dietAnalyze(RequestOptions options) async {
-    // meal_type 은 multipart FormData 또는 Map 에서 추출.
+    // meal_type·idempotency_key 는 multipart FormData 또는 Map 에서 추출.
     String mealType = 'lunch';
+    String? idempotencyKey;
     final data = options.data;
     if (data is FormData) {
       for (final MapEntry<String, String> f in data.fields) {
         if (f.key == 'meal_type' && f.value.isNotEmpty) mealType = f.value;
+        if (f.key == 'idempotency_key' && f.value.isNotEmpty) {
+          idempotencyKey = f.value;
+        }
       }
     } else if (data is Map) {
       mealType = (data['meal_type'] as String?) ?? 'lunch';
+      idempotencyKey = data['idempotency_key'] as String?;
+    }
+
+    // 같은 멱등키가 이미 저장돼 있으면 새로 저장하지 않고 기존 entry 를 반환(재시도 중복 방지).
+    if (idempotencyKey != null) {
+      final existing = await (_db.select(
+        _db.dietEntries,
+      )..where((t) => t.idempotencyKey.equals(idempotencyKey!))).getSingleOrNull();
+      if (existing != null) {
+        final storedFoods = (jsonDecode(existing.foodsJson) as List<Object?>)
+            .cast<Map<String, Object?>>();
+        return _ok(options, <String, Object?>{
+          'entry_id': existing.id,
+          'analysis': <String, Object?>{
+            'engine': 'stub',
+            'foods': storedFoods,
+            'total_calories': existing.totalCalories,
+            'total_sodium_mg': existing.sodiumMg,
+            'total_sugar_g': existing.sugarG,
+            'coach_comment': '',
+          },
+        });
+      }
     }
 
     final foods = <Map<String, Object?>>[
@@ -415,6 +445,7 @@ class LocalApiInterceptor extends Interceptor {
             totalCalories: totalCal,
             sodiumMg: const Value(totalNa),
             sugarG: const Value(totalSugar),
+            idempotencyKey: Value(idempotencyKey),
           ),
         );
 
@@ -493,6 +524,7 @@ class LocalApiInterceptor extends Interceptor {
         'type': r.type,
         'minutes': r.minutes,
         'calories': r.calories,
+        'intensity': r.intensity,
         // Date/time labels are synthesized here so the React-style
         // session list ("오늘", "어제", "MM월 DD일") works without
         // a schema migration on the drift `exerciseSessions` table.
@@ -593,6 +625,7 @@ class LocalApiInterceptor extends Interceptor {
       return _badRequest(options, 'minutes must be > 0');
     }
     final calories = (payload['calories'] as num?)?.toInt() ?? 0;
+    final intensity = (payload['intensity'] as String?) ?? 'moderate';
     final dayLabel =
         (payload['day_label'] as String?) ??
         _weekdayLabels[DateTime.now().weekday - 1];
@@ -608,6 +641,7 @@ class LocalApiInterceptor extends Interceptor {
             type: type,
             minutes: minutes,
             calories: calories,
+            intensity: Value(intensity),
           ),
         );
 
@@ -617,6 +651,7 @@ class LocalApiInterceptor extends Interceptor {
       'type': type,
       'minutes': minutes,
       'calories': calories,
+      'intensity': intensity,
       'date_label': _dateLabelForDayLabel(dayLabel),
       'time_label': _defaultTimeLabel(type),
       'items': _defaultItems(type),

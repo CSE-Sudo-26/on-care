@@ -10,6 +10,7 @@ class MockExerciseRepository implements ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     return ExerciseSession(
@@ -18,6 +19,7 @@ class MockExerciseRepository implements ExerciseRepository {
       type: type,
       minutes: minutes,
       calories: calories,
+      intensity: intensity,
       dateLabel: '오늘',
     );
   }
@@ -100,6 +102,7 @@ class MockExerciseRepository implements ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   }) async {
     return ExerciseSession(
       id: id,
@@ -107,6 +110,7 @@ class MockExerciseRepository implements ExerciseRepository {
       type: type,
       minutes: minutes,
       calories: calories,
+      intensity: intensity,
       dateLabel: '오늘',
     );
   }

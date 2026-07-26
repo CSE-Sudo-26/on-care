@@ -40,7 +40,10 @@ void main() {
     ) async {
       final container = await pumpTrainerApp(tester);
 
-      await tester.enterText(find.byType(TextField).at(0), 'trainer@oncare.com');
+      await tester.enterText(
+        find.byType(TextField).at(0),
+        'trainer@oncare.com',
+      );
       await tester.enterText(find.byType(TextField).at(1), 'pw');
       await tester.tap(find.widgetWithText(InkWell, '로그인'));
       await settle(tester);

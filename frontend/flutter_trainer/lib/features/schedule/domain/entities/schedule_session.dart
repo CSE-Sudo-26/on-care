@@ -63,9 +63,14 @@ class ScheduleSession {
   /// Whether this is an empty ("빈 시간") slot.
   bool get isGap => status == '공백';
 
-  /// Whether the session is done — only these expand to show the program.
+  /// Whether the session is done.
   bool get isDone => status == '완료';
 
-  /// Whether the card can expand (done + has a program to show).
-  bool get expandable => isDone && program.isNotEmpty;
+  /// Whether the session is still upcoming (예정).
+  bool get isUpcoming => status == '예정';
+
+  /// Whether the card can expand. Every booked session opens: 완료 shows
+  /// the finished program, 예정 shows the plan (or a no-plan hint), and
+  /// both expose the manage/chat actions.
+  bool get expandable => !isGap;
 }
