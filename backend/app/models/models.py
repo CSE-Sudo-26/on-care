@@ -94,6 +94,9 @@ class DietEntry(Base):
     time_label: Mapped[str] = mapped_column(String(10), default="")
     foods_json: Mapped[str] = mapped_column(Text, default="[]")  # [{name, calories}]
     total_calories: Mapped[int] = mapped_column(Integer, default=0)
+    carbs_g: Mapped[float] = mapped_column(Float, default=0.0)
+    protein_g: Mapped[float] = mapped_column(Float, default=0.0)
+    fat_g: Mapped[float] = mapped_column(Float, default=0.0)
     sodium_mg: Mapped[int] = mapped_column(Integer, default=0)
     sugar_g: Mapped[int] = mapped_column(Integer, default=0)
     engine: Mapped[str] = mapped_column(String(20), default="")  # 인식 엔진(gemini|yolo)

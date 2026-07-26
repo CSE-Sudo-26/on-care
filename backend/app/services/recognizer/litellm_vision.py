@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
 import time
 
@@ -23,7 +24,7 @@ _PROMPT = """당신은 전문 영양사입니다. 이 음식 사진을 분석해
 
 {
   "foods": [
-    {"name":"음식명(한국어)","calories":정수kcal,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
+    {"name":"음식명(한국어)","calories":정수kcal,"carbs_g":탄수화물g,"protein_g":단백질g,"fat_g":지방g,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
   ],
   "coach_comment": "고혈압(DASH) 관점 식단평. 나트륨 높은 음식을 짚고 개선 제안을 2~3문장 한국어로."
 }
@@ -81,7 +82,10 @@ class LiteLLMVisionRecognizer(FoodRecognizer):
                 foods.append(RecognizedFood(
                     name=str(f.get("name", "알 수 없음")),
                     calories=_i(f.get("calories")), sodium_mg=_i(f.get("sodium_mg")),
-                    sugar_g=_i(f.get("sugar_g")), confidence=_f(f.get("confidence")),
+                    carbs_g=_macro_f(f.get("carbs_g")),
+                    protein_g=_macro_f(f.get("protein_g")),
+                    fat_g=_macro_f(f.get("fat_g")), sugar_g=_i(f.get("sugar_g")),
+                    confidence=_f(f.get("confidence")),
                 ))
         except (json.JSONDecodeError, AttributeError):
             pass
@@ -107,3 +111,13 @@ def _f(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _macro_f(v):
+    if v is None:
+        return None
+    try:
+        value = float(v)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value >= 0 else None
