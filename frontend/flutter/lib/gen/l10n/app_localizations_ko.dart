@@ -429,13 +429,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietAddSheetTitle => '식단 추가하기';
+  String get dietAddSheetTitle => '식단 추가';
 
   @override
   String get dietAddSheetSubtitle => '사진으로 음식을 분석해요';
 
   @override
-  String get dietPickPhoto => '사진 선택하기';
+  String get dietPickPhoto => '사진 선택';
 
   @override
   String get dietPickPhotoSub => '갤러리에서 음식 사진 선택';
