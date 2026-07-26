@@ -144,7 +144,7 @@ def test_entry_update_rejects_non_finite_macros(field, value):
 
 
 def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.db.init_db import DEMO_USER_ID
     from app.models.models import DietEntry, FoodNutrient
 
@@ -379,7 +379,7 @@ def test_update_entry_changes_meal_type(client):
 
 
 def test_update_entry_changes_nutrition_and_today_totals(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.db.init_db import DEMO_USER_ID
     from app.models.models import DietEntry
 
@@ -476,7 +476,7 @@ def test_update_entry_rejects_negative_nutrition(client, field, value):
 
 
 def test_update_entry_hides_other_users_record(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.models.models import DietEntry, User
 
     suffix = uuid.uuid4().hex[:12]
