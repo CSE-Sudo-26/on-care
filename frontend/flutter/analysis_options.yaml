@@ -57,6 +57,7 @@ linter:
     always_use_package_imports: true
 
     # --- Documentation / API hygiene ---
+    package_api_docs: false
     public_member_api_docs: false
 
     # Disabled — too noisy for an app (vs. a library).

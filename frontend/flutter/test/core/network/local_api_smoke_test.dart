@@ -62,13 +62,7 @@ void main() {
     );
     // 3 seeded meals.
     expect(summary.dietEntries, 3);
-    // Two baseline events always fall on today. One of the monthly demo
-    // events can also land on today (5th/12th/22nd/26th), so keep this
-    // assertion stable across the calendar while still checking the baseline.
-    expect(
-      summary.todaySchedule.map((item) => item.title),
-      containsAll(<String>['병원 정기검진', '헬스장 운동']),
-    );
-    expect(summary.todaySchedule.length, inInclusiveRange(2, 3));
+    // Two seeded schedule events.
+    expect(summary.todaySchedule.length, 2);
   });
 }

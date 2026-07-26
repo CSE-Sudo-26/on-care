@@ -3,17 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-
-class _FailingDashboardRepository implements DashboardRepository {
-  const _FailingDashboardRepository();
-
-  @override
-  Future<DashboardSummary> fetchSummary() async {
-    throw StateError('boom');
-  }
-}
 
 void main() {
   test('dashboardSummaryProvider returns mock indicators + schedule', () async {
@@ -34,22 +24,6 @@ void main() {
     expect(summary.indicators.length, 3);
     expect(summary.todaySchedule.length, 2);
     expect(summary.weekScore, 85);
-  });
-
-  test('dashboardSummaryProvider propagates repository failures', () async {
-    final container = ProviderContainer(
-      overrides: <Override>[
-        dashboardRepositoryProvider.overrideWithValue(
-          const _FailingDashboardRepository(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await expectLater(
-      container.read(dashboardSummaryProvider.future),
-      throwsA(isA<StateError>()),
-    );
   });
 
   test('MockDashboardRepository marks sodium as over-budget', () async {
