@@ -227,19 +227,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeVsLastWeek => '지난주 대비';
 
   @override
-  String get homeSodiumInsightPre => '나트륨 섭취가 ';
+  String homeSodiumInsight(String trend, String alert) {
+    return '나트륨 섭취가 $trend 추세예요. 소금 사용량을 줄이고, $alert을 켜볼까요?';
+  }
 
   @override
   String get homeSodiumInsightTrend => '2주 연속 증가';
 
   @override
-  String get homeSodiumInsightMid => ' 추세예요. 소금 사용량을 줄이고, ';
-
-  @override
   String get homeSodiumInsightAlert => '고염분 식단 알림';
-
-  @override
-  String get homeSodiumInsightPost => '을 켜볼까요?';
 
   @override
   String get homeAiPill => '✦ AI';
@@ -311,6 +307,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unitMinutes => '분';
+
+  @override
+  String unitKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
+
+  @override
+  String unitMinutesValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString분';
+  }
 
   @override
   String get unitKg => 'kg';

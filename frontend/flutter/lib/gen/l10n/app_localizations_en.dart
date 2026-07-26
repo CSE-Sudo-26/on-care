@@ -229,19 +229,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeVsLastWeek => 'vs last week';
 
   @override
-  String get homeSodiumInsightPre => 'Sodium intake has been ';
+  String homeSodiumInsight(String trend, String alert) {
+    return 'Sodium intake has been $trend. Cut back on salt and turn on $alert?';
+  }
 
   @override
   String get homeSodiumInsightTrend => 'rising for 2 weeks';
 
   @override
-  String get homeSodiumInsightMid => '. Cut back on salt and turn on ';
-
-  @override
   String get homeSodiumInsightAlert => 'high-sodium meal alerts';
-
-  @override
-  String get homeSodiumInsightPost => '?';
 
   @override
   String get homeAiPill => '✦ AI';
@@ -313,6 +309,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unitMinutes => 'min';
+
+  @override
+  String unitKcalValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString kcal';
+  }
+
+  @override
+  String unitMinutesValue(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '$countString min';
+  }
 
   @override
   String get unitKg => 'kg';

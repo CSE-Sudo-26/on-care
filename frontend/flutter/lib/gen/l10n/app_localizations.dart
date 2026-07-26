@@ -518,11 +518,11 @@ abstract class AppLocalizations {
   /// **'vs last week'**
   String get homeVsLastWeek;
 
-  /// No description provided for @homeSodiumInsightPre.
+  /// No description provided for @homeSodiumInsight.
   ///
   /// In en, this message translates to:
-  /// **'Sodium intake has been '**
-  String get homeSodiumInsightPre;
+  /// **'Sodium intake has been {trend}. Cut back on salt and turn on {alert}?'**
+  String homeSodiumInsight(String trend, String alert);
 
   /// No description provided for @homeSodiumInsightTrend.
   ///
@@ -530,23 +530,11 @@ abstract class AppLocalizations {
   /// **'rising for 2 weeks'**
   String get homeSodiumInsightTrend;
 
-  /// No description provided for @homeSodiumInsightMid.
-  ///
-  /// In en, this message translates to:
-  /// **'. Cut back on salt and turn on '**
-  String get homeSodiumInsightMid;
-
   /// No description provided for @homeSodiumInsightAlert.
   ///
   /// In en, this message translates to:
   /// **'high-sodium meal alerts'**
   String get homeSodiumInsightAlert;
-
-  /// No description provided for @homeSodiumInsightPost.
-  ///
-  /// In en, this message translates to:
-  /// **'?'**
-  String get homeSodiumInsightPost;
 
   /// No description provided for @homeAiPill.
   ///
@@ -685,6 +673,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'min'**
   String get unitMinutes;
+
+  /// No description provided for @unitKcalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} kcal'**
+  String unitKcalValue(int count);
+
+  /// No description provided for @unitMinutesValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String unitMinutesValue(int count);
 
   /// No description provided for @unitKg.
   ///

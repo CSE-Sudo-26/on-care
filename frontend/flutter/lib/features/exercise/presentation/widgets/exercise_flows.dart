@@ -332,7 +332,13 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         ),
                       ),
                       Text(
-                        '${_estimateCalories(_typeFromIndex(_type), _minutes.round(), _level)} ${l.unitKcal}',
+                        l.unitKcalValue(
+                          _estimateCalories(
+                            _typeFromIndex(_type),
+                            _minutes.round(),
+                            _level,
+                          ),
+                        ),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
