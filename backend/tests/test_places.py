@@ -6,6 +6,45 @@
 from __future__ import annotations
 
 
+def test_kakao_merges_all_categories_when_none(monkeypatch):
+    """category 생략 시 네 카테고리를 모두 검색·병합하고, 각 결과를 계약 카테고리로
+    태깅한다(응답 category 가 빈 문자열이 되지 않음 — 시드 provider 와 의미 일치)."""
+    import asyncio
+
+    import httpx
+
+    from app.services.places import kakao
+
+    kakao._cache.clear()
+    seen_queries: list[str] = []
+
+    async def fake_get(self, url, params=None, headers=None):
+        q = params["query"]
+        seen_queries.append(q)
+
+        class _Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"documents": [{
+                    "id": f"id-{q}", "place_name": q, "x": "127.0", "y": "37.5",
+                    "distance": str(len(seen_queries) * 10),
+                }]}
+
+        return _Resp()
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    out = asyncio.run(kakao.search_nearby(37.5, 127.0, None, 1000, "key"))
+
+    assert set(seen_queries) == {"병원", "헬스장", "샐러드", "약국"}  # 네 카테고리 모두 검색
+    assert out and all(
+        p.category in {"medical", "fitness", "healthy_food", "pharmacy"} for p in out
+    )
+    assert not any(p.category == "" for p in out)  # 빈 category 없음
+    kakao._cache.clear()
+
+
 def test_kakao_docs_to_places_parsing():
     from app.services.places.kakao import docs_to_places
 

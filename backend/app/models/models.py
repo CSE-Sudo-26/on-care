@@ -15,7 +15,8 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func,
+    Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
+    func, text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -295,6 +296,8 @@ class TrainerClient(Base):
 
     goal 은 트레이너가 설정한 코칭 목표(예: '혈압 관리 · 체중 감량'). active 는
     활성/휴면. 한 회원이 한 트레이너에게 중복 배정되지 않도록 (trainer, member) 유일.
+    또한 회원측 API 는 '현재 담당 코치 1명'을 전제하므로, 회원당 active 링크는 최대
+    1개로 partial unique index 로 강제한다(복수 트레이너 동시 배정 방지).
     """
     __tablename__ = "trainer_clients"
 
@@ -312,6 +315,11 @@ class TrainerClient(Base):
 
     __table_args__ = (
         UniqueConstraint("trainer_id", "member_id", name="uq_trainer_client"),
+        # 회원당 active 담당은 최대 1명(휴면 링크는 과거 이력으로 여러 개 허용).
+        Index(
+            "uq_trainer_client_active_member", "member_id",
+            unique=True, postgresql_where=text("active"),
+        ),
     )
 
 

@@ -80,6 +80,11 @@ def upgrade() -> None:
     )
     op.create_index("ix_trainer_clients_trainer_id", "trainer_clients", ["trainer_id"])
     op.create_index("ix_trainer_clients_member_id", "trainer_clients", ["member_id"])
+    # 회원당 active 담당 최대 1명(회원측 API 의 '현재 담당 코치 1명' 전제 보장).
+    op.create_index(
+        "uq_trainer_client_active_member", "trainer_clients", ["member_id"],
+        unique=True, postgresql_where=sa.text("active"),
+    )
 
     # --- trainer_routines (배정 루틴) ---
     op.create_table(

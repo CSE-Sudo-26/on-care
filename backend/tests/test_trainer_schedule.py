@@ -98,6 +98,32 @@ def test_schedule_update_member_id_empty_unassigns(client, db_session):
     client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
 
 
+def test_delete_completed_session_removes_derived_history(client, db_session):
+    """완료 세션을 삭제하면 완료 시 파생된 운동기록(sched-hist-{id})도 함께 제거되어
+    회원 이력에 고아 레코드가 남지 않는다."""
+    from app.models import models
+
+    token = _tok(client)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(), "time": "07:15", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT",
+            "program": [{"name": "스쿼트", "sets": 3, "reps": "10회", "weight": "40kg"}],
+        },
+        headers=_h(token),
+    )
+    sid = c.json()["id"]
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={"note": "완료"}, headers=_h(token))
+    db_session.expire_all()
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is not None
+
+    d = client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
+    assert d.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is None  # 고아 없음
+
+
 def test_schedule_create_with_unlinked_member_404(client):
     token = _tok(client)
     r = client.post(

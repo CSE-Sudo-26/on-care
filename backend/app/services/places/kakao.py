@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import time
 
 import httpx
@@ -39,9 +40,7 @@ _CATEGORY_QUERY = {
 }
 
 
-def _query_for(category: str | None) -> str:
-    if not category:
-        return "병원"
+def _query_for(category: str) -> str:
     return _CATEGORY_QUERY.get(category, category)
 
 
@@ -70,18 +69,11 @@ def docs_to_places(docs: list[dict], category: str | None) -> list[PlaceOut]:
     return out
 
 
-async def search_nearby(
-    lat: float, lng: float, category: str | None, radius_m: int,
-    api_key: str, timeout: float = 3.0,
+async def _search_one(
+    client: httpx.AsyncClient, lat: float, lng: float, category: str,
+    radius_m: int, api_key: str,
 ) -> list[PlaceOut]:
-    """카카오 Local 키워드 검색으로 주변 장소를 거리순 조회. 실패 시 예외(라우터가 폴백).
-    TTL 캐시 히트 시 호출을 건너뛴다."""
-    key = _cache_key(lat, lng, category, radius_m)
-    now = time.monotonic()
-    hit = _cache.get(key)
-    if hit is not None and hit[0] > now:
-        return hit[1]
-
+    """단일 카테고리 키워드 검색 → PlaceOut 목록(응답 category 는 이 카테고리로 태깅)."""
     params = {
         "query": _query_for(category),
         "x": str(lng),      # 카카오는 x=경도, y=위도
@@ -91,11 +83,44 @@ async def search_nearby(
         "size": 15,
     }
     headers = {"Authorization": f"KakaoAK {api_key}"}
+    resp = await client.get(_KAKAO_KEYWORD_URL, params=params, headers=headers)
+    resp.raise_for_status()
+    docs = resp.json().get("documents", [])
+    return docs_to_places(docs, category)
+
+
+async def search_nearby(
+    lat: float, lng: float, category: str | None, radius_m: int,
+    api_key: str, timeout: float = 3.0,
+) -> list[PlaceOut]:
+    """카카오 Local 키워드 검색으로 주변 장소를 거리순 조회. 실패 시 예외(라우터가 폴백).
+
+    category 를 생략하면 계약의 네 카테고리를 모두 검색해 병합한다 — 시드 provider 의
+    무카테고리 동작(전체 반환)과 의미를 맞춰 provider 간 계약을 일치시킨다. 각 결과는
+    검색한 카테고리로 태깅되므로 응답 category 가 빈 문자열이 되지 않는다.
+    TTL 캐시 히트 시 호출을 건너뛴다."""
+    key = _cache_key(lat, lng, category, radius_m)
+    now = time.monotonic()
+    hit = _cache.get(key)
+    if hit is not None and hit[0] > now:
+        return hit[1]
+
+    categories = [category] if category else list(_CATEGORY_QUERY)
     async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(_KAKAO_KEYWORD_URL, params=params, headers=headers)
-        resp.raise_for_status()
-        docs = resp.json().get("documents", [])
-    result = docs_to_places(docs, category)
+        groups = await asyncio.gather(*[
+            _search_one(client, lat, lng, c, radius_m, api_key) for c in categories
+        ])
+
+    # 병합 → id 중복 제거(가장 가까운 것 유지) → 거리순 → 상한 15
+    merged = sorted((p for g in groups for p in g), key=lambda p: p.distance_meters)
+    seen: set[str] = set()
+    result: list[PlaceOut] = []
+    for p in merged:
+        if p.id and p.id in seen:
+            continue
+        seen.add(p.id)
+        result.append(p)
+    result = result[:15]
 
     if len(_cache) >= _CACHE_MAX:
         _cache.clear()  # 단순 상한 — 무한 증식 방지

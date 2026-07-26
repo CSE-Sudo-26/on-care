@@ -21,6 +21,40 @@ def _trainer_tok(client) -> str:
     ).json()["access_token"]
 
 
+def test_one_active_coach_per_member_enforced(client, db_session):
+    """회원측 API 는 '현재 담당 코치 1명'을 전제하므로, 회원당 active 담당 링크는 DB
+    partial unique index 로 최대 1개만 허용된다(복수 트레이너 동시 배정 방지)."""
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models import models
+
+    tid = f"trainer-{uuid4().hex[:8]}"
+    db_session.add(models.User(
+        id=tid, email=f"{tid}@oncare.com", name="T2", hashed_password="x", role="trainer",
+    ))
+    db_session.commit()
+    try:
+        # user-jisu 는 시드로 이미 active 담당(trainer-demo)이 있다. 두 번째 active 담당 추가 → 실패
+        db_session.add(models.TrainerClient(
+            id=f"tc-{tid}-jisu", trainer_id=tid, member_id="user-jisu", active=True,
+        ))
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+        db_session.rollback()
+        # 반면 휴면(active=False) 링크는 여러 개 허용된다
+        db_session.add(models.TrainerClient(
+            id=f"tc-{tid}-jisu", trainer_id=tid, member_id="user-jisu", active=False,
+        ))
+        db_session.commit()
+    finally:
+        db_session.rollback()
+        for row in db_session.query(models.TrainerClient).filter_by(trainer_id=tid).all():
+            db_session.delete(row)
+        db_session.delete(db_session.get(models.User, tid))
+        db_session.commit()
+
+
 def test_my_coach(client):
     t = _member_tok(client)
     r = client.get("/v1/me/coach", headers=_h(t))

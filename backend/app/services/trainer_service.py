@@ -574,6 +574,12 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return False
+    # 완료 세션은 완료 시 파생된 운동기록(sched-hist-{id})을 갖는다. 세션을 지우면 그
+    # 파생 기록도 함께 지워 고아 레코드가 회원 이력에 남지 않게 한다(완료 시 적재의 역연산).
+    if s.status == "완료":
+        hist = db.get(RoutineHistory, f"sched-hist-{s.id}")
+        if hist is not None:
+            db.delete(hist)
     db.delete(s)
     db.commit()
     return True

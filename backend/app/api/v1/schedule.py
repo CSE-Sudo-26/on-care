@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date as _date
 from datetime import datetime
 from typing import Annotated
 
@@ -20,6 +21,19 @@ from app.models.models import ScheduleEvent
 from app.schemas.misc_api import ScheduleEventCreate, ScheduleEventOut, ScheduleEventUpdate
 
 router = APIRouter(tags=["schedule"])
+
+
+def _is_ymd(v: str) -> bool:
+    try:
+        _date.fromisoformat(v)  # 2026-99-99 등 달력상 불가능한 값 거부
+        return True
+    except ValueError:
+        return False
+
+
+def _is_ym(v: str) -> bool:
+    # YYYY-MM 인지: 그 달 1일이 유효한 날짜인지로 검증(month=% 등 와일드카드 차단).
+    return len(v) == 7 and v[4] == "-" and _is_ymd(f"{v}-01")
 
 
 def _owned_event(db: Session, user_id: str, event_id: str) -> ScheduleEvent:
@@ -39,9 +53,14 @@ def list_events(
 ) -> list[ScheduleEvent]:
     stmt = select(ScheduleEvent).where(ScheduleEvent.user_id == current_user.id)
     if month:
+        # 형식 검증 필수 — 미검증 시 month=% 같은 값이 LIKE 와일드카드로 새어 전체 조회됨.
+        if not _is_ym(month):
+            raise HTTPException(status_code=422, detail="month 는 YYYY-MM 형식이어야 합니다.")
         stmt = stmt.where(ScheduleEvent.date.like(f"{month}-%"))
     else:
         target = date or datetime.now().strftime("%Y-%m-%d")
+        if not _is_ymd(target):
+            raise HTTPException(status_code=422, detail="date 는 YYYY-MM-DD 형식이어야 합니다.")
         stmt = stmt.where(ScheduleEvent.date == target)
     rows = db.scalars(
         stmt.order_by(ScheduleEvent.date.asc(), ScheduleEvent.time.asc())

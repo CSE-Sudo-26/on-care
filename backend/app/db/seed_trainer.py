@@ -29,6 +29,25 @@ from app.models import models
 
 logger = logging.getLogger(__name__)
 
+#: PostgreSQL unique_violation. 동시 기동이 같은 결정론적 id/이메일을 경쟁 삽입할 때만
+#: 나는 코드로, 이때만 '이미 다른 인스턴스가 넣음'으로 보고 넘긴다.
+_PG_UNIQUE_VIOLATION = "23505"
+
+
+def _safe_commit(db: Session, context: str) -> None:
+    """시드 커밋. 동시 기동 경쟁의 UNIQUE 충돌(23505)만 무시하고, FK(23503)·NOT NULL
+    (23502)·CHECK 등 진짜 오류는 다시 발생시켜(데이터가 롤백된 채 조용히 기동 계속 방지)
+    기동을 실패시킨다."""
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        sqlstate = getattr(getattr(e, "orig", None), "sqlstate", None)
+        if sqlstate != _PG_UNIQUE_VIOLATION:
+            raise
+        logger.warning("%s — 동시 기동 경쟁으로 롤백 후 스킵.", context, exc_info=True)
+
+
 # 트레이너 데모 계정
 TRAINER_ID = "trainer-demo"
 TRAINER_EMAIL = "trainer@oncare.com"
@@ -115,12 +134,7 @@ def _seed_trainer_account(db: Session) -> None:
             gym_hours="06:00 – 23:00",
             gym_phone="02-1234-5678",
         ))
-    try:
-        db.commit()
-    except IntegrityError:
-        # 동시 기동/이메일 경합 등 — 부분 커밋 없이 안전하게 롤백(기동은 계속).
-        db.rollback()
-        logger.warning("트레이너 데모 계정 시드 충돌 — 롤백 후 스킵.", exc_info=True)
+    _safe_commit(db, "트레이너 데모 계정 시드 충돌")
 
 
 def _seed_member_accounts(db: Session) -> None:
@@ -140,11 +154,7 @@ def _seed_member_accounts(db: Session) -> None:
             hashed_password=_demo_password_hash(),
             role="member",
         ))
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        logger.warning("회원 데모 계정 시드 충돌 — 롤백 후 스킵.", exc_info=True)
+    _safe_commit(db, "회원 데모 계정 시드 충돌")
 
 
 def _seed_client_links(db: Session) -> None:
@@ -175,8 +185,4 @@ def _seed_client_links(db: Session) -> None:
             active=active,
             sort_order=order,
         ))
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        logger.warning("담당 링크 시드 충돌 — 롤백 후 스킵.", exc_info=True)
+    _safe_commit(db, "담당 링크 시드 충돌")

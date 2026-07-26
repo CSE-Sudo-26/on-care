@@ -46,6 +46,16 @@ def test_schedule_event_detail_not_found(client):
     assert client.delete("/v1/schedule/events/nope").status_code == 404
 
 
+def test_schedule_events_reject_bad_date_and_month(client):
+    """date·month 는 형식 검증 필수 — month=% 같은 값이 LIKE 와일드카드로 새지 않게 422."""
+    assert client.get("/v1/schedule/events", params={"month": "%"}).status_code == 422
+    assert client.get("/v1/schedule/events", params={"month": "2026-13"}).status_code == 422
+    assert client.get("/v1/schedule/events", params={"date": "2026-99-99"}).status_code == 422
+    # 정상 형식은 200
+    assert client.get("/v1/schedule/events", params={"month": "2026-07"}).status_code == 200
+    assert client.get("/v1/schedule/events", params={"date": "2026-07-26"}).status_code == 200
+
+
 def test_schedule_event_input_validation(client):
     """잘못된 날짜·시간·카테고리·색상은 DB 500 이 아니라 422(리뷰 재-#4)."""
     base = {"date": _today(), "title": "검진"}
