@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -25,6 +27,9 @@ class GymDetailPage extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
+    final List<ConsultationRequest> requests = ref.watch(
+      consultationRequestControllerProvider,
+    );
 
     final Gym? nearbyGym = switch (nearbyAsync) {
       AsyncData<List<Gym>>(:final value) => _findGym(value),
@@ -37,7 +42,13 @@ class GymDetailPage extends ConsumerWidget {
     final Gym? gym = nearbyGym ?? myGym;
     final Widget body;
     if (gym != null) {
-      body = _GymDetails(gym: gym);
+      final bool hasPending = requests.any(
+        (ConsultationRequest request) =>
+            request.targetType == ConsultationTargetType.gym &&
+            request.gymId == gym.id &&
+            request.status == ConsultationStatus.pending,
+      );
+      body = _GymDetails(gym: gym, hasPending: hasPending);
     } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
     } else if (nearbyAsync.hasError || myGymAsync.hasError) {
@@ -73,9 +84,10 @@ class GymDetailPage extends ConsumerWidget {
 }
 
 class _GymDetails extends StatelessWidget {
-  const _GymDetails({required this.gym});
+  const _GymDetails({required this.gym, required this.hasPending});
 
   final Gym gym;
+  final bool hasPending;
 
   @override
   Widget build(BuildContext context) {
@@ -263,6 +275,28 @@ class _GymDetails extends StatelessWidget {
                 ),
               ),
             ],
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: hasPending
+                  ? null
+                  : () => context.push(
+                      AppRoutes.consultationRequestPath(
+                        targetType: ConsultationTargetType.gym.name,
+                        gymId: gym.id,
+                      ),
+                    ),
+              style: FilledButton.styleFrom(
+                backgroundColor: FigmaColors.primary,
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                hasPending ? l.exConsultPendingCta : l.exGymConsultRequest,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
       ),

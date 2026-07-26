@@ -25,15 +25,25 @@ String _typeLabel(AppLocalizations l, ExerciseType t) => switch (t) {
 /// sub-tab switcher over a weekly summary, stacked activity chart, AI routine,
 /// today's logs, and the gym card.
 class ExercisePage extends StatefulWidget {
-  const ExercisePage({super.key});
+  const ExercisePage({this.initialSubTab = 0, super.key});
+
+  final int initialSubTab;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
 }
 
 class _ExercisePageState extends State<ExercisePage> {
-  int _subTab = 0; // 0 = 운동 기록, 1 = 헬스장
+  late int _subTab = widget.initialSubTab; // 0 = 운동 기록, 1 = 헬스장
   String? _slot;
+
+  @override
+  void didUpdateWidget(covariant ExercisePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSubTab != widget.initialSubTab) {
+      _subTab = widget.initialSubTab;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

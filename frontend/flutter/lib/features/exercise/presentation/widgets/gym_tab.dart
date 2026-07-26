@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -26,6 +28,12 @@ class GymTab extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
     final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
+    final List<ConsultationRequest> requests = ref.watch(
+      consultationRequestControllerProvider,
+    );
+    final ConsultationRequest? recentRequest = requests.isEmpty
+        ? null
+        : requests.first;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -41,6 +49,10 @@ class GymTab extends ConsumerWidget {
             onFind: onFind,
             onRetry: () => ref.invalidate(myGymProvider),
           ),
+          if (recentRequest != null) ...<Widget>[
+            const SizedBox(height: 28),
+            _RecentConsultationSection(request: recentRequest),
+          ],
           const SizedBox(height: 28),
           _RecommendedGymSection(
             gymsAsync: nearbyAsync,
@@ -55,6 +67,131 @@ class GymTab extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RecentConsultationSection extends StatelessWidget {
+  const _RecentConsultationSection({required this.request});
+
+  final ConsultationRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool trainerTarget =
+        request.targetType == ConsultationTargetType.trainer;
+    final String targetName = trainerTarget
+        ? request.trainerName ?? request.gymName
+        : request.gymName;
+    final String targetType = trainerTarget
+        ? l.exTrainerConsultType
+        : l.exGymConsultType;
+    final String status = switch (request.status) {
+      ConsultationStatus.pending => l.exConsultPendingStatus,
+      ConsultationStatus.accepted => l.exConsultAcceptedStatus,
+      ConsultationStatus.rejected => l.exConsultRejectedStatus,
+    };
+    final String date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(request.preferredDate);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _SectionHeader(title: l.exConsultStatusSection),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: _cardDecoration(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: FigmaColors.primaryA(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  trainerTarget ? Icons.person_outline : Icons.fitness_center,
+                  size: 21,
+                  color: FigmaColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            targetName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: FigmaColors.primaryA(0.10),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            status,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: FigmaColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      trainerTarget
+                          ? '$targetType · ${request.gymName}'
+                          : targetType,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: FigmaColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      '$date · ${request.preferredTimeSlot}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textBody,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
