@@ -64,17 +64,28 @@
 `intensity`: 생략 시 `moderate`. 수정 시트가 저장된 강도로 복원되고 칼로리 추정 배수(0.85/1.0/1.2)의 근거가 된다.
 `day_labels`: `["월","화","수","목","금","토","일"]`
 
-### 일정
+### 일정 (캘린더 상세 CRUD)
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/schedule/events?date=YYYY-MM-DD` | `[{ id, date, time, title, category, emoji, color_hex }]` (배열) |
+| GET | `/schedule/events?month=YYYY-MM` | 그 달 전체(캘린더 뷰) |
+| GET | `/schedule/events/{id}` | 단건(없으면 404) |
+| POST | `/schedule/events` | 입력 `{ date, time?, title, category, emoji?, color_hex? }` → 생성 항목 |
+| PUT | `/schedule/events/{id}` | 부분 수정(본인 소유만, 아니면 404) |
+| DELETE | `/schedule/events/{id}` | 삭제 → `{ status: "deleted" }` |
 
 category: hospital|exercise|meal|medication|other
+- **검증**: `date`(YYYY-MM-DD)·`month`(YYYY-MM)·`time`(HH:MM 또는 빈값)·`color_hex`(#RGB/#RRGGBB)는
+  형식 위반 시 **422**. 특히 `month`는 미검증 시 `month=%` 같은 값이 LIKE 와일드카드로 새므로 필수.
 
-### 알림
+### 알림 (액션)
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/notifications` | `[{ id, title, body, category, read(bool), created_at(ISO), time_ago }]` (배열, 최신순) |
+| GET | `/notifications/unread-count` | `{ unread(int) }` |
+| POST | `/notifications/{id}/read` | 단건 읽음 → `{ id, read: true }` |
+| POST | `/notifications/read-all` | 전체 읽음 → `{ marked_read(int) }` |
+| DELETE | `/notifications/{id}` | 삭제 → `{ status: "deleted" }` |
 
 category: reminder|health_check|achievement|system
 
@@ -95,12 +106,26 @@ tag: diet|exercise|hydration|...
 
 value 예시(drift 주석): weight `{kg}`, blood-pressure `{systolic, diastolic}`, blood-sugar `{mg_per_dl}`
 
-### 장소 (온오프라인 연결)
+### 장소 (온오프라인 연결, O2O)
 | Method | Path | 응답 |
 |---|---|---|
-| GET | `/places/nearby` | `[{ id, name, category, address, distance_meters, lat, lng }]` (배열) |
+| GET | `/places/nearby?lat=&lng=&category=&radius_m=` | `[{ id, name, category, address, distance_meters, lat, lng }]` (거리순 배열) |
 
-category: medical|fitness|healthy_food|pharmacy
+category: medical|fitness|healthy_food|pharmacy (생략 가능)
+- **공급자**: `places_provider` 설정에 따라 **카카오 Local 실검색**(서버가 키를 쥐고 프록시,
+  60초 TTL 캐시) 또는 **시드 폴백**. 키가 없거나 호출 실패 시 자동으로 시드로 폴백.
+- **무카테고리**: `category` 생략 시 네 카테고리를 **모두 검색·병합**하고 각 결과를 해당
+  카테고리로 태깅한다(공급자 간 의미 일치, 빈 category 없음).
+- **검증**: `lat`(-90~90)·`lng`(-180~180)·`category`(허용값)는 위반 시 **422**.
+
+### 트레이너 도메인 / 회원측 코치 미러
+
+트레이너 앱 백엔드(`/v1/trainer/*`)와 회원측 "내 담당 코치" 미러(`/v1/me/coach/*`),
+그리고 트레이너↔회원 **실데이터 공유** 설계는 별도 문서로 분리했다:
+**[`docs/TRAINER_DOMAIN.md`](docs/TRAINER_DOMAIN.md)**.
+
+핵심: `users.role`(member|trainer)로 두 앱 계정을 구분하되, "고객"은 실제 회원 User이고
+트레이너 API는 회원의 실제 `diet_entries`·`routine_history`를 그대로 읽어 집계한다.
 
 ---
 
