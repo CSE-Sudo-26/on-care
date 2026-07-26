@@ -1200,7 +1200,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exHealthPurposeOtherHint => '허리디스크 재활, 무릎 통증 관리, 고지혈증 관리';
 
   @override
-  String get exOtherGoalHint => '자세한 목표는 문의 내용에 작성할 수 있어요.';
+  String get exOtherGoalHint => '구체적인 운동 목표는 문의 내용에 작성해주세요.';
 
   @override
   String get exPreferredDate => '희망 날짜';

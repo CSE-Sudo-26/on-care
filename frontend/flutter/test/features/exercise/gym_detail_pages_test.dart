@@ -97,12 +97,17 @@ void main() {
     await tester.scrollUntilVisible(
       find.text(_gymWithTrainer.trainerName!),
       250,
+      scrollable: find.byType(Scrollable).last,
     );
     await tester.tap(find.text(_gymWithTrainer.trainerName!));
     await tester.pumpAndSettle();
     expect(find.text('트레이너 상세'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text(_gymWithTrainer.name), 250);
+    await tester.scrollUntilVisible(
+      find.text(_gymWithTrainer.name),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text(_gymWithTrainer.name));
     await tester.pumpAndSettle();
     expect(find.text('헬스장 상세'), findsOneWidget);

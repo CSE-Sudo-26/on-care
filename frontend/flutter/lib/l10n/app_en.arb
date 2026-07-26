@@ -600,7 +600,7 @@
   "exPurposeGeneral": "General Health Management",
   "exPurposeNone": "None",
   "exHealthPurposeOtherHint": "For example, back rehabilitation, knee pain, or cholesterol management",
-  "exOtherGoalHint": "You can describe your goal in the message.",
+  "exOtherGoalHint": "Please describe your specific exercise goal in the message.",
   "exPreferredDate": "Preferred Date",
   "exSelectDate": "Select a date",
   "exPreferredTime": "Preferred Time",

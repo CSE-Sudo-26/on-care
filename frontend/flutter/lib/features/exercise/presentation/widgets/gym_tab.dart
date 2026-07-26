@@ -249,7 +249,8 @@ class _MyGymTrainerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String trainer = gym.trainerName ?? l.exTrainer;
+    final bool hasTrainerName = gym.trainerName?.isNotEmpty ?? false;
+    final String trainer = hasTrainerName ? gym.trainerName! : l.exTrainer;
 
     return Container(
       width: double.infinity,

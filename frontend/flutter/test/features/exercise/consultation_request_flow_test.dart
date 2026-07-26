@@ -61,6 +61,10 @@ Future<void> _scrollTo(WidgetTester tester, Finder target, double delta) {
   return tester.scrollUntilVisible(target, delta, scrollable: pageScroll);
 }
 
+AppLocalizations _localizations(WidgetTester tester) {
+  return AppLocalizations.of(tester.element(find.byType(Scaffold).first));
+}
+
 void main() {
   late ProviderContainer container;
   late GoRouter router;
@@ -107,18 +111,19 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpRoute(tester, AppRoutes.gymDetailPath(_gym.id));
-    await _scrollTo(tester, find.text('헬스장 상담 요청하기'), 250);
-    await tester.tap(find.text('헬스장 상담 요청하기'));
+    final AppLocalizations l = _localizations(tester);
+    await _scrollTo(tester, find.text(l.exGymConsultRequest), 250);
+    await tester.tap(find.text(l.exGymConsultRequest));
     await tester.pumpAndSettle();
 
-    expect(find.text('상담 요청'), findsOneWidget);
+    expect(find.text(l.exConsultRequestTitle), findsOneWidget);
     expect(find.text(_gym.name), findsOneWidget);
-    expect(find.textContaining('헬스장에서 확인 후 배정돼요'), findsOneWidget);
+    expect(find.textContaining(l.exTrainerAssignedLater), findsOneWidget);
 
     router.go(AppRoutes.trainerDetailPath(_gym.id));
     await tester.pumpAndSettle();
-    await _scrollTo(tester, find.text('트레이너 상담 요청하기'), 250);
-    await tester.tap(find.text('트레이너 상담 요청하기'));
+    await _scrollTo(tester, find.text(l.exTrainerConsultRequest), 250);
+    await tester.tap(find.text(l.exTrainerConsultRequest));
     await tester.pumpAndSettle();
 
     expect(find.text(_gym.trainerName!), findsOneWidget);
@@ -136,23 +141,28 @@ void main() {
         gymId: _gym.id,
       ),
     );
+    final AppLocalizations l = _localizations(tester);
 
-    await _scrollTo(tester, find.text('상담 요청 보내기'), 250);
-    await tester.tap(find.text('상담 요청 보내기'));
+    await _scrollTo(tester, find.text(l.exSendConsultRequest), 250);
+    await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pump();
-    await _scrollTo(tester, find.text('운동 목표를 선택해주세요.'), -250);
-    expect(find.text('운동 목표를 선택해주세요.'), findsOneWidget);
-    expect(find.text('건강관리 목적을 선택해주세요.'), findsOneWidget);
+    await _scrollTo(tester, find.text(l.exGoalRequired), -250);
+    expect(find.text(l.exGoalRequired), findsOneWidget);
+    expect(find.text(l.exHealthPurposeRequired), findsOneWidget);
 
-    await tester.tap(find.text('체중 감량'));
-    await _scrollTo(tester, find.text('기타').last, 200);
-    await tester.tap(find.text('기타').last);
+    await tester.tap(find.text(l.exGoalWeightLoss));
+    final Finder healthPurposeOther = find.descendant(
+      of: find.byKey(const Key('health-purpose-options')),
+      matching: find.text(l.exOptionOther),
+    );
+    await _scrollTo(tester, healthPurposeOther, 200);
+    await tester.tap(healthPurposeOther);
     await tester.pump();
-    expect(find.text('건강관리 목적을 입력해주세요.'), findsOneWidget);
+    expect(find.text(l.exHealthPurposeInputRequired), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, '무릎 통증 관리');
     await tester.pump();
-    expect(find.text('건강관리 목적을 입력해주세요.'), findsNothing);
+    expect(find.text(l.exHealthPurposeInputRequired), findsNothing);
   });
 
   testWidgets('valid submission completes, stores pending, and shows status', (
@@ -165,38 +175,39 @@ void main() {
         gymId: _gym.id,
       ),
     );
+    final AppLocalizations l = _localizations(tester);
 
-    await tester.tap(find.text('체중 감량'));
-    await _scrollTo(tester, find.text('해당 없음'), 180);
-    await tester.tap(find.text('해당 없음'));
-    await _scrollTo(tester, find.text('날짜를 선택해주세요'), 180);
-    await tester.tap(find.text('날짜를 선택해주세요'));
+    await tester.tap(find.text(l.exGoalWeightLoss));
+    await _scrollTo(tester, find.text(l.exPurposeNone), 180);
+    await tester.tap(find.text(l.exPurposeNone));
+    await _scrollTo(tester, find.text(l.exSelectDate), 180);
+    await tester.tap(find.text(l.exSelectDate));
     await tester.pumpAndSettle();
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
-    await _scrollTo(tester, find.text('오후'), 180);
-    await tester.tap(find.text('오후'));
-    await _scrollTo(tester, find.text('상담 요청 보내기'), 220);
-    await tester.tap(find.text('상담 요청 보내기'));
+    await _scrollTo(tester, find.text(l.exTimeAfternoon), 180);
+    await tester.tap(find.text(l.exTimeAfternoon));
+    await _scrollTo(tester, find.text(l.exSendConsultRequest), 220);
+    await tester.tap(find.text(l.exSendConsultRequest));
     await tester.pumpAndSettle();
 
-    expect(find.text('상담 요청이 접수되었어요'), findsOneWidget);
+    expect(find.text(l.exConsultReceived), findsOneWidget);
     final List<ConsultationRequest> requests = container.read(
       consultationRequestControllerProvider,
     );
     expect(requests, hasLength(1));
     expect(requests.single.status, ConsultationStatus.pending);
 
-    await tester.tap(find.text('운동 탭으로 돌아가기'));
+    await tester.tap(find.text(l.exReturnExercise));
     await tester.pumpAndSettle();
-    expect(find.text('상담 요청 현황'), findsOneWidget);
-    expect(find.text('요청 대기'), findsOneWidget);
+    expect(find.text(l.exConsultStatusSection), findsOneWidget);
+    expect(find.text(l.exConsultPendingStatus), findsOneWidget);
 
     router.go(AppRoutes.gymDetailPath(_gym.id));
     await tester.pumpAndSettle();
-    await _scrollTo(tester, find.text('상담 요청 대기 중'), 250);
+    await _scrollTo(tester, find.text(l.exConsultPendingCta), 250);
     final FilledButton pendingButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '상담 요청 대기 중'),
+      find.widgetWithText(FilledButton, l.exConsultPendingCta),
     );
     expect(pendingButton.onPressed, isNull);
   });
@@ -208,7 +219,8 @@ void main() {
       tester,
       '${AppRoutes.consultationRequest}?targetType=invalid&gymId=missing',
     );
-    expect(find.text('상담 대상 정보를 찾을 수 없어요.'), findsOneWidget);
+    final AppLocalizations l = _localizations(tester);
+    expect(find.text(l.exConsultTargetNotFound), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     router.go(
@@ -218,7 +230,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('상담 대상 정보를 찾을 수 없어요.'), findsOneWidget);
+    expect(find.text(l.exConsultTargetNotFound), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

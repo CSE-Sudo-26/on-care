@@ -2369,7 +2369,7 @@ abstract class AppLocalizations {
   /// No description provided for @exOtherGoalHint.
   ///
   /// In en, this message translates to:
-  /// **'You can describe your goal in the message.'**
+  /// **'Please describe your specific exercise goal in the message.'**
   String get exOtherGoalHint;
 
   /// No description provided for @exPreferredDate.

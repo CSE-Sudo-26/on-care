@@ -1220,7 +1220,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'For example, back rehabilitation, knee pain, or cholesterol management';
 
   @override
-  String get exOtherGoalHint => 'You can describe your goal in the message.';
+  String get exOtherGoalHint =>
+      'Please describe your specific exercise goal in the message.';
 
   @override
   String get exPreferredDate => 'Preferred Date';

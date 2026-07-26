@@ -257,6 +257,7 @@ class _ConsultationRequestPageState
             ],
             const SizedBox(height: 20),
             _ChoiceField<_HealthPurpose>(
+              key: const Key('health-purpose-options'),
               title: l.exHealthPurpose,
               values: _HealthPurpose.values,
               labels: purposeLabels,
@@ -451,6 +452,7 @@ class _ChoiceField<T> extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     this.errorText,
+    super.key,
   });
 
   final String title;
