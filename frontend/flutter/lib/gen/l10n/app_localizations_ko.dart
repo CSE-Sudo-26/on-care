@@ -283,6 +283,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealTagLowCal => '저칼로리';
 
   @override
+  String get homeMealNamulBibimbap => '나물 비빔밥';
+
+  @override
+  String get homeMealReasonFiber => '식이섬유가 풍부해요';
+
+  @override
+  String get homeMealTagHighFiber => '고식이섬유';
+
+  @override
   String get homeRecMealsTitle => '이번 주 AI 추천 식단';
 
   @override

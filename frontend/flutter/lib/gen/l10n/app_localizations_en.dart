@@ -285,6 +285,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealTagLowCal => 'Low calorie';
 
   @override
+  String get homeMealNamulBibimbap => 'Namul bibimbap';
+
+  @override
+  String get homeMealReasonFiber => 'Rich in dietary fiber';
+
+  @override
+  String get homeMealTagHighFiber => 'High fiber';
+
+  @override
   String get homeRecMealsTitle => 'This week\'s AI meal picks';
 
   @override

@@ -626,6 +626,24 @@ abstract class AppLocalizations {
   /// **'Low calorie'**
   String get homeMealTagLowCal;
 
+  /// No description provided for @homeMealNamulBibimbap.
+  ///
+  /// In en, this message translates to:
+  /// **'Namul bibimbap'**
+  String get homeMealNamulBibimbap;
+
+  /// No description provided for @homeMealReasonFiber.
+  ///
+  /// In en, this message translates to:
+  /// **'Rich in dietary fiber'**
+  String get homeMealReasonFiber;
+
+  /// No description provided for @homeMealTagHighFiber.
+  ///
+  /// In en, this message translates to:
+  /// **'High fiber'**
+  String get homeMealTagHighFiber;
+
   /// No description provided for @homeRecMealsTitle.
   ///
   /// In en, this message translates to:

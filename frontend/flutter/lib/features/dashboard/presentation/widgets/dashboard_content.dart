@@ -1731,6 +1731,14 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagLowCal,
     FigmaColors.sugarPurple,
   ),
+  _RecMeal(
+    '🥬',
+    l.homeMealNamulBibimbap,
+    l.homeMealReasonFiber,
+    const Color(0xFFEFF7ED),
+    l.homeMealTagHighFiber,
+    FigmaColors.greenText,
+  ),
 ];
 
 class _RecommendedMeals extends StatelessWidget {
