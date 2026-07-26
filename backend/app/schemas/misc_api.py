@@ -4,6 +4,7 @@ STEP 6 스키마 — 일정 / 알림 / 장소 / AI 코치.
 """
 from __future__ import annotations
 
+import re
 from datetime import date as _date, datetime
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -11,11 +12,16 @@ from pydantic import BaseModel, Field, field_validator
 # 회원 일정 카테고리 허용값(프론트 계약).
 ScheduleCategory = Literal["hospital", "exercise", "meal", "medication", "other"]
 _HEX_COLOR = r"^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$"
+# 계약 형식은 정확히 YYYY-MM-DD. date.fromisoformat 는 3.11+ 에서 basic ISO(20260726)·
+# 주 날짜(2026-W30-7)까지 받으므로 형식을 먼저 좁힌다.
+_YMD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _valid_ymd(v: str) -> str:
+    if not _YMD_RE.fullmatch(v):
+        raise ValueError("유효한 날짜(YYYY-MM-DD)가 아닙니다.")
     try:
-        _date.fromisoformat(v)  # 2026-99-99 등 달력상 불가능한 값 거부
+        _date.fromisoformat(v)  # 2026-02-30 등 달력상 불가능한 값 거부
     except ValueError as e:
         raise ValueError("유효한 날짜(YYYY-MM-DD)가 아닙니다.") from e
     return v

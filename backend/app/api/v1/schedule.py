@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date as _date
 from datetime import datetime
@@ -23,17 +24,32 @@ from app.schemas.misc_api import ScheduleEventCreate, ScheduleEventOut, Schedule
 router = APIRouter(tags=["schedule"])
 
 
+# 계약 형식은 정확히 YYYY-MM-DD / YYYY-MM. date.fromisoformat 는 3.11+ 에서 basic ISO
+# (20260726)·주 날짜(2026-W30-7)까지 받아들이므로, 먼저 형식을 정규식으로 좁힌 뒤
+# 달력상 유효성을 검사한다.
+_YMD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_YM_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
 def _is_ymd(v: str) -> bool:
+    if not _YMD_RE.fullmatch(v):
+        return False
     try:
-        _date.fromisoformat(v)  # 2026-99-99 등 달력상 불가능한 값 거부
+        _date.fromisoformat(v)  # 2026-02-30 등 달력상 불가능한 값 거부
         return True
     except ValueError:
         return False
 
 
 def _is_ym(v: str) -> bool:
-    # YYYY-MM 인지: 그 달 1일이 유효한 날짜인지로 검증(month=% 등 와일드카드 차단).
-    return len(v) == 7 and v[4] == "-" and _is_ymd(f"{v}-01")
+    # YYYY-MM 인지: 형식 확인 후 그 달 1일이 유효한 날짜인지로 검증(month=% 등 와일드카드 차단).
+    if not _YM_RE.fullmatch(v):
+        return False
+    try:
+        _date.fromisoformat(f"{v}-01")  # 2026-13 등 잘못된 월 거부
+        return True
+    except ValueError:
+        return False
 
 
 def _owned_event(db: Session, user_id: str, event_id: str) -> ScheduleEvent:

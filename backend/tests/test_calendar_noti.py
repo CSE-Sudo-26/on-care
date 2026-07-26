@@ -47,13 +47,30 @@ def test_schedule_event_detail_not_found(client):
 
 
 def test_schedule_events_reject_bad_date_and_month(client):
-    """date·month 는 형식 검증 필수 — month=% 같은 값이 LIKE 와일드카드로 새지 않게 422."""
-    assert client.get("/v1/schedule/events", params={"month": "%"}).status_code == 422
-    assert client.get("/v1/schedule/events", params={"month": "2026-13"}).status_code == 422
-    assert client.get("/v1/schedule/events", params={"date": "2026-99-99"}).status_code == 422
+    """date·month 는 형식 검증 필수 — month=% 같은 값이 LIKE 와일드카드로 새지 않게 422.
+
+    date.fromisoformat 만으로는 3.11+ 에서 basic ISO(20260726)·주 날짜(2026-W30-7)가
+    통과하므로, 계약 형식 YYYY-MM-DD / YYYY-MM 만 허용하는지 확인한다."""
+    bad_dates = ["%", "20260726", "2026-W30-7", "2026-99-99", "2026-02-30", "2026-7-26"]
+    for d in bad_dates:
+        assert client.get("/v1/schedule/events", params={"date": d}).status_code == 422, d
+    for m in ["%", "2026-13", "202607", "2026-W30", "2026-7"]:
+        assert client.get("/v1/schedule/events", params={"month": m}).status_code == 422, m
     # 정상 형식은 200
     assert client.get("/v1/schedule/events", params={"month": "2026-07"}).status_code == 200
     assert client.get("/v1/schedule/events", params={"date": "2026-07-26"}).status_code == 200
+
+
+def test_schedule_event_create_rejects_non_iso_date(client):
+    """생성 본문의 date 도 basic ISO/주 날짜를 거부하고 정확히 YYYY-MM-DD 만 허용."""
+    for d in ["20260726", "2026-W30-7", "2026-02-30"]:
+        r = client.post("/v1/schedule/events", json={"date": d, "title": "x", "category": "other"})
+        assert r.status_code == 422, d
+    ok = client.post(
+        "/v1/schedule/events", json={"date": "2026-07-26", "title": "x", "category": "other"}
+    )
+    assert ok.status_code == 201, ok.text
+    client.delete(f"/v1/schedule/events/{ok.json()['id']}")
 
 
 def test_schedule_event_input_validation(client):
