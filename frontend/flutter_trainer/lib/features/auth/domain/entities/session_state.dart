@@ -1,4 +1,4 @@
-import 'package:oncare_trainer/features/auth/domain/entities/trainer_profile.dart';
+import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 
 /// Lifecycle of the trainer session.
 ///

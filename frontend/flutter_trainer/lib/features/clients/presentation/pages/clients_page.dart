@@ -4,45 +4,163 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/clients/data/repositories/client_repository.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/trainer_client.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/content_frame.dart';
+import 'package:oncare_trainer/shared/widgets/oni_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/outlined_action_button.dart';
 
 /// 고객 관리 tab — reservation badge, AI summary, and the client list.
+///
+/// Responsive: from [AppLayout.splitBreakpoint] the tab becomes a
+/// master-detail split — list on the left, the selected client's
+/// 채팅/식단/운동기록 panel on the right. The selection is mirrored to
+/// the URL (`/clients?c=<id>`) so a refresh restores the same state.
+/// Narrower viewports keep the full-screen push to `/client/:id`.
 class ClientsPage extends ConsumerWidget {
   /// Creates the clients tab.
   const ClientsPage({super.key});
 
+  Future<void> _openAddClientSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: AppRadius.card),
+      ),
+      builder: (context) => const _AddClientSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clients = ref.watch(clientsProvider);
+    // Priority ordering: sodium-over clients first, then recent chat.
+    final clients = ref.watch(prioritizedClientsProvider);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
+    final unread =
+        ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: clients.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
+          error: (e, _) => const Center(
             child: Text(
               '고객 정보를 불러오지 못했어요',
               style: TextStyle(color: AppColors.mutedForeground),
             ),
           ),
-          data: (list) => _ClientsView(clients: list, reservations: reservations),
+          data: (list) => LayoutBuilder(
+            builder: (context, constraints) {
+              final wide =
+                  constraints.maxWidth >= AppLayout.splitBreakpoint &&
+                  list.isNotEmpty;
+
+              // Restore the selection from the URL (?c=<id>). Absent or
+              // stale means the panel is closed — the tab starts as a
+              // plain list until a client is picked.
+              final query = GoRouterState.of(context).uri.queryParameters['c'];
+              final selected = wide && list.any((c) => c.id == query)
+                  ? query
+                  : null;
+
+              if (selected == null) {
+                return ContentFrame(
+                  child: _ClientsView(
+                    clients: list,
+                    reservations: reservations,
+                    unread: unread,
+                    selectedId: null,
+                    // Wide: open the side panel via the URL. Narrow:
+                    // keep the full-screen push.
+                    onOpen: (id) => wide
+                        ? context.go(_clientsLocation(id))
+                        : context.push(AppRoutes.clientDetail(id)),
+                    onAddClient: () => _openAddClientSheet(context),
+                  ),
+                );
+              }
+
+              return ContentFrame(
+                maxWidth: AppLayout.wideMaxWidth,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    SizedBox(
+                      width: AppLayout.splitListWidth,
+                      child: _ClientsView(
+                        clients: list,
+                        reservations: reservations,
+                        unread: unread,
+                        selectedId: selected,
+                        // Selecting swaps the right panel (and the URL)
+                        // instead of pushing a new screen.
+                        onOpen: (id) => context.go(_clientsLocation(id)),
+                        onAddClient: () => _openAddClientSheet(context),
+                      ),
+                    ),
+                    const VerticalDivider(
+                      width: 1,
+                      color: AppColors.borderStrong,
+                    ),
+                    Expanded(
+                      child: ClientDetailView(
+                        clientId: selected,
+                        showBack: false,
+                        onClose: () => context.go(AppRoutes.clients),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
 
+/// The `?c=` location for [clientId], built through [Uri] so the id is
+/// percent-encoded — string concatenation would break on a `?`/`&`/
+/// non-ASCII id once ids stop being seed-generated.
+String _clientsLocation(String clientId) => Uri(
+  path: AppRoutes.clients,
+  queryParameters: <String, String>{'c': clientId},
+).toString();
+
 class _ClientsView extends StatelessWidget {
-  const _ClientsView({required this.clients, required this.reservations});
+  const _ClientsView({
+    required this.clients,
+    required this.reservations,
+    required this.unread,
+    required this.selectedId,
+    required this.onOpen,
+    required this.onAddClient,
+  });
 
   final List<TrainerClient> clients;
   final int? reservations;
+
+  /// Unread chat counts by client id (absent = 0).
+  final Map<String, int> unread;
+
+  /// Highlighted client in the split layout (null on narrow viewports).
+  final String? selectedId;
+
+  /// Invoked with the tapped client's id.
+  final ValueChanged<String> onOpen;
+
+  /// Opens the 신규 고객 등록 sheet.
+  final VoidCallback onAddClient;
 
   @override
   Widget build(BuildContext context) {
@@ -95,11 +213,167 @@ class _ClientsView extends StatelessWidget {
         for (final client in clients) ...<Widget>[
           ClientCard(
             client: client,
-            onTap: () => context.push(AppRoutes.clientDetail(client.id)),
+            selected: client.id == selectedId,
+            unread: unread[client.id] ?? 0,
+            onTap: () => onOpen(client.id),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+        OutlinedActionButton(
+          label: '＋ 신규 고객 등록',
+          color: AppColors.accent,
+          onTap: onAddClient,
+        ),
       ],
+    );
+  }
+}
+
+/// Bottom sheet collecting the new client's 이름/목표.
+class _AddClientSheet extends ConsumerStatefulWidget {
+  const _AddClientSheet();
+
+  @override
+  ConsumerState<_AddClientSheet> createState() => _AddClientSheetState();
+}
+
+class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _goal = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _goal.dispose();
+    super.dispose();
+  }
+
+  /// Set when the entered name is blank or already taken.
+  String? _nameError;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = '이름을 입력해 주세요');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _nameError = null;
+    });
+    final navigator = Navigator.of(context);
+    bool added;
+    try {
+      added = await ref
+          .read(clientRepositoryProvider)
+          .addClient(name: name, goal: _goal.text);
+    } catch (_) {
+      // An unexpected DB failure must not leave the sheet silently stuck —
+      // surface it inline like the duplicate case. `finally` clears the
+      // saving flag on every path (CodeRabbit review).
+      if (mounted) setState(() => _nameError = '등록에 실패했어요. 다시 시도해 주세요');
+      return;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+    if (!mounted) return;
+    if (!added) {
+      // Duplicate name — schedules resolve their client by name, so
+      // allowing it would misattribute chat/운동기록 (review PR 243).
+      setState(() => _nameError = '이미 같은 이름의 고객이 있어요');
+      return;
+    }
+    navigator.pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Text(
+            '신규 고객 등록',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: <Widget>[
+              const Text(
+                '이름',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '*필수',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.destructive.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextField(
+            controller: _name,
+            decoration: InputDecoration(
+              hintText: '고객 이름',
+              isDense: true,
+              errorText: _nameError,
+            ),
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _goal,
+            decoration: const InputDecoration(
+              hintText: '목표 (예: 체중 감량 · 근력 향상)',
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Material(
+            color: AppColors.primary,
+            borderRadius: const BorderRadius.all(AppRadius.lg),
+            child: InkWell(
+              onTap: _saving ? null : _save,
+              borderRadius: const BorderRadius.all(AppRadius.lg),
+              child: Container(
+                height: 44,
+                alignment: Alignment.center,
+                child: const Text(
+                  '등록하기',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryForeground,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -129,16 +403,8 @@ class _AiSummaryCard extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.card,
-            ),
-            child: const Text('🙂', style: TextStyle(fontSize: 20)),
-          ),
+          // The On-Care mascot — same AI identity as the user app redesign.
+          const OniAvatar(size: 40),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -180,9 +446,7 @@ class _AiSummaryCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  sodiumOver > 0
-                      ? '루틴 조정이 필요할 수 있어요.'
-                      : '모든 고객이 목표 범위 안에 있어요.',
+                  sodiumOver > 0 ? '루틴 조정이 필요할 수 있어요.' : '모든 고객이 목표 범위 안에 있어요.',
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: AppColors.mutedForeground,

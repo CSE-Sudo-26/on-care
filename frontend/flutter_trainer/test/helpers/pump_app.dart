@@ -22,6 +22,7 @@ Future<ProviderContainer> pumpTrainerApp(
   WidgetTester tester, {
   String? token,
   bool seed = true,
+  List<Override> extraOverrides = const <Override>[],
 }) async {
   final values = <String, Object>{};
   if (token != null) values['trainer_access_token'] = token;
@@ -36,6 +37,7 @@ Future<ProviderContainer> pumpTrainerApp(
     overrides: <Override>[
       sharedPreferencesProvider.overrideWithValue(prefs),
       appDatabaseProvider.overrideWithValue(db),
+      ...extraOverrides,
     ],
   );
   addTearDown(container.dispose);

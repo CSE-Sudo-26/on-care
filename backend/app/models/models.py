@@ -94,10 +94,19 @@ class DietEntry(Base):
     time_label: Mapped[str] = mapped_column(String(10), default="")
     foods_json: Mapped[str] = mapped_column(Text, default="[]")  # [{name, calories}]
     total_calories: Mapped[int] = mapped_column(Integer, default=0)
+    carbs_g: Mapped[float] = mapped_column(Float, default=0.0)
+    protein_g: Mapped[float] = mapped_column(Float, default=0.0)
+    fat_g: Mapped[float] = mapped_column(Float, default=0.0)
     sodium_mg: Mapped[int] = mapped_column(Integer, default=0)
     sugar_g: Mapped[int] = mapped_column(Integer, default=0)
     engine: Mapped[str] = mapped_column(String(20), default="")  # 인식 엔진(gemini|yolo)
+    # 재시도 중복 저장 방지용 멱등키(클라 요청당 1회 생성). NULL 허용 → 기존/무키 요청은 제약 밖.
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_diet_entries_user_idem"),
+    )
 
 
 class FoodNutrient(Base):
@@ -134,6 +143,8 @@ class ExerciseSession(Base):
     type: Mapped[str] = mapped_column(String(20))  # cardio|strength|yoga|walking
     minutes: Mapped[int] = mapped_column(Integer, default=0)
     calories: Mapped[int] = mapped_column(Integer, default=0)
+    # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
+    intensity: Mapped[str] = mapped_column(String(20), default="moderate", server_default="moderate")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -10,6 +10,7 @@ abstract class ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   });
 
   /// DELETE /exercise/sessions/{id} — remove a workout session.
@@ -22,5 +23,6 @@ abstract class ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   });
 }

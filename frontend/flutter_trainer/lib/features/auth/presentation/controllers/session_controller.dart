@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/storage/session_token_store.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/mock_trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
-import 'package:oncare_trainer/features/auth/domain/entities/trainer_profile.dart';
+import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 
 /// Owns the trainer session lifecycle: restore-on-launch, mock login,
@@ -42,14 +42,8 @@ class SessionController extends StateNotifier<SessionState> {
   /// Logs in with email/password (mock: any non-empty credentials
   /// succeed). Persists the token and attaches the seed profile.
   /// Throws [AuthException] on failure.
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    final token = await _authRepository.login(
-      email: email,
-      password: password,
-    );
+  Future<void> login({required String email, required String password}) async {
+    final token = await _authRepository.login(email: email, password: password);
     await _tokenStore.saveToken(token);
     state = const SessionState(
       status: SessionStatus.authenticated,

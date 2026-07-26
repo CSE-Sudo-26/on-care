@@ -323,6 +323,11 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
   bool _loading = true;
   bool _failed = false;
 
+  // One key per capture, reused across retries so a lost response followed by
+  // 「다시 시도」 doesn't record the same meal twice (server dedupes on it).
+  late final String _idempotencyKey =
+      'diet-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(this)}';
+
   @override
   void initState() {
     super.initState();
@@ -341,6 +346,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             imageBytes: widget.imageBytes,
             filename: 'meal.jpg',
             mealType: widget.mealType,
+            idempotencyKey: _idempotencyKey,
           );
       if (!mounted) return;
       // analyze() already persisted the entry → refresh the day's summary/list.

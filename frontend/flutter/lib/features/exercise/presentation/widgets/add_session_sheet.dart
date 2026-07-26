@@ -82,6 +82,9 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
               type: _type,
               minutes: minutes,
               calories: calories,
+              // This sheet has no intensity picker — keep the saved level
+              // so an edit here never downgrades a 보통/높음 record.
+              intensity: session.intensity,
               dayLabel: session.dayLabel,
             );
       } else {

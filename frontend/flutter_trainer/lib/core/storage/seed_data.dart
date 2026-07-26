@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v1']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v2']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Behaviour mirrors the user
 /// app's date-aware seeder (see the user app's `seed_data.dart`):
 ///
@@ -15,6 +16,14 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
+/// The flag is `_v2` (was `_v1`): the schema-v2 migration adds
+/// `sodiumWeekJson` with an empty default, so a client who upgrades and
+/// re-opens the SAME day would keep blank sodium trends until the date
+/// rolled over (`_v1` flag already == today ⇒ re-seed skipped). Bumping
+/// the key forces exactly one re-seed on upgrade, backfilling the seed
+/// clients' real weekly sodium while runtime rows are preserved (245→247,
+/// review PR 247).
+///
 /// **User data is preserved.** Only rows whose `id` starts with `seed-`
 /// are wiped, so anything added at runtime (e.g. a trainer's chat reply,
 /// which gets a non-`seed-` id) survives re-seeding.
@@ -22,9 +31,9 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 /// Source data mirrors the On-Care Figma trainer mock
 /// (`TRAINER_CLIENTS` / `TRAINER_SCHEDULE`).
 Future<void> seedIfEmpty(AppDatabase db) async {
-  final today = _fmtDate(DateTime.now());
+  final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v1') == today) return;
+  if (await db.readValue('trainer_seeded_v2') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -40,7 +49,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // date rollover).
   await db.transaction(() async {
     // ---- Wipe existing seed rows (seed-% only; user rows survive) ----
-    await (db.delete(db.trainerClients)..where((t) => t.id.like('seed-%'))).go();
+    await (db.delete(
+      db.trainerClients,
+    )..where((t) => t.id.like('seed-%'))).go();
     await (db.delete(
       db.clientDietEntries,
     )..where((t) => t.id.like('seed-%'))).go();
@@ -75,6 +86,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               sugarG: client.sugarG,
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(client.weekCompletion),
+              sodiumWeekJson: Value(jsonEncode(client.sodiumWeek)),
               sortOrder: Value(client.id),
             ),
           );
@@ -158,14 +170,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v1', today);
+    await db.putValue('trainer_seeded_v2', today);
   });
 }
-
-String _fmtDate(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
 
 // ---------------------------------------------------------------------------
 // Seed data (from On-Care_figma/src/app/App.tsx — TRAINER_CLIENTS /
@@ -226,6 +233,7 @@ class _Client {
     required this.sugarG,
     required this.lastRoutine,
     required this.weekCompletion,
+    required this.sodiumWeek,
     required this.diet,
     required this.aiRoutine,
     required this.history,
@@ -243,6 +251,7 @@ class _Client {
   final int sugarG;
   final String lastRoutine;
   final List<int> weekCompletion;
+  final List<int> sodiumWeek;
   final List<_Meal> diet;
   final List<_Routine> aiRoutine;
   final List<_History> history;
@@ -282,6 +291,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 45,
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
+    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 2100],
     diet: <_Meal>[
       _Meal('아침', '오트밀, 바나나', 315, 380),
       _Meal('점심', '닭가슴살 샐러드, 현미밥', 620, 890),
@@ -319,7 +329,11 @@ const List<_Client> _clients = <_Client>[
       ),
     ],
     chat: <_Chat>[
-      _Chat('trainer', '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?', '18:10'),
+      _Chat(
+        'trainer',
+        '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?',
+        '18:10',
+      ),
       _Chat('client', '찌개 먹을 때 국물을 많이 마셨나봐요 😅', '18:13'),
       _Chat('trainer', '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?', '18:14'),
       _Chat('client', '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16'),
@@ -343,6 +357,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 38,
     lastRoutine: '어제',
     weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
+    sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
     diet: <_Meal>[
       _Meal('아침', '그릭요거트, 과일', 280, 200),
       _Meal('점심', '현미밥, 불고기, 나물', 750, 980),
@@ -380,7 +395,11 @@ const List<_Client> _clients = <_Client>[
       ),
     ],
     chat: <_Chat>[
-      _Chat('trainer', '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?', '20:05'),
+      _Chat(
+        'trainer',
+        '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?',
+        '20:05',
+      ),
       _Chat('client', '생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨', '20:08'),
       _Chat(
         'trainer',
@@ -402,6 +421,7 @@ const List<_Client> _clients = <_Client>[
     sugarG: 55,
     lastRoutine: '5일 전',
     weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
+    sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
     diet: <_Meal>[
       _Meal('아침', '계란 3개, 토스트', 480, 520),
       _Meal('점심', '짜장면', 890, 1200),
@@ -459,10 +479,30 @@ const List<_Slot> _schedule = <_Slot>[
     status: '완료',
     note: '무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '레그프레스', 'sets': 3, 'reps': '12회', 'weight': '80kg'},
-      <String, Object?>{'name': '레그컬', 'sets': 3, 'reps': '12회', 'weight': '40kg'},
-      <String, Object?>{'name': '카프레이즈', 'sets': 3, 'reps': '20회', 'weight': '자체중량'},
-      <String, Object?>{'name': '하체 스트레칭', 'sets': 1, 'reps': '10분', 'weight': '-'},
+      <String, Object?>{
+        'name': '레그프레스',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '80kg',
+      },
+      <String, Object?>{
+        'name': '레그컬',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '40kg',
+      },
+      <String, Object?>{
+        'name': '카프레이즈',
+        'sets': 3,
+        'reps': '20회',
+        'weight': '자체중량',
+      },
+      <String, Object?>{
+        'name': '하체 스트레칭',
+        'sets': 1,
+        'reps': '10분',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(
@@ -473,10 +513,25 @@ const List<_Slot> _schedule = <_Slot>[
     status: '완료',
     note: '데드리프트 자세 안정적. 다음 세션 60kg 도전.',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '데드리프트', 'sets': 4, 'reps': '8회', 'weight': '55kg'},
-      <String, Object?>{'name': '루마니안 데드리프트', 'sets': 3, 'reps': '10회', 'weight': '40kg'},
+      <String, Object?>{
+        'name': '데드리프트',
+        'sets': 4,
+        'reps': '8회',
+        'weight': '55kg',
+      },
+      <String, Object?>{
+        'name': '루마니안 데드리프트',
+        'sets': 3,
+        'reps': '10회',
+        'weight': '40kg',
+      },
       <String, Object?>{'name': '플랭크', 'sets': 3, 'reps': '45초', 'weight': '-'},
-      <String, Object?>{'name': '코어 서킷', 'sets': 2, 'reps': '12회', 'weight': '-'},
+      <String, Object?>{
+        'name': '코어 서킷',
+        'sets': 2,
+        'reps': '12회',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(
@@ -496,9 +551,24 @@ const List<_Slot> _schedule = <_Slot>[
     status: '예정',
     note: '',
     program: <Map<String, Object?>>[
-      <String, Object?>{'name': '벤치프레스', 'sets': 4, 'reps': '8회', 'weight': '65kg'},
-      <String, Object?>{'name': '인클라인 덤벨 프레스', 'sets': 3, 'reps': '10회', 'weight': '26kg'},
-      <String, Object?>{'name': '트라이셉스 딥', 'sets': 3, 'reps': '12회', 'weight': '-'},
+      <String, Object?>{
+        'name': '벤치프레스',
+        'sets': 4,
+        'reps': '8회',
+        'weight': '65kg',
+      },
+      <String, Object?>{
+        'name': '인클라인 덤벨 프레스',
+        'sets': 3,
+        'reps': '10회',
+        'weight': '26kg',
+      },
+      <String, Object?>{
+        'name': '트라이셉스 딥',
+        'sets': 3,
+        'reps': '12회',
+        'weight': '-',
+      },
     ],
   ),
   _Slot(

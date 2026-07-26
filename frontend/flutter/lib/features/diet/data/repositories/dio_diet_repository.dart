@@ -31,6 +31,7 @@ class DioDietRepository implements DietRepository {
     required Uint8List imageBytes,
     required String filename,
     required String mealType,
+    String? idempotencyKey,
   }) async {
     final form = FormData.fromMap(<String, Object?>{
       'image': MultipartFile.fromBytes(
@@ -39,6 +40,7 @@ class DioDietRepository implements DietRepository {
         contentType: DioMediaType('image', 'jpeg'),
       ),
       'meal_type': mealType,
+      'idempotency_key': ?idempotencyKey,
     });
     final res = await _dio.post<Map<String, Object?>>(
       '/diet/analyze',

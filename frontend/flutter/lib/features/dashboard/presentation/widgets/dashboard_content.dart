@@ -1308,17 +1308,31 @@ class _NutTab extends StatelessWidget {
 /// sentence — word order, spacing, particles — while keeping per-segment
 /// styling. Falls back to plain text if a marker isn't found.
 List<InlineSpan> _emphasisSpans(String full, List<(String, TextStyle)> marks) {
-  final List<InlineSpan> spans = <InlineSpan>[];
-  int cursor = 0;
+  final List<(int, String, TextStyle)> positioned =
+      <(int, String, TextStyle)>[];
   for (final (String text, TextStyle style) in marks) {
     if (text.isEmpty) continue;
-    final int idx = full.indexOf(text, cursor);
-    if (idx < 0) continue;
-    if (idx > cursor) spans.add(TextSpan(text: full.substring(cursor, idx)));
-    spans.add(TextSpan(text: text, style: style));
-    cursor = idx + text.length;
+    final int index = full.indexOf(text);
+    if (index >= 0) positioned.add((index, text, style));
   }
-  if (cursor < full.length) spans.add(TextSpan(text: full.substring(cursor)));
+  positioned.sort(
+    ((int, String, TextStyle) a, (int, String, TextStyle) b) =>
+        a.$1.compareTo(b.$1),
+  );
+
+  final List<InlineSpan> spans = <InlineSpan>[];
+  int cursor = 0;
+  for (final (int index, String text, TextStyle style) in positioned) {
+    if (index < cursor) continue;
+    if (index > cursor) {
+      spans.add(TextSpan(text: full.substring(cursor, index)));
+    }
+    spans.add(TextSpan(text: text, style: style));
+    cursor = index + text.length;
+  }
+  if (cursor < full.length) {
+    spans.add(TextSpan(text: full.substring(cursor)));
+  }
   return spans;
 }
 

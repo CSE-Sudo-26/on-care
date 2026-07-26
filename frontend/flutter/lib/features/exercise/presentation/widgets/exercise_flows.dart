@@ -129,11 +129,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
   late int _type = widget.session != null
       ? _indexFromType(widget.session!.type)
       : 1;
-  int _level = 0;
-  // Intensity isn't persisted on ExerciseSession, so an edit always opens at
-  // 가벼움. Track whether the user actually changed it so we don't silently
-  // recompute (and downgrade) a stored 보통/높음 record's calories.
-  bool _levelTouched = false;
+  // Intensity is persisted on ExerciseSession, so an edit reopens at the
+  // saved level (가벼움/보통/높음); a new session defaults to 보통.
+  late int _level = widget.session?.intensity.index ?? 1;
   late double _minutes = widget.session?.minutes.toDouble() ?? 30;
   bool _saving = false;
 
@@ -158,12 +156,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       );
       return;
     }
-    // On edit, keep the stored calories unless the user actually changed the
-    // intensity — recomputing at the defaulted 가벼움 would corrupt a 보통/높음
-    // record (intensity isn't persisted yet; see the follow-up issue).
-    final int calories = (editing != null && !_levelTouched)
-        ? editing.calories
-        : _estimateCalories(type, minutes, _level);
+    // Intensity is persisted now, so always recompute calories from the
+    // (restored or edited) level — no more preserving stale values.
+    final ExerciseIntensity intensity = ExerciseIntensity.values[_level];
+    final int calories = _estimateCalories(type, minutes, _level);
     setState(() => _saving = true);
     try {
       // 서버(mock 모드는 drift)에 저장 → 주간 데이터 무효화로 통계·차트·목록 반영.
@@ -175,6 +171,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               type: type,
               minutes: minutes,
               calories: calories,
+              intensity: intensity,
               dayLabel: editing.dayLabel,
             );
       } else {
@@ -184,6 +181,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               type: type,
               minutes: minutes,
               calories: calories,
+              intensity: intensity,
               dayLabel: _weekdayLabels[DateTime.now().weekday - 1],
             );
       }
@@ -296,10 +294,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         child: _chip(
                           levels[i],
                           _level == i,
-                          () => setState(() {
-                            _level = i;
-                            _levelTouched = true;
-                          }),
+                          () => setState(() => _level = i),
                           center: true,
                         ),
                       ),
@@ -333,7 +328,13 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         ),
                       ),
                       Text(
-                        l.unitKcalValue((_minutes * 6).round()),
+                        l.unitKcalValue(
+                          _estimateCalories(
+                            _typeFromIndex(_type),
+                            _minutes.round(),
+                            _level,
+                          ),
+                        ),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,

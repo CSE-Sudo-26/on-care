@@ -152,6 +152,49 @@ void main() {
     expect(res.data!['total_minutes'], 175);
   });
 
+  test('POST/PUT /exercise/sessions round-trips intensity', () async {
+    final add = await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{
+        'type': 'strength',
+        'minutes': 40,
+        'calories': 300,
+        'intensity': 'high',
+        'day_label': '화',
+      },
+    );
+    expect(add.data!['intensity'], 'high');
+    final String id = add.data!['id']! as String;
+
+    // GET week echoes the saved intensity for that session.
+    final week = await dio.get<Map<String, Object?>>('/exercise/weeks/current');
+    final sessions = (week.data!['sessions']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    final added = sessions.firstWhere((s) => s['id'] == id);
+    expect(added['intensity'], 'high');
+
+    // Editing to a lower intensity persists.
+    final put = await dio.put<Map<String, Object?>>(
+      '/exercise/sessions/$id',
+      data: <String, Object?>{
+        'type': 'strength',
+        'minutes': 40,
+        'calories': 250,
+        'intensity': 'light',
+        'day_label': '화',
+      },
+    );
+    expect(put.data!['intensity'], 'light');
+  });
+
+  test('POST /exercise/sessions defaults intensity to moderate', () async {
+    final add = await dio.post<Map<String, Object?>>(
+      '/exercise/sessions',
+      data: <String, Object?>{'type': 'cardio', 'minutes': 20, 'day_label': '목'},
+    );
+    expect(add.data!['intensity'], 'moderate');
+  });
+
   test('POST /exercise/sessions rejects non-positive minutes', () async {
     final res = await dio.post<Map<String, Object?>>(
       '/exercise/sessions',

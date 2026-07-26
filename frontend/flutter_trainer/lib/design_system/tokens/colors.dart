@@ -33,14 +33,15 @@ class AppColors {
   /// Deeper blue — second stop of the client-avatar gradient.
   static const Color accentDark = Color(0xFF2A8FBD);
 
-  /// Purple used for the 당류(sugar) metric on the diet summary
-  /// (mock: App.tsx 식단 서브탭, `#9B8FD4`).
-  static const Color accentPurple = Color(0xFF9B8FD4);
-
   /// AI-summary card gradient (mock: `linear-gradient(135deg,#C8E8F6,
   /// #A8D8F0)` on the 고객 탭 "AI 요약" card).
   static const Color aiCardGradientStart = Color(0xFFC8E8F6);
   static const Color aiCardGradientEnd = Color(0xFFA8D8F0);
+
+  /// MY 탭 "이번 달 통계" warm gradient (mock: `linear-gradient(135deg,
+  /// #FFF4EE,#FFE8D8)`) — kept orange as a trainer-identity block.
+  static const Color statsGradientStart = Color(0xFFFFF4EE);
+  static const Color statsGradientEnd = Color(0xFFFFE8D8);
 
   // --- Surface / text ---
   /// App canvas behind cards (mock uses `#F8FAFC`).

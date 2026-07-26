@@ -46,20 +46,22 @@
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/diet/days/today` | `{ entries[], total_calories, total_sodium_mg, total_sugar_g, macros, ai_coach_message }` |
+| POST | `/diet/analyze` | multipart `{ image, meal_type, idempotency_key? }` → `{ entry_id, analysis }` (분석과 동시에 diet_entries 저장) |
 
 `entries[]`: `{ id(str), meal_type(breakfast|lunch|dinner|snack), time_label, foods[], total_calories, sodium_mg, sugar_g }`
 `foods[]`: `[{ name, calories }]` (drift 주석 기준)
 `macros`: `{ carbs_pct, protein_pct, fat_pct }`
-
-> **(예정) `POST /diet/analyze`** — 백엔드 README 로드맵. 사진 → Gemini 분석.
-> LocalApi 에는 아직 없으나, 기존 PoC 와 로드맵에 명시되어 있어 백엔드에 함께 구현(프론트가 켜면 바로 사용).
+`idempotency_key`(선택): 재시도 중복 저장 방지. 클라 요청당 1회 생성해 재시도 시 재사용하면, 서버는 (user_id, key) 유니크 제약으로 같은 키의 재요청에 대해 **인식·저장을 건너뛰고 기존 entry 를 반환**한다(중복 기록·RAG 재적재 없음).
 
 ### 운동
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/exercise/weeks/current` | `{ sessions[], daily_minutes[7], cardio_minutes[7], strength_minutes[7], stretching_minutes[7], day_labels[7], total_minutes, total_calories, streak_days, ai_coach_message }` |
+| POST | `/exercise/sessions` | 입력 `{ type, minutes(>0), calories, intensity(light\|moderate\|high), day_label? }` → 생성된 `sessions[]` 항목 |
+| PUT | `/exercise/sessions/{id}` | 입력 동일(부분 갱신) → 갱신된 항목 |
 
-`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, date_label, time_label, items[str] }`
+`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, intensity(light|moderate|high), date_label, time_label, items[str] }`
+`intensity`: 생략 시 `moderate`. 수정 시트가 저장된 강도로 복원되고 칼로리 추정 배수(0.85/1.0/1.2)의 근거가 된다.
 `day_labels`: `["월","화","수","목","금","토","일"]`
 
 ### 일정
