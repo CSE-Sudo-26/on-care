@@ -85,6 +85,7 @@ def build_current_week(rows: list) -> dict:
         sessions.append({
             "id": r.id, "day_label": r.day_label, "type": r.type,
             "minutes": r.minutes, "calories": r.calories,
+            "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "date_label": _date_label_for_day(r.day_label),
             "time_label": _default_time_label(r.type),
             "items": _default_items(r.type),

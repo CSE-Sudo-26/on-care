@@ -3,6 +3,17 @@ enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 ExerciseType _exerciseTypeFromString(String s) => ExerciseType.values
     .firstWhere((t) => t.name == s, orElse: () => ExerciseType.other);
 
+/// Workout intensity, persisted so the edit sheet reopens at the saved
+/// level and calorie estimates stay consistent. Order matches the
+/// 가벼움 / 보통 / 높음 chips and the `_intensityFactor` multipliers.
+enum ExerciseIntensity { light, moderate, high }
+
+ExerciseIntensity _exerciseIntensityFromString(String? s) =>
+    ExerciseIntensity.values.firstWhere(
+      (i) => i.name == s,
+      orElse: () => ExerciseIntensity.moderate,
+    );
+
 class ExerciseSession {
   const ExerciseSession({
     this.id,
@@ -10,6 +21,7 @@ class ExerciseSession {
     required this.type,
     required this.minutes,
     required this.calories,
+    this.intensity = ExerciseIntensity.moderate,
     this.dateLabel,
     this.timeLabel,
     this.items = const <String>[],
@@ -20,6 +32,10 @@ class ExerciseSession {
   final ExerciseType type;
   final int minutes;
   final int calories;
+
+  /// Saved workout intensity. Defaults to [ExerciseIntensity.moderate] for
+  /// legacy payloads that predate the field.
+  final ExerciseIntensity intensity;
 
   /// Day-of-record label shown above the session card. `오늘`, `어제`,
   /// or `5월 12일`. Optional because older payloads (and the unit
@@ -40,6 +56,7 @@ class ExerciseSession {
         type: _exerciseTypeFromString(json['type']! as String),
         minutes: (json['minutes']! as num).toInt(),
         calories: (json['calories']! as num).toInt(),
+        intensity: _exerciseIntensityFromString(json['intensity'] as String?),
         dateLabel: json['date_label'] as String?,
         timeLabel: json['time_label'] as String?,
         items: ((json['items'] as List<Object?>?) ?? const <Object?>[])

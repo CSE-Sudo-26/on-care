@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/clients/data/repositories/chat_repository.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/client_chat_message.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 /// The 채팅 sub-tab: an AI-received system banner, the message thread
@@ -37,6 +37,14 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
+  /// A send is in flight — blocks re-entry (button mash / IME send)
+  /// from inserting the same message twice.
+  bool _sending = false;
+
+  /// Message count at the last auto-scroll, so the thread only scrolls
+  /// when a message actually arrives (not on every rebuild).
+  int _lastCount = -1;
+
   @override
   void dispose() {
     _input.dispose();
@@ -45,20 +53,30 @@ class _ChatViewState extends ConsumerState<ChatView> {
   }
 
   Future<void> _send() async {
+    if (_sending) return;
     final text = _input.text;
     if (text.trim().isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+    setState(() => _sending = true);
     try {
       await ref
           .read(chatRepositoryProvider)
           .sendTrainerMessage(clientId: widget.clientId, text: text);
     } catch (_) {
+      // Guard the failure path too: a slow send that fails after the
+      // user left would otherwise touch a disposed messenger.
+      if (!mounted) return;
       // Keep the draft in the input and tell the user it didn't go out.
       messenger.showSnackBar(
         const SnackBar(content: Text('메시지 전송에 실패했어요. 다시 시도해 주세요')),
       );
       return;
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
+    // The insert may outlive this widget (user navigated away while
+    // awaiting) — don't touch disposed controllers.
+    if (!mounted) return;
     // Clear only after the insert succeeds so the text isn't lost on error.
     _input.clear();
     _scrollToBottom();
@@ -66,7 +84,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scroll.hasClients) return;
+      if (!mounted || !_scroll.hasClients) return;
       _scroll.animateTo(
         _scroll.position.maxScrollExtent,
         duration: const Duration(milliseconds: 250),
@@ -91,7 +109,18 @@ class _ChatViewState extends ConsumerState<ChatView> {
               ),
             ),
             data: (list) {
-              _scrollToBottom();
+              // Auto-scroll only when a message arrived, not every build.
+              if (list.length != _lastCount) {
+                _lastCount = list.length;
+                _scrollToBottom();
+                // Viewing the thread clears its unread badge — also for
+                // messages that arrive while it stays open. Deferred so
+                // the write never runs inside build.
+                final repo = ref.read(chatRepositoryProvider);
+                Future<void>.microtask(
+                  () => repo.markThreadRead(widget.clientId),
+                );
+              }
               return ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -108,7 +137,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
             },
           ),
         ),
-        _InputBar(controller: _input, onSend: _send),
+        _InputBar(controller: _input, sending: _sending, onSend: _send),
       ],
     );
   }
@@ -178,9 +207,7 @@ class _SentBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.success.withValues(alpha: 0.08),
           borderRadius: const BorderRadius.all(AppRadius.card),
-          border: Border.all(
-            color: AppColors.success.withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.25)),
         ),
         child: Column(
           children: <Widget>[
@@ -220,8 +247,9 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final fromTrainer = message.fromTrainer;
     final bubble = Column(
-      crossAxisAlignment:
-          fromTrainer ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: fromTrainer
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: <Widget>[
         Container(
           padding: const EdgeInsets.symmetric(
@@ -230,7 +258,9 @@ class _Bubble extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: fromTrainer ? AppColors.accent : AppColors.card,
-            border: fromTrainer ? null : Border.all(color: AppColors.borderStrong),
+            border: fromTrainer
+                ? null
+                : Border.all(color: AppColors.borderStrong),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -262,8 +292,9 @@ class _Bubble extends StatelessWidget {
     );
 
     return Row(
-      mainAxisAlignment:
-          fromTrainer ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: fromTrainer
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         if (!fromTrainer) ...<Widget>[
@@ -277,9 +308,17 @@ class _Bubble extends StatelessWidget {
 }
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({required this.controller, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.sending,
+    required this.onSend,
+  });
 
   final TextEditingController controller;
+
+  /// Disables the field and the send button while an insert is in flight.
+  final bool sending;
+
   final Future<void> Function() onSend;
 
   @override
@@ -300,6 +339,7 @@ class _InputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              enabled: !sending,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
               decoration: InputDecoration(
@@ -320,14 +360,18 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Material(
-            color: AppColors.accent,
+            color: sending ? AppColors.disabledForeground : AppColors.accent,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: onSend,
+              onTap: sending ? null : onSend,
               child: const Padding(
                 padding: EdgeInsets.all(AppSpacing.sm),
-                child: Icon(Icons.send, size: 18, color: AppColors.accentForeground),
+                child: Icon(
+                  Icons.send,
+                  size: 18,
+                  color: AppColors.accentForeground,
+                ),
               ),
             ),
           ),

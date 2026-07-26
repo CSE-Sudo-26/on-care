@@ -43,4 +43,46 @@ void main() {
     final entries = (today.data!['entries']! as List<Object?>);
     expect(entries, isNotEmpty);
   });
+
+  test('same idempotency_key dedupes a retried /diet/analyze', () async {
+    FormData buildForm() => FormData.fromMap(<String, Object?>{
+      'image': MultipartFile.fromBytes(<int>[1, 2, 3, 4], filename: 'meal.jpg'),
+      'meal_type': 'lunch',
+      'idempotency_key': 'idem-fixed-1',
+    });
+
+    final first = await dio.post<Map<String, Object?>>(
+      '/diet/analyze',
+      data: buildForm(),
+    );
+    final String firstId = first.data!['entry_id']! as String;
+
+    // Simulate a lost-response retry with the SAME key → same entry, no dup.
+    final second = await dio.post<Map<String, Object?>>(
+      '/diet/analyze',
+      data: buildForm(),
+    );
+    expect(second.data!['entry_id'], firstId);
+
+    final today = await dio.get<Map<String, Object?>>('/diet/days/today');
+    final entries = (today.data!['entries']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    // Only one row for that key.
+    expect(entries.where((e) => e['id'] == firstId).length, 1);
+    expect(entries.length, 1);
+  });
+
+  test('missing idempotency_key records each analyze separately', () async {
+    FormData form() => FormData.fromMap(<String, Object?>{
+      'image': MultipartFile.fromBytes(<int>[1, 2, 3, 4], filename: 'meal.jpg'),
+      'meal_type': 'lunch',
+    });
+    final a = await dio.post<Map<String, Object?>>('/diet/analyze', data: form());
+    final b = await dio.post<Map<String, Object?>>('/diet/analyze', data: form());
+    expect(a.data!['entry_id'], isNot(b.data!['entry_id']));
+
+    final today = await dio.get<Map<String, Object?>>('/diet/days/today');
+    final entries = (today.data!['entries']! as List<Object?>);
+    expect(entries.length, 2);
+  });
 }

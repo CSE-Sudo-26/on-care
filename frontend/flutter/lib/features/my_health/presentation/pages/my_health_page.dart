@@ -9,30 +9,36 @@ import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// MY tab, rebuilt to the On-Care Figma redesign: profile, role toggle
 /// (the trainer app is intentionally not built), an activity-points banner,
 /// the settings list, and logout.
+/// Stable identifiers for the settings rows, decoupled from their localized
+/// display labels so the switch never keys off a translated string.
+enum _MySetting { profile, goals, notif, support }
+
 class MyHealthPage extends ConsumerWidget {
   const MyHealthPage({super.key});
 
-  void _openSetting(BuildContext context, String label) {
-    switch (label) {
-      case '내 프로필':
+  void _openSetting(BuildContext context, _MySetting id) {
+    switch (id) {
+      case _MySetting.profile:
         showProfileSheet(context);
-      case '건강 목표':
+      case _MySetting.goals:
         showGoalsSheet(context);
-      case '알림 설정':
+      case _MySetting.notif:
         showNotifSheet(context);
-      case '고객 지원':
+      case _MySetting.support:
         showSupportSheet(context);
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<MyHealthState> health = ref.watch(myHealthStateProvider);
     return Scaffold(
       backgroundColor: Colors.white,
@@ -45,7 +51,7 @@ class MyHealthPage extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 108),
               children: <Widget>[
                 FigmaTabHeader(
-                  title: 'MY',
+                  title: l.myTabTitle,
                   onBell: () => showRightSlidePanel<void>(
                     context,
                     content: const NotificationPanelBody(),
@@ -71,7 +77,7 @@ class MyHealthPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _Settings(
-                    onTap: (String s) => _openSetting(context, s),
+                    onTap: (_MySetting id) => _openSetting(context, id),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -83,16 +89,16 @@ class MyHealthPage extends ConsumerWidget {
                           await showDialog<bool>(
                             context: context,
                             builder: (BuildContext ctx) => AlertDialog(
-                              title: const Text('로그아웃'),
-                              content: const Text('로그아웃 하시겠어요?'),
+                              title: Text(l.myLogout),
+                              content: Text(l.myLogoutConfirm),
                               actions: <Widget>[
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('취소'),
+                                  child: Text(l.myCancel),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text('로그아웃'),
+                                  child: Text(l.myLogout),
                                 ),
                               ],
                             ),
@@ -122,6 +128,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final String name = profile?.name ?? '';
     final String email = profile?.email ?? '';
     final String initial = name.isNotEmpty ? name.substring(0, 1) : '·';
@@ -169,7 +176,7 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  name.isEmpty ? '사용자' : name,
+                  name.isEmpty ? l.myDefaultUserName : name,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -202,6 +209,7 @@ class _PointsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -237,7 +245,7 @@ class _PointsBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                '$rank위 랭킹',
+                l.myRank(rank!),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -252,30 +260,44 @@ class _PointsBanner extends StatelessWidget {
 }
 
 class _SettingItem {
-  const _SettingItem(this.icon, this.label);
+  const _SettingItem(this.icon, this.id);
   final IconData icon;
-  final String label;
+  final _MySetting id;
 }
 
 class _Settings extends StatelessWidget {
   const _Settings({required this.onTap});
-  final ValueChanged<String> onTap;
+  final ValueChanged<_MySetting> onTap;
 
   static const List<_SettingItem> _items = <_SettingItem>[
-    _SettingItem(Icons.person_outline, '내 프로필'),
-    _SettingItem(Icons.bar_chart_rounded, '건강 목표'),
-    _SettingItem(Icons.notifications_none_rounded, '알림 설정'),
-    _SettingItem(Icons.chat_bubble_outline_rounded, '고객 지원'),
+    _SettingItem(Icons.person_outline, _MySetting.profile),
+    _SettingItem(Icons.bar_chart_rounded, _MySetting.goals),
+    _SettingItem(Icons.notifications_none_rounded, _MySetting.notif),
+    _SettingItem(Icons.chat_bubble_outline_rounded, _MySetting.support),
   ];
+
+  static String _label(AppLocalizations l, _MySetting id) {
+    switch (id) {
+      case _MySetting.profile:
+        return l.myProfileTitle;
+      case _MySetting.goals:
+        return l.myGoalsTitle;
+      case _MySetting.notif:
+        return l.myNotifTitle;
+      case _MySetting.support:
+        return l.mySupportTitle;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          '설정',
-          style: TextStyle(
+        Text(
+          l.mySettingsTitle,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
@@ -300,8 +322,9 @@ class _Settings extends StatelessWidget {
             children: <Widget>[
               for (int i = 0; i < _items.length; i++) ...<Widget>[
                 _SettingRow(
-                  item: _items[i],
-                  onTap: () => onTap(_items[i].label),
+                  icon: _items[i].icon,
+                  label: _label(l, _items[i].id),
+                  onTap: () => onTap(_items[i].id),
                 ),
                 if (i < _items.length - 1)
                   const Padding(
@@ -318,8 +341,13 @@ class _Settings extends StatelessWidget {
 }
 
 class _SettingRow extends StatelessWidget {
-  const _SettingRow({required this.item, required this.onTap});
-  final _SettingItem item;
+  const _SettingRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -337,12 +365,12 @@ class _SettingRow extends StatelessWidget {
                 color: FigmaColors.softBlue,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(item.icon, size: 16, color: FigmaColors.primary),
+              child: Icon(icon, size: 16, color: FigmaColors.primary),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                item.label,
+                label,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -368,6 +396,7 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -402,9 +431,9 @@ class _LogoutButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                '로그아웃',
-                style: TextStyle(
+              Text(
+                l.myLogout,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFFFF3B30),

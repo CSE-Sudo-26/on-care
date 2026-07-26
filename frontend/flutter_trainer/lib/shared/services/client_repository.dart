@@ -24,8 +24,127 @@ class ClientRepository {
       ..orderBy(<OrderingTerm Function($TrainerClientsTable)>[
         (t) => OrderingTerm(expression: t.sortOrder),
       ]);
-    return query.watch().map(
-      (rows) => rows.map(_toEntity).toList(),
+    return query.watch().map((rows) => rows.map(_toEntity).toList());
+  }
+
+  /// Clients ordered by coaching priority for the 고객 관리 list:
+  /// sodium-over-target clients first, ties broken by the most recent
+  /// chat activity, then by the seeded order.
+  Stream<List<TrainerClient>> watchClientsPrioritized() {
+    final t = _db.trainerClients;
+    final chat = _db.clientChatMessages;
+    final lastChatAt = chat.createdAt.max();
+    final query =
+        _db.select(t).join(<Join>[
+            leftOuterJoin(
+              chat,
+              chat.clientId.equalsExp(t.id),
+              useColumns: false,
+            ),
+          ])
+          ..addColumns(<Expression<Object>>[lastChatAt])
+          ..groupBy(<Expression<Object>>[t.id]);
+    return query.watch().map((rows) {
+      final entries = rows.map((r) {
+        final row = r.readTable(t);
+        return (
+          client: _toEntity(row),
+          lastChatAt: r.read(lastChatAt),
+          sortOrder: row.sortOrder,
+        );
+      }).toList();
+      entries.sort((a, b) {
+        final over = (b.client.sodiumOverBudget ? 1 : 0).compareTo(
+          a.client.sodiumOverBudget ? 1 : 0,
+        );
+        if (over != 0) return over;
+        final chatCmp = (b.lastChatAt ?? DateTime.utc(1970)).compareTo(
+          a.lastChatAt ?? DateTime.utc(1970),
+        );
+        if (chatCmp != 0) return chatCmp;
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+      return entries.map((e) => e.client).toList();
+    });
+  }
+
+  /// Whether a client with this display name already exists
+  /// (whitespace- and case-insensitive). Counts in SQL rather than
+  /// loading every row into memory (review PR 243).
+  Future<bool> clientNameExists(String name) async {
+    final key = name.trim().toLowerCase();
+    if (key.isEmpty) return false;
+    return _nameTaken(key);
+  }
+
+  /// SQL `COUNT(*)` of clients whose normalised name matches [key]
+  /// (already trimmed + lower-cased). Runs inside the caller's
+  /// transaction when there is one, so `addClient` can check-then-insert
+  /// atomically.
+  Future<bool> _nameTaken(String key) async {
+    final row = await _db
+        .customSelect(
+          'SELECT COUNT(*) AS c FROM trainer_clients '
+          'WHERE lower(trim(name)) = ?1',
+          variables: <Variable<Object>>[Variable<String>(key)],
+          readsFrom: <ResultSetImplementation<Object?, Object?>>{
+            _db.trainerClients,
+          },
+        )
+        .getSingle();
+    return row.read<int>('c') > 0;
+  }
+
+  /// Registers a new client (e.g. after a 상담) with a fresh, empty
+  /// profile. The non-`seed-` id survives the daily re-seed.
+  ///
+  /// Returns `false` — writing nothing — when the name is blank or
+  /// already taken. Schedule rows reference a client by NAME (the chat
+  /// shortcut and completion logging both look up `clientName`), so a
+  /// duplicate name would attribute one client's chat/운동기록 to
+  /// another. Keeping names unique closes that path until schedules
+  /// carry a clientId (review PR 243).
+  ///
+  /// The duplicate check and the insert run in ONE transaction, so two
+  /// concurrent adds of the same name can't both pass the check and both
+  /// insert — exactly one wins, the other returns `false` (review 243).
+  Future<bool> addClient({required String name, required String goal}) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return false;
+    return _db.transaction(() async {
+      if (await _nameTaken(trimmedName.toLowerCase())) return false;
+      final now = DateTime.now();
+      await _db
+          .into(_db.trainerClients)
+          .insert(
+            TrainerClientsCompanion.insert(
+              id: 'client-${now.microsecondsSinceEpoch}',
+              name: trimmedName,
+              // runes.first survives surrogate pairs without pulling the
+              // characters package into this pure-Dart service.
+              avatar: String.fromCharCode(trimmedName.runes.first),
+              goal: goal.trim().isEmpty ? '목표 설정 전' : goal.trim(),
+              lastMessage: '아직 대화가 없어요',
+              lastTime: '-',
+              active: const Value(true),
+              caloriesToday: 0,
+              sodiumMg: 0,
+              sugarG: 0,
+              lastRoutine: '-',
+              weekCompletionJson: '[0,0,0,0,0,0,0]',
+              sodiumWeekJson: const Value('[]'),
+              // Large key appends new clients after the seeded roster.
+              sortOrder: Value(now.millisecondsSinceEpoch),
+            ),
+          );
+      return true;
+    });
+  }
+
+  /// Flips a client between 활성 and 휴면.
+  Future<void> setClientActive(String id, bool active) async {
+    await (_db.update(_db.trainerClients)..where((t) => t.id.equals(id))).write(
+      TrainerClientsCompanion(active: Value(active)),
     );
   }
 
@@ -89,10 +208,14 @@ class ClientRepository {
     );
   }
 
-
   TrainerClient _toEntity(TrainerClientRow row) {
     final week = (jsonDecode(row.weekCompletionJson) as List<Object?>)
         .map((e) => e as int)
+        .toList();
+    final sodiumWeek = (jsonDecode(row.sodiumWeekJson) as List<Object?>)
+        // On web, JSON numbers can decode as double — `as int` would
+        // throw, so normalise through num (review PR 247).
+        .map((e) => (e as num).toInt())
         .toList();
     return TrainerClient(
       id: row.id,
@@ -107,6 +230,7 @@ class ClientRepository {
       sugarG: row.sugarG,
       lastRoutine: row.lastRoutine,
       weekCompletion: week,
+      sodiumWeek: sodiumWeek,
     );
   }
 }
@@ -121,16 +245,23 @@ final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   return ref.watch(clientRepositoryProvider).watchClients();
 });
 
+/// Streams the coaching-priority ordering of the client list (sodium
+/// over-target first, then most recent chat) for the 고객 관리 tab.
+final prioritizedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
+  return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
+});
+
 /// Streams today's booked-session count for the header badge.
 final todayReservationCountProvider = StreamProvider<int>((ref) {
   return ref.watch(clientRepositoryProvider).watchTodayReservationCount();
 });
 
 /// Streams a client's meals for the 식단 sub-tab.
-final clientDietProvider =
-    StreamProvider.family<List<ClientDietEntry>, String>((ref, clientId) {
-      return ref.watch(clientRepositoryProvider).watchDiet(clientId);
-    });
+final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
+  (ref, clientId) {
+    return ref.watch(clientRepositoryProvider).watchDiet(clientId);
+  },
+);
 
 /// Streams a client's workout history for the 운동기록 sub-tab.
 final clientHistoryProvider =

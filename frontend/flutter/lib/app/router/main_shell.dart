@@ -204,6 +204,7 @@ class _RecordAddSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       top: false,
       child: ConstrainedBox(
@@ -230,22 +231,22 @@ class _RecordAddSheet extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            '새 기록 추가',
-                            style: TextStyle(
+                            l.navAddRecordTitle,
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: FigmaColors.ink,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            '식단 또는 운동을 선택해 주세요',
-                            style: TextStyle(
+                            l.navAddRecordSubtitle,
+                            style: const TextStyle(
                               fontSize: 13,
                               color: FigmaColors.textSub,
                             ),
@@ -269,8 +270,8 @@ class _RecordAddSheet extends StatelessWidget {
                         borderColor: FigmaColors.primary.withValues(
                           alpha: 0.35,
                         ),
-                        title: '식단',
-                        subtitle: '사진으로 영양 분석',
+                        title: l.navDiet,
+                        subtitle: l.navDietOptionSub,
                         onTap: onDiet,
                       ),
                     ),
@@ -281,8 +282,8 @@ class _RecordAddSheet extends StatelessWidget {
                         iconColor: FigmaColors.green,
                         iconBg: const Color(0xFFEAF8F2),
                         borderColor: FigmaColors.green.withValues(alpha: 0.35),
-                        title: '운동',
-                        subtitle: '종류와 시간 기록',
+                        title: l.navExercise,
+                        subtitle: l.navExerciseOptionSub,
                         onTap: onExercise,
                       ),
                     ),

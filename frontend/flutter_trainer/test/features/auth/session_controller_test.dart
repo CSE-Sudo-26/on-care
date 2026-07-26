@@ -13,9 +13,7 @@ Future<ProviderContainer> _makeContainer() async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
   final prefs = await SharedPreferences.getInstance();
   final container = ProviderContainer(
-    overrides: <Override>[
-      sharedPreferencesProvider.overrideWithValue(prefs),
-    ],
+    overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
   );
   addTearDown(container.dispose);
   return container;
@@ -53,27 +51,28 @@ void main() {
       expect(state.profile?.email, 'trainer@oncare.com');
     });
 
-    test('login with non-empty credentials authenticates and persists',
-        () async {
-      final container = await _makeContainer();
-      final controller = container.read(sessionControllerProvider.notifier);
+    test(
+      'login with non-empty credentials authenticates and persists',
+      () async {
+        final container = await _makeContainer();
+        final controller = container.read(sessionControllerProvider.notifier);
 
-      await controller.login(email: 'trainer@oncare.com', password: 'pw');
+        await controller.login(email: 'trainer@oncare.com', password: 'pw');
 
-      final state = container.read(sessionControllerProvider);
-      expect(state.status, SessionStatus.authenticated);
-      expect(state.canEnterApp, isTrue);
-      expect(state.profile, isNotNull);
+        final state = container.read(sessionControllerProvider);
+        expect(state.status, SessionStatus.authenticated);
+        expect(state.canEnterApp, isTrue);
+        expect(state.profile, isNotNull);
 
-      // Token persisted → survives a "restart".
-      expect(
-        container.read(sessionTokenStoreProvider).readToken(),
-        isNotNull,
-      );
-    });
+        // Token persisted → survives a "restart".
+        expect(
+          container.read(sessionTokenStoreProvider).readToken(),
+          isNotNull,
+        );
+      },
+    );
 
-    test('login with empty credentials throws and stays signed out',
-        () async {
+    test('login with empty credentials throws and stays signed out', () async {
       final container = await _makeContainer();
       final controller = container.read(sessionControllerProvider.notifier);
 
@@ -84,14 +83,10 @@ void main() {
 
       final state = container.read(sessionControllerProvider);
       expect(state.status, SessionStatus.signedOut);
-      expect(
-        container.read(sessionTokenStoreProvider).readToken(),
-        isNull,
-      );
+      expect(container.read(sessionTokenStoreProvider).readToken(), isNull);
     });
 
-    test('enterDemo grants app access without persisting a token',
-        () async {
+    test('enterDemo grants app access without persisting a token', () async {
       final container = await _makeContainer();
       final controller = container.read(sessionControllerProvider.notifier);
 
@@ -102,10 +97,7 @@ void main() {
       expect(state.canEnterApp, isTrue);
       expect(state.isAuthenticated, isFalse);
       // Demo is in-memory only — nothing persisted.
-      expect(
-        container.read(sessionTokenStoreProvider).readToken(),
-        isNull,
-      );
+      expect(container.read(sessionTokenStoreProvider).readToken(), isNull);
     });
 
     test('signOut clears the token and returns to signedOut', () async {
@@ -124,10 +116,7 @@ void main() {
         container.read(sessionControllerProvider).status,
         SessionStatus.signedOut,
       );
-      expect(
-        container.read(sessionTokenStoreProvider).readToken(),
-        isNull,
-      );
+      expect(container.read(sessionTokenStoreProvider).readToken(), isNull);
     });
   });
 }

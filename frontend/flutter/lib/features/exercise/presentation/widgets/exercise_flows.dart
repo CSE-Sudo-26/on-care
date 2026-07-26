@@ -5,18 +5,29 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
+// Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
 const List<String> _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
 
-/// The "운동 종류" chips, kept 1:1 with [ExerciseType] so a saved type
-/// round-trips losslessly into the edit sheet (labels mirror `_typeLabel`).
-const List<String> _exerciseTypeLabels = <String>[
-  '걷기', // walking
-  '유산소', // cardio
-  '근력', // strength
-  '요가', // yoga
-  '스트레칭', // stretching
-  '기타', // other
+/// The "운동 종류" chip display labels, kept index-1:1 with [ExerciseType] so a
+/// saved type round-trips losslessly into the edit sheet (mirrors `_typeLabel`).
+/// Only the display strings are localized — the index→type mapping is fixed.
+List<String> _exerciseTypeLabels(AppLocalizations l) => <String>[
+  l.exTypeWalking, // walking
+  l.exTypeCardio, // cardio
+  l.exTypeStrength, // strength
+  l.exTypeYoga, // yoga
+  l.exTypeStretching, // stretching
+  l.exTypeOtherChip, // other
+];
+
+/// Intensity chip display labels (가벼움 / 보통 / 높음), index-1:1 with
+/// [_intensityFactor]. Only the display strings are localized.
+List<String> _levelLabels(AppLocalizations l) => <String>[
+  l.exLevelLight,
+  l.exLevelModerate,
+  l.exLevelHigh,
 ];
 
 /// Chip index → backend [ExerciseType] (1:1 with [_exerciseTypeLabels]).
@@ -39,7 +50,7 @@ int _indexFromType(ExerciseType t) => switch (t) {
   ExerciseType.other => 5,
 };
 
-/// Per-intensity multiplier for [_levels] (가벼움 / 보통 / 높음).
+/// Per-intensity multiplier for [_levelLabels] (가벼움 / 보통 / 높음).
 const List<double> _intensityFactor = <double>[0.85, 1.0, 1.2];
 
 /// Rough kcal/min per type scaled by intensity, used to estimate burn when the
@@ -115,27 +126,24 @@ class _ExerciseAddSheet extends ConsumerStatefulWidget {
 }
 
 class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
-  static const List<String> _types = _exerciseTypeLabels;
-  static const List<String> _levels = <String>['가벼움', '보통', '높음'];
   late int _type = widget.session != null
       ? _indexFromType(widget.session!.type)
       : 1;
-  int _level = 0;
-  // Intensity isn't persisted on ExerciseSession, so an edit always opens at
-  // 가벼움. Track whether the user actually changed it so we don't silently
-  // recompute (and downgrade) a stored 보통/높음 record's calories.
-  bool _levelTouched = false;
+  // Intensity is persisted on ExerciseSession, so an edit reopens at the
+  // saved level (가벼움/보통/높음); a new session defaults to 보통.
+  late int _level = widget.session?.intensity.index ?? 1;
   late double _minutes = widget.session?.minutes.toDouble() ?? 30;
   bool _saving = false;
 
   Future<void> _save() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final int minutes = _minutes.round();
     if (minutes <= 0) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('운동 시간을 입력해주세요')),
+        SnackBar(content: Text(l.exEnterDuration)),
       );
       return;
     }
@@ -144,16 +152,14 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     if (editing != null && editing.id == null) {
       // No id → PUT impossible; don't silently create a duplicate session.
       messenger.showSnackBar(
-        const SnackBar(content: Text('이 기록은 수정할 수 없어요')),
+        SnackBar(content: Text(l.exCannotEdit)),
       );
       return;
     }
-    // On edit, keep the stored calories unless the user actually changed the
-    // intensity — recomputing at the defaulted 가벼움 would corrupt a 보통/높음
-    // record (intensity isn't persisted yet; see the follow-up issue).
-    final int calories = (editing != null && !_levelTouched)
-        ? editing.calories
-        : _estimateCalories(type, minutes, _level);
+    // Intensity is persisted now, so always recompute calories from the
+    // (restored or edited) level — no more preserving stale values.
+    final ExerciseIntensity intensity = ExerciseIntensity.values[_level];
+    final int calories = _estimateCalories(type, minutes, _level);
     setState(() => _saving = true);
     try {
       // 서버(mock 모드는 drift)에 저장 → 주간 데이터 무효화로 통계·차트·목록 반영.
@@ -165,6 +171,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               type: type,
               minutes: minutes,
               calories: calories,
+              intensity: intensity,
               dayLabel: editing.dayLabel,
             );
       } else {
@@ -174,6 +181,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               type: type,
               minutes: minutes,
               calories: calories,
+              intensity: intensity,
               dayLabel: _weekdayLabels[DateTime.now().weekday - 1],
             );
       }
@@ -183,19 +191,22 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text(widget.isEdit ? '운동 기록이 수정됐어요' : '운동이 기록됐어요'),
+          content: Text(widget.isEdit ? l.exUpdated : l.exLogged),
         ),
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.exSaveFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<String> types = _exerciseTypeLabels(l);
+    final List<String> levels = _levelLabels(l);
     // Block back/drag dismiss while the save request is in flight.
     final Widget sheet = _shell(
       context,
@@ -209,7 +220,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               children: <Widget>[
                 Expanded(
                   child: Text(
-                    widget.isEdit ? '운동 기록 수정' : '운동 추가',
+                    widget.isEdit ? l.exEditExercise : l.exAddExercise,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -219,9 +230,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                 ),
                 TextButton(
                   onPressed: _saving ? null : _save,
-                  child: const Text(
-                    '저장',
-                    style: TextStyle(
+                  child: Text(
+                    l.exSave,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
@@ -236,15 +247,15 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
               children: <Widget>[
-                const _Label('운동 종류'),
+                _Label(l.exExerciseType),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: <Widget>[
-                    for (int i = 0; i < _types.length; i++)
+                    for (int i = 0; i < types.length; i++)
                       _chip(
-                        _types[i],
+                        types[i],
                         _type == i,
                         () => setState(() => _type = i),
                       ),
@@ -253,10 +264,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                 const SizedBox(height: 20),
                 Row(
                   children: <Widget>[
-                    const _Label('운동 시간'),
+                    _Label(l.exExerciseDuration),
                     const Spacer(),
                     Text(
-                      '${_minutes.round()}분',
+                      l.exDurationMinutes(_minutes.round()),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -274,23 +285,20 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   onChanged: (double v) => setState(() => _minutes = v),
                 ),
                 const SizedBox(height: 12),
-                const _Label('운동 강도'),
+                _Label(l.exExerciseIntensity),
                 const SizedBox(height: 10),
                 Row(
                   children: <Widget>[
-                    for (int i = 0; i < _levels.length; i++) ...<Widget>[
+                    for (int i = 0; i < levels.length; i++) ...<Widget>[
                       Expanded(
                         child: _chip(
-                          _levels[i],
+                          levels[i],
                           _level == i,
-                          () => setState(() {
-                            _level = i;
-                            _levelTouched = true;
-                          }),
+                          () => setState(() => _level = i),
                           center: true,
                         ),
                       ),
-                      if (i < _levels.length - 1) const SizedBox(width: 8),
+                      if (i < levels.length - 1) const SizedBox(width: 8),
                     ],
                   ],
                 ),
@@ -309,10 +317,10 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         size: 20,
                       ),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          '예상 소모 칼로리',
-                          style: TextStyle(
+                          l.exEstimatedCalories,
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: FigmaColors.textSub,
@@ -320,7 +328,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         ),
                       ),
                       Text(
-                        '${(_minutes * 6).round()} kcal',
+                        '${_estimateCalories(_typeFromIndex(_type), _minutes.round(), _level)} ${l.unitKcal}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -430,6 +438,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<List<Gym>> async = ref.watch(nearbyGymsProvider);
     return _shell(
       context,
@@ -459,9 +468,9 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  '헬스장 찾기',
-                  style: TextStyle(
+                Text(
+                  l.exFindGym,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
@@ -498,15 +507,17 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                             fontSize: 13,
                             color: FigmaColors.ink,
                           ),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             isDense: true,
                             border: InputBorder.none,
-                            hintText: '헬스장, 지역으로 검색',
-                            hintStyle: TextStyle(
+                            hintText: l.exGymSearchHint,
+                            hintStyle: const TextStyle(
                               fontSize: 13,
                               color: FigmaColors.textFaint,
                             ),
-                            contentPadding: EdgeInsets.symmetric(vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -534,16 +545,16 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                 const SizedBox(height: 16),
                 Row(
                   children: <Widget>[
-                    const Text(
-                      '주변 헬스장 · O2O 연동',
-                      style: TextStyle(
+                    Text(
+                      l.exNearbyGyms,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    AiPill('✦ AI 분석', background: FigmaColors.primaryA(0.10)),
+                    AiPill(l.exAiAnalysis, background: FigmaColors.primaryA(0.10)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -556,7 +567,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Center(
                             child: Text(
-                              "'$_query'에 맞는 헬스장이 없어요",
+                              l.exNoGymMatch(_query),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -594,9 +605,9 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Column(
                         children: <Widget>[
-                          const Text(
-                            '헬스장을 불러오지 못했어요.',
-                            style: TextStyle(
+                          Text(
+                            l.exGymsLoadError,
+                            style: const TextStyle(
                               fontSize: 13,
                               color: FigmaColors.textMuted,
                             ),
@@ -609,7 +620,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                               foregroundColor: FigmaColors.primary,
                               side: BorderSide(color: FigmaColors.primaryA(0.4)),
                             ),
-                            child: const Text('다시 시도'),
+                            child: Text(l.actionRetry),
                           ),
                         ],
                       ),
@@ -635,22 +646,24 @@ class _GymResult extends StatelessWidget {
   final bool top;
 
   /// A short, real-data reason line for the AI-styled highlight box.
-  String get _reason {
+  String _reason(AppLocalizations l) {
     if (gym.trainerName != null) {
       final String role = gym.trainerRole != null ? ' · ${gym.trainerRole}' : '';
-      return '전담 트레이너 ${gym.trainerName}$role 상주';
+      return l.exReasonTrainer(gym.trainerName!, role);
     }
     if (gym.weekdayHours != null) {
       final String weekend = gym.weekendHours != null
-          ? ' · 주말 ${gym.weekendHours}'
+          ? ' · ${l.exGymWeekendHours(gym.weekendHours!)}'
           : '';
-      return '평일 ${gym.weekdayHours}$weekend 운영';
+      return l.exReasonHours(l.exGymWeekdayHours(gym.weekdayHours!), weekend);
     }
     return '';
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String reason = _reason(l);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -671,8 +684,8 @@ class _GymResult extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (top) ...<Widget>[
-            const AiPill(
-              '✦ AI 추천 1순위',
+            AiPill(
+              l.exAiTopPick,
               background: FigmaColors.primary,
               color: Colors.white,
             ),
@@ -772,10 +785,10 @@ class _GymResult extends StatelessWidget {
                         ),
                     ],
                   ),
-                  if (_reason.isNotEmpty) ...<Widget>[
+                  if (reason.isNotEmpty) ...<Widget>[
                     const SizedBox(height: 6),
                     Text(
-                      _reason,
+                      reason,
                       style: const TextStyle(
                         fontSize: 11,
                         height: 1.5,
@@ -800,9 +813,12 @@ class _GymResult extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '트레이너 채팅',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  child: Text(
+                    l.exTrainerChat,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -818,9 +834,12 @@ class _GymResult extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '건강 요약 전달',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  child: Text(
+                    l.exSendHealthSummary,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -835,6 +854,7 @@ class _GymResult extends StatelessWidget {
 /// Confirms and "sends" the user's health summary to the gym/trainer. There is
 /// no O2O backend yet, so this is a local confirm dialog + success SnackBar.
 Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
+  final AppLocalizations l = AppLocalizations.of(context);
   final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
   final bool? confirmed = await showDialog<bool>(
     context: context,
@@ -843,16 +863,16 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      title: const Text(
-        '건강 요약 전달',
-        style: TextStyle(
+      title: Text(
+        l.exSendHealthSummary,
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w800,
           color: FigmaColors.ink,
         ),
       ),
       content: Text(
-        '최근 운동 기록과 건강 프로필 요약을\n$gymName 트레이너에게 전달할까요?',
+        l.exSendHealthSummaryBody(gymName),
         style: const TextStyle(
           fontSize: 13,
           height: 1.5,
@@ -862,22 +882,22 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text(
-            '취소',
-            style: TextStyle(color: FigmaColors.textMuted),
+          child: Text(
+            l.exCancel,
+            style: const TextStyle(color: FigmaColors.textMuted),
           ),
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(true),
           style: FilledButton.styleFrom(backgroundColor: FigmaColors.primary),
-          child: const Text('전달하기'),
+          child: Text(l.exSend),
         ),
       ],
     ),
   );
   if (confirmed != true) return;
   messenger.showSnackBar(
-    SnackBar(content: Text('$gymName에 건강 요약을 전달했어요')),
+    SnackBar(content: Text(l.exHealthSummarySent(gymName))),
   );
 }
 
@@ -951,6 +971,7 @@ class _MapPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: SizedBox(
@@ -968,9 +989,12 @@ class _MapPlaceholder extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
-                  '카카오맵 영역',
-                  style: TextStyle(fontSize: 9, color: FigmaColors.textMuted),
+                child: Text(
+                  l.exKakaoMapArea,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: FigmaColors.textMuted,
+                  ),
                 ),
               ),
             ),
@@ -1071,9 +1095,12 @@ class _MapPainter extends CustomPainter {
 
 /// Gym detail sheet opened from the "헬스장 정보" button, driven by [gym].
 Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
+  final AppLocalizations l = AppLocalizations.of(context);
   final String hours = gym.weekdayHours != null
-      ? '평일 ${gym.weekdayHours}'
-            '${gym.weekendHours != null ? '\n주말 ${gym.weekendHours}' : ''}'
+      ? l.exGymWeekdayHours(gym.weekdayHours!) +
+            (gym.weekendHours != null
+                ? '\n${l.exGymWeekendHours(gym.weekendHours!)}'
+                : '')
       : '';
   final String trainer = gym.trainerName != null
       ? '${gym.trainerName}${gym.trainerRole != null ? ' · ${gym.trainerRole}' : ''}'
@@ -1093,10 +1120,10 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: Row(
               children: <Widget>[
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '헬스장 정보',
-                    style: TextStyle(
+                    l.exGymInfo,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: FigmaColors.ink,
@@ -1140,21 +1167,21 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                 const SizedBox(height: 14),
                 _infoRow(
                   Icons.place_outlined,
-                  '주소',
+                  l.exAddress,
                   '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
                 ),
                 if (hours.isNotEmpty)
-                  _infoRow(Icons.schedule, '운영시간', hours),
+                  _infoRow(Icons.schedule, l.exHours, hours),
                 if (gym.phone != null)
-                  _infoRow(Icons.call_outlined, '전화', gym.phone!),
+                  _infoRow(Icons.call_outlined, l.exPhone, gym.phone!),
                 if (gym.tags.isNotEmpty)
                   _infoRow(
                     Icons.fitness_center,
-                    '전문 분야',
+                    l.exSpecialty,
                     gym.tags.join(' · '),
                   ),
                 if (trainer.isNotEmpty)
-                  _infoRow(Icons.person_outline, '전담 트레이너', trainer),
+                  _infoRow(Icons.person_outline, l.exTrainerDedicated, trainer),
               ],
             ),
           ),
@@ -1196,14 +1223,24 @@ class _GymChatSheet extends StatefulWidget {
 
 class _GymChatSheetState extends State<_GymChatSheet> {
   final TextEditingController _c = TextEditingController();
-  late final String _trainer = widget.trainerName ?? '김트레이너';
-  late final String _gym = widget.gymName ?? '강남 피트니스 센터';
-  late final List<_GymMsg> _msgs = <_GymMsg>[
-    _GymMsg('안녕하세요, $_trainer입니다. 😊\n무엇을 도와드릴까요?', mine: false),
-  ];
-  static const List<String> _chips = <String>['PT 상담', '이용권 문의', '방문 예약'];
+  late String _trainer;
+  late String _gym;
+  final List<_GymMsg> _msgs = <_GymMsg>[];
+  bool _seeded = false;
 
   bool get _started => _msgs.any((_GymMsg m) => m.mine);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_seeded) return;
+    _seeded = true;
+    // Localized defaults/greeting need a BuildContext, so seed them here.
+    final AppLocalizations l = AppLocalizations.of(context);
+    _trainer = widget.trainerName ?? l.exDefaultTrainerName;
+    _gym = widget.gymName ?? l.exDefaultGymName;
+    _msgs.add(_GymMsg(l.exChatGreeting(_trainer), mine: false));
+  }
 
   @override
   void dispose() {
@@ -1214,20 +1251,22 @@ class _GymChatSheetState extends State<_GymChatSheet> {
   void _send([String? preset]) {
     final String t = (preset ?? _c.text).trim();
     if (t.isEmpty) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     setState(() {
       _msgs.add(_GymMsg(t, mine: true));
-      _msgs.add(
-        const _GymMsg(
-          '네, 확인했어요! 담당 트레이너가 곧 답변드릴게요. 편한 방문 시간도 알려주세요. 🙌',
-          mine: false,
-        ),
-      );
+      _msgs.add(_GymMsg(l.exChatReply, mine: false));
       _c.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<String> chips = <String>[
+      l.exChatChipPt,
+      l.exChatChipPass,
+      l.exChatChipVisit,
+    ];
     return _shell(
       context,
       Column(
@@ -1265,7 +1304,7 @@ class _GymChatSheetState extends State<_GymChatSheet> {
                         ),
                       ),
                       Text(
-                        '$_gym · 1:1 상담',
+                        l.exGymConsultSubtitle(_gym),
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: FigmaColors.primary,
@@ -1295,7 +1334,7 @@ class _GymChatSheetState extends State<_GymChatSheet> {
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        for (final String q in _chips)
+                        for (final String q in chips)
                           GestureDetector(
                             onTap: () => _send(q),
                             child: Container(
@@ -1342,15 +1381,17 @@ class _GymChatSheetState extends State<_GymChatSheet> {
                     child: TextField(
                       controller: _c,
                       onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
-                        hintText: '메시지를 입력하세요',
-                        hintStyle: TextStyle(
+                        hintText: l.exMessageHint,
+                        hintStyle: const TextStyle(
                           fontSize: 13,
                           color: FigmaColors.textFaint,
                         ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),

@@ -9,10 +9,15 @@ abstract class DietRepository {
   /// Upload a food photo for AI analysis (POST /diet/analyze). The server
   /// recognizes the foods, maps nutrition from the public DB, persists a
   /// diet entry, and returns the analysis.
+  ///
+  /// [idempotencyKey], when supplied, lets the server dedupe a retried
+  /// request (lost-response case) so the same photo isn't recorded twice.
+  /// Generate it once per capture and reuse it across retries.
   Future<DietAnalysisResult> analyze({
     required Uint8List imageBytes,
     required String filename,
     required String mealType,
+    String? idempotencyKey,
   });
 
   /// DELETE /diet/entries/{id} — remove a diet entry.

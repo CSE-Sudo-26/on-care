@@ -93,6 +93,58 @@ def test_update_session_404_when_missing(client):
     assert r.status_code == 404
 
 
+def test_intensity_persists_and_is_returned(client):
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 30, "calories": 300, "intensity": "high", "day_label": "월"},
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["intensity"] == "high"
+
+    week = client.get("/v1/exercise/weeks/current", headers=h)
+    assert week.json()["sessions"][0]["intensity"] == "high"
+
+
+def test_intensity_defaults_to_moderate_when_omitted(client):
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 30, "day_label": "월"},
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["intensity"] == "moderate"
+
+
+def test_add_session_rejects_unknown_intensity(client):
+    h = _login(client)
+    r = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 10, "intensity": "extreme"},
+        headers=h,
+    )
+    assert r.status_code == 400
+
+
+def test_update_session_changes_intensity(client):
+    h = _login(client)
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 30, "intensity": "light", "day_label": "월"},
+        headers=h,
+    ).json()["id"]
+
+    r = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={"type": "cardio", "minutes": 30, "intensity": "high", "day_label": "월"},
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["intensity"] == "high"
+
+
 def test_update_session_rejects_bad_type(client):
     h = _login(client)
     sid = client.post(
