@@ -10,9 +10,10 @@
 
 <br/>
 
-[![Intro Page](https://img.shields.io/badge/Intro_Page-소개페이지-185079?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ewhasudo.zapto.org/)
-[![Web](https://img.shields.io/badge/Web-서비스_바로가기-3eafdf?style=for-the-badge&logo=flutter&logoColor=white)](https://ewhasudo.zapto.org/frontend/#/dashboard)
-[![YouTube Demo](https://img.shields.io/badge/YouTube-데모_영상_보기-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/C4ivM_dlAww?si=8iOWmOpSxcpQmlU3)
+[![소개 페이지](https://img.shields.io/badge/INTRO_PAGE-소개_페이지-185079?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ewhasudo.zapto.org/)
+[![사용자 앱](https://img.shields.io/badge/APP-사용자-3eafdf?style=for-the-badge&logo=flutter&logoColor=white)](https://ewhasudo.zapto.org/frontend/#/dashboard)
+[![트레이너 앱](https://img.shields.io/badge/WEB-트레이너-9bd3f0?style=for-the-badge&logo=safari&logoColor=white)](https://ewhasudo.zapto.org/trainer/)
+[![데모 영상](https://img.shields.io/badge/YOUTUBE-데모_영상-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/C4ivM_dlAww?si=8iOWmOpSxcpQmlU3)
 
 <br/>
 
@@ -114,7 +115,7 @@
 
 | 영역 | 사용 기술 |
 | --- | --- |
-| **Frontend** | Flutter · Dart · Riverpod · GoRouter (회원/트레이너 이중 모드) |
+| **Frontend** | Flutter · Dart · Riverpod · GoRouter (사용자 앱 · 트레이너 앱 — 분리된 코드베이스, 아키텍처 패턴 미러링) |
 | **Backend** | FastAPI · SQLAlchemy · Alembic · JWT · Docker |
 | **Database** | PostgreSQL · pgvector |
 | **AI** | Vision(VLM) 식단 인식 · 식약처 공공 영양성분 DB 매칭 · RAG 코치 |
