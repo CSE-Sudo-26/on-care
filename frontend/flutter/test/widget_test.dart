@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Home'), findsAtLeastNWidgets(1));
     expect(find.text('Diet'), findsAtLeastNWidgets(1));
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
-    expect(find.text('My'), findsAtLeastNWidgets(1));
+    expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('Tapping a bottom-nav destination switches branch', (
@@ -82,9 +82,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
 
-    await tester.tap(find.text('My').first);
+    await tester.tap(find.text('MY').first);
     await tester.pumpAndSettle();
-    expect(find.text('My'), findsAtLeastNWidgets(1));
+    expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('Korean locale localises the bottom-nav labels', (tester) async {
@@ -93,7 +93,7 @@ void main() {
     expect(find.text('홈'), findsAtLeastNWidgets(1));
     expect(find.text('식단'), findsAtLeastNWidgets(1));
     expect(find.text('운동'), findsAtLeastNWidgets(1));
-    expect(find.text('My'), findsAtLeastNWidgets(1));
+    expect(find.text('MY'), findsAtLeastNWidgets(1));
   });
 
   test('ARB resources expose nav strings for ko + en', () {
