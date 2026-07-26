@@ -17,10 +17,10 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('returns 3 seeded workouts in order with decoded exercises',
-        () async {
-      final history =
-          await ClientRepository(db).watchHistory('seed-client-1').first;
+    test('returns 3 seeded workouts in order with decoded exercises', () async {
+      final history = await ClientRepository(
+        db,
+      ).watchHistory('seed-client-1').first;
       expect(history.length, 3);
       expect(history.first.dateLabel, '7/12 (오늘)');
       expect(history.first.completionRate, 100);
@@ -31,8 +31,9 @@ void main() {
     });
 
     test('returns per-client data (clients differ)', () async {
-      final seongho =
-          await ClientRepository(db).watchHistory('seed-client-3').first;
+      final seongho = await ClientRepository(
+        db,
+      ).watchHistory('seed-client-3').first;
       expect(seongho.last.completionRate, 0); // 7/3 · all skipped
       expect(seongho.first.trainerNote, contains('벤치 중량'));
     });
@@ -65,10 +66,7 @@ void main() {
       expect(find.text('100%'), findsWidgets);
       await tester.scrollUntilVisible(find.text('트레이너 메모'), 150);
       expect(find.text('트레이너 메모'), findsOneWidget); // only 7/12 has one
-      expect(
-        find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'),
-        findsOneWidget,
-      );
+      expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
       await tester.scrollUntilVisible(find.text('스트레칭 ✗ (생략)'), 150);

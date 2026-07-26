@@ -1,7 +1,7 @@
 """인식 결과(DietAnalysis)를 공공 식품영양성분 DB 값으로 보강.
 
 각 음식을 food_nutrients 에 매칭해:
-  - 매칭 O → 신뢰 가능한 1인분 kcal/나트륨/당류로 교체하고 source="db"
+  - 매칭 O → DB 값으로 교체. 인식기 탄단지가 남으면 source="mixed"
   - 매칭 X → LLM 추정치 유지, source="estimate"
 그 뒤 합계를 재계산한다. 엔진(gemini/yolo)과 무관하게 동작.
 """
@@ -32,7 +32,14 @@ def enrich_analysis(db: Session, analysis: DietAnalysis, enabled: bool = True) -
             food.calories = int(round(match.calories or 0))
             food.sodium_mg = int(round(match.sodium_mg or 0))
             food.sugar_g = int(round(match.sugar_g or 0))
-            food.source = "db"
+            kept_recognizer_value = False
+            for field in ("carbs_g", "protein_g", "fat_g"):
+                db_value = getattr(match, field)
+                if db_value is not None:
+                    setattr(food, field, float(db_value))
+                elif getattr(food, field) is not None:
+                    kept_recognizer_value = True
+            food.source = "mixed" if kept_recognizer_value else "db"
         else:
             food.source = "estimate"
 

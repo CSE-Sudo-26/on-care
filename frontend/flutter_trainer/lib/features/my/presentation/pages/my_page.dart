@@ -12,6 +12,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 
 /// MY tab — trainer profile, certifications, this month's stats, gym
 /// info, and 로그아웃. Editing is page-local (mock).
@@ -63,10 +64,7 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 
   TextEditingController _field(String key, String initial) {
-    return _fields.putIfAbsent(
-      key,
-      () => TextEditingController(text: initial),
-    );
+    return _fields.putIfAbsent(key, () => TextEditingController(text: initial));
   }
 
   void _startEdit() {
@@ -122,119 +120,114 @@ class _MyPageState extends ConsumerState<MyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final clientCount =
-        ref.watch(clientsProvider).valueOrNull?.length ?? 0;
+    final clientCount = ref.watch(clientsProvider).valueOrNull?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.lg,
-            AppSpacing.xl,
-            AppSpacing.xxl,
-          ),
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    'MY',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ),
-                if (_editing) ...<Widget>[
-                  _ChipButton(
-                    label: '취소',
-                    background: AppColors.inputBackground,
-                    foreground: AppColors.subtleForeground,
-                    onTap: () => setState(() {
-                      _editing = false;
-                      // Drop the un-added cert draft too — otherwise it
-                      // reappears on the next edit (PR review).
-                      _newCert.clear();
-                    }),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  _ChipButton(
-                    label: '저장',
-                    background: AppColors.primary,
-                    foreground: AppColors.primaryForeground,
-                    onTap: _save,
-                  ),
-                ] else
-                  _ChipButton(
-                    label: '✎ 프로필 수정',
-                    background: AppColors.accentSurface,
-                    foreground: AppColors.primary,
-                    onTap: _startEdit,
-                  ),
-              ],
+        child: ContentFrame(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.xxl,
             ),
-            if (_saveFlash) ...<Widget>[
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.all(AppRadius.card),
-                  border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.25),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'MY',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  '✓ 변경사항이 저장됐어요',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.success,
-                  ),
-                ),
+                  if (_editing) ...<Widget>[
+                    _ChipButton(
+                      label: '취소',
+                      background: AppColors.inputBackground,
+                      foreground: AppColors.subtleForeground,
+                      onTap: () => setState(() {
+                        _editing = false;
+                        // Drop the un-added cert draft too — otherwise it
+                        // reappears on the next edit (PR review).
+                        _newCert.clear();
+                      }),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    _ChipButton(
+                      label: '저장',
+                      background: AppColors.primary,
+                      foreground: AppColors.primaryForeground,
+                      onTap: _save,
+                    ),
+                  ] else
+                    _ChipButton(
+                      label: '✎ 프로필 수정',
+                      background: AppColors.accentSurface,
+                      foreground: AppColors.primary,
+                      onTap: _startEdit,
+                    ),
+                ],
               ),
+              if (_saveFlash) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: const BorderRadius.all(AppRadius.card),
+                    border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: const Text(
+                    '✓ 변경사항이 저장됐어요',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              _ProfileCard(profile: _profile, editing: _editing, field: _field),
+              const SizedBox(height: AppSpacing.lg),
+              _sectionLabel('자격증 · 인증'),
+              const SizedBox(height: AppSpacing.sm),
+              _CertsCard(
+                certs: _editing ? _draftCerts : _certs,
+                editing: _editing,
+                newCert: _newCert,
+                onAdd: () {
+                  final v = _newCert.text.trim();
+                  if (v.isEmpty) return;
+                  setState(() {
+                    _draftCerts.add(v);
+                    _newCert.clear();
+                  });
+                },
+                onRemove: (i) => setState(() => _draftCerts.removeAt(i)),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _sectionLabel('이번 달 통계'),
+              const SizedBox(height: AppSpacing.sm),
+              _StatsCard(clientCount: clientCount),
+              const SizedBox(height: AppSpacing.lg),
+              _sectionLabel('소속 헬스장'),
+              const SizedBox(height: AppSpacing.sm),
+              _GymCard(gym: _gym, editing: _editing, field: _field),
+              const SizedBox(height: AppSpacing.xl),
+              // 역할 전환 대신 로그아웃만 둔다 (계정 기반 분리).
+              _LogoutButton(onTap: _signOut),
             ],
-            const SizedBox(height: AppSpacing.md),
-            _ProfileCard(
-              profile: _profile,
-              editing: _editing,
-              field: _field,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            _sectionLabel('자격증 · 인증'),
-            const SizedBox(height: AppSpacing.sm),
-            _CertsCard(
-              certs: _editing ? _draftCerts : _certs,
-              editing: _editing,
-              newCert: _newCert,
-              onAdd: () {
-                final v = _newCert.text.trim();
-                if (v.isEmpty) return;
-                setState(() {
-                  _draftCerts.add(v);
-                  _newCert.clear();
-                });
-              },
-              onRemove: (i) => setState(() => _draftCerts.removeAt(i)),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            _sectionLabel('이번 달 통계'),
-            const SizedBox(height: AppSpacing.sm),
-            _StatsCard(clientCount: clientCount),
-            const SizedBox(height: AppSpacing.lg),
-            _sectionLabel('소속 헬스장'),
-            const SizedBox(height: AppSpacing.sm),
-            _GymCard(gym: _gym, editing: _editing, field: _field),
-            const SizedBox(height: AppSpacing.xl),
-            // 역할 전환 대신 로그아웃만 둔다 (계정 기반 분리).
-            _LogoutButton(onTap: _signOut),
-          ],
+          ),
         ),
       ),
     );
@@ -381,14 +374,8 @@ class _ProfileCard extends StatelessWidget {
               child: Divider(height: 1, color: AppColors.borderStrong),
             ),
             _EditField(label: '이름', controller: field('name', profile.name)),
-            _EditField(
-              label: '이메일',
-              controller: field('email', profile.email),
-            ),
-            _EditField(
-              label: '연락처',
-              controller: field('phone', profile.phone),
-            ),
+            _EditField(label: '이메일', controller: field('email', profile.email)),
+            _EditField(label: '연락처', controller: field('phone', profile.phone)),
             _EditField(
               label: '전문 분야',
               controller: field('specialty', profile.specialty),
@@ -418,7 +405,10 @@ class _Tag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.all(AppRadius.pill),
@@ -618,9 +608,7 @@ class _StatsCard extends StatelessWidget {
           ],
         ),
         borderRadius: const BorderRadius.all(AppRadius.card),
-        border: Border.all(
-          color: AppColors.brandOrange.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: AppColors.brandOrange.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: <Widget>[

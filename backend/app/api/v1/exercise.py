@@ -27,6 +27,7 @@ from app.services.exercise_service import (
 router = APIRouter(tags=["exercise"])
 
 _ALLOWED_TYPES = {"cardio", "strength", "yoga", "walking", "stretching", "other"}
+_ALLOWED_INTENSITIES = {"light", "moderate", "high"}
 
 
 @router.get("/exercise/weeks/current", response_model=ExerciseWeekResponse)
@@ -55,6 +56,8 @@ def add_session(
 ) -> ExerciseSessionOut:
     if payload.type not in _ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 타입: {payload.type}")
+    if payload.intensity not in _ALLOWED_INTENSITIES:
+        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
     # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
 
     day_label = payload.day_label or WEEKDAY_LABELS[datetime.now().weekday()]
@@ -69,6 +72,7 @@ def add_session(
         type=payload.type,
         minutes=payload.minutes,
         calories=payload.calories,
+        intensity=payload.intensity,
     )
     db.add(row)
     db.commit()
@@ -86,9 +90,11 @@ def update_session(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ExerciseSessionOut:
-    """운동 기록 수정(본인 소유만, 아니면 404). 유형/시간/칼로리/요일 갱신."""
+    """운동 기록 수정(본인 소유만, 아니면 404). 유형/시간/칼로리/강도/요일 갱신."""
     if payload.type not in _ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 타입: {payload.type}")
+    if payload.intensity not in _ALLOWED_INTENSITIES:
+        raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
     # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
 
     row = db.scalar(
@@ -106,6 +112,7 @@ def update_session(
     row.type = payload.type
     row.minutes = payload.minutes
     row.calories = payload.calories
+    row.intensity = payload.intensity
     row.day_label = day_label
     db.commit()
     db.refresh(row)

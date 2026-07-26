@@ -21,6 +21,7 @@ class DioExerciseRepository implements ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
       '/exercise/sessions',
@@ -28,6 +29,7 @@ class DioExerciseRepository implements ExerciseRepository {
         'type': type.name,
         'minutes': minutes,
         'calories': calories,
+        'intensity': intensity.name,
         'day_label': dayLabel,
       },
     );
@@ -46,6 +48,7 @@ class DioExerciseRepository implements ExerciseRepository {
     required int minutes,
     required int calories,
     required String dayLabel,
+    ExerciseIntensity intensity = ExerciseIntensity.moderate,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/exercise/sessions/$id',
@@ -53,6 +56,7 @@ class DioExerciseRepository implements ExerciseRepository {
         'type': type.name,
         'minutes': minutes,
         'calories': calories,
+        'intensity': intensity.name,
         'day_label': dayLabel,
       },
     );

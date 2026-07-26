@@ -5,6 +5,7 @@ import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _shell(
@@ -237,6 +238,7 @@ Widget _saveRow({
   required bool saving,
   required VoidCallback onSave,
 }) {
+  final AppLocalizations l = AppLocalizations.of(context);
   return Row(
     children: <Widget>[
       Expanded(
@@ -250,9 +252,9 @@ Widget _saveRow({
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
-            '취소',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          child: Text(
+            l.myCancel,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -276,9 +278,9 @@ Widget _saveRow({
                     color: Colors.white,
                   ),
                 )
-              : const Text(
-                  '저장',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              : Text(
+                  l.mySave,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
         ),
       ),
@@ -305,10 +307,11 @@ class _ProfileSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
     return profile.when(
       data: (UserProfile p) => _ProfileForm(initial: p),
-      loading: () => _shell(context, '내 프로필', const <Widget>[_SheetLoader()]),
+      loading: () => _shell(context, l.myProfileTitle, const <Widget>[_SheetLoader()]),
       error: (_, _) => const _ProfileForm(
         initial: UserProfile(id: '', name: '', email: ''),
       ),
@@ -350,6 +353,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
@@ -365,40 +369,41 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
       ref.invalidate(profileProvider);
       navigator.pop();
       messenger.showSnackBar(
-        const SnackBar(content: Text('프로필이 저장되었어요')),
+        SnackBar(content: Text(l.myProfileSaved)),
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.mySaveFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final String name = widget.initial.name.trim();
     final String initial = name.isNotEmpty ? name.substring(0, 1) : '·';
-    return _shell(context, '내 프로필', <Widget>[
+    return _shell(context, l.myProfileTitle, <Widget>[
       Center(child: _Avatar(initial: initial)),
       const SizedBox(height: 16),
       _card(<Widget>[
-        _SheetField(label: '이름', controller: _name),
+        _SheetField(label: l.myFieldName, controller: _name),
         const SizedBox(height: 12),
         _SheetField(
-          label: '이메일',
+          label: l.myFieldEmail,
           controller: _email,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '전화번호',
+          label: l.myFieldPhone,
           controller: _phone,
           keyboardType: TextInputType.phone,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '생년월일',
+          label: l.myFieldBirth,
           controller: _birth,
           hintText: '1996-03-21',
         ),
@@ -428,10 +433,11 @@ class _GoalsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
     return profile.when(
       data: (UserProfile p) => _GoalsForm(initial: p),
-      loading: () => _shell(context, '건강 목표', const <Widget>[_SheetLoader()]),
+      loading: () => _shell(context, l.myGoalsTitle, const <Widget>[_SheetLoader()]),
       error: (_, _) => const _GoalsForm(
         initial: UserProfile(id: '', name: '', email: ''),
       ),
@@ -477,6 +483,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final NavigatorState navigator = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
@@ -493,38 +500,39 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       ref.invalidate(profileProvider);
       navigator.pop();
       messenger.showSnackBar(
-        const SnackBar(content: Text('건강 목표가 저장되었어요')),
+        SnackBar(content: Text(l.myGoalsSaved)),
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.mySaveFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final List<TextInputFormatter> digitsOnly = <TextInputFormatter>[
       FilteringTextInputFormatter.digitsOnly,
     ];
-    return _shell(context, '건강 목표', <Widget>[
-      const Text(
-        '앱 곳곳의 요약·피드백이 이 목표를 기준으로 계산돼요.',
-        style: TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+    return _shell(context, l.myGoalsTitle, <Widget>[
+      Text(
+        l.myGoalsDesc,
+        style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
       ),
       const SizedBox(height: 12),
       _card(<Widget>[
         _SheetField(
-          label: '목표 체중',
+          label: l.myGoalWeight,
           controller: _weight,
-          suffix: 'kg',
+          suffix: l.unitKg,
           keyboardType: TextInputType.number,
           inputFormatters: digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '목표 혈압 (수축기)',
+          label: l.myGoalBp,
           controller: _bp,
           suffix: 'mmHg',
           keyboardType: TextInputType.number,
@@ -532,7 +540,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '목표 혈당',
+          label: l.myGoalBloodSugar,
           controller: _sugar,
           suffix: 'mg/dL',
           keyboardType: TextInputType.number,
@@ -542,15 +550,15 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       const SizedBox(height: 12),
       _card(<Widget>[
         _SheetField(
-          label: '일일 칼로리',
+          label: l.myGoalCalories,
           controller: _kcal,
-          suffix: 'kcal',
+          suffix: l.unitKcal,
           keyboardType: TextInputType.number,
           inputFormatters: digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '나트륨 제한',
+          label: l.myGoalSodium,
           controller: _sodium,
           suffix: 'mg',
           keyboardType: TextInputType.number,
@@ -565,22 +573,40 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
 
 // ───────────────────────────────────────────────────────── 알림 설정 ──
 
-/// One notification toggle: Figma label, SharedPreferences key, and the
-/// default used before the user has ever changed it.
+/// One notification toggle: SharedPreferences key and the default used before
+/// the user has ever changed it. The display label is resolved from
+/// [_notifLabel] so it is never carried as a hardcoded string.
 class _NotifItem {
-  const _NotifItem(this.label, this.prefKey, this.fallback);
-  final String label;
+  const _NotifItem(this.prefKey, this.fallback);
   final String prefKey;
   final bool fallback;
 }
 
 const List<_NotifItem> _notifItems = <_NotifItem>[
-  _NotifItem('식단 기록 알림', 'notif_diet_log', true),
-  _NotifItem('운동 리마인더', 'notif_exercise_reminder', true),
-  _NotifItem('트레이너 메시지', 'notif_trainer_message', true),
-  _NotifItem('AI 코칭 조언', 'notif_ai_coaching', true),
-  _NotifItem('주간 리포트', 'notif_weekly_report', false),
+  _NotifItem('notif_diet_log', true),
+  _NotifItem('notif_exercise_reminder', true),
+  _NotifItem('notif_trainer_message', true),
+  _NotifItem('notif_ai_coaching', true),
+  _NotifItem('notif_weekly_report', false),
 ];
+
+/// Localized label for a notification toggle, keyed off its stable prefKey.
+String _notifLabel(AppLocalizations l, String prefKey) {
+  switch (prefKey) {
+    case 'notif_diet_log':
+      return l.myNotifDietLog;
+    case 'notif_exercise_reminder':
+      return l.myNotifExercise;
+    case 'notif_trainer_message':
+      return l.myNotifTrainer;
+    case 'notif_ai_coaching':
+      return l.myNotifAiCoaching;
+    case 'notif_weekly_report':
+      return l.myNotifWeeklyReport;
+    default:
+      return prefKey;
+  }
+}
 
 /// Notification preferences — toggles load from and persist to
 /// SharedPreferences so they survive a reload.
@@ -621,14 +647,15 @@ class _NotifSheetState extends ConsumerState<_NotifSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return _shell(context, '알림 설정', <Widget>[
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _shell(context, l.myNotifTitle, <Widget>[
       _card(<Widget>[
         for (int i = 0; i < _notifItems.length; i++) ...<Widget>[
           Row(
             children: <Widget>[
               Expanded(
                 child: Text(
-                  _notifItems[i].label,
+                  _notifLabel(l, _notifItems[i].prefKey),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -655,41 +682,43 @@ class _NotifSheetState extends ConsumerState<_NotifSheet> {
 
 /// Customer support entries.
 Future<void> showSupportSheet(BuildContext context) {
-  return _open(context, '고객 지원', <Widget>[
+  final AppLocalizations l = AppLocalizations.of(context);
+  return _open(context, l.mySupportTitle, <Widget>[
     _supportRow(
       Icons.help_outline,
-      '자주 묻는 질문',
-      () => _comingSoon(context, '자주 묻는 질문'),
+      l.mySupportFaq,
+      () => _comingSoon(context, l.mySupportFaq),
     ),
     _supportRow(
       Icons.chat_bubble_outline,
-      '1:1 문의',
-      () => _comingSoon(context, '1:1 문의'),
+      l.mySupportInquiry,
+      () => _comingSoon(context, l.mySupportInquiry),
     ),
     _supportRow(
       Icons.description_outlined,
-      '이용약관',
+      l.myLegalTermsTitle,
       () => _openLegal(context, _LegalDoc.terms),
     ),
     _supportRow(
       Icons.privacy_tip_outlined,
-      '개인정보 처리방침',
+      l.myLegalPrivacyTitle,
       () => _openLegal(context, _LegalDoc.privacy),
     ),
     const SizedBox(height: 12),
-    const Center(
+    Center(
       child: Text(
-        'On-Care · 버전 1.0.0',
-        style: TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+        l.myAppVersion,
+        style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
       ),
     ),
   ]);
 }
 
 void _comingSoon(BuildContext context, String label) {
+  final AppLocalizations l = AppLocalizations.of(context);
   ScaffoldMessenger.of(
     context,
-  ).showSnackBar(SnackBar(content: Text('$label은(는) 준비 중이에요')));
+  ).showSnackBar(SnackBar(content: Text(l.myComingSoon(label))));
 }
 
 void _openLegal(BuildContext context, _LegalDoc doc) {
@@ -740,15 +769,9 @@ Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
   );
 }
 
-/// The in-app legal documents surfaced from 고객 지원.
-enum _LegalDoc {
-  terms('이용약관', _termsBody),
-  privacy('개인정보 처리방침', _privacyBody);
-
-  const _LegalDoc(this.title, this.body);
-  final String title;
-  final String body;
-}
+/// The in-app legal documents surfaced from customer support. Titles and
+/// bodies are resolved from localizations via [_LegalDocSheet].
+enum _LegalDoc { terms, privacy }
 
 class _LegalDocSheet extends StatelessWidget {
   const _LegalDocSheet({required this.doc});
@@ -756,10 +779,15 @@ class _LegalDocSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _shell(context, doc.title, <Widget>[
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String title =
+        doc == _LegalDoc.terms ? l.myLegalTermsTitle : l.myLegalPrivacyTitle;
+    final String body =
+        doc == _LegalDoc.terms ? l.myLegalTermsBody : l.myLegalPrivacyBody;
+    return _shell(context, title, <Widget>[
       _card(<Widget>[
         Text(
-          doc.body,
+          body,
           style: const TextStyle(
             fontSize: 13,
             height: 1.7,
@@ -769,53 +797,12 @@ class _LegalDocSheet extends StatelessWidget {
         ),
       ]),
       const SizedBox(height: 12),
-      const Center(
+      Center(
         child: Text(
-          '시행일 2026. 01. 01.',
-          style: TextStyle(fontSize: 11, color: FigmaColors.textFaint),
+          l.myLegalEffectiveDate,
+          style: const TextStyle(fontSize: 11, color: FigmaColors.textFaint),
         ),
       ),
     ]);
   }
 }
-
-const String _termsBody =
-    '제1조 (목적)\n'
-    '이 약관은 On-Care(이하 "회사")가 제공하는 건강 관리 서비스(이하 "서비스")의 이용과 관련하여 '
-    '회사와 회원 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.\n\n'
-    '제2조 (약관의 효력 및 변경)\n'
-    '① 이 약관은 서비스를 이용하는 모든 회원에게 효력이 발생합니다.\n'
-    '② 회사는 관련 법령을 위반하지 않는 범위에서 이 약관을 변경할 수 있으며, 변경 시 적용일자와 '
-    '변경 사유를 명시하여 서비스 내에 공지합니다.\n\n'
-    '제3조 (서비스의 제공)\n'
-    '회사는 식단 기록, 운동 기록, 건강 지표 관리, AI 코칭 등 회원의 건강 관리를 돕는 기능을 '
-    '제공합니다. 서비스의 구체적인 내용은 회사의 정책에 따라 변경될 수 있습니다.\n\n'
-    '제4조 (회원의 의무)\n'
-    '회원은 본인의 건강 정보를 정확하게 입력하여야 하며, 서비스가 제공하는 정보는 의학적 진단이나 '
-    '치료를 대체하지 않습니다. 건강상 문제가 있는 경우 반드시 전문 의료기관의 진료를 받으시기 바랍니다.\n\n'
-    '제5조 (책임의 제한)\n'
-    '회사는 회원이 서비스를 통해 얻은 정보에 기반하여 내린 판단과 그 결과에 대하여 법령이 허용하는 '
-    '범위 내에서 책임을 부담하지 않습니다.\n\n'
-    '부칙\n'
-    '이 약관은 2026년 1월 1일부터 시행합니다.';
-
-const String _privacyBody =
-    'On-Care(이하 "회사")는 「개인정보 보호법」 등 관련 법령을 준수하며, 회원의 개인정보를 소중히 '
-    '보호합니다.\n\n'
-    '1. 수집하는 개인정보 항목\n'
-    '회사는 회원가입 및 서비스 제공을 위하여 이름, 이메일, 전화번호, 생년월일과 함께 식단·운동·건강 '
-    '지표 등 건강 관련 정보를 수집합니다.\n\n'
-    '2. 개인정보의 수집 및 이용 목적\n'
-    '수집한 개인정보는 회원 식별, 건강 관리 기능 제공, 맞춤형 AI 코칭, 서비스 개선 및 고객 문의 '
-    '응대의 목적으로만 이용됩니다.\n\n'
-    '3. 개인정보의 보유 및 이용 기간\n'
-    '회원의 개인정보는 원칙적으로 회원 탈퇴 시 지체 없이 파기합니다. 다만 관련 법령에 따라 보존할 '
-    '필요가 있는 경우 해당 기간 동안 안전하게 보관합니다.\n\n'
-    '4. 개인정보의 제3자 제공\n'
-    '회사는 회원의 동의 없이 개인정보를 외부에 제공하지 않습니다. 다만 법령에 특별한 규정이 있는 '
-    '경우는 예외로 합니다.\n\n'
-    '5. 이용자의 권리\n'
-    '회원은 언제든지 자신의 개인정보를 조회·수정하거나 처리 정지 및 삭제를 요청할 수 있습니다.\n\n'
-    '6. 개인정보 보호책임자\n'
-    '개인정보와 관련한 문의는 고객 지원(support@oncare.com)으로 연락하실 수 있습니다.\n\n'
-    '시행일: 2026년 1월 1일';

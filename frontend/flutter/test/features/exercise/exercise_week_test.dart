@@ -40,7 +40,31 @@ void main() {
     expect(week.sessions.length, 1);
     expect(week.sessions.first.id, 's-1');
     expect(week.sessions.first.type, ExerciseType.cardio);
+    // Absent intensity defaults to moderate (legacy payloads).
+    expect(week.sessions.first.intensity, ExerciseIntensity.moderate);
     expect(week.dailyMinutes, <double>[30, 0, 45, 0, 60, 0, 0]);
     expect(week.streakDays, 3);
+  });
+
+  test('ExerciseSession.fromJson parses a persisted intensity', () {
+    final week = ExerciseWeek.fromJson(<String, Object?>{
+      'sessions': <Object?>[
+        <String, Object?>{
+          'id': 's-1',
+          'day_label': '월',
+          'type': 'strength',
+          'minutes': 40,
+          'calories': 300,
+          'intensity': 'high',
+        },
+      ],
+      'daily_minutes': <Object?>[40, 0, 0, 0, 0, 0, 0],
+      'day_labels': <Object?>['월', '화', '수', '목', '금', '토', '일'],
+      'total_minutes': 40,
+      'total_calories': 300,
+      'streak_days': 1,
+      'ai_coach_message': 'hi',
+    });
+    expect(week.sessions.first.intensity, ExerciseIntensity.high);
   });
 }

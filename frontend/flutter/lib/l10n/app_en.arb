@@ -4,12 +4,10 @@
   "@appTitle": {
     "description": "Application name shown in window/AppBar titles."
   },
-
   "navDashboard": "Home",
   "navDiet": "Diet",
   "navExercise": "Exercise",
   "navMyHealth": "MY",
-
   "pageDashboardTitle": "Home",
   "pageDietTitle": "Diet",
   "pageExerciseTitle": "Exercise",
@@ -18,12 +16,10 @@
   "pageNotificationTitle": "Notifications",
   "pagePlaceTitle": "Place",
   "pageSignInTitle": "Sign in",
-
   "actionOpenAiCoach": "Open AI Coach",
   "actionFindPlace": "Find a place",
   "actionSignInPlaceholder": "Sign in (placeholder)",
   "actionRetry": "Retry",
-
   "placeholderDashboard": "Dashboard (placeholder)",
   "placeholderDiet": "Diet Record (placeholder)",
   "placeholderExercise": "Exercise (placeholder)",
@@ -32,14 +28,12 @@
   "placeholderNotification": "Notifications (placeholder)",
   "placeholderPlace": "Place (placeholder, Google Maps in Stage 4)",
   "placeholderSignIn": "Sign in (placeholder, social SDKs in Stage 4)",
-
   "errorNetwork": "Network problem",
   "errorUnauthorized": "Sign in required",
   "errorNotFound": "Not found",
   "errorServer": "Server error",
   "errorCancelled": "Cancelled",
   "errorUnknown": "Something went wrong",
-
   "dashboardSectionToday": "Today",
   "dashboardMetricCalories": "Calories",
   "dashboardMetricExercise": "Exercise",
@@ -48,19 +42,503 @@
   "dashboardCaloriesProgress": "{pct}% of {goal}",
   "@dashboardCaloriesProgress": {
     "placeholders": {
-      "pct": {"type": "int"},
-      "goal": {"type": "int"}
+      "pct": {
+        "type": "int"
+      },
+      "goal": {
+        "type": "int"
+      }
     }
   },
   "dashboardWeightDelta": "{sign}{delta} vs last week",
   "@dashboardWeightDelta": {
     "placeholders": {
-      "sign": {"type": "String"},
-      "delta": {"type": "String"}
+      "sign": {
+        "type": "String"
+      },
+      "delta": {
+        "type": "String"
+      }
     }
   },
-
+  "homeGreeting": "{name}, let's ease into the day 👋",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreetingGeneric": "Let's ease into the day 👋",
+  "homeCoachingPill": "✦ AI Coaching",
+  "homeCoachingTitle": "Today's tailored advice",
+  "homeCoachingBody": "Cut back on sodium at dinner and\ntake about a 20-minute walk",
+  "homeCoachingReady": "AI prepared 3 tailored tips for you today",
+  "homeDietSodiumAlert": "Sodium over limit detected",
+  "homeMacroCarbs": "Carbs",
+  "homeMacroProtein": "Protein",
+  "homeMacroFat": "Fat",
+  "homeDietRecBadge": "✦ AI dinner recommendation",
+  "homeMealChickenSalad": "Chicken breast salad",
+  "homeDietRecRice": "Half bowl of brown rice",
+  "homeDietLogButton": "Log diet →",
+  "homeExerciseRoutineProgress": "AI routine 1/3 done",
+  "homeExerciseBurnGoal": "{unit} burned · Goal {goal}",
+  "@homeExerciseBurnGoal": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
+  "homeExerciseBrisk": "Brisk walking",
+  "homeExerciseLegStretch": "Lower-body stretch",
+  "homeExerciseRecBadge": "✦ AI remaining routine",
+  "homeExerciseRecStretch": "Lower-body stretch 10 min",
+  "homeExerciseRecStrength": "Low-intensity strength 15 min",
+  "homeExerciseLogButton": "Log exercise →",
+  "homeSummaryToday": "Today total",
+  "homeVsGoal": "vs goal",
+  "homeNutritionTitle": "Nutrition status",
+  "homeAiAnalysisPill": "✦ AI analysis",
+  "homeNutritionSubtitle": "Weekly trend · vs last week",
+  "homeDetails": "Details",
+  "homeThisWeekAvg": "This week avg",
+  "homeLastWeekAvg": "Last week avg",
+  "homeGoal": "Goal",
+  "homeVsLastWeek": "vs last week",
+  "homeSodiumInsightPre": "Sodium intake has been ",
+  "homeSodiumInsightTrend": "rising for 2 weeks",
+  "homeSodiumInsightMid": ". Cut back on salt and turn on ",
+  "homeSodiumInsightAlert": "high-sodium meal alerts",
+  "homeSodiumInsightPost": "?",
+  "homeAiPill": "✦ AI",
+  "homeLegendThisWeek": "This week",
+  "homeLegendLastWeek": "Last week",
+  "homeLegendToday": "Today",
+  "homeMealReasonSodium": "Great for sodium control",
+  "homeMealTagLowSodium": "Low sodium",
+  "homeMealBrownRiceBox": "Brown rice lunchbox",
+  "homeMealReasonGlucose": "Helps steady blood sugar",
+  "homeMealTagLowGi": "Low GI",
+  "homeMealSalmon": "Grilled salmon + greens",
+  "homeMealReasonOmega": "Omega-3 + fiber",
+  "homeMealTagHighProtein": "High protein",
+  "homeMealTofu": "Stir-fried tofu & veggies",
+  "homeMealReasonLowCal": "Low calorie, keeps you full",
+  "homeMealTagLowCal": "Low calorie",
+  "homeRecMealsTitle": "This week's AI meal picks",
+  "homeViewAll": "View all",
+  "homeScheduleDate": "{weekday}, {month}/{day}",
+  "@homeScheduleDate": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      },
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "homeScheduleTitle": "Today's schedule",
+  "homeScheduleEveningWalk": "Evening walk",
+  "homeScheduleWalkDetail": "Around home · 20 min",
   "unitKcal": "kcal",
   "unitMinutes": "min",
-  "unitKg": "kg"
+  "unitKg": "kg",
+  "dietTitle": "Diet",
+  "dietToday": "Today",
+  "dietWeekLabel": "Month {month}, Week {week}",
+  "@dietWeekLabel": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "dietWeekdayMon": "Mon",
+  "dietWeekdayTue": "Tue",
+  "dietWeekdayWed": "Wed",
+  "dietWeekdayThu": "Thu",
+  "dietWeekdayFri": "Fri",
+  "dietWeekdaySat": "Sat",
+  "dietWeekdaySun": "Sun",
+  "dietNutritionSummary": "Today's Nutrition",
+  "dietCalories": "Calories",
+  "dietSodium": "Sodium",
+  "dietSugar": "Sugar",
+  "dietUnitMg": "mg",
+  "dietUnitG": "g",
+  "dietAiFeedback": "AI Feedback",
+  "dietTodayMeals": "Today's Meals",
+  "dietAddMeal": "Add Meal",
+  "dietEmptyLog": "No meals logged yet.\nAdd your first meal with a photo!",
+  "dietPhotoAnalysis": "Photo Analysis",
+  "dietLoadError": "Couldn't load your diet.",
+  "dietOtherDateEmpty": "Records for the selected date aren't available yet.\nPlease check your diet on today's date.",
+  "dietTagSodium": "Sodium {mg}mg",
+  "@dietTagSodium": {
+    "placeholders": {
+      "mg": {
+        "type": "int"
+      }
+    }
+  },
+  "dietTagSugar": "Sugar {g}g",
+  "@dietTagSugar": {
+    "placeholders": {
+      "g": {
+        "type": "int"
+      }
+    }
+  },
+  "dietMealBreakfast": "Breakfast",
+  "dietMealLunch": "Lunch",
+  "dietMealDinner": "Dinner",
+  "dietMealSnack": "Snack",
+  "dietMealSheetTitle": "{meal}",
+  "@dietMealSheetTitle": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "dietAddSheetTitle": "Add a Meal",
+  "dietAddSheetSubtitle": "Analyze your food from a photo",
+  "dietPickPhoto": "Choose a Photo",
+  "dietPickPhotoSub": "Pick a food photo from your gallery",
+  "dietTakePhoto": "Take a Photo",
+  "dietTakePhotoSub": "Snap your food with the camera",
+  "dietPhotoLoadError": "Couldn't load the photo. Please try again in a moment.",
+  "dietAnalyzing": "Analyzing…",
+  "dietAnalysisFailed": "Analysis failed",
+  "dietAnalysisDone": "Analysis complete!",
+  "dietAiNutritionResult": "AI Nutrition Result",
+  "dietAnalyzingBody": "Analyzing the food in your photo",
+  "dietAnalysisFailedBody": "Analysis failed. Please try again in a moment.",
+  "dietRecognizedFood": "Recognized Food",
+  "dietNoRecognizedFood": "No food recognized",
+  "dietNutritionResult": "Nutrition Result",
+  "dietSaved": "Meal saved",
+  "dietDone": "Done",
+  "dietSaveFailed": "Couldn't save. Please try again in a moment.",
+  "dietDeleteTitle": "Delete Meal Record",
+  "dietDeleteConfirm": "Delete this meal record?",
+  "dietCancel": "Cancel",
+  "dietDelete": "Delete",
+  "dietDeleted": "Meal deleted",
+  "dietDeleteFailed": "Couldn't delete. Please try again in a moment.",
+  "dietSave": "Save",
+  "dietMealInfo": "Meal Info",
+  "dietEatenTime": "Time Eaten",
+  "dietEatenFood": "Food Eaten",
+  "dietNewFood": "New food",
+  "dietAddFood": "+ Add Food",
+  "dietEditFoodHint": "You can edit the food name and calories",
+  "dietTotalCalories": "Total Calories",
+  "dietNutritionInfo": "Nutrition Info",
+  "dietEditNutritionHint": "You can edit the analyzed values directly",
+  "dietSodiumHint": "Recommended under 2,000mg/day",
+  "dietSugarHint": "Recommended under 50g/day",
+  "dietDeleteMeal": "Delete Meal",
+  "exTypeWalking": "Walking",
+  "exTypeCardio": "Cardio",
+  "exTypeStrength": "Strength",
+  "exTypeYoga": "Yoga",
+  "exTypeStretching": "Stretching",
+  "exTypeOther": "Exercise",
+  "exTypeOtherChip": "Other",
+  "exLevelLight": "Light",
+  "exLevelModerate": "Moderate",
+  "exLevelHigh": "High",
+  "exExerciseLog": "Exercise Log",
+  "exGymTab": "Gym",
+  "exWeekSummary": "This Week's Summary",
+  "exActivityTitle": "Activity",
+  "exThisWeek": "This week",
+  "exAiRoutineToday": "AI Routine · Today",
+  "exStatTime": "Time",
+  "exStatCalories": "Calories",
+  "exStatStreak": "Streak",
+  "exUnitCount": "times",
+  "exUnitStreakDays": "day streak",
+  "exToday": "Today",
+  "exLoadError": "Couldn't load your exercise data.",
+  "exEmptyLog": "No workouts logged this week.\nAdd one to start your log!",
+  "exAiFeedback": "AI Feedback",
+  "exAddExercise": "Add Exercise",
+  "exRoutineBriskTitle": "Brisk walking 30 min",
+  "exRoutineBriskSub": "Cardio · Blood pressure",
+  "exRoutineStretchTitle": "Lower-body stretch",
+  "exRoutineStretchSub": "Stretching · Flexibility",
+  "exRoutineStrengthTitle": "Low-intensity strength",
+  "exRoutineStrengthSub": "Strength · Endurance",
+  "exMissionComplete": "Mission complete!",
+  "exMinutesExercise": "{minutes} min exercise",
+  "@exMinutesExercise": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "exDurationMinutes": "{minutes} min",
+  "@exDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "exEditExercise": "Edit Exercise Record",
+  "exSave": "Save",
+  "exExerciseType": "Exercise Type",
+  "exExerciseDuration": "Duration",
+  "exExerciseIntensity": "Intensity",
+  "exEstimatedCalories": "Estimated Calories",
+  "exEnterDuration": "Please enter a duration",
+  "exCannotEdit": "This record can't be edited",
+  "exUpdated": "Exercise record updated",
+  "exLogged": "Exercise logged",
+  "exSaveFailed": "Couldn't save. Please try again in a moment",
+  "exFindGym": "Find a Gym",
+  "exGymSearchHint": "Search by gym or area",
+  "exNearbyGyms": "Nearby Gyms · O2O",
+  "exAiAnalysis": "✦ AI analysis",
+  "exNoGymMatch": "No gyms match '{query}'",
+  "@exNoGymMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "exGymsLoadError": "Couldn't load gyms.",
+  "exAiTopPick": "✦ AI top pick",
+  "exTrainerChat": "Trainer Chat",
+  "exSendHealthSummary": "Share Health Summary",
+  "exSendHealthSummaryBody": "Share your recent workouts and health profile summary\nwith the {gym} trainer?",
+  "@exSendHealthSummaryBody": {
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
+  },
+  "exCancel": "Cancel",
+  "exSend": "Share",
+  "exHealthSummarySent": "Shared your health summary with {gym}",
+  "@exHealthSummarySent": {
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
+  },
+  "exReasonTrainer": "Personal trainer {name}{role} on site",
+  "@exReasonTrainer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "exReasonHours": "Open {hours}{weekend}",
+  "@exReasonHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "weekend": {
+        "type": "String"
+      }
+    }
+  },
+  "exGymWeekdayHours": "Weekdays {hours}",
+  "@exGymWeekdayHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "exGymWeekendHours": "Weekends {hours}",
+  "@exGymWeekendHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "exTrainer": "Trainer",
+  "exMyGym": "My Gym",
+  "exTrainerDedicated": "Personal trainer",
+  "exAiSlotTitle": "✦ AI recommended times",
+  "exTrainerAvailability": "{trainer}'s openings",
+  "@exTrainerAvailability": {
+    "placeholders": {
+      "trainer": {
+        "type": "String"
+      }
+    }
+  },
+  "exSlotToday19": "Today 19:00",
+  "exSlotTomorrow0730": "Tomorrow 07:30",
+  "exSlotTomorrow20": "Tomorrow 20:00",
+  "exSlot1Left": "1 spot left",
+  "exSlotAvailable": "Open",
+  "exSlot2Left": "2 spots left",
+  "exReserveConfirmedSlotGym": "{slot} · {gym} reservation confirmed",
+  "@exReserveConfirmedSlotGym": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "gym": {
+        "type": "String"
+      }
+    }
+  },
+  "exReserveConfirm": "Confirm {slot}",
+  "@exReserveConfirm": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "exGymInfo": "Gym Info",
+  "exConsultButton": "💬 1:1 Consult",
+  "exGymLoadError": "Couldn't load the gym.",
+  "exNoGymTitle": "No gym registered",
+  "exNoGymSub": "Register a nearby gym with Find a Gym",
+  "exAddress": "Address",
+  "exHours": "Hours",
+  "exPhone": "Phone",
+  "exSpecialty": "Specialties",
+  "exKakaoMapArea": "Kakao Map area",
+  "exDefaultTrainerName": "Trainer Kim",
+  "exDefaultGymName": "Gangnam Fitness Center",
+  "exChatGreeting": "Hello, I'm {trainer}. 😊\nHow can I help you?",
+  "@exChatGreeting": {
+    "placeholders": {
+      "trainer": {
+        "type": "String"
+      }
+    }
+  },
+  "exChatChipPt": "PT consult",
+  "exChatChipPass": "Membership inquiry",
+  "exChatChipVisit": "Book a visit",
+  "exChatReply": "Got it! Your trainer will reply soon. Please share a convenient time to visit. 🙌",
+  "exGymConsultSubtitle": "{gym} · 1:1 Consult",
+  "@exGymConsultSubtitle": {
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
+  },
+  "exMessageHint": "Type a message",
+  "myTabTitle": "MY",
+  "myDefaultUserName": "User",
+  "myRank": "Rank {rank}",
+  "@myRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "mySettingsTitle": "Settings",
+  "myProfileTitle": "My Profile",
+  "myGoalsTitle": "Health Goals",
+  "myNotifTitle": "Notification Settings",
+  "mySupportTitle": "Customer Support",
+  "myLogout": "Log out",
+  "myLogoutConfirm": "Log out of your account?",
+  "myCancel": "Cancel",
+  "mySave": "Save",
+  "myProfileSaved": "Profile saved",
+  "myGoalsSaved": "Health goals saved",
+  "mySaveFailed": "Couldn't save. Please try again in a moment",
+  "myFieldName": "Name",
+  "myFieldEmail": "Email",
+  "myFieldPhone": "Phone",
+  "myFieldBirth": "Date of birth",
+  "myGoalsDesc": "Summaries and feedback across the app are based on these goals.",
+  "myGoalWeight": "Target weight",
+  "myGoalBp": "Target blood pressure (systolic)",
+  "myGoalBloodSugar": "Target blood sugar",
+  "myGoalCalories": "Daily calories",
+  "myGoalSodium": "Sodium limit",
+  "myNotifDietLog": "Diet log reminder",
+  "myNotifExercise": "Exercise reminder",
+  "myNotifTrainer": "Trainer message",
+  "myNotifAiCoaching": "AI coaching tips",
+  "myNotifWeeklyReport": "Weekly report",
+  "mySupportFaq": "FAQ",
+  "mySupportInquiry": "1:1 Inquiry",
+  "myLegalTermsTitle": "Terms of Service",
+  "myLegalPrivacyTitle": "Privacy Policy",
+  "myLegalTermsBody": "Terms of Service (Korean original governs).",
+  "myLegalPrivacyBody": "Privacy Policy (Korean original governs).",
+  "myLegalEffectiveDate": "Effective Jan 1, 2026",
+  "myAppVersion": "On-Care · Version 1.0.0",
+  "myComingSoon": "{label} is coming soon",
+  "@myComingSoon": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "coachHeaderPill": "AI Health Assistant",
+  "coachHeaderSubtitle": "Here are today's tailored tips",
+  "coachCardDietTag": "Diet",
+  "coachCardDietTitle": "Try easing back on sodium at dinner.",
+  "coachCardDietBody": "Grilled dishes or a salad are great.",
+  "coachCardExerciseTag": "Exercise",
+  "coachCardExerciseTitle": "A 20-minute evening walk.",
+  "coachCardExerciseBody": "A light walk after meals helps manage blood sugar.",
+  "coachCardWaterTag": "Hydration",
+  "coachCardWaterTitle": "Drink one more glass of water.",
+  "coachCardWaterBody": "You've been quite active today.",
+  "coachProgressLabel": "Today's recommendation progress",
+  "coachProgressDone": "{done}/{total} done",
+  "@coachProgressDone": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "coachCtaChat": "Chat with AI",
+  "navAddRecordTitle": "Add a record",
+  "navAddRecordSubtitle": "Choose diet or exercise",
+  "navDietOptionSub": "Nutrition analysis from a photo",
+  "navExerciseOptionSub": "Log the type and duration",
+  "aicHeaderSubtitle": "Ask me anytime",
+  "aicDatePillToday": "Today",
+  "aicInputHint": "Ask the AI anything",
+  "aicQuickRepliesLabel": "Try asking",
+  "aicQuickReply1": "Recommend a dinner menu for today",
+  "aicQuickReply2": "How much should I exercise today?",
+  "aicQuickReply3": "How are my blood sugar readings?"
 }

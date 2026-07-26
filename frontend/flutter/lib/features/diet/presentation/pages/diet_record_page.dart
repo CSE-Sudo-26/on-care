@@ -6,6 +6,7 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -23,24 +24,37 @@ class DietRecordPage extends ConsumerStatefulWidget {
   ConsumerState<DietRecordPage> createState() => _DietRecordPageState();
 }
 
-const List<String> _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
+/// Localized short weekday label (1 = Mon … 7 = Sun).
+String _weekdayLabel(AppLocalizations l, int weekday) => switch (weekday) {
+  1 => l.dietWeekdayMon,
+  2 => l.dietWeekdayTue,
+  3 => l.dietWeekdayWed,
+  4 => l.dietWeekdayThu,
+  5 => l.dietWeekdayFri,
+  6 => l.dietWeekdaySat,
+  _ => l.dietWeekdaySun,
+};
 
-/// Meal-type presentation metadata (badge label, thumbnail emoji + tint).
-const Map<MealType, ({String badge, String emoji, Color bg})> _mealMeta =
-    <MealType, ({String badge, String emoji, Color bg})>{
-      MealType.breakfast: (badge: '아침', emoji: '🥣', bg: Color(0xFFFFF3E0)),
-      MealType.lunch: (badge: '점심', emoji: '🥗', bg: Color(0xFFE8F5E9)),
-      MealType.dinner: (badge: '저녁', emoji: '🐟', bg: Color(0xFFE3F2FD)),
-      MealType.snack: (badge: '간식', emoji: '🍎', bg: Color(0xFFFCE4EC)),
+/// Meal-type presentation metadata (thumbnail emoji + tint). The badge label is
+/// localized separately at display time via [mealBadge] so the API `meal_type`
+/// stays decoupled from the UI language.
+const Map<MealType, ({String emoji, Color bg})> _mealMeta =
+    <MealType, ({String emoji, Color bg})>{
+      MealType.breakfast: (emoji: '🥣', bg: Color(0xFFFFF3E0)),
+      MealType.lunch: (emoji: '🥗', bg: Color(0xFFE8F5E9)),
+      MealType.dinner: (emoji: '🐟', bg: Color(0xFFE3F2FD)),
+      MealType.snack: (emoji: '🍎', bg: Color(0xFFFCE4EC)),
     };
 
-/// Maps a backend [DietEntry] onto the Figma meal-card view model.
-DietMeal _mealFromEntry(DietEntry e) {
-  final ({String badge, String emoji, Color bg}) meta =
+/// Maps a backend [DietEntry] onto the Figma meal-card view model. [l] localizes
+/// the nutrient tag labels; the meal type is carried as a [MealType] so the badge
+/// text is resolved at render time.
+DietMeal _mealFromEntry(AppLocalizations l, DietEntry e) {
+  final ({String emoji, Color bg}) meta =
       _mealMeta[e.mealType] ?? _mealMeta[MealType.snack]!;
   return DietMeal(
     id: e.id,
-    badge: meta.badge,
+    mealType: e.mealType,
     time: e.timeLabel,
     total: e.totalCalories,
     emoji: meta.emoji,
@@ -49,8 +63,8 @@ DietMeal _mealFromEntry(DietEntry e) {
       for (final FoodItem f in e.foods) DietFood(f.name, f.calories),
     ],
     tags: <DietTag>[
-      DietTag('나트륨 ${e.sodiumMg}mg', over: e.sodiumMg > 700),
-      DietTag('당류 ${e.sugarG}g'),
+      DietTag(l.dietTagSodium(e.sodiumMg), over: e.sodiumMg > 700),
+      DietTag(l.dietTagSugar(e.sugarG)),
     ],
     sodium: e.sodiumMg,
     sugar: e.sugarG,
@@ -80,6 +94,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final DateTime today = _today;
     // Window is always centred on today (+ whole-week shifts): 3 days before,
     // today in the middle, 3 days after.
@@ -102,7 +117,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
               padding: const EdgeInsets.only(bottom: 108),
               children: <Widget>[
                 FigmaTabHeader(
-                  title: '식단',
+                  title: l.dietTitle,
                   onBell: () => showRightSlidePanel<void>(
                     context,
                     content: const NotificationPanelBody(),
@@ -113,7 +128,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: '${center.month}월 ${_weekOfMonth(center)}주차',
+                  weekLabel: l.dietWeekLabel(center.month, _weekOfMonth(center)),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
                   onPrev: () => setState(() => _weekShift -= 1),
@@ -185,6 +200,7 @@ class _DateStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -216,9 +232,9 @@ class _DateStrip extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: FigmaColors.primaryA(0.25)),
                       ),
-                      child: const Text(
-                        '오늘로',
-                        style: TextStyle(
+                      child: Text(
+                        l.dietToday,
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.primary,
@@ -297,6 +313,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final Color labelColor = isSelected || isToday
         ? FigmaColors.primary
         : FigmaColors.textFaint;
@@ -307,7 +324,7 @@ class _DayCell extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Text(
-            _weekdayLabels[day.weekday - 1],
+            _weekdayLabel(l, day.weekday),
             style: TextStyle(
               fontSize: 9.5,
               fontWeight: FontWeight.w600,
@@ -360,14 +377,15 @@ class _NutritionSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '오늘의 영양 요약',
-            style: TextStyle(
+          Text(
+            l.dietNutritionSummary,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
@@ -378,27 +396,27 @@ class _NutritionSummary extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _SummaryTile(
-                  label: '칼로리',
+                  label: l.dietCalories,
                   value: '${day.totalCalories}',
-                  unit: 'kcal',
+                  unit: l.unitKcal,
                   color: FigmaColors.primary,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _SummaryTile(
-                  label: '나트륨',
+                  label: l.dietSodium,
                   value: '${day.totalSodiumMg}',
-                  unit: 'mg',
+                  unit: l.dietUnitMg,
                   color: FigmaColors.orange,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _SummaryTile(
-                  label: '당류',
+                  label: l.dietSugar,
                   value: '${day.totalSugarG}',
-                  unit: 'g',
+                  unit: l.dietUnitG,
                   color: FigmaColors.primary,
                 ),
               ),
@@ -479,6 +497,7 @@ class _AiFeedback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.trim().isEmpty) return const SizedBox.shrink();
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
@@ -497,9 +516,9 @@ class _AiFeedback extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Text(
-                    'AI 피드백',
-                    style: TextStyle(
+                  Text(
+                    l.dietAiFeedback,
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
@@ -540,6 +559,7 @@ class _MealLog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -547,9 +567,9 @@ class _MealLog extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Text(
-                '오늘의 식단',
-                style: TextStyle(
+              Text(
+                l.dietTodayMeals,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
@@ -561,13 +581,13 @@ class _MealLog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (entries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 28),
               child: Center(
                 child: Text(
-                  '아직 기록된 식단이 없어요.\n사진으로 첫 끼니를 추가해 보세요!',
+                  l.dietEmptyLog,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12.5,
                     height: 1.5,
                     fontWeight: FontWeight.w500,
@@ -580,7 +600,7 @@ class _MealLog extends StatelessWidget {
             for (final DietEntry e in entries) ...<Widget>[
               Builder(
                 builder: (BuildContext context) {
-                  final DietMeal m = _mealFromEntry(e);
+                  final DietMeal m = _mealFromEntry(l, e);
                   return _MealCard(meal: m, onTap: () => onEditMeal(m));
                 },
               ),
@@ -598,22 +618,23 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: FigmaColors.primary,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(Icons.add, size: 13, color: Colors.white),
-              SizedBox(width: 4),
+              const Icon(Icons.add, size: 13, color: Colors.white),
+              const SizedBox(width: 4),
               Text(
-                '식단 추가',
-                style: TextStyle(
+                l.dietAddMeal,
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -634,6 +655,7 @@ class _MealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -669,7 +691,7 @@ class _MealCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        meal.badge,
+                        mealBadge(l, meal.mealType),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -688,7 +710,7 @@ class _MealCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '${meal.total} kcal',
+                      '${meal.total} ${l.unitKcal}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -724,9 +746,9 @@ class _MealCard extends StatelessWidget {
                             meal.emoji,
                             style: const TextStyle(fontSize: 22),
                           ),
-                          const Text(
-                            '사진 분석',
-                            style: TextStyle(
+                          Text(
+                            l.dietPhotoAnalysis,
+                            style: const TextStyle(
                               fontSize: 7.5,
                               fontWeight: FontWeight.w600,
                               color: FigmaColors.textMuted,
@@ -756,7 +778,7 @@ class _MealCard extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    '${f.kcal} kcal',
+                                    '${f.kcal} ${l.unitKcal}',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -837,13 +859,14 @@ class _DietError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Column(
         children: <Widget>[
-          const Text(
-            '식단 정보를 불러오지 못했어요.',
-            style: TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+          Text(
+            l.dietLoadError,
+            style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -852,7 +875,7 @@ class _DietError extends StatelessWidget {
               foregroundColor: FigmaColors.primary,
               side: BorderSide(color: FigmaColors.primaryA(0.4)),
             ),
-            child: const Text('다시 시도'),
+            child: Text(l.actionRetry),
           ),
         ],
       ),
@@ -865,13 +888,14 @@ class _EmptyDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Center(
         child: Text(
-          '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 식단을 확인해 주세요.',
+          l.dietOtherDateEmpty,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12.5,
             height: 1.5,
             fontWeight: FontWeight.w500,

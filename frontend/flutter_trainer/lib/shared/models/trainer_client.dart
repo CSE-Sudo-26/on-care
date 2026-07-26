@@ -23,6 +23,7 @@ class TrainerClient {
     required this.sugarG,
     required this.lastRoutine,
     required this.weekCompletion,
+    required this.sodiumWeek,
   });
 
   /// Row id (e.g. `seed-client-1`).
@@ -61,7 +62,21 @@ class TrainerClient {
   /// This week's daily completion rates (7 entries, 월→일).
   final List<int> weekCompletion;
 
+  /// Last 7 days of daily sodium (mg), oldest→today (index 6 == today's
+  /// [sodiumMg]). Empty for pre-v2 rows (before the next re-seed
+  /// backfills it).
+  final List<int> sodiumWeek;
+
   /// Sodium exceeds the [sodiumTargetMg] daily target — surfaced as a
   /// warning on the list card and counted by the AI summary.
   bool get sodiumOverBudget => sodiumMg > sodiumTargetMg;
+
+  /// Days in [sodiumWeek] that were over the daily target.
+  int get sodiumOverDays =>
+      sodiumWeek.where((mg) => mg > sodiumTargetMg).length;
+
+  /// 7-day average sodium (mg), or `null` when no history exists.
+  int? get sodiumWeekAvg => sodiumWeek.isEmpty
+      ? null
+      : (sodiumWeek.reduce((a, b) => a + b) / sodiumWeek.length).round();
 }

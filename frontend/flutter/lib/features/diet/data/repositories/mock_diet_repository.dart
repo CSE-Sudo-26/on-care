@@ -12,6 +12,7 @@ class MockDietRepository implements DietRepository {
     required Uint8List imageBytes,
     required String filename,
     required String mealType,
+    String? idempotencyKey,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     return const DietAnalysisResult(

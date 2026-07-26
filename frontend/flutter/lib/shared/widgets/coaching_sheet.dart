@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// "AI 건강 도우미" bottom sheet — the daily coaching digest opened from the
 /// floating Oni button and the Home coaching banner. Its CTA hands off to the
@@ -32,26 +33,26 @@ class _CoachCard {
   final bool done;
 }
 
-const List<_CoachCard> _cards = <_CoachCard>[
+List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
   _CoachCard(
-    tag: '식단',
+    tag: l.coachCardDietTag,
     tagColor: FigmaColors.orange,
-    title: '저녁은 나트륨을 조금 줄여보세요.',
-    body: '구이나 샐러드가 좋아요.',
+    title: l.coachCardDietTitle,
+    body: l.coachCardDietBody,
     done: true,
   ),
   _CoachCard(
-    tag: '운동',
+    tag: l.coachCardExerciseTag,
     tagColor: FigmaColors.greenTag,
-    title: '저녁 산책 20분.',
-    body: '식후 가벼운 산책은 혈당 관리에 도움이 돼요.',
+    title: l.coachCardExerciseTitle,
+    body: l.coachCardExerciseBody,
     done: true,
   ),
   _CoachCard(
-    tag: '수분',
+    tag: l.coachCardWaterTag,
     tagColor: FigmaColors.primary,
-    title: '물 한 잔 더 마시기.',
-    body: '오늘 활동량이 많았어요.',
+    title: l.coachCardWaterTitle,
+    body: l.coachCardWaterBody,
     done: false,
   ),
 ];
@@ -61,8 +62,10 @@ class _CoachingSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int done = _cards.where((_CoachCard c) => c.done).length;
-    final double pct = done / _cards.length;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<_CoachCard> cards = _cardsOf(l);
+    final int done = cards.where((_CoachCard c) => c.done).length;
+    final double pct = done / cards.length;
 
     return SafeArea(
       top: false,
@@ -94,22 +97,22 @@ class _CoachingSheet extends StatelessWidget {
                   children: <Widget>[
                     const OniAvatar(size: 44),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'AI 건강 도우미',
-                            style: TextStyle(
+                            l.coachHeaderPill,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: FigmaColors.primary,
                             ),
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           Text(
-                            '오늘의 맞춤 조언을 모아봤어요',
-                            style: TextStyle(
+                            l.coachHeaderSubtitle,
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: FigmaColors.ink,
@@ -126,9 +129,9 @@ class _CoachingSheet extends StatelessWidget {
                 child: ListView.separated(
                   shrinkWrap: true,
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  itemCount: _cards.length,
+                  itemCount: cards.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (_, int i) => _CoachCardTile(card: _cards[i]),
+                  itemBuilder: (_, int i) => _CoachCardTile(card: cards[i]),
                 ),
               ),
               Padding(
@@ -139,16 +142,16 @@ class _CoachingSheet extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        const Text(
-                          '오늘의 추천 진행도',
-                          style: TextStyle(
+                        Text(
+                          l.coachProgressLabel,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: FigmaColors.textMuted,
                           ),
                         ),
                         Text(
-                          '$done/${_cards.length} 완료',
+                          l.coachProgressDone(done, cards.length),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -190,9 +193,12 @@ class _CoachingSheet extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.chat_bubble_outline_rounded, size: 19),
-                    label: const Text(
-                      'AI와 대화하기',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    label: Text(
+                      l.coachCtaChat,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

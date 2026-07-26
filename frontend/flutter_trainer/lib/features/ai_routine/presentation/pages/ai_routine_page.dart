@@ -3,13 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 
 /// Minute options offered for every routine item (mock: 10~45분 chips).
@@ -43,15 +48,35 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   String? _clientId; // null until clients load (defaults to the first)
   final Map<String, int> _minuteEdits = <String, int>{};
   final Map<String, String> _nameEdits = <String, String>{};
+
+  /// AI suggestions the trainer removed for this round (in-memory,
+  /// like the other edits).
+  final Set<String> _removed = <String>{};
   String? _editingNameId;
   final List<_CustomExercise> _custom = <_CustomExercise>[];
   bool _showAddForm = false;
   bool _sent = false;
   Timer? _sentTimer;
 
+  /// A homework send is in flight (blocks re-entry, disables the button).
+  bool _sending = false;
+
+  /// A schedule registration just succeeded (drives the 3s flash).
+  bool _registered = false;
+  // The client whose registration is in flight (null when none). Tracked
+  // per-client — not a plain bool — so switching away and back can't let
+  // the SAME client's registration be triggered twice while the first is
+  // still saving (review PR 220).
+  String? _registeringClientId;
+  Timer? _registerTimer;
+
+  /// Day offset (0 = 오늘 … 6) the routine gets registered on.
+  int _registerOffset = 0;
+
   @override
   void dispose() {
     _sentTimer?.cancel();
+    _registerTimer?.cancel();
     super.dispose();
   }
 
@@ -62,17 +87,65 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       // A different client gets a clean slate, like the mock.
       _minuteEdits.clear();
       _nameEdits.clear();
+      _removed.clear();
       _editingNameId = null;
       _custom.clear();
       _showAddForm = false;
       _sent = false;
+      _sending = false;
+      _registered = false;
+      _registerOffset = 0;
+      // NOTE: _registeringClientId is intentionally NOT cleared — a
+      // registration in flight for another client keeps being tracked,
+      // so returning to it still blocks a duplicate (review PR 220).
     });
     _sentTimer?.cancel();
+    _registerTimer?.cancel();
   }
 
-  void _send() {
-    if (_sent) return;
-    setState(() => _sent = true);
+  Future<void> _send(TrainerClient client, List<AiRoutineItem> items) async {
+    if (_sent || _sending) return;
+    final program = _composeProgram(items);
+    if (program.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final total = items
+        .where((i) => !_removed.contains(i.id))
+        .fold<int>(0, (sum, i) => sum + (_minuteEdits[i.id] ?? i.minutes));
+    final custom = _custom.fold<int>(0, (sum, c) => sum + c.minutes);
+
+    // AWAIT the chat write before claiming success — firing it off with
+    // unawaited() showed '전송 완료' even when the insert failed, and
+    // swallowed the error (review PR 239).
+    //
+    // Capture who this send is for: the trainer can switch clients while
+    // it saves, and the '전송 완료' flash + edit-reset timer must land on
+    // the starting client, not whoever is on screen when it resolves
+    // (review PR 239).
+    final sentFor = client.id;
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .sendTrainerMessage(
+            clientId: client.id,
+            text:
+                '📋 AI 루틴 숙제를 보냈어요 · ${program.length}개 운동 · '
+                '총 ${total + custom}분',
+          );
+    } catch (_) {
+      if (!mounted || !_isStillSelected(sentFor)) return;
+      setState(() => _sending = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted || !_isStillSelected(sentFor)) return;
+    setState(() {
+      _sending = false;
+      _sent = true;
+    });
     _sentTimer?.cancel();
     // Mock: after the confirmation, reset the edits for the next round.
     _sentTimer = Timer(const Duration(seconds: 3), () {
@@ -82,11 +155,100 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
         _custom.clear();
         _minuteEdits.clear();
         _nameEdits.clear();
+        _removed.clear();
         // Close any editing UI too — otherwise an open name editor or
         // add-form would survive the "next round" reset (PR review).
         _editingNameId = null;
         _showAddForm = false;
       });
+    });
+  }
+
+  /// The composed routine (edited AI items minus removed, plus custom)
+  /// in the schedule programJson shape.
+  List<Map<String, Object?>> _composeProgram(List<AiRoutineItem> items) {
+    return <Map<String, Object?>>[
+      for (final item in items)
+        if (!_removed.contains(item.id))
+          <String, Object?>{
+            'name': _nameEdits[item.id] ?? item.name,
+            'sets': 1,
+            'reps': '${_minuteEdits[item.id] ?? item.minutes}분',
+            'weight': '-',
+          },
+      for (final c in _custom)
+        <String, Object?>{
+          'name': c.name,
+          'sets': 1,
+          'reps': '${c.minutes}분',
+          'weight': '-',
+        },
+    ];
+  }
+
+  /// Writes the routine onto today's schedule (attach to the client's
+  /// 예정 session, or book a new slot) and flashes a confirmation.
+  /// Whether [clientId] is still the client on screen. `_clientId` is
+  /// null until the trainer picks someone (the first client is shown by
+  /// default), so null means "still the initial selection".
+  bool _isStillSelected(String clientId) =>
+      _clientId == null || _clientId == clientId;
+
+  Future<void> _registerToSchedule(
+    TrainerClient client,
+    List<AiRoutineItem> items,
+  ) async {
+    // Block a duplicate for THIS client — either just registered, or one
+    // is already in flight for them.
+    if (_registered || _registeringClientId == client.id) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final program = _composeProgram(items);
+    if (program.isEmpty) {
+      // Every exercise was removed — tell the trainer instead of a
+      // silent no-op (review PR 220).
+      messenger.showSnackBar(
+        const SnackBar(content: Text('운동을 하나 이상 추가해 주세요')),
+      );
+      return;
+    }
+    final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
+    // Remember who this write is for — the trainer can switch clients
+    // while it saves, and the result must not be attributed to the new
+    // one (review PR 220).
+    final registeredFor = client.id;
+    setState(() => _registeringClientId = registeredFor);
+    try {
+      await ref
+          .read(aiRoutineRepositoryProvider)
+          .registerToSchedule(
+            date: date,
+            clientName: client.name,
+            program: program,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      // Clear the guard for this client so it can be retried.
+      if (_registeringClientId == registeredFor) {
+        setState(() => _registeringClientId = null);
+      }
+      // Only surface the error if that client is still on screen.
+      if (_isStillSelected(registeredFor)) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    if (_registeringClientId == registeredFor) {
+      setState(() => _registeringClientId = null);
+    }
+    // Attribute the success flash only to the client it was started for.
+    if (!_isStillSelected(registeredFor)) return;
+    setState(() => _registered = true);
+    _registerTimer?.cancel();
+    _registerTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _registered = false);
     });
   }
 
@@ -118,45 +280,103 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
               (c) => c.id == _clientId,
               orElse: () => clients.first,
             );
-            return _buildBody(clients, selected);
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
+                if (!wide) {
+                  return ContentFrame(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.lg,
+                        AppSpacing.xl,
+                        AppSpacing.xxl,
+                      ),
+                      children: <Widget>[
+                        ..._overviewChildren(clients, selected),
+                        const SizedBox(height: AppSpacing.lg),
+                        ..._editorChildren(selected),
+                      ],
+                    ),
+                  );
+                }
+                // Wide: client/diet overview docks left, the routine
+                // editor gets its own column.
+                return ContentFrame(
+                  maxWidth: AppLayout.wideMaxWidth,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      SizedBox(
+                        width: AppLayout.splitListWidth,
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            AppSpacing.lg,
+                            AppSpacing.xl,
+                            AppSpacing.xxl,
+                          ),
+                          children: _overviewChildren(clients, selected),
+                        ),
+                      ),
+                      const VerticalDivider(
+                        width: 1,
+                        color: AppColors.borderStrong,
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            AppSpacing.lg,
+                            AppSpacing.xl,
+                            AppSpacing.xxl,
+                          ),
+                          children: _editorChildren(selected),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildBody(List<TrainerClient> clients, TrainerClient client) {
-    final routineAsync = ref.watch(aiRoutineProvider(client.id));
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.xxl,
+  /// Title, client picker, and diet summary (left column on wide).
+  List<Widget> _overviewChildren(
+    List<TrainerClient> clients,
+    TrainerClient client,
+  ) {
+    return <Widget>[
+      Text(
+        'AI 루틴 생성',
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       ),
-      children: <Widget>[
-        Text(
-          'AI 루틴 생성',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+      const Text(
+        '고객 식단 · 건강 데이터 기반',
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w500,
+          color: AppColors.subtleForeground,
         ),
-        const Text(
-          '고객 식단 · 건강 데이터 기반',
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        _sectionLabel('고객 선택'),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      _sectionLabel('고객 선택'),
+      const SizedBox(height: AppSpacing.sm),
+      // Horizontal scroll instead of one cramped Row — stays usable as
+      // the roster grows past the seeded three (codex review).
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
           children: <Widget>[
             for (final c in clients) ...<Widget>[
-              Expanded(
+              SizedBox(
+                width: 104,
                 child: _ClientChip(
                   client: c,
                   selected: c.id == client.id,
@@ -167,57 +387,63 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
             ],
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        _sectionLabel('오늘 식단 요약'),
-        const SizedBox(height: AppSpacing.sm),
-        _DietSummaryCard(client: client),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: <Widget>[
-            _sectionLabel('AI 추천 루틴'),
-            const SizedBox(width: AppSpacing.xs),
-            const Text(
-              '· 수정 가능',
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      _sectionLabel('오늘 식단 요약'),
+      const SizedBox(height: AppSpacing.sm),
+      _DietSummaryCard(client: client),
+    ];
+  }
+
+  /// The routine editor column (right column on wide).
+  List<Widget> _editorChildren(TrainerClient client) {
+    final routineAsync = ref.watch(aiRoutineProvider(client.id));
+
+    return <Widget>[
+      Row(
+        children: <Widget>[
+          _sectionLabel('AI 추천 루틴'),
+          const SizedBox(width: AppSpacing.xs),
+          const Text(
+            '· 수정 가능',
+            style: TextStyle(fontSize: 11, color: AppColors.disabledForeground),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 2,
+            ),
+            decoration: const BoxDecoration(
+              color: AppColors.accentSurface,
+              borderRadius: BorderRadius.all(AppRadius.pill),
+            ),
+            child: const Text(
+              '✦ 자동 생성',
               style: TextStyle(
-                fontSize: 11,
-                color: AppColors.disabledForeground,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accent,
               ),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 2,
-              ),
-              decoration: const BoxDecoration(
-                color: AppColors.accentSurface,
-                borderRadius: BorderRadius.all(AppRadius.pill),
-              ),
-              child: const Text(
-                '✦ 자동 생성',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accent,
-                ),
-              ),
-            ),
-          ],
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      routineAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Center(child: CircularProgressIndicator()),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        routineAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => const Text(
-            '루틴을 불러오지 못했어요',
-            style: TextStyle(color: AppColors.mutedForeground),
-          ),
-          data: (items) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              for (final item in items) ...<Widget>[
+        error: (e, _) => const Text(
+          '루틴을 불러오지 못했어요',
+          style: TextStyle(color: AppColors.mutedForeground),
+        ),
+        data: (items) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final item in items)
+              if (!_removed.contains(item.id)) ...<Widget>[
                 _RoutineCard(
                   name: _nameEdits[item.id] ?? item.name,
                   minutes: _minuteEdits[item.id] ?? item.minutes,
@@ -229,62 +455,119 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                   onNameChanged: (v) => _nameEdits[item.id] = v,
                   onNameDone: () => setState(() => _editingNameId = null),
                   onMinutes: (m) => setState(() => _minuteEdits[item.id] = m),
+                  // AI suggestions can be dropped from this round too.
+                  onDelete: () => setState(() {
+                    _removed.add(item.id);
+                    if (_editingNameId == item.id) _editingNameId = null;
+                  }),
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
-              for (var i = 0; i < _custom.length; i++) ...<Widget>[
-                _RoutineCard(
-                  name: _custom[i].name,
-                  minutes: _custom[i].minutes,
-                  type: _custom[i].type,
-                  reason: '트레이너 추가',
-                  isCustom: true,
-                  onDelete: () => setState(() => _custom.removeAt(i)),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              const SizedBox(height: AppSpacing.xs),
-              _showAddForm
-                  ? _AddExerciseForm(
-                      onCancel: () => setState(() => _showAddForm = false),
-                      onAdd: (name, minutes, type) => setState(() {
-                        _custom.add(
-                          _CustomExercise(
-                            name: name,
-                            minutes: minutes,
-                            type: type,
-                          ),
-                        );
-                        _showAddForm = false;
-                      }),
-                    )
-                  : _AddExerciseButton(
-                      onTap: () => setState(() => _showAddForm = true),
-                    ),
-              const SizedBox(height: AppSpacing.lg),
-              _SendButton(
-                clientName: client.name,
-                sent: _sent,
-                onSend: _send,
+            for (var i = 0; i < _custom.length; i++) ...<Widget>[
+              _RoutineCard(
+                name: _custom[i].name,
+                minutes: _custom[i].minutes,
+                type: _custom[i].type,
+                reason: '트레이너 추가',
+                isCustom: true,
+                onDelete: () => setState(() => _custom.removeAt(i)),
               ),
-              if (_sent)
-                const Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.sm),
-                  child: Text(
-                    '고객 앱에 알림이 전송됐어요',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.success,
-                    ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.xs),
+            _showAddForm
+                ? _AddExerciseForm(
+                    onCancel: () => setState(() => _showAddForm = false),
+                    onAdd: (name, minutes, type) => setState(() {
+                      _custom.add(
+                        _CustomExercise(
+                          name: name,
+                          minutes: minutes,
+                          type: type,
+                        ),
+                      );
+                      _showAddForm = false;
+                    }),
+                  )
+                : _AddExerciseButton(
+                    onTap: () => setState(() => _showAddForm = true),
+                  ),
+            const SizedBox(height: AppSpacing.lg),
+            // Two destinations: homework to the client's app (mock),
+            // or today's PT session program (real drift write that the
+            // 스케줄 탭 picks up live).
+            _SendButton(
+              clientName: client.name,
+              // Disabled while the chat write is in flight so a second
+              // tap can't queue a duplicate message.
+              sent: _sent || _sending,
+              onSend: () => _send(client, items),
+            ),
+            if (_sent)
+              const Padding(
+                padding: EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  '고객 앱에 알림이 전송됐어요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.success,
                   ),
                 ),
-            ],
-          ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            // Which day the routine lands on (오늘 … +6일).
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: <Widget>[
+                  for (var i = 0; i < 7; i++) ...<Widget>[
+                    _DateChip(
+                      offset: i,
+                      selected: _registerOffset == i,
+                      onTap: () => setState(() {
+                        _registerOffset = i;
+                        _registered = false;
+                      }),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _RegisterButton(
+              // Disabled just after registering, or while THIS client's
+              // registration is in flight, so a second tap can't queue a
+              // duplicate session (review PR 220).
+              registered: _registered || _registeringClientId == client.id,
+              label: _registered
+                  ? '✓ ${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
+                  : '📅 ${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
+              onTap: () => _registerToSchedule(client, items),
+            ),
+            if (_registered)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  // Match the button's day label — '오늘'/'내일'/'M/D' —
+                  // so a future-day registration isn't described as '오늘'
+                  // (CodeRabbit review).
+                  '스케줄 탭에서 ${_dateChipLabel(_registerOffset)} '
+                  '세션의 프로그램으로 확인할 수 있어요',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+          ],
         ),
-      ],
-    );
+      ),
+    ];
   }
 
   Widget _sectionLabel(String text) {
@@ -538,7 +821,7 @@ class _RoutineCard extends StatelessWidget {
                         ),
                       ),
               ),
-              if (isCustom)
+              if (onDelete != null)
                 GestureDetector(
                   onTap: onDelete,
                   child: const Padding(
@@ -609,9 +892,9 @@ class _NameEditField extends StatefulWidget {
 }
 
 class _NameEditFieldState extends State<_NameEditField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initial)
-        ..selection = TextSelection.collapsed(offset: widget.initial.length);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initial,
+  )..selection = TextSelection.collapsed(offset: widget.initial.length);
 
   @override
   void dispose() {
@@ -708,9 +991,7 @@ class _AddExerciseButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(
-              color: AppColors.warning.withValues(alpha: 0.4),
-            ),
+            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
           ),
           child: const Text(
             '＋ 운동 직접 추가',
@@ -917,6 +1198,97 @@ class _FormButton extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: foreground,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Label for a register-day offset (오늘/내일/M/D).
+String _dateChipLabel(int offset) {
+  if (offset == 0) return '오늘';
+  if (offset == 1) return '내일';
+  final d = DateTime.now().add(Duration(days: offset));
+  return '${d.month}/${d.day}';
+}
+
+/// One selectable register-day chip.
+class _DateChip extends StatelessWidget {
+  const _DateChip({
+    required this.offset,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int offset;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.inputBackground,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+        ),
+        child: Text(
+          _dateChipLabel(offset),
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: selected
+                ? AppColors.primaryForeground
+                : AppColors.subtleForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Secondary action — registers the routine as the chosen day's PT
+/// session program on the 스케줄 tab.
+class _RegisterButton extends StatelessWidget {
+  const _RegisterButton({
+    required this.registered,
+    required this.label,
+    required this.onTap,
+  });
+
+  final bool registered;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = registered ? AppColors.success : AppColors.accent;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(AppRadius.card),
+      child: InkWell(
+        onTap: registered ? null : onTap,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(AppRadius.card),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
         ),

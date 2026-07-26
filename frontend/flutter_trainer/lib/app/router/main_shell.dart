@@ -20,16 +20,10 @@ class MainShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const BrandHeader(),
-      // Web-first: cap + center the content column so wide viewports
-      // don't stretch lists/chat edge-to-edge.
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppLayout.contentMaxWidth,
-          ),
-          child: navigationShell,
-        ),
-      ),
+      // Each tab page frames (centers + caps) its own content — the
+      // 고객 탭 needs a wider cap for the master-detail split, so the
+      // shell no longer imposes a single width here.
+      body: navigationShell,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppColors.card,
