@@ -65,8 +65,11 @@ def test_schedule_crud(client):
     assert client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token)).status_code == 404
 
 
-def test_schedule_update_member_id_empty_unassigns(client):
-    """빈 member_id 로 수정하면 배정 해제(NULL)로 저장 — ""는 FK 위반 500 이 아니라 200."""
+def test_schedule_update_member_id_empty_unassigns(client, db_session):
+    """빈 member_id 로 수정하면 실제로 member_id IS NULL 로 저장되고(FK 위반 500 아님),
+    이후 완료해도 배정이 없으므로 회원 운동기록(sched-hist-{sid})이 생성되지 않는다."""
+    from app.models import models
+
     token = _tok(client)
     c = client.post(
         "/v1/trainer/schedule",
@@ -77,15 +80,21 @@ def test_schedule_update_member_id_empty_unassigns(client):
         headers=_h(token),
     )
     sid = c.json()["id"]
-    # 빈 member_id 로 수정 → FK 위반 500 이 아니라 200(NULL 로 배정 해제)
+
+    # 빈 member_id 로 수정 → 200, 그리고 DB 에 실제로 NULL 로 저장(빈 값 무시하고 유지하면 실패)
     u = client.put(
         f"/v1/trainer/schedule/{sid}", json={"member_id": ""}, headers=_h(token)
     )
     assert u.status_code == 200, u.text
+    db_session.expire_all()
+    assert db_session.get(models.TrainerSchedule, sid).member_id is None
 
-    # 배정 해제된 슬롯은 이후 완료해도 회원 운동기록으로 적재되지 않는다(member_id NULL)
+    # 완료해도 배정된 회원이 없으므로 운동기록이 만들어지지 않는다
     done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
     assert done.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is None
+
     client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
 
 

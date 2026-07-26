@@ -29,13 +29,22 @@ from app.models import models
 logger = logging.getLogger(__name__)
 
 
+#: PostgreSQL unique_violation. 동시 기동(멀티 인스턴스)이 같은 결정론적 id를 경쟁
+#: 삽입할 때만 발생하는 코드로, 이때만 '이미 다른 인스턴스가 넣음'으로 보고 넘긴다.
+_PG_UNIQUE_VIOLATION = "23505"
+
+
 def _safe_commit(db: Session) -> None:
-    """시드 커밋. 동시 기동(멀티 인스턴스)이 같은 결정론적 id를 경쟁 삽입해 유니크/FK
-    충돌이 나도 기동을 죽이지 않는다 — 롤백만 하고 넘어간다(다른 인스턴스가 이미 넣음)."""
+    """시드 커밋. 동시 기동이 같은 결정론적 id를 경쟁 삽입한 UNIQUE 충돌(23505)만
+    무시하고 넘어간다. FK(23503)·NOT NULL(23502)·CHECK 등 진짜 오류는 데이터가 롤백된
+    채 조용히 기동을 이어가면 안 되므로 다시 발생시켜 기동을 실패시킨다."""
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
+        sqlstate = getattr(getattr(e, "orig", None), "sqlstate", None)
+        if sqlstate != _PG_UNIQUE_VIOLATION:
+            raise
         logger.info("member seed commit skipped (already seeded by a concurrent start)")
 
 # 회원별 오늘 3끼 (meal_type, 음식, 칼로리, 나트륨, 당류) — 프론트 seed 와 동일 수치.
