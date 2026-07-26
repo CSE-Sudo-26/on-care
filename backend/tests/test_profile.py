@@ -81,6 +81,7 @@ def test_update_health_goals(client):
             "goal_blood_sugar": 100,
             "daily_calories": 2000,
             "daily_sodium_mg": 1800,
+            "daily_sugar_g": 30,
         },
         headers=_auth(token),
     )
@@ -88,6 +89,11 @@ def test_update_health_goals(client):
     p = r.json()
     assert p["goal_weight_kg"] == 68.0
     assert p["daily_sodium_mg"] == 1800
+    assert p["daily_sugar_g"] == 30
+
+    # 저장 후 재조회에서도 값이 유지되어야 한다(실서버 영속 계약).
+    me = client.get("/v1/users/me/profile", headers=_auth(token))
+    assert me.json()["daily_sugar_g"] == 30
 
 
 def test_delete_me_removes_account(client):

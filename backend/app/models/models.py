@@ -70,6 +70,7 @@ class HealthProfile(Base):
     goal_blood_sugar: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_calories: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_sodium_mg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_sugar_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)

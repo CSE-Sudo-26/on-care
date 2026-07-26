@@ -933,6 +933,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalSodium => '나트륨 제한';
 
   @override
+  String get myGoalSugar => '당류 제한';
+
+  @override
   String get myNotifDietLog => '식단 기록 알림';
 
   @override

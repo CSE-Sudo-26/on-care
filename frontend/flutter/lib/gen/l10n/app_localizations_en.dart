@@ -943,6 +943,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalSodium => 'Sodium limit';
 
   @override
+  String get myGoalSugar => 'Sugar limit';
+
+  @override
   String get myNotifDietLog => 'Diet log reminder';
 
   @override

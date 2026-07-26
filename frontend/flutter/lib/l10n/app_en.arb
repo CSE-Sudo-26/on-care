@@ -511,6 +511,7 @@
   "myGoalBloodSugar": "Target blood sugar",
   "myGoalCalories": "Daily calories",
   "myGoalSodium": "Sodium limit",
+  "myGoalSugar": "Sugar limit",
   "myNotifDietLog": "Diet log reminder",
   "myNotifExercise": "Exercise reminder",
   "myNotifTrainer": "Trainer message",

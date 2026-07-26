@@ -106,6 +106,7 @@ def _profile_view(user: User) -> ProfileView:
         goal_blood_sugar=p.goal_blood_sugar if p else None,
         daily_calories=p.daily_calories if p else None,
         daily_sodium_mg=p.daily_sodium_mg if p else None,
+        daily_sugar_g=p.daily_sugar_g if p else None,
         onboarded=p.onboarded if p else False,
     )
 
@@ -174,7 +175,7 @@ def update_health_goals(
     user: RequireUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileView:
-    """건강 목표 모달 저장: 목표 체중/혈압/혈당/일일 칼로리·나트륨."""
+    """건강 목표 모달 저장: 목표 체중/혈압/혈당/일일 칼로리·나트륨·당류."""
     profile = _get_or_create_profile(db, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)

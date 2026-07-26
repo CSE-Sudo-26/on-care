@@ -1820,6 +1820,12 @@ abstract class AppLocalizations {
   /// **'Sodium limit'**
   String get myGoalSodium;
 
+  /// No description provided for @myGoalSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar limit'**
+  String get myGoalSugar;
+
   /// No description provided for @myNotifDietLog.
   ///
   /// In en, this message translates to:
