@@ -12,7 +12,7 @@
 
 [![소개 페이지](https://img.shields.io/badge/INTRO_PAGE-소개_페이지-185079?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ewhasudo.zapto.org/)
 [![사용자 앱](https://img.shields.io/badge/APP-사용자-3eafdf?style=for-the-badge&logo=flutter&logoColor=white)](https://ewhasudo.zapto.org/frontend/#/dashboard)
-[![트레이너 앱](https://img.shields.io/badge/WEB-트레이너-5cb3e8?style=for-the-badge&logo=safari&logoColor=white)](https://ewhasudo.zapto.org/trainer/)
+[![트레이너 앱](https://img.shields.io/badge/WEB-트레이너-3eafdf?style=for-the-badge&logo=safari&logoColor=white)](https://ewhasudo.zapto.org/trainer/)
 [![데모 영상](https://img.shields.io/badge/YOUTUBE-데모_영상-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/C4ivM_dlAww?si=8iOWmOpSxcpQmlU3)
 
 <br/>
