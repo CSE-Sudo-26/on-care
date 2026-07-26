@@ -196,8 +196,10 @@ def test_trainer_client_history_newest_first(client):
     assert r.status_code == 200, r.text
     hist = r.json()
     assert len(hist) >= 1
-    assert hist[0]["label"] == "AI 루틴 · 자율 운동"
+    # 최신 우선: 오늘 기록이 맨 앞. (다른 테스트가 오늘자 PT 기록을 추가할 수 있어
+    # hist[0]의 라벨을 고정하지 않고, '오늘이 선두 + 시드 AI 루틴 존재'로 검증한다.)
     assert "(오늘)" in hist[0]["date_label"]
+    assert any(h["label"] == "AI 루틴 · 자율 운동" for h in hist)
 
 
 def test_history_excludes_other_trainers_records(client, db_session):

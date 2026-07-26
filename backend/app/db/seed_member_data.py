@@ -15,14 +15,28 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_commit(db: Session) -> None:
+    """시드 커밋. 동시 기동(멀티 인스턴스)이 같은 결정론적 id를 경쟁 삽입해 유니크/FK
+    충돌이 나도 기동을 죽이지 않는다 — 롤백만 하고 넘어간다(다른 인스턴스가 이미 넣음)."""
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        logger.info("member seed commit skipped (already seeded by a concurrent start)")
 
 # 회원별 오늘 3끼 (meal_type, 음식, 칼로리, 나트륨, 당류) — 프론트 seed 와 동일 수치.
 # 하루 나트륨 합 == _SODIUM_WEEK[member][-1](오늘) 이 되도록 맞춰 둠.
@@ -223,7 +237,7 @@ def _seed_schedule(db: Session, valid: set[str]) -> None:
             program_json=json.dumps(program, ensure_ascii=False),
             sort_order=i,
         ))
-    db.commit()
+    _safe_commit(db)
 
 
 def _seed_chat(db: Session, member_id: str) -> None:
@@ -245,7 +259,7 @@ def _seed_chat(db: Session, member_id: str) -> None:
             body=text,
             created_at=base + timedelta(minutes=i * 2),
         ))
-    db.commit()
+    _safe_commit(db)
 
 
 def _seed_routines(db: Session, member_id: str) -> None:
@@ -268,7 +282,7 @@ def _seed_routines(db: Session, member_id: str) -> None:
             source="ai",
             sort_order=i,
         ))
-    db.commit()
+    _safe_commit(db)
 
 
 def _has_diet_on(db: Session, member_id: str, day: str) -> bool:
@@ -328,7 +342,7 @@ def _seed_diet(db: Session, member_id: str) -> None:
             sugar_g=0,
             engine="seed",
         ))
-    db.commit()
+    _safe_commit(db)
 
 
 def _seed_history(db: Session, member_id: str) -> None:
@@ -364,4 +378,4 @@ def _seed_history(db: Session, member_id: str) -> None:
             client_feedback=feedback,
             trainer_note=note,
         ))
-    db.commit()
+    _safe_commit(db)

@@ -553,7 +553,8 @@ def update_session(
     if "client_name" in fields:
         s.client_name = fields["client_name"]
     if "member_id" in fields:
-        s.member_id = fields["member_id"]
+        # 빈 문자열은 '배정 해제'로 해석 → NULL 로 저장(""는 users.id FK 위반이라 500 유발).
+        s.member_id = fields["member_id"] or None
     if "type" in fields:
         s.type = fields["type"]
     if "duration_minutes" in fields:
@@ -689,12 +690,17 @@ def build_member_routines(db: Session, member_id: str) -> list[RoutineOut]:
     return build_routines(db, member_id, trainer_id)
 
 
+#: 회원 세션 목록 상한 — 시간이 지나며 누적되는 PT 세션을 최근 것 위주로 잘라 응답 크기를 묶는다.
+_MEMBER_SESSIONS_LIMIT = 100
+
+
 def build_member_sessions(db: Session, member_id: str) -> list[ScheduleSessionOut]:
-    """회원의 PT 세션(담당 트레이너 스케줄에서 나와 매칭된 것), 최신 날짜/시간 순."""
+    """회원의 PT 세션(담당 트레이너 스케줄에서 나와 매칭된 것), 최신 날짜/시간 순(최근 100건)."""
     rows = db.scalars(
         select(TrainerSchedule)
         .where(TrainerSchedule.member_id == member_id)
         .order_by(TrainerSchedule.date.desc(), TrainerSchedule.time.desc())
+        .limit(_MEMBER_SESSIONS_LIMIT)
     ).all()
     return [_schedule_out(s) for s in rows]
 

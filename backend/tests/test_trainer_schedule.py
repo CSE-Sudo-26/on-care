@@ -65,6 +65,30 @@ def test_schedule_crud(client):
     assert client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token)).status_code == 404
 
 
+def test_schedule_update_member_id_empty_unassigns(client):
+    """빈 member_id 로 수정하면 배정 해제(NULL)로 저장 — ""는 FK 위반 500 이 아니라 200."""
+    token = _tok(client)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(), "time": "16:45", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT", "duration_minutes": 40,
+        },
+        headers=_h(token),
+    )
+    sid = c.json()["id"]
+    # 빈 member_id 로 수정 → FK 위반 500 이 아니라 200(NULL 로 배정 해제)
+    u = client.put(
+        f"/v1/trainer/schedule/{sid}", json={"member_id": ""}, headers=_h(token)
+    )
+    assert u.status_code == 200, u.text
+
+    # 배정 해제된 슬롯은 이후 완료해도 회원 운동기록으로 적재되지 않는다(member_id NULL)
+    done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    assert done.status_code == 200
+    client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
+
+
 def test_schedule_create_with_unlinked_member_404(client):
     token = _tok(client)
     r = client.post(
