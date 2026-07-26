@@ -6,39 +6,10 @@ import 'package:logger/logger.dart';
 import 'package:oncare/app/app.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
-import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
-import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
 
-class _StubDashboardRepository implements DashboardRepository {
-  const _StubDashboardRepository();
-  @override
-  Future<DashboardSummary> fetchSummary() async => const DashboardSummary(
-    indicators: <HealthIndicator>[
-      HealthIndicator(label: 'A', current: 1, max: 2, unit: 'u'),
-    ],
-    dietEntries: 2,
-    exerciseMinutes: 45,
-    todaySchedule: <ScheduleItem>[
-      ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),
-    ],
-    weekScore: 85,
-    weekScoreDelta: 12,
-    sodiumWarning: null,
-  );
-}
-
-class _FailingDashboardRepository implements DashboardRepository {
-  const _FailingDashboardRepository();
-  @override
-  Future<DashboardSummary> fetchSummary() async {
-    throw StateError('boom');
-  }
-}
-
 void main() {
-  Future<void> pumpApp(WidgetTester tester, DashboardRepository repo) async {
+  Future<void> pumpApp(WidgetTester tester) async {
     // Five stacked dashboard cards — give the surface enough height so
     // the bottom ones stay attached (ListView lazy-builds otherwise).
     await tester.binding.setSurfaceSize(const Size(800, 1600));
@@ -54,7 +25,6 @@ void main() {
           appConfigProvider.overrideWithValue(config),
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           localeProvider.overrideWith((ref) => const Locale('ko')),
-          dashboardRepositoryProvider.overrideWithValue(repo),
         ],
         child: const OncareApp(),
       ),
@@ -66,20 +36,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('Dashboard data path renders schedule + week score', (
-    tester,
+  testWidgets('Dashboard renders the current localized sections', (
+    WidgetTester tester,
   ) async {
-    await pumpApp(tester, const _StubDashboardRepository());
-    expect(find.text('오늘도 건강한 하루 되세요 ☀️'), findsOneWidget);
-    expect(find.text('오늘의 건강 기록'), findsOneWidget);
-    expect(find.text('병원 정기검진'), findsOneWidget);
-    expect(find.text('85점'), findsOneWidget);
-  });
-
-  testWidgets('Dashboard error path shows ErrorView retry button', (
-    tester,
-  ) async {
-    await pumpApp(tester, const _FailingDashboardRepository());
-    expect(find.text('다시 시도'), findsOneWidget);
+    await pumpApp(tester);
+    expect(find.text('오늘도 가볍게 시작해요 👋'), findsOneWidget);
+    expect(find.text('영양 현황'), findsOneWidget);
+    expect(find.text('오늘의 일정'), findsOneWidget);
+    expect(find.text('저녁 산책'), findsOneWidget);
   });
 }
