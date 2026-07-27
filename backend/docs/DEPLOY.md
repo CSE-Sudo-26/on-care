@@ -1,8 +1,8 @@
 # 백엔드 배포 가이드 — AWS App Runner + RDS(pgvector)
 
 컨테이너 + Postgres(pgvector) 구조라 **App Runner + RDS PostgreSQL** 조합을 권장한다
-(HTTPS 자동, 운영 부담 최소). CI 는 `main` push 시 이미지를 ECR 에 올리고 App Runner 를
-재배포한다(`.github/workflows/backend-deploy.yml`).
+(HTTPS 자동, 운영 부담 최소). `main`의 Backend CI가 성공하면 해당 커밋 이미지를 ECR에 올리고,
+불변 digest로 App Runner 소스를 갱신한다(`.github/workflows/backend-deploy.yml`).
 
 ```
 GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:8000, /v1/healthz)
@@ -18,12 +18,13 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
 **배포 게이팅**: `.github/workflows/backend-deploy.yml` 은 **"Backend CI" 가 성공**했을 때만
 (workflow_run) 실행되어, 테스트/마이그레이션 실패 커밋이 운영에 배포되지 않는다. Backend CI 는
 `alembic heads` 가 **정확히 1개**인지 검사해 마이그레이션 head 분기(선형화 누락)를 막는다.
-배포 잡은 `concurrency` 로 한 번에 하나만 돌고, `start-deployment` 후 App Runner 상태와
+배포 잡은 `concurrency` 로 한 번에 하나만 돌고, `update-service`가 반환한 정확한 OperationId와
 `/v1/healthz` 를 폴링해 **실제 배포·기동 성공까지 확인**한 뒤 워크플로우를 통과시킨다.
 
-> ⚠️ **수동 실행 주의**: `workflow_dispatch` 로 수동 트리거하면 **CI 성공 게이트를 우회**해
-> 현재 ref 를 그대로 배포한다(리포 write 권한자만 가능). 최초 배포/긴급 롤백 용도로만 쓰고,
-> 반드시 로컬에서 `alembic upgrade head` + `pytest` 를 통과시킨 커밋에서만 사용한다.
+**수동 실행**도 CI 게이트를 우회하지 않는다. `main`에서 워크플로우를 실행하며 배포할 40자리
+커밋 SHA를 입력해야 하고, 워크플로우가 GitHub Actions API에서 그 SHA의 `main` push에 대한
+`Backend CI` 성공 기록을 확인한 뒤에만 배포한다. 따라서 최초 배포나 롤백도 이미 CI를 통과한
+`main` 커밋 중에서 선택해야 한다.
 
 ---
 
@@ -64,21 +65,24 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ## 4) App Runner 서비스
 
-- 소스: ECR 이미지, 포트 `8000`. CI 는 매 배포마다 **커밋 SHA 태그** 이미지(`oncare-backend:<sha>`)와
-  `:latest` 를 함께 push 한다.
-- **배포 방식(권장)**: CI 가 push 직후 `start-deployment` 로 트리거하고 완료·헬스까지 확인한다.
-  App Runner 자동배포를 `:latest` 로 켜두면 **다른 push 가 먼저 `:latest` 를 덮을 때 CI 통과 SHA 가
-  아닌 이미지가 나갈 수 있으므로**, 정확성이 중요하면 App Runner 소스 이미지를 `:latest` 대신
-  **커밋 SHA 태그(또는 digest)** 로 지정하고 CI 가 그 이미지 식별자를 갱신하도록 두는 편이 안전하다.
+- 소스: ECR 이미지, 포트 `8000`. CI는 **커밋 SHA 태그** 이미지(`oncare-backend:<sha>`)만 push하고
+  ECR에서 그 이미지의 digest를 조회한다. 가변 `:latest` 태그는 만들거나 배포하지 않는다.
+- **배포 방식**: CI가 `update-service`로 App Runner의
+  `SourceConfiguration.ImageRepository.ImageIdentifier`를 `oncare-backend@sha256:...` 형식의
+  불변 digest로 갱신하고 자동배포를 끈다. 기존 이미지 환경변수·시크릿·ECR 액세스 역할은
+  `describe-service` 결과에서 보존한다.
+- 워크플로우는 `update-service`의 OperationId를 `list-operations`로 추적하고, 성공 후 서비스에
+  설정된 이미지 식별자가 요청한 digest와 같은지도 검증한다.
 - 헬스체크: HTTP `GET /v1/healthz`.
 - 환경변수: 위 표(민감값은 Secrets 참조).
 - 컨테이너가 기동 시 마이그레이션을 수행하므로 별도 마이그레이션 스텝 불필요.
 
 ## 5) CI 용 GitHub Secrets & IAM 역할
 
-- `AWS_DEPLOY_ROLE_ARN` — GitHub OIDC 로 assume 하는 IAM 역할. 필요 권한: ECR push
+- `AWS_DEPLOY_ROLE_ARN` — GitHub OIDC 로 assume 하는 IAM 역할. 필요 권한: ECR push 및 digest 조회
   (`ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:PutImage`,
-  `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`) + `apprunner:StartDeployment`,
+  `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`,
+  `ecr:DescribeImages`) + `apprunner:UpdateService`, `apprunner:ListOperations`,
   `apprunner:DescribeService`.
 - `APPRUNNER_SERVICE_ARN` — 배포 대상 App Runner 서비스 ARN.
 - **App Runner ECR 액세스 역할(별도)**: App Runner 가 **private ECR 에서 이미지를 pull** 하려면
