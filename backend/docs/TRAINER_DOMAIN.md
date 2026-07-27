@@ -46,6 +46,8 @@
 - **`UNIQUE(member_id) WHERE active`** (partial unique index
   `uq_trainer_client_active_member`) — 회원측 API가 "현재 담당 코치 **1명**"을 전제하므로,
   회원당 **active 링크는 최대 1개**로 강제한다. 휴면(`active=false`) 이력은 여러 개 허용.
+  이 인덱스는 `0012` 테이블 생성을 수정하지 않고 별도 `0013_trainer_active_coach_uq`
+  마이그레이션으로 추가한다(이미 `0012`가 적용된 DB 에서도 확실히 생성되도록).
 
 > 정책이 복수 담당으로 바뀌면 이 인덱스를 제거하고 회원측 코치·채팅·루틴 API를
 > **목록 기반**으로 바꿔야 한다(현재는 단일 담당 가정).
@@ -127,5 +129,6 @@
 
 트레이너 마이그레이션은 스택이 **가장 마지막에 머지**되므로 병렬로 갈라졌던 번호를
 재선형화했다: `0010_diet_entry_macros`(#207) → `0011_health_daily_sugar_g`(#230/#231)
-→ **`0012_trainer_domain`**. 반드시 앞 둘이 main에 반영된 뒤 머지해야 alembic 단일 head가
-유지된다. 자세한 배포/마이그레이션 절차는 배포 문서를 참고.
+→ **`0012_trainer_domain`**(도메인 테이블) → **`0013_trainer_active_coach_uq`**(회원당
+active 담당 1명 partial unique index). 반드시 `0010`·`0011`이 main에 반영된 뒤 머지해야
+alembic 단일 head가 유지된다. 자세한 배포/마이그레이션 절차는 배포 문서를 참고.
