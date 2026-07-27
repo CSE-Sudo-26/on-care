@@ -18,6 +18,12 @@ GitHub(main push) ──> Actions ──> ECR(이미지) ──> App Runner(:800
 **배포 게이팅**: `.github/workflows/backend-deploy.yml` 은 **"Backend CI" 가 성공**했을 때만
 (workflow_run) 실행되어, 테스트/마이그레이션 실패 커밋이 운영에 배포되지 않는다. Backend CI 는
 `alembic heads` 가 **정확히 1개**인지 검사해 마이그레이션 head 분기(선형화 누락)를 막는다.
+배포 잡은 `concurrency` 로 한 번에 하나만 돌고, `start-deployment` 후 App Runner 상태와
+`/v1/healthz` 를 폴링해 **실제 배포·기동 성공까지 확인**한 뒤 워크플로우를 통과시킨다.
+
+> ⚠️ **수동 실행 주의**: `workflow_dispatch` 로 수동 트리거하면 **CI 성공 게이트를 우회**해
+> 현재 ref 를 그대로 배포한다(리포 write 권한자만 가능). 최초 배포/긴급 롤백 용도로만 쓰고,
+> 반드시 로컬에서 `alembic upgrade head` + `pytest` 를 통과시킨 커밋에서만 사용한다.
 
 ---
 
@@ -58,16 +64,28 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ## 4) App Runner 서비스
 
-- 소스: ECR 이미지(`oncare-backend:latest`), 포트 `8000`.
+- 소스: ECR 이미지, 포트 `8000`. CI 는 매 배포마다 **커밋 SHA 태그** 이미지(`oncare-backend:<sha>`)와
+  `:latest` 를 함께 push 한다.
+- **배포 방식(권장)**: CI 가 push 직후 `start-deployment` 로 트리거하고 완료·헬스까지 확인한다.
+  App Runner 자동배포를 `:latest` 로 켜두면 **다른 push 가 먼저 `:latest` 를 덮을 때 CI 통과 SHA 가
+  아닌 이미지가 나갈 수 있으므로**, 정확성이 중요하면 App Runner 소스 이미지를 `:latest` 대신
+  **커밋 SHA 태그(또는 digest)** 로 지정하고 CI 가 그 이미지 식별자를 갱신하도록 두는 편이 안전하다.
 - 헬스체크: HTTP `GET /v1/healthz`.
 - 환경변수: 위 표(민감값은 Secrets 참조).
-- 자동배포: ECR `:latest` push 시 재배포(또는 CI 의 `start-deployment` 로 트리거).
 - 컨테이너가 기동 시 마이그레이션을 수행하므로 별도 마이그레이션 스텝 불필요.
 
-## 5) CI 용 GitHub Secrets
+## 5) CI 용 GitHub Secrets & IAM 역할
 
-- `AWS_DEPLOY_ROLE_ARN` — GitHub OIDC 로 assume 하는 IAM 역할(ECR push + `apprunner:StartDeployment`).
+- `AWS_DEPLOY_ROLE_ARN` — GitHub OIDC 로 assume 하는 IAM 역할. 필요 권한: ECR push
+  (`ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:PutImage`,
+  `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`) + `apprunner:StartDeployment`,
+  `apprunner:DescribeService`.
 - `APPRUNNER_SERVICE_ARN` — 배포 대상 App Runner 서비스 ARN.
+- **App Runner ECR 액세스 역할(별도)**: App Runner 가 **private ECR 에서 이미지를 pull** 하려면
+  서비스의 `AuthenticationConfiguration.AccessRoleArn` 에 지정하는 IAM 역할이 필요하다.
+  신뢰 주체 `build.apprunner.amazonaws.com`, 정책은 `ecr:GetAuthorizationToken`(리소스 `*`) +
+  `ecr:BatchGetImage`·`ecr:GetDownloadUrlForLayer`·`ecr:BatchCheckLayerAvailability`·`ecr:DescribeImages`
+  (해당 리포 리소스). 이 역할이 없으면 배포/기동 시 이미지 pull 이 실패한다.
 
 ## 6) 프론트 연결
 
@@ -81,15 +99,23 @@ flutter build web --release \
 
 ---
 
-## ⚠️ 마이그레이션 head 선형화 (머지 순서 주의)
+## 마이그레이션 head 선형화 (머지 순서 주의)
 
-트레이너 도메인 마이그레이션(`0010_trainer_domain`)과 `backend-diet-macros`의
-`0010_diet_entry_macros` 가 **둘 다 0009 에서 분기**한다. 둘 다 머지되면 Alembic head 가
-2개가 되어 `alembic upgrade head` 가 실패한다.
+병렬 브랜치가 같은 부모에서 각자 새 마이그레이션을 만들면 Alembic head 가 여러 개가 되어
+`alembic upgrade head` 가 실패한다. 현재는 아래처럼 **단일 선형 체인**으로 정리돼 있다:
 
-**나중에 머지되는 쪽**이 자기 마이그레이션의 `down_revision` 을 상대 head 로 바꿔 선형화한다
-(1줄 + 파일명 `0011_` 정리). 예: diet-macros 가 먼저 머지되면 트레이너 마이그레이션을
-`down_revision = "0010_diet_entry_macros"` 로.
+```
+0009_diet_idempotency_key → 0010_diet_entry_macros(#207) → 0011_health_daily_sugar_g(#231)
+                          → 0012_trainer_domain(트레이너 스택)
+```
+
+**원칙**: 나중에 머지되는 마이그레이션의 `down_revision` 을 현재 main head 로 맞춰 한 줄로 잇는다
+(파일명 숫자도 위치에 맞게). 트레이너 스택은 위 순서대로 **가장 마지막**에 머지한다.
+
+> 단, **한쪽 브랜치가 이미 staging/production DB 에 적용된 뒤**라면 위 "down_revision 만 바꾸기"를
+> 쓰면 안 된다. 먼저 `alembic current` 로 그 DB 의 현재 revision 을 확인하고, 이미 적용된 경우
+> `alembic merge` 로 병합 revision 을 만들거나 실제 적용 상태에 맞춰 head 를 선형화한다.
+> CI 의 single-head 검사(`alembic heads` == 1)로 분기 재발을 막는다.
 
 ---
 

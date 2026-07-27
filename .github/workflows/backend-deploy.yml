@@ -19,6 +19,12 @@ permissions:
   id-token: write   # OIDC 로 AWS 자격 취득
   contents: read
 
+# 배포는 한 번에 하나만(동시 배포가 :latest 를 앞다퉈 덮어써 잘못된 이미지가 나가는 것 방지).
+# 진행 중 배포는 취소하지 않고 큐잉한다(배포 중단 방지).
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: oncare-backend
@@ -31,20 +37,22 @@ jobs:
       ${{ github.event_name == 'workflow_dispatch' ||
           github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: actions/checkout@v4
+      # 배포 권한(OIDC)을 쓰는 스텝의 외부 action 은 이동 가능한 태그가 아니라 불변 커밋 SHA 로 핀한다
+      # (공급망 변경 리스크 완화). 뒤 주석은 원 버전. 갱신 시 GitHub API 로 태그→커밋 SHA 재조회.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # CI 를 통과한 정확한 커밋을 배포(workflow_dispatch 는 현재 ref).
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2
 
       - name: Build and push image
         working-directory: backend
@@ -59,7 +67,32 @@ jobs:
           docker push "$IMAGE"
           docker push "$LATEST"
 
-      - name: Trigger App Runner deployment
+      - name: Deploy to App Runner and wait for health
+        env:
+          SVC: ${{ secrets.APPRUNNER_SERVICE_ARN }}
         run: |
-          aws apprunner start-deployment \
-            --service-arn "${{ secrets.APPRUNNER_SERVICE_ARN }}"
+          set -euo pipefail
+          OP=$(aws apprunner start-deployment --service-arn "$SVC" --query OperationId --output text)
+          echo "started deployment operation: $OP"
+          # 배포 완료까지 서비스 status 폴링 (OPERATION_IN_PROGRESS -> RUNNING). 최대 ~10분.
+          for i in $(seq 1 40); do
+            STATUS=$(aws apprunner describe-service --service-arn "$SVC" \
+              --query 'Service.Status' --output text)
+            echo "[$i] service status: $STATUS"
+            case "$STATUS" in
+              RUNNING) break ;;
+              OPERATION_IN_PROGRESS) sleep 15 ;;
+              *) echo "::error::예상치 못한 App Runner 상태: $STATUS"; exit 1 ;;
+            esac
+            if [ "$i" -eq 40 ]; then echo "::error::배포가 시간 내 완료되지 않음"; exit 1; fi
+          done
+          # 실제 서비스가 응답하는지 /v1/healthz 로 확인(개시 성공≠배포 성공).
+          URL=$(aws apprunner describe-service --service-arn "$SVC" \
+            --query 'Service.ServiceUrl' --output text)
+          for i in $(seq 1 10); do
+            if curl -fsS "https://$URL/v1/healthz" > /dev/null; then
+              echo "healthz OK -> deploy verified"; exit 0
+            fi
+            echo "healthz not ready, retry $i"; sleep 10
+          done
+          echo "::error::배포 후 /v1/healthz 가 응답하지 않음"; exit 1
