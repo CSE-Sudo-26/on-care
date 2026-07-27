@@ -50,6 +50,12 @@ def get_current_user(
             user_id = decode_access_token(token)
             user = db.scalar(select(User).where(User.id == user_id))
             if user is not None:
+                if not user.is_active:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="인증이 필요합니다.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
                 # 회원 전용 API. 트레이너 계정은 /trainer/* 를 쓴다(역할 분리).
                 if user.role == "trainer":
                     raise HTTPException(

@@ -1,6 +1,8 @@
 """트레이너 스케줄 CRUD + 예약→수업→기록 완료 루프(#252). DB 필요."""
 from __future__ import annotations
 
+import pytest
+
 
 def _tok(client) -> str:
     return client.post(
@@ -96,6 +98,35 @@ def test_schedule_update_member_id_empty_unassigns(client, db_session):
     assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is None
 
     client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["time", "client_name", "type", "duration_minutes", "note", "program"],
+)
+def test_schedule_update_rejects_null_for_non_nullable_fields(client, field):
+    """명시적 null이 NOT NULL 컬럼까지 도달해 500을 만들지 않고 API 경계에서 422가 된다."""
+    token = _tok(client)
+    c = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": _today(),
+            "time": "16:50",
+            "client_name": "이지수",
+            "member_id": "user-jisu",
+            "type": "1:1 PT",
+            "duration_minutes": 40,
+        },
+        headers=_h(token),
+    )
+    assert c.status_code == 201, c.text
+
+    r = client.put(
+        f"/v1/trainer/schedule/{c.json()['id']}",
+        json={field: None},
+        headers=_h(token),
+    )
+    assert r.status_code == 422, r.text
 
 
 def test_delete_completed_session_removes_derived_history(client, db_session):

@@ -241,7 +241,11 @@ def login(
     db: Annotated[Session, Depends(get_db)],
 ) -> Token:
     user = db.scalar(select(User).where(User.email == form.username))
-    if not user or not verify_password(form.password, user.hashed_password):
+    if (
+        not user
+        or not user.is_active
+        or not verify_password(form.password, user.hashed_password)
+    ):
         audit(db, event="auth.login", ip=client_ip(request), success=False, detail=form.username)
         raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
     audit(db, event="auth.login", user_id=user.id, ip=client_ip(request), success=True)

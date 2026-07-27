@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date as _date, datetime as _datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def _validate_ymd(v: str) -> str:
@@ -184,6 +184,19 @@ class ScheduleUpdateRequest(BaseModel):
     @classmethod
     def _v_time(cls, v: str | None) -> str | None:
         return _validate_hhmm(v) if v is not None else v
+
+    @model_validator(mode="after")
+    def _reject_null_for_non_nullable_fields(self) -> ScheduleUpdateRequest:
+        """부분 수정에서 명시적 null은 member_id(배정 해제)에만 허용한다.
+
+        나머지 필드는 DB NOT NULL 컬럼이므로 null을 그대로 반영하면 IntegrityError 500이
+        발생한다. 누락은 변경 없음, member_id null은 배정 해제, 그 외 null은 422로 구분한다.
+        """
+        nullable = {"member_id"}
+        for field in self.model_fields_set - nullable:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
 
 
 class ScheduleCompleteRequest(BaseModel):
