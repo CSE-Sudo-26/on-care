@@ -1,0 +1,86 @@
+name: Trainer CI
+
+# 트레이너 Flutter 앱(frontend/flutter_trainer) 전용 PR/main CI.
+# 배포(GitHub Pages, /trainer/)는 deploy.yml(#233)이 담당하고, 이 워크플로우는
+# PR 단계에서 analyze/test + Drift WASM 포함 웹 빌드를 검증한다(#185 잔여 작업).
+on:
+  pull_request:
+    paths:
+      - "frontend/flutter_trainer/**"
+      - ".github/workflows/trainer-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/flutter_trainer/**"
+      - ".github/workflows/trainer-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trainer-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/flutter_trainer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  web-build:
+    name: Build trainer web with Drift WASM
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    defaults:
+      run:
+        working-directory: frontend/flutter_trainer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 웹 빌드 전에 반드시 Drift 런타임(sqlite3.wasm + drift_worker.js)을 web/ 로 받아야 한다.
+      - name: Download Drift WASM runtime
+        run: bash tool/fetch_drift_wasm.sh
+
+      - name: Verify Drift runtime files (source web/)
+        run: |
+          test -s web/sqlite3.wasm
+          test -s web/drift_worker.js
+
+      - name: Build trainer web
+        run: flutter build web --release --base-href "/trainer/"
+
+      # 다운로드뿐 아니라 최종 산출물에도 두 파일이 포함됐는지 확인(배포 시 404 방지).
+      - name: Verify built Drift runtime files (build/web/)
+        run: |
+          test -s build/web/sqlite3.wasm
+          test -s build/web/drift_worker.js
