@@ -21,25 +21,47 @@ def test_prod_blocks_default_secret():
         Settings(_env_file=None, env="prod", jwt_secret=DEFAULT_JWT_SECRET)
 
 
-def test_prod_ok_with_real_secret():
-    s = Settings(
+def _prod(**kw) -> Settings:
+    """운영 정상 설정 헬퍼 — Alembic 이 스키마 소스이므로 auto_create_tables=False 명시."""
+    base = dict(
         _env_file=None, env="prod",
         jwt_secret="a-strong-random-secret-value",
         cors_allow_origins="https://app.oncare.com",
-        seed_demo_data=False,  # 운영 권장: 데모 시드 끔(켜려면 DEMO_LOGIN_PASSWORD 강제)
+        seed_demo_data=False,       # 운영 권장: 데모 시드 끔(켜려면 DEMO_LOGIN_PASSWORD 강제)
+        auto_create_tables=False,   # 운영은 Alembic 이 스키마 소스
     )
+    base.update(kw)
+    return Settings(**base)
+
+
+def test_prod_ok_with_real_secret():
+    s = _prod()
     assert s.is_prod is True
+    assert s.auto_create_tables is False
+
+
+def test_prod_blocks_auto_create_tables():
+    """운영에서 AUTO_CREATE_TABLES=true 면 기동 거부(Alembic 만 스키마 소스)."""
+    with pytest.raises(ValidationError):
+        _prod(auto_create_tables=True)
+
+
+def test_dev_keeps_auto_create_tables():
+    """개발에서는 create_all 편의 유지(기본 True)."""
+    assert Settings(_env_file=None).auto_create_tables is True
+
+
+def test_log_level_rejects_invalid():
+    """LOG_LEVEL 은 허용값만(임의 문자열 금지)."""
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, log_level="LOUD")
+    assert Settings(_env_file=None, log_level="DEBUG").log_level == "DEBUG"
 
 
 def test_demo_fallback_gated_by_env():
     # 개발: 기본 허용
     assert Settings(_env_file=None).demo_fallback_enabled is True
-    # 운영: 설정과 무관하게 비활성
-    prod = Settings(
-        _env_file=None, env="prod", jwt_secret="strong",
-        cors_allow_origins="https://app.oncare.com", allow_demo_fallback=True,
-        seed_demo_data=False,
-    )
-    assert prod.demo_fallback_enabled is False
+    # 운영: 설정과 무관하게 비활성(_prod 헬퍼가 seed/auto_create 가드를 모두 만족)
+    assert _prod(allow_demo_fallback=True).demo_fallback_enabled is False
     # 명시적으로 끄면 개발에서도 비활성
     assert Settings(_env_file=None, allow_demo_fallback=False).demo_fallback_enabled is False
