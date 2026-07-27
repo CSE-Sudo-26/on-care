@@ -24,7 +24,8 @@
 - 두 앱은 로그인 계정이 다르다. **앱 내 역할 전환 기능은 없다.**
 - 인증 의존성(`app/api/deps.py`):
   - `get_current_user` — 토큰 있으면 그 사용자, 없으면 데모 회원(회원 앱 계약 유지).
-    단, **trainer 역할이 회원 데이터 엔드포인트로 새어들지 않도록** 트레이너 계정엔 403.
+    단, 비활성 계정은 기존 토큰을 포함해 401이며, **trainer 역할이 회원 데이터
+    엔드포인트로 새어들지 않도록** 트레이너 계정엔 403.
   - `RequireTrainer` / `require_trainer` — 트레이너 전용 라우터 가드(회원 계정 403).
   - `RequireMember` / `require_member` — 회원 전용 라우터 가드.
 
@@ -75,7 +76,7 @@
 
 ### 로스터 집계 (`build_roster`)
 
-- 회원별 최신 식단/루틴/기록/미확인수를 **배치 조회**한다(N+1 방지).
+- 회원별 식단·기록과 최신 메시지·루틴을 **배치 조회**한다(N+1 방지).
   `chat_messages`·`trainer_routines`의 회원별 최신 1건은 **`DISTINCT ON (member_id)`**로 한 번에.
 - `last_routine` 라벨은 `created_at`(UTC 저장)을 **시스템 로컬 시각으로 변환**해 계산한다
   (`_local_date_iso` → `astimezone().date()`). UTC `.date()`로 계산하면 자정 근처에서
@@ -92,7 +93,8 @@
   조건부 `UPDATE ... WHERE status='예정'` + `rowcount==1` 게이트로 **동시 완료 요청의
   중복 기록을 방지**. 기록 id는 슬롯 기준 결정론적(`sched-hist-{id}`)이라 재호출에도 멱등.
 - **수정(`update_session`)**: `완료` 세션 수정은 **409**(기록과 스케줄이 어긋나지 않게).
-  `member_id=""`는 '배정 해제'로 해석해 **NULL** 저장(빈 문자열의 FK 위반 500 방지).
+  `member_id=""` 또는 명시적 `null`은 '배정 해제'로 해석해 **NULL** 저장한다.
+  DB `NOT NULL`인 나머지 필드의 명시적 `null`은 요청 경계에서 **422**로 거부한다.
 - **삭제(`delete_session`)**: `완료` 세션을 지우면 파생된 `sched-hist-{id}` 운동기록도
   **함께 삭제**(고아 레코드 방지 — 완료 시 적재의 역연산).
 
