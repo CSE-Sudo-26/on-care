@@ -5,6 +5,11 @@ class AppBreakpoints {
   AppBreakpoints._();
   static const double tablet = 600;
   static const double desktop = 1024;
+
+  /// Max width of primary page/sheet content. The tab pages and every
+  /// bottom-sheet cap their content at this so they scale with the
+  /// viewport identically instead of drifting apart.
+  static const double contentMaxWidth = 720;
 }
 
 /// Coarse device form factor inferred from a width. Pages and shells

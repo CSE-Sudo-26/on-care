@@ -1069,7 +1069,7 @@ class _LogCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '$kcal ${l.unitKcal}',
+                l.unitKcalValue(kcal),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,

@@ -17,6 +17,7 @@ class MockAccountRepository implements AccountRepository {
     goalBloodSugar: 100,
     dailyCalories: 2000,
     dailySodiumMg: 2000,
+    dailySugarG: 50,
   );
 
   @override
@@ -53,5 +54,6 @@ class MockAccountRepository implements AccountRepository {
     int? goalBloodSugar,
     int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
   }) async => _demo;
 }

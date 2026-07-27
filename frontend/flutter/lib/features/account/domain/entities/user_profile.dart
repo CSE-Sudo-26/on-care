@@ -12,6 +12,7 @@ class UserProfile {
     this.goalBloodSugar,
     this.dailyCalories,
     this.dailySodiumMg,
+    this.dailySugarG,
   });
 
   final String id;
@@ -25,6 +26,9 @@ class UserProfile {
   final int? dailyCalories;
   final int? dailySodiumMg;
 
+  /// 일일 당류 제한(g). 홈 영양 현황의 목표 당류와 같은 값을 공유한다.
+  final int? dailySugarG;
+
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
     id: (json['id'] as String?) ?? '',
     name: (json['name'] as String?) ?? '',
@@ -36,5 +40,6 @@ class UserProfile {
     goalBloodSugar: (json['goal_blood_sugar'] as num?)?.toInt(),
     dailyCalories: (json['daily_calories'] as num?)?.toInt(),
     dailySodiumMg: (json['daily_sodium_mg'] as num?)?.toInt(),
+    dailySugarG: (json['daily_sugar_g'] as num?)?.toInt(),
   );
 }

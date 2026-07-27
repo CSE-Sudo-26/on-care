@@ -710,7 +710,7 @@ class _MealCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '${meal.total} ${l.unitKcal}',
+                      l.unitKcalValue(meal.total),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -778,7 +778,7 @@ class _MealCard extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    '${f.kcal} ${l.unitKcal}',
+                                    l.unitKcalValue(f.kcal),
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,

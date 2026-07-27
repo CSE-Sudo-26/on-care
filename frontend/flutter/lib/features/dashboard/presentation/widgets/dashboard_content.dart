@@ -587,7 +587,7 @@ class _DietSummaryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '/ 1,800 ${l.unitKcal}',
+                    '/ ${l.unitKcalValue(1800)}',
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
@@ -844,7 +844,7 @@ class _ChecklistRow extends StatelessWidget {
           ),
         ),
         Text(
-          '$minutes${l.unitMinutes}',
+          l.unitMinutesValue(minutes),
           style: const TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w500,
@@ -1032,20 +1032,25 @@ String _nutLabel(AppLocalizations l, _NutTabKind key) => switch (key) {
   _NutTabKind.sugar => l.dietSugar,
 };
 
-class _NutritionSection extends StatefulWidget {
+class _NutritionSection extends ConsumerStatefulWidget {
   const _NutritionSection();
 
   @override
-  State<_NutritionSection> createState() => _NutritionSectionState();
+  ConsumerState<_NutritionSection> createState() => _NutritionSectionState();
 }
 
-class _NutritionSectionState extends State<_NutritionSection> {
+class _NutritionSectionState extends ConsumerState<_NutritionSection> {
   _NutTabKind _tab = _NutTabKind.calories;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final _NutData cfg = _nutrition[_tab]!;
+    final int sugarGoal =
+        ref.watch(profileProvider).valueOrNull?.dailySugarG ?? 50;
+    final double goal = _tab == _NutTabKind.sugar
+        ? sugarGoal.toDouble()
+        : cfg.goal;
     final List<String> days = _weekDayLabels(l);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1188,7 +1193,7 @@ class _NutritionSectionState extends State<_NutritionSection> {
                 height: 62,
                 child: CustomPaint(
                   size: Size.infinite,
-                  painter: _NutritionChartPainter(cfg),
+                  painter: _NutritionChartPainter(cfg, goal),
                 ),
               ),
               const SizedBox(height: 4),
@@ -1229,7 +1234,7 @@ class _NutritionSectionState extends State<_NutritionSection> {
                   Expanded(
                     child: _StatTile(
                       label: l.homeGoal,
-                      value: cfg.goal,
+                      value: goal,
                       unit: cfg.unit,
                     ),
                   ),
@@ -1303,10 +1308,45 @@ class _NutTab extends StatelessWidget {
   }
 }
 
+/// Splits a resolved sentence into styled spans by locating each (already
+/// resolved) emphasis substring in order. Lets translators own the full
+/// sentence — word order, spacing, particles — while keeping per-segment
+/// styling. Falls back to plain text if a marker isn't found.
+List<InlineSpan> _emphasisSpans(String full, List<(String, TextStyle)> marks) {
+  final List<(int, String, TextStyle)> positioned =
+      <(int, String, TextStyle)>[];
+  for (final (String text, TextStyle style) in marks) {
+    if (text.isEmpty) continue;
+    final int index = full.indexOf(text);
+    if (index >= 0) positioned.add((index, text, style));
+  }
+  positioned.sort(
+    ((int, String, TextStyle) a, (int, String, TextStyle) b) =>
+        a.$1.compareTo(b.$1),
+  );
+
+  final List<InlineSpan> spans = <InlineSpan>[];
+  int cursor = 0;
+  for (final (int index, String text, TextStyle style) in positioned) {
+    if (index < cursor) continue;
+    if (index > cursor) {
+      spans.add(TextSpan(text: full.substring(cursor, index)));
+    }
+    spans.add(TextSpan(text: text, style: style));
+    cursor = index + text.length;
+  }
+  if (cursor < full.length) {
+    spans.add(TextSpan(text: full.substring(cursor)));
+  }
+  return spans;
+}
+
 class _SodiumInsight extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final String trend = l.homeSodiumInsightTrend;
+    final String alert = l.homeSodiumInsightAlert;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -1332,25 +1372,25 @@ class _SodiumInsight extends StatelessWidget {
                   color: FigmaColors.ink,
                   height: 1.5,
                 ),
-                children: <InlineSpan>[
-                  TextSpan(text: l.homeSodiumInsightPre),
-                  TextSpan(
-                    text: l.homeSodiumInsightTrend,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.orange,
+                children: _emphasisSpans(
+                  l.homeSodiumInsight(trend, alert),
+                  <(String, TextStyle)>[
+                    (
+                      trend,
+                      const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.orange,
+                      ),
                     ),
-                  ),
-                  TextSpan(text: l.homeSodiumInsightMid),
-                  TextSpan(
-                    text: l.homeSodiumInsightAlert,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
+                    (
+                      alert,
+                      const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.primary,
+                      ),
                     ),
-                  ),
-                  TextSpan(text: l.homeSodiumInsightPost),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1414,20 +1454,21 @@ class _ChartLegend extends StatelessWidget {
 }
 
 class _NutritionChartPainter extends CustomPainter {
-  _NutritionChartPainter(this.cfg);
+  _NutritionChartPainter(this.cfg, this.goal);
   final _NutData cfg;
+  final double goal;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double maxVal =
-        <double>[...cfg.cur, ...cfg.prev].reduce(math.max) * 1.12;
+        <double>[...cfg.cur, ...cfg.prev, goal].reduce(math.max) * 1.12;
     final double w = size.width;
     final double h = size.height;
     Offset at(int i, double v) =>
         Offset((i / (cfg.cur.length - 1)) * w, h - (v / maxVal) * h);
 
     // Goal line.
-    final double gy = h - (cfg.goal / maxVal) * h;
+    final double gy = h - (goal / maxVal) * h;
     _dashLine(
       canvas,
       Offset(0, gy),
@@ -1508,7 +1549,8 @@ class _NutritionChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NutritionChartPainter old) => old.cfg != cfg;
+  bool shouldRepaint(covariant _NutritionChartPainter old) =>
+      old.cfg != cfg || old.goal != goal;
 }
 
 class _DeltaTile extends StatelessWidget {
@@ -1689,6 +1731,14 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagLowCal,
     FigmaColors.sugarPurple,
   ),
+  _RecMeal(
+    '🥬',
+    l.homeMealNamulBibimbap,
+    l.homeMealReasonFiber,
+    const Color(0xFFEFF7ED),
+    l.homeMealTagHighFiber,
+    FigmaColors.greenText,
+  ),
 ];
 
 class _RecommendedMeals extends StatelessWidget {
@@ -1731,7 +1781,7 @@ class _RecommendedMeals extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 158,
+          height: 164,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1776,50 +1826,58 @@ class _RecMealCard extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(meal.emoji, style: const TextStyle(fontSize: 32)),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  meal.name,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.ink,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  meal.reason,
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w500,
-                    color: FigmaColors.textMuted,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: meal.tagColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    meal.tag,
-                    style: TextStyle(
-                      fontSize: 9,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    meal.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: meal.tagColor,
+                      color: FigmaColors.ink,
+                      height: 1.3,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    meal.reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w500,
+                      color: FigmaColors.textMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: meal.tagColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      meal.tag,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: meal.tagColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

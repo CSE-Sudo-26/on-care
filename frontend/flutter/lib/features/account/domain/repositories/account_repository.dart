@@ -37,5 +37,6 @@ abstract class AccountRepository {
     int? goalBloodSugar,
     int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
   });
 }

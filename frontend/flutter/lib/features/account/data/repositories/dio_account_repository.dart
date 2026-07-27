@@ -73,6 +73,7 @@ class DioAccountRepository implements AccountRepository {
     int? goalBloodSugar,
     int? dailyCalories,
     int? dailySodiumMg,
+    int? dailySugarG,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/users/me/health-goals',
@@ -82,6 +83,7 @@ class DioAccountRepository implements AccountRepository {
         'goal_blood_sugar': ?goalBloodSugar,
         'daily_calories': ?dailyCalories,
         'daily_sodium_mg': ?dailySodiumMg,
+        'daily_sugar_g': ?dailySugarG,
       },
     );
     return UserProfile.fromJson(res.data!);

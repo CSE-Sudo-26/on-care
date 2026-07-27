@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -208,7 +209,10 @@ class _RecordAddSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
+        // Match the main content width so the sheet scales with the viewport
+        // like the tab pages. The theme lifts the modal route cap to this
+        // width too (see AppTheme._bottomSheetTheme); this centres the child.
+        constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
