@@ -51,6 +51,32 @@ def test_global_500_hides_detail_and_carries_request_id():
     assert r.headers.get("X-Request-ID") == "trace-abc"
 
 
+def test_access_log_carries_request_id_on_success(client):
+    """정상 200 응답의 액세스 로그에도 request_id 가 실려야 한다(reset 전에 로그).
+
+    로그·헤더가 request_id_ctx.reset() 이후에 실행되면 로그 request_id 가 '-' 가 되어
+    상관관계가 끊긴다 — 그 회귀를 막는다.
+    """
+    import io
+    import logging
+
+    from app.core.observability import RequestIdLogFilter
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("[%(request_id)s] %(message)s"))
+    handler.addFilter(RequestIdLogFilter())  # contextvar 에서 request_id 주입
+    access = logging.getLogger("app.access")
+    access.addHandler(handler)
+    access.setLevel(logging.INFO)
+    try:
+        client.get("/v1/healthz", headers={"X-Request-ID": "trace-log-1"})
+    finally:
+        access.removeHandler(handler)
+    out = stream.getvalue()
+    assert "[trace-log-1]" in out  # reset 이전에 로그 → rid 가 '-' 가 아님
+
+
 def test_readyz_ok(client):
     r = client.get("/v1/readyz")
     assert r.status_code == 200

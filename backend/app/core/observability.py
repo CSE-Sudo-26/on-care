@@ -35,8 +35,12 @@ def new_request_id() -> str:
 
 
 def _resolve_request_id(raw: str | None) -> str:
-    """외부 헤더 값은 형식 검증을 통과할 때만 재사용하고, 아니면 새로 생성한다."""
-    if raw and _REQUEST_ID_RE.match(raw):
+    """외부 헤더 값은 형식 검증을 통과할 때만 재사용하고, 아니면 새로 생성한다.
+
+    fullmatch 로 문자열 전체를 검사한다 — match+$ 는 'abc\\n' 처럼 끝의 개행 직전까지만
+    매치될 수 있어(로그 인젝션 여지) 안전하지 않다.
+    """
+    if raw and _REQUEST_ID_RE.fullmatch(raw):
         return raw
     return new_request_id()
 
@@ -72,22 +76,25 @@ def install(app: FastAPI) -> None:
         request.state.request_id = rid
         token = request_id_ctx.set(rid)
         start = time.monotonic()
+        # 액세스 로그·응답 헤더는 반드시 reset 이전에 처리한다 — reset 뒤에 로그하면
+        # contextvar 가 이미 '-' 라 로그의 request_id 가 비어 상관관계가 끊긴다.
+        # path 는 %r 로 남긴다 — 인코딩된 CR/LF 등이 로그 행을 깨거나 위조하지 못하게.
         try:
             response = await call_next(request)
+            duration_ms = (time.monotonic() - start) * 1000
+            # 민감정보(쿼리/바디/헤더)는 남기지 않는다 — method·path·상태·소요시간만.
+            logger.info(
+                "%s %r -> %d (%.1fms)",
+                request.method, request.url.path, response.status_code, duration_ms,
+            )
+            response.headers[_REQUEST_ID_HEADER] = rid
+            return response
         except Exception:
             duration_ms = (time.monotonic() - start) * 1000
-            # 민감정보(쿼리/바디/헤더)는 남기지 않는다 — method·path·소요시간만.
-            logger.info("%s %s -> 500 (%.1fms)", request.method, request.url.path, duration_ms)
+            logger.info("%s %r -> 500 (%.1fms)", request.method, request.url.path, duration_ms)
             raise
         finally:
             request_id_ctx.reset(token)
-        duration_ms = (time.monotonic() - start) * 1000
-        logger.info(
-            "%s %s -> %d (%.1fms)",
-            request.method, request.url.path, response.status_code, duration_ms,
-        )
-        response.headers[_REQUEST_ID_HEADER] = rid
-        return response
 
     @app.exception_handler(Exception)
     async def _unhandled_exception(request: Request, exc: Exception):
@@ -96,7 +103,7 @@ def install(app: FastAPI) -> None:
         try:
             # stack trace 는 서버 로그에만 한 번. 클라이언트엔 내부 상세를 노출하지 않는다.
             logging.getLogger("app.error").exception(
-                "unhandled error: %s %s", request.method, request.url.path
+                "unhandled error: %s %r", request.method, request.url.path
             )
         finally:
             request_id_ctx.reset(token)
