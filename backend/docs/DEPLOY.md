@@ -106,7 +106,7 @@ flutter build web --release \
 
 ```
 0009_diet_idempotency_key → 0010_diet_entry_macros(#207) → 0011_health_daily_sugar_g(#231)
-                          → 0012_trainer_domain(트레이너 스택)
+                          → 0012_trainer_domain(트레이너 도메인) → 0013_trainer_active_coach_uq(active 담당 unique index)
 ```
 
 **원칙**: 나중에 머지되는 마이그레이션의 `down_revision` 을 현재 main head 로 맞춰 한 줄로 잇는다
