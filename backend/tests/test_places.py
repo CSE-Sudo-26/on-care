@@ -45,6 +45,65 @@ def test_kakao_merges_all_categories_when_none(monkeypatch):
     kakao._cache.clear()
 
 
+def test_kakao_all_category_search_keeps_successful_groups(monkeypatch):
+    """전체 검색 중 일부 카테고리 실패가 성공한 카테고리 결과까지 버리지 않는다."""
+    import asyncio
+
+    from app.schemas.misc_api import PlaceOut
+    from app.services.places import kakao
+
+    kakao._cache.clear()
+
+    async def fake_search(client, lat, lng, category, radius_m, api_key):
+        if category == "medical":
+            raise RuntimeError("temporary provider failure")
+        return [
+            PlaceOut(
+                id=f"id-{category}",
+                name=category,
+                category=category,
+                address="서울",
+                distance_meters=10,
+                lat=lat,
+                lng=lng,
+            )
+        ]
+
+    monkeypatch.setattr(kakao, "_search_one", fake_search)
+    try:
+        out = asyncio.run(kakao.search_nearby(37.5, 127.0, None, 1000, "key"))
+        assert {place.category for place in out} == {
+            "fitness",
+            "healthy_food",
+            "pharmacy",
+        }
+    finally:
+        kakao._cache.clear()
+
+
+def test_kakao_single_category_failure_still_propagates(monkeypatch):
+    """단일 카테고리 실패는 라우터의 기존 시드 폴백 경로로 전달한다."""
+    import asyncio
+
+    import pytest
+
+    from app.services.places import kakao
+
+    kakao._cache.clear()
+
+    async def fail_search(*args, **kwargs):
+        raise RuntimeError("temporary provider failure")
+
+    monkeypatch.setattr(kakao, "_search_one", fail_search)
+    try:
+        with pytest.raises(RuntimeError, match="temporary provider failure"):
+            asyncio.run(
+                kakao.search_nearby(37.5, 127.0, "fitness", 1000, "key")
+            )
+    finally:
+        kakao._cache.clear()
+
+
 def test_kakao_docs_to_places_parsing():
     from app.services.places.kakao import docs_to_places
 
@@ -77,6 +136,16 @@ def test_use_kakao_resolution():
     assert _use_kakao(kakao_forced) is True
     assert _use_kakao(auto_with_key) is True
     assert _use_kakao(auto_no_key) is False
+
+
+def test_places_provider_rejects_unknown_value():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, places_provider="unknown")
 
 
 def test_places_fallback_to_seed_without_key(client):

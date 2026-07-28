@@ -58,6 +58,10 @@ def trainer_me(
         certs = json.loads(profile.certifications_json) if profile.certifications_json else []
     except json.JSONDecodeError:
         certs = []
+    if not isinstance(certs, list) or not all(
+        isinstance(cert, str) for cert in certs
+    ):
+        certs = []
 
     return TrainerMe(
         id=trainer.id,

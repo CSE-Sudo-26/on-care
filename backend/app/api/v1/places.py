@@ -72,8 +72,12 @@ async def places_nearby(
             if places:
                 return places
             # 결과 0건이면 시드로 폴백(데모가 비지 않도록)
-        except Exception:  # noqa: BLE001 — 외부 API 실패가 요청을 깨지 않도록 폴백
-            logger.warning("카카오 장소검색 실패 — 시드 데이터로 폴백", exc_info=True)
+        except Exception as exc:  # noqa: BLE001 — 외부 API 실패가 요청을 깨지 않도록 폴백
+            # httpx 예외 repr에는 사용자 좌표(x/y)가 포함된 요청 URL이 들어갈 수 있다.
+            logger.warning(
+                "카카오 장소검색 실패(%s) — 시드 데이터로 폴백",
+                type(exc).__name__,
+            )
     return _seed_nearby(db, lat, lng, category, radius_m)
 
 

@@ -8,6 +8,10 @@
 0012 가 이미 적용된 DB 에서도 이 마이그레이션이 새 revision 으로 반드시 실행되어
 ORM(모델 __table_args__)과 실제 DB 스키마가 어긋나지 않게 한다.
 
+기존 DB에 회원별 active 링크가 중복되어 있으면 인덱스 생성은 트랜잭션 안에서 실패한다.
+마이그레이션이 임의로 담당 관계를 비활성화하면 데이터 의미를 훼손할 수 있으므로 자동 정리하지
+않는다. 운영 적용 전 중복을 조회해 담당 관계를 확정한 뒤 실행해야 한다.
+
 Revision ID: 0013_trainer_active_coach_uq
 Revises: 0012_trainer_domain
 Create Date: 2026-07-27

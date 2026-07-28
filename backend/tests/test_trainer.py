@@ -44,6 +44,34 @@ def test_trainer_me_returns_profile(client):
     assert "생활스포츠지도사 2급" in body["certifications"]
 
 
+def test_trainer_me_treats_non_list_certifications_as_empty(client, db_session):
+    """유효한 JSON이더라도 배열이 아니면 응답 검증 500 대신 빈 자격 목록으로 정규화한다."""
+    from sqlalchemy import select
+
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import TrainerProfile
+
+    profile = db_session.scalar(
+        select(TrainerProfile).where(TrainerProfile.trainer_id == TRAINER_ID)
+    )
+    assert profile is not None
+    original = profile.certifications_json
+    profile.certifications_json = '{"unexpected": "object"}'
+    db_session.commit()
+
+    try:
+        token = _trainer_token(client)
+        response = client.get(
+            "/v1/trainer/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["certifications"] == []
+    finally:
+        profile.certifications_json = original
+        db_session.commit()
+
+
 def test_member_cannot_access_trainer_endpoint(client):
     token = _member_token(client)
     r = client.get("/v1/trainer/me", headers={"Authorization": f"Bearer {token}"})

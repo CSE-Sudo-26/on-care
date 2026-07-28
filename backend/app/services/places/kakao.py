@@ -107,12 +107,29 @@ async def search_nearby(
 
     categories = [category] if category else list(_CATEGORY_QUERY)
     async with httpx.AsyncClient(timeout=timeout) as client:
-        groups = await asyncio.gather(*[
-            _search_one(client, lat, lng, c, radius_m, api_key) for c in categories
-        ])
+        groups = await asyncio.gather(
+            *[
+                _search_one(client, lat, lng, c, radius_m, api_key)
+                for c in categories
+            ],
+            return_exceptions=True,
+        )
+
+    # 단일 카테고리 실패는 기존 계약대로 라우터까지 전파해 시드 폴백한다. 전체 검색은
+    # 한 카테고리의 일시 실패 때문에 성공한 나머지 결과까지 버리지 않도록 부분 허용한다.
+    if len(groups) == 1 and isinstance(groups[0], BaseException):
+        raise groups[0]
 
     # 병합 → id 중복 제거(가장 가까운 것 유지) → 거리순 → 상한 15
-    merged = sorted((p for g in groups for p in g), key=lambda p: p.distance_meters)
+    merged = sorted(
+        (
+            place
+            for group in groups
+            if not isinstance(group, BaseException)
+            for place in group
+        ),
+        key=lambda place: place.distance_meters,
+    )
     seen: set[str] = set()
     result: list[PlaceOut] = []
     for p in merged:
