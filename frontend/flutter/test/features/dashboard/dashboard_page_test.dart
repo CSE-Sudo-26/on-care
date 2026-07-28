@@ -31,8 +31,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     // The app now boots into the sign-in screen; enter demo mode to reach
-    // the dashboard.
-    await tester.tap(find.text('데모로 시작'));
+    // the dashboard. Scroll the button into view first (it sits below the
+    // fold on the compact test surface).
+    final demoButton = find.text('로그인 없이 데모 둘러보기');
+    await tester.ensureVisible(demoButton);
+    await tester.pumpAndSettle();
+    await tester.tap(demoButton);
     await tester.pumpAndSettle();
   }
 
@@ -41,7 +45,7 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('오늘도 가볍게 시작해요 👋'), findsOneWidget);
-    expect(find.text('영양 현황'), findsOneWidget);
+    expect(find.text('식단 · 영양'), findsOneWidget);
     expect(find.text('오늘의 일정'), findsOneWidget);
     expect(find.text('저녁 산책'), findsOneWidget);
   });

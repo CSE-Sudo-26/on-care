@@ -53,8 +53,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     // The app now boots into the sign-in screen; enter demo mode to reach
-    // the main app (Home tab).
-    await tester.tap(find.text('데모로 시작'));
+    // the main app (Home tab). The button sits below the fold on the compact
+    // test surface, so scroll it into view before tapping.
+    final demoButton = find.text('로그인 없이 데모 둘러보기');
+    await tester.ensureVisible(demoButton);
+    await tester.pumpAndSettle();
+    await tester.tap(demoButton);
     await tester.pumpAndSettle();
   }
 

@@ -1703,13 +1703,16 @@ class _RecMealCard extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(meal.emoji, style: const TextStyle(fontSize: 32)),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
                 Text(
                   meal.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -1718,13 +1721,17 @@ class _RecMealCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  meal.reason,
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w500,
-                    color: FigmaColors.textMuted,
-                    height: 1.4,
+                Flexible(
+                  child: Text(
+                    meal.reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w500,
+                      color: FigmaColors.textMuted,
+                      height: 1.4,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1747,6 +1754,7 @@ class _RecMealCard extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         ],
