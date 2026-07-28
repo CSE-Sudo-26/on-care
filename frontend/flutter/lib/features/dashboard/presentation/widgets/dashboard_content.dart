@@ -1331,12 +1331,17 @@ class _ChartLegend extends StatelessWidget {
         ),
         const Spacer(),
         // 목표 수치는 그래프 오른쪽 상단에 브랜드 블루로 크게 배치.
-        Text(
-          goalText,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.primary,
+        // 좁은 화면·영어 로케일에서 범례가 넘치지 않도록 Flexible+말줄임.
+        Flexible(
+          child: Text(
+            goalText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.primary,
+            ),
           ),
         ),
       ],
