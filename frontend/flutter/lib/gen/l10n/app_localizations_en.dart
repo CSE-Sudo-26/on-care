@@ -1173,4 +1173,160 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aicQuickReply3 => 'How are my blood sugar readings?';
+
+  @override
+  String get exConsultRequestTitle => 'Consultation Request';
+
+  @override
+  String get exGymConsultRequest => 'Request a Gym Consultation';
+
+  @override
+  String get exTrainerConsultRequest => 'Request a Trainer Consultation';
+
+  @override
+  String get exConsultPendingCta => 'Consultation Request Pending';
+
+  @override
+  String get exConsultTarget => 'Consultation Target';
+
+  @override
+  String get exGymConsultType => 'Gym Consultation';
+
+  @override
+  String get exTrainerConsultType => 'Trainer Consultation';
+
+  @override
+  String get exAssignedTrainer => 'Assigned Trainer';
+
+  @override
+  String get exTrainerAssignedLater =>
+      'The gym will confirm and assign a trainer';
+
+  @override
+  String get exExerciseGoal => 'Exercise Goal';
+
+  @override
+  String get exGoalWeightLoss => 'Weight Loss';
+
+  @override
+  String get exGoalStrength => 'Build Strength';
+
+  @override
+  String get exGoalFitness => 'Improve Fitness';
+
+  @override
+  String get exGoalPosture => 'Improve Posture';
+
+  @override
+  String get exGoalHealth => 'Health Management';
+
+  @override
+  String get exOptionOther => 'Other';
+
+  @override
+  String get exHealthPurpose => 'Health Management Purpose';
+
+  @override
+  String get exPurposeWeight => 'Weight Management';
+
+  @override
+  String get exPurposeChronic => 'Chronic Condition Management';
+
+  @override
+  String get exPurposeRehab => 'Pain or Rehabilitation';
+
+  @override
+  String get exPurposeGeneral => 'General Health Management';
+
+  @override
+  String get exPurposeNone => 'None';
+
+  @override
+  String get exHealthPurposeOtherHint =>
+      'For example, back rehabilitation, knee pain, or cholesterol management';
+
+  @override
+  String get exOtherGoalHint =>
+      'Please describe your specific exercise goal in the message.';
+
+  @override
+  String get exPreferredDate => 'Preferred Date';
+
+  @override
+  String get exSelectDate => 'Select a date';
+
+  @override
+  String get exPreferredTime => 'Preferred Time';
+
+  @override
+  String get exTimeMorning => 'Morning';
+
+  @override
+  String get exTimeAfternoon => 'Afternoon';
+
+  @override
+  String get exTimeEvening => 'Evening';
+
+  @override
+  String get exTimeFlexible => 'Discuss Later';
+
+  @override
+  String get exConsultMessage => 'Message';
+
+  @override
+  String get exConsultMessageHint =>
+      'Share your exercise experience or anything helpful for the consultation.';
+
+  @override
+  String get exSendConsultRequest => 'Send Consultation Request';
+
+  @override
+  String get exGoalRequired => 'Please select an exercise goal.';
+
+  @override
+  String get exHealthPurposeRequired =>
+      'Please select a health management purpose.';
+
+  @override
+  String get exHealthPurposeInputRequired =>
+      'Please enter a health management purpose.';
+
+  @override
+  String get exDateRequired => 'Please select a preferred date.';
+
+  @override
+  String get exTimeRequired => 'Please select a preferred time.';
+
+  @override
+  String get exConsultTargetNotFound =>
+      'Couldn\'t find the consultation target.';
+
+  @override
+  String get exConsultPendingExists =>
+      'A consultation request is already pending.';
+
+  @override
+  String get exConsultReceived => 'Your consultation request was received';
+
+  @override
+  String get exConsultCompletionInfo =>
+      'We\'ll let you know when the other party reviews your request.';
+
+  @override
+  String get exConsultStatus => 'Current Status';
+
+  @override
+  String get exConsultPendingStatus => 'Pending';
+
+  @override
+  String get exConsultAcceptedStatus => 'Accepted';
+
+  @override
+  String get exConsultRejectedStatus => 'Rejected';
+
+  @override
+  String get exReturnExercise => 'Return to Exercise';
+
+  @override
+  String get exConsultStatusSection => 'Consultation Request Status';
 }
