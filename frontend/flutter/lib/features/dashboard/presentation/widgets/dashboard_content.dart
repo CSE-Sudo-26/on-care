@@ -771,6 +771,8 @@ class _ExerciseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final double pct = (_burned / _burnGoal).clamp(0.0, 1.0);
+    // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
+    const double rawPct = _burned / _burnGoal;
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(_week);
     final NumberFormat nf = NumberFormat('#,###');
@@ -800,7 +802,8 @@ class _ExerciseCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   icon: Icons.timer_outlined,
-                  value: '50',
+                  // 운동 탭 오늘 도넛 기본값(유산소15+근력40+스트레칭10=65)과 일치.
+                  value: '65',
                   unit: l.unitMinutes,
                   label: l.homeExerciseActiveTime,
                   color: FigmaColors.primary,
@@ -854,7 +857,7 @@ class _ExerciseCard extends StatelessWidget {
                     TextSpan(
                       text:
                           ' / ${nf.format(_burnGoal)} ${l.unitKcal}'
-                          '  ·  ${(pct * 100).round()}%',
+                          '  ·  ${(rawPct * 100).round()}%',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,

@@ -53,9 +53,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     // The app now boots into the sign-in screen; enter demo mode to reach
-    // the main app (Home tab). The button sits below the fold on the compact
-    // test surface, so scroll it into view before tapping.
-    final demoButton = find.text('로그인 없이 데모 둘러보기');
+    // the main app (Home tab). Find by Key so the finder is locale-independent,
+    // and scroll it into view (it sits below the fold on the compact surface).
+    final demoButton = find.byKey(const Key('demoEnterButton'));
     await tester.ensureVisible(demoButton);
     await tester.pumpAndSettle();
     await tester.tap(demoButton);

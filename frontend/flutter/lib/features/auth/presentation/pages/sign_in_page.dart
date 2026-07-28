@@ -183,6 +183,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                       Center(
                         child: TextButton(
+                          key: const Key('demoEnterButton'),
                           onPressed: _enterDemo,
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,

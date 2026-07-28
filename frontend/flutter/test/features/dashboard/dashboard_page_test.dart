@@ -31,9 +31,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     // The app now boots into the sign-in screen; enter demo mode to reach
-    // the dashboard. Scroll the button into view first (it sits below the
-    // fold on the compact test surface).
-    final demoButton = find.text('로그인 없이 데모 둘러보기');
+    // the dashboard. Find by Key (locale-independent) and scroll it into view
+    // first (it sits below the fold on the compact test surface).
+    final demoButton = find.byKey(const Key('demoEnterButton'));
     await tester.ensureVisible(demoButton);
     await tester.pumpAndSettle();
     await tester.tap(demoButton);
