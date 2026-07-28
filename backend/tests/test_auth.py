@@ -33,6 +33,37 @@ def test_login_wrong_password_401(client):
     assert r.status_code == 401
 
 
+def test_inactive_user_cannot_login_or_use_existing_access_token(client, db_session):
+    """비활성화된 계정은 새 로그인과 기존 access token 사용이 모두 차단되어야 한다."""
+    from app.models.models import User
+
+    email = f"inactive-{uuid4().hex[:8]}@oncare.com"
+    password = "pw-12345!"
+    registered = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": password, "name": "비활성회원"},
+    )
+    assert registered.status_code == 201
+    login = client.post(
+        "/v1/auth/login", data={"username": email, "password": password}
+    )
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+
+    user = db_session.get(User, registered.json()["id"])
+    assert user is not None
+    user.is_active = False
+    db_session.commit()
+
+    assert client.post(
+        "/v1/auth/login", data={"username": email, "password": password}
+    ).status_code == 401
+    assert client.get(
+        "/v1/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 401
+
+
 def test_duplicate_register_conflicts_409(client):
     email = f"dup-{uuid4().hex[:8]}@oncare.com"
     r1 = client.post("/v1/auth/register", json={"email": email, "password": "pw!", "name": "a"})

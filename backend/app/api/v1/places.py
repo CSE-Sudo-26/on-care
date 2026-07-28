@@ -9,19 +9,33 @@
 """
 from __future__ import annotations
 
+import logging
 import math
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.models import Place
 from app.schemas.misc_api import PlaceOut
+from app.services.places import kakao
 
 router = APIRouter(tags=["places"])
+logger = logging.getLogger(__name__)
+
+
+def _use_kakao(settings) -> bool:
+    """카카오 실검색을 쓸지: provider=kakao 강제거나, auto+키 보유."""
+    provider = settings.places_provider
+    if provider == "seed":
+        return False
+    if provider == "kakao":
+        return True
+    return bool(settings.kakao_rest_api_key)  # auto
 
 
 def _haversine_m(lat1, lng1, lat2, lng2) -> int:
@@ -35,16 +49,42 @@ def _haversine_m(lat1, lng1, lat2, lng2) -> int:
 
 
 @router.get("/places/nearby", response_model=list[PlaceOut])
-def places_nearby(
+async def places_nearby(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
-    lat: float = Query(37.5665, description="기준 위도(기본: 서울시청)"),
-    lng: float = Query(126.9780, description="기준 경도"),
-    category: str | None = Query(None, description="medical|fitness|healthy_food|pharmacy"),
+    lat: float = Query(37.5665, ge=-90, le=90, description="기준 위도(기본: 서울시청)"),
+    lng: float = Query(126.9780, ge=-180, le=180, description="기준 경도"),
+    category: Literal["medical", "fitness", "healthy_food", "pharmacy"] | None = Query(
+        None, description="medical|fitness|healthy_food|pharmacy"
+    ),
     radius_m: int = Query(3000, ge=100, le=20000),
 ) -> list[PlaceOut]:
-    # TODO(카카오맵): 실연동 시 여기서 _search_kakao(lat,lng,category) 호출 후
-    #                 결과를 PlaceOut 으로 변환. 현재는 DB 시드 데이터 사용.
+    """주변 장소(거리순). 카카오 키가 있으면 실검색, 없거나 실패하면 시드 폴백.
+    응답 형식(PlaceOut)은 두 경로 동일하므로 프론트는 영향 없음."""
+    settings = get_settings()
+    if _use_kakao(settings) and settings.kakao_rest_api_key:
+        try:
+            places = await kakao.search_nearby(
+                lat, lng, category, radius_m,
+                api_key=settings.kakao_rest_api_key,
+                timeout=settings.kakao_timeout_seconds,
+            )
+            if places:
+                return places
+            # 결과 0건이면 시드로 폴백(데모가 비지 않도록)
+        except Exception as exc:  # noqa: BLE001 — 외부 API 실패가 요청을 깨지 않도록 폴백
+            # httpx 예외 repr에는 사용자 좌표(x/y)가 포함된 요청 URL이 들어갈 수 있다.
+            logger.warning(
+                "카카오 장소검색 실패(%s) — 시드 데이터로 폴백",
+                type(exc).__name__,
+            )
+    return _seed_nearby(db, lat, lng, category, radius_m)
+
+
+def _seed_nearby(
+    db: Session, lat: float, lng: float, category: str | None, radius_m: int
+) -> list[PlaceOut]:
+    """DB 시드 장소를 거리 계산해 반환(카카오 미연동/실패 시 폴백)."""
     q = select(Place)
     if category:
         q = q.where(Place.category == category)

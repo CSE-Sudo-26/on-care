@@ -10,18 +10,37 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
 from app.db.session import get_db
-from app.models.models import TrainerProfile
-from app.schemas.trainer_api import TrainerGymOut, TrainerMe
+from app.models.models import TrainerClient, TrainerProfile
+from app.schemas.trainer_api import (
+    ChatMessageOut, ChatSendRequest, ClientDietEntryOut, RoutineAssignRequest, RoutineOut,
+    RoutineHistoryOut, ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut,
+    ScheduleUpdateRequest, TrainerClientOut, TrainerGymOut, TrainerMe,
+)
+from app.services import trainer_service
 
 router = APIRouter(tags=["trainer"])
+
+
+def _require_client(db: Session, trainer_id: str, member_id: str) -> TrainerClient:
+    """(trainer, member) 담당 링크를 확인. 남의 고객/미담당이면 404(소유권 경계)."""
+    link = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer_id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    if link is None:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
+    return link
 
 
 @router.get("/trainer/me", response_model=TrainerMe)
@@ -38,6 +57,10 @@ def trainer_me(
     try:
         certs = json.loads(profile.certifications_json) if profile.certifications_json else []
     except json.JSONDecodeError:
+        certs = []
+    if not isinstance(certs, list) or not all(
+        isinstance(cert, str) for cert in certs
+    ):
         certs = []
 
     return TrainerMe(
@@ -56,3 +79,226 @@ def trainer_me(
             phone=profile.gym_phone,
         ),
     )
+
+
+@router.get("/trainer/clients", response_model=list[TrainerClientOut])
+def trainer_clients(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerClientOut]:
+    """담당 고객 로스터. 각 카드의 오늘 칼로리/나트륨/당류와 나트륨 추세는
+    회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유."""
+    return trainer_service.build_roster(db, trainer.id)
+
+
+@router.get("/trainer/clients/{member_id}/diet", response_model=list[ClientDietEntryOut])
+def trainer_client_diet(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    date: str | None = Query(None, description="YYYY-MM-DD (기본: 오늘)"),
+) -> list[ClientDietEntryOut]:
+    """담당 고객의 식단(회원이 회원 앱에서 기록한 실제 데이터)."""
+    _require_client(db, trainer.id, member_id)
+    day = date or trainer_service.today_iso()
+    return trainer_service.build_client_diet(db, member_id, day)
+
+
+@router.get("/trainer/clients/{member_id}/history", response_model=list[RoutineHistoryOut])
+def trainer_client_history(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RoutineHistoryOut]:
+    """담당 고객의 운동 완료 기록(최신순). 타 트레이너 기록/메모는 제외한다."""
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_client_history(db, member_id, trainer.id)
+
+
+# ---- 채팅 (트레이너↔회원) ----
+
+@router.get("/trainer/chat/unread", response_model=dict[str, int])
+def trainer_chat_unread(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, int]:
+    """회원별 미확인 메시지 수(회원 발신·미읽음). 고객 목록 배지용."""
+    return trainer_service.unread_counts_for_trainer(db, trainer.id)
+
+
+@router.get("/trainer/clients/{member_id}/chat", response_model=list[ChatMessageOut])
+def trainer_client_chat(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(50, ge=1, le=100, description="한 번에 가져올 최신 메시지 수"),
+    before: str | None = Query(
+        None, description="ISO datetime 커서 — 이전 페이지 요청(응답 created_at 사용)"
+    ),
+    before_id: str | None = Query(
+        None, description="복합 커서 tie-break — 이전 페이지 가장 오래된 메시지의 id"
+    ),
+) -> list[ChatMessageOut]:
+    """담당 고객과의 채팅 스레드(오래된→최신). 기본 최신 50건, (before, before_id)로 이전 페이지."""
+    _require_client(db, trainer.id, member_id)
+    before_dt: datetime | None = None
+    if before:
+        try:
+            before_dt = datetime.fromisoformat(before)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=422, detail="before 는 ISO datetime 형식이어야 합니다."
+            ) from e
+    return trainer_service.build_chat_thread(
+        db, trainer.id, member_id, limit=limit, before=before_dt, before_id=before_id
+    )
+
+
+@router.post("/trainer/clients/{member_id}/chat", response_model=ChatMessageOut, status_code=201)
+def trainer_send_chat(
+    member_id: str,
+    payload: ChatSendRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ChatMessageOut:
+    """트레이너가 담당 고객에게 메시지 발신."""
+    _require_client(db, trainer.id, member_id)
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="빈 메시지는 보낼 수 없습니다.")
+    return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)
+
+
+@router.post("/trainer/clients/{member_id}/chat/read")
+def trainer_mark_chat_read(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """트레이너가 해당 고객 스레드를 읽음 처리."""
+    _require_client(db, trainer.id, member_id)
+    n = trainer_service.mark_thread_read(db, trainer.id, member_id, "trainer")
+    return {"marked_read": n}
+
+
+# ---- 루틴 배정 (트레이너/AI → 회원) ----
+
+@router.get("/trainer/clients/{member_id}/routines", response_model=list[RoutineOut])
+def trainer_client_routines(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RoutineOut]:
+    """담당 고객에게 배정된 루틴 목록."""
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_routines(db, member_id, trainer.id)
+
+
+@router.post("/trainer/clients/{member_id}/routines", response_model=RoutineOut, status_code=201)
+def trainer_assign_routine(
+    member_id: str,
+    payload: RoutineAssignRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """담당 고객에게 루틴 배정(트레이너 직접 또는 AI 추천)."""
+    _require_client(db, trainer.id, member_id)
+    # type/source/길이·범위는 RoutineAssignRequest(Field/Literal)가 이미 422 로 거른다.
+    # 공백만 있는 이름은 trim 후 400.
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="루틴 이름이 필요합니다.")
+    return trainer_service.assign_routine(
+        db, trainer.id, member_id,
+        name=payload.name.strip(), minutes=payload.minutes,
+        type_=payload.type, reason=payload.reason, source=payload.source,
+    )
+
+
+# ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----
+
+@router.get("/trainer/schedule/booked-dates", response_model=list[str])
+def trainer_booked_dates(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[str]:
+    """예약이 있는(공백 아닌) 날짜 목록 — 주간 스트립 도트용."""
+    return trainer_service.booked_dates(db, trainer.id)
+
+
+@router.get("/trainer/schedule", response_model=list[ScheduleSessionOut])
+def trainer_schedule(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    date: str | None = Query(None, description="YYYY-MM-DD (기본: 오늘)"),
+) -> list[ScheduleSessionOut]:
+    """하루 타임라인(시간순, 공백 포함)."""
+    day = date or trainer_service.today_iso()
+    return trainer_service.build_schedule(db, trainer.id, day)
+
+
+@router.post("/trainer/schedule", response_model=ScheduleSessionOut, status_code=201)
+def trainer_create_session(
+    payload: ScheduleCreateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """예약 추가(status 예정). member_id 를 주면 담당 고객이어야 한다(아니면 404)."""
+    if payload.member_id:
+        _require_client(db, trainer.id, payload.member_id)
+    return trainer_service.create_session(
+        db, trainer.id,
+        date=payload.date, time=payload.time, client_name=payload.client_name,
+        member_id=payload.member_id, type_=payload.type,
+        duration_minutes=payload.duration_minutes, note=payload.note,
+        program=payload.program,
+    )
+
+
+@router.put("/trainer/schedule/{session_id}", response_model=ScheduleSessionOut)
+def trainer_update_session(
+    session_id: str,
+    payload: ScheduleUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """예약 수정(제공된 필드만). member_id 변경 시 담당 고객이어야 한다.
+    완료된 세션은 기록과의 정합성을 위해 수정 불가(409)."""
+    fields = payload.model_dump(exclude_unset=True)
+    if fields.get("member_id"):
+        _require_client(db, trainer.id, fields["member_id"])
+    try:
+        out = trainer_service.update_session(db, trainer.id, session_id, fields)
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.delete("/trainer/schedule/{session_id}")
+def trainer_delete_session(
+    session_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """예약 삭제."""
+    if not trainer_service.delete_session(db, trainer.id, session_id):
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return {"status": "deleted"}
+
+
+@router.post("/trainer/schedule/{session_id}/complete", response_model=ScheduleSessionOut)
+def trainer_complete_session(
+    session_id: str,
+    payload: ScheduleCompleteRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
+    try:
+        out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out

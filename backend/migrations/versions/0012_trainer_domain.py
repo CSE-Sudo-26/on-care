@@ -80,6 +80,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_trainer_clients_trainer_id", "trainer_clients", ["trainer_id"])
     op.create_index("ix_trainer_clients_member_id", "trainer_clients", ["member_id"])
+    # 회원당 active 담당 1명 보장 partial unique index 는 별도 0013 마이그레이션에서 생성한다.
+    # (이 파일은 스택 앞 PR 에서 먼저 머지·적용되므로, 여기서 나중에 인덱스를 추가로 넣으면
+    #  이미 0012 를 적용한 DB 에서는 재실행되지 않아 ORM↔DB 가 어긋난다.)
 
     # --- trainer_routines (배정 루틴) ---
     op.create_table(

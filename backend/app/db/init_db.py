@@ -46,6 +46,10 @@ def init_db() -> None:
         # 김민수(user-demo) 링크가 성립한다.
         from app.db.seed_trainer import seed_trainer_domain
         seed_trainer_domain()
+        # 담당 회원 실데이터(식단·운동기록) — 트레이너 로스터/식단/기록을 실데이터로 채운다.
+        # 회원 계정 시드(seed_trainer_domain) 뒤에 호출.
+        from app.db.seed_member_data import seed_member_health_data
+        seed_member_health_data()
 
     _promote_admins()  # ADMIN_EMAILS 사용자를 관리자로 승격(멱등)
 

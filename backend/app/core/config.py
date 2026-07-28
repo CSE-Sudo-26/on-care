@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,6 +38,13 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
     # 토큰 없이 접근 시 데모 사용자로 폴백(개발 편의). 운영(prod)에서는 항상 비활성.
     allow_demo_fallback: bool = True
+
+    # --- 장소(O2O) ---
+    # 카카오 Local REST 키. 있으면 실검색, 없으면 시드 폴백(recognizer 팩토리와 같은 철학).
+    kakao_rest_api_key: str = ""
+    # auto: 키 있으면 kakao, 없으면 seed. 강제하려면 kakao|seed.
+    places_provider: Literal["auto", "kakao", "seed"] = "auto"
+    kakao_timeout_seconds: float = 3.0
 
     # --- AI 엔진 ---
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo
