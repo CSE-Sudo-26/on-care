@@ -1403,7 +1403,11 @@ class _TrendChartPainter extends CustomPainter {
     _bubble(canvas, '${_fmt(cur.last)}$unit', last, w, color);
   }
 
-  String _fmt(double v) => NumberFormat('#,###').format(v);
+  // Keep one decimal for fractional values (당류 14.8g stays 14.8, not 15) so
+  // the home bubble matches the 식단 탭 요약 수치.
+  String _fmt(double v) => v == v.roundToDouble()
+      ? NumberFormat('#,###').format(v)
+      : NumberFormat('#,##0.#').format(v);
 
   void _dot(Canvas c, Offset o, Color color, {required bool filled}) {
     c.drawCircle(o, 3.5, Paint()..color = Colors.white);

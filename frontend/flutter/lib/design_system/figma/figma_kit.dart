@@ -54,8 +54,8 @@ class FigmaColors {
 }
 
 /// Shared soft-blue card shadow used by every card across all tabs so the
-/// elevation reads identically everywhere. (primary #3EAFDF @ ~0.14, blur 18,
-/// y+6). Apply as `boxShadow: kCardShadow` on any white content card.
+/// elevation reads identically everywhere. (primary #3EAFDF @ ~0.125 (0x20),
+/// blur 10, y+3). Apply as `boxShadow: kCardShadow` on any white content card.
 const List<BoxShadow> kCardShadow = <BoxShadow>[
   BoxShadow(
     color: Color(0x203EAFDF),

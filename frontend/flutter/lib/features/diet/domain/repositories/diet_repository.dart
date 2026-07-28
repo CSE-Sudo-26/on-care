@@ -32,6 +32,6 @@ abstract class DietRepository {
     List<FoodItem>? foods,
     int? totalCalories,
     int? sodiumMg,
-    int? sugarG,
+    double? sugarG,
   });
 }

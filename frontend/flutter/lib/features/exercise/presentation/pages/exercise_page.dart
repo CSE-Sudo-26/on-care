@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -824,9 +826,13 @@ class _TodayDonut extends StatelessWidget {
       ),
       child: SizedBox(
         height: 170,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+        // Scale down on narrow screens so the fixed-width donut + legend never
+        // overflows, while keeping the centred wide-gap layout on wide viewports.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
             SizedBox(
               width: 116,
               height: 116,
@@ -887,6 +893,7 @@ class _TodayDonut extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -956,16 +963,20 @@ class _DonutPainter extends CustomPainter {
     final double radius = (size.width - stroke) / 2;
     final Rect rect = Rect.fromCircle(center: center, radius: radius);
     const double gap = 0.06; // radians of spacing between segments
-    double start = -1.5708; // -90° (top)
+    const double full = 2 * math.pi;
+    double start = -math.pi / 2; // top (12 o'clock)
     for (final _DonutSeg s in segs) {
-      final double sweep = (s.minutes / total) * 6.2832 - gap;
+      // Skip 0-minute categories (a checked routine may zero one out); a
+      // negative sweep would otherwise paint a stray rounded dot.
+      if (s.minutes <= 0) continue;
+      final double sweep = (s.minutes / total) * full - gap;
       final Paint p = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
         ..strokeCap = StrokeCap.round
         ..color = s.color;
       canvas.drawArc(rect, start + gap / 2, sweep, false, p);
-      start += (s.minutes / total) * 6.2832;
+      start += (s.minutes / total) * full;
     }
   }
 
@@ -1270,7 +1281,9 @@ class _StackedBarPainter extends CustomPainter {
     }
 
     final double slot = chartW / bars.length;
-    const double barW = 40;
+    // Cap the bar to a fraction of the slot so bars never overlap on narrow
+    // layouts or with many buckets.
+    final double barW = math.min(slot * 0.6, 40);
     for (int i = 0; i < bars.length; i++) {
       final _Bar b = bars[i];
       final double cx = left + slot * i + slot / 2;

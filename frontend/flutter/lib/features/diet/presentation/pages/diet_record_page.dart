@@ -53,12 +53,19 @@ DietMeal _mealFromEntry(DietEntry e) {
   final ({String emoji, Color bg}) meta =
       _mealMeta[e.mealType] ?? _mealMeta[MealType.snack]!;
   // Totals are summed from the per-food nutrition so the pills on the card and
-  // the "오늘의 영양 요약" numbers stay consistent.
-  final int sodium = e.foods.fold<int>(0, (int a, FoodItem f) => a + f.sodiumMg);
-  final double sugar = e.foods.fold<double>(
+  // the "오늘의 영양 요약" numbers stay consistent. Real-server payloads carry
+  // nutrition only at the entry level (foods = [{name, calories}]), so fall back
+  // to the entry totals when the per-food sum is 0.
+  final int foodSodium = e.foods.fold<int>(
+    0,
+    (int a, FoodItem f) => a + f.sodiumMg,
+  );
+  final double foodSugar = e.foods.fold<double>(
     0,
     (double a, FoodItem f) => a + f.sugarG,
   );
+  final int sodium = foodSodium > 0 ? foodSodium : e.sodiumMg;
+  final double sugar = foodSugar > 0 ? foodSugar : e.sugarG;
   return DietMeal(
     id: e.id,
     mealType: e.mealType,
@@ -395,16 +402,27 @@ class _NutritionSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // Sum straight from the foods so the summary always equals the meal cards.
+    // Sum straight from the foods so the summary always equals the meal cards;
+    // fall back to the server day totals when the per-food sum is 0 (real-server
+    // payloads carry nutrition only at the day/entry level).
     final List<FoodItem> foods = <FoodItem>[
       for (final DietEntry e in day.entries) ...e.foods,
     ];
-    final int kcal = foods.fold<int>(0, (int a, FoodItem f) => a + f.calories);
-    final int sodium = foods.fold<int>(0, (int a, FoodItem f) => a + f.sodiumMg);
-    final double sugar = foods.fold<double>(
+    final int foodKcal = foods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.calories,
+    );
+    final int foodSodium = foods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.sodiumMg,
+    );
+    final double foodSugar = foods.fold<double>(
       0,
       (double a, FoodItem f) => a + f.sugarG,
     );
+    final int kcal = foodKcal > 0 ? foodKcal : day.totalCalories;
+    final int sodium = foodSodium > 0 ? foodSodium : day.totalSodiumMg;
+    final double sugar = foodSugar > 0 ? foodSugar : day.totalSugarG;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -858,20 +876,25 @@ class _MealThumb extends StatelessWidget {
           width: 52,
           height: 52,
           fit: BoxFit.cover,
+          // Fall back to the emoji chip if the bundled asset is missing.
+          errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+              _emojiThumb(),
         ),
       );
     }
-    return Container(
-      width: 52,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: meal.thumbBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
-    );
+    return _emojiThumb();
   }
+
+  Widget _emojiThumb() => Container(
+    width: 52,
+    height: 52,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: meal.thumbBg,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
+  );
 }
 
 /// Rounded "button-style" total chip: nutrient label + value in a tinted pill.

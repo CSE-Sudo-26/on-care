@@ -103,7 +103,7 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
             foods: foods,
             totalCalories: totalCalories,
             sodiumMg: int.parse(_sodiumController.text.trim()),
-            sugarG: int.parse(_sugarController.text.trim()),
+            sugarG: double.tryParse(_sugarController.text.trim()) ?? 0,
           );
       ref.invalidate(dietTodayProvider);
       navigator.pop(DietEntryDetailResult.updated);
