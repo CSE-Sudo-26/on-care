@@ -30,6 +30,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # 주의: 이미 한 회원에 active 링크가 2개 이상 쌓인 DB(기존 운영 데이터)에서는 이 유니크
+    # 인덱스 생성이 실패한다(트랜잭션 롤백이라 무손실). 그런 DB엔 사전 정리가 필요하다 — 예:
+    #   회원별 최신 1건만 active 로 남기고 나머지는 active=false 로 내린 뒤 이 마이그레이션 적용.
+    # 현재 스택(fresh/seed)에는 회원당 active 1건이라 그대로 통과한다.
     op.create_index(
         "uq_trainer_client_active_member",
         "trainer_clients",

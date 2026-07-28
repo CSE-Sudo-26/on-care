@@ -135,7 +135,8 @@ async def search_nearby(
     for p in merged:
         if p.id and p.id in seen:
             continue
-        seen.add(p.id)
+        if p.id:  # 빈 id 는 dedup 대상에서 제외(seen 에 ""를 넣어 무관한 항목을 지우지 않게)
+            seen.add(p.id)
         result.append(p)
     result = result[:15]
 

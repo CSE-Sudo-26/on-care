@@ -701,10 +701,20 @@ _MEMBER_SESSIONS_LIMIT = 100
 
 
 def build_member_sessions(db: Session, member_id: str) -> list[ScheduleSessionOut]:
-    """회원의 PT 세션(담당 트레이너 스케줄에서 나와 매칭된 것), 최신 날짜/시간 순(최근 100건)."""
+    """회원의 PT 세션(현재 활성 담당 트레이너의 스케줄에서 매칭된 것), 최신순(최근 100건).
+
+    routines 와 동일하게 **활성 트레이너로 스코프**한다 — member_id 로만 조회하면 코치
+    재배정 후에도 이전 트레이너가 만든 세션이 계속 보인다(stale). 활성 담당이 없으면 빈 목록.
+    """
+    trainer_id = get_member_trainer_id(db, member_id)
+    if trainer_id is None:
+        return []
     rows = db.scalars(
         select(TrainerSchedule)
-        .where(TrainerSchedule.member_id == member_id)
+        .where(
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.trainer_id == trainer_id,
+        )
         .order_by(TrainerSchedule.date.desc(), TrainerSchedule.time.desc())
         .limit(_MEMBER_SESSIONS_LIMIT)
     ).all()
