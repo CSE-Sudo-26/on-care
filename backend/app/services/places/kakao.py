@@ -140,7 +140,10 @@ async def search_nearby(
         result.append(p)
     result = result[:15]
 
-    if len(_cache) >= _CACHE_MAX:
-        _cache.clear()  # 단순 상한 — 무한 증식 방지
-    _cache[key] = (now + _CACHE_TTL_SECONDS, result)
+    # 빈 결과는 캐시하지 않는다 — 일시적 0건(쿼터/지연 등)이 TTL 동안 seed 폴백을 고정시키지
+    # 않도록. 실제 장소가 나온 경우만 캐시한다(리뷰 #282).
+    if result:
+        if len(_cache) >= _CACHE_MAX:
+            _cache.clear()  # 단순 상한 — 무한 증식 방지
+        _cache[key] = (now + _CACHE_TTL_SECONDS, result)
     return result

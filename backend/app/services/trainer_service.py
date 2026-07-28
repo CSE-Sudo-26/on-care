@@ -425,6 +425,12 @@ def assign_routine(
     name: str, minutes: int, type_: str, reason: str, source: str,
 ) -> RoutineOut:
     """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영."""
+    # 이 회원 루틴들의 현재 최대 sort_order + 1 로 끝에 붙인다. timestamp 방식은 시드(0..n)와
+    # 의미가 섞이고, 같은 초에 배정된 둘은 순서가 비결정적이었다(리뷰 #279).
+    max_order = db.scalar(
+        select(func.max(TrainerRoutine.sort_order))
+        .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
+    )
     rt = TrainerRoutine(
         id=f"rt-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
@@ -434,8 +440,7 @@ def assign_routine(
         type=type_,
         reason=reason,
         source=source,
-        # 새 루틴을 목록 끝에 붙인다(기존 시드는 0..n).
-        sort_order=int(datetime.now(timezone.utc).timestamp()),
+        sort_order=(max_order or 0) + 1,
         created_at=datetime.now(timezone.utc),
     )
     db.add(rt)
@@ -493,11 +498,21 @@ def build_schedule(db: Session, trainer_id: str, day: str) -> list[ScheduleSessi
     return [_schedule_out(s) for s in rows]
 
 
+#: booked_dates 조회 하한(일). 주간 스트립 도트용이라 과거 전체가 필요없다 — 시간이 갈수록
+#: 결과가 무한정 커지는 것을 막는다(리뷰 #280). 문자열 날짜(YYYY-MM-DD)는 사전식 비교 가능.
+_BOOKED_DATES_WINDOW_DAYS = 90
+
+
 def booked_dates(db: Session, trainer_id: str) -> list[str]:
-    """예약이 있는(공백 아닌) 날짜 목록 — 주간 스트립 도트용."""
+    """예약이 있는(공백 아닌) 날짜 목록 — 주간 스트립 도트용(최근 90일 이후)."""
+    cutoff = (_today() - timedelta(days=_BOOKED_DATES_WINDOW_DAYS)).isoformat()
     rows = db.scalars(
         select(TrainerSchedule.date)
-        .where(TrainerSchedule.trainer_id == trainer_id, TrainerSchedule.status != "공백")
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.status != "공백",
+            TrainerSchedule.date >= cutoff,
+        )
         .distinct()
     ).all()
     return sorted(rows)
@@ -644,28 +659,33 @@ def complete_session(
 
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅 / 내 세션) ----
 
+def _active_link(db: Session, member_id: str) -> TrainerClient | None:
+    """회원의 현재 담당(활성) 링크 — 가장 오래된 active 1건. 없으면 None.
+
+    '현재 담당 코치 1명' 판정의 단일 소스. get_member_trainer_id / build_member_coach 등이
+    각자 같은 쿼리를 중복하면 divergence 위험이 있어 여기로 모은다(리뷰 #281).
+    """
+    return db.scalar(
+        select(TrainerClient)
+        .where(TrainerClient.member_id == member_id, TrainerClient.active.is_(True))
+        .order_by(TrainerClient.created_at)
+        .limit(1)
+    )
+
+
 def get_member_trainer_id(db: Session, member_id: str) -> str | None:
     """회원의 현재 담당 트레이너 id. 활성(active) 링크만 인정하며 없으면 None.
 
     휴면(비활성) 링크는 '현재 담당'이 아니므로 제외한다(리뷰 재-#3) — 비활성 링크만
     가진 회원은 코치 조회/발신이 불가(404/빈 목록)해야 한다.
     """
-    return db.scalar(
-        select(TrainerClient.trainer_id)
-        .where(TrainerClient.member_id == member_id, TrainerClient.active.is_(True))
-        .order_by(TrainerClient.created_at)
-        .limit(1)
-    )
+    link = _active_link(db, member_id)
+    return link.trainer_id if link is not None else None
 
 
 def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
     """회원의 '내 담당 코치' 요약. 활성 담당이 없으면 None(라우터 404)."""
-    link = db.scalar(
-        select(TrainerClient)
-        .where(TrainerClient.member_id == member_id, TrainerClient.active.is_(True))
-        .order_by(TrainerClient.created_at)
-        .limit(1)
-    )
+    link = _active_link(db, member_id)
     if link is None:
         return None
     trainer = db.get(User, link.trainer_id)

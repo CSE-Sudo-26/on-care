@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import date as _date
 from datetime import datetime
 from typing import Annotated
 
@@ -28,6 +30,20 @@ from app.schemas.trainer_api import (
 from app.services import trainer_service
 
 router = APIRouter(tags=["trainer"])
+
+# 계약 형식은 정확히 YYYY-MM-DD. date.fromisoformat 는 3.11+ 에서 basic ISO·주 날짜도 받으므로
+# 정규식으로 먼저 좁힌 뒤 달력 유효성을 확인한다(schedule 라우트와 동일 규약).
+_YMD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _is_ymd(v: str) -> bool:
+    if not _YMD_RE.fullmatch(v):
+        return False
+    try:
+        _date.fromisoformat(v)
+        return True
+    except ValueError:
+        return False
 
 
 def _require_client(db: Session, trainer_id: str, member_id: str) -> TrainerClient:
@@ -101,6 +117,9 @@ def trainer_client_diet(
     """담당 고객의 식단(회원이 회원 앱에서 기록한 실제 데이터)."""
     _require_client(db, trainer.id, member_id)
     day = date or trainer_service.today_iso()
+    # 형식 검증 — 잘못된 date 가 조용히 빈 목록으로 나가지 않게 422(캘린더 라우트와 일관, #278).
+    if not _is_ymd(day):
+        raise HTTPException(status_code=422, detail="date 는 YYYY-MM-DD 형식이어야 합니다.")
     return trainer_service.build_client_diet(db, member_id, day)
 
 
