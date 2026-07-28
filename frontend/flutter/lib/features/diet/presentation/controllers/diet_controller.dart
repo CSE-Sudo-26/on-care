@@ -12,7 +12,9 @@ final dietRepositoryProvider = Provider<DietRepository>((ref) {
   // per-food nutrition, per-meal AI feedback) so the diet tab renders
   // real-looking data with no backend. The real REST repo is used otherwise.
   if (ref.watch(appConfigProvider).useMockApi) {
-    return const MockDietRepository();
+    // One instance per provider lifetime so in-memory CRUD (analyze/edit/
+    // delete) persists across `dietTodayProvider` invalidations for the session.
+    return MockDietRepository();
   }
   return DioDietRepository(ref.watch(dioProvider));
 }, name: 'dietRepository');

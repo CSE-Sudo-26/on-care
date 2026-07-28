@@ -11,7 +11,7 @@ void main() {
       overrides: <Override>[
         // Default repo is DioDietRepository (needs db + dio overrides);
         // for this unit test the in-memory mock from stage 4 is enough.
-        dietRepositoryProvider.overrideWithValue(const MockDietRepository()),
+        dietRepositoryProvider.overrideWithValue(MockDietRepository()),
       ],
     );
     addTearDown(container.dispose);

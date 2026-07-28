@@ -15,7 +15,9 @@ final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
   // 코치 피드백·짬뽕 식단 반영 AI 루틴) so the exercise tab renders the intended
   // context with no backend. The real REST repo is used otherwise.
   if (ref.watch(appConfigProvider).useMockApi) {
-    return const MockExerciseRepository();
+    // One instance per provider lifetime so in-memory CRUD (add/edit/delete)
+    // persists across `exerciseWeekProvider` invalidations for the session.
+    return MockExerciseRepository();
   }
   return DioExerciseRepository(ref.watch(dioProvider));
 }, name: 'exerciseRepository');
