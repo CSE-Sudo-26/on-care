@@ -144,7 +144,7 @@ def test_entry_update_rejects_non_finite_macros(field, value):
 
 
 def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.db.init_db import DEMO_USER_ID
     from app.models.models import DietEntry, FoodNutrient
 
@@ -214,6 +214,58 @@ def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
         "protein_pct": 25,
         "fat_pct": 25,
     }
+
+
+def test_analyze_succeeds_when_personal_rag_ingest_fails(
+    client, db_session, monkeypatch
+):
+    """보조 RAG 적재 실패가 이미 저장된 식단의 성공 응답을 500으로 바꾸지 않는다."""
+    from app.models.models import DietEntry
+    from app.services import diet_service
+
+    def fail_record_diet(*args, **kwargs):
+        raise RuntimeError("embedding unavailable")
+
+    monkeypatch.setattr(diet_service, "record_diet", fail_record_diet)
+
+    response = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    )
+
+    assert response.status_code == 200, response.text
+    entry_id = response.json()["entry_id"]
+    db_session.expire_all()
+    assert db_session.get(DietEntry, entry_id) is not None
+
+
+def test_save_analyzed_entry_isolates_rag_failure_without_database(monkeypatch):
+    """서비스 경계의 best-effort 처리를 DB 없이도 빠르게 검증한다."""
+    from unittest.mock import MagicMock
+
+    from app.schemas.diet import DietAnalysis
+    from app.services import diet_service
+
+    db = MagicMock()
+
+    def fail_record_diet(*args, **kwargs):
+        raise RuntimeError("embedding unavailable")
+
+    monkeypatch.setattr(diet_service, "record_diet", fail_record_diet)
+    entry, is_new = diet_service.save_analyzed_entry(
+        db,
+        "user-test",
+        "lunch",
+        DietAnalysis(engine="stub"),
+        None,
+    )
+
+    assert is_new is True
+    assert entry.user_id == "user-test"
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(entry)
+    db.rollback.assert_called_once()
 
 
 def test_analyze_idempotency_key_dedupes_retry(client):
@@ -379,7 +431,7 @@ def test_update_entry_changes_meal_type(client):
 
 
 def test_update_entry_changes_nutrition_and_today_totals(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.db.init_db import DEMO_USER_ID
     from app.models.models import DietEntry
 
@@ -476,7 +528,7 @@ def test_update_entry_rejects_negative_nutrition(client, field, value):
 
 
 def test_update_entry_hides_other_users_record(client, db_session):
-    from app.api.v1.diet import _today_str
+    from app.services.diet_service import today_str as _today_str
     from app.models.models import DietEntry, User
 
     suffix = uuid.uuid4().hex[:12]
