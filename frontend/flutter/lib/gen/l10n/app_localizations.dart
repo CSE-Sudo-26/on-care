@@ -1190,6 +1190,72 @@ abstract class AppLocalizations {
   /// **'Gym'**
   String get exGymTab;
 
+  /// No description provided for @exMyGymTrainerSection.
+  ///
+  /// In en, this message translates to:
+  /// **'My Gym & Trainer'**
+  String get exMyGymTrainerSection;
+
+  /// No description provided for @exConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get exConnected;
+
+  /// No description provided for @exMyTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'My Trainer'**
+  String get exMyTrainer;
+
+  /// No description provided for @exRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Gyms'**
+  String get exRecommendedGyms;
+
+  /// No description provided for @exRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Trainers'**
+  String get exRecommendedTrainers;
+
+  /// No description provided for @exSeeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'See more'**
+  String get exSeeMore;
+
+  /// No description provided for @exNoGymTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have a connected gym or trainer yet.'**
+  String get exNoGymTrainer;
+
+  /// No description provided for @exNoRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'No gym recommendations yet.'**
+  String get exNoRecommendedGyms;
+
+  /// No description provided for @exNoRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer recommendations yet.'**
+  String get exNoRecommendedTrainers;
+
+  /// No description provided for @exTrainerAffiliation.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym'**
+  String get exTrainerAffiliation;
+
+  /// No description provided for @exTrainerRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'A good fit for your health goals'**
+  String get exTrainerRecommendationReason;
+
   /// No description provided for @exWeekSummary.
   ///
   /// In en, this message translates to:
@@ -1399,6 +1465,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Find a Gym'**
   String get exFindGym;
+
+  /// No description provided for @exFindTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a Trainer'**
+  String get exFindTrainer;
+
+  /// No description provided for @exGymDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Details'**
+  String get exGymDetailTitle;
+
+  /// No description provided for @exTrainerDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer Details'**
+  String get exTrainerDetailTitle;
+
+  /// No description provided for @exDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exDistance;
+
+  /// No description provided for @exRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exRating;
+
+  /// No description provided for @exAffiliatedTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Affiliated Trainer'**
+  String get exAffiliatedTrainer;
+
+  /// No description provided for @exRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why we recommend this trainer'**
+  String get exRecommendationReason;
+
+  /// No description provided for @exGymNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this gym.'**
+  String get exGymNotFound;
+
+  /// No description provided for @exTrainerNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this trainer.'**
+  String get exTrainerNotFound;
+
+  /// No description provided for @exGymSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by area or gym name'**
+  String get exGymSearchPlaceholder;
+
+  /// No description provided for @exTrainerSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by specialty or trainer name'**
+  String get exTrainerSearchPlaceholder;
+
+  /// No description provided for @exSortRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get exSortRecommended;
+
+  /// No description provided for @exSortDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exSortDistance;
+
+  /// No description provided for @exSortRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exSortRating;
+
+  /// No description provided for @exSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get exSortName;
+
+  /// No description provided for @exResultCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 result} other{{count} results}}'**
+  String exResultCount(int count);
+
+  /// No description provided for @exNoSearchResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No search results.'**
+  String get exNoSearchResults;
+
+  /// No description provided for @exTrainersLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load trainers.'**
+  String get exTrainersLoadError;
 
   /// No description provided for @exGymSearchHint.
   ///

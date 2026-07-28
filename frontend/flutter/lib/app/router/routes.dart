@@ -13,6 +13,16 @@ class AppRoutes {
   static const String aiCoach = '/ai-coach';
   static const String notification = '/notification';
   static const String place = '/place';
+  static const String gyms = '/gyms';
+  static const String trainers = '/trainers';
+  static const String gymDetail = '/gyms/:gymId';
+  static const String trainerDetail = '/trainers/:gymId';
+
+  static String gymDetailPath(String gymId) =>
+      '$gyms/${Uri.encodeComponent(gymId)}';
+
+  static String trainerDetailPath(String gymId) =>
+      '$trainers/${Uri.encodeComponent(gymId)}';
 
   // Auth
   static const String signIn = '/auth/sign-in';

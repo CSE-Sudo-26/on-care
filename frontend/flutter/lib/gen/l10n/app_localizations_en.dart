@@ -595,6 +595,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymTab => 'Gym';
 
   @override
+  String get exMyGymTrainerSection => 'My Gym & Trainer';
+
+  @override
+  String get exConnected => 'Connected';
+
+  @override
+  String get exMyTrainer => 'My Trainer';
+
+  @override
+  String get exRecommendedGyms => 'Recommended Gyms';
+
+  @override
+  String get exRecommendedTrainers => 'Recommended Trainers';
+
+  @override
+  String get exSeeMore => 'See more';
+
+  @override
+  String get exNoGymTrainer =>
+      'You don\'t have a connected gym or trainer yet.';
+
+  @override
+  String get exNoRecommendedGyms => 'No gym recommendations yet.';
+
+  @override
+  String get exNoRecommendedTrainers => 'No trainer recommendations yet.';
+
+  @override
+  String get exTrainerAffiliation => 'Gym';
+
+  @override
+  String get exTrainerRecommendationReason =>
+      'A good fit for your health goals';
+
+  @override
   String get exWeekSummary => 'This Week\'s Summary';
 
   @override
@@ -703,6 +738,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exFindGym => 'Find a Gym';
+
+  @override
+  String get exFindTrainer => 'Find a Trainer';
+
+  @override
+  String get exGymDetailTitle => 'Gym Details';
+
+  @override
+  String get exTrainerDetailTitle => 'Trainer Details';
+
+  @override
+  String get exDistance => 'Distance';
+
+  @override
+  String get exRating => 'Rating';
+
+  @override
+  String get exAffiliatedTrainer => 'Affiliated Trainer';
+
+  @override
+  String get exRecommendationReason => 'Why we recommend this trainer';
+
+  @override
+  String get exGymNotFound => 'Couldn\'t find this gym.';
+
+  @override
+  String get exTrainerNotFound => 'Couldn\'t find this trainer.';
+
+  @override
+  String get exGymSearchPlaceholder => 'Search by area or gym name';
+
+  @override
+  String get exTrainerSearchPlaceholder =>
+      'Search by specialty or trainer name';
+
+  @override
+  String get exSortRecommended => 'Recommended';
+
+  @override
+  String get exSortDistance => 'Distance';
+
+  @override
+  String get exSortRating => 'Rating';
+
+  @override
+  String get exSortName => 'Name';
+
+  @override
+  String exResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exNoSearchResults => 'No search results.';
+
+  @override
+  String get exTrainersLoadError => 'Couldn\'t load trainers.';
 
   @override
   String get exGymSearchHint => 'Search by gym or area';

@@ -1,60 +1,821 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:oncare/core/errors/app_error.dart';
-import 'package:oncare/design_system/atoms/app_card.dart';
-import 'package:oncare/design_system/tokens/colors.dart';
-import 'package:oncare/design_system/tokens/radius.dart';
-import 'package:oncare/design_system/tokens/spacing.dart';
+import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/gym_finder_sheet.dart';
-import 'package:oncare/shared/widgets/error_view.dart';
+import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
-/// 헬스장 tab body — matches the prototype's `GymCard` flow:
-/// a full-width 헬스장 찾기 CTA on top, then either the user's
-/// registered gym (with trainer info + 헬스장 정보 / 1:1 상담) or an
-/// empty state.
 class GymTab extends ConsumerWidget {
-  const GymTab({super.key});
+  const GymTab({
+    required this.selectedSlot,
+    required this.onSlot,
+    required this.onFind,
+    super.key,
+  });
+
+  final String? selectedSlot;
+  final ValueChanged<String> onSlot;
+  final VoidCallback onFind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(myGymProvider);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.xxxl,
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
+    final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _SectionHeader(title: l.exMyGymTrainerSection),
+          const SizedBox(height: 10),
+          _MyGymTrainerSection(
+            gymAsync: myGymAsync,
+            selectedSlot: selectedSlot,
+            onSlot: onSlot,
+            onFind: onFind,
+            onRetry: () => ref.invalidate(myGymProvider),
+          ),
+          const SizedBox(height: 28),
+          _RecommendedGymSection(
+            gymsAsync: nearbyAsync,
+            onMore: () => context.push(AppRoutes.gyms),
+            onRetry: () => ref.invalidate(nearbyGymsProvider),
+          ),
+          const SizedBox(height: 28),
+          _RecommendedTrainerSection(
+            gymsAsync: nearbyAsync,
+            onMore: () => context.push(AppRoutes.trainers),
+            onRetry: () => ref.invalidate(nearbyGymsProvider),
+          ),
+        ],
       ),
-      children: <Widget>[
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            onPressed: () => showGymFinderSheet(context),
-            icon: const Icon(Icons.place_outlined, size: 18),
-            label: const Text('헬스장 찾기'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(AppRadius.lg),
+    );
+  }
+}
+
+class _MyGymTrainerSection extends StatelessWidget {
+  const _MyGymTrainerSection({
+    required this.gymAsync,
+    required this.selectedSlot,
+    required this.onSlot,
+    required this.onFind,
+    required this.onRetry,
+  });
+
+  final AsyncValue<Gym?> gymAsync;
+  final String? selectedSlot;
+  final ValueChanged<String> onSlot;
+  final VoidCallback onFind;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return gymAsync.when(
+      loading: () => const _SectionLoading(height: 180),
+      error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
+      data: (Gym? gym) => gym == null
+          ? _EmptyMyGym(onFind: onFind)
+          : _MyGymTrainerCard(
+              gym: gym,
+              selectedSlot: selectedSlot,
+              onSlot: onSlot,
+              onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
+              onTrainerTap: gym.trainerName?.isNotEmpty ?? false
+                  ? () => context.push(AppRoutes.trainerDetailPath(gym.id))
+                  : null,
+            ),
+    );
+  }
+}
+
+class _MyGymTrainerCard extends StatelessWidget {
+  const _MyGymTrainerCard({
+    required this.gym,
+    required this.selectedSlot,
+    required this.onSlot,
+    required this.onGymTap,
+    required this.onTrainerTap,
+  });
+
+  final Gym gym;
+  final String? selectedSlot;
+  final ValueChanged<String> onSlot;
+  final VoidCallback onGymTap;
+  final VoidCallback? onTrainerTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String trainer = gym.trainerName ?? l.exTrainer;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: FigmaColors.primaryA(0.10),
+                borderRadius: BorderRadius.circular(999),
               ),
-              minimumSize: const Size.fromHeight(48),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(
+                    Icons.check_circle,
+                    size: 13,
+                    color: FigmaColors.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l.exConnected,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _InfoLabel(icon: Icons.place_outlined, label: l.exMyGym),
+          const SizedBox(height: 7),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onGymTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            gym.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: FigmaColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: FigmaColors.textFaint,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (gym.trainerName?.isNotEmpty ?? false) ...<Widget>[
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: FigmaColors.hairline),
+            const SizedBox(height: 14),
+            _InfoLabel(icon: Icons.person_outline, label: l.exMyTrainer),
+            const SizedBox(height: 9),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTrainerTap,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: FigmaColors.iconTint,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.person_outline,
+                          size: 20,
+                          color: FigmaColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              gym.trainerName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                            Text(
+                              gym.trainerRole ?? l.exTrainerDedicated,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: FigmaColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: FigmaColors.textFaint,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          _ReservationPanel(
+            gym: gym,
+            trainer: trainer,
+            selectedSlot: selectedSlot,
+            onSlot: onSlot,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => showGymInfoSheet(context, gym),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: FigmaColors.primary,
+                    backgroundColor: FigmaColors.softBlue,
+                    side: BorderSide(color: FigmaColors.primaryA(0.18)),
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    l.exGymInfo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => showGymChatSheet(context, gym: gym),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FigmaColors.primary,
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    l.exConsultButton,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReservationPanel extends StatelessWidget {
+  const _ReservationPanel({
+    required this.gym,
+    required this.trainer,
+    required this.selectedSlot,
+    required this.onSlot,
+  });
+
+  final Gym gym;
+  final String trainer;
+  final String? selectedSlot;
+  final ValueChanged<String> onSlot;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[FigmaColors.bannerStart, FigmaColors.bannerEnd],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: FigmaColors.primaryA(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.exAiSlotTitle,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.primary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l.exTrainerAvailability(trainer),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final List<String> slot in <List<String>>[
+                <String>[l.exSlotToday19, l.exSlot1Left],
+                <String>[l.exSlotTomorrow0730, l.exSlotAvailable],
+                <String>[l.exSlotTomorrow20, l.exSlot2Left],
+              ])
+                _SlotChip(
+                  label: slot[0],
+                  sub: slot[1],
+                  selected: selectedSlot == slot[0],
+                  onTap: () => onSlot(slot[0]),
+                ),
+            ],
+          ),
+          if (selectedSlot != null) ...<Widget>[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        l.exReserveConfirmedSlotGym(selectedSlot!, gym.name),
+                      ),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: FigmaColors.primary,
+                  minimumSize: const Size(0, 42),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  l.exReserveConfirm(selectedSlot!),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendedGymSection extends StatelessWidget {
+  const _RecommendedGymSection({
+    required this.gymsAsync,
+    required this.onMore,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<Gym>> gymsAsync;
+  final VoidCallback onMore;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _SectionHeader(
+          title: l.exRecommendedGyms,
+          actionLabel: l.exSeeMore,
+          onAction: onMore,
+        ),
+        const SizedBox(height: 10),
+        gymsAsync.when(
+          loading: () => const _SectionLoading(height: 184),
+          error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
+          data: (List<Gym> gyms) => gyms.isEmpty
+              ? _EmptyRecommendation(message: l.exNoRecommendedGyms)
+              : SizedBox(
+                  height: 184,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: gyms.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
+                    itemBuilder: (BuildContext context, int index) {
+                      return _GymRecommendationCard(
+                        gym: gyms[index],
+                        onTap: () => context.push(
+                          AppRoutes.gymDetailPath(gyms[index].id),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GymRecommendationCard extends StatelessWidget {
+  const _GymRecommendationCard({required this.gym, required this.onTap});
+
+  final Gym gym;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _RecommendationSurface(
+      width: 236,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            gym.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.ink,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.place_outlined,
+                size: 14,
+                color: FigmaColors.textMuted,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '${gym.distanceKm.toStringAsFixed(1)}km',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: FigmaColors.textMuted,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.star_rounded,
+                size: 15,
+                color: FigmaColors.orange,
+              ),
+              const SizedBox(width: 2),
+              Text(
+                gym.rating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.ink,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: <Widget>[
+              for (final String tag in gym.tags.take(2)) _TagChip(label: tag),
+            ],
+          ),
+          const Spacer(),
+          if (gym.weekdayHours != null)
+            Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.schedule_outlined,
+                  size: 13,
+                  color: FigmaColors.textMuted,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    l.exGymWeekdayHours(gym.weekdayHours!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: FigmaColors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendedTrainerSection extends StatelessWidget {
+  const _RecommendedTrainerSection({
+    required this.gymsAsync,
+    required this.onMore,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<Gym>> gymsAsync;
+  final VoidCallback onMore;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _SectionHeader(
+          title: l.exRecommendedTrainers,
+          actionLabel: l.exSeeMore,
+          onAction: onMore,
+        ),
+        const SizedBox(height: 10),
+        gymsAsync.when(
+          loading: () => const _SectionLoading(height: 156),
+          error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
+          data: (List<Gym> gyms) {
+            final List<Gym> trainerGyms = gyms
+                .where((Gym gym) => gym.trainerName?.isNotEmpty ?? false)
+                .toList(growable: false);
+            if (trainerGyms.isEmpty) {
+              return _EmptyRecommendation(message: l.exNoRecommendedTrainers);
+            }
+            return SizedBox(
+              height: 156,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: trainerGyms.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (BuildContext context, int index) {
+                  return _TrainerRecommendationCard(
+                    gym: trainerGyms[index],
+                    onTap: () => context.push(
+                      AppRoutes.trainerDetailPath(trainerGyms[index].id),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _TrainerRecommendationCard extends StatelessWidget {
+  const _TrainerRecommendationCard({required this.gym, required this.onTap});
+
+  final Gym gym;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _RecommendationSurface(
+      width: 252,
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(
+              color: FigmaColors.iconTint,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.person_outline,
+              size: 21,
+              color: FigmaColors.primary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  gym.trainerName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  gym.trainerRole ?? l.exTrainerDedicated,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: FigmaColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  '${l.exTrainerAffiliation} · ${gym.name}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textBody,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  l.exTrainerRecommendationReason,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationSurface extends StatelessWidget {
+  const _RecommendationSurface({
+    required this.width,
+    required this.onTap,
+    required this.child,
+  });
+
+  final double width;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius radius = BorderRadius.circular(16);
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.white,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(color: FigmaColors.hairline),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.ink,
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        async.when(
-          data: (gym) => gym == null ? const _EmptyGym() : _MyGymCard(gym: gym),
-          loading: () => const SizedBox(
-            height: 160,
-            child: Center(child: CircularProgressIndicator()),
+        if (actionLabel != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              minimumSize: const Size(48, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
           ),
-          error: (Object e, _) => ErrorView(
-            error: e is AppError ? e : UnknownError(message: e.toString()),
-            onRetry: () => ref.invalidate(myGymProvider),
+      ],
+    );
+  }
+}
+
+class _InfoLabel extends StatelessWidget {
+  const _InfoLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 15, color: FigmaColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: FigmaColors.textMuted,
           ),
         ),
       ],
@@ -62,400 +823,85 @@ class GymTab extends ConsumerWidget {
   }
 }
 
-class _EmptyGym extends StatelessWidget {
-  const _EmptyGym();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AppCard(
-      outlined: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-        child: Column(
-          children: <Widget>[
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.fitness_center,
-                color: AppColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              '등록된 헬스장이 없어요',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '주변 헬스장을 찾아보세요',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MyGymCard extends StatefulWidget {
-  const _MyGymCard({required this.gym});
-  final Gym gym;
-
-  @override
-  State<_MyGymCard> createState() => _MyGymCardState();
-}
-
-class _MyGymCardState extends State<_MyGymCard> {
-  bool _chatOpen = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final gym = widget.gym;
-    return AppCard(
-      outlined: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: const BorderRadius.all(AppRadius.md),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.place_outlined,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                '내 헬스장',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            gym.name,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.place_outlined,
-                size: 14,
-                color: AppColors.mutedForeground,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (gym.trainerName != null) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: <Widget>[
-                const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.muted,
-                  child: Icon(
-                    Icons.person,
-                    size: 18,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        gym.trainerName!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (gym.trainerRole != null)
-                        Text(
-                          gym.trainerRole!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (gym.tags.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: <Widget>[for (final t in gym.tags) _TagChip(label: t)],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _PillButton(
-                  label: '헬스장 정보',
-                  tone: _PillTone.secondary,
-                  onTap: () => _showGymInfo(context, gym),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _PillButton(
-                  label: '1:1 상담',
-                  icon: Icons.chat_bubble_outline,
-                  tone: _PillTone.primary,
-                  onTap: () => setState(() => _chatOpen = !_chatOpen),
-                ),
-              ),
-            ],
-          ),
-          if (_chatOpen) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            _ChatPanel(
-              trainerInitial: gym.trainerName?.characters.first ?? '김',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ChatPanel extends StatefulWidget {
-  const _ChatPanel({required this.trainerInitial});
-  final String trainerInitial;
-
-  @override
-  State<_ChatPanel> createState() => _ChatPanelState();
-}
-
-class _ChatPanelState extends State<_ChatPanel> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.05),
-        borderRadius: const BorderRadius.all(AppRadius.lg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.check_circle_outline,
-                size: 16,
-                color: Color(0xFF22C55E),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '건강 데이터 요약본 전송 완료',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            '전송된 정보:',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.mutedForeground,
-            ),
-          ),
-          Text(
-            '• 최근 운동 기록 (이번 주 5회)\n• 선호 운동 유형: 유산소, 근력\n• 고혈압 위험군 프로필',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: const BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.all(AppRadius.md),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                CircleAvatar(
-                  radius: 12,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: Text(
-                    widget.trainerInitial,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    '자료 잘 받았습니다. 고혈압 관리를 위한 맞춤 운동 프로그램 준비했어요!',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: '메시지 입력...',
-                    filled: true,
-                    fillColor: AppColors.background,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(AppRadius.md),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              FilledButton(
-                onPressed: () {
-                  if (_controller.text.trim().isEmpty) return;
-                  _controller.clear();
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('메시지를 보냈어요')));
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(AppRadius.md),
-                  ),
-                ),
-                child: const Text('전송'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _TagChip extends StatelessWidget {
   const _TagChip({required this.label});
+
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: const BoxDecoration(
-        color: AppColors.accent,
-        borderRadius: BorderRadius.all(AppRadius.pill),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: FigmaColors.primaryA(0.09),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, color: AppColors.accentForeground),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: FigmaColors.primary,
+        ),
       ),
     );
   }
 }
 
-enum _PillTone { primary, secondary }
-
-class _PillButton extends StatelessWidget {
-  const _PillButton({
+class _SlotChip extends StatelessWidget {
+  const _SlotChip({
     required this.label,
-    required this.tone,
+    required this.sub,
+    required this.selected,
     required this.onTap,
-    this.icon,
   });
+
   final String label;
-  final _PillTone tone;
+  final String sub;
+  final bool selected;
   final VoidCallback onTap;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final bg = tone == _PillTone.primary ? AppColors.primary : AppColors.accent;
-    final fg = tone == _PillTone.primary
-        ? Colors.white
-        : AppColors.accentForeground;
     return Material(
-      color: bg,
-      borderRadius: const BorderRadius.all(AppRadius.lg),
+      color: selected ? FigmaColors.primary : Colors.white,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.lg),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                if (icon != null) ...<Widget>[
-                  Icon(icon, size: 16, color: fg),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  label,
-                  style: TextStyle(color: fg, fontWeight: FontWeight.w600),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: selected
+                ? null
+                : Border.all(color: FigmaColors.primaryA(0.25)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : FigmaColors.ink,
                 ),
-              ],
-            ),
+              ),
+              Text(
+                sub,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : FigmaColors.textMuted,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -463,135 +909,161 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-Future<void> _showGymInfo(BuildContext context, Gym gym) {
-  return showDialog<void>(
-    context: context,
-    builder: (BuildContext ctx) => _GymInfoDialog(gym: gym),
-  );
-}
+class _EmptyMyGym extends StatelessWidget {
+  const _EmptyMyGym({required this.onFind});
 
-class _GymInfoDialog extends StatelessWidget {
-  const _GymInfoDialog({required this.gym});
-  final Gym gym;
+  final VoidCallback onFind;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Dialog(
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(AppRadius.card),
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 18),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: <Widget>[
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: FigmaColors.primaryA(0.10),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.fitness_center,
+              size: 23,
+              color: FigmaColors.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l.exNoGymTrainer,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: onFind,
+            style: FilledButton.styleFrom(
+              backgroundColor: FigmaColors.primary,
+              minimumSize: const Size(0, 46),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            icon: const Icon(Icons.search, size: 17),
+            label: Text(
+              l.exFindGym,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.md,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    gym.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: <Widget>[
-                const Icon(
-                  Icons.place_outlined,
-                  size: 16,
-                  color: AppColors.mutedForeground,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(gym.address, style: theme.textTheme.bodySmall),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: <Widget>[
-                const Icon(Icons.star, color: Color(0xFFF4A946), size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  '평점: ${gym.rating.toStringAsFixed(1)}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-            if (gym.weekdayHours != null ||
-                gym.weekendHours != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                '운영 시간',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              if (gym.weekdayHours != null)
-                Text(
-                  '평일: ${gym.weekdayHours}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              if (gym.weekendHours != null)
-                Text(
-                  '주말: ${gym.weekendHours}',
-                  style: theme.textTheme.bodySmall,
-                ),
-            ],
-            if (gym.phone != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                '연락처',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              Text(gym.phone!, style: theme.textTheme.bodySmall),
-            ],
-            if (gym.trainerName != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                '전담 트레이너',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              Text(gym.trainerName!, style: theme.textTheme.bodySmall),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            SizedBox(
-              height: 44,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(AppRadius.lg),
-                  ),
-                ),
-                child: const Text('닫기'),
-              ),
-            ),
-          ],
+    );
+  }
+}
+
+class _SectionLoading extends StatelessWidget {
+  const _SectionLoading({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: const Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(strokeWidth: 3),
         ),
       ),
     );
   }
+}
+
+class _SectionError extends StatelessWidget {
+  const _SectionError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: <Widget>[
+          Text(
+            l.exGymsLoadError,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: onRetry,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              side: BorderSide(color: FigmaColors.primaryA(0.35)),
+              minimumSize: const Size(48, 44),
+            ),
+            child: Text(l.actionRetry),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyRecommendation extends StatelessWidget {
+  const _EmptyRecommendation({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: _cardDecoration(),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w500,
+          color: FigmaColors.textMuted,
+        ),
+      ),
+    );
+  }
+}
+
+BoxDecoration _cardDecoration() {
+  return BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: FigmaColors.hairline),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.09),
+        blurRadius: 24,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  );
 }

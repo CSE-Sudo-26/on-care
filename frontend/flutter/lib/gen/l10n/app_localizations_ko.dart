@@ -588,6 +588,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymTab => '헬스장';
 
   @override
+  String get exMyGymTrainerSection => '내 헬스장·트레이너';
+
+  @override
+  String get exConnected => '연결됨';
+
+  @override
+  String get exMyTrainer => '내 트레이너';
+
+  @override
+  String get exRecommendedGyms => '추천 헬스장';
+
+  @override
+  String get exRecommendedTrainers => '추천 트레이너';
+
+  @override
+  String get exSeeMore => '더보기';
+
+  @override
+  String get exNoGymTrainer => '아직 연결된 헬스장이나 트레이너가 없어요.';
+
+  @override
+  String get exNoRecommendedGyms => '추천할 헬스장이 아직 없어요.';
+
+  @override
+  String get exNoRecommendedTrainers => '추천할 트레이너가 아직 없어요.';
+
+  @override
+  String get exTrainerAffiliation => '소속 헬스장';
+
+  @override
+  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+
+  @override
   String get exWeekSummary => '이번 주 운동 요약';
 
   @override
@@ -695,6 +728,62 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exFindGym => '헬스장 찾기';
+
+  @override
+  String get exFindTrainer => '트레이너 찾기';
+
+  @override
+  String get exGymDetailTitle => '헬스장 상세';
+
+  @override
+  String get exTrainerDetailTitle => '트레이너 상세';
+
+  @override
+  String get exDistance => '거리';
+
+  @override
+  String get exRating => '평점';
+
+  @override
+  String get exAffiliatedTrainer => '소속 트레이너';
+
+  @override
+  String get exRecommendationReason => '추천 이유';
+
+  @override
+  String get exGymNotFound => '헬스장 정보를 찾을 수 없어요.';
+
+  @override
+  String get exTrainerNotFound => '트레이너 정보를 찾을 수 없어요.';
+
+  @override
+  String get exGymSearchPlaceholder => '지역이나 헬스장 이름 검색';
+
+  @override
+  String get exTrainerSearchPlaceholder => '전문 분야나 트레이너 이름 검색';
+
+  @override
+  String get exSortRecommended => '추천순';
+
+  @override
+  String get exSortDistance => '거리순';
+
+  @override
+  String get exSortRating => '평점순';
+
+  @override
+  String get exSortName => '이름순';
+
+  @override
+  String exResultCount(int count) {
+    return '$count개 결과';
+  }
+
+  @override
+  String get exNoSearchResults => '검색 결과가 없어요.';
+
+  @override
+  String get exTrainersLoadError => '트레이너 정보를 불러오지 못했어요.';
 
   @override
   String get exGymSearchHint => '헬스장, 지역으로 검색';
