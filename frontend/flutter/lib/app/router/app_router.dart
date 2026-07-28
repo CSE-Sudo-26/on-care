@@ -15,7 +15,14 @@ import 'package:oncare/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:oncare/features/auth/presentation/pages/sign_up_page.dart';
 import 'package:oncare/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
+import 'package:oncare/features/exercise/presentation/pages/consultation_complete_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/consultation_request_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_detail_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/trainer_detail_page.dart';
+import 'package:oncare/features/exercise/presentation/pages/trainer_list_page.dart';
 import 'package:oncare/features/my_health/presentation/pages/my_health_page.dart';
 import 'package:oncare/features/notification/presentation/pages/notification_page.dart';
 import 'package:oncare/features/place/presentation/pages/place_page.dart';
@@ -91,7 +98,11 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.exercise,
-                builder: (context, state) => const ExercisePage(),
+                builder: (context, state) => ExercisePage(
+                  initialSubTab: state.uri.queryParameters['tab'] == 'gym'
+                      ? 1
+                      : 0,
+                ),
               ),
             ],
           ),
@@ -116,6 +127,47 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoutes.place,
         builder: (context, state) => const PlacePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.gyms,
+        builder: (context, state) => const GymListPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.gymDetail,
+        builder: (context, state) =>
+            GymDetailPage(gymId: state.pathParameters['gymId'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.trainers,
+        builder: (context, state) => const TrainerListPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.trainerDetail,
+        builder: (context, state) =>
+            TrainerDetailPage(gymId: state.pathParameters['gymId'] ?? ''),
+      ),
+      GoRoute(
+        path: AppRoutes.consultationRequest,
+        builder: (context, state) {
+          final String? rawTarget = state.uri.queryParameters['targetType'];
+          final ConsultationTargetType? targetType = switch (rawTarget) {
+            'gym' => ConsultationTargetType.gym,
+            'trainer' => ConsultationTargetType.trainer,
+            _ => null,
+          };
+          return ConsultationRequestPage(
+            targetType: targetType,
+            gymId: state.uri.queryParameters['gymId'] ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.consultationComplete,
+        builder: (context, state) => ConsultationCompletePage(
+          request: state.extra is ConsultationRequest
+              ? state.extra! as ConsultationRequest
+              : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.signIn,

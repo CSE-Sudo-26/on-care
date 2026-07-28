@@ -1244,6 +1244,72 @@ abstract class AppLocalizations {
   /// **'Gym'**
   String get exGymTab;
 
+  /// No description provided for @exMyGymTrainerSection.
+  ///
+  /// In en, this message translates to:
+  /// **'My Gym & Trainer'**
+  String get exMyGymTrainerSection;
+
+  /// No description provided for @exConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get exConnected;
+
+  /// No description provided for @exMyTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'My Trainer'**
+  String get exMyTrainer;
+
+  /// No description provided for @exRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Gyms'**
+  String get exRecommendedGyms;
+
+  /// No description provided for @exRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Trainers'**
+  String get exRecommendedTrainers;
+
+  /// No description provided for @exSeeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'See more'**
+  String get exSeeMore;
+
+  /// No description provided for @exNoGymTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have a connected gym or trainer yet.'**
+  String get exNoGymTrainer;
+
+  /// No description provided for @exNoRecommendedGyms.
+  ///
+  /// In en, this message translates to:
+  /// **'No gym recommendations yet.'**
+  String get exNoRecommendedGyms;
+
+  /// No description provided for @exNoRecommendedTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainer recommendations yet.'**
+  String get exNoRecommendedTrainers;
+
+  /// No description provided for @exTrainerAffiliation.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym'**
+  String get exTrainerAffiliation;
+
+  /// No description provided for @exTrainerRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'A good fit for your health goals'**
+  String get exTrainerRecommendationReason;
+
   /// No description provided for @exWeekSummary.
   ///
   /// In en, this message translates to:
@@ -1453,6 +1519,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Find a Gym'**
   String get exFindGym;
+
+  /// No description provided for @exFindTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a Trainer'**
+  String get exFindTrainer;
+
+  /// No description provided for @exGymDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Details'**
+  String get exGymDetailTitle;
+
+  /// No description provided for @exTrainerDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer Details'**
+  String get exTrainerDetailTitle;
+
+  /// No description provided for @exDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exDistance;
+
+  /// No description provided for @exRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exRating;
+
+  /// No description provided for @exAffiliatedTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Affiliated Trainer'**
+  String get exAffiliatedTrainer;
+
+  /// No description provided for @exRecommendationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why we recommend this trainer'**
+  String get exRecommendationReason;
+
+  /// No description provided for @exGymNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this gym.'**
+  String get exGymNotFound;
+
+  /// No description provided for @exTrainerNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find this trainer.'**
+  String get exTrainerNotFound;
+
+  /// No description provided for @exGymSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by area or gym name'**
+  String get exGymSearchPlaceholder;
+
+  /// No description provided for @exTrainerSearchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by specialty or trainer name'**
+  String get exTrainerSearchPlaceholder;
+
+  /// No description provided for @exSortRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get exSortRecommended;
+
+  /// No description provided for @exSortDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get exSortDistance;
+
+  /// No description provided for @exSortRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get exSortRating;
+
+  /// No description provided for @exSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get exSortName;
+
+  /// No description provided for @exResultCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 result} other{{count} results}}'**
+  String exResultCount(int count);
+
+  /// No description provided for @exNoSearchResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No search results.'**
+  String get exNoSearchResults;
+
+  /// No description provided for @exTrainersLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load trainers.'**
+  String get exTrainersLoadError;
 
   /// No description provided for @exGymSearchHint.
   ///
@@ -2131,6 +2305,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How are my blood sugar readings?'**
   String get aicQuickReply3;
+
+  /// No description provided for @exConsultRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation Request'**
+  String get exConsultRequestTitle;
+
+  /// No description provided for @exGymConsultRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a Gym Consultation'**
+  String get exGymConsultRequest;
+
+  /// No description provided for @exTrainerConsultRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a Trainer Consultation'**
+  String get exTrainerConsultRequest;
+
+  /// No description provided for @exConsultPendingCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation Request Pending'**
+  String get exConsultPendingCta;
+
+  /// No description provided for @exConsultTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation Target'**
+  String get exConsultTarget;
+
+  /// No description provided for @exGymConsultType.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Consultation'**
+  String get exGymConsultType;
+
+  /// No description provided for @exTrainerConsultType.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer Consultation'**
+  String get exTrainerConsultType;
+
+  /// No description provided for @exAssignedTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned Trainer'**
+  String get exAssignedTrainer;
+
+  /// No description provided for @exTrainerAssignedLater.
+  ///
+  /// In en, this message translates to:
+  /// **'The gym will confirm and assign a trainer'**
+  String get exTrainerAssignedLater;
+
+  /// No description provided for @exExerciseGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise Goal'**
+  String get exExerciseGoal;
+
+  /// No description provided for @exGoalWeightLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight Loss'**
+  String get exGoalWeightLoss;
+
+  /// No description provided for @exGoalStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Strength'**
+  String get exGoalStrength;
+
+  /// No description provided for @exGoalFitness.
+  ///
+  /// In en, this message translates to:
+  /// **'Improve Fitness'**
+  String get exGoalFitness;
+
+  /// No description provided for @exGoalPosture.
+  ///
+  /// In en, this message translates to:
+  /// **'Improve Posture'**
+  String get exGoalPosture;
+
+  /// No description provided for @exGoalHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Management'**
+  String get exGoalHealth;
+
+  /// No description provided for @exOptionOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get exOptionOther;
+
+  /// No description provided for @exHealthPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Management Purpose'**
+  String get exHealthPurpose;
+
+  /// No description provided for @exPurposeWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight Management'**
+  String get exPurposeWeight;
+
+  /// No description provided for @exPurposeChronic.
+  ///
+  /// In en, this message translates to:
+  /// **'Chronic Condition Management'**
+  String get exPurposeChronic;
+
+  /// No description provided for @exPurposeRehab.
+  ///
+  /// In en, this message translates to:
+  /// **'Pain or Rehabilitation'**
+  String get exPurposeRehab;
+
+  /// No description provided for @exPurposeGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General Health Management'**
+  String get exPurposeGeneral;
+
+  /// No description provided for @exPurposeNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get exPurposeNone;
+
+  /// No description provided for @exHealthPurposeOtherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For example, back rehabilitation, knee pain, or cholesterol management'**
+  String get exHealthPurposeOtherHint;
+
+  /// No description provided for @exOtherGoalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe your specific exercise goal in the message.'**
+  String get exOtherGoalHint;
+
+  /// No description provided for @exPreferredDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred Date'**
+  String get exPreferredDate;
+
+  /// No description provided for @exSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get exSelectDate;
+
+  /// No description provided for @exPreferredTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred Time'**
+  String get exPreferredTime;
+
+  /// No description provided for @exTimeMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning'**
+  String get exTimeMorning;
+
+  /// No description provided for @exTimeAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon'**
+  String get exTimeAfternoon;
+
+  /// No description provided for @exTimeEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening'**
+  String get exTimeEvening;
+
+  /// No description provided for @exTimeFlexible.
+  ///
+  /// In en, this message translates to:
+  /// **'Discuss Later'**
+  String get exTimeFlexible;
+
+  /// No description provided for @exConsultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get exConsultMessage;
+
+  /// No description provided for @exConsultMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your exercise experience or anything helpful for the consultation.'**
+  String get exConsultMessageHint;
+
+  /// No description provided for @exSendConsultRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Consultation Request'**
+  String get exSendConsultRequest;
+
+  /// No description provided for @exGoalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an exercise goal.'**
+  String get exGoalRequired;
+
+  /// No description provided for @exHealthPurposeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a health management purpose.'**
+  String get exHealthPurposeRequired;
+
+  /// No description provided for @exHealthPurposeInputRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a health management purpose.'**
+  String get exHealthPurposeInputRequired;
+
+  /// No description provided for @exDateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a preferred date.'**
+  String get exDateRequired;
+
+  /// No description provided for @exTimeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a preferred time.'**
+  String get exTimeRequired;
+
+  /// No description provided for @exConsultTargetNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find the consultation target.'**
+  String get exConsultTargetNotFound;
+
+  /// No description provided for @exConsultPendingExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A consultation request is already pending.'**
+  String get exConsultPendingExists;
+
+  /// No description provided for @exConsultReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Your consultation request was received'**
+  String get exConsultReceived;
+
+  /// No description provided for @exConsultCompletionInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll let you know when the other party reviews your request.'**
+  String get exConsultCompletionInfo;
+
+  /// No description provided for @exConsultStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Status'**
+  String get exConsultStatus;
+
+  /// No description provided for @exConsultPendingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get exConsultPendingStatus;
+
+  /// No description provided for @exConsultAcceptedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get exConsultAcceptedStatus;
+
+  /// No description provided for @exConsultRejectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get exConsultRejectedStatus;
+
+  /// No description provided for @exReturnExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Exercise'**
+  String get exReturnExercise;
+
+  /// No description provided for @exConsultStatusSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation Request Status'**
+  String get exConsultStatusSection;
 }
 
 class _AppLocalizationsDelegate

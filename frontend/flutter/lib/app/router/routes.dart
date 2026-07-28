@@ -13,6 +13,32 @@ class AppRoutes {
   static const String aiCoach = '/ai-coach';
   static const String notification = '/notification';
   static const String place = '/place';
+  static const String gyms = '/gyms';
+  static const String trainers = '/trainers';
+  static const String gymDetail = '/gyms/:gymId';
+  static const String trainerDetail = '/trainers/:gymId';
+  static const String consultationRequest = '/consultations/request';
+  static const String consultationComplete = '/consultations/complete';
+  static const String exerciseGym = '/exercise?tab=gym';
+
+  static String gymDetailPath(String gymId) =>
+      '$gyms/${Uri.encodeComponent(gymId)}';
+
+  static String trainerDetailPath(String gymId) =>
+      '$trainers/${Uri.encodeComponent(gymId)}';
+
+  static String consultationRequestPath({
+    required String targetType,
+    required String gymId,
+  }) {
+    return Uri(
+      path: consultationRequest,
+      queryParameters: <String, String>{
+        'targetType': targetType,
+        'gymId': gymId,
+      },
+    ).toString();
+  }
 
   // Auth
   static const String signIn = '/auth/sign-in';

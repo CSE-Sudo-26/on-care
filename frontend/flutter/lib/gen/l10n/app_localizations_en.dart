@@ -622,6 +622,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymTab => 'Gym';
 
   @override
+  String get exMyGymTrainerSection => 'My Gym & Trainer';
+
+  @override
+  String get exConnected => 'Connected';
+
+  @override
+  String get exMyTrainer => 'My Trainer';
+
+  @override
+  String get exRecommendedGyms => 'Recommended Gyms';
+
+  @override
+  String get exRecommendedTrainers => 'Recommended Trainers';
+
+  @override
+  String get exSeeMore => 'See more';
+
+  @override
+  String get exNoGymTrainer =>
+      'You don\'t have a connected gym or trainer yet.';
+
+  @override
+  String get exNoRecommendedGyms => 'No gym recommendations yet.';
+
+  @override
+  String get exNoRecommendedTrainers => 'No trainer recommendations yet.';
+
+  @override
+  String get exTrainerAffiliation => 'Gym';
+
+  @override
+  String get exTrainerRecommendationReason =>
+      'A good fit for your health goals';
+
+  @override
   String get exWeekSummary => 'This Week\'s Summary';
 
   @override
@@ -730,6 +765,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exFindGym => 'Find a Gym';
+
+  @override
+  String get exFindTrainer => 'Find a Trainer';
+
+  @override
+  String get exGymDetailTitle => 'Gym Details';
+
+  @override
+  String get exTrainerDetailTitle => 'Trainer Details';
+
+  @override
+  String get exDistance => 'Distance';
+
+  @override
+  String get exRating => 'Rating';
+
+  @override
+  String get exAffiliatedTrainer => 'Affiliated Trainer';
+
+  @override
+  String get exRecommendationReason => 'Why we recommend this trainer';
+
+  @override
+  String get exGymNotFound => 'Couldn\'t find this gym.';
+
+  @override
+  String get exTrainerNotFound => 'Couldn\'t find this trainer.';
+
+  @override
+  String get exGymSearchPlaceholder => 'Search by area or gym name';
+
+  @override
+  String get exTrainerSearchPlaceholder =>
+      'Search by specialty or trainer name';
+
+  @override
+  String get exSortRecommended => 'Recommended';
+
+  @override
+  String get exSortDistance => 'Distance';
+
+  @override
+  String get exSortRating => 'Rating';
+
+  @override
+  String get exSortName => 'Name';
+
+  @override
+  String exResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exNoSearchResults => 'No search results.';
+
+  @override
+  String get exTrainersLoadError => 'Couldn\'t load trainers.';
 
   @override
   String get exGymSearchHint => 'Search by gym or area';
@@ -1102,4 +1200,160 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aicQuickReply3 => 'How are my blood sugar readings?';
+
+  @override
+  String get exConsultRequestTitle => 'Consultation Request';
+
+  @override
+  String get exGymConsultRequest => 'Request a Gym Consultation';
+
+  @override
+  String get exTrainerConsultRequest => 'Request a Trainer Consultation';
+
+  @override
+  String get exConsultPendingCta => 'Consultation Request Pending';
+
+  @override
+  String get exConsultTarget => 'Consultation Target';
+
+  @override
+  String get exGymConsultType => 'Gym Consultation';
+
+  @override
+  String get exTrainerConsultType => 'Trainer Consultation';
+
+  @override
+  String get exAssignedTrainer => 'Assigned Trainer';
+
+  @override
+  String get exTrainerAssignedLater =>
+      'The gym will confirm and assign a trainer';
+
+  @override
+  String get exExerciseGoal => 'Exercise Goal';
+
+  @override
+  String get exGoalWeightLoss => 'Weight Loss';
+
+  @override
+  String get exGoalStrength => 'Build Strength';
+
+  @override
+  String get exGoalFitness => 'Improve Fitness';
+
+  @override
+  String get exGoalPosture => 'Improve Posture';
+
+  @override
+  String get exGoalHealth => 'Health Management';
+
+  @override
+  String get exOptionOther => 'Other';
+
+  @override
+  String get exHealthPurpose => 'Health Management Purpose';
+
+  @override
+  String get exPurposeWeight => 'Weight Management';
+
+  @override
+  String get exPurposeChronic => 'Chronic Condition Management';
+
+  @override
+  String get exPurposeRehab => 'Pain or Rehabilitation';
+
+  @override
+  String get exPurposeGeneral => 'General Health Management';
+
+  @override
+  String get exPurposeNone => 'None';
+
+  @override
+  String get exHealthPurposeOtherHint =>
+      'For example, back rehabilitation, knee pain, or cholesterol management';
+
+  @override
+  String get exOtherGoalHint =>
+      'Please describe your specific exercise goal in the message.';
+
+  @override
+  String get exPreferredDate => 'Preferred Date';
+
+  @override
+  String get exSelectDate => 'Select a date';
+
+  @override
+  String get exPreferredTime => 'Preferred Time';
+
+  @override
+  String get exTimeMorning => 'Morning';
+
+  @override
+  String get exTimeAfternoon => 'Afternoon';
+
+  @override
+  String get exTimeEvening => 'Evening';
+
+  @override
+  String get exTimeFlexible => 'Discuss Later';
+
+  @override
+  String get exConsultMessage => 'Message';
+
+  @override
+  String get exConsultMessageHint =>
+      'Share your exercise experience or anything helpful for the consultation.';
+
+  @override
+  String get exSendConsultRequest => 'Send Consultation Request';
+
+  @override
+  String get exGoalRequired => 'Please select an exercise goal.';
+
+  @override
+  String get exHealthPurposeRequired =>
+      'Please select a health management purpose.';
+
+  @override
+  String get exHealthPurposeInputRequired =>
+      'Please enter a health management purpose.';
+
+  @override
+  String get exDateRequired => 'Please select a preferred date.';
+
+  @override
+  String get exTimeRequired => 'Please select a preferred time.';
+
+  @override
+  String get exConsultTargetNotFound =>
+      'Couldn\'t find the consultation target.';
+
+  @override
+  String get exConsultPendingExists =>
+      'A consultation request is already pending.';
+
+  @override
+  String get exConsultReceived => 'Your consultation request was received';
+
+  @override
+  String get exConsultCompletionInfo =>
+      'We\'ll let you know when the other party reviews your request.';
+
+  @override
+  String get exConsultStatus => 'Current Status';
+
+  @override
+  String get exConsultPendingStatus => 'Pending';
+
+  @override
+  String get exConsultAcceptedStatus => 'Accepted';
+
+  @override
+  String get exConsultRejectedStatus => 'Rejected';
+
+  @override
+  String get exReturnExercise => 'Return to Exercise';
+
+  @override
+  String get exConsultStatusSection => 'Consultation Request Status';
 }

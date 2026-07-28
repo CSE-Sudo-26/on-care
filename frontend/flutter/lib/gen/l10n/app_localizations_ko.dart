@@ -615,6 +615,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymTab => '헬스장';
 
   @override
+  String get exMyGymTrainerSection => '내 헬스장·트레이너';
+
+  @override
+  String get exConnected => '연결됨';
+
+  @override
+  String get exMyTrainer => '내 트레이너';
+
+  @override
+  String get exRecommendedGyms => '추천 헬스장';
+
+  @override
+  String get exRecommendedTrainers => '추천 트레이너';
+
+  @override
+  String get exSeeMore => '더보기';
+
+  @override
+  String get exNoGymTrainer => '아직 연결된 헬스장이나 트레이너가 없어요.';
+
+  @override
+  String get exNoRecommendedGyms => '추천할 헬스장이 아직 없어요.';
+
+  @override
+  String get exNoRecommendedTrainers => '추천할 트레이너가 아직 없어요.';
+
+  @override
+  String get exTrainerAffiliation => '소속 헬스장';
+
+  @override
+  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+
+  @override
   String get exWeekSummary => '이번 주 운동 요약';
 
   @override
@@ -722,6 +755,62 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exFindGym => '헬스장 찾기';
+
+  @override
+  String get exFindTrainer => '트레이너 찾기';
+
+  @override
+  String get exGymDetailTitle => '헬스장 상세';
+
+  @override
+  String get exTrainerDetailTitle => '트레이너 상세';
+
+  @override
+  String get exDistance => '거리';
+
+  @override
+  String get exRating => '평점';
+
+  @override
+  String get exAffiliatedTrainer => '소속 트레이너';
+
+  @override
+  String get exRecommendationReason => '추천 이유';
+
+  @override
+  String get exGymNotFound => '헬스장 정보를 찾을 수 없어요.';
+
+  @override
+  String get exTrainerNotFound => '트레이너 정보를 찾을 수 없어요.';
+
+  @override
+  String get exGymSearchPlaceholder => '지역이나 헬스장 이름 검색';
+
+  @override
+  String get exTrainerSearchPlaceholder => '전문 분야나 트레이너 이름 검색';
+
+  @override
+  String get exSortRecommended => '추천순';
+
+  @override
+  String get exSortDistance => '거리순';
+
+  @override
+  String get exSortRating => '평점순';
+
+  @override
+  String get exSortName => '이름순';
+
+  @override
+  String exResultCount(int count) {
+    return '$count개 결과';
+  }
+
+  @override
+  String get exNoSearchResults => '검색 결과가 없어요.';
+
+  @override
+  String get exTrainersLoadError => '트레이너 정보를 불러오지 못했어요.';
 
   @override
   String get exGymSearchHint => '헬스장, 지역으로 검색';
@@ -1093,4 +1182,151 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aicQuickReply3 => '내 혈당 기록은 괜찮아?';
+
+  @override
+  String get exConsultRequestTitle => '상담 요청';
+
+  @override
+  String get exGymConsultRequest => '헬스장 상담 요청하기';
+
+  @override
+  String get exTrainerConsultRequest => '트레이너 상담 요청하기';
+
+  @override
+  String get exConsultPendingCta => '상담 요청 대기 중';
+
+  @override
+  String get exConsultTarget => '상담 대상';
+
+  @override
+  String get exGymConsultType => '헬스장 상담';
+
+  @override
+  String get exTrainerConsultType => '트레이너 상담';
+
+  @override
+  String get exAssignedTrainer => '담당 트레이너';
+
+  @override
+  String get exTrainerAssignedLater => '헬스장에서 확인 후 배정돼요';
+
+  @override
+  String get exExerciseGoal => '운동 목표';
+
+  @override
+  String get exGoalWeightLoss => '체중 감량';
+
+  @override
+  String get exGoalStrength => '근력 향상';
+
+  @override
+  String get exGoalFitness => '체력 향상';
+
+  @override
+  String get exGoalPosture => '자세 교정';
+
+  @override
+  String get exGoalHealth => '건강 관리';
+
+  @override
+  String get exOptionOther => '기타';
+
+  @override
+  String get exHealthPurpose => '건강관리 목적';
+
+  @override
+  String get exPurposeWeight => '체중 관리';
+
+  @override
+  String get exPurposeChronic => '만성질환 관리';
+
+  @override
+  String get exPurposeRehab => '통증·재활';
+
+  @override
+  String get exPurposeGeneral => '일반 건강관리';
+
+  @override
+  String get exPurposeNone => '해당 없음';
+
+  @override
+  String get exHealthPurposeOtherHint => '허리디스크 재활, 무릎 통증 관리, 고지혈증 관리';
+
+  @override
+  String get exOtherGoalHint => '구체적인 운동 목표는 문의 내용에 작성해주세요.';
+
+  @override
+  String get exPreferredDate => '희망 날짜';
+
+  @override
+  String get exSelectDate => '날짜를 선택해주세요';
+
+  @override
+  String get exPreferredTime => '희망 시간대';
+
+  @override
+  String get exTimeMorning => '오전';
+
+  @override
+  String get exTimeAfternoon => '오후';
+
+  @override
+  String get exTimeEvening => '저녁';
+
+  @override
+  String get exTimeFlexible => '시간 협의';
+
+  @override
+  String get exConsultMessage => '문의 내용';
+
+  @override
+  String get exConsultMessageHint => '운동 경험이나 상담 시 참고할 내용을 자유롭게 작성해주세요.';
+
+  @override
+  String get exSendConsultRequest => '상담 요청 보내기';
+
+  @override
+  String get exGoalRequired => '운동 목표를 선택해주세요.';
+
+  @override
+  String get exHealthPurposeRequired => '건강관리 목적을 선택해주세요.';
+
+  @override
+  String get exHealthPurposeInputRequired => '건강관리 목적을 입력해주세요.';
+
+  @override
+  String get exDateRequired => '희망 날짜를 선택해주세요.';
+
+  @override
+  String get exTimeRequired => '희망 시간대를 선택해주세요.';
+
+  @override
+  String get exConsultTargetNotFound => '상담 대상 정보를 찾을 수 없어요.';
+
+  @override
+  String get exConsultPendingExists => '이미 확인 대기 중인 상담 요청이 있어요.';
+
+  @override
+  String get exConsultReceived => '상담 요청이 접수되었어요';
+
+  @override
+  String get exConsultCompletionInfo => '상대방이 요청을 확인하면 안내해드릴게요.';
+
+  @override
+  String get exConsultStatus => '현재 상태';
+
+  @override
+  String get exConsultPendingStatus => '요청 대기';
+
+  @override
+  String get exConsultAcceptedStatus => '요청 수락';
+
+  @override
+  String get exConsultRejectedStatus => '요청 거절';
+
+  @override
+  String get exReturnExercise => '운동 탭으로 돌아가기';
+
+  @override
+  String get exConsultStatusSection => '상담 요청 현황';
 }
