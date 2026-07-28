@@ -68,6 +68,22 @@ class MockExerciseRepository implements ExerciseRepository {
           calories: 480,
         ),
         ExerciseSession(
+          id: 's-fri',
+          dateLabel: '금요일',
+          dayLabel: '금',
+          type: ExerciseType.cardio,
+          minutes: 55,
+          calories: 400,
+        ),
+        ExerciseSession(
+          id: 's-sat',
+          dateLabel: '토요일',
+          dayLabel: '토',
+          type: ExerciseType.cardio,
+          minutes: 45,
+          calories: 330,
+        ),
+        ExerciseSession(
           id: 's-today',
           dateLabel: '오늘',
           timeLabel: '18:00',
