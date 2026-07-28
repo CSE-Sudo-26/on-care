@@ -224,6 +224,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGoal => '목표';
 
   @override
+  String get homeDietNutritionTitle => '식단 · 영양';
+
+  @override
+  String get homeCalorieIntake => '오늘 섭취 칼로리';
+
+  @override
+  String get homeAchieveRate => '달성률';
+
+  @override
+  String get homeWeeklyTrend => '주간 추이';
+
+  @override
+  String get homeExerciseActiveTime => '운동 시간';
+
+  @override
+  String get homeExerciseBurned => '소모 칼로리';
+
+  @override
+  String get homeExerciseCount => '운동 횟수';
+
+  @override
+  String get homeExerciseBurnProgress => '칼로리 소모 목표';
+
+  @override
+  String get unitTimes => '회';
+
+  @override
   String get homeVsLastWeek => '지난주 대비';
 
   @override
@@ -389,7 +416,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietUnitG => 'g';
 
   @override
-  String get dietAiFeedback => 'AI 피드백';
+  String get dietAiFeedback => 'AI 맞춤 조언';
 
   @override
   String get dietTodayMeals => '오늘의 식단';
@@ -624,7 +651,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exEmptyLog => '이번 주 운동 기록이 없어요.\n운동을 추가해 기록을 남겨 보세요!';
 
   @override
-  String get exAiFeedback => 'AI 피드백';
+  String get exAiFeedback => 'AI 맞춤 조언';
 
   @override
   String get exAddExercise => '운동 추가';

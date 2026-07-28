@@ -226,6 +226,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGoal => 'Goal';
 
   @override
+  String get homeDietNutritionTitle => 'Diet & nutrition';
+
+  @override
+  String get homeCalorieIntake => 'Today\'s calories';
+
+  @override
+  String get homeAchieveRate => 'Progress';
+
+  @override
+  String get homeWeeklyTrend => 'Weekly trend';
+
+  @override
+  String get homeExerciseActiveTime => 'Active time';
+
+  @override
+  String get homeExerciseBurned => 'Calories';
+
+  @override
+  String get homeExerciseCount => 'Workouts';
+
+  @override
+  String get homeExerciseBurnProgress => 'Burn goal';
+
+  @override
+  String get unitTimes => '×';
+
+  @override
   String get homeVsLastWeek => 'vs last week';
 
   @override
@@ -391,7 +418,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietUnitG => 'g';
 
   @override
-  String get dietAiFeedback => 'AI Feedback';
+  String get dietAiFeedback => 'AI advice';
 
   @override
   String get dietTodayMeals => 'Today\'s Meals';
@@ -632,7 +659,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'No workouts logged this week.\nAdd one to start your log!';
 
   @override
-  String get exAiFeedback => 'AI Feedback';
+  String get exAiFeedback => 'AI advice';
 
   @override
   String get exAddExercise => 'Add Exercise';

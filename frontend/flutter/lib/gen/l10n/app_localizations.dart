@@ -512,6 +512,60 @@ abstract class AppLocalizations {
   /// **'Goal'**
   String get homeGoal;
 
+  /// No description provided for @homeDietNutritionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet & nutrition'**
+  String get homeDietNutritionTitle;
+
+  /// No description provided for @homeCalorieIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s calories'**
+  String get homeCalorieIntake;
+
+  /// No description provided for @homeAchieveRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get homeAchieveRate;
+
+  /// No description provided for @homeWeeklyTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly trend'**
+  String get homeWeeklyTrend;
+
+  /// No description provided for @homeExerciseActiveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Active time'**
+  String get homeExerciseActiveTime;
+
+  /// No description provided for @homeExerciseBurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get homeExerciseBurned;
+
+  /// No description provided for @homeExerciseCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts'**
+  String get homeExerciseCount;
+
+  /// No description provided for @homeExerciseBurnProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Burn goal'**
+  String get homeExerciseBurnProgress;
+
+  /// No description provided for @unitTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'×'**
+  String get unitTimes;
+
   /// No description provided for @homeVsLastWeek.
   ///
   /// In en, this message translates to:
@@ -809,7 +863,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietAiFeedback.
   ///
   /// In en, this message translates to:
-  /// **'AI Feedback'**
+  /// **'AI advice'**
   String get dietAiFeedback;
 
   /// No description provided for @dietTodayMeals.
@@ -1265,7 +1319,7 @@ abstract class AppLocalizations {
   /// No description provided for @exAiFeedback.
   ///
   /// In en, this message translates to:
-  /// **'AI Feedback'**
+  /// **'AI advice'**
   String get exAiFeedback;
 
   /// No description provided for @exAddExercise.
