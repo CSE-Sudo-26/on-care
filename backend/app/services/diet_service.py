@@ -8,6 +8,7 @@ diet 라우터가 오늘 집계·나트륨 코칭·엔트리 저장/멱등을 �
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime
 
@@ -21,6 +22,8 @@ from app.schemas.diet_api import (
     DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
 from app.services.coach.personal_ingest import record_diet
+
+logger = logging.getLogger(__name__)
 
 # 끼니 macros/nutrient 는 DietEntry 를 단일 원본으로 삼는다. 저장 시 유지하는 음식 필드.
 _FOOD_STORAGE_FIELDS = ("name", "calories", "sodium_mg", "sugar_g", "source")
@@ -158,11 +161,20 @@ def save_analyzed_entry(
         raise
     db.refresh(entry)
 
-    # 개인 RAG 문서로 적재(코치가 내 최근 식단을 검색하도록). best-effort.
-    record_diet(
-        db, user_id, date=entry.date, foods=foods_for_storage,
-        total_calories=entry.total_calories, sodium_mg=entry.sodium_mg, sugar_g=entry.sugar_g,
-    )
+    # 개인 RAG 문서로 적재(코치가 내 최근 식단을 검색하도록). 식단 저장은 이미
+    # commit됐으므로 보조 인덱싱 실패가 성공 응답을 500으로 바꾸지 않게 격리한다.
+    try:
+        record_diet(
+            db, user_id, date=entry.date, foods=foods_for_storage,
+            total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
+            sugar_g=entry.sugar_g,
+        )
+    except Exception as exc:  # noqa: BLE001 — 개인 RAG 적재는 best-effort
+        db.rollback()
+        logger.warning(
+            "개인 RAG 적재 실패(%s) — 식단 저장은 유지",
+            type(exc).__name__,
+        )
     return entry, True
 
 
