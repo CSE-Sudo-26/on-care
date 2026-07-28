@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 개발 기본 시크릿(운영에서 그대로 쓰면 기동 차단)
 DEFAULT_JWT_SECRET = "CHANGE_ME_dev_only_secret_key_please_replace_in_prod"
+# 데모 계정(트레이너/회원 시드) 기본 로그인 비밀번호. 운영에서 데모 시드를 켜려면
+# 반드시 이 기본값이 아닌 안전한 값으로 바꿔야 한다(아래 _guard_prod_secrets 가 강제).
+DEFAULT_DEMO_PASSWORD = "oncare123"
+# 운영에서 데모 시드를 켤 때 요구하는 DEMO_LOGIN_PASSWORD 최소 길이.
+MIN_DEMO_PASSWORD_LEN = 12
 
 
 class Settings(BaseSettings):
@@ -71,6 +76,9 @@ class Settings(BaseSettings):
     # --- 기타 ---
     cors_allow_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
     seed_demo_data: bool = True
+    # 데모 계정(트레이너/회원 시드) 로그인 비밀번호. 운영에서 데모 계정에 데이터를 담아
+    # 두고 싶으면 이 값을 안전하게 설정한다(기본값이면 운영 기동 차단).
+    demo_login_password: str = DEFAULT_DEMO_PASSWORD
     # 관리자 이메일(콤마구분) — 기동 시 해당 사용자를 is_admin=True 로 승격
     admin_emails: str = ""
 
@@ -115,6 +123,17 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "운영(env=prod)에서는 CORS 허용 출처를 명시해야 합니다(와일드카드 '*' 금지)."
                 )
+            # 운영에서 데모 시드를 켜면 트레이너/회원 데모 계정이 생성된다. 약한 비밀번호가
+            # 그대로 운영 자격증명이 되는 것을 막는다: 기본값 금지 + 최소 길이 강제.
+            # (빈 문자열·짧은 문자열·기본값 모두 거부. 원치 않으면 SEED_DEMO_DATA=false)
+            if self.seed_demo_data:
+                pw = self.demo_login_password or ""
+                if pw == DEFAULT_DEMO_PASSWORD or len(pw) < MIN_DEMO_PASSWORD_LEN:
+                    raise ValueError(
+                        "운영(env=prod)에서 데모 시드(SEED_DEMO_DATA=true)를 켜려면 "
+                        f"DEMO_LOGIN_PASSWORD 를 기본값이 아닌 {MIN_DEMO_PASSWORD_LEN}자 이상의 "
+                        "안전한 값으로 설정해야 합니다(또는 SEED_DEMO_DATA=false)."
+                    )
         return self
 
 

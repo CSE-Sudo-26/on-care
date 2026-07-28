@@ -26,6 +26,7 @@ def test_prod_ok_with_real_secret():
         _env_file=None, env="prod",
         jwt_secret="a-strong-random-secret-value",
         cors_allow_origins="https://app.oncare.com",
+        seed_demo_data=False,  # 운영 권장: 데모 시드 끔(켜려면 DEMO_LOGIN_PASSWORD 강제)
     )
     assert s.is_prod is True
 
@@ -37,6 +38,7 @@ def test_demo_fallback_gated_by_env():
     prod = Settings(
         _env_file=None, env="prod", jwt_secret="strong",
         cors_allow_origins="https://app.oncare.com", allow_demo_fallback=True,
+        seed_demo_data=False,
     )
     assert prod.demo_fallback_enabled is False
     # 명시적으로 끄면 개발에서도 비활성
