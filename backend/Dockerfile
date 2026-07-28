@@ -1,10 +1,8 @@
 FROM python:3.12-slim
 WORKDIR /code
 
-# psycopg(libpq) 빌드 의존성. 슬림 이미지 기준.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
-
+# psycopg[binary] 휠이 libpq 를 번들하므로 apt 빌드 툴체인(build-essential/libpq-dev)이
+# 불필요하다 — 이미지에서 수백 MB 를 덜어낸다. (소스 빌드로 바꾸면 psycopg[c] + libpq-dev 필요)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
