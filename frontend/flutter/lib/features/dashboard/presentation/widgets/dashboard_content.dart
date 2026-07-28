@@ -422,7 +422,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
   _NutTabKind _tab = _NutTabKind.calories;
 
   static const double _calCur = 967; // 식단 탭 오늘 합계와 일치
-  static const double _calGoal = 1800;
+  static const double _calGoal = 2000; // MY 건강목표 칼로리
 
   @override
   Widget build(BuildContext context) {
@@ -432,6 +432,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _trendScale(cfg);
     final NumberFormat nf = NumberFormat('#,###');
+    // 오늘 값의 목표 대비 상태색(안전 초록 / 근접 주황 / 초과 빨강).
+    final Color todayColor = _nutStatusColor(cfg.cur.last, cfg.goal);
 
     return _StripeCard(
       child: Column(
@@ -546,7 +548,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                         label: _nutLabel(l, t),
                         active: _tab == t,
                         warn: false,
-                        activeColor: _nutrition[t]!.color,
+                        // 세 버튼 모두 선택 시 브랜드 블루(#3EAFDF)로 통일.
+                        activeColor: FigmaColors.primary,
                         onTap: () => setState(() => _tab = t),
                       ),
                       const SizedBox(height: 6),
@@ -559,21 +562,29 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    _ChartLegend(color: cfg.color),
+                    _ChartLegend(
+                      goalText: '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
+                        // 가로축 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
                         SizedBox(
-                          width: 32,
+                          width: 34,
                           height: 60,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Stack(
                             children: <Widget>[
-                              _AxisLabel('${nf.format(hi.round())}${cfg.unit}'),
-                              _AxisLabel(nf.format(((lo + hi) / 2).round())),
-                              _AxisLabel(nf.format(lo.round())),
+                              for (final double t in cfg.ticks)
+                                Positioned(
+                                  right: 0,
+                                  top:
+                                      (60 -
+                                              ((t - lo) / (hi - lo)) * 60 -
+                                              5)
+                                          .clamp(0.0, 50.0),
+                                  child: _AxisLabel(nf.format(t)),
+                                ),
                             ],
                           ),
                         ),
@@ -589,10 +600,9 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                     cur: cfg.cur,
                                     prev: cfg.prev,
                                     goal: cfg.goal,
+                                    ticks: cfg.ticks,
                                     lo: lo,
                                     hi: hi,
-                                    color: cfg.color,
-                                    unit: cfg.unit,
                                   ),
                                 ),
                               ),
@@ -608,7 +618,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                         fontSize: 8,
                                         fontWeight: FontWeight.w600,
                                         color: i == 6
-                                            ? cfg.color
+                                            ? todayColor
                                             : FigmaColors.textFaint,
                                       ),
                                     ),
@@ -1039,11 +1049,23 @@ class _MetricTile extends StatelessWidget {
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
 /// a nearly flat line.
 (double, double) _trendScale(_NutData c) {
-  final List<double> all = <double>[...c.cur, ...c.prev, c.goal];
-  final double lo = all.reduce(math.min);
-  final double hi = all.reduce(math.max);
+  // 데이터와 눈금(ticks)을 모두 포함하도록 스케일을 잡아 눈금선이 항상 보이게 한다.
+  final List<double> all = <double>[...c.cur, ...c.prev, ...c.ticks, c.goal];
+  double lo = all.reduce(math.min);
+  double hi = all.reduce(math.max);
   final double range = (hi - lo) == 0 ? 1 : (hi - lo);
-  return (lo - range * 0.16, hi + range * 0.22);
+  hi += range * 0.10;
+  lo -= range * 0.08;
+  // 당류처럼 0이 최소 눈금인 지표는 바닥을 0에 고정.
+  if (c.ticks.isNotEmpty && c.ticks.first <= 0 && lo < 0) lo = 0;
+  return (lo, hi);
+}
+
+/// 목표 대비 상태색: 초과(빨강) / 근접 90%↑(주황) / 안전(초록).
+Color _nutStatusColor(double v, double goal) {
+  if (v > goal) return const Color(0xFFF04438);
+  if (v >= goal * 0.9) return FigmaColors.orange;
+  return const Color(0xFF34C759);
 }
 
 /// Padded scale for the exercise bar chart. The baseline sits well below the
@@ -1139,6 +1161,7 @@ class _NutData {
     required this.prev,
     required this.unit,
     required this.goal,
+    required this.ticks,
     required this.color,
     required this.warn,
   });
@@ -1146,6 +1169,9 @@ class _NutData {
   final List<double> prev;
   final String unit;
   final double goal;
+
+  /// 세로축(가로 눈금선) 값들. 지표마다 다르게 지정한다.
+  final List<double> ticks;
   final Color color;
   final bool warn;
 }
@@ -1156,29 +1182,35 @@ enum _NutTabKind { calories, sodium, sugar }
 
 const Map<_NutTabKind, _NutData> _nutrition = <_NutTabKind, _NutData>{
   _NutTabKind.calories: _NutData(
-    // 오늘(일) = 식단 탭 합계 967 kcal 로 일치.
+    // 오늘(일) = 식단 탭 합계 967 kcal 로 일치. 목표 2,000 기준으로 안전(초록)·
+    // 근접(주황 1,860)·초과(빨강 2,100)가 모두 나타나도록 구성.
     cur: <double>[1650, 2100, 1480, 1720, 1390, 1860, 967],
     prev: <double>[1820, 1950, 1700, 1800, 1650, 2050, 1610],
     unit: 'kcal',
-    goal: 1800,
+    goal: 2000,
+    ticks: <double>[1000, 1500, 2000, 2500],
     color: FigmaColors.primary,
     warn: false,
   ),
   _NutTabKind.sodium: _NutData(
-    // 오늘(일) = 식단 탭 합계 3,421 mg (짬뽕 나트륨 스파이크) 로 일치.
-    cur: <double>[2050, 2280, 2120, 2400, 2200, 2550, 3421],
+    // 오늘(일) = 식단 탭 합계 3,421 mg (짬뽕 나트륨 스파이크) 로 일치. 목표 2,000
+    // 기준 안전(초록 1,600/1,550)·근접(주황 1,900/1,850)·초과(빨강 2,200+)가 공존.
+    cur: <double>[1600, 1900, 2200, 1550, 1850, 2600, 3421],
     prev: <double>[1900, 2000, 1950, 2100, 2050, 2200, 2180],
     unit: 'mg',
     goal: 2000,
+    ticks: <double>[1500, 2500, 3500],
     color: FigmaColors.orange,
     warn: true,
   ),
   _NutTabKind.sugar: _NutData(
-    // 오늘(일) = 식단 탭 합계 14.8 g 로 일치.
-    cur: <double>[28, 42, 22, 31, 18, 38, 14.8],
+    // 오늘(일) = 식단 탭 합계 14.8 g 로 일치. 목표 50 기준 안전(초록)·근접(주황
+    // 48/47)·초과(빨강 55)가 모두 나타나도록 구성.
+    cur: <double>[30, 48, 22, 55, 18, 47, 14.8],
     prev: <double>[35, 38, 30, 40, 28, 44, 32],
     unit: 'g',
     goal: 50,
+    ticks: <double>[0, 25, 50],
     color: FigmaColors.sugarPurple,
     warn: false,
   ),
@@ -1261,57 +1293,64 @@ class _NutTab extends StatelessWidget {
   }
 }
 
+const Color _nutLineGray = Color(0xFF98A2B3); // 이번 주 꺾은선(회색)
+const Color _nutGoalGray = Color(0xFFCBD2DA); // 목표 점선(옅은 회색)
+const Color _nutLastWeek =
+    Color(0xFFAC93F2); // 지난 주 꺾은선(sugarPurple 기반, 살짝 쨍·살짝 연하게)
+const Color _nutLabelBg = Color(0xFFEFF1F4); // 데이터 값 라벨 배경(연한 회색)
+const TextStyle _legendStyle = TextStyle(
+  fontSize: 9,
+  fontWeight: FontWeight.w600,
+  color: FigmaColors.textMuted,
+);
+
 class _ChartLegend extends StatelessWidget {
-  const _ChartLegend({required this.color});
-  final Color color;
+  const _ChartLegend({required this.goalText});
+
+  /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
+  final String goalText;
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     return Row(
       children: <Widget>[
-        Container(width: 16, height: 2, color: color),
-        const SizedBox(width: 4),
-        Text(
-          l.homeLegendThisWeek,
-          style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: FigmaColors.textMuted,
+        _item(
+          const SizedBox(
+            width: 16,
+            child: Divider(color: _nutLineGray, thickness: 2, height: 2),
           ),
+          AppLocalizations.of(context).homeLegendThisWeek,
         ),
-        const SizedBox(width: 12),
-        const SizedBox(
-          width: 16,
-          child: Divider(color: Color(0xFF8FD694), thickness: 1.4, height: 2),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          l.homeLegendLastWeek,
-          style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: FigmaColors.textMuted,
+        const SizedBox(width: 10),
+        _item(
+          const SizedBox(
+            width: 16,
+            child: Divider(color: _nutLastWeek, thickness: 1.6, height: 2),
           ),
+          AppLocalizations.of(context).homeLegendLastWeek,
         ),
         const Spacer(),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
+        // 목표 수치는 그래프 오른쪽 상단에 브랜드 블루로 크게 배치.
         Text(
-          l.homeLegendToday,
+          goalText,
           style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: FigmaColors.textMuted,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.primary,
           ),
         ),
       ],
     );
   }
+
+  Widget _item(Widget swatch, String text) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      swatch,
+      const SizedBox(width: 4),
+      Text(text, style: _legendStyle),
+    ],
+  );
 }
 
 /// The weekly nutrition trend line: a dashed previous week, a filled current
@@ -1323,19 +1362,17 @@ class _TrendChartPainter extends CustomPainter {
     required this.cur,
     required this.prev,
     required this.goal,
+    required this.ticks,
     required this.lo,
     required this.hi,
-    required this.color,
-    required this.unit,
   });
 
   final List<double> cur;
   final List<double> prev;
   final double goal;
+  final List<double> ticks;
   final double lo;
   final double hi;
-  final Color color;
-  final String unit;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1345,39 +1382,38 @@ class _TrendChartPainter extends CustomPainter {
     double dx(int i) => cur.length <= 1 ? w / 2 : (i / (cur.length - 1)) * w;
     double dy(double v) => h - ((v - lo) / span) * h;
 
+    // 가로 눈금선: 지표별 눈금(ticks) 값마다 그린다.
     final Paint grid = Paint()
       ..color = const Color(0xFFEFF3F7)
       ..strokeWidth = 1;
-    for (final double t in <double>[0.0, 0.5, 1.0]) {
-      final double gy = t * (h - 1) + 0.5;
+    for (final double t in ticks) {
+      if (t < lo || t > hi) continue;
+      final double gy = dy(t);
       canvas.drawLine(Offset(0, gy), Offset(w, gy), grid);
     }
 
+    // 목표선(옅은 회색 점선).
     if (goal >= lo && goal <= hi) {
-      _dash(
-        canvas,
-        Offset(0, dy(goal)),
-        Offset(w, dy(goal)),
-        color.withValues(alpha: 0.5),
-        1.2,
-      );
+      _dash(canvas, Offset(0, dy(goal)), Offset(w, dy(goal)), _nutGoalGray, 1.2);
     }
 
+    // 지난 주(연한 보라 점선).
     for (int i = 0; i < prev.length - 1; i++) {
       _dash(
         canvas,
         Offset(dx(i), dy(prev[i])),
         Offset(dx(i + 1), dy(prev[i + 1])),
-        const Color(0xFF8FD694),
-        1.8,
+        _nutLastWeek,
+        1.4,
       );
     }
 
     final List<Offset> pts = <Offset>[
       for (int i = 0; i < cur.length; i++) Offset(dx(i), dy(cur[i])),
     ];
-    // (Area gradient fill removed — the line graph now has no shadow fill.)
 
+    // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
+    // 포인트마다 값을 같은 색으로 표기한다.
     final Path line = Path()..moveTo(pts.first.dx, pts.first.dy);
     for (final Offset p in pts.skip(1)) {
       line.lineTo(p.dx, p.dy);
@@ -1385,25 +1421,18 @@ class _TrendChartPainter extends CustomPainter {
     canvas.drawPath(
       line,
       Paint()
-        ..color = color
+        ..color = _nutLineGray
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
+        ..strokeWidth = 1.6
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
 
-    int peak = 0;
-    for (int i = 1; i < cur.length; i++) {
-      if (cur[i] > cur[peak]) peak = i;
+    for (int i = 0; i < cur.length; i++) {
+      final Color sc = _nutStatusColor(cur[i], goal);
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 4.2 : 3.4);
+      _text(canvas, _fmt(cur[i]), pts[i], w, sc);
     }
-    if (peak != cur.length - 1) {
-      _dot(canvas, pts[peak], color, filled: false);
-      _text(canvas, _fmt(cur[peak]), pts[peak], w, color);
-    }
-
-    final Offset last = pts.last;
-    _dot(canvas, last, color, filled: true);
-    _bubble(canvas, '${_fmt(cur.last)}$unit', last, w, color);
   }
 
   // Keep one decimal for fractional values (당류 14.8g stays 14.8, not 15) so
@@ -1412,17 +1441,9 @@ class _TrendChartPainter extends CustomPainter {
       ? NumberFormat('#,###').format(v)
       : NumberFormat('#,##0.#').format(v);
 
-  void _dot(Canvas c, Offset o, Color color, {required bool filled}) {
-    c.drawCircle(o, 3.5, Paint()..color = Colors.white);
-    c.drawCircle(
-      o,
-      3.5,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    if (filled) c.drawCircle(o, 1.6, Paint()..color = color);
+  void _dot(Canvas c, Offset o, Color color, {double r = 3.0}) {
+    c.drawCircle(o, r + 1.3, Paint()..color = Colors.white); // 흰 테두리(halo)
+    c.drawCircle(o, r, Paint()..color = color); // 상태색으로 채운 데이터 포인트
   }
 
   void _text(Canvas c, String s, Offset at, double w, Color color) {
@@ -1430,43 +1451,26 @@ class _TrendChartPainter extends CustomPainter {
       text: TextSpan(
         text: s,
         style: TextStyle(
-          fontSize: 8,
+          fontSize: 7.5,
           fontWeight: FontWeight.w700,
           color: color,
         ),
       ),
       textDirection: ui.TextDirection.ltr,
     )..layout();
-    final double x = (at.dx - tp.width / 2).clamp(0.0, w - tp.width);
-    double y = at.dy - tp.height - 6;
-    if (y < 0) y = at.dy + 6;
-    tp.paint(c, Offset(x, y));
-  }
-
-  void _bubble(Canvas c, String s, Offset at, double w, Color color) {
-    final TextPainter tp = TextPainter(
-      text: TextSpan(
-        text: s,
-        style: const TextStyle(
-          fontSize: 8.5,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
-        ),
-      ),
-      textDirection: ui.TextDirection.ltr,
-    )..layout();
-    const double padX = 5, padY = 2.5;
+    // 값마다 연한 회색 둥근 네모 배경.
+    const double padX = 3.5, padY = 1.5;
     final double bw = tp.width + padX * 2;
     final double bh = tp.height + padY * 2;
     final double bx = (at.dx - bw / 2).clamp(0.0, w - bw);
-    double by = at.dy - bh - 7;
-    if (by < 0) by = at.dy + 7;
+    double by = at.dy - bh - 6;
+    if (by < 0) by = at.dy + 6;
     c.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(bx, by, bw, bh),
-        const Radius.circular(5),
+        const Radius.circular(4),
       ),
-      Paint()..color = color,
+      Paint()..color = _nutLabelBg,
     );
     tp.paint(c, Offset(bx + padX, by + padY));
   }
@@ -1490,9 +1494,10 @@ class _TrendChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _TrendChartPainter old) =>
       old.cur != cur ||
       old.prev != prev ||
+      old.goal != goal ||
+      old.ticks != ticks ||
       old.lo != lo ||
-      old.hi != hi ||
-      old.color != color;
+      old.hi != hi;
 }
 
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
