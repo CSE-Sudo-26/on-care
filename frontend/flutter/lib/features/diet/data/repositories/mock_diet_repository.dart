@@ -160,6 +160,12 @@ class MockDietRepository implements DietRepository {
     _totalSodiumMg = _nonNegInt(_totalSodiumMg - e.sodiumMg);
     _totalSugarG = _nonNegDouble(_totalSugarG - e.sugarG);
     _entries.removeAt(idx);
+    // 이 항목을 가리키던 멱등 캐시 키를 제거한다. 안 그러면 삭제 후 같은
+    // idempotencyKey 로 재요청할 때 이미 사라진 항목의 낡은 결과만 반환되고
+    // 목록에는 다시 추가되지 않는다(같은 키를 재기록 가능 상태로 되돌린다).
+    _analyzed.removeWhere(
+      (String _, DietAnalysisResult r) => r.entryId == id,
+    );
   }
 
   @override

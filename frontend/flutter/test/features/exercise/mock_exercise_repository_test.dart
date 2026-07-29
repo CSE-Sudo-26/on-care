@@ -79,5 +79,48 @@ void main() {
       expect(after.sessions.length, 6);
       expect(after.totalMinutes, 315);
     });
+
+    test(
+      'daily == cardio + strength + stretching holds after seed edit/delete (리뷰 #294)',
+      () async {
+        void expectInvariant(ExerciseWeek w) {
+          for (int i = 0; i < w.dailyMinutes.length; i++) {
+            expect(
+              w.cardioMinutes[i] +
+                  w.strengthMinutes[i] +
+                  w.stretchingMinutes[i],
+              w.dailyMinutes[i],
+              reason: '요일 index $i 의 유형별 합이 일별 총합과 어긋납니다.',
+            );
+          }
+        }
+
+        final repo = MockExerciseRepository();
+        expectInvariant(await repo.fetchThisWeek());
+
+        // 시드 세션 삭제 후에도 유지. (예전 이중 시드에서는 월요일 세션이 유산소
+        // 40분이지만 차트 배열은 유산소30+스트레칭10이라, 삭제하면 일별 0인데
+        // 스트레칭 10분이 유령으로 남아 불변식이 깨졌다.)
+        await repo.deleteSession('s-mon');
+        final ExerciseWeek afterDelete = await repo.fetchThisWeek();
+        expectInvariant(afterDelete);
+        expect(afterDelete.dailyMinutes[0], 0); // 월요일 세션이 하나뿐 → 완전 0
+        expect(afterDelete.cardioMinutes[0], 0);
+        expect(afterDelete.stretchingMinutes[0], 0);
+
+        // 시드 세션 유형 변경(근력→스트레칭) 후에도 유지.
+        await repo.updateSession(
+          id: 's-tue',
+          type: ExerciseType.stretching,
+          minutes: 60,
+          calories: 420,
+          dayLabel: '화',
+        );
+        final ExerciseWeek afterUpdate = await repo.fetchThisWeek();
+        expectInvariant(afterUpdate);
+        expect(afterUpdate.stretchingMinutes[1], 60);
+        expect(afterUpdate.strengthMinutes[1], 0);
+      },
+    );
   });
 }

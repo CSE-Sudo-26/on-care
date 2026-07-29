@@ -73,6 +73,39 @@ void main() {
       expect(after.totalSugarG, closeTo(14.8, 0.001));
     });
 
+    test(
+      'same key after delete re-adds the entry (cache purged on delete, 리뷰 #294)',
+      () async {
+        final repo = MockDietRepository();
+        final first = await repo.analyze(
+          imageBytes: bytes,
+          filename: 'a.jpg',
+          mealType: 'dinner',
+          idempotencyKey: 'reuse',
+        );
+        expect((await repo.fetchToday()).entries.length, 3);
+
+        // 항목 삭제 → 멱등 캐시도 함께 정리돼야 한다.
+        await repo.deleteEntry(first.entryId);
+        expect((await repo.fetchToday()).entries.length, 2);
+
+        // 같은 키로 재요청하면 (낡은 결과만 반환하는 대신) 다시 추가된다.
+        final second = await repo.analyze(
+          imageBytes: bytes,
+          filename: 'a.jpg',
+          mealType: 'dinner',
+          idempotencyKey: 'reuse',
+        );
+        final DietDay after = await repo.fetchToday();
+        expect(after.entries.length, 3);
+        expect(
+          after.entries.map((DietEntry e) => e.id),
+          contains(second.entryId),
+        );
+        expect(after.totalCalories, 1582); // 967 + 615 다시 반영
+      },
+    );
+
     test('updateEntry edits a seeded entry and re-derives totals', () async {
       final repo = MockDietRepository();
       await repo.updateEntry(
