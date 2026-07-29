@@ -54,16 +54,28 @@ void main() {
     );
   });
 
-  test('enterDemo clears consultation requests from an existing session', () {
+  test('enterDemo clears existing consultation requests', () {
     final ProviderContainer container = ProviderContainer();
     addTearDown(container.dispose);
 
-    container
-        .read(consultationRequestControllerProvider.notifier)
-        .add(_pendingRequest);
+    expect(
+      container
+          .read(consultationRequestControllerProvider.notifier)
+          .add(_pendingRequest),
+      isTrue,
+    );
 
     container.read(sessionControllerProvider.notifier).enterDemo();
 
     expect(container.read(consultationRequestControllerProvider), isEmpty);
+    expect(
+      container
+          .read(consultationRequestControllerProvider.notifier)
+          .hasPending(
+            targetType: _pendingRequest.targetType,
+            gymId: _pendingRequest.gymId,
+          ),
+      isFalse,
+    );
   });
 }
