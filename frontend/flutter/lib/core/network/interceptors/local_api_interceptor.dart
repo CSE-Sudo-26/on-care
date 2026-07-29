@@ -249,11 +249,29 @@ class LocalApiInterceptor extends Interceptor {
     int totalCalories = 0;
     int totalSodium = 0;
     int totalSugar = 0;
+    var totalCarbs = 0.0;
+    var totalProtein = 0.0;
+    var totalFat = 0.0;
+    final sodiumSources = <({String name, int sodiumMg})>[];
     for (final r in dietRows) {
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
       totalSugar += r.sugarG;
+      final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
+      final macros = _foodMacroTotals(foods);
+      totalCarbs += macros.carbsG;
+      totalProtein += macros.proteinG;
+      totalFat += macros.fatG;
+      for (final food in foods) {
+        if (food is! Map) continue;
+        final name = (food['name'] as String? ?? '').trim();
+        final sodium = (food['sodium_mg'] as num?)?.round() ?? 0;
+        if (name.isNotEmpty && sodium > 0) {
+          sodiumSources.add((name: name, sodiumMg: sodium));
+        }
+      }
     }
+    sodiumSources.sort((a, b) => b.sodiumMg.compareTo(a.sodiumMg));
 
     // Exercise minutes for today's day-label.
     final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
@@ -309,6 +327,7 @@ class LocalApiInterceptor extends Interceptor {
           'unit': 'g',
         },
       ],
+      'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
       'today_schedule': schedJson,
@@ -317,7 +336,9 @@ class LocalApiInterceptor extends Interceptor {
       // diff lands in a later phase.
       'week_score_delta': 12,
       'sodium_warning': totalSodium > 2000
-          ? '오늘의 나트륨 섭취량이 높아요. 저녁에는 담백한 구이나 샐러드를 추천해요!'
+          ? sodiumSources.length >= 2
+                ? '${sodiumSources[0].name}와 ${sodiumSources[1].name}로 나트륨이 높아요.'
+                : '오늘 나트륨 섭취량이 권장량을 초과했어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
           ? '오늘 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'

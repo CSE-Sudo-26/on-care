@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Annotated
 
@@ -21,6 +22,7 @@ from app.models.models import DietEntry, ExerciseSession, ScheduleEvent
 from app.schemas.dashboard_api import (
     DashboardIndicator, DashboardScheduleItem, DashboardSummary,
 )
+from app.schemas.diet_api import calculate_macros
 from app.services.exercise_service import monday_of_this_week_str
 
 router = APIRouter(tags=["dashboard"])
@@ -46,6 +48,10 @@ def dashboard_summary(
     total_cal = sum(r.total_calories for r in diet_rows)
     total_na = sum(r.sodium_mg for r in diet_rows)
     total_sugar = sum(r.sugar_g for r in diet_rows)
+    total_carbs = sum(r.carbs_g for r in diet_rows)
+    total_protein = sum(r.protein_g for r in diet_rows)
+    total_fat = sum(r.fat_g for r in diet_rows)
+    macros = calculate_macros(total_carbs, total_protein, total_fat)
 
     indicators = [
         DashboardIndicator(label="칼로리", current=total_cal, max=_MAX_CALORIES,
@@ -55,10 +61,31 @@ def dashboard_summary(
         DashboardIndicator(label="당류", current=total_sugar, max=_MAX_SUGAR_G,
                            unit="g", over_budget=total_sugar > _MAX_SUGAR_G),
     ]
-    sodium_warning = (
-        f"오늘 나트륨이 {total_na}mg 으로 권장량({_MAX_SODIUM_MG}mg)을 넘었어요."
-        if total_na > _MAX_SODIUM_MG else None
-    )
+    sodium_sources: list[tuple[str, int]] = []
+    for row in diet_rows:
+        try:
+            foods = json.loads(row.foods_json)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        for food in foods if isinstance(foods, list) else []:
+            if not isinstance(food, dict):
+                continue
+            name = str(food.get("name") or "").strip()
+            sodium = food.get("sodium_mg")
+            if name and isinstance(sodium, (int, float)):
+                sodium_sources.append((name, int(sodium)))
+    sodium_sources.sort(key=lambda item: item[1], reverse=True)
+    source_names = [name for name, _ in sodium_sources[:2]]
+    if total_na > _MAX_SODIUM_MG and source_names:
+        sodium_warning = (
+            f"{'와 '.join(source_names)}로 나트륨이 높아요."
+        )
+    elif total_na > _MAX_SODIUM_MG:
+        sodium_warning = (
+            f"오늘 나트륨이 {total_na}mg 으로 권장량({_MAX_SODIUM_MG}mg)을 넘었어요."
+        )
+    else:
+        sodium_warning = None
 
     # --- 이번 주 운동 집계 ---
     week = monday_of_this_week_str()
@@ -97,6 +124,7 @@ def dashboard_summary(
 
     return DashboardSummary(
         indicators=indicators,
+        macros=macros,
         diet_entries=len(diet_rows),
         exercise_minutes=exercise_minutes,
         today_schedule=today_schedule,

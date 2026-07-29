@@ -1,3 +1,5 @@
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+
 /// One row of the "오늘의 건강 요약" progress list.
 class HealthIndicator {
   const HealthIndicator({
@@ -55,6 +57,7 @@ class ScheduleItem {
 class DashboardSummary {
   const DashboardSummary({
     required this.indicators,
+    required this.macros,
     required this.dietEntries,
     required this.exerciseMinutes,
     required this.todaySchedule,
@@ -66,6 +69,9 @@ class DashboardSummary {
 
   /// 3-row health summary (칼로리 / 나트륨 / 당류).
   final List<HealthIndicator> indicators;
+
+  /// Today's carbohydrate, protein, and fat totals and calorie ratios.
+  final DietMacros macros;
 
   /// `quickStats` left tile — number of diet records logged today.
   final int dietEntries;
@@ -88,12 +94,46 @@ class DashboardSummary {
   /// Exercise-side daily feedback line. Optional for back-compat.
   final String? exerciseFeedback;
 
+  HealthIndicator get calorieIndicator => indicators.firstWhere(
+    (HealthIndicator indicator) => indicator.unit == 'kcal',
+    orElse: () => const HealthIndicator(
+      label: '칼로리',
+      current: 0,
+      max: 2000,
+      unit: 'kcal',
+    ),
+  );
+
+  HealthIndicator get sodiumIndicator => indicators.firstWhere(
+    (HealthIndicator indicator) => indicator.unit == 'mg',
+    orElse: () =>
+        const HealthIndicator(label: '나트륨', current: 0, max: 2000, unit: 'mg'),
+  );
+
+  HealthIndicator get sugarIndicator => indicators.firstWhere(
+    (HealthIndicator indicator) => indicator.unit == 'g',
+    orElse: () =>
+        const HealthIndicator(label: '당류', current: 0, max: 50, unit: 'g'),
+  );
+
+  bool get isEmpty =>
+      dietEntries == 0 &&
+      exerciseMinutes == 0 &&
+      todaySchedule.isEmpty &&
+      calorieIndicator.current == 0;
+
   factory DashboardSummary.fromJson(Map<String, Object?> json) =>
       DashboardSummary(
         indicators: (json['indicators']! as List<Object?>)
             .cast<Map<String, Object?>>()
             .map(HealthIndicator.fromJson)
             .toList(),
+        macros: json['macros'] is Map<Object?, Object?>
+            ? DietMacros.fromJson(
+                (json['macros']! as Map<Object?, Object?>)
+                    .cast<String, Object?>(),
+              )
+            : const DietMacros.zero(),
         dietEntries: (json['diet_entries']! as num).toInt(),
         exerciseMinutes: (json['exercise_minutes']! as num).toInt(),
         todaySchedule: (json['today_schedule']! as List<Object?>)
