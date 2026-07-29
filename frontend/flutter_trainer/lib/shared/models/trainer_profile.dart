@@ -63,6 +63,30 @@ class TrainerProfile {
 
   /// Gym the trainer belongs to.
   final TrainerGym gym;
+
+  /// Returns a copy with the given fields replaced. Used by 회원가입 to
+  /// reflect the submitted name/email on the (otherwise seed) demo profile.
+  TrainerProfile copyWith({
+    String? name,
+    String? email,
+    String? phone,
+    String? specialty,
+    String? career,
+    String? intro,
+    List<String>? certifications,
+    TrainerGym? gym,
+  }) {
+    return TrainerProfile(
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      specialty: specialty ?? this.specialty,
+      career: career ?? this.career,
+      intro: intro ?? this.intro,
+      certifications: certifications ?? this.certifications,
+      gym: gym ?? this.gym,
+    );
+  }
 }
 
 /// The single fixed trainer profile attached on a successful (mock)

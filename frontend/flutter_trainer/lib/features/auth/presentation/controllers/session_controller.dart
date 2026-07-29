@@ -59,11 +59,21 @@ class SessionController extends StateNotifier<SessionState> {
     required String password,
     required String name,
   }) async {
-    final token = await _authRepository.login(email: email, password: password);
+    final token = await _authRepository.register(
+      email: email,
+      password: password,
+      name: name,
+    );
     await _tokenStore.saveToken(token);
-    state = const SessionState(
+    final trimmedName = name.trim();
+    final trimmedEmail = email.trim();
+    state = SessionState(
       status: SessionStatus.authenticated,
-      profile: seedTrainerProfile,
+      // 데모: 제출한 이름/이메일을 시드 프로필에 반영(빈 값이면 시드 값 유지).
+      profile: seedTrainerProfile.copyWith(
+        name: trimmedName.isEmpty ? null : trimmedName,
+        email: trimmedEmail.isEmpty ? null : trimmedEmail,
+      ),
     );
   }
 
@@ -71,9 +81,11 @@ class SessionController extends StateNotifier<SessionState> {
   /// real provider SDK lands, this exchanges a demo credential through the
   /// mock repo, persists the token, and attaches the seed profile.
   Future<void> socialLogin({required String provider}) async {
-    final token = await _authRepository.login(
-      email: '$provider@trainer.demo',
-      password: 'social-$provider',
+    // 사용자 앱과 동일: 실기기 SDK 연동 전까지 데모 토큰을 보내고, 실서버가
+    // provider 토큰을 검증한다(트레이너 auth는 아직 전부 mock).
+    final token = await _authRepository.socialLogin(
+      provider: provider,
+      token: 'demo-$provider-token',
     );
     await _tokenStore.saveToken(token);
     state = const SessionState(
