@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = "postgresql+psycopg://oncare:oncare@localhost:5432/oncare"
+    # DB 커넥션 인출(연결 수립) 상한(초) — 네트워크 파티션/무응답 시 스레드 무한 점유 방지.
+    db_connect_timeout_seconds: int = 5
     # 앱 기동 시 create_all() 로 테이블 생성 여부(개발 편의). 운영은 Alembic 을 정답으로 → false 권장.
     auto_create_tables: bool = True
 
@@ -93,6 +95,8 @@ class Settings(BaseSettings):
     # --- 운영 배포 하드닝 ---
     force_https: bool = False       # HTTP→HTTPS 리다이렉트(프록시 뒤면 X-Forwarded-Proto 신뢰)
     security_headers: bool = True   # 보안 응답 헤더(HSTS·nosniff·frame deny 등)
+    # 루트 로거 레벨. 허용값만(임의 문자열 금지 — 오타로 로깅이 조용히 죽는 것 방지).
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
     # --- Rate limit (인증 엔드포인트 브루트포스 방어) ---
     rate_limit_enabled: bool = True
@@ -160,6 +164,14 @@ class Settings(BaseSettings):
                         f"DEMO_LOGIN_PASSWORD 를 기본값이 아닌 {MIN_DEMO_PASSWORD_LEN}자 이상의 "
                         "안전한 값으로 설정해야 합니다(또는 SEED_DEMO_DATA=false)."
                     )
+            # 운영은 Alembic 을 스키마의 유일한 변경 경로로 삼는다. create_all 이 켜져 있으면
+            # ORM 정의만으로 테이블이 생겨 Alembic 이력과 어긋날 수 있으므로, 조용히 무시하지 않고
+            # 기동을 거부한다(AUTO_CREATE_TABLES=false 를 명시하도록 강제).
+            if self.auto_create_tables:
+                raise ValueError(
+                    "운영(env=prod)에서는 AUTO_CREATE_TABLES=false 로 두고 Alembic 을 스키마의 "
+                    "유일한 소스로 삼아야 합니다."
+                )
         return self
 
 

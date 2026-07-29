@@ -38,3 +38,24 @@ def test_latest_by_member_returns_one_row_per_member(client, db_session):
             ChatMessage.id.in_(ids)
         ).delete(synchronize_session=False)
         db_session.commit()
+
+
+def test_assign_routine_sort_order_is_monotonic(client, db_session):
+    """연속 배정한 두 루틴의 sort_order 가 max+1 로 단조 증가(같은 초에도 순서 결정론적, #279)."""
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import TrainerRoutine
+    from app.services import trainer_service
+
+    kw = dict(minutes=10, type_="근력", reason="테스트", source="trainer")
+    r1 = trainer_service.assign_routine(db_session, TRAINER_ID, "user-jisu", name="rt-a", **kw)
+    r2 = trainer_service.assign_routine(db_session, TRAINER_ID, "user-jisu", name="rt-b", **kw)
+    try:
+        o1 = db_session.get(TrainerRoutine, r1.id).sort_order
+        o2 = db_session.get(TrainerRoutine, r2.id).sort_order
+        assert o2 == o1 + 1  # 뒤에 배정한 것이 정확히 +1
+    finally:
+        for rid in (r1.id, r2.id):
+            row = db_session.get(TrainerRoutine, rid)
+            if row is not None:
+                db_session.delete(row)
+        db_session.commit()

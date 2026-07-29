@@ -104,6 +104,33 @@ def test_kakao_single_category_failure_still_propagates(monkeypatch):
         kakao._cache.clear()
 
 
+def test_kakao_empty_result_not_cached(monkeypatch):
+    """일시적 0건은 캐시하지 않는다 — 다음 요청이 다시 실검색을 시도(seed 폴백 고정 방지, #282)."""
+    import asyncio
+
+    import httpx
+
+    from app.services.places import kakao
+
+    kakao._cache.clear()
+
+    async def fake_get(self, url, params=None, headers=None):
+        class _Resp:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"documents": []}
+
+        return _Resp()
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    out = asyncio.run(kakao.search_nearby(37.5, 127.0, "fitness", 1000, "key"))
+    assert out == []
+    assert len(kakao._cache) == 0  # 빈 결과는 캐시에 남지 않음
+    kakao._cache.clear()
+
+
 def test_kakao_docs_to_places_parsing():
     from app.services.places.kakao import docs_to_places
 

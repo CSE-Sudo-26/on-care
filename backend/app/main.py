@@ -15,10 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import (
     ai_coach, coach_docs, dashboard, diet, exercise, member_coach, notifications, places, schedule, social, system, trainer, users, vitals,
 )
+from app.core import observability
 from app.core.config import get_settings
 from app.db.init_db import init_db
 
 settings = get_settings()
+# 로깅을 먼저 설정(요청 ID 포함 포맷). 이후 모듈 로거들이 이 설정을 따른다.
+observability.setup_logging(settings.log_level)
 
 
 @asynccontextmanager
@@ -65,6 +68,10 @@ if settings.security_headers:
                 "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
             )
         return response
+
+# 관측성: request-id 미들웨어(가장 바깥 — 컨텍스트를 먼저 세팅) + 액세스 로그 + 전역 500 핸들러.
+# 보안 헤더 미들웨어 뒤에 설치해 request-id 미들웨어가 최외곽에서 감싸게 한다.
+observability.install(app)
 
 # /v1 prefix 로 마운트 (프론트 base URL 이 /v1 을 포함하는 계약)
 app.include_router(system.router, prefix=settings.api_v1_prefix)

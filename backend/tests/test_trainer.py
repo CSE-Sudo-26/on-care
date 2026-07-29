@@ -11,7 +11,6 @@ from uuid import uuid4
 def test_user_role_defaults_to_member():
     from app.models.models import User
 
-    u = User(id="u1", email="a@b.com", name="a")
     # SQLAlchemy 컬럼 default 는 flush 시 적용되므로, 여기선 모델 기본 문자열만 확인.
     assert User.__table__.c.role.default.arg == "member"
 
@@ -109,6 +108,7 @@ def test_prod_demo_seed_requires_strong_password():
         _env_file=None, env="prod",
         jwt_secret="a-strong-enough-production-secret-value-01234567",
         cors_allow_origins="https://app.example.com",
+        auto_create_tables=False,  # 운영 스키마 가드(#288) 충족 — 이 테스트는 데모 비번 강도만 검증
     )
     # 기본값 + 데모 시드 → 기동 거부
     with pytest.raises(ValueError):

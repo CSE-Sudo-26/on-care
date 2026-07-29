@@ -8,12 +8,19 @@
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+import logging
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.db.session import get_db
 
 router = APIRouter(tags=["system"])
 settings = get_settings()
+logger = logging.getLogger("app.system")
 
 
 @router.get("/ping")
@@ -23,7 +30,29 @@ def ping() -> dict[str, str]:
 
 @router.get("/healthz")
 def healthz() -> dict[str, str]:
+    """Liveness — 프로세스 생존만 확인(DB 무관). App Runner liveness 용."""
     return {"status": "ok", "backend": "fastapi"}
+
+
+@router.get("/readyz")
+def readyz(db: Annotated[Session, Depends(get_db)]) -> dict[str, str]:
+    """Readiness — DB 연결 가능 여부까지 확인. 실패 시 내부 상세를 숨긴 503.
+
+    배포 검증/로드밸런서가 '트래픽 받을 준비'를 판정하는 데 쓴다(liveness 와 분리).
+    """
+    try:
+        # established-but-slow 커넥션에서도 프로브가 무한 대기하지 않게 짧은 statement_timeout
+        # 을 트랜잭션 로컬로 건다(connect_timeout 은 연결 수립만 커버 — 리뷰 #291).
+        db.execute(text("SET LOCAL statement_timeout = '3s'"))
+        db.execute(text("SELECT 1"))
+    except Exception:
+        # 실패/타임아웃 트랜잭션 상태를 롤백해 정리한다 — 같은 세션/커넥션이 이후 재사용될 때
+        # 'aborted transaction' 이 남지 않도록(리뷰 #291).
+        db.rollback()
+        # 원인(접속 문자열 등)은 서버 로그에만. 클라이언트엔 일반화된 503.
+        logger.exception("readiness check failed — DB unavailable")
+        raise HTTPException(status_code=503, detail="서비스가 아직 준비되지 않았습니다.")
+    return {"status": "ready"}
 
 
 @router.get("/version")
