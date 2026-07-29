@@ -275,7 +275,8 @@ class TrainerProfile(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     trainer_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+        # unique=True 가 이미 유니크 인덱스를 만들므로 index=True 는 잉여(중복 인덱스). 제거.
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
     )
     phone: Mapped[str] = mapped_column(String(20), default="")
     specialty: Mapped[str] = mapped_column(String(50), default="")     # 퍼스널 트레이너

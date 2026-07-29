@@ -11,7 +11,6 @@ from uuid import uuid4
 def test_user_role_defaults_to_member():
     from app.models.models import User
 
-    u = User(id="u1", email="a@b.com", name="a")
     # SQLAlchemy 컬럼 default 는 flush 시 적용되므로, 여기선 모델 기본 문자열만 확인.
     assert User.__table__.c.role.default.arg == "member"
 

@@ -86,6 +86,11 @@ class RoutineHistoryOut(BaseModel):
     trainer_note: str
 
 
+# 채팅 sender 출력 허용값 — 뷰어 관점(_sender_out): 트레이너 앱은 trainer|client,
+# 회원 앱은 me|trainer.
+ChatSender = Literal["trainer", "client", "me"]
+
+
 class ChatMessageOut(BaseModel):
     """채팅 메시지 — 프론트 ClientChatMessage 계약 정렬.
 
@@ -94,7 +99,7 @@ class ChatMessageOut(BaseModel):
     가장 오래된 메시지의 (created_at, id)를 before/before_id 로 넘겨 요청한다.
     """
     id: str
-    sender: str        # trainer|client
+    sender: ChatSender  # trainer|client(트레이너 뷰) | me|trainer(회원 뷰)
     body: str
     time_label: str    # "18:10"
     created_at: str    # ISO datetime — 커서/정렬용
@@ -106,6 +111,7 @@ class ChatSendRequest(BaseModel):
 
 
 RoutineType = Literal["유산소", "근력", "스트레칭"]
+RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
 
 class RoutineOut(BaseModel):
@@ -113,9 +119,9 @@ class RoutineOut(BaseModel):
     id: str
     name: str
     minutes: int
-    type: str          # 유산소|근력|스트레칭
+    type: RoutineType
     reason: str
-    source: str        # ai|trainer
+    source: RoutineSource
 
 
 class RoutineAssignRequest(BaseModel):
@@ -127,7 +133,7 @@ class RoutineAssignRequest(BaseModel):
     minutes: int = Field(default=0, ge=0, le=600)   # 0..600분(현실적 상한)
     type: RoutineType
     reason: str = Field(default="", max_length=200)
-    source: Literal["trainer", "ai"] = "trainer"
+    source: RoutineSource = "trainer"
 
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 루프) ----
