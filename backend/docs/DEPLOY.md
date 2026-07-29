@@ -147,10 +147,14 @@ AWS(App Runner + RDS)가 복잡하면 **같은 Docker 이미지를 그대로** R
 
 1. Railway 새 프로젝트 → GitHub 레포 연결 → 서비스의 **Root Directory = `backend`** 로 지정
    (그래야 `railway.json`·`Dockerfile` 을 찾는다).
-2. **Postgres 는 `pgvector` 템플릿**으로 추가한다(0007 마이그레이션이 vector 타입 사용).
-   일반 Postgres 를 골랐다면 DB 콘솔에서 한 번: `CREATE EXTENSION IF NOT EXISTS vector;`
+2. DB 는 **반드시 `pgvector` 템플릿**(또는 pgvector 가 설치된 외부 DB: Neon/Supabase)으로
+   추가한다. Railway **일반 Postgres 이미지에는 pgvector 바이너리가 없어** `CREATE EXTENSION
+   vector` 자체가 실패하므로 0007 마이그레이션(vector 타입)이 동작하지 않는다 — 일반 Postgres 는
+   선택지가 아니다. (`CREATE EXTENSION IF NOT EXISTS vector;` 는 pgvector 가 이미 설치된 DB 에서만 가능.)
 3. **Variables** 에 `backend/.env.railway.example` 값을 채워 넣는다
    (`DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `CORS_ALLOW_ORIGINS`, `ENV=prod` 등).
+   `${{Postgres.DATABASE_URL}}` 참조는 **DB 서비스명이 정확히 `Postgres` 일 때만** 연결되므로,
+   서비스명을 `Postgres` 로 두거나 실제 서비스명에 맞춰 참조를 바꾼다(`${{<서비스명>.DATABASE_URL}}`).
    `PORT` 는 직접 넣지 않는다(Railway 가 주입).
 4. 배포되면 컨테이너가 `scripts/start.sh` 로 **마이그레이션 → uvicorn** 을 수행하고,
    Railway 가 `/v1/healthz` 로 헬스체크한다. 발급된 도메인을 프론트 `API_BASE_URL` 에 연결

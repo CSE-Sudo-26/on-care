@@ -21,8 +21,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 실행 시점의 실제 DB URL 주입 (하드코딩 방지)
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# 실행 시점의 실제 DB URL 주입 (하드코딩 방지).
+# sqlalchemy_database_url: 관리형 Postgres(Railway/Neon/Supabase)가 주는
+# postgres:// · bare postgresql:// 를 psycopg v3 드라이버로 정규화한 값. Alembic 도
+# 앱과 동일한 URL 로 엔진을 만들어야 bare URL 에서 psycopg2 dialect 오류로 마이그레이션이
+# 실패하지 않는다(앱 기동 전 단계).
+config.set_main_option("sqlalchemy.url", get_settings().sqlalchemy_database_url)
 
 target_metadata = Base.metadata
 
