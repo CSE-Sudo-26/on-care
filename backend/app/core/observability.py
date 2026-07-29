@@ -98,7 +98,10 @@ def install(app: FastAPI) -> None:
             return response
         except Exception:
             duration_ms = (time.monotonic() - start) * 1000
-            logger.info("%s %r -> 500 (%.1fms)", request.method, request.url.path, duration_ms)
+            # 성공 경로와 동일하게 헬스 폴링 경로는 로그 제외 — 헬스 핸들러의 미처리 예외가
+            # 폴링 빈도만큼 로그를 도배하지 않도록(리뷰 일관성).
+            if not request.url.path.endswith(_ACCESS_LOG_SKIP_SUFFIXES):
+                logger.info("%s %r -> 500 (%.1fms)", request.method, request.url.path, duration_ms)
             raise
         finally:
             request_id_ctx.reset(token)

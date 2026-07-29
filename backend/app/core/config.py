@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = "postgresql+psycopg://oncare:oncare@localhost:5432/oncare"
+    # DB 커넥션 인출(연결 수립) 상한(초) — 네트워크 파티션/무응답 시 스레드 무한 점유 방지.
+    db_connect_timeout_seconds: int = 5
     # 앱 기동 시 create_all() 로 테이블 생성 여부(개발 편의). 운영은 Alembic 을 정답으로 → false 권장.
     auto_create_tables: bool = True
 

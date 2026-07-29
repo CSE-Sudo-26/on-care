@@ -41,9 +41,12 @@ def readyz(db: Annotated[Session, Depends(get_db)]) -> dict[str, str]:
     배포 검증/로드밸런서가 '트래픽 받을 준비'를 판정하는 데 쓴다(liveness 와 분리).
     """
     try:
+        # established-but-slow 커넥션에서도 프로브가 무한 대기하지 않게 짧은 statement_timeout
+        # 을 트랜잭션 로컬로 건다(connect_timeout 은 연결 수립만 커버 — 리뷰 #291).
+        db.execute(text("SET LOCAL statement_timeout = '3s'"))
         db.execute(text("SELECT 1"))
     except Exception:
-        # 실패한 트랜잭션 상태를 롤백해 정리한다 — 같은 세션/커넥션이 이후 재사용될 때
+        # 실패/타임아웃 트랜잭션 상태를 롤백해 정리한다 — 같은 세션/커넥션이 이후 재사용될 때
         # 'aborted transaction' 이 남지 않도록(리뷰 #291).
         db.rollback()
         # 원인(접속 문자열 등)은 서버 로그에만. 클라이언트엔 일반화된 503.
