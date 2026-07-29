@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 
 void main() {
   final Uint8List bytes = Uint8List(0);
