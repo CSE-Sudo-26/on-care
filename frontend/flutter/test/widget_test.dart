@@ -33,12 +33,12 @@ void main() {
           // Diet repo defaults to DioDietRepository (Stage 9) which
           // needs a real dio+db. Swap to the in-memory mock here.
           dietRepositoryProvider.overrideWithValue(
-            const MockDietRepository() as DietRepository,
+            MockDietRepository() as DietRepository,
           ),
           // Same reason — exercise repo defaults to DioExerciseRepository
           // (Stage 9.6); swap to the in-memory mock here.
           exerciseRepositoryProvider.overrideWithValue(
-            const MockExerciseRepository() as ExerciseRepository,
+            MockExerciseRepository() as ExerciseRepository,
           ),
           // Dashboard summary defaults to DioDashboardRepository (Stage
           // 9.8); the smoke test only inspects the nav, so the mock is

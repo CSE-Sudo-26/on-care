@@ -11,7 +11,7 @@ void main() {
         // Production repo is DioExerciseRepository (needs dio + db);
         // unit test only needs the React-shaped in-memory mock.
         exerciseRepositoryProvider.overrideWithValue(
-          const MockExerciseRepository(),
+          MockExerciseRepository(),
         ),
       ],
     );
