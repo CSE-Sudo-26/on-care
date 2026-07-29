@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -403,11 +404,6 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       Row(
         children: <Widget>[
           _sectionLabel('AI 추천 루틴'),
-          const SizedBox(width: AppSpacing.xs),
-          const Text(
-            '· 수정 가능',
-            style: TextStyle(fontSize: 11, color: AppColors.disabledForeground),
-          ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(
@@ -542,9 +538,12 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
               // registration is in flight, so a second tap can't queue a
               // duplicate session (review PR 220).
               registered: _registered || _registeringClientId == client.id,
+              icon: _registered
+                  ? Icons.check_rounded
+                  : Icons.calendar_today_outlined,
               label: _registered
-                  ? '✓ ${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
-                  : '📅 ${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
+                  ? '${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
+                  : '${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
               onTap: () => _registerToSchedule(client, items),
             ),
             if (_registered)
@@ -663,6 +662,7 @@ class _DietSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -758,6 +758,7 @@ class _RoutineCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(
           color: isCustom
               ? AppColors.warning.withValues(alpha: 0.35)
@@ -836,13 +837,29 @@ class _RoutineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            '💡 $reason',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: AppColors.subtleForeground,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Padding(
+                padding: EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.lightbulb_outline,
+                  size: 12,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  reason,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.subtleForeground,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -1039,6 +1056,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
       ),
       child: Column(
@@ -1259,11 +1277,13 @@ class _DateChip extends StatelessWidget {
 class _RegisterButton extends StatelessWidget {
   const _RegisterButton({
     required this.registered,
+    required this.icon,
     required this.label,
     required this.onTap,
   });
 
   final bool registered;
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
 
@@ -1283,13 +1303,24 @@ class _RegisterButton extends StatelessWidget {
             borderRadius: const BorderRadius.all(AppRadius.card),
             border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
