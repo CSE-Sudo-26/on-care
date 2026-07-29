@@ -65,6 +65,11 @@ def setup_logging(level: str = "INFO") -> None:
     root.setLevel(level)
 
 
+# LB/오케스트레이터가 자주 폴링하는 헬스 경로는 액세스 로그에서 제외(로그 도배 방지).
+# readiness 실패의 원인은 system.readyz 가 별도로 logger.exception 으로 남긴다.
+_ACCESS_LOG_SKIP_SUFFIXES = ("/ping", "/healthz", "/readyz")
+
+
 def install(app: FastAPI) -> None:
     """request-id 미들웨어 + 액세스 로그 + 전역 예외 핸들러를 앱에 설치한다."""
 
@@ -83,10 +88,12 @@ def install(app: FastAPI) -> None:
             response = await call_next(request)
             duration_ms = (time.monotonic() - start) * 1000
             # 민감정보(쿼리/바디/헤더)는 남기지 않는다 — method·path·상태·소요시간만.
-            logger.info(
-                "%s %r -> %d (%.1fms)",
-                request.method, request.url.path, response.status_code, duration_ms,
-            )
+            # 헬스 폴링 경로는 로그에서 제외한다.
+            if not request.url.path.endswith(_ACCESS_LOG_SKIP_SUFFIXES):
+                logger.info(
+                    "%s %r -> %d (%.1fms)",
+                    request.method, request.url.path, response.status_code, duration_ms,
+                )
             response.headers[_REQUEST_ID_HEADER] = rid
             return response
         except Exception:

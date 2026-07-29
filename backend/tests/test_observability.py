@@ -70,7 +70,8 @@ def test_access_log_carries_request_id_on_success(client):
     access.addHandler(handler)
     access.setLevel(logging.INFO)
     try:
-        client.get("/v1/healthz", headers={"X-Request-ID": "trace-log-1"})
+        # 헬스 경로(/healthz·/readyz·/ping)는 액세스 로그에서 제외되므로 비-헬스 경로로 검사한다.
+        client.get("/v1/version", headers={"X-Request-ID": "trace-log-1"})
     finally:
         access.removeHandler(handler)
     out = stream.getvalue()
@@ -88,9 +89,14 @@ def test_readyz_503_on_db_failure(client):
     from app.db.session import get_db
     from app.main import app
 
+    rolled_back = {"called": False}
+
     class _BoomSession:
         def execute(self, *a, **k):
             raise RuntimeError("connection refused to 10.0.0.5:5432")
+
+        def rollback(self):  # /readyz 가 실패 트랜잭션을 정리하는지(리뷰 #291) 확인용
+            rolled_back["called"] = True
 
     def _boom_db():
         yield _BoomSession()
@@ -100,6 +106,7 @@ def test_readyz_503_on_db_failure(client):
         r = client.get("/v1/readyz")
         assert r.status_code == 503
         assert "connection refused" not in r.text  # 원인 미노출
+        assert rolled_back["called"] is True        # 예외 시 rollback 호출됨
         # liveness 는 DB 와 무관하게 여전히 200
         assert client.get("/v1/healthz").status_code == 200
     finally:
