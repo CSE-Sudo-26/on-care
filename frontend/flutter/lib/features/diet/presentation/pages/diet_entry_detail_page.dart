@@ -103,7 +103,8 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
             foods: foods,
             totalCalories: totalCalories,
             sodiumMg: int.parse(_sodiumController.text.trim()),
-            sugarG: double.tryParse(_sugarController.text.trim()) ?? 0,
+            // validate() 게이트를 통과했으므로 파싱은 안전(잘못된 값은 저장 전 차단).
+            sugarG: double.parse(_sugarController.text.trim()),
           );
       ref.invalidate(dietTodayProvider);
       navigator.pop(DietEntryDetailResult.updated);
@@ -188,7 +189,11 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
             _SummarySection(
               caloriesLabel: calories == null ? '-' : '$calories kcal',
               sodiumLabel: _nutrientLabel(_sodiumController.text, 'mg'),
-              sugarLabel: _nutrientLabel(_sugarController.text, 'g'),
+              sugarLabel: _nutrientLabel(
+                _sugarController.text,
+                'g',
+                decimal: true,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             _SectionCard(
@@ -236,6 +241,8 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
                           controller: _sugarController,
                           label: '총 당류',
                           suffixText: 'g',
+                          decimal: true,
+                          fieldKey: const Key('sugarField'),
                           onChanged: () => setState(() {}),
                         ),
                       ),
@@ -370,8 +377,18 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
   }
 }
 
-String _nutrientLabel(String raw, String unit) {
-  final value = int.tryParse(raw.trim());
+String _nutrientLabel(String raw, String unit, {bool decimal = false}) {
+  final String trimmed = raw.trim();
+  if (decimal) {
+    final double? value = double.tryParse(trimmed);
+    if (value == null) return '-';
+    // 정수면 정수로, 소수면 그대로(예: 14 / 8.5).
+    final String text = value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toString();
+    return '$text$unit';
+  }
+  final int? value = int.tryParse(trimmed);
   if (value == null) return '-';
   return '$value$unit';
 }
@@ -384,6 +401,15 @@ String? _requiredText(String? value) {
 String? _nonNegativeNumber(String? value) {
   if (value == null || value.trim().isEmpty) return '숫자를 입력해 주세요.';
   final parsed = int.tryParse(value.trim());
+  if (parsed == null || parsed < 0) return '0 이상의 숫자만 입력해 주세요.';
+  return null;
+}
+
+/// 당류 등 소수 필드용. 파싱 실패(예: "8.5.3", 빈 값)나 음수면 안내 메시지를
+/// 돌려줘 저장을 막는다(이전엔 double.tryParse(...) ?? 0 으로 조용히 0 저장됨).
+String? _nonNegativeDecimal(String? value) {
+  if (value == null || value.trim().isEmpty) return '숫자를 입력해 주세요.';
+  final parsed = double.tryParse(value.trim());
   if (parsed == null || parsed < 0) return '0 이상의 숫자만 입력해 주세요.';
   return null;
 }
@@ -578,12 +604,21 @@ class _NumberField extends StatelessWidget {
     required this.label,
     required this.suffixText,
     required this.onChanged,
+    this.decimal = false,
+    this.fieldKey,
   });
 
   final TextEditingController controller;
   final String label;
   final String suffixText;
   final VoidCallback onChanged;
+
+  /// 테스트에서 이 입력 필드를 특정하기 위한 키(선택).
+  final Key? fieldKey;
+
+  /// 당류처럼 소수(예: 8.5g)를 받는 필드면 true. 소수점 입력을 허용하고
+  /// 소수 검증기를 쓴다(정수 전용 필드는 digitsOnly + 정수 검증기).
+  final bool decimal;
 
   @override
   Widget build(BuildContext context) {
@@ -593,11 +628,16 @@ class _NumberField extends StatelessWidget {
         _FieldLabel(label),
         const SizedBox(height: AppSpacing.xs),
         TextFormField(
+          key: fieldKey,
           controller: controller,
-          validator: _nonNegativeNumber,
-          keyboardType: TextInputType.number,
+          validator: decimal ? _nonNegativeDecimal : _nonNegativeNumber,
+          keyboardType: decimal
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.number,
           inputFormatters: <TextInputFormatter>[
-            FilteringTextInputFormatter.digitsOnly,
+            decimal
+                ? FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                : FilteringTextInputFormatter.digitsOnly,
           ],
           onChanged: (_) => onChanged(),
           decoration: InputDecoration(

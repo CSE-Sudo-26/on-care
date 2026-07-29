@@ -368,6 +368,24 @@ abstract class AppLocalizations {
   /// **'Sodium over limit detected'**
   String get homeDietSodiumAlert;
 
+  /// No description provided for @homeAiAdviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s combined AI advice'**
+  String get homeAiAdviceTitle;
+
+  /// No description provided for @homeAiAdviceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your breakfast and evening PT session were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish the day well with the shoulder stretches your coach emphasized.'**
+  String get homeAiAdviceBody;
+
+  /// No description provided for @homeSodiumExceededBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over'**
+  String get homeSodiumExceededBadge;
+
   /// No description provided for @homeMacroCarbs.
   ///
   /// In en, this message translates to:
@@ -2177,13 +2195,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardDietTitle.
   ///
   /// In en, this message translates to:
-  /// **'Try easing back on sodium at dinner.'**
+  /// **'Great breakfast — watch lunch sodium'**
   String get coachCardDietTitle;
 
   /// No description provided for @coachCardDietBody.
   ///
   /// In en, this message translates to:
-  /// **'Grilled dishes or a salad are great.'**
+  /// **'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.'**
   String get coachCardDietBody;
 
   /// No description provided for @coachCardExerciseTag.
@@ -2195,13 +2213,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardExerciseTitle.
   ///
   /// In en, this message translates to:
-  /// **'A 20-minute evening walk.'**
+  /// **'Upper-body PT session 12 done'**
   String get coachCardExerciseTitle;
 
   /// No description provided for @coachCardExerciseBody.
   ///
   /// In en, this message translates to:
-  /// **'A light walk after meals helps manage blood sugar.'**
+  /// **'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.'**
   String get coachCardExerciseBody;
 
   /// No description provided for @coachCardWaterTag.

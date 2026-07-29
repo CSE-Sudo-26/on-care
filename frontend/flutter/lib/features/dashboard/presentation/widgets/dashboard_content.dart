@@ -259,6 +259,7 @@ class _CoachingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
@@ -286,25 +287,22 @@ class _CoachingBanner extends StatelessWidget {
                   children: <Widget>[
                     const OniAvatar(size: 46),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            '오늘의 AI 통합 조언',
-                            style: TextStyle(
+                            l.homeAiAdviceTitle,
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               color: FigmaColors.ink,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 '
-                            '높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 '
-                            '코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 '
-                            '마무리해 보세요.',
-                            style: TextStyle(
+                            l.homeAiAdviceBody,
+                            style: const TextStyle(
                               fontSize: 12,
                               height: 1.5,
                               fontWeight: FontWeight.w500,
@@ -489,9 +487,9 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                             color: const Color(0xFFF04438).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: const Text(
-                            '나트륨 초과',
-                            style: TextStyle(
+                          child: Text(
+                            l.homeSodiumExceededBadge,
+                            style: const TextStyle(
                               fontSize: 8.5,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFFF04438),

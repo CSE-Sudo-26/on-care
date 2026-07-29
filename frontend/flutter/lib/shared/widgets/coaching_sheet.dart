@@ -37,17 +37,15 @@ List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
   _CoachCard(
     tag: l.coachCardDietTag,
     tagColor: FigmaColors.orange,
-    title: '아침 식단 훌륭, 점심 나트륨 주의',
-    body: '아침 식단은 훌륭했지만 점심 짬뽕의 나트륨·당류 부담이 크니, '
-        '수분을 충분히 섭취해 나트륨 배출을 도와주세요.',
+    title: l.coachCardDietTitle,
+    body: l.coachCardDietBody,
     done: true,
   ),
   _CoachCard(
     tag: l.coachCardExerciseTag,
     tagColor: FigmaColors.greenTag,
-    title: '12회차 상체 PT 완료',
-    body: '12회차 상체 PT를 잘 마쳤어요! 코치님 피드백대로 어깨 회전근개 '
-        '스트레칭과 가벼운 유산소로 마무리를 추천합니다.',
+    title: l.coachCardExerciseTitle,
+    body: l.coachCardExerciseBody,
     done: true,
   ),
 ];

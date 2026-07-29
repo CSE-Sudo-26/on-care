@@ -150,6 +150,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeDietSodiumAlert => '나트륨 초과 감지됨';
 
   @override
+  String get homeAiAdviceTitle => '오늘의 AI 통합 조언';
+
+  @override
+  String get homeAiAdviceBody =>
+      '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 마무리해 보세요.';
+
+  @override
+  String get homeSodiumExceededBadge => '나트륨 초과';
+
+  @override
   String get homeMacroCarbs => '탄수화물';
 
   @override
@@ -1116,19 +1126,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachCardDietTag => '식단';
 
   @override
-  String get coachCardDietTitle => '저녁은 나트륨을 조금 줄여보세요.';
+  String get coachCardDietTitle => '아침 식단 훌륭, 점심 나트륨 주의';
 
   @override
-  String get coachCardDietBody => '구이나 샐러드가 좋아요.';
+  String get coachCardDietBody =>
+      '아침 식단은 훌륭했지만 점심 짬뽕의 나트륨·당류 부담이 크니, 수분을 충분히 섭취해 나트륨 배출을 도와주세요.';
 
   @override
   String get coachCardExerciseTag => '운동';
 
   @override
-  String get coachCardExerciseTitle => '저녁 산책 20분.';
+  String get coachCardExerciseTitle => '12회차 상체 PT 완료';
 
   @override
-  String get coachCardExerciseBody => '식후 가벼운 산책은 혈당 관리에 도움이 돼요.';
+  String get coachCardExerciseBody =>
+      '12회차 상체 PT를 잘 마쳤어요! 코치님 피드백대로 어깨 회전근개 스트레칭과 가벼운 유산소로 마무리를 추천합니다.';
 
   @override
   String get coachCardWaterTag => '수분';

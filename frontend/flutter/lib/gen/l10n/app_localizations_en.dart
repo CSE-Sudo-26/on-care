@@ -152,6 +152,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDietSodiumAlert => 'Sodium over limit detected';
 
   @override
+  String get homeAiAdviceTitle => 'Today\'s combined AI advice';
+
+  @override
+  String get homeAiAdviceBody =>
+      'Your breakfast and evening PT session were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish the day well with the shoulder stretches your coach emphasized.';
+
+  @override
+  String get homeSodiumExceededBadge => 'Sodium over';
+
+  @override
   String get homeMacroCarbs => 'Carbs';
 
   @override
@@ -1133,20 +1143,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachCardDietTag => 'Diet';
 
   @override
-  String get coachCardDietTitle => 'Try easing back on sodium at dinner.';
+  String get coachCardDietTitle => 'Great breakfast — watch lunch sodium';
 
   @override
-  String get coachCardDietBody => 'Grilled dishes or a salad are great.';
+  String get coachCardDietBody =>
+      'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.';
 
   @override
   String get coachCardExerciseTag => 'Exercise';
 
   @override
-  String get coachCardExerciseTitle => 'A 20-minute evening walk.';
+  String get coachCardExerciseTitle => 'Upper-body PT session 12 done';
 
   @override
   String get coachCardExerciseBody =>
-      'A light walk after meals helps manage blood sugar.';
+      'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.';
 
   @override
   String get coachCardWaterTag => 'Hydration';

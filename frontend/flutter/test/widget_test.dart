@@ -105,4 +105,35 @@ void main() {
     expect(AppLocalizations.supportedLocales, contains(const Locale('en')));
     expect(AppLocalizations.supportedLocales, contains(const Locale('ko')));
   });
+
+  testWidgets('English locale localises the Home AI advice (리뷰 #292)', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('en'));
+    // 회귀: 예전엔 '오늘의 AI 통합 조언' 배너가 한국어로 하드코딩돼 영어 로케일에서도
+    // 한국어로 노출됐다. 이제 ARB 를 거쳐 영어로 나오고 한국어 리터럴은 없어야 한다.
+    expect(find.text("Today's combined AI advice"), findsAtLeastNWidgets(1));
+    expect(find.text('오늘의 AI 통합 조언'), findsNothing);
+    expect(find.text('나트륨 초과'), findsNothing);
+  });
+
+  test('coaching/advice strings are localised — en English, ko Korean (리뷰 #292)', () {
+    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+    final RegExp hangul = RegExp('[가-힣]');
+
+    // 코드에 하드코딩돼 있던 문구들이 이제 로케일별 ARB 로 분리됐다.
+    expect(en.coachCardDietTitle, 'Great breakfast — watch lunch sodium');
+    expect(ko.coachCardDietTitle, '아침 식단 훌륭, 점심 나트륨 주의');
+    expect(en.coachCardExerciseTitle, 'Upper-body PT session 12 done');
+    expect(en.homeAiAdviceTitle, "Today's combined AI advice");
+    expect(ko.homeAiAdviceTitle, '오늘의 AI 통합 조언');
+    expect(en.homeSodiumExceededBadge, 'Sodium over');
+    expect(ko.homeSodiumExceededBadge, '나트륨 초과');
+
+    // 영어 리소스에 한글이 남아 있지 않아야 한다.
+    expect(hangul.hasMatch(en.coachCardDietBody), isFalse);
+    expect(hangul.hasMatch(en.coachCardExerciseBody), isFalse);
+    expect(hangul.hasMatch(en.homeAiAdviceBody), isFalse);
+  });
 }
