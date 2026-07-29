@@ -51,6 +51,37 @@ class SessionController extends StateNotifier<SessionState> {
     );
   }
 
+  /// 회원가입 — creates an account and signs in. Mock: reuses the login
+  /// exchange (any non-empty credentials succeed) and attaches the seed
+  /// profile. The real backend (POST /auth/register) replaces this later.
+  Future<void> register({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    final token = await _authRepository.login(email: email, password: password);
+    await _tokenStore.saveToken(token);
+    state = const SessionState(
+      status: SessionStatus.authenticated,
+      profile: seedTrainerProfile,
+    );
+  }
+
+  /// Social sign-in (kakao / google). Mirrors the user app: until the
+  /// real provider SDK lands, this exchanges a demo credential through the
+  /// mock repo, persists the token, and attaches the seed profile.
+  Future<void> socialLogin({required String provider}) async {
+    final token = await _authRepository.login(
+      email: '$provider@trainer.demo',
+      password: 'social-$provider',
+    );
+    await _tokenStore.saveToken(token);
+    state = const SessionState(
+      status: SessionStatus.authenticated,
+      profile: seedTrainerProfile,
+    );
+  }
+
   /// Enters demo mode — skip login, no token, browse with mock data.
   /// Not persisted, so a restart returns to the signed-out state.
   void enterDemo() {

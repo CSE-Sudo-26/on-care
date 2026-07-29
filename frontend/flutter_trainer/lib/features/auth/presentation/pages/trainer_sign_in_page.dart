@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
@@ -40,6 +39,26 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
     context.go(AppRoutes.clients);
   }
 
+  void _onSignUp() => context.push(AppRoutes.signUp);
+
+  Future<void> _social(String provider) async {
+    if (_loading) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(sessionControllerProvider.notifier)
+          .socialLogin(provider: provider);
+      if (!mounted) return;
+      context.go(AppRoutes.clients);
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요')),
+      );
+    }
+  }
+
   Future<void> _login() async {
     if (_loading) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -73,7 +92,8 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      // 사용자 앱 로그인 화면과 동일한 흰색 배경.
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -84,37 +104,30 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // Brand — On-Care logo in a rounded card.
+                  // 브랜드 — On-Care 로고(테두리 없이 크게), 사용자 앱과 동일.
                   Center(
-                    child: Container(
-                      width: 84,
-                      height: 84,
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: const BorderRadius.all(AppRadius.card),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Image.asset(
-                        'assets/images/oncare-logo.png',
-                        fit: BoxFit.contain,
-                      ),
+                    child: Image.asset(
+                      'assets/images/oncare-logo.png',
+                      width: 132,
+                      height: 132,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    '온케어 트레이너',
+                    'On - Care 트레이너',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF262626),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 4),
                   Text(
                     '고객 관리를 위한 트레이너 전용 앱',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxl),
@@ -136,7 +149,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
                         size: 20,
-                        color: AppColors.subtleForeground,
+                        color: const Color(0xFF64748B),
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
@@ -149,6 +162,32 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                     onTap: _login,
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  const _OrDivider(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _SocialButton.kakao(
+                    onTap: _loading ? null : () => _social('kakao'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SocialButton.google(
+                    onTap: _loading ? null : () => _social('google'),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      const Text(
+                        '계정이 없으신가요?',
+                        style: TextStyle(color: Color(0xFF64748B)),
+                      ),
+                      TextButton(
+                        onPressed: _loading ? null : _onSignUp,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: const Text('회원가입'),
+                      ),
+                    ],
+                  ),
                   Center(
                     child: TextButton(
                       onPressed: _loading ? null : _enterDemo,
@@ -161,6 +200,102 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "— 또는 —" separator between the email login and social buttons.
+/// Mirrors the user app's sign-in divider.
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: <Widget>[
+        Expanded(child: Divider(color: Color(0x1A000000))),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Text(
+            '또는',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+          ),
+        ),
+        Expanded(child: Divider(color: Color(0x1A000000))),
+      ],
+    );
+  }
+}
+
+/// Provider-branded social sign-in button (kakao / google), matching the
+/// user app. [onTap] drives the demo-token social exchange.
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.onTap,
+    this.border,
+    this.iconSize = 20,
+  });
+
+  factory _SocialButton.kakao({required VoidCallback? onTap}) => _SocialButton(
+    label: '카카오로 시작하기',
+    icon: Icons.chat_bubble_rounded,
+    background: const Color(0xFFFEE500),
+    foreground: const Color(0xFF191600),
+    onTap: onTap,
+  );
+
+  factory _SocialButton.google({required VoidCallback? onTap}) => _SocialButton(
+    label: '구글로 시작하기',
+    icon: Icons.g_mobiledata,
+    background: const Color(0xFFFFFFFF),
+    foreground: const Color(0xFF262626),
+    border: const Color(0x1A000000),
+    iconSize: 28,
+    onTap: onTap,
+  );
+
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final Color? border;
+  final double iconSize;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: background,
+      borderRadius: const BorderRadius.all(Radius.circular(14)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(14)),
+            border: border != null ? Border.all(color: border!) : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, color: foreground, size: iconSize),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                label,
+                style: TextStyle(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ),
