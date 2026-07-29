@@ -262,10 +262,10 @@ class ConsultationRequest(Base):
     )
     target_type: Mapped[str] = mapped_column(String(20))
     gym_id: Mapped[str | None] = mapped_column(
-        ForeignKey("places.id", ondelete="CASCADE"), nullable=True
+        ForeignKey("places.id", ondelete="SET NULL"), nullable=True
     )
     trainer_id: Mapped[str | None] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     exercise_goal: Mapped[str] = mapped_column(String(30))
     health_purpose_type: Mapped[str] = mapped_column(String(30))

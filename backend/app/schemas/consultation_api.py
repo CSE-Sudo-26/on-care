@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ConsultationTargetType = Literal["gym", "trainer"]
 ExerciseGoal = Literal[
@@ -61,6 +61,8 @@ class ConsultationCreate(BaseModel):
 
 
 class ConsultationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     member_id: str
     target_type: ConsultationTargetType

@@ -31,11 +31,11 @@ def upgrade() -> None:
         sa.Column("target_type", sa.String(20), nullable=False),
         sa.Column(
             "gym_id", sa.String(64),
-            sa.ForeignKey("places.id", ondelete="CASCADE"), nullable=True,
+            sa.ForeignKey("places.id", ondelete="SET NULL"), nullable=True,
         ),
         sa.Column(
             "trainer_id", sa.String(64),
-            sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=True,
+            sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
         ),
         sa.Column("exercise_goal", sa.String(30), nullable=False),
         sa.Column("health_purpose_type", sa.String(30), nullable=False),

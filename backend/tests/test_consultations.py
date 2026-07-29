@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 
 from app.models.models import ConsultationRequest, Place, TrainerProfile, User
+from app.schemas.consultation_api import ConsultationOut
 
 TEST_EMAIL_PREFIX = "consult-test-"
 TEST_PLACE_PREFIX = "consult-place-"
@@ -157,17 +158,43 @@ def test_create_trainer_consultation(client, db_session):
     assert response.json()["gym_id"] is None
 
 
-def test_client_cannot_set_consultation_status(client, db_session):
+@pytest.mark.parametrize("status", ["pending", "accepted", "rejected"])
+def test_client_cannot_set_consultation_status(client, db_session, status):
     _, token = _register_member(client)
     gym = _create_place(db_session)
     payload = _payload(gym_id=gym.id)
-    payload["status"] = "approved"
+    payload["status"] = status
 
     response = client.post(
         "/v1/consultations", headers=_auth(token), json=payload
     )
 
     assert response.status_code == 422
+
+
+def test_consultation_out_validates_orm_instance():
+    now = datetime.now(timezone.utc)
+    consultation = ConsultationRequest(
+        id="consult-orm-validation",
+        member_id="user-orm-validation",
+        target_type="gym",
+        gym_id="place-orm-validation",
+        trainer_id=None,
+        exercise_goal="health",
+        health_purpose_type="general",
+        health_purpose_detail=None,
+        preferred_date=date.today().isoformat(),
+        preferred_time_slot="flexible",
+        message=None,
+        status="pending",
+        created_at=now,
+        updated_at=now,
+    )
+
+    response = ConsultationOut.model_validate(consultation)
+
+    assert response.id == consultation.id
+    assert response.preferred_date == date.today()
 
 
 def test_past_preferred_date_is_rejected(client, db_session):
