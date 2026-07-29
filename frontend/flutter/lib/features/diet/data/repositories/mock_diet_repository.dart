@@ -43,51 +43,56 @@ class MockDietRepository implements DietRepository {
   @override
   Future<DietDay> fetchToday() async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
+    // Per-food nutrition is the single source of truth: the diet-tab meal
+    // cards and the "오늘의 영양 요약" totals are both derived from these foods,
+    // so the numbers always agree (아침 217/221/6.3 + 점심 750/3,200/8.5 =
+    // 967/3,421/14.8).
     return const DietDay(
       entries: <DietEntry>[
         DietEntry(
           id: 'mock-breakfast',
           mealType: MealType.breakfast,
           timeLabel: '08:20',
-          totalCalories: 315,
-          sodiumMg: 380,
-          sugarG: 18,
+          totalCalories: 217,
+          sodiumMg: 221,
+          sugarG: 6.3,
+          photoAsset: 'assets/images/breakfast-scrambled-egg-strawberry.jpg',
+          aiComment: '단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.',
           foods: <FoodItem>[
-            FoodItem(name: '오트밀', calories: 220),
-            FoodItem(name: '바나나 1개', calories: 90),
-            FoodItem(name: '아메리카노', calories: 5),
+            FoodItem(
+              name: '스크램블 에그',
+              calories: 185,
+              sodiumMg: 220,
+              sugarG: 0.8,
+            ),
+            FoodItem(name: '딸기', calories: 32, sodiumMg: 1, sugarG: 5.5),
           ],
         ),
         DietEntry(
           id: 'mock-lunch',
           mealType: MealType.lunch,
           timeLabel: '12:40',
-          totalCalories: 530,
-          sodiumMg: 1120,
-          sugarG: 14,
+          totalCalories: 750,
+          sodiumMg: 3200,
+          sugarG: 8.5,
+          photoAsset: 'assets/images/lunch-jjamppong.jpg',
+          aiComment: '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 해물과 야채 위주로 드시는 것이 좋습니다.',
           foods: <FoodItem>[
-            FoodItem(name: '닭가슴살 샐러드', calories: 380),
-            FoodItem(name: '현미밥 반공기', calories: 150),
-          ],
-        ),
-        DietEntry(
-          id: 'mock-dinner',
-          mealType: MealType.dinner,
-          timeLabel: '19:00',
-          totalCalories: 575,
-          sodiumMg: 600,
-          sugarG: 13,
-          foods: <FoodItem>[
-            FoodItem(name: '연어 스테이크', calories: 420),
-            FoodItem(name: '구운 야채', calories: 155),
+            FoodItem(
+              name: '짬뽕',
+              calories: 750,
+              sodiumMg: 3200,
+              sugarG: 8.5,
+            ),
           ],
         ),
       ],
-      totalCalories: 1420,
-      totalSodiumMg: 2100,
-      totalSugarG: 45,
+      totalCalories: 967,
+      totalSodiumMg: 3421,
+      totalSugarG: 14.8,
       macros: DietMacros(carbsPct: 50, proteinPct: 30, fatPct: 20),
-      aiCoachMessage: '오늘 점심에 나트륨이 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!',
+      aiCoachMessage:
+          '점심 짬뽕으로 나트륨과 혈당 부담이 크게 높아졌어요! 오늘 저녁은 간을 하지 않은 두부/닭가슴살 샐러드나 채소 위주 식단으로 가볍게 드시고, 물을 자주 드셔주세요.',
     );
   }
 
@@ -102,7 +107,7 @@ class MockDietRepository implements DietRepository {
     List<FoodItem>? foods,
     int? totalCalories,
     int? sodiumMg,
-    int? sugarG,
+    double? sugarG,
   }) async {
     final updatedFoods = foods ?? const <FoodItem>[];
     return DietEntry(

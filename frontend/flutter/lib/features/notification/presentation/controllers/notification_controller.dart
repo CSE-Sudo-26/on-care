@@ -13,25 +13,24 @@ class NotificationController extends StateNotifier<NotificationState> {
       items: <AlertItem>[
         AlertItem(
           id: 'a1',
-          title: '식단 입력 알림',
-          body: '오늘 점심 입력이 비어있어요.',
+          title: '나트륨 섭취 주의',
+          body: '점심 짬뽕으로 오늘 나트륨이 3,421mg까지 올랐어요. 물을 충분히 드세요.',
           timeAgo: '10분 전',
           category: AlertCategory.reminder,
         ),
         AlertItem(
           id: 'a2',
-          title: '운동 목표 달성',
-          body: '주간 운동 240분 달성!',
+          title: 'PT 수업 완료',
+          body: '오늘 18:00 김트레이너와 12회차 PT를 마쳤어요!',
           timeAgo: '1시간 전',
           category: AlertCategory.achievement,
         ),
         AlertItem(
           id: 'a3',
-          title: '체중 측정 권장',
-          body: '오늘 체중을 기록해 보세요.',
-          timeAgo: '3시간 전',
-          category: AlertCategory.healthCheck,
-          read: true,
+          title: '트레이너 피드백 도착',
+          body: '마무리로 어깨 회전근개 스트레칭을 꼭 해주세요.',
+          timeAgo: '2시간 전',
+          category: AlertCategory.reminder,
         ),
         AlertItem(
           id: 'a4',

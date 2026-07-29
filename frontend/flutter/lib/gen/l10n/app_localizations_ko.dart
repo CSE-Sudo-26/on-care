@@ -150,6 +150,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeDietSodiumAlert => '나트륨 초과 감지됨';
 
   @override
+  String get homeAiAdviceTitle => '오늘의 AI 통합 조언';
+
+  @override
+  String get homeAiAdviceBody =>
+      '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 마무리해 보세요.';
+
+  @override
+  String get homeSodiumExceededBadge => '나트륨 초과';
+
+  @override
   String get homeMacroCarbs => '탄수화물';
 
   @override
@@ -222,6 +232,33 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeGoal => '목표';
+
+  @override
+  String get homeDietNutritionTitle => '식단 · 영양';
+
+  @override
+  String get homeCalorieIntake => '오늘 섭취 칼로리';
+
+  @override
+  String get homeAchieveRate => '달성률';
+
+  @override
+  String get homeWeeklyTrend => '주간 추이';
+
+  @override
+  String get homeExerciseActiveTime => '운동 시간';
+
+  @override
+  String get homeExerciseBurned => '소모 칼로리';
+
+  @override
+  String get homeExerciseCount => '운동 횟수';
+
+  @override
+  String get homeExerciseBurnProgress => '칼로리 소모 목표';
+
+  @override
+  String get unitTimes => '회';
 
   @override
   String get homeVsLastWeek => '지난주 대비';
@@ -389,7 +426,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietUnitG => 'g';
 
   @override
-  String get dietAiFeedback => 'AI 피드백';
+  String get dietAiFeedback => 'AI 맞춤 조언';
 
   @override
   String get dietTodayMeals => '오늘의 식단';
@@ -657,7 +694,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exEmptyLog => '이번 주 운동 기록이 없어요.\n운동을 추가해 기록을 남겨 보세요!';
 
   @override
-  String get exAiFeedback => 'AI 피드백';
+  String get exAiFeedback => 'AI 맞춤 조언';
 
   @override
   String get exAddExercise => '운동 추가';
@@ -1089,19 +1126,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachCardDietTag => '식단';
 
   @override
-  String get coachCardDietTitle => '저녁은 나트륨을 조금 줄여보세요.';
+  String get coachCardDietTitle => '아침 식단 훌륭, 점심 나트륨 주의';
 
   @override
-  String get coachCardDietBody => '구이나 샐러드가 좋아요.';
+  String get coachCardDietBody =>
+      '아침 식단은 훌륭했지만 점심 짬뽕의 나트륨·당류 부담이 크니, 수분을 충분히 섭취해 나트륨 배출을 도와주세요.';
 
   @override
   String get coachCardExerciseTag => '운동';
 
   @override
-  String get coachCardExerciseTitle => '저녁 산책 20분.';
+  String get coachCardExerciseTitle => '12회차 상체 PT 완료';
 
   @override
-  String get coachCardExerciseBody => '식후 가벼운 산책은 혈당 관리에 도움이 돼요.';
+  String get coachCardExerciseBody =>
+      '12회차 상체 PT를 잘 마쳤어요! 코치님 피드백대로 어깨 회전근개 스트레칭과 가벼운 유산소로 마무리를 추천합니다.';
 
   @override
   String get coachCardWaterTag => '수분';

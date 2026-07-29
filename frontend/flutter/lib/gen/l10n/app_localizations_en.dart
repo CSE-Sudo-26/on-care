@@ -152,6 +152,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDietSodiumAlert => 'Sodium over limit detected';
 
   @override
+  String get homeAiAdviceTitle => 'Today\'s combined AI advice';
+
+  @override
+  String get homeAiAdviceBody =>
+      'Your breakfast and evening PT session were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish the day well with the shoulder stretches your coach emphasized.';
+
+  @override
+  String get homeSodiumExceededBadge => 'Sodium over';
+
+  @override
   String get homeMacroCarbs => 'Carbs';
 
   @override
@@ -224,6 +234,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeGoal => 'Goal';
+
+  @override
+  String get homeDietNutritionTitle => 'Diet & nutrition';
+
+  @override
+  String get homeCalorieIntake => 'Today\'s calories';
+
+  @override
+  String get homeAchieveRate => 'Progress';
+
+  @override
+  String get homeWeeklyTrend => 'Weekly trend';
+
+  @override
+  String get homeExerciseActiveTime => 'Active time';
+
+  @override
+  String get homeExerciseBurned => 'Calories';
+
+  @override
+  String get homeExerciseCount => 'Workouts';
+
+  @override
+  String get homeExerciseBurnProgress => 'Burn goal';
+
+  @override
+  String get unitTimes => '×';
 
   @override
   String get homeVsLastWeek => 'vs last week';
@@ -391,7 +428,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietUnitG => 'g';
 
   @override
-  String get dietAiFeedback => 'AI Feedback';
+  String get dietAiFeedback => 'AI advice';
 
   @override
   String get dietTodayMeals => 'Today\'s Meals';
@@ -667,7 +704,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'No workouts logged this week.\nAdd one to start your log!';
 
   @override
-  String get exAiFeedback => 'AI Feedback';
+  String get exAiFeedback => 'AI advice';
 
   @override
   String get exAddExercise => 'Add Exercise';
@@ -1106,20 +1143,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachCardDietTag => 'Diet';
 
   @override
-  String get coachCardDietTitle => 'Try easing back on sodium at dinner.';
+  String get coachCardDietTitle => 'Great breakfast — watch lunch sodium';
 
   @override
-  String get coachCardDietBody => 'Grilled dishes or a salad are great.';
+  String get coachCardDietBody =>
+      'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.';
 
   @override
   String get coachCardExerciseTag => 'Exercise';
 
   @override
-  String get coachCardExerciseTitle => 'A 20-minute evening walk.';
+  String get coachCardExerciseTitle => 'Upper-body PT session 12 done';
 
   @override
   String get coachCardExerciseBody =>
-      'A light walk after meals helps manage blood sugar.';
+      'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.';
 
   @override
   String get coachCardWaterTag => 'Hydration';

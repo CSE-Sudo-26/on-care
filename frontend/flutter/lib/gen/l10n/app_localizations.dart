@@ -368,6 +368,24 @@ abstract class AppLocalizations {
   /// **'Sodium over limit detected'**
   String get homeDietSodiumAlert;
 
+  /// No description provided for @homeAiAdviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s combined AI advice'**
+  String get homeAiAdviceTitle;
+
+  /// No description provided for @homeAiAdviceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your breakfast and evening PT session were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish the day well with the shoulder stretches your coach emphasized.'**
+  String get homeAiAdviceBody;
+
+  /// No description provided for @homeSodiumExceededBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over'**
+  String get homeSodiumExceededBadge;
+
   /// No description provided for @homeMacroCarbs.
   ///
   /// In en, this message translates to:
@@ -511,6 +529,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Goal'**
   String get homeGoal;
+
+  /// No description provided for @homeDietNutritionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet & nutrition'**
+  String get homeDietNutritionTitle;
+
+  /// No description provided for @homeCalorieIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s calories'**
+  String get homeCalorieIntake;
+
+  /// No description provided for @homeAchieveRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get homeAchieveRate;
+
+  /// No description provided for @homeWeeklyTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly trend'**
+  String get homeWeeklyTrend;
+
+  /// No description provided for @homeExerciseActiveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Active time'**
+  String get homeExerciseActiveTime;
+
+  /// No description provided for @homeExerciseBurned.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get homeExerciseBurned;
+
+  /// No description provided for @homeExerciseCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts'**
+  String get homeExerciseCount;
+
+  /// No description provided for @homeExerciseBurnProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Burn goal'**
+  String get homeExerciseBurnProgress;
+
+  /// No description provided for @unitTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'×'**
+  String get unitTimes;
 
   /// No description provided for @homeVsLastWeek.
   ///
@@ -809,7 +881,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietAiFeedback.
   ///
   /// In en, this message translates to:
-  /// **'AI Feedback'**
+  /// **'AI advice'**
   String get dietAiFeedback;
 
   /// No description provided for @dietTodayMeals.
@@ -1331,7 +1403,7 @@ abstract class AppLocalizations {
   /// No description provided for @exAiFeedback.
   ///
   /// In en, this message translates to:
-  /// **'AI Feedback'**
+  /// **'AI advice'**
   String get exAiFeedback;
 
   /// No description provided for @exAddExercise.
@@ -2123,13 +2195,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardDietTitle.
   ///
   /// In en, this message translates to:
-  /// **'Try easing back on sodium at dinner.'**
+  /// **'Great breakfast — watch lunch sodium'**
   String get coachCardDietTitle;
 
   /// No description provided for @coachCardDietBody.
   ///
   /// In en, this message translates to:
-  /// **'Grilled dishes or a salad are great.'**
+  /// **'Your breakfast was great, but the lunch jjamppong is heavy on sodium and sugar, so drink plenty of water to help flush the sodium out.'**
   String get coachCardDietBody;
 
   /// No description provided for @coachCardExerciseTag.
@@ -2141,13 +2213,13 @@ abstract class AppLocalizations {
   /// No description provided for @coachCardExerciseTitle.
   ///
   /// In en, this message translates to:
-  /// **'A 20-minute evening walk.'**
+  /// **'Upper-body PT session 12 done'**
   String get coachCardExerciseTitle;
 
   /// No description provided for @coachCardExerciseBody.
   ///
   /// In en, this message translates to:
-  /// **'A light walk after meals helps manage blood sugar.'**
+  /// **'Nice work finishing upper-body PT session 12! As your coach advised, wrap up with rotator-cuff shoulder stretches and light cardio.'**
   String get coachCardExerciseBody;
 
   /// No description provided for @coachCardWaterTag.

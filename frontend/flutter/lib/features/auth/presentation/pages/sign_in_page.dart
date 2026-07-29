@@ -88,19 +88,6 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       body: SafeArea(
         child: Stack(
           children: <Widget>[
-            // 우측 상단 데모 바로가기
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: TextButton.icon(
-                  onPressed: _enterDemo,
-                  style: TextButton.styleFrom(foregroundColor: AppColors.mutedForeground),
-                  icon: const Text('데모로 시작', style: TextStyle(fontSize: 13)),
-                  label: const Icon(Icons.arrow_forward, size: 16),
-                ),
-              ),
-            ),
             Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.xl),
@@ -110,26 +97,18 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      // 브랜드 — 온케어 로고
+                      // 브랜드 — On-Care 로고 (테두리 없이 크게)
                       Center(
-                        child: Container(
-                          width: 84,
-                          height: 84,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: const BorderRadius.all(AppRadius.card),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Image.asset(
-                            'assets/images/oncare-logo.png',
-                            fit: BoxFit.contain,
-                          ),
+                        child: Image.asset(
+                          'assets/images/oncare-logo.png',
+                          width: 132,
+                          height: 132,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
-                        '온케어',
+                        'On - care',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -204,6 +183,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                       Center(
                         child: TextButton(
+                          key: const Key('demoEnterButton'),
                           onPressed: _enterDemo,
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,

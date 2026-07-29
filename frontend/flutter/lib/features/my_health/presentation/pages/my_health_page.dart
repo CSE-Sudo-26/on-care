@@ -138,13 +138,7 @@ class _ProfileCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.hairline),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Row(
         children: <Widget>[
@@ -215,13 +209,7 @@ class _PointsBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: FigmaColors.primary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: FigmaColors.primaryA(0.38),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Row(
         children: <Widget>[
@@ -253,8 +241,132 @@ class _PointsBanner extends StatelessWidget {
                 ),
               ),
             ),
+          const SizedBox(width: 8),
+          const _PointsInfoButton(),
         ],
       ),
+    );
+  }
+}
+
+/// Circular "i" button on the points banner — taps open a sheet explaining how
+/// points are earned.
+class _PointsInfoButton extends StatelessWidget {
+  const _PointsInfoButton();
+
+  void _show(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          '포인트 적립 안내',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.ink,
+          ),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _PointRule(
+              icon: Icons.restaurant_rounded,
+              text: '식단 추가',
+              points: '+50P',
+            ),
+            SizedBox(height: 10),
+            _PointRule(
+              icon: Icons.auto_awesome,
+              text: 'AI 추천 운동 완료',
+              points: '+50P',
+            ),
+            SizedBox(height: 10),
+            _PointRule(
+              icon: Icons.fitness_center_rounded,
+              text: '운동 직접 추가',
+              points: '+20P',
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: TextButton.styleFrom(foregroundColor: FigmaColors.primary),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _show(context),
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.22),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.info_outline, size: 15, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _PointRule extends StatelessWidget {
+  const _PointRule({
+    required this.icon,
+    required this.text,
+    required this.points,
+  });
+
+  final IconData icon;
+  final String text;
+  final String points;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: FigmaColors.primaryA(0.10),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(icon, size: 16, color: FigmaColors.primary),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: FigmaColors.ink,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          points,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.primary,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -309,13 +421,7 @@ class _Settings extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FigmaColors.hairline),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: kCardShadow,
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -402,13 +508,7 @@ class _LogoutButton extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.hairline),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

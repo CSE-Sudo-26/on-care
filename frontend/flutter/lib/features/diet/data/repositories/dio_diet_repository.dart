@@ -64,7 +64,7 @@ class DioDietRepository implements DietRepository {
     List<FoodItem>? foods,
     int? totalCalories,
     int? sodiumMg,
-    int? sugarG,
+    double? sugarG,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/diet/entries/$id',
@@ -143,9 +143,9 @@ class DioDietRepository implements DietRepository {
         0,
         (int total, DietEntry entry) => total + entry.sodiumMg,
       ),
-      totalSugarG: entries.fold<int>(
+      totalSugarG: entries.fold<double>(
         0,
-        (int total, DietEntry entry) => total + entry.sugarG,
+        (double total, DietEntry entry) => total + entry.sugarG,
       ),
       aiCoachMessage: day.aiCoachMessage,
     );

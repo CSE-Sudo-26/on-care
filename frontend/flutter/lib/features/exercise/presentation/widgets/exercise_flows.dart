@@ -682,13 +682,7 @@ class _GymResult extends StatelessWidget {
         border: Border.all(
           color: top ? FigmaColors.primaryA(0.25) : FigmaColors.hairline,
         ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

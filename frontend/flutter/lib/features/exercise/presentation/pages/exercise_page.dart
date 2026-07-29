@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,16 +12,6 @@ import 'package:oncare/features/notification/presentation/widgets/notification_p
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
-
-/// Localized label for a workout type badge.
-String _typeLabel(AppLocalizations l, ExerciseType t) => switch (t) {
-  ExerciseType.cardio => l.exTypeCardio,
-  ExerciseType.strength => l.exTypeStrength,
-  ExerciseType.yoga => l.exTypeYoga,
-  ExerciseType.walking => l.exTypeWalking,
-  ExerciseType.stretching => l.exTypeStretching,
-  ExerciseType.other => l.exTypeOther,
-};
 
 /// 운동 tab, rebuilt to the On-Care Figma redesign — a 운동 기록 / 헬스장
 /// sub-tab switcher over a weekly summary, stacked activity chart, AI routine,
@@ -72,7 +64,7 @@ class _ExercisePageState extends State<ExercisePage> {
                 ),
                 const SizedBox(height: 16),
                 if (_subTab == 0)
-                  _RecordTab(onAdd: () => showExerciseAddSheet(context))
+                  const _RecordTab()
                 else
                   GymTab(
                     selectedSlot: _slot,
@@ -158,14 +150,42 @@ class _SubTabs extends StatelessWidget {
 
 // ───────────────────────────────────────────────────────── 운동 기록 ──
 
-class _RecordTab extends ConsumerWidget {
-  const _RecordTab({required this.onAdd});
-  final VoidCallback onAdd;
+class _RecordTab extends ConsumerStatefulWidget {
+  const _RecordTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RecordTab> createState() => _RecordTabState();
+}
+
+class _RecordTabState extends ConsumerState<_RecordTab> {
+  // AI 추천 운동 완료 체크([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
+  final List<bool> _routineDone = <bool>[false, false];
+
+  // 오늘 기본 운동(분): 유산소 / 근력 / 스트레칭.
+  static const double _baseCardio = 15;
+  static const double _baseStrength = 40;
+  static const double _baseStretch = 10;
+
+  // 주간 달력에서 선택한 날짜(기본=오늘)와 주 단위 이동.
+  late DateTime _selected = _today;
+  int _weekShift = 0;
+
+  DateTime get _today {
+    final DateTime n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(exerciseWeekProvider);
+    final DateTime today = _today;
+    final DateTime center = today.add(Duration(days: _weekShift * 7));
+    final bool atToday = _weekShift == 0 && _selected == today;
+    // 체크한 추천 운동 시간을 오늘 활동에 더한다(인터벌 러닝→유산소, 어깨→스트레칭).
+    final double todayCardio = _baseCardio + (_routineDone[1] ? 30 : 0);
+    const double todayStrength = _baseStrength;
+    final double todayStretch = _baseStretch + (_routineDone[0] ? 8 : 0);
     return weekAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 64),
@@ -200,6 +220,27 @@ class _RecordTab extends ConsumerWidget {
       data: (ExerciseWeek week) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // 0) 운동 주간 달력 (식단 탭과 동일한 스타일)
+          _ExerciseWeekStrip(
+            center: center,
+            selected: _selected,
+            today: today,
+            showTodayButton: !atToday,
+            onSelect: (DateTime d) => setState(() => _selected = d),
+            onToday: () => setState(() {
+              _weekShift = 0;
+              _selected = today;
+            }),
+            onPrev: () => setState(() => _weekShift -= 1),
+            onNext: _weekShift >= 0
+                ? null
+                : () => setState(() => _weekShift += 1),
+          ),
+          const SizedBox(height: 8),
+          if (!atToday)
+            const _ExerciseOtherDay()
+          else ...<Widget>[
+          // 1) 이번 주 운동 요약
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
             child: Text(
@@ -220,6 +261,7 @@ class _RecordTab extends ConsumerWidget {
                     label: l.exThisWeek,
                     value: '${week.sessions.length}',
                     unit: l.exUnitCount,
+                    accent: true,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -228,6 +270,7 @@ class _RecordTab extends ConsumerWidget {
                     label: l.exStatTime,
                     value: '${week.totalMinutes}',
                     unit: l.unitMinutes,
+                    accent: true,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -252,48 +295,273 @@ class _RecordTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-            child: Row(
-              children: <Widget>[
-                Text(
-                  l.exActivityTitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.ink,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l.exThisWeek,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _ActivityChart(week: week),
-          ),
-          const SizedBox(height: 20),
+          // 2) AI 피드백
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: _ExerciseFeedback(message: week.aiCoachMessage),
           ),
           const SizedBox(height: 20),
+          // 3) 운동 현황 (오늘 / 이번 주 / 이번 달)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _AiRoutine(onAdd: onAdd),
+            child: _ActivityStatus(
+              week: week,
+              todayCardio: todayCardio,
+              todayStrength: todayStrength,
+              todayStretch: todayStretch,
+            ),
           ),
           const SizedBox(height: 20),
+          // 4) 오늘 완료한 PT 일지 (트레이너 연동)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: _PtLogCard(),
+          ),
+          const SizedBox(height: 20),
+          // 5) PT 맞춤 연계 AI 루틴
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _TodayLogs(sessions: week.sessions),
+            child: _PtAiRoutineCard(
+              done: _routineDone,
+              onToggle: (int i) =>
+                  setState(() => _routineDone[i] = !_routineDone[i]),
+            ),
+          ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Weekly date strip for the 운동 기록 tab, mirroring the 식단 tab calendar:
+/// the current week centred on today, with the selected day highlighted and a
+/// "오늘" reset chip when a non-today day is picked. Controlled by [_RecordTab].
+class _ExerciseWeekStrip extends StatelessWidget {
+  const _ExerciseWeekStrip({
+    required this.center,
+    required this.selected,
+    required this.today,
+    required this.showTodayButton,
+    required this.onSelect,
+    required this.onToday,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final DateTime center;
+  final DateTime selected;
+  final DateTime today;
+  final bool showTodayButton;
+  final ValueChanged<DateTime> onSelect;
+  final VoidCallback onToday;
+  final VoidCallback onPrev;
+  final VoidCallback? onNext;
+
+  int _weekOfMonth(DateTime d) {
+    final DateTime first = DateTime(d.year, d.month);
+    final int offset = first.weekday - 1;
+    return ((d.day + offset - 1) / 7).floor() + 1;
+  }
+
+  String _weekday(AppLocalizations l, int weekday) => switch (weekday) {
+    1 => l.dietWeekdayMon,
+    2 => l.dietWeekdayTue,
+    3 => l.dietWeekdayWed,
+    4 => l.dietWeekdayThu,
+    5 => l.dietWeekdayFri,
+    6 => l.dietWeekdaySat,
+    _ => l.dietWeekdaySun,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<DateTime> days = List<DateTime>.generate(
+      7,
+      (int i) => center.add(Duration(days: i - 3)),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text(
+                  l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textSub,
+                  ),
+                ),
+                if (showTodayButton)
+                  GestureDetector(
+                    onTap: onToday,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: FigmaColors.primaryA(0.10),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: FigmaColors.primaryA(0.25)),
+                      ),
+                      child: Text(
+                        l.dietToday,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _Arrow(icon: Icons.chevron_left, onTap: onPrev),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    for (final DateTime d in days)
+                      _WeekDay(
+                        day: d,
+                        label: _weekday(l, d.weekday),
+                        isToday: d == today,
+                        isSelected: d == selected,
+                        onTap: () => onSelect(d),
+                      ),
+                  ],
+                ),
+              ),
+              _Arrow(icon: Icons.chevron_right, onTap: onNext),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Circular week-navigation arrow, dimmed when disabled (onTap == null).
+class _Arrow extends StatelessWidget {
+  const _Arrow({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: onTap == null ? 0.35 : 1,
+      child: Material(
+        color: FigmaColors.softBlue,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: Icon(icon, size: 16, color: FigmaColors.primary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when a non-today date is selected in the 운동 주간 달력 — mirrors the
+/// 식단 탭's empty state (same copy, 식단→운동).
+class _ExerciseOtherDay extends StatelessWidget {
+  const _ExerciseOtherDay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: Center(
+        child: Text(
+          '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 운동을 확인해 주세요.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12.5,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+            color: FigmaColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeekDay extends StatelessWidget {
+  const _WeekDay({
+    required this.day,
+    required this.label,
+    required this.isToday,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final String label;
+  final bool isToday;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color labelColor = isSelected || isToday
+        ? FigmaColors.primary
+        : FigmaColors.textFaint;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: labelColor,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? FigmaColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isSelected ? kCardShadow : null,
+            ),
+            child: Text(
+              '${day.day}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? Colors.white
+                    : isToday
+                    ? FigmaColors.primary
+                    : FigmaColors.textSub,
+              ),
+            ),
           ),
         ],
       ),
@@ -372,28 +640,36 @@ class _StatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: accent ? 13 : 15,
-              fontWeight: FontWeight.w800,
-              color: valueColor,
-              height: 1,
-              letterSpacing: -0.4,
+          // Value with the unit inline to its right → one line shorter.
+          Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontSize: accent ? 14 : 16,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor,
+                    height: 1,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                TextSpan(
+                  text: ' $unit',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: streak
+                        ? Colors.white.withValues(alpha: 0.85)
+                        : accent
+                        ? FigmaColors.primary.withValues(alpha: 0.7)
+                        : FigmaColors.textMuted,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            unit,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w500,
-              color: streak
-                  ? Colors.white.withValues(alpha: 0.85)
-                  : accent
-                  ? FigmaColors.primary.withValues(alpha: 0.7)
-                  : FigmaColors.textMuted,
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -401,71 +677,499 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _ActivityChart extends StatelessWidget {
-  const _ActivityChart({required this.week});
+/// A period of the "운동 현황" chart: the stacked bars, their x-labels, and
+/// which bar (if any) represents "now" for the highlight/label.
+class _ChartPeriod {
+  const _ChartPeriod(this.bars, this.labels, this.todayIndex);
+  final List<_Bar> bars;
+  final List<String> labels;
+  final int todayIndex;
+}
 
+/// "운동 현황" with an 오늘 / 이번 주 / 이번 달 segmented switcher over the same
+/// stacked-bar chart. All three views share the chart's legend and styling so
+/// the section stays visually consistent with the rest of the tab.
+class _ActivityStatus extends StatefulWidget {
+  const _ActivityStatus({
+    required this.week,
+    required this.todayCardio,
+    required this.todayStrength,
+    required this.todayStretch,
+  });
   final ExerciseWeek week;
+
+  /// Today's live activity minutes (base + any checked AI routines), shared with
+  /// the 오늘 donut and the 이번 주 chart's today bar so both always agree.
+  final double todayCardio;
+  final double todayStrength;
+  final double todayStretch;
+
+  @override
+  State<_ActivityStatus> createState() => _ActivityStatusState();
+}
+
+class _ActivityStatusState extends State<_ActivityStatus> {
+  int _period = 1; // 0 = 오늘, 1 = 이번 주, 2 = 이번 달
+
+  List<_Bar> _weekBars() {
+    final ExerciseWeek w = widget.week;
+    final int n = w.dailyMinutes.length;
+    final bool hasBreakdown =
+        n > 0 &&
+        w.cardioMinutes.length == n &&
+        w.strengthMinutes.length == n &&
+        w.stretchingMinutes.length == n;
+    return <_Bar>[
+      for (int i = 0; i < n; i++)
+        // 마지막(오늘) 막대는 실시간 오늘 활동으로 대체 → 오늘 도넛과 항상 일치.
+        if (i == n - 1)
+          _Bar(
+            widget.todayCardio,
+            widget.todayStrength,
+            widget.todayStretch,
+          )
+        else if (hasBreakdown)
+          _Bar(w.cardioMinutes[i], w.strengthMinutes[i], w.stretchingMinutes[i])
+        else
+          _Bar(w.dailyMinutes[i], 0, 0),
+    ];
+  }
+
+  _ChartPeriod _dataFor(int period) {
+    switch (period) {
+      case 2: // 이번 달 — weekly buckets
+        return const _ChartPeriod(
+          <_Bar>[
+            _Bar(120, 40, 30),
+            _Bar(95, 60, 20),
+            _Bar(140, 45, 35),
+            _Bar(90, 55, 25),
+            _Bar(60, 40, 20),
+          ],
+          <String>['1주', '2주', '3주', '4주', '5주'],
+          -1,
+        );
+      default: // 이번 주
+        return _ChartPeriod(
+          _weekBars(),
+          widget.week.dayLabels,
+          widget.week.dailyMinutes.length - 1,
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final int n = week.dailyMinutes.length;
-    final bool hasBreakdown =
-        n > 0 &&
-        week.cardioMinutes.length == n &&
-        week.strengthMinutes.length == n &&
-        week.stretchingMinutes.length == n;
-    final List<_Bar> bars = <_Bar>[
-      for (int i = 0; i < n; i++)
-        if (hasBreakdown)
-          _Bar(
-            week.cardioMinutes[i],
-            week.strengthMinutes[i],
-            week.stretchingMinutes[i],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Text(
+              l.exActivityTitle,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.ink,
+              ),
+            ),
+            const Spacer(),
+            _PeriodToggle(
+              active: _period,
+              labels: <String>[l.exToday, l.exThisWeek, '이번 달'],
+              onChanged: (int i) => setState(() => _period = i),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // 오늘 = 도넛(카테고리 비중), 이번 주/이번 달 = 막대차트.
+        if (_period == 0)
+          _TodayDonut(
+            segs: <_DonutSeg>[
+              _DonutSeg('유산소', widget.todayCardio.round(), FigmaColors.primary),
+              _DonutSeg(
+                '근력',
+                widget.todayStrength.round(),
+                const Color(0xFF1B6FA8),
+              ),
+              _DonutSeg(
+                '스트레칭',
+                widget.todayStretch.round(),
+                const Color(0xFFD4EEF8),
+              ),
+            ],
           )
         else
-          _Bar(week.dailyMinutes[i], 0, 0),
-    ];
-    // Localized weekday fallback (월~일) for when the backend sends no labels.
-    final List<String> fallbackDays = <String>[
-      l.dietWeekdayMon,
-      l.dietWeekdayTue,
-      l.dietWeekdayWed,
-      l.dietWeekdayThu,
-      l.dietWeekdayFri,
-      l.dietWeekdaySat,
-      l.dietWeekdaySun,
-    ];
-    final List<String> dayLabels = week.dayLabels.length == n
-        ? week.dayLabels
-        : fallbackDays;
+          Builder(
+            builder: (BuildContext context) {
+              final _ChartPeriod data = _dataFor(_period);
+              return _ActivityChart(
+                bars: data.bars,
+                dayLabels: data.labels,
+                todayIndex: data.todayIndex,
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
 
+/// "오늘" 뷰: 왼쪽 도넛(오늘 운동 카테고리 비중) + 오른쪽 카테고리별 시간.
+/// 카드 안에서 도넛+시간 묶음을 가운데 정렬한다.
+class _TodayDonut extends StatelessWidget {
+  const _TodayDonut({required this.segs});
+
+  final List<_DonutSeg> segs;
+
+  @override
+  Widget build(BuildContext context) {
+    final int total = segs.fold<int>(0, (int a, _DonutSeg s) => a + s.minutes);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: FigmaColors.primaryA(0.10)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: FigmaColors.primaryA(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
+        boxShadow: kCardShadow,
+      ),
+      child: SizedBox(
+        height: 170,
+        // Scale down on narrow screens so the fixed-width donut + legend never
+        // overflows, while keeping the centred wide-gap layout on wide viewports.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+            SizedBox(
+              width: 116,
+              height: 116,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  CustomPaint(
+                    size: const Size.square(116),
+                    painter: _DonutPainter(segs),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        '$total',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.ink,
+                          height: 1,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const Text(
+                        '분',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 48),
+            SizedBox(
+              width: 160,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    '오늘 총 운동 시간',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final _DonutSeg s in segs) ...<Widget>[
+                    _DonutLegendRow(seg: s),
+                    const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+            ),
+          ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DonutSeg {
+  const _DonutSeg(this.label, this.minutes, this.color);
+  final String label;
+  final int minutes;
+  final Color color;
+}
+
+class _DonutLegendRow extends StatelessWidget {
+  const _DonutLegendRow({required this.seg});
+  final _DonutSeg seg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: seg.color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            seg.label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: FigmaColors.textSub,
+            ),
+          ),
+        ),
+        Text(
+          '${seg.minutes}분',
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.ink,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter(this.segs);
+  final List<_DonutSeg> segs;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double total = segs.fold<double>(
+      0,
+      (double a, _DonutSeg s) => a + s.minutes,
+    );
+    if (total <= 0) return;
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    const double stroke = 20;
+    final double radius = (size.width - stroke) / 2;
+    final Rect rect = Rect.fromCircle(center: center, radius: radius);
+    const double gap = 0.06; // radians of spacing between segments
+    const double full = 2 * math.pi;
+    double start = -math.pi / 2; // top (12 o'clock)
+    for (final _DonutSeg s in segs) {
+      // Skip 0-minute categories (a checked routine may zero one out); a
+      // negative sweep would otherwise paint a stray rounded dot.
+      if (s.minutes <= 0) continue;
+      final double sweep = (s.minutes / total) * full - gap;
+      final Paint p = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = s.color;
+      canvas.drawArc(rect, start + gap / 2, sweep, false, p);
+      start += (s.minutes / total) * full;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
+      oldDelegate.segs != segs;
+}
+
+/// Compact segmented control (오늘 / 이번 주 / 이번 달) matching the app's
+/// primary-tint pill styling.
+class _PeriodToggle extends StatelessWidget {
+  const _PeriodToggle({
+    required this.active,
+    required this.labels,
+    required this.onChanged,
+  });
+
+  final int active;
+  final List<String> labels;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            GestureDetector(
+              onTap: () => onChanged(i),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: active == i ? FigmaColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  labels[i],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: active == i ? Colors.white : FigmaColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActivityChart extends StatelessWidget {
+  const _ActivityChart({
+    required this.bars,
+    required this.dayLabels,
+    required this.todayIndex,
+  });
+
+  final List<_Bar> bars;
+  final List<String> dayLabels;
+  final int todayIndex;
+
+  /// Hover tooltip content for a bar — one line per activity type as
+  /// [color square] 종류   N분 (see the legend).
+  List<InlineSpan> _tipSpans(AppLocalizations l, int i) {
+    final _Bar b = bars[i];
+    final List<({Color color, String label, int min})> rows =
+        <({Color color, String label, int min})>[
+          if (b.cardio > 0)
+            (color: FigmaColors.primary, label: l.exTypeCardio, min: b.cardio.round()),
+          if (b.strength > 0)
+            (
+              color: const Color(0xFF1B6FA8),
+              label: l.exTypeStrength,
+              min: b.strength.round(),
+            ),
+          if (b.stretch > 0)
+            (
+              color: const Color(0xFFD4EEF8),
+              label: l.exTypeStretching,
+              min: b.stretch.round(),
+            ),
+        ];
+    if (rows.isEmpty) return const <InlineSpan>[TextSpan(text: '휴식')];
+    final List<InlineSpan> spans = <InlineSpan>[];
+    for (int k = 0; k < rows.length; k++) {
+      final ({Color color, String label, int min}) r = rows[k];
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            width: 9,
+            height: 9,
+            margin: const EdgeInsets.only(right: 6),
+            decoration: BoxDecoration(
+              color: r.color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      );
+      spans.add(TextSpan(text: '${r.label}   ${r.min}분'));
+      if (k < rows.length - 1) spans.add(const TextSpan(text: '\n'));
+    }
+    return spans;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: FigmaColors.primaryA(0.10)),
+        boxShadow: kCardShadow,
       ),
       child: Column(
         children: <Widget>[
           SizedBox(
             height: 150,
             width: double.infinity,
-            child: CustomPaint(
-              painter: _StackedBarPainter(
-                bars: bars,
-                dayLabels: dayLabels,
-                todayIndex: n - 1,
-                todayLabel: l.exToday,
-              ),
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _StackedBarPainter(
+                      bars: bars,
+                      dayLabels: dayLabels,
+                      todayIndex: todayIndex,
+                      todayLabel: l.exToday,
+                    ),
+                  ),
+                ),
+                // Transparent per-bar hover regions aligned to the painter's
+                // slots (left axis pad = 24, label strip = bottom 24).
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 24, bottom: 24),
+                    child: Row(
+                      children: <Widget>[
+                        for (int i = 0; i < bars.length; i++)
+                          Expanded(
+                            child: Tooltip(
+                              richMessage: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: FigmaColors.ink,
+                                  height: 1.15,
+                                ),
+                                children: _tipSpans(l, i),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F3F5),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: FigmaColors.hairline),
+                                boxShadow: kCardShadow,
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 6),
@@ -587,24 +1291,47 @@ class _StackedBarPainter extends CustomPainter {
     }
 
     final double slot = chartW / bars.length;
-    const double barW = 26;
+    // Cap the bar to a fraction of the slot so bars never overlap on narrow
+    // layouts or with many buckets.
+    final double barW = math.min(slot * 0.6, 40);
     for (int i = 0; i < bars.length; i++) {
       final _Bar b = bars[i];
       final double cx = left + slot * i + slot / 2;
       final double x = cx - barW / 2;
       final bool isToday = i == todayIndex;
+      // Only the topmost non-zero segment gets rounded top corners so every
+      // bar (whatever its top category) reads with the same rounded cap.
+      final bool cardioTop = b.cardio > 0;
+      final bool strengthTop = !cardioTop && b.strength > 0;
+      final bool stretchTop = !cardioTop && !strengthTop && b.stretch > 0;
       double yBottom = chartH;
       double h;
       // stretch (light, bottom)
       h = (b.stretch / max) * chartH;
       if (h > 0) {
-        _rrect(canvas, x, yBottom - h, barW, h, const Color(0xFFD4EEF8), 3);
+        _rrect(
+          canvas,
+          x,
+          yBottom - h,
+          barW,
+          h,
+          const Color(0xFFD4EEF8),
+          stretchTop ? 4 : 0,
+        );
         yBottom -= h;
       }
       // strength (dark mid)
       h = (b.strength / max) * chartH;
       if (h > 0) {
-        _rrect(canvas, x, yBottom - h, barW, h, const Color(0xFF1B6FA8), 0);
+        _rrect(
+          canvas,
+          x,
+          yBottom - h,
+          barW,
+          h,
+          const Color(0xFF1B6FA8),
+          strengthTop ? 4 : 0,
+        );
         yBottom -= h;
       }
       // cardio (blue top)
@@ -616,8 +1343,9 @@ class _StackedBarPainter extends CustomPainter {
           yBottom - h,
           barW,
           h,
-          isToday ? const Color(0xFF2190C4) : FigmaColors.primary,
-          3,
+          // 유산소는 항상 동일한 브랜드 색(오늘 막대도 예외 없이).
+          FigmaColors.primary,
+          cardioTop ? 4 : 0,
         );
         yBottom -= h;
       }
@@ -731,382 +1459,70 @@ class _ExerciseFeedback extends StatelessWidget {
   }
 }
 
-class _AiRoutine extends StatelessWidget {
-  const _AiRoutine({required this.onAdd});
-  final VoidCallback onAdd;
+
+// ───────────────────────────────────── 오늘 완료한 PT 일지 ──
+
+/// Trainer-linked card summarising today's completed PT session and the
+/// coach's feedback. Demo scenario: 김코치님 12회차, 18:00 수업.
+class _PtLogCard extends StatelessWidget {
+  const _PtLogCard();
+
+  static const List<String> _items = <String>[
+    '벤치프레스 40kg · 4세트',
+    '덤벨 숄더프레스 10kg · 4세트',
+    '랫풀다운 45kg · 4세트',
+    '플랭크 60초 · 3세트',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Text(
-              l.exAiRoutineToday,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
-            ),
-            const Spacer(),
-            const Text(
-              '1/3',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Material(
-              color: FigmaColors.primary,
-              borderRadius: BorderRadius.circular(999),
-              child: InkWell(
-                onTap: onAdd,
-                borderRadius: BorderRadius.circular(999),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const Icon(Icons.add, size: 12, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        l.exAddExercise,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _Fill33(),
-        const SizedBox(height: 16),
-        _RoutineCard(
-          title: l.exRoutineBriskTitle,
-          subtitle: l.exRoutineBriskSub,
-          done: true,
-        ),
-        const SizedBox(height: 10),
-        _RoutineCard(
-          title: l.exRoutineStretchTitle,
-          subtitle: l.exRoutineStretchSub,
-          minutes: l.exDurationMinutes(10),
-        ),
-        const SizedBox(height: 10),
-        _RoutineCard(
-          title: l.exRoutineStrengthTitle,
-          subtitle: l.exRoutineStrengthSub,
-          minutes: l.exDurationMinutes(15),
-        ),
-      ],
-    );
-  }
-}
-
-class _Fill33 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 5,
-        child: Row(
-          children: <Widget>[
-            const Expanded(
-              flex: 33,
-              child: ColoredBox(color: FigmaColors.primary),
-            ),
-            Expanded(
-              flex: 67,
-              child: ColoredBox(color: FigmaColors.primaryA(0.12)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RoutineCard extends StatelessWidget {
-  const _RoutineCard({
-    required this.title,
-    required this.subtitle,
-    this.done = false,
-    this.minutes,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool done;
-  final String? minutes;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: done ? FigmaColors.primaryA(0.15) : FigmaColors.hairline,
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: <Widget>[
-          if (done)
-            Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: FigmaColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, size: 15, color: Colors.white),
-            )
-          else
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6FBFE),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: FigmaColors.primaryA(0.3), width: 2),
-              ),
-            ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: done ? FigmaColors.textFaint : FigmaColors.ink,
-                    decoration: done ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: done ? FigmaColors.textFaint : FigmaColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (done)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: FigmaColors.statusGreen,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Icon(Icons.check, size: 9, color: Colors.white),
-                  const SizedBox(width: 3),
-                  Text(
-                    l.exMissionComplete,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (minutes != null)
-            Text(
-              minutes!,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.textMuted,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayLogs extends StatelessWidget {
-  const _TodayLogs({required this.sessions});
-
-  final List<ExerciseSession> sessions;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          l.exExerciseLog,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.ink,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (sessions.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                l.exEmptyLog,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  height: 1.5,
-                  fontWeight: FontWeight.w500,
-                  color: FigmaColors.textMuted,
-                ),
-              ),
-            ),
-          )
-        else
-          for (final ExerciseSession s in sessions) ...<Widget>[
-            _LogCard(
-              tag: _typeLabel(l, s.type),
-              time: s.timeLabel ?? s.dateLabel ?? s.dayLabel,
-              kcal: s.calories,
-              items: s.items.isNotEmpty
-                  ? s.items
-                  : <String>[l.exMinutesExercise(s.minutes)],
-              session: s,
-            ),
-            const SizedBox(height: 12),
-          ],
-      ],
-    );
-  }
-}
-
-class _LogCard extends StatelessWidget {
-  const _LogCard({
-    required this.tag,
-    required this.time,
-    required this.kcal,
-    required this.items,
-    this.session,
-  });
-
-  final String tag;
-  final String time;
-  final int kcal;
-  final List<String> items;
-  final ExerciseSession? session;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.hairline),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
+          const Row(
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  tag,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.primary,
-                  ),
-                ),
+              Icon(
+                Icons.fitness_center_rounded,
+                size: 16,
+                color: FigmaColors.primary,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 6),
               Text(
-                time,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: FigmaColors.textFaint,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                l.unitKcalValue(kcal),
-                style: const TextStyle(
-                  fontSize: 16,
+                '오늘 완료한 PT',
+                style: TextStyle(
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: FigmaColors.primary,
+                  color: FigmaColors.ink,
                 ),
               ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => showExerciseAddSheet(context, session: session),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: FigmaColors.textFaint,
-                  ),
-                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Row(
+            children: <Widget>[
+              _MetaChip(
+                icon: Icons.check_circle,
+                text: '18:00 수업 완료',
+                color: FigmaColors.statusGreen,
               ),
+              SizedBox(width: 6),
+              _MetaChip(icon: Icons.person_outline, text: '김트레이너와 12회차'),
             ],
           ),
           const SizedBox(height: 12),
           const Divider(height: 1, color: FigmaColors.hairline),
           const SizedBox(height: 12),
-          for (final String it in items)
+          for (final String it in _items)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.fromLTRB(10, 3, 0, 3),
               child: Row(
                 children: <Widget>[
                   Container(
@@ -1129,6 +1545,315 @@ class _LogCard extends StatelessWidget {
                 ],
               ),
             ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: FigmaColors.softBlue,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: FigmaColors.primaryA(0.12)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: FigmaColors.primaryA(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 18,
+                        color: FigmaColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          '김트레이너',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.ink,
+                          ),
+                        ),
+                        Text(
+                          '오늘의 피드백',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: FigmaColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '숄더프레스할 때 오른쪽 어깨가 들리는 경향이 있으니, 마무리할 때 '
+                  '회전근개 스트레칭을 꼭 해주세요!',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                    color: FigmaColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small rounded meta chip (icon + label) used for the PT status row.
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.text,
+    this.color = FigmaColors.primary,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────── PT 맞춤 연계 AI 루틴 ──
+
+/// AI routine card whose two recommendations tie back to the coach's feedback
+/// (오른쪽 어깨 회전근개) and today's lunch (해물 짬뽕 나트륨).
+class _PtAiRoutineCard extends StatelessWidget {
+  const _PtAiRoutineCard({required this.done, required this.onToggle});
+
+  /// Completion state per recommendation ([0]=어깨 스트레칭, [1]=인터벌 러닝),
+  /// owned by [_RecordTab] so checking a routine updates the 운동 현황 graph.
+  final List<bool> done;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.primaryA(0.15)),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Title (with AI glyph) on the left, the "반영" badge on the right.
+          const Row(
+            children: <Widget>[
+              Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'AI 추천 운동',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.ink,
+                ),
+              ),
+              Spacer(),
+              AiPill(
+                '트레이너 피드백 + 식단 반영',
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _PtRoutineItem(
+            icon: Icons.self_improvement,
+            title: '어깨 관절 보호 스트레칭',
+            minutes: '8분',
+            reason: "⮕ 트레이너가 언급한 '오른쪽 어깨 회전근개' 케어",
+            done: done[0],
+            onToggle: () => onToggle(0),
+          ),
+          const SizedBox(height: 10),
+          _PtRoutineItem(
+            icon: Icons.directions_run,
+            title: '가벼운 인터벌 러닝',
+            minutes: '30분',
+            reason: "⮕ 점심 '해물 짬뽕' 나트륨 배출 & 250kcal 소모",
+            done: done[1],
+            onToggle: () => onToggle(1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PtRoutineItem extends StatelessWidget {
+  const _PtRoutineItem({
+    required this.icon,
+    required this.title,
+    required this.minutes,
+    required this.reason,
+    required this.done,
+    required this.onToggle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String minutes;
+  final String reason;
+  final bool done;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(14),
+        border: done ? Border.all(color: FigmaColors.primaryA(0.35)) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              // Done / not-done check toggle.
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onToggle,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: done ? FigmaColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: done
+                          ? FigmaColors.primary
+                          : FigmaColors.primaryA(0.35),
+                      width: 2,
+                    ),
+                  ),
+                  child: done
+                      ? const Icon(Icons.check, size: 13, color: Colors.white)
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: FigmaColors.primaryA(0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: FigmaColors.primary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: done ? FigmaColors.textFaint : FigmaColors.ink,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: FigmaColors.primaryA(0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.schedule,
+                      size: 11,
+                      color: FigmaColors.primary,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      minutes,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: FigmaColors.primaryA(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: FigmaColors.primaryA(0.14)),
+            ),
+            child: Text(
+              reason,
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                fontWeight: FontWeight.w400,
+                color: FigmaColors.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );

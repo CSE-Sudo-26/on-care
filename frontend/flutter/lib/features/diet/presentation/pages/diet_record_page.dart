@@ -49,9 +49,23 @@ const Map<MealType, ({String emoji, Color bg})> _mealMeta =
 /// Maps a backend [DietEntry] onto the Figma meal-card view model. [l] localizes
 /// the nutrient tag labels; the meal type is carried as a [MealType] so the badge
 /// text is resolved at render time.
-DietMeal _mealFromEntry(AppLocalizations l, DietEntry e) {
+DietMeal _mealFromEntry(DietEntry e) {
   final ({String emoji, Color bg}) meta =
       _mealMeta[e.mealType] ?? _mealMeta[MealType.snack]!;
+  // Totals are summed from the per-food nutrition so the pills on the card and
+  // the "오늘의 영양 요약" numbers stay consistent. Real-server payloads carry
+  // nutrition only at the entry level (foods = [{name, calories}]), so fall back
+  // to the entry totals when the per-food sum is 0.
+  final int foodSodium = e.foods.fold<int>(
+    0,
+    (int a, FoodItem f) => a + f.sodiumMg,
+  );
+  final double foodSugar = e.foods.fold<double>(
+    0,
+    (double a, FoodItem f) => a + f.sugarG,
+  );
+  final int sodium = foodSodium > 0 ? foodSodium : e.sodiumMg;
+  final double sugar = foodSugar > 0 ? foodSugar : e.sugarG;
   return DietMeal(
     id: e.id,
     mealType: e.mealType,
@@ -59,17 +73,27 @@ DietMeal _mealFromEntry(AppLocalizations l, DietEntry e) {
     total: e.totalCalories,
     emoji: meta.emoji,
     thumbBg: meta.bg,
+    photoAsset: e.photoAsset,
+    aiComment: e.aiComment,
     items: <DietFood>[
-      for (final FoodItem f in e.foods) DietFood(f.name, f.calories),
+      for (final FoodItem f in e.foods)
+        DietFood(f.name, f.calories, sodiumMg: f.sodiumMg, sugarG: f.sugarG),
     ],
-    tags: <DietTag>[
-      DietTag(l.dietTagSodium(e.sodiumMg), over: e.sodiumMg > 700),
-      DietTag(l.dietTagSugar(e.sugarG)),
-    ],
-    sodium: e.sodiumMg,
-    sugar: e.sugarG,
+    tags: const <DietTag>[],
+    sodium: sodium,
+    sugar: sugar,
   );
 }
+
+/// Formats grams dropping a trailing `.0` (6.0 → "6", 8.5 → "8.5").
+String _formatG(double v) =>
+    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+
+/// Groups an integer with thousands separators (3200 → "3,200").
+String _formatInt(int v) => v.toString().replaceAllMapped(
+  RegExp(r'\B(?=(\d{3})+(?!\d))'),
+  (Match _) => ',',
+);
 
 class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   int _weekShift = 0; // whole-week steps away from today
@@ -378,6 +402,27 @@ class _NutritionSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // Sum straight from the foods so the summary always equals the meal cards;
+    // fall back to the server day totals when the per-food sum is 0 (real-server
+    // payloads carry nutrition only at the day/entry level).
+    final List<FoodItem> foods = <FoodItem>[
+      for (final DietEntry e in day.entries) ...e.foods,
+    ];
+    final int foodKcal = foods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.calories,
+    );
+    final int foodSodium = foods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.sodiumMg,
+    );
+    final double foodSugar = foods.fold<double>(
+      0,
+      (double a, FoodItem f) => a + f.sugarG,
+    );
+    final int kcal = foodKcal > 0 ? foodKcal : day.totalCalories;
+    final int sodium = foodSodium > 0 ? foodSodium : day.totalSodiumMg;
+    final double sugar = foodSugar > 0 ? foodSugar : day.totalSugarG;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -391,13 +436,13 @@ class _NutritionSummary extends StatelessWidget {
               color: FigmaColors.ink,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: <Widget>[
               Expanded(
                 child: _SummaryTile(
                   label: l.dietCalories,
-                  value: '${day.totalCalories}',
+                  value: _formatInt(kcal),
                   unit: l.unitKcal,
                   color: FigmaColors.primary,
                 ),
@@ -406,16 +451,17 @@ class _NutritionSummary extends StatelessWidget {
               Expanded(
                 child: _SummaryTile(
                   label: l.dietSodium,
-                  value: '${day.totalSodiumMg}',
+                  value: _formatInt(sodium),
                   unit: l.dietUnitMg,
-                  color: FigmaColors.orange,
+                  // 오늘 나트륨 과다(짬뽕) → 빨간계열로 강조.
+                  color: const Color(0xFFF04438),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _SummaryTile(
                   label: l.dietSugar,
-                  value: '${day.totalSugarG}',
+                  value: _formatG(sugar),
                   unit: l.dietUnitG,
                   color: FigmaColors.primary,
                 ),
@@ -444,7 +490,7 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
@@ -462,24 +508,32 @@ class _SummaryTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: color,
-              height: 1,
-              letterSpacing: -0.5,
+          // Value with the unit inline to its right → one line shorter.
+          Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    height: 1,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                TextSpan(
+                  text: ' $unit',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: color.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            unit,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w500,
-              color: color.withValues(alpha: 0.8),
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -600,7 +654,7 @@ class _MealLog extends StatelessWidget {
             for (final DietEntry e in entries) ...<Widget>[
               Builder(
                 builder: (BuildContext context) {
-                  final DietMeal m = _mealFromEntry(l, e);
+                  final DietMeal m = _mealFromEntry(e);
                   return _MealCard(meal: m, onTap: () => onEditMeal(m));
                 },
               ),
@@ -660,13 +714,7 @@ class _MealCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Material(
         color: Colors.transparent,
@@ -675,7 +723,7 @@ class _MealCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -710,7 +758,7 @@ class _MealCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      l.unitKcalValue(meal.total),
+                      '${_formatInt(meal.total)} ${l.unitKcal}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -726,37 +774,9 @@ class _MealCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Divider(height: 1, color: FigmaColors.hairline),
-                const SizedBox(height: 12),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Container(
-                      width: 52,
-                      height: 52,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: meal.thumbBg,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                            meal.emoji,
-                            style: const TextStyle(fontSize: 22),
-                          ),
-                          Text(
-                            l.dietPhotoAnalysis,
-                            style: const TextStyle(
-                              fontSize: 7.5,
-                              fontWeight: FontWeight.w600,
-                              color: FigmaColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _MealThumb(meal: meal),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -764,23 +784,31 @@ class _MealCard extends StatelessWidget {
                         children: <Widget>[
                           for (final DietFood f in meal.items)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              padding: const EdgeInsets.symmetric(vertical: 2),
                               child: Row(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
                                 children: <Widget>[
-                                  Expanded(
+                                  Flexible(
                                     child: Text(
                                       f.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontSize: 12.5,
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.w600,
                                         color: Color(0xFF3A3A4A),
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    l.unitKcalValue(f.kcal),
+                                    '${f.kcal}${l.unitKcal} · '
+                                    '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
+                                    '${_formatG(f.sugarG)}${l.dietUnitG}',
                                     style: const TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.w600,
                                       color: FigmaColors.textSub,
                                     ),
@@ -798,35 +826,153 @@ class _MealCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: <Widget>[
-                    for (final DietTag t in meal.tags)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: t.over
-                              ? const Color(0x1AFF5841)
-                              : FigmaColors.primaryA(0.10),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          t.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: t.over
-                                ? const Color(0xFFFF5841)
-                                : FigmaColors.primary,
-                          ),
-                        ),
-                      ),
+                    _TotalPill(
+                      label: l.dietCalories,
+                      value: '${_formatInt(meal.total)} ${l.unitKcal}',
+                      color: FigmaColors.primary,
+                    ),
+                    _TotalPill(
+                      label: l.dietSodium,
+                      value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
+                      // 좋으면 파란계열, 나트륨이 과다하면 빨간계열.
+                      color: meal.sodium > 1000
+                          ? const Color(0xFFF04438)
+                          : FigmaColors.primary,
+                    ),
+                    _TotalPill(
+                      label: l.dietSugar,
+                      value: '${_formatG(meal.sugar)} ${l.dietUnitG}',
+                      color: FigmaColors.primary,
+                    ),
                   ],
                 ),
+                if (meal.aiComment.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 10),
+                  _MealAiNote(text: meal.aiComment),
+                ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Meal thumbnail: the AI-analysed food photo, falling back to the meal-type
+/// emoji chip when no photo is bundled.
+class _MealThumb extends StatelessWidget {
+  const _MealThumb({required this.meal});
+  final DietMeal meal;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? asset = meal.photoAsset;
+    if (asset != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          asset,
+          width: 52,
+          height: 52,
+          fit: BoxFit.cover,
+          // Fall back to the emoji chip if the bundled asset is missing.
+          errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+              _emojiThumb(),
+        ),
+      );
+    }
+    return _emojiThumb();
+  }
+
+  Widget _emojiThumb() => Container(
+    width: 52,
+    height: 52,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: meal.thumbBg,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Text(meal.emoji, style: const TextStyle(fontSize: 24)),
+  );
+}
+
+/// Rounded "button-style" total chip: nutrient label + value in a tinted pill.
+class _TotalPill extends StatelessWidget {
+  const _TotalPill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: <InlineSpan>[
+            TextSpan(
+              text: '$label ',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color.withValues(alpha: 0.75),
+              ),
+            ),
+            TextSpan(
+              text: value,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact per-meal AI feedback line shown under the food breakdown.
+class _MealAiNote extends StatelessWidget {
+  const _MealAiNote({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: FigmaColors.softBlue,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(Icons.auto_awesome, size: 13, color: FigmaColors.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+                color: FigmaColors.textBody,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

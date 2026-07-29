@@ -18,17 +18,13 @@ void main() {
 
     final day = await container.read(dietTodayProvider.future);
     expect(day, isA<DietDay>());
-    expect(day.entries.length, 3);
+    expect(day.entries.length, 2);
     expect(
       day.entries.map((DietEntry e) => e.mealType),
-      containsAll(<MealType>[
-        MealType.breakfast,
-        MealType.lunch,
-        MealType.dinner,
-      ]),
+      containsAll(<MealType>[MealType.breakfast, MealType.lunch]),
     );
-    expect(day.totalCalories, 1420);
-    expect(day.totalSodiumMg, 2100);
+    expect(day.totalCalories, 967);
+    expect(day.totalSodiumMg, 3421);
     expect(day.aiCoachMessage, isNotEmpty);
   });
 }
