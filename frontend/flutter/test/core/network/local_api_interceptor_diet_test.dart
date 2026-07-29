@@ -42,6 +42,14 @@ void main() {
     expect(today.data!['total_calories'], greaterThan(0));
     final entries = (today.data!['entries']! as List<Object?>);
     expect(entries, isNotEmpty);
+    final entry = entries.single as Map<String, Object?>;
+    expect(entry['carbs_g'], 94.0);
+    expect(entry['protein_g'], 19.0);
+    expect(entry['fat_g'], 18.0);
+    final macros = today.data!['macros']! as Map<String, Object?>;
+    expect(macros['carbs_g'], 94.0);
+    expect(macros['protein_g'], 19.0);
+    expect(macros['fat_g'], 18.0);
   });
 
   test('same idempotency_key dedupes a retried /diet/analyze', () async {

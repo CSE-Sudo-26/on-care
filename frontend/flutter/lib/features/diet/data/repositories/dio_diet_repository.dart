@@ -77,6 +77,11 @@ class DioDietRepository implements DietRepository {
                 (FoodItem food) => <String, Object?>{
                   'name': food.name,
                   'calories': food.calories,
+                  'sodium_mg': food.sodiumMg,
+                  'sugar_g': food.sugarG,
+                  'carbs_g': food.carbsG,
+                  'protein_g': food.proteinG,
+                  'fat_g': food.fatG,
                 },
               )
               .toList(),
@@ -96,6 +101,9 @@ class DioDietRepository implements DietRepository {
       totalCalories: totalCalories ?? returned.totalCalories,
       sodiumMg: sodiumMg ?? returned.sodiumMg,
       sugarG: sugarG ?? returned.sugarG,
+      carbsG: returned.carbsG,
+      proteinG: returned.proteinG,
+      fatG: returned.fatG,
     );
     _entryOverrides[id] = updated;
     _entryOverrideUpdatedAt[id] = DateTime.now();

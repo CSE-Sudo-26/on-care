@@ -201,12 +201,16 @@ class LocalApiInterceptor extends Interceptor {
       _db.dietEntries,
     )..where((t) => t.id.equals(id))).getSingle();
     final foods = jsonDecode(row.foodsJson) as List<Object?>;
+    final macros = _foodMacroTotals(foods);
     return _ok(options, <String, Object?>{
       'id': row.id,
       'meal_type': row.mealType,
       'time_label': row.timeLabel,
       'foods': foods,
       'total_calories': row.totalCalories,
+      'carbs_g': macros.carbsG,
+      'protein_g': macros.proteinG,
+      'fat_g': macros.fatG,
       'sodium_mg': row.sodiumMg,
       'sugar_g': row.sugarG,
     });
@@ -331,17 +335,28 @@ class LocalApiInterceptor extends Interceptor {
     int totalCalories = 0;
     int totalSodium = 0;
     int totalSugar = 0;
+    double totalCarbs = 0;
+    double totalProtein = 0;
+    double totalFat = 0;
     final entriesJson = <Map<String, Object?>>[];
     for (final r in rows) {
+      final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
+      final macros = _foodMacroTotals(foods);
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
       totalSugar += r.sugarG;
+      totalCarbs += macros.carbsG;
+      totalProtein += macros.proteinG;
+      totalFat += macros.fatG;
       entriesJson.add(<String, Object?>{
         'id': r.id,
         'meal_type': r.mealType,
         'time_label': r.timeLabel,
-        'foods': (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>(),
+        'foods': foods,
         'total_calories': r.totalCalories,
+        'carbs_g': macros.carbsG,
+        'protein_g': macros.proteinG,
+        'fat_g': macros.fatG,
         'sodium_mg': r.sodiumMg,
         'sugar_g': r.sugarG,
       });
@@ -352,15 +367,9 @@ class LocalApiInterceptor extends Interceptor {
       'total_calories': totalCalories,
       'total_sodium_mg': totalSodium,
       'total_sugar_g': totalSugar,
-      // Macro breakdown isn't tracked per entry yet — return the
-      // demo split until a richer schema lands.
-      'macros': <String, Object?>{
-        'carbs_pct': 50,
-        'protein_pct': 30,
-        'fat_pct': 20,
-      },
+      'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'ai_coach_message': totalSodium > 2000
-          ? '오늘 점심에 나트륨이 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!'
+          ? '오늘 나트륨 섭취량이 권장량을 초과했어요. 점심의 김치찌개와 배추김치가 가장 큰 영향을 주었어요.'
           : '균형 잡힌 하루였어요. 내일도 이대로 가요!',
     });
   }
@@ -415,6 +424,9 @@ class LocalApiInterceptor extends Interceptor {
         'calories': 600,
         'sodium_mg': 900,
         'sugar_g': 8,
+        'carbs_g': 91.0,
+        'protein_g': 18.0,
+        'fat_g': 18.0,
         'source': 'db',
       },
       <String, Object?>{
@@ -422,6 +434,9 @@ class LocalApiInterceptor extends Interceptor {
         'calories': 15,
         'sodium_mg': 300,
         'sugar_g': 1,
+        'carbs_g': 3.0,
+        'protein_g': 1.0,
+        'fat_g': 0.0,
         'source': 'db',
       },
     ];
@@ -1326,3 +1341,54 @@ class LocalApiInterceptor extends Interceptor {
 }
 
 typedef _Handler = Future<Response<Object?>> Function(RequestOptions);
+
+typedef _MacroTotals = ({double carbsG, double proteinG, double fatG});
+
+_MacroTotals _foodMacroTotals(List<Object?> foods) {
+  var carbs = 0.0;
+  var protein = 0.0;
+  var fat = 0.0;
+  for (final food in foods) {
+    if (food is! Map) continue;
+    carbs += (food['carbs_g'] as num?)?.toDouble() ?? 0;
+    protein += (food['protein_g'] as num?)?.toDouble() ?? 0;
+    fat += (food['fat_g'] as num?)?.toDouble() ?? 0;
+  }
+  return (carbsG: carbs, proteinG: protein, fatG: fat);
+}
+
+Map<String, Object?> _macroPayload(
+  double carbsG,
+  double proteinG,
+  double fatG,
+) {
+  final energies = <double>[carbsG * 4, proteinG * 4, fatG * 9];
+  final totalEnergy = energies.fold<double>(0, (sum, value) => sum + value);
+  final percentages = <int>[0, 0, 0];
+  if (totalEnergy > 0) {
+    final raw = energies.map((energy) => energy / totalEnergy * 100).toList();
+    for (var i = 0; i < percentages.length; i++) {
+      percentages[i] = raw[i].floor();
+    }
+    final ranked = <int>[0, 1, 2]
+      ..sort((a, b) {
+        final fraction = (raw[b] - percentages[b]).compareTo(
+          raw[a] - percentages[a],
+        );
+        return fraction == 0 ? b.compareTo(a) : fraction;
+      });
+    final remaining =
+        100 - percentages.fold<int>(0, (sum, value) => sum + value);
+    for (final index in ranked.take(remaining)) {
+      percentages[index]++;
+    }
+  }
+  return <String, Object?>{
+    'carbs_g': carbsG,
+    'protein_g': proteinG,
+    'fat_g': fatG,
+    'carbs_pct': percentages[0],
+    'protein_pct': percentages[1],
+    'fat_pct': percentages[2],
+  };
+}
