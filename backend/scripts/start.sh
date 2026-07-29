@@ -8,7 +8,10 @@ set -euo pipefail
 echo "[start] migrate (advisory-lock serialized)"
 python scripts/migrate.py
 
-echo "[start] launching uvicorn on :8000"
+# 포트: Railway 등 일부 플랫폼은 동적 $PORT 를 주입한다. 없으면(App Runner·로컬·
+# docker-compose) 8000 으로 폴백 → 한 이미지가 두 플랫폼 모두에서 그대로 뜬다.
+PORT="${PORT:-8000}"
+echo "[start] launching uvicorn on :${PORT}"
 exec uvicorn app.main:app \
-  --host 0.0.0.0 --port 8000 \
+  --host 0.0.0.0 --port "${PORT}" \
   --proxy-headers --forwarded-allow-ips="*"

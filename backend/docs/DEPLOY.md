@@ -125,6 +125,40 @@ flutter build web --release \
 
 ---
 
+## 대안 — Railway (예비/대비용, AWS 이전 대상)
+
+> **성격**: 운영 기본값은 여전히 **AWS(App Runner + RDS)** 이며, Railway 이전이
+> 확정된 것은 아니다. 이 절과 관련 파일(`railway.json`·`.env.railway.example` 등)은
+> **AWS 설정이 과하게 어렵거나 비용/운영 부담이 될 때 즉시 갈아탈 수 있게 해두는
+> 예비용**이다. 지금 당장 Railway 를 쓰지 않아도 두어도 무해하며(런타임·CI 에 영향 없음),
+> 필요해지는 순간 반나절 안에 이전할 수 있도록 이식성만 확보해 둔다.
+
+AWS(App Runner + RDS)가 복잡하면 **같은 Docker 이미지를 그대로** Railway 에 올릴 수 있다.
+코드 변경 없이 플랫폼만 바뀌며, 이 저장소는 그렇게 이식 가능하도록 준비돼 있다:
+
+- **`backend/railway.json`** — Dockerfile 빌더 · 헬스체크(`/v1/healthz`) · 재시작 정책을 코드로 선언.
+- **`scripts/start.sh`** — `--port ${PORT:-8000}`. Railway 가 주입하는 **동적 $PORT** 로 바인딩하고,
+  없으면(App Runner·로컬·compose) 8000 으로 폴백한다(한 이미지가 양쪽 다 뜬다).
+- **DB URL 자동 정규화** — Railway/Neon/Supabase 는 `postgres://…`·bare `postgresql://…` 를 준다.
+  이 프로젝트는 psycopg **v3** 만 있어 bare URL 은 기동에 실패하는데, `config.sqlalchemy_database_url`
+  이 `postgresql+psycopg://` 로 자동 변환하므로 플랫폼이 준 값을 **그대로** 붙여도 된다.
+
+**배포 절차**
+
+1. Railway 새 프로젝트 → GitHub 레포 연결 → 서비스의 **Root Directory = `backend`** 로 지정
+   (그래야 `railway.json`·`Dockerfile` 을 찾는다).
+2. **Postgres 는 `pgvector` 템플릿**으로 추가한다(0007 마이그레이션이 vector 타입 사용).
+   일반 Postgres 를 골랐다면 DB 콘솔에서 한 번: `CREATE EXTENSION IF NOT EXISTS vector;`
+3. **Variables** 에 `backend/.env.railway.example` 값을 채워 넣는다
+   (`DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `CORS_ALLOW_ORIGINS`, `ENV=prod` 등).
+   `PORT` 는 직접 넣지 않는다(Railway 가 주입).
+4. 배포되면 컨테이너가 `scripts/start.sh` 로 **마이그레이션 → uvicorn** 을 수행하고,
+   Railway 가 `/v1/healthz` 로 헬스체크한다. 발급된 도메인을 프론트 `API_BASE_URL` 에 연결
+   (아래 "6) 프론트 연결" 과 동일, `/v1` 포함).
+
+> AWS → Railway 이전 시 DB 를 옮기고 싶지 않다면, 애초에 **DB 를 Neon/Supabase(pgvector)** 에
+> 두고 컴퓨트(App Runner ↔ Railway)만 바꾸면 `DATABASE_URL` 한 줄 교체로 끝난다.
+
 ## 대안 — 저비용 EC2 (수동)
 
 `docker-compose.yml` 거의 그대로 EC2 1대에 올리고 Nginx + Let's Encrypt 로 HTTPS.

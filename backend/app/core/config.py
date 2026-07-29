@@ -103,6 +103,24 @@ class Settings(BaseSettings):
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
 
     @property
+    def sqlalchemy_database_url(self) -> str:
+        """SQLAlchemy 엔진용 DB URL(psycopg v3 드라이버를 명시).
+
+        Railway/Neon/Supabase/Heroku 등 관리형 Postgres 는 DATABASE_URL 을
+        `postgres://…` 또는 드라이버 없는 `postgresql://…` 로 준다. 이 프로젝트는
+        psycopg **v3** 만 설치돼 있어(psycopg2 없음) bare `postgresql://` 는
+        SQLAlchemy 가 기본값인 psycopg2 로 붙으려다 기동에 실패한다. 그래서 여기서
+        psycopg v3 드라이버(`postgresql+psycopg://`)로 정규화해, 플랫폼이 준 URL 을
+        그대로 붙여도 되게 한다(이미 +psycopg 이거나 postgres 계열이 아니면 그대로).
+        """
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://") :]
+        if url.startswith("postgresql://"):
+            url = "postgresql+psycopg://" + url[len("postgresql://") :]
+        return url
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
 
