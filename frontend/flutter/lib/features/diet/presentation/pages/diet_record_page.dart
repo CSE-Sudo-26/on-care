@@ -158,7 +158,10 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                  weekLabel: l.dietWeekLabel(
+                    center.month,
+                    _weekOfMonth(center),
+                  ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
                   onPrev: () => setState(() => _weekShift -= 1),
@@ -823,8 +826,7 @@ class _MealCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 2),
                               child: Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.baseline,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
                                 textBaseline: TextBaseline.alphabetic,
                                 children: <Widget>[
                                   Flexible(

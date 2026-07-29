@@ -47,9 +47,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // so the next insert lands cleanly. Non-seed rows (anything the
   // user actually entered) are not matched by the LIKE and survive.
   await db.transaction(() async {
-    await (db.delete(
-      db.dietEntries,
-    )..where((t) => t.id.like('seed-%'))).go();
+    await (db.delete(db.dietEntries)..where((t) => t.id.like('seed-%'))).go();
     await (db.delete(
       db.exerciseSessions,
     )..where((t) => t.id.like('seed-%'))).go();
@@ -67,7 +65,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   await db.deleteValue('seeded_v2');
 
   await db.transaction(() async {
-    // ---- Diet entries (3 meals for today) ----
+    // ---- Diet entries (4 meals for today) ----
     await db.batch((Batch b) {
       b.insertAll(db.dietEntries, <DietEntriesCompanion>[
         DietEntriesCompanion.insert(
@@ -76,13 +74,37 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           mealType: 'breakfast',
           timeLabel: '08:20',
           foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{'name': '오트밀', 'calories': 220},
-            <String, Object?>{'name': '바나나 1개', 'calories': 90},
-            <String, Object?>{'name': '아메리카노', 'calories': 5},
+            <String, Object?>{
+              'name': '그릭요거트',
+              'calories': 150,
+              'sodium_mg': 70,
+              'sugar_g': 8,
+              'carbs_g': 12.0,
+              'protein_g': 14.0,
+              'fat_g': 4.0,
+            },
+            <String, Object?>{
+              'name': '바나나',
+              'calories': 105,
+              'sodium_mg': 1,
+              'sugar_g': 14,
+              'carbs_g': 27.0,
+              'protein_g': 1.3,
+              'fat_g': 0.4,
+            },
+            <String, Object?>{
+              'name': '삶은 달걀',
+              'calories': 75,
+              'sodium_mg': 65,
+              'sugar_g': 0,
+              'carbs_g': 0.6,
+              'protein_g': 6.5,
+              'fat_g': 5.3,
+            },
           ]),
-          totalCalories: 315,
-          sodiumMg: const Value(380),
-          sugarG: const Value(18),
+          totalCalories: 330,
+          sodiumMg: const Value(136),
+          sugarG: const Value(22),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-lunch',
@@ -90,12 +112,75 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           mealType: 'lunch',
           timeLabel: '12:40',
           foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{'name': '닭가슴살 샐러드', 'calories': 380},
-            <String, Object?>{'name': '현미밥 반공기', 'calories': 150},
+            <String, Object?>{
+              'name': '김치찌개',
+              'calories': 285,
+              'sodium_mg': 900,
+              'sugar_g': 4,
+              'carbs_g': 16.0,
+              'protein_g': 20.0,
+              'fat_g': 15.5,
+            },
+            <String, Object?>{
+              'name': '흰쌀밥',
+              'calories': 280,
+              'sodium_mg': 3,
+              'sugar_g': 0,
+              'carbs_g': 61.0,
+              'protein_g': 5.5,
+              'fat_g': 0.5,
+            },
+            <String, Object?>{
+              'name': '계란말이',
+              'calories': 190,
+              'sodium_mg': 320,
+              'sugar_g': 1,
+              'carbs_g': 5.0,
+              'protein_g': 13.0,
+              'fat_g': 13.0,
+            },
+            <String, Object?>{
+              'name': '배추김치',
+              'calories': 25,
+              'sodium_mg': 420,
+              'sugar_g': 2,
+              'carbs_g': 4.0,
+              'protein_g': 1.5,
+              'fat_g': 0.3,
+            },
           ]),
-          totalCalories: 530,
-          sodiumMg: const Value(1120),
-          sugarG: const Value(14),
+          totalCalories: 780,
+          sodiumMg: const Value(1643),
+          sugarG: const Value(7),
+        ),
+        DietEntriesCompanion.insert(
+          id: 'seed-diet-snack',
+          date: today,
+          mealType: 'snack',
+          timeLabel: '15:30',
+          foodsJson: jsonEncode(<Map<String, Object?>>[
+            <String, Object?>{
+              'name': '아이스 아메리카노',
+              'calories': 10,
+              'sodium_mg': 10,
+              'sugar_g': 0,
+              'carbs_g': 2.0,
+              'protein_g': 0.5,
+              'fat_g': 0.0,
+            },
+            <String, Object?>{
+              'name': '견과류 한 봉',
+              'calories': 170,
+              'sodium_mg': 5,
+              'sugar_g': 3,
+              'carbs_g': 7.0,
+              'protein_g': 6.0,
+              'fat_g': 13.0,
+            },
+          ]),
+          totalCalories: 180,
+          sodiumMg: const Value(15),
+          sugarG: const Value(3),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-dinner',
@@ -103,12 +188,37 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           mealType: 'dinner',
           timeLabel: '19:00',
           foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{'name': '연어 스테이크', 'calories': 420},
-            <String, Object?>{'name': '구운 야채', 'calories': 155},
+            <String, Object?>{
+              'name': '닭가슴살 샐러드',
+              'calories': 260,
+              'sodium_mg': 180,
+              'sugar_g': 4,
+              'carbs_g': 14.0,
+              'protein_g': 36.0,
+              'fat_g': 6.7,
+            },
+            <String, Object?>{
+              'name': '현미밥',
+              'calories': 220,
+              'sodium_mg': 5,
+              'sugar_g': 1,
+              'carbs_g': 46.0,
+              'protein_g': 5.0,
+              'fat_g': 1.8,
+            },
+            <String, Object?>{
+              'name': '오리엔탈 드레싱',
+              'calories': 90,
+              'sodium_mg': 350,
+              'sugar_g': 6,
+              'carbs_g': 9.0,
+              'protein_g': 0.0,
+              'fat_g': 6.0,
+            },
           ]),
-          totalCalories: 575,
-          sodiumMg: const Value(600),
-          sugarG: const Value(13),
+          totalCalories: 570,
+          sodiumMg: const Value(535),
+          sugarG: const Value(11),
         ),
       ]);
     });
