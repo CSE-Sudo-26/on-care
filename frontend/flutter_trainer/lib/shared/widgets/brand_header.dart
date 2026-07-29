@@ -33,7 +33,11 @@ class BrandHeader extends StatelessWidget implements PreferredSizeWidget {
               shape: BoxShape.circle,
               color: AppColors.accentSurface,
             ),
-            child: const Text('🧑', style: TextStyle(fontSize: 13)),
+            child: const Icon(
+              Icons.person,
+              size: 16,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           const Text.rich(
@@ -45,7 +49,7 @@ class BrandHeader extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 TextSpan(
                   text: '트레이너',
-                  style: TextStyle(color: AppColors.brandOrange),
+                  style: TextStyle(color: AppColors.primary),
                 ),
               ],
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),

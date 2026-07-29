@@ -14,7 +14,7 @@ class OncareTrainerApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: '온케어 트레이너',
+      title: 'On-Care 트레이너',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: router,
