@@ -23,7 +23,7 @@ class AppColors {
 
   /// Trainer identity orange — kept only as a small accent (the
   /// "트레이너" brand word, MY-tab highlights), not as the main color.
-  static const Color brandOrange = Color(0xFFFF7A45);
+  static const Color brandOrange = Color(0xFFFF953C); // 주의 오렌지(#FF953C)로 통일
 
   // --- Accent (client blue) ---
   /// Blue used for client avatars, info chips, and the "AI 요약" card.
@@ -42,6 +42,11 @@ class AppColors {
   /// #FFF4EE,#FFE8D8)`) — kept orange as a trainer-identity block.
   static const Color statsGradientStart = Color(0xFFFFF4EE);
   static const Color statsGradientEnd = Color(0xFFFFE8D8);
+
+  /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 블루). 통계 카드 등
+  /// 블루 톤으로 통일할 때 사용.
+  static const Color bannerStart = Color(0xFFEDF7FC);
+  static const Color bannerEnd = Color(0xFFD6EEF8);
 
   // --- Surface / text ---
   /// App canvas behind cards (mock uses `#F8FAFC`).

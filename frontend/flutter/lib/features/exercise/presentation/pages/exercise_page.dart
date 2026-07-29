@@ -611,15 +611,7 @@ class _StatCard extends StatelessWidget {
                     ? FigmaColors.primaryA(0.15)
                     : FigmaColors.hairline,
               ),
-        boxShadow: streak
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: FigmaColors.heartOrange.withValues(alpha: 0.4),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        boxShadow: streak ? kCardShadow : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,7 +822,7 @@ class _TodayDonut extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.primaryA(0.10)),
         boxShadow: kCardShadow,
       ),
@@ -1112,7 +1104,7 @@ class _ActivityChart extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.primaryA(0.10)),
         boxShadow: kCardShadow,
       ),

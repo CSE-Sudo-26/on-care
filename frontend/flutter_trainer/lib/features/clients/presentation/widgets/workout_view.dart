@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -80,6 +81,7 @@ class _WeekCompletionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -202,6 +204,7 @@ class _HistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
       child: Column(

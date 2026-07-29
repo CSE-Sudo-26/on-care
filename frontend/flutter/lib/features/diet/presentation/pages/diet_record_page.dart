@@ -454,7 +454,7 @@ class _NutritionSummary extends StatelessWidget {
                   value: _formatInt(sodium),
                   unit: l.dietUnitMg,
                   // 오늘 나트륨 과다(짬뽕) → 빨간계열로 강조.
-                  color: const Color(0xFFF04438),
+                  color: FigmaColors.dangerRed,
                 ),
               ),
               const SizedBox(width: 8),
@@ -836,7 +836,7 @@ class _MealCard extends StatelessWidget {
                       value: '${_formatInt(meal.sodium)} ${l.dietUnitMg}',
                       // 좋으면 파란계열, 나트륨이 과다하면 빨간계열.
                       color: meal.sodium > 1000
-                          ? const Color(0xFFF04438)
+                          ? FigmaColors.dangerRed
                           : FigmaColors.primary,
                     ),
                     _TotalPill(

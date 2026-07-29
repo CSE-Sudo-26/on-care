@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 // Session은 앱 전역 상태라 예외적으로 auth feature 의 provider 를 직접
@@ -303,6 +304,7 @@ class _ProfileCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(
           color: editing
               ? AppColors.primary.withValues(alpha: 0.35)
@@ -313,20 +315,30 @@ class _ProfileCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              // Warm gradient avatar — trainer identity accent (mock).
+              // 사용자 앱 MY 프로필과 동일한 이니셜 원형 아바타(블루 그라데이션).
               Container(
                 width: 52,
                 height: 52,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: <Color>[AppColors.brandOrange, AppColors.warning],
+                    colors: <Color>[AppColors.primary, AppColors.secondary],
+                  ),
+                  border: Border.all(color: AppColors.primary, width: 2.5),
+                ),
+                child: Text(
+                  profile.name.isNotEmpty
+                      ? profile.name.substring(0, 1)
+                      : '·',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
-                child: const Text('🧑‍💼', style: TextStyle(fontSize: 22)),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -354,7 +366,7 @@ class _ProfileCard extends StatelessWidget {
                       children: <Widget>[
                         _Tag(
                           text: profile.specialty,
-                          color: AppColors.brandOrange,
+                          color: AppColors.success,
                         ),
                         const SizedBox(width: AppSpacing.xs),
                         _Tag(
@@ -502,6 +514,7 @@ class _CertsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -517,14 +530,14 @@ class _CertsCard extends StatelessWidget {
                     width: 24,
                     height: 24,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandOrange.withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.all(AppRadius.sm),
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentSurface,
+                      borderRadius: BorderRadius.all(AppRadius.sm),
                     ),
                     child: const Icon(
                       Icons.workspace_premium_outlined,
                       size: 13,
-                      color: AppColors.brandOrange,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -602,19 +615,32 @@ class _StatsCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[
-            AppColors.statsGradientStart,
-            AppColors.statsGradientEnd,
-          ],
+          colors: <Color>[AppColors.bannerStart, AppColors.bannerEnd],
         ),
         borderRadius: const BorderRadius.all(AppRadius.card),
-        border: Border.all(color: AppColors.brandOrange.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+        boxShadow: kCardShadow,
       ),
       child: Row(
         children: <Widget>[
-          _Stat(icon: '👥', value: '$clientCount', unit: '명', label: '담당 고객'),
-          const _Stat(icon: '✅', value: '24', unit: '회', label: '완료 세션'),
-          const _Stat(icon: '📤', value: '18', unit: '건', label: '루틴 전송'),
+          _Stat(
+            icon: Icons.people_alt_outlined,
+            value: '$clientCount',
+            unit: '명',
+            label: '담당 고객',
+          ),
+          const _Stat(
+            icon: Icons.check_circle_outline_rounded,
+            value: '24',
+            unit: '회',
+            label: '완료 세션',
+          ),
+          const _Stat(
+            icon: Icons.send_rounded,
+            value: '18',
+            unit: '건',
+            label: '루틴 전송',
+          ),
         ],
       ),
     );
@@ -629,7 +655,7 @@ class _Stat extends StatelessWidget {
     required this.label,
   });
 
-  final String icon;
+  final IconData icon;
   final String value;
   final String unit;
   final String label;
@@ -639,14 +665,14 @@ class _Stat extends StatelessWidget {
     return Expanded(
       child: Column(
         children: <Widget>[
-          Text(icon, style: const TextStyle(fontSize: 15)),
-          const SizedBox(height: 2),
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 4),
           Text(
             value,
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: AppColors.brandOrange,
+              color: AppColors.secondary,
             ),
           ),
           Text(
@@ -654,7 +680,7 @@ class _Stat extends StatelessWidget {
             style: const TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,
-              color: AppColors.warning,
+              color: AppColors.primary,
             ),
           ),
           Text(
@@ -689,6 +715,7 @@ class _GymCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
         border: Border.all(
           color: editing
               ? AppColors.primary.withValues(alpha: 0.35)

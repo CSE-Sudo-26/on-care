@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -33,10 +34,16 @@ class ClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.accentSurface : AppColors.card,
-      borderRadius: const BorderRadius.all(AppRadius.card),
-      child: InkWell(
+    return DecoratedBox(
+      // 사용자 앱과 동일한 kCardShadow(소프트 블루)로 통일.
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
+      ),
+      child: Material(
+        color: selected ? AppColors.accentSurface : AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        child: InkWell(
         onTap: onTap,
         borderRadius: const BorderRadius.all(AppRadius.card),
         child: Container(
@@ -167,6 +174,7 @@ class ClientCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

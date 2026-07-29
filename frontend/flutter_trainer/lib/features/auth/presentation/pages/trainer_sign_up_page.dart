@@ -1,24 +1,26 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:oncare/app/router/routes.dart';
-import 'package:oncare/design_system/tokens/colors.dart';
-import 'package:oncare/design_system/tokens/spacing.dart';
-import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
-import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
+import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.dart';
 
-/// 회원가입 화면 — 이름/이메일/비밀번호로 계정을 만들고, 성공 시 자동
-/// 로그인해 대시보드로 진입한다(라우터 가드가 인증 상태를 감지).
-class SignUpPage extends ConsumerStatefulWidget {
-  const SignUpPage({super.key});
+/// 트레이너 회원가입 화면 — 사용자 앱 회원가입과 동일한 디자인. 이름/이메일/
+/// 비밀번호로 계정을 만들고, 성공 시 자동 로그인해 고객 탭으로 진입한다
+/// (라우터 가드가 인증 상태를 감지).
+class TrainerSignUpPage extends ConsumerStatefulWidget {
+  /// Creates the trainer sign-up screen.
+  const TrainerSignUpPage({super.key});
 
   @override
-  ConsumerState<SignUpPage> createState() => _SignUpPageState();
+  ConsumerState<TrainerSignUpPage> createState() => _TrainerSignUpPageState();
 }
 
-class _SignUpPageState extends ConsumerState<SignUpPage> {
+class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
@@ -74,15 +76,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           .read(sessionControllerProvider.notifier)
           .register(email: email, password: password, name: name);
       if (!mounted) return;
-      // New accounts land in first-run onboarding; the guard keeps the
-      // (now authenticated) user on this protected route.
-      context.go(AppRoutes.onboarding);
-    } on DioException catch (e) {
+      context.go(AppRoutes.clients);
+    } on AuthException catch (e) {
       if (mounted) setState(() => _loading = false);
-      final msg = e.response?.statusCode == 409
-          ? '이미 가입된 이메일이에요. 로그인해 주세요.'
-          : '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
-      messenger.showSnackBar(SnackBar(content: Text(msg)));
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(
@@ -95,7 +92,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: <Widget>[
@@ -106,7 +103,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 child: IconButton(
                   onPressed: _backToSignIn,
                   icon: const Icon(Icons.arrow_back),
-                  color: AppColors.mutedForeground,
+                  color: const Color(0xFF64748B),
                 ),
               ),
             ),
@@ -124,14 +121,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: const Color(0xFF262626),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'On-Care 계정을 만들어 건강 관리를 시작하세요',
+                        'On-Care 계정을 만들어 회원 관리를 시작하세요',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xxl),
@@ -158,7 +156,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           icon: Icon(
                             _obscure ? Icons.visibility_off : Icons.visibility,
                             size: 20,
-                            color: AppColors.mutedForeground,
+                            color: const Color(0xFF64748B),
                           ),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
@@ -184,7 +182,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         children: <Widget>[
                           const Text(
                             '이미 계정이 있으신가요?',
-                            style: TextStyle(color: AppColors.mutedForeground),
+                            style: TextStyle(color: Color(0xFF64748B)),
                           ),
                           TextButton(
                             onPressed: _backToSignIn,

@@ -262,10 +262,10 @@ class _CoachingBanner extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -273,7 +273,7 @@ class _CoachingBanner extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: <Color>[FigmaColors.bannerStart, FigmaColors.bannerEnd],
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: FigmaColors.primaryA(0.18)),
             boxShadow: kCardShadow,
           ),
@@ -350,7 +350,7 @@ class _StripeCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.primaryA(0.08)),
         boxShadow: kCardShadow,
       ),
@@ -484,7 +484,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF04438).withValues(alpha: 0.12),
+                            color: FigmaColors.dangerRed.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -492,7 +492,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                             style: const TextStyle(
                               fontSize: 8.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFFF04438),
+                              color: FigmaColors.dangerRed,
                             ),
                           ),
                         ),
@@ -1061,7 +1061,7 @@ class _MetricTile extends StatelessWidget {
 
 /// 목표 대비 상태색: 초과(빨강) / 근접 90%↑(주황) / 안전(초록).
 Color _nutStatusColor(double v, double goal) {
-  if (v > goal) return const Color(0xFFF04438);
+  if (v > goal) return FigmaColors.dangerRed;
   if (v >= goal * 0.9) return FigmaColors.orange;
   return const Color(0xFF34C759);
 }
@@ -1699,7 +1699,7 @@ class _RecMealCard extends StatelessWidget {
       width: 130,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x0D000000)),
         boxShadow: kCardShadow,
       ),

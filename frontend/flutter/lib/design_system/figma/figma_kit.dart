@@ -29,12 +29,13 @@ class FigmaColors {
   static const Color greenTag = Color(0xFF34C782); // coaching 운동 tag
   static const Color orange = Color(0xFFFF953C); // fat bar / warn fill
   static const Color orangeText = Color(0xFFE8760A); // warn text
-  static const Color heartOrange = Color(0xFFFF7A45); // spark / trainer accent
+  static const Color heartOrange = Color(0xFFFF953C); // spark accent(주의 오렌지로 통일)
   static const Color sugarPurple = Color(0xFF9B8FD4); // 당류 chart
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
   // Dots / status
   static const Color redDot = Color(0xFFFF3B5C);
+  static const Color dangerRed = Color(0xFFF04438); // 초과/경고 강조(나트륨 초과 등)
   static const Color statusGreen = Color(0xFF34C759);
   static const Color onlineGreen = Color(0xFF4ADE80);
 

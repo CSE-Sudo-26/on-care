@@ -21,4 +21,21 @@ abstract class TrainerAuthRepository {
   /// Exchanges email/password for an access token. Throws
   /// [AuthException] on failure.
   Future<String> login({required String email, required String password});
+
+  /// Creates a new trainer account (POST /auth/register) and returns an
+  /// access token. Distinct from [login] so the real backend can enforce
+  /// account-creation semantics and persist [name]. Throws [AuthException].
+  Future<String> register({
+    required String email,
+    required String password,
+    required String name,
+  });
+
+  /// Exchanges a provider (kakao/google) [token] for an access token
+  /// (POST /auth/social). The real backend validates the provider token;
+  /// the mock issues a demo token. Throws [AuthException].
+  Future<String> socialLogin({
+    required String provider,
+    required String token,
+  });
 }
