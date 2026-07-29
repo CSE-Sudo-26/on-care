@@ -47,7 +47,15 @@ void main() {
           date: today,
           mealType: 'breakfast',
           timeLabel: '08:20',
-          foodsJson: jsonEncode(<Object?>[]),
+          foodsJson: jsonEncode(<Object?>[
+            <String, Object?>{
+              'name': '그릭요거트',
+              'sodium_mg': 70,
+              'carbs_g': 40,
+              'protein_g': 20,
+              'fat_g': 10,
+            },
+          ]),
           totalCalories: 315,
           sodiumMg: const Value(380),
           sugarG: const Value(18),
@@ -57,7 +65,22 @@ void main() {
           date: today,
           mealType: 'lunch',
           timeLabel: '12:40',
-          foodsJson: jsonEncode(<Object?>[]),
+          foodsJson: jsonEncode(<Object?>[
+            <String, Object?>{
+              'name': '김치찌개',
+              'sodium_mg': 900,
+              'carbs_g': 50,
+              'protein_g': 25,
+              'fat_g': 15,
+            },
+            <String, Object?>{
+              'name': '배추김치',
+              'sodium_mg': 420,
+              'carbs_g': 20,
+              'protein_g': 5,
+              'fat_g': 5,
+            },
+          ]),
           totalCalories: 530,
           sodiumMg: const Value(1120),
           sugarG: const Value(14),
@@ -67,7 +90,15 @@ void main() {
           date: today,
           mealType: 'dinner',
           timeLabel: '19:00',
-          foodsJson: jsonEncode(<Object?>[]),
+          foodsJson: jsonEncode(<Object?>[
+            <String, Object?>{
+              'name': '닭가슴살 샐러드',
+              'sodium_mg': 180,
+              'carbs_g': 50,
+              'protein_g': 40,
+              'fat_g': 15,
+            },
+          ]),
           totalCalories: 575,
           sodiumMg: const Value(600),
           sugarG: const Value(13),
@@ -150,6 +181,14 @@ void main() {
       expect(byLabel['나트륨']!['over_budget'], isTrue);
       expect(byLabel['당류']!['current'], 45);
       expect(byLabel.containsKey('혈당'), isFalse);
+      expect(body['macros'], <String, Object?>{
+        'carbs_g': 160.0,
+        'protein_g': 90.0,
+        'fat_g': 45.0,
+        'carbs_pct': 45,
+        'protein_pct': 26,
+        'fat_pct': 29,
+      });
 
       // Quick stats.
       expect(body['diet_entries'], 3);
@@ -162,7 +201,8 @@ void main() {
       expect(schedule.first['title'], '병원 정기검진');
 
       // Sodium warning is set when total > 2000.
-      expect(body['sodium_warning'], isNotNull);
+      expect(body['sodium_warning'], contains('김치찌개'));
+      expect(body['sodium_warning'], contains('배추김치'));
 
       // Week score is in the 0..100 band.
       final score = body['week_score']! as int;
