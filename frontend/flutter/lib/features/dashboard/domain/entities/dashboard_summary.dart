@@ -78,7 +78,7 @@ class DashboardSummary {
   /// `quickStats` left tile — number of diet records logged today.
   final int dietEntries;
 
-  /// `quickStats` right tile — total exercise minutes today.
+  /// `quickStats` right tile — total exercise minutes for the current week.
   final int exerciseMinutes;
 
   /// Total calories burned by the exercise sessions included in this summary.
@@ -99,7 +99,7 @@ class DashboardSummary {
   /// coach wants surfaced today". Null = nothing to say.
   final String? sodiumWarning;
 
-  /// Exercise-side daily feedback line. Optional for back-compat.
+  /// Exercise-side weekly feedback line. Optional for back-compat.
   final String? exerciseFeedback;
 
   HealthIndicator get calorieIndicator => indicators.firstWhere(

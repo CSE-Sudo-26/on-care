@@ -6,7 +6,7 @@ import json
 import pytest
 from sqlalchemy import delete
 
-from app.api.v1.dashboard import _build_sodium_warning
+from app.api.v1.dashboard import _build_sodium_warning, _rank_sodium_sources
 
 
 @pytest.mark.parametrize(
@@ -35,6 +35,21 @@ def test_build_sodium_warning(
     assert _build_sodium_warning(total_sodium_mg, source_names) == expected
 
 
+def test_rank_sodium_sources_combines_duplicate_food_names():
+    foods_json_values = [
+        json.dumps([
+            {"name": "라면", "sodium_mg": 600},
+            {"name": "김밥", "sodium_mg": 700},
+        ]),
+        json.dumps([
+            {"name": " 라면 ", "sodium_mg": 600},
+            {"name": "샐러드", "sodium_mg": 800},
+        ]),
+    ]
+
+    assert _rank_sodium_sources(foods_json_values) == ["라면", "샐러드", "김밥"]
+
+
 def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session):
     from app.db.init_db import DEMO_USER_ID
     from app.models.models import DietEntry
@@ -53,8 +68,8 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
             date=today_str(),
             meal_type="lunch",
             foods_json=json.dumps([
-                {"name": "김치찌개", "sodium_mg": 900},
-                {"name": "배추김치", "sodium_mg": 420},
+                {"name": "라면", "sodium_mg": 600},
+                {"name": "김밥", "sodium_mg": 700},
             ]),
             total_calories=780,
             carbs_g=86,
@@ -69,7 +84,8 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
             date=today_str(),
             meal_type="dinner",
             foods_json=json.dumps([
-                {"name": "오리엔탈 드레싱", "sodium_mg": 350},
+                {"name": "라면", "sodium_mg": 600},
+                {"name": "샐러드", "sodium_mg": 800},
             ]),
             total_calories=570,
             carbs_g=69,
@@ -85,15 +101,20 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
 
     assert response.status_code == 200
     body = response.json()
-    assert body["macros"] == {
-        "carbs_g": 155.0,
-        "protein_g": 81.0,
-        "fat_g": 43.8,
+    macros = body["macros"]
+    assert macros["carbs_g"] == pytest.approx(155.0)
+    assert macros["protein_g"] == pytest.approx(81.0)
+    assert macros["fat_g"] == pytest.approx(43.8)
+    assert {
+        "carbs_pct": macros["carbs_pct"],
+        "protein_pct": macros["protein_pct"],
+        "fat_pct": macros["fat_pct"],
+    } == {
         "carbs_pct": 46,
         "protein_pct": 24,
         "fat_pct": 30,
     }
-    assert body["sodium_warning"] == "김치찌개·배추김치 섭취로 나트륨이 높아요."
+    assert body["sodium_warning"] == "라면·샐러드 섭취로 나트륨이 높아요."
     assert isinstance(body["exercise_minutes"], int)
     assert isinstance(body["exercise_calories"], int)
     assert isinstance(body["exercise_count"], int)

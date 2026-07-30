@@ -259,6 +259,70 @@ void main() {
     },
   );
 
+  test('sodium_warning combines duplicate food names before ranking', () async {
+    await (db.delete(db.dietEntries)).go();
+    await db.batch((batch) {
+      batch.insertAll(db.dietEntries, <DietEntriesCompanion>[
+        DietEntriesCompanion.insert(
+          id: 'd-duplicate-lunch',
+          date: _todayDateString(),
+          mealType: 'lunch',
+          timeLabel: '12:00',
+          foodsJson: jsonEncode(<Object?>[
+            <String, Object?>{'name': '라면', 'sodium_mg': 600},
+            <String, Object?>{'name': '김밥', 'sodium_mg': 700},
+          ]),
+          totalCalories: 500,
+          sodiumMg: const Value(1100),
+          sugarG: const Value(2),
+        ),
+        DietEntriesCompanion.insert(
+          id: 'd-duplicate-dinner',
+          date: _todayDateString(),
+          mealType: 'dinner',
+          timeLabel: '18:00',
+          foodsJson: jsonEncode(<Object?>[
+            <String, Object?>{'name': '라면', 'sodium_mg': 600},
+            <String, Object?>{'name': '샐러드', 'sodium_mg': 800},
+          ]),
+          totalCalories: 500,
+          sodiumMg: const Value(1100),
+          sugarG: const Value(2),
+        ),
+      ]);
+    });
+
+    final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
+
+    expect(res.data!['sodium_warning'], '라면·샐러드 섭취로 나트륨이 높아요.');
+  });
+
+  test(
+    'exercise summary aggregates every session in the current week',
+    () async {
+      await db
+          .into(db.exerciseSessions)
+          .insert(
+            ExerciseSessionsCompanion.insert(
+              id: 'ex-another-day',
+              weekStart: _currentMonday(),
+              dayLabel: _weekdayLabels[DateTime.now().weekday % 7],
+              type: 'strength',
+              minutes: 15,
+              calories: 100,
+            ),
+          );
+
+      final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
+      final body = res.data!;
+
+      expect(body['exercise_minutes'], 60);
+      expect(body['exercise_calories'], 420);
+      expect(body['exercise_count'], 2);
+      expect(body['exercise_feedback'], contains('이번 주'));
+    },
+  );
+
   test('sodium_warning falls back when source names are empty', () async {
     await (db.delete(db.dietEntries)).go();
     await db

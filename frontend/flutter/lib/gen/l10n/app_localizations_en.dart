@@ -263,16 +263,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeeklyTrend => 'Weekly trend';
 
   @override
-  String get homeExerciseActiveTime => 'Active time';
+  String get homeExerciseActiveTime => 'Weekly active time';
 
   @override
-  String get homeExerciseBurned => 'Calories';
+  String get homeExerciseBurned => 'Weekly calories';
 
   @override
-  String get homeExerciseCount => 'Workouts';
+  String get homeExerciseCount => 'Weekly workouts';
 
   @override
-  String get homeExerciseBurnProgress => 'Burn goal';
+  String get homeExerciseBurnProgress => 'Weekly burn goal';
 
   @override
   String get unitTimes => '×';

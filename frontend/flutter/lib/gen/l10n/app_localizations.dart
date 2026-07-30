@@ -581,25 +581,25 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
-  /// **'Active time'**
+  /// **'Weekly active time'**
   String get homeExerciseActiveTime;
 
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
-  /// **'Calories'**
+  /// **'Weekly calories'**
   String get homeExerciseBurned;
 
   /// No description provided for @homeExerciseCount.
   ///
   /// In en, this message translates to:
-  /// **'Workouts'**
+  /// **'Weekly workouts'**
   String get homeExerciseCount;
 
   /// No description provided for @homeExerciseBurnProgress.
   ///
   /// In en, this message translates to:
-  /// **'Burn goal'**
+  /// **'Weekly burn goal'**
   String get homeExerciseBurnProgress;
 
   /// No description provided for @unitTimes.

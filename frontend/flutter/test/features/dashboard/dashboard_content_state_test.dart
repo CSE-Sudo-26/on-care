@@ -121,6 +121,14 @@ void main() {
     expect(find.text('아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.'), findsOneWidget);
     expect(find.text('오늘 예정된 일정이 없어요.'), findsOneWidget);
     expect(find.text('0g'), findsNWidgets(3));
+    expect(
+      find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('dashboard-exercise-chart')),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -144,8 +152,19 @@ void main() {
       expect(find.text('45'), findsOneWidget);
       expect(find.text('520'), findsWidgets);
       expect(find.text('4'), findsWidgets);
+      expect(find.text('주간 운동 시간'), findsOneWidget);
+      expect(find.text('주간 소모 칼로리'), findsOneWidget);
+      expect(find.text('주간 운동 횟수'), findsOneWidget);
       expect(find.text('병원 정기검진'), findsOneWidget);
       expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('dashboard-nutrition-chart')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('dashboard-exercise-chart')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
   }

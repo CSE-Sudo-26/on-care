@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Annotated
 
@@ -49,6 +50,30 @@ def _build_sodium_warning(
     return f"{top_source_names} 섭취로 나트륨이 높아요."
 
 
+def _rank_sodium_sources(foods_json_values: Iterable[str]) -> list[str]:
+    sodium_by_food_name: dict[str, int] = {}
+    for foods_json in foods_json_values:
+        try:
+            foods = json.loads(foods_json)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        for food in foods if isinstance(foods, list) else []:
+            if not isinstance(food, dict):
+                continue
+            name = str(food.get("name") or "").strip()
+            sodium = food.get("sodium_mg")
+            if name and isinstance(sodium, (int, float)) and sodium > 0:
+                sodium_by_food_name[name] = (
+                    sodium_by_food_name.get(name, 0) + int(sodium)
+                )
+
+    sodium_sources = sorted(
+        sodium_by_food_name.items(),
+        key=lambda item: (-item[1], item[0]),
+    )
+    return [name for name, _ in sodium_sources]
+
+
 @router.get("/dashboard/summary", response_model=DashboardSummary)
 def dashboard_summary(
     current_user: CurrentUser,
@@ -77,21 +102,7 @@ def dashboard_summary(
         DashboardIndicator(label="당류", current=total_sugar, max=_MAX_SUGAR_G,
                            unit="g", over_budget=total_sugar > _MAX_SUGAR_G),
     ]
-    sodium_sources: list[tuple[str, int]] = []
-    for row in diet_rows:
-        try:
-            foods = json.loads(row.foods_json)
-        except (TypeError, json.JSONDecodeError):
-            continue
-        for food in foods if isinstance(foods, list) else []:
-            if not isinstance(food, dict):
-                continue
-            name = str(food.get("name") or "").strip()
-            sodium = food.get("sodium_mg")
-            if name and isinstance(sodium, (int, float)):
-                sodium_sources.append((name, int(sodium)))
-    sodium_sources.sort(key=lambda item: item[1], reverse=True)
-    source_names = [name for name, _ in sodium_sources]
+    source_names = _rank_sodium_sources(row.foods_json for row in diet_rows)
     sodium_warning = _build_sodium_warning(total_na, source_names)
 
     # --- 이번 주 운동 집계 ---

@@ -276,7 +276,7 @@ class LocalApiInterceptor extends Interceptor {
     var totalCarbs = 0.0;
     var totalProtein = 0.0;
     var totalFat = 0.0;
-    final sodiumSources = <({String name, int sodiumMg})>[];
+    final sodiumByFoodName = <String, int>{};
     for (final r in dietRows) {
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
@@ -289,16 +289,24 @@ class LocalApiInterceptor extends Interceptor {
       for (final food in foods) {
         if (food is! Map) continue;
         final name = (food['name'] as String? ?? '').trim();
-        final sodium = (food['sodium_mg'] as num?)?.round() ?? 0;
+        final sodium = (food['sodium_mg'] as num?)?.toInt() ?? 0;
         if (name.isNotEmpty && sodium > 0) {
-          sodiumSources.add((name: name, sodiumMg: sodium));
+          sodiumByFoodName.update(
+            name,
+            (total) => total + sodium,
+            ifAbsent: () => sodium,
+          );
         }
       }
     }
-    sodiumSources.sort((a, b) => b.sodiumMg.compareTo(a.sodiumMg));
+    final sodiumSources = sodiumByFoodName.entries.toList()
+      ..sort((a, b) {
+        final sodiumOrder = b.value.compareTo(a.value);
+        return sodiumOrder != 0 ? sodiumOrder : a.key.compareTo(b.key);
+      });
     final sodiumSourceNames = sodiumSources
         .take(2)
-        .map((source) => source.name)
+        .map((source) => source.key)
         .join('·');
 
     // Exercise aggregates for the current week.
@@ -369,7 +377,7 @@ class LocalApiInterceptor extends Interceptor {
                 : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
-          ? '오늘 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
+          ? '이번 주 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
           : '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
     });
   }

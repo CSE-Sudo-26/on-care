@@ -260,16 +260,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeWeeklyTrend => '주간 추이';
 
   @override
-  String get homeExerciseActiveTime => '운동 시간';
+  String get homeExerciseActiveTime => '주간 운동 시간';
 
   @override
-  String get homeExerciseBurned => '소모 칼로리';
+  String get homeExerciseBurned => '주간 소모 칼로리';
 
   @override
-  String get homeExerciseCount => '운동 횟수';
+  String get homeExerciseCount => '주간 운동 횟수';
 
   @override
-  String get homeExerciseBurnProgress => '칼로리 소모 목표';
+  String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
 
   @override
   String get unitTimes => '회';

@@ -154,11 +154,19 @@ class _DashboardData extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          child: _DietNutritionCard(summary: summary, onOpen: onDietTap),
+          child: _DietNutritionCard(
+            summary: summary,
+            showCharts: !summary.isEmpty,
+            onOpen: onDietTap,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          child: _ExerciseCard(summary: summary, onOpen: onExerciseTap),
+          child: _ExerciseCard(
+            summary: summary,
+            showCharts: !summary.isEmpty,
+            onOpen: onExerciseTap,
+          ),
         ),
         const Padding(
           padding: EdgeInsets.only(bottom: 20),
@@ -492,8 +500,13 @@ class _CardTitle extends StatelessWidget {
 /// The merged 식단·영양 card: calorie ring + achievement, macro grams/goals,
 /// and the weekly nutrition trend chart (legend + Y axis + point labels).
 class _DietNutritionCard extends StatefulWidget {
-  const _DietNutritionCard({required this.summary, required this.onOpen});
+  const _DietNutritionCard({
+    required this.summary,
+    required this.showCharts,
+    required this.onOpen,
+  });
   final DashboardSummary summary;
+  final bool showCharts;
   final VoidCallback onOpen;
 
   @override
@@ -654,107 +667,109 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
               color: FigmaColors.textMuted,
             ),
           ),
-          const SizedBox(height: 10),
-          const _SoftDivider(),
-          const SizedBox(height: 10),
-          // 지표 버튼(칼로리/나트륨/당류)을 그래프 왼쪽에 세로로 배치해 카드 높이를 줄인다.
-          Row(
-            children: <Widget>[
-              // 동일 크기 버튼(가장 넓은 라벨 기준 + stretch). 나트륨 주의 표시 없음.
-              IntrinsicWidth(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    for (final _NutTabKind t in nutrition.keys) ...<Widget>[
-                      _NutTab(
-                        label: _nutLabel(l, t),
-                        active: _tab == t,
-                        warn: false,
-                        // 세 버튼 모두 선택 시 브랜드 블루(#3EAFDF)로 통일.
-                        activeColor: FigmaColors.primary,
-                        onTap: () => setState(() => _tab = t),
+          if (widget.showCharts) const SizedBox(height: 10),
+          if (widget.showCharts) const _SoftDivider(),
+          if (widget.showCharts) const SizedBox(height: 10),
+          if (widget.showCharts)
+            // 지표 버튼(칼로리/나트륨/당류)을 그래프 왼쪽에 세로로 배치해 카드 높이를 줄인다.
+            Row(
+              key: const ValueKey<String>('dashboard-nutrition-chart'),
+              children: <Widget>[
+                // 동일 크기 버튼(가장 넓은 라벨 기준 + stretch). 나트륨 주의 표시 없음.
+                IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (final _NutTabKind t in nutrition.keys) ...<Widget>[
+                        _NutTab(
+                          label: _nutLabel(l, t),
+                          active: _tab == t,
+                          warn: false,
+                          // 세 버튼 모두 선택 시 브랜드 블루(#3EAFDF)로 통일.
+                          activeColor: FigmaColors.primary,
+                          onTap: () => setState(() => _tab = t),
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _ChartLegend(
+                        goalText:
+                            '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
                       ),
                       const SizedBox(height: 6),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _ChartLegend(
-                      goalText:
-                          '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        // 가로축 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
-                        SizedBox(
-                          width: 34,
-                          height: 60,
-                          child: Stack(
-                            children: <Widget>[
-                              for (final double t in cfg.ticks)
-                                Positioned(
-                                  right: 0,
-                                  top: (60 - ((t - lo) / (hi - lo)) * 60 - 5)
-                                      .clamp(0.0, 50.0),
-                                  child: _AxisLabel(nf.format(t)),
-                                ),
-                            ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          // 가로축 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
+                          SizedBox(
+                            width: 34,
+                            height: 60,
+                            child: Stack(
+                              children: <Widget>[
+                                for (final double t in cfg.ticks)
+                                  Positioned(
+                                    right: 0,
+                                    top: (60 - ((t - lo) / (hi - lo)) * 60 - 5)
+                                        .clamp(0.0, 50.0),
+                                    child: _AxisLabel(nf.format(t)),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            children: <Widget>[
-                              SizedBox(
-                                height: 60,
-                                child: CustomPaint(
-                                  size: Size.infinite,
-                                  painter: _TrendChartPainter(
-                                    cur: cfg.cur,
-                                    prev: cfg.prev,
-                                    goal: cfg.goal,
-                                    ticks: cfg.ticks,
-                                    lo: lo,
-                                    hi: hi,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              children: <Widget>[
+                                SizedBox(
+                                  height: 60,
+                                  child: CustomPaint(
+                                    size: Size.infinite,
+                                    painter: _TrendChartPainter(
+                                      cur: cfg.cur,
+                                      prev: cfg.prev,
+                                      goal: cfg.goal,
+                                      ticks: cfg.ticks,
+                                      lo: lo,
+                                      hi: hi,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  for (int i = 0; i < days.length; i++)
-                                    Text(
-                                      days[i],
-                                      style: TextStyle(
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w600,
-                                        color: i == 6
-                                            ? todayColor
-                                            : FigmaColors.textFaint,
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    for (int i = 0; i < days.length; i++)
+                                      Text(
+                                        days[i],
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w600,
+                                          color: i == 6
+                                              ? todayColor
+                                              : FigmaColors.textFaint,
+                                        ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -941,8 +956,13 @@ class _AxisLabel extends StatelessWidget {
 /// The full-width 운동 card: activity metrics (time / kcal / count), the burn
 /// goal progress, and a weekly burned-calories trend chart with value labels.
 class _ExerciseCard extends StatelessWidget {
-  const _ExerciseCard({required this.summary, required this.onOpen});
+  const _ExerciseCard({
+    required this.summary,
+    required this.showCharts,
+    required this.onOpen,
+  });
   final DashboardSummary summary;
+  final bool showCharts;
   final VoidCallback onOpen;
 
   static const double _burnGoal = 500;
@@ -954,7 +974,7 @@ class _ExerciseCard extends StatelessWidget {
     final double pct = (burned / _burnGoal).clamp(0.0, 1.0);
     // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
     final double rawPct = burned / _burnGoal;
-    final week = <double>[..._demoExerciseWeekCalories.take(6), burned];
+    const week = _demoExerciseWeekCalories;
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
@@ -1073,68 +1093,72 @@ class _ExerciseCard extends StatelessWidget {
               colors: <Color>[FigmaColors.primary, FigmaColors.primaryStripe],
             ),
           ),
-          const SizedBox(height: 6),
-          const _SoftDivider(),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              _SectionLabel(
-                icon: Icons.bar_chart_rounded,
-                text: l.homeWeeklyTrend,
-              ),
-              const Spacer(),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
+          if (showCharts) const SizedBox(height: 6),
+          if (showCharts) const _SoftDivider(),
+          if (showCharts) const SizedBox(height: 10),
+          if (showCharts)
+            Row(
+              children: <Widget>[
+                _SectionLabel(
+                  icon: Icons.bar_chart_rounded,
+                  text: l.homeWeeklyTrend,
+                ),
+                const Spacer(),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: FigmaColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${l.homeLegendToday} · ${l.unitKcal}',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          if (showCharts) const SizedBox(height: 10),
+          if (showCharts)
+            SizedBox(
+              key: const ValueKey<String>('dashboard-exercise-chart'),
+              height: 50,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _ExerciseBarPainter(
+                  data: week,
+                  lo: lo,
+                  hi: hi,
                   color: FigmaColors.primary,
-                  shape: BoxShape.circle,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${l.homeLegendToday} · ${l.unitKcal}',
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 50,
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _ExerciseBarPainter(
-                data: week,
-                lo: lo,
-                hi: hi,
-                color: FigmaColors.primary,
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: <Widget>[
-              for (int i = 0; i < days.length; i++)
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      days[i],
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
-                        color: i == 6
-                            ? FigmaColors.primary
-                            : FigmaColors.textFaint,
+          if (showCharts) const SizedBox(height: 6),
+          if (showCharts)
+            Row(
+              children: <Widget>[
+                for (int i = 0; i < days.length; i++)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        days[i],
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                          color: i == 6
+                              ? FigmaColors.primary
+                              : FigmaColors.textFaint,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -1421,7 +1445,7 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
 }
 
 /// Presentation-only history until the dashboard API exposes daily exercise
-/// series. The final point is always replaced with live calories.
+/// series. Weekly live totals are shown separately in the metrics above.
 const List<double> _demoExerciseWeekCalories = <double>[
   300,
   430,
