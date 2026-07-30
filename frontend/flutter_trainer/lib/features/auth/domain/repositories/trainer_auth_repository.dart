@@ -57,7 +57,13 @@ abstract class TrainerAuthRepository {
   Future<TrainerAuthTokens> refresh(String refreshToken);
 
   /// Reads the signed-in trainer's profile (GET /v1/trainer/me) using
-  /// [accessToken]. Throws [NotTrainerException] when the account is not a
-  /// trainer (403) and [AuthException] on 401 / transport failures.
+  /// [accessToken].
+  ///
+  /// Error contract (kept in sync with the Dio implementation so callers
+  /// can catch precisely):
+  ///  * 403 → [NotTrainerException] — the account is not a trainer;
+  ///  * 401 → `UnauthorizedError` (from `core/errors`), surfaced so
+  ///    `SessionController` can attempt a token refresh;
+  ///  * other transport / empty-body failures → [AuthException].
   Future<TrainerProfile> fetchProfile(String accessToken);
 }
