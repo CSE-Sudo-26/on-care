@@ -3,22 +3,50 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
+/// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
+///
+/// Two implementations sit behind this contract (selected by
+/// [clientRepositoryProvider] via [AppConfig.useMockApi]):
+///  * [DriftClientRepository] — local drift, demo / `USE_MOCK_API=true`;
+///  * [DioClientRepository] — the real FastAPI backend.
+///
+/// Reads are exposed as streams so the drift source can stay reactive; the
+/// Dio source emits a single fetched value (loading/error surface through
+/// the consuming `AsyncValue`).
+abstract interface class ClientRepository {
+  Stream<List<TrainerClient>> watchClients();
+  Stream<List<TrainerClient>> watchClientsPrioritized();
+  Stream<int> watchTodayReservationCount();
+  Stream<List<ClientDietEntry>> watchDiet(String clientId);
+  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
+
+  /// Demo-only roster mutations — the backend roster comes from
+  /// trainer↔member links, so these are unsupported against the real API.
+  Future<bool> clientNameExists(String name);
+  Future<bool> addClient({required String name, required String goal});
+  Future<void> setClientActive(String id, bool active);
+}
+
 /// Reads client + schedule data from the local drift DB for the
 /// 고객 관리 tab. Returns reactive streams so the UI updates if the
 /// underlying rows change (e.g. a routine sent from another tab).
-class ClientRepository {
+class DriftClientRepository implements ClientRepository {
   /// Creates the repository over [_db].
-  const ClientRepository(this._db);
+  const DriftClientRepository(this._db);
 
   final AppDatabase _db;
 
   /// All clients, ordered as seeded (sortOrder).
+  @override
   Stream<List<TrainerClient>> watchClients() {
     final query = _db.select(_db.trainerClients)
       ..orderBy(<OrderingTerm Function($TrainerClientsTable)>[
@@ -30,6 +58,7 @@ class ClientRepository {
   /// Clients ordered by coaching priority for the 고객 관리 list:
   /// sodium-over-target clients first, ties broken by the most recent
   /// chat activity, then by the seeded order.
+  @override
   Stream<List<TrainerClient>> watchClientsPrioritized() {
     final t = _db.trainerClients;
     final chat = _db.clientChatMessages;
@@ -71,6 +100,7 @@ class ClientRepository {
   /// Whether a client with this display name already exists
   /// (whitespace- and case-insensitive). Counts in SQL rather than
   /// loading every row into memory (review PR 243).
+  @override
   Future<bool> clientNameExists(String name) async {
     final key = name.trim().toLowerCase();
     if (key.isEmpty) return false;
@@ -108,6 +138,7 @@ class ClientRepository {
   /// The duplicate check and the insert run in ONE transaction, so two
   /// concurrent adds of the same name can't both pass the check and both
   /// insert — exactly one wins, the other returns `false` (review 243).
+  @override
   Future<bool> addClient({required String name, required String goal}) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) return false;
@@ -142,6 +173,7 @@ class ClientRepository {
   }
 
   /// Flips a client between 활성 and 휴면.
+  @override
   Future<void> setClientActive(String id, bool active) async {
     await (_db.update(_db.trainerClients)..where((t) => t.id.equals(id))).write(
       TrainerClientsCompanion(active: Value(active)),
@@ -151,6 +183,7 @@ class ClientRepository {
   /// Count of today's booked sessions — every schedule slot dated today
   /// that isn't a gap (`공백`). Drives the "오늘 N명 예약" header badge.
   /// Uses a SQL `COUNT(*)` aggregate rather than loading every row.
+  @override
   Stream<int> watchTodayReservationCount() {
     final today = ymd(DateTime.now());
     final table = _db.trainerScheduleEntries;
@@ -162,6 +195,7 @@ class ClientRepository {
   }
 
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
+  @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) {
     final query = _db.select(_db.clientDietEntries)
       ..where((t) => t.clientId.equals(clientId))
@@ -184,6 +218,7 @@ class ClientRepository {
 
   /// A client's workout history for the 운동기록 sub-tab, newest first
   /// (seeded order).
+  @override
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) {
     final query = _db.select(_db.clientRoutineHistory)
       ..where((t) => t.clientId.equals(clientId))
@@ -235,9 +270,14 @@ class ClientRepository {
   }
 }
 
-/// Provides the [ClientRepository] wired to the app database.
+/// Provides the [ClientRepository]: the real Dio-backed source against the
+/// FastAPI backend, or the local drift source for demo / `USE_MOCK_API=true`.
 final clientRepositoryProvider = Provider<ClientRepository>((ref) {
-  return ClientRepository(ref.watch(appDatabaseProvider));
+  final config = ref.watch(appConfigProvider);
+  if (config.useMockApi) {
+    return DriftClientRepository(ref.watch(appDatabaseProvider));
+  }
+  return DioClientRepository(ref.watch(dioProvider));
 });
 
 /// Streams the client list for the 고객 관리 tab.

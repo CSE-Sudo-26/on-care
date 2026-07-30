@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -47,6 +48,10 @@ class ClientsPage extends ConsumerWidget {
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
+    // Roster mutations exist only in demo/mock mode — the real backend has
+    // no add-client endpoint (the roster is derived from trainer↔member
+    // links), so hide the 신규 고객 등록 entry when hitting the real API.
+    final canManageRoster = ref.watch(appConfigProvider).useMockApi;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -85,7 +90,9 @@ class ClientsPage extends ConsumerWidget {
                     onOpen: (id) => wide
                         ? context.go(_clientsLocation(id))
                         : context.push(AppRoutes.clientDetail(id)),
-                    onAddClient: () => _openAddClientSheet(context),
+                    onAddClient: canManageRoster
+                        ? () => _openAddClientSheet(context)
+                        : null,
                   ),
                 );
               }
@@ -105,7 +112,9 @@ class ClientsPage extends ConsumerWidget {
                         // Selecting swaps the right panel (and the URL)
                         // instead of pushing a new screen.
                         onOpen: (id) => context.go(_clientsLocation(id)),
-                        onAddClient: () => _openAddClientSheet(context),
+                        onAddClient: canManageRoster
+                            ? () => _openAddClientSheet(context)
+                            : null,
                       ),
                     ),
                     const VerticalDivider(
@@ -160,8 +169,9 @@ class _ClientsView extends StatelessWidget {
   /// Invoked with the tapped client's id.
   final ValueChanged<String> onOpen;
 
-  /// Opens the 신규 고객 등록 sheet.
-  final VoidCallback onAddClient;
+  /// Opens the 신규 고객 등록 sheet, or `null` to hide the entry (real-API
+  /// mode has no add-client endpoint).
+  final VoidCallback? onAddClient;
 
   @override
   Widget build(BuildContext context) {
@@ -220,11 +230,12 @@ class _ClientsView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        OutlinedActionButton(
-          label: '＋ 신규 고객 등록',
-          color: AppColors.accent,
-          onTap: onAddClient,
-        ),
+        if (onAddClient != null)
+          OutlinedActionButton(
+            label: '＋ 신규 고객 등록',
+            color: AppColors.accent,
+            onTap: onAddClient!,
+          ),
       ],
     );
   }
