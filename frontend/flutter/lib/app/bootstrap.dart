@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
@@ -59,29 +57,27 @@ Future<void> bootstrap() async {
       stackTrace: details.stack,
     );
   };
+  WidgetsBinding.instance.platformDispatcher.onError =
+      (Object error, StackTrace stack) {
+        logger.e('Uncaught platform error', error: error, stackTrace: stack);
+        return true;
+      };
 
   // Provider observers — log lifecycle events outside prod.
   final observers = <ProviderObserver>[
     if (!config.isProd) LoggingProviderObserver(logger),
   ];
 
-  runZonedGuarded<void>(
-    () {
-      runApp(
-        ProviderScope(
-          observers: observers,
-          overrides: <Override>[
-            appConfigProvider.overrideWithValue(config),
-            appLoggerProvider.overrideWithValue(logger),
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            appDatabaseProvider.overrideWithValue(db),
-          ],
-          child: const OncareApp(),
-        ),
-      );
-    },
-    (Object error, StackTrace stack) {
-      logger.e('Uncaught zone error', error: error, stackTrace: stack);
-    },
+  runApp(
+    ProviderScope(
+      observers: observers,
+      overrides: <Override>[
+        appConfigProvider.overrideWithValue(config),
+        appLoggerProvider.overrideWithValue(logger),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        appDatabaseProvider.overrideWithValue(db),
+      ],
+      child: const OncareApp(),
+    ),
   );
 }

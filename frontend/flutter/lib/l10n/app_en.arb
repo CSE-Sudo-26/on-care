@@ -70,6 +70,17 @@
     }
   },
   "homeGreetingGeneric": "Let's ease into the day 👋",
+  "homeDashboardLoadError": "Could not load the dashboard.",
+  "homeDashboardEmpty": "No records yet today. Add a meal or workout to get started.",
+  "homeDietRecordCount": "{count} diet records today",
+  "@homeDietRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeScheduleEmpty": "No events scheduled for today.",
   "homeCoachingPill": "✦ AI Coaching",
   "homeCoachingTitle": "Today's tailored advice",
   "homeCoachingBody": "Cut back on sodium at dinner and\ntake about a 20-minute walk",
@@ -116,10 +127,10 @@
   "homeCalorieIntake": "Today's calories",
   "homeAchieveRate": "Progress",
   "homeWeeklyTrend": "Weekly trend",
-  "homeExerciseActiveTime": "Active time",
-  "homeExerciseBurned": "Calories",
-  "homeExerciseCount": "Workouts",
-  "homeExerciseBurnProgress": "Burn goal",
+  "homeExerciseActiveTime": "Weekly active time",
+  "homeExerciseBurned": "Weekly calories",
+  "homeExerciseCount": "Weekly workouts",
+  "homeExerciseBurnProgress": "Weekly burn goal",
   "unitTimes": "×",
   "homeVsLastWeek": "vs last week",
   "homeSodiumInsight": "Sodium intake has been {trend}. Cut back on salt and turn on {alert}?",

@@ -135,6 +135,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGreetingGeneric => '오늘도 가볍게 시작해요 👋';
 
   @override
+  String get homeDashboardLoadError => '대시보드 정보를 불러오지 못했어요.';
+
+  @override
+  String get homeDashboardEmpty => '아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.';
+
+  @override
+  String homeDietRecordCount(int count) {
+    return '오늘 식단 기록 $count개';
+  }
+
+  @override
+  String get homeScheduleEmpty => '오늘 예정된 일정이 없어요.';
+
+  @override
   String get homeCoachingPill => '✦ AI 코칭';
 
   @override
@@ -246,16 +260,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeWeeklyTrend => '주간 추이';
 
   @override
-  String get homeExerciseActiveTime => '운동 시간';
+  String get homeExerciseActiveTime => '주간 운동 시간';
 
   @override
-  String get homeExerciseBurned => '소모 칼로리';
+  String get homeExerciseBurned => '주간 소모 칼로리';
 
   @override
-  String get homeExerciseCount => '운동 횟수';
+  String get homeExerciseCount => '주간 운동 횟수';
 
   @override
-  String get homeExerciseBurnProgress => '칼로리 소모 목표';
+  String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
 
   @override
   String get unitTimes => '회';

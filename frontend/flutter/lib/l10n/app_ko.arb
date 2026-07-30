@@ -40,6 +40,17 @@
   "dashboardWeightDelta": "{sign}{delta} (지난주 대비)",
   "homeGreeting": "{name}님, 오늘도 가볍게 시작해요 👋",
   "homeGreetingGeneric": "오늘도 가볍게 시작해요 👋",
+  "homeDashboardLoadError": "대시보드 정보를 불러오지 못했어요.",
+  "homeDashboardEmpty": "아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.",
+  "homeDietRecordCount": "오늘 식단 기록 {count}개",
+  "@homeDietRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeScheduleEmpty": "오늘 예정된 일정이 없어요.",
   "homeCoachingPill": "✦ AI 코칭",
   "homeCoachingTitle": "오늘의 맞춤 조언",
   "homeCoachingBody": "저녁은 나트륨을 줄이고\n20분 정도 걸어보세요",
@@ -76,10 +87,10 @@
   "homeCalorieIntake": "오늘 섭취 칼로리",
   "homeAchieveRate": "달성률",
   "homeWeeklyTrend": "주간 추이",
-  "homeExerciseActiveTime": "운동 시간",
-  "homeExerciseBurned": "소모 칼로리",
-  "homeExerciseCount": "운동 횟수",
-  "homeExerciseBurnProgress": "칼로리 소모 목표",
+  "homeExerciseActiveTime": "주간 운동 시간",
+  "homeExerciseBurned": "주간 소모 칼로리",
+  "homeExerciseCount": "주간 운동 횟수",
+  "homeExerciseBurnProgress": "주간 칼로리 소모 목표",
   "unitTimes": "회",
   "homeVsLastWeek": "지난주 대비",
   "homeSodiumInsight": "나트륨 섭취가 {trend} 추세예요. 소금 사용량을 줄이고, {alert}을 켜볼까요?",
