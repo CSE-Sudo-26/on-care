@@ -8,7 +8,6 @@ import 'package:oncare/features/exercise/domain/entities/consultation_request.da
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
@@ -411,54 +410,6 @@ class _MyGymTrainerCard extends StatelessWidget {
             trainer: trainer,
             selectedSlot: selectedSlot,
             onSlot: onSlot,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => showGymInfoSheet(context, gym),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: FigmaColors.primary,
-                    backgroundColor: FigmaColors.softBlue,
-                    side: BorderSide(color: FigmaColors.primaryA(0.18)),
-                    minimumSize: const Size(0, 44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l.exGymInfo,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => showGymChatSheet(context, gym: gym),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FigmaColors.primary,
-                    minimumSize: const Size(0, 44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l.exConsultButton,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
