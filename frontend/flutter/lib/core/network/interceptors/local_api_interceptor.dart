@@ -190,12 +190,36 @@ class LocalApiInterceptor extends Interceptor {
     final body = _jsonBody(options);
     final mealType = (body['meal_type'] as String?)?.trim();
     final timeLabel = (body['time_label'] as String?)?.trim();
+    final Object? foodsValue = body['foods'];
+    if (body.containsKey('foods') &&
+        (foodsValue is! List || foodsValue.any((food) => food is! Map))) {
+      return _badRequest(options, 'foods must be a list of objects');
+    }
+    final List<Object?>? requestFoods = foodsValue is List
+        ? List<Object?>.from(foodsValue)
+        : null;
+    final Object? totalCaloriesValue = body['total_calories'];
+    final Object? sodiumMgValue = body['sodium_mg'];
+    final Object? sugarGValue = body['sugar_g'];
     await (_db.update(_db.dietEntries)..where((t) => t.id.equals(id))).write(
       DietEntriesCompanion(
         mealType: (mealType == null || mealType.isEmpty)
             ? const Value.absent()
             : Value(mealType),
         timeLabel: timeLabel == null ? const Value.absent() : Value(timeLabel),
+        foodsJson: requestFoods == null
+            ? const Value.absent()
+            : Value(jsonEncode(requestFoods)),
+        totalCalories:
+            body.containsKey('total_calories') && totalCaloriesValue is num
+            ? Value(totalCaloriesValue.toInt())
+            : const Value.absent(),
+        sodiumMg: body.containsKey('sodium_mg') && sodiumMgValue is num
+            ? Value(sodiumMgValue.toInt())
+            : const Value.absent(),
+        sugarG: body.containsKey('sugar_g') && sugarGValue is num
+            ? Value(sugarGValue.toInt())
+            : const Value.absent(),
       ),
     );
     final row = await (_db.select(

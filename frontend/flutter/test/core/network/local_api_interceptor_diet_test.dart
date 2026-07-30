@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
@@ -110,5 +113,129 @@ void main() {
     final today = await dio.get<Map<String, Object?>>('/diet/days/today');
     final entries = (today.data!['entries']! as List<Object?>);
     expect(entries.length, 2);
+  });
+
+  test('PUT /diet/entries persists edited foods and nutrition', () async {
+    await db
+        .into(db.dietEntries)
+        .insert(
+          DietEntriesCompanion.insert(
+            id: 'diet-edit',
+            date: DateTime.now().toIso8601String().substring(0, 10),
+            mealType: 'lunch',
+            timeLabel: '12:00',
+            foodsJson: jsonEncode(<Map<String, Object?>>[
+              <String, Object?>{
+                'name': '기존 음식',
+                'calories': 100,
+                'sodium_mg': 100,
+                'sugar_g': 1,
+                'carbs_g': 10,
+                'protein_g': 2,
+                'fat_g': 1,
+              },
+            ]),
+            totalCalories: 100,
+            sodiumMg: const Value(100),
+            sugarG: const Value(1),
+          ),
+        );
+    final editedFoods = <Map<String, Object?>>[
+      <String, Object?>{
+        'name': '현미밥',
+        'calories': 220,
+        'sodium_mg': 5,
+        'sugar_g': 0,
+        'carbs_g': 46.0,
+        'protein_g': 5.0,
+        'fat_g': 1.8,
+      },
+      <String, Object?>{
+        'name': '닭가슴살',
+        'calories': 165,
+        'sodium_mg': 74,
+        'sugar_g': 0,
+        'carbs_g': 0.0,
+        'protein_g': 31.0,
+        'fat_g': 3.6,
+      },
+    ];
+
+    final updated = await dio.put<Map<String, Object?>>(
+      '/diet/entries/diet-edit',
+      data: <String, Object?>{
+        'foods': editedFoods,
+        'total_calories': 385,
+        'sodium_mg': 79,
+        'sugar_g': 0,
+      },
+    );
+
+    expect(updated.data!['foods'], editedFoods);
+    expect(updated.data!['total_calories'], 385);
+    expect(updated.data!['sodium_mg'], 79);
+    expect(updated.data!['sugar_g'], 0);
+    expect(updated.data!['carbs_g'], 46.0);
+    expect(updated.data!['protein_g'], 36.0);
+    expect(updated.data!['fat_g'], closeTo(5.4, 0.001));
+
+    final today = await dio.get<Map<String, Object?>>('/diet/days/today');
+    final entries = (today.data!['entries']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    final persisted = entries.singleWhere(
+      (Map<String, Object?> entry) => entry['id'] == 'diet-edit',
+    );
+    expect(persisted['foods'], editedFoods);
+    expect(persisted['total_calories'], 385);
+    expect(persisted['sodium_mg'], 79);
+    expect(persisted['sugar_g'], 0);
+    expect(persisted['carbs_g'], 46.0);
+    expect(persisted['protein_g'], 36.0);
+    expect(persisted['fat_g'], closeTo(5.4, 0.001));
+
+    final mealOnly = await dio.put<Map<String, Object?>>(
+      '/diet/entries/diet-edit',
+      data: <String, Object?>{'meal_type': 'dinner'},
+    );
+    expect(mealOnly.data!['meal_type'], 'dinner');
+    expect(mealOnly.data!['foods'], editedFoods);
+    expect(mealOnly.data!['carbs_g'], 46.0);
+    expect(mealOnly.data!['protein_g'], 36.0);
+    expect(mealOnly.data!['fat_g'], closeTo(5.4, 0.001));
+  });
+
+  test('PUT /diet/entries rejects an invalid foods value', () async {
+    await db
+        .into(db.dietEntries)
+        .insert(
+          DietEntriesCompanion.insert(
+            id: 'diet-invalid-foods',
+            date: DateTime.now().toIso8601String().substring(0, 10),
+            mealType: 'lunch',
+            timeLabel: '12:00',
+            foodsJson: jsonEncode(<Map<String, Object?>>[
+              <String, Object?>{'name': '기존 음식', 'calories': 100},
+            ]),
+            totalCalories: 100,
+          ),
+        );
+
+    final response = await dio.put<Map<String, Object?>>(
+      '/diet/entries/diet-invalid-foods',
+      data: <String, Object?>{'foods': 'not-a-list', 'total_calories': 999},
+      options: Options(validateStatus: (_) => true),
+    );
+
+    expect(response.statusCode, 400);
+    final row = await (db.select(
+      db.dietEntries,
+    )..where((table) => table.id.equals('diet-invalid-foods'))).getSingle();
+    expect(
+      row.foodsJson,
+      jsonEncode(<Map<String, Object?>>[
+        <String, Object?>{'name': '기존 음식', 'calories': 100},
+      ]),
+    );
+    expect(row.totalCalories, 100);
   });
 }

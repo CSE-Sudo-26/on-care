@@ -91,19 +91,36 @@ class DioDietRepository implements DietRepository {
       },
     );
     final returned = DietEntry.fromJson(res.data!);
+    final updatedFoods = foods ?? returned.foods;
+    final editedMacros = foods == null
+        ? null
+        : (
+            carbsG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.carbsG,
+            ),
+            proteinG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.proteinG,
+            ),
+            fatG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.fatG,
+            ),
+          );
     final updated = DietEntry(
       id: returned.id,
       mealType: mealType == null
           ? returned.mealType
           : MealType.values.byName(mealType),
       timeLabel: timeLabel ?? returned.timeLabel,
-      foods: foods ?? returned.foods,
+      foods: updatedFoods,
       totalCalories: totalCalories ?? returned.totalCalories,
       sodiumMg: sodiumMg ?? returned.sodiumMg,
       sugarG: sugarG ?? returned.sugarG,
-      carbsG: returned.carbsG,
-      proteinG: returned.proteinG,
-      fatG: returned.fatG,
+      carbsG: editedMacros?.carbsG ?? returned.carbsG,
+      proteinG: editedMacros?.proteinG ?? returned.proteinG,
+      fatG: editedMacros?.fatG ?? returned.fatG,
     );
     _entryOverrides[id] = updated;
     _entryOverrideUpdatedAt[id] = DateTime.now();
