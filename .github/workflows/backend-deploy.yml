@@ -1,7 +1,9 @@
 name: Backend Deploy (ECR + App Runner)
 
-# main의 Backend CI를 통과한 정확한 커밋 이미지만 ECR과 App Runner에 배포한다.
-# 필요한 GitHub Secrets:
+# 배포 job은 기본적으로 비활성화된다. 배포 플랫폼과 인프라가 준비된 뒤
+# Repository Variable BACKEND_DEPLOY_ENABLED=true를 설정하면 활성화된다.
+# 현재 구현은 AWS ECR + App Runner 전용이며 최종 플랫폼 결정 후 바뀔 수 있다.
+# AWS 사용 시 필요한 GitHub Secrets:
 #   AWS_DEPLOY_ROLE_ARN   OIDC로 assume할 IAM 역할 ARN
 #   APPRUNNER_SERVICE_ARN 배포 대상 App Runner 서비스 ARN
 on:
@@ -34,13 +36,14 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     if: >-
-      ${{ (github.event_name == 'workflow_run' &&
-           github.event.workflow_run.conclusion == 'success' &&
-           github.event.workflow_run.event == 'push' &&
-           github.event.workflow_run.head_branch == 'main' &&
-           github.event.workflow_run.head_repository.full_name == github.repository) ||
-          (github.event_name == 'workflow_dispatch' &&
-           github.ref == 'refs/heads/main') }}
+      ${{ vars.BACKEND_DEPLOY_ENABLED == 'true' &&
+          ((github.event_name == 'workflow_run' &&
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.event == 'push' &&
+            github.event.workflow_run.head_branch == 'main' &&
+            github.event.workflow_run.head_repository.full_name == github.repository) ||
+           (github.event_name == 'workflow_dispatch' &&
+            github.ref == 'refs/heads/main')) }}
     steps:
       - name: Resolve and verify deploy commit
         id: target
