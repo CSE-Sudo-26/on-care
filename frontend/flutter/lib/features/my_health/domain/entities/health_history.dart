@@ -169,7 +169,10 @@ class MyHealthState {
   final RiskAlert risk;
   final List<IndicatorTrend> indicators;
   final int activityPoints;
-  final int activityRank;
+  // 백엔드 계약상 nullable(schemas/user.py: activity_rank: Optional[int]).
+  // 온보딩만 마친 일반 사용자는 순위가 아직 없어 null 로 온다 — 강제 언랩하면
+  // My Health 화면 전체가 파싱 오류가 되므로 null 을 그대로 수용한다(UI 는 배지 숨김).
+  final int? activityRank;
   final List<SettingsItem> settings;
 
   factory MyHealthState.fromJson(Map<String, Object?> json) => MyHealthState(
@@ -180,7 +183,7 @@ class MyHealthState {
         .map(IndicatorTrend.fromJson)
         .toList(),
     activityPoints: (json['activity_points']! as num).toInt(),
-    activityRank: (json['activity_rank']! as num).toInt(),
+    activityRank: (json['activity_rank'] as num?)?.toInt(),
     settings: (json['settings']! as List<Object?>)
         .cast<Map<String, Object?>>()
         .map(SettingsItem.fromJson)
