@@ -14,7 +14,6 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/content_frame.dart';
@@ -46,8 +45,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   final Set<String> _expanded = <String>{};
   final Set<String> _sent = <String>{};
-  // Sends whose chat write is still in flight (blocks re-entry).
-  final Set<String> _sending = <String>{};
   // 단일 플래시: 연속 전송 시 직전 카드의 확인 플래시는 새 플래시로
   // 대체된다(의도된 단순화 — 전송 결과는 '전송됨' 칩으로 남는다).
   String? _flash;
@@ -66,36 +63,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     });
   }
 
-  Future<void> _send(ScheduleSession s) async {
-    if (_sent.contains(s.id) || _sending.contains(s.id)) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // Persist a trace in the client's 채팅 thread (when the client is
-    // registered) so the send shows up outside this tab. AWAIT it —
-    // unawaited() showed '전송됨' even when the insert failed and
-    // swallowed the error (review PR 239).
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    final match = clients.where((c) => c.name == s.clientName);
-    if (match.isNotEmpty && s.program.isNotEmpty) {
-      setState(() => _sending.add(s.id));
-      try {
-        await ref
-            .read(chatRepositoryProvider)
-            .sendTrainerMessage(
-              clientId: match.first.id,
-              text: '📤 오늘 PT 프로그램을 보냈어요 · ${s.program.length}개 운동',
-            );
-      } catch (_) {
-        if (!mounted) return;
-        setState(() => _sending.remove(s.id));
-        messenger.showSnackBar(
-          const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
-        );
-        return;
-      }
-      if (!mounted) return;
-    }
+  void _send(ScheduleSession s) {
+    if (_sent.contains(s.id)) return;
     setState(() {
-      _sending.remove(s.id);
       _sent.add(s.id);
       _flash = s.id;
     });

@@ -315,14 +315,47 @@ void main() {
     ) async {
       await openTab(tester);
 
-      expect(find.text('AI에게 루틴 옵션 요청하기'), findsOneWidget);
-      await tester.tap(find.text('AI에게 루틴 옵션 요청하기'));
+      expect(find.text('AI에게 맞춤 루틴 요청하기'), findsOneWidget);
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
       await tester.pumpAndSettle();
 
       expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
       expect(find.text('추천 목록으로'), findsOneWidget);
       // The persistent shell proves this was not opened as a dialog/page.
       expect(find.text('AI루틴'), findsOneWidget);
+    });
+
+    testWidgets('reviewed AI option remains in the recommendation list', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('추천 목록으로'));
+      await tester.pump();
+      await tester.tap(find.text('추천 목록으로'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('저강도 걷기'), findsOneWidget);
+      expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
     });
 
     testWidgets('switching client updates the verdict and suggestions', (
@@ -475,7 +508,7 @@ void main() {
       expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
     });
 
-    testWidgets('homework send leaves a trace in the client chat', (
+    testWidgets('homework send does not create a trainer chat bubble', (
       tester,
     ) async {
       await openTab(tester);
@@ -489,13 +522,15 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
 
-      // The 고객 tab's chat thread now shows the homework message.
+      // Routine delivery is shown in the member's routine feed, not as a
+      // trainer-authored blue chat bubble.
       await tester.tap(find.text('고객'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsOneWidget);
+      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsNothing);
     });
 
     testWidgets('내일 chip registers the routine on the next day', (
@@ -640,7 +675,7 @@ void main() {
       expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
     });
 
-    testWidgets('a failed chat write does not show the send confirmation', (
+    testWidgets('homework delivery does not depend on the chat repository', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -665,11 +700,8 @@ void main() {
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
 
-      // The homework write failed — no success flash, and the button is
-      // still actionable (review PR 239).
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsNothing);
-      expect(find.textContaining('검토 완료'), findsOneWidget);
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
     });
 
     testWidgets('A → B → A cannot double-register while A is still saving', (

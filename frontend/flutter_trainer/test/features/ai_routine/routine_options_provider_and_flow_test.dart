@@ -9,9 +9,7 @@ import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_rou
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_options_flow.dart';
-import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -48,31 +46,6 @@ class _CapturingRoutineRepository implements TrainerRoutineRepository {
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
       Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
-}
-
-class _CapturingChatRepository implements ChatRepository {
-  String? clientId;
-  String? text;
-
-  @override
-  Future<void> markThreadRead(String clientId) async {}
-
-  @override
-  Future<void> sendTrainerMessage({
-    required String clientId,
-    required String text,
-  }) async {
-    this.clientId = clientId;
-    this.text = text;
-  }
-
-  @override
-  Stream<List<ClientChatMessage>> watchThread(String clientId) =>
-      Stream<List<ClientChatMessage>>.value(const <ClientChatMessage>[]);
-
-  @override
-  Stream<Map<String, int>> watchUnreadCounts() =>
-      Stream<Map<String, int>>.value(const <String, int>{});
 }
 
 void main() {
@@ -115,21 +88,21 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final assigned = _CapturingRoutineRepository();
-    final chat = _CapturingChatRepository();
+    List<RoutineExercise>? reviewed;
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(_mockConfig),
           trainerRoutineRepositoryProvider.overrideWithValue(assigned),
-          chatRepositoryProvider.overrideWithValue(chat),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           home: AiRoutineOptionsFlow(
             client: _client,
             recommendedExercises: <RoutineExercise>[
               RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
             ],
             recommendedReason: '기존 회원 데이터 기반 추천',
+            onReviewCompleted: (exercises) => reviewed = exercises,
           ),
         ),
       ),
@@ -162,18 +135,41 @@ void main() {
       find.byKey(const ValueKey<String>('routine-options-horizontal-scroll')),
       findsOneWidget,
     );
-    expect(find.textContaining('A안 · 회복·지속 중심'), findsOneWidget);
-    expect(find.textContaining('B안 · 강도·운동량 중심'), findsOneWidget);
-    expect(find.textContaining('추천안 · 기존 AI 추천'), findsOneWidget);
+    expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
+    expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
+    expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
+    final optionHeights = <String>['A', 'B', '추천']
+        .map(
+          (key) => tester
+              .getSize(find.byKey(ValueKey<String>('routine-option-$key')))
+              .height,
+        )
+        .toSet();
+    expect(optionHeights, hasLength(1));
 
     // Select B and edit its first exercise in the common inline editor.
     await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
-    await tester.tap(
-      find.byKey(const ValueKey<String>('routine-minute-0-20')),
-    );
+    await tester.tap(find.byKey(const ValueKey<String>('routine-minute-0-20')));
     await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('complete-routine-review')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('complete-routine-review')),
+    );
+    await tester.pumpAndSettle();
+    expect(reviewed, isNotNull);
+    expect(reviewed!.first.name, '인터벌 걷기');
+    expect(
+      find.byKey(const ValueKey<String>('reviewed-routine-list')),
+      findsOneWidget,
+    );
+
+    expect(assigned.memberId, isNull);
+    expect(assigned.assigned, isNull);
 
     await tester.ensureVisible(
       find.byKey(const ValueKey<String>('send-selected-routine')),
@@ -185,12 +181,10 @@ void main() {
 
     expect(assigned.memberId, 'm1');
     expect(assigned.assigned, isNotNull);
-    expect(assigned.assigned!.name, 'AI 맞춤 루틴 (B안)');
+    expect(assigned.assigned!.name, 'AI 맞춤 루틴 (강화안)');
     expect(assigned.assigned!.minutes, 35);
     expect(assigned.assigned!.reason, contains('무릎 충격 주의'));
     expect(assigned.assigned!.reason, contains('인터벌 걷기 20분'));
-    expect(chat.clientId, 'm1');
-    expect(chat.text, contains('무릎 충격 주의'));
     expect(
       find.byKey(const ValueKey<String>('routine-sent-confirmation')),
       findsOneWidget,

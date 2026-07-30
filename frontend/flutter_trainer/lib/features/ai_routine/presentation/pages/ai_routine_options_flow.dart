@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -13,7 +12,6 @@ import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_rou
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 /// Conversation-style AI routine builder.
 ///
@@ -26,6 +24,7 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
     this.embedded = false,
     this.recommendedExercises = const <RoutineExercise>[],
     this.recommendedReason = '',
+    this.onReviewCompleted,
     super.key,
   });
 
@@ -33,6 +32,7 @@ class AiRoutineOptionsFlow extends ConsumerStatefulWidget {
   final bool embedded;
   final List<RoutineExercise> recommendedExercises;
   final String recommendedReason;
+  final ValueChanged<List<RoutineExercise>>? onReviewCompleted;
 
   @override
   ConsumerState<AiRoutineOptionsFlow> createState() =>
@@ -54,6 +54,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   bool _showAddExercise = false;
   bool _sent = false;
   RoutineOptions? _options;
+  int _stage = 0;
+  int _maxReachedStage = 0;
   String _selectedKey = 'A';
   List<RoutineExercise> _edited = <RoutineExercise>[];
 
@@ -96,6 +98,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   _RoutineChoice get _selectedChoice =>
       _choices.firstWhere((choice) => choice.key == _selectedKey);
 
+  String _optionDisplayName(String key) => switch (key) {
+    'A' => '회복안',
+    'B' => '강화안',
+    _ => '기존안',
+  };
+
   Future<void> _generate() async {
     if (_generating) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -118,6 +126,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _selectedKey = 'A';
         _edited = List<RoutineExercise>.of(options.planA.exercises);
         _showAddExercise = false;
+        _stage = 1;
+        _maxReachedStage = 1;
       });
     } catch (_) {
       if (!mounted) return;
@@ -156,6 +166,29 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     });
   }
 
+  void _completeReview() {
+    if (_edited.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('운동을 하나 이상 남겨 주세요')));
+      return;
+    }
+    setState(() {
+      _stage = 2;
+      _maxReachedStage = 2;
+      _showAddExercise = false;
+    });
+    widget.onReviewCompleted?.call(List<RoutineExercise>.unmodifiable(_edited));
+  }
+
+  void _goToStage(int stage) {
+    if (_sending || stage > _maxReachedStage || stage == _stage) return;
+    setState(() {
+      _stage = stage;
+      if (stage < 2) _sent = false;
+    });
+  }
+
   Future<void> _send() async {
     if (_sending || _sent) return;
     if (_edited.isEmpty) {
@@ -166,34 +199,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    final config = ref.read(appConfigProvider);
     final routine = _composeRoutine();
-    final chatText =
-        '📋 ${widget.client.name}님을 위한 ${routine.name}을 전송했어요 · '
-        '총 ${routine.minutes}분'
-        '${_trainerMemo.text.trim().isEmpty ? '' : ' · ${_trainerMemo.text.trim()}'}';
 
     setState(() => _sending = true);
     try {
       await ref
           .read(trainerRoutineRepositoryProvider)
           .assignRoutine(widget.client.id, routine);
-      if (config.useMockApi) {
-        // In demo mode the chat entry is the durable, visible delivery trace.
-        await ref
-            .read(chatRepositoryProvider)
-            .sendTrainerMessage(clientId: widget.client.id, text: chatText);
-      } else {
-        // The routine assignment is the real delivery. A chat summary is
-        // helpful but must not turn a successful assignment into a retry.
-        try {
-          await ref
-              .read(chatRepositoryProvider)
-              .sendTrainerMessage(clientId: widget.client.id, text: chatText);
-        } catch (_) {
-          // Assignment already succeeded.
-        }
-      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -228,7 +240,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         .join(', ');
     final memo = _trainerMemo.text.trim();
     final context = memo.isEmpty ? _selectedChoice.reason : memo;
-    final optionName = _selectedKey == '추천' ? '추천안' : '$_selectedKey안';
+    final optionName = _optionDisplayName(_selectedKey);
 
     return AssignedRoutine(
       id: '',
@@ -247,39 +259,45 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   @override
   Widget build(BuildContext context) {
     final content = <Widget>[
-      _assistantAnalysis(),
-      const SizedBox(height: AppSpacing.lg),
-      _directionControls(),
-      const SizedBox(height: AppSpacing.lg),
-      _primaryButton(
-        key: const ValueKey<String>('generate-routine-options'),
-        label: _generating
-            ? 'AI가 분석 중…'
-            : _options == null
-            ? 'A/B 루틴 생성'
-            : '조건을 반영해 다시 생성',
-        icon: Icons.auto_awesome,
-        busy: _generating,
-        onTap: _generate,
+      _ProgressStepper(
+        stage: _stage,
+        maxReachedStage: _maxReachedStage,
+        onStageTap: _goToStage,
       ),
-      if (_options != null) ...<Widget>[
-        const SizedBox(height: AppSpacing.xxl),
+      const SizedBox(height: AppSpacing.xl),
+      if (_stage == 0) ...<Widget>[
+        _assistantAnalysis(),
+        const SizedBox(height: AppSpacing.lg),
+        _directionControls(),
+        const SizedBox(height: AppSpacing.lg),
+        _primaryButton(
+          key: const ValueKey<String>('generate-routine-options'),
+          label: _generating ? 'AI가 분석 중…' : '맞춤 루틴 후보 생성',
+          icon: Icons.auto_awesome,
+          busy: _generating,
+          onTap: _generate,
+        ),
+      ] else if (_stage == 1) ...<Widget>[
         _generatedOptions(),
         const SizedBox(height: AppSpacing.xl),
         _routineEditor(),
         const SizedBox(height: AppSpacing.lg),
         _trainerMemoField(),
         const SizedBox(height: AppSpacing.xl),
-        if (!_sent)
-          _primaryButton(
-            key: const ValueKey<String>('send-selected-routine'),
-            label: _sending ? '전송 중…' : '회원에게 전송',
-            icon: Icons.send_rounded,
-            busy: _sending,
-            onTap: _send,
-          )
-        else
+        _primaryButton(
+          key: const ValueKey<String>('complete-routine-review'),
+          label: '검토 완료',
+          icon: Icons.fact_check_outlined,
+          onTap: _completeReview,
+        ),
+      ] else ...<Widget>[
+        _reviewedRoutineList(),
+        const SizedBox(height: AppSpacing.lg),
+        if (_sent) ...<Widget>[
           _sentConfirmation(),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        _reviewActions(),
       ],
       const SizedBox(height: AppSpacing.xxl),
     ];
@@ -411,7 +429,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const _AssistantLabel(text: '세 가지 방향 중 하나를 골라보세요'),
+        const _AssistantLabel(text: '맞춤 루틴 후보를 비교해 보세요'),
         const SizedBox(height: AppSpacing.xs),
         Text(
           '${options.analysis.goal} · 완료율 '
@@ -431,15 +449,17 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             controller: _optionScroll,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                for (final choice in _choices) ...<Widget>[
-                  SizedBox(width: 286, child: _optionCard(choice)),
-                  if (choice != _choices.last)
-                    const SizedBox(width: AppSpacing.md),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final choice in _choices) ...<Widget>[
+                    SizedBox(width: 286, child: _optionCard(choice)),
+                    if (choice != _choices.last)
+                      const SizedBox(width: AppSpacing.md),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -453,7 +473,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       0,
       (sum, exercise) => sum + exercise.minutes,
     );
-    final optionName = choice.key == '추천' ? '추천안' : '${choice.key}안';
+    final optionName = _optionDisplayName(choice.key);
     return Material(
       color: AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -539,7 +559,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _routineEditor() {
-    final optionName = _selectedKey == '추천' ? '추천안' : '$_selectedKey안';
+    final optionName = _optionDisplayName(_selectedKey);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -634,9 +654,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                         minutes: minutes,
                       );
                     }),
-                    key: ValueKey<String>(
-                      'routine-minute-$index-$minutes',
-                    ),
+                    key: ValueKey<String>('routine-minute-$index-$minutes'),
                   ),
                 )
                 .toList(),
@@ -736,6 +754,173 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
+  Widget _reviewedRoutineList() {
+    final optionName = _optionDisplayName(_selectedKey);
+    final memo = _trainerMemo.text.trim();
+    return Column(
+      key: const ValueKey<String>('reviewed-routine-list'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 20,
+              color: AppColors.success,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                '검토 완료 · AI 추천 루틴 ($optionName)',
+                style: _sectionTitleStyle,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        const Text(
+          '선택하고 수정한 내용이 최종 추천 목록에 반영됐어요.',
+          style: TextStyle(fontSize: 10, color: AppColors.mutedForeground),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (final exercise in _edited) ...<Widget>[
+          _surfaceCard(
+            child: Row(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 3,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentSurface,
+                    borderRadius: BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Text(
+                    exercise.type,
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    exercise.name,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${exercise.minutes}분',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        if (memo.isNotEmpty)
+          _surfaceCard(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 17,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '트레이너 메모',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        memo,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          height: 1.4,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _reviewActions() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final send = FilledButton.icon(
+          key: const ValueKey<String>('send-selected-routine'),
+          onPressed: _sending || _sent ? null : _send,
+          icon: _sending
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primaryForeground,
+                  ),
+                )
+              : Icon(_sent ? Icons.check : Icons.send_rounded, size: 17),
+          label: Text(
+            _sending
+                ? '전송 중…'
+                : _sent
+                ? '전송 완료'
+                : '고객에게 전송',
+          ),
+        );
+        final chat = OutlinedButton.icon(
+          key: const ValueKey<String>('open-client-chat'),
+          onPressed: _openClientChat,
+          icon: const Icon(Icons.chat_bubble_outline, size: 17),
+          label: const Text('채팅으로 이동'),
+        );
+        if (constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              SizedBox(height: 48, child: send),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: 48, child: chat),
+            ],
+          );
+        }
+        return Row(
+          children: <Widget>[
+            Expanded(child: SizedBox(height: 48, child: send)),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: SizedBox(height: 48, child: chat)),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _sentConfirmation() {
     return Container(
       key: const ValueKey<String>('routine-sent-confirmation'),
@@ -764,19 +949,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           ),
           const SizedBox(height: 4),
           const Text(
-            '채팅에서 전송 기록을 확인하고 바로 안내할 수 있어요.',
+            '아래 버튼에서 고객 채팅으로 이동해 바로 안내할 수 있어요.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              key: const ValueKey<String>('open-client-chat'),
-              onPressed: _openClientChat,
-              icon: const Icon(Icons.chat_bubble_outline, size: 17),
-              label: Text('${widget.client.name}님 채팅으로 이동'),
-            ),
           ),
         ],
       ),
@@ -928,6 +1103,123 @@ class _RoutineChoice {
   final String intensity;
   final List<RoutineExercise> exercises;
   final String reason;
+}
+
+class _ProgressStepper extends StatelessWidget {
+  const _ProgressStepper({
+    required this.stage,
+    required this.maxReachedStage,
+    required this.onStageTap,
+  });
+
+  final int stage;
+  final int maxReachedStage;
+  final ValueChanged<int> onStageTap;
+
+  static const List<(String, String)> _steps = <(String, String)>[
+    ('1', '조건 설정'),
+    ('2', '후보 검토'),
+    ('3', '추천 완료'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '맞춤 루틴 생성 진행 단계',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (var index = 0; index < _steps.length; index++) ...<Widget>[
+            Expanded(
+              child: InkWell(
+                key: ValueKey<String>('routine-stage-$index'),
+                onTap: index <= maxReachedStage
+                    ? () => onStageTap(index)
+                    : null,
+                borderRadius: const BorderRadius.all(AppRadius.md),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          if (index > 0)
+                            Expanded(
+                              child: Container(
+                                height: 2,
+                                color: index <= maxReachedStage
+                                    ? AppColors.accent
+                                    : AppColors.borderStrong,
+                              ),
+                            ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: index <= maxReachedStage
+                                  ? AppColors.accent
+                                  : AppColors.inputBackground,
+                              border: Border.all(
+                                color: index == stage
+                                    ? AppColors.primary
+                                    : AppColors.borderStrong,
+                                width: index == stage ? 2 : 1,
+                              ),
+                            ),
+                            child: index < stage
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: AppColors.accentForeground,
+                                  )
+                                : Text(
+                                    _steps[index].$1,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: index <= maxReachedStage
+                                          ? AppColors.accentForeground
+                                          : AppColors.mutedForeground,
+                                    ),
+                                  ),
+                          ),
+                          if (index < _steps.length - 1)
+                            Expanded(
+                              child: Container(
+                                height: 2,
+                                color: index < maxReachedStage
+                                    ? AppColors.accent
+                                    : AppColors.borderStrong,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        _steps[index].$2,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: index == stage
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: index <= maxReachedStage
+                              ? AppColors.foreground
+                              : AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _AssistantLabel extends StatelessWidget {

@@ -452,7 +452,7 @@ void main() {
       expect(find.text('신규 회원'), findsNothing);
     });
 
-    testWidgets('program send leaves a trace in the client chat', (
+    testWidgets('program send does not create a trainer chat bubble', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -467,13 +467,15 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
       await settle(tester);
+      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
 
-      // The 고객 tab's chat thread shows the send trace.
+      // Program status stays in the schedule UI rather than appearing as a
+      // trainer-authored blue chat bubble.
       await tester.tap(find.text('고객'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsOneWidget);
+      expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsNothing);
     });
 
     testWidgets('✓ 완료 marks the session done and shows in 운동기록', (
@@ -671,7 +673,7 @@ void main() {
       expect(duration, 30);
     });
 
-    testWidgets('a failed chat write does not mark the program as sent', (
+    testWidgets('program status does not depend on the chat repository', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -697,11 +699,8 @@ void main() {
       await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
       await settle(tester);
 
-      // The write failed, so the UI must NOT claim success — the button
-      // stays actionable and an error is surfaced (review PR 239).
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-      expect(find.text('✓ 김민수님에게 전송됨'), findsNothing);
-      expect(find.textContaining('오늘 PT 프로그램 전송'), findsOneWidget);
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
     });
 
     testWidgets('a failed save shows a snackbar and keeps the sheet open', (

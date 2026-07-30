@@ -62,6 +62,8 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   final Set<String> _removed = <String>{};
   String? _editingNameId;
   final List<_CustomExercise> _custom = <_CustomExercise>[];
+  final Map<String, List<AiRoutineItem>> _generatedRecommendations =
+      <String, List<AiRoutineItem>>{};
   bool _showAddForm = false;
   bool _showOptionsFlow = false;
   bool _sent = false;
@@ -124,10 +126,6 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
         .fold<int>(0, (sum, i) => sum + (_minuteEdits[i.id] ?? i.minutes));
     final custom = _custom.fold<int>(0, (sum, c) => sum + c.minutes);
 
-    // AWAIT the chat write before claiming success — firing it off with
-    // unawaited() showed '전송 완료' even when the insert failed, and
-    // swallowed the error (review PR 239).
-    //
     // Capture who this send is for: the trainer can switch clients while
     // it saves, and the '전송 완료' flash + edit-reset timer must land on
     // the starting client, not whoever is on screen when it resolves
@@ -508,6 +506,20 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                 recommendedReason: items.isEmpty
                     ? ''
                     : items.map((item) => item.reason).join(' · '),
+                onReviewCompleted: (exercises) {
+                  setState(() {
+                    _generatedRecommendations[client.id] = <AiRoutineItem>[
+                      for (var index = 0; index < exercises.length; index++)
+                        AiRoutineItem(
+                          id: 'generated-${client.id}-$index',
+                          name: exercises[index].name,
+                          minutes: exercises[index].minutes,
+                          type: exercises[index].type,
+                          reason: 'AI 생성 후 트레이너 검토 완료',
+                        ),
+                    ];
+                  });
+                },
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -517,7 +529,8 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                     onTap: () => setState(() => _showOptionsFlow = true),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  for (final item in items)
+                  for (final item
+                      in _generatedRecommendations[client.id] ?? items)
                     if (!_removed.contains(item.id)) ...<Widget>[
                       _RoutineCard(
                         name: _nameEdits[item.id] ?? item.name,
@@ -575,10 +588,13 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                   // 스케줄 탭 picks up live).
                   _SendButton(
                     clientName: client.name,
-                    // Disabled while the chat write is in flight so a second
-                    // tap can't queue a duplicate message.
+                    // Disabled while routine delivery is in flight so a
+                    // second tap cannot create a duplicate assignment.
                     sent: _sent || _sending,
-                    onSend: () => _send(client, items),
+                    onSend: () => _send(
+                      client,
+                      _generatedRecommendations[client.id] ?? items,
+                    ),
                   ),
                   if (_sent)
                     const Padding(
@@ -626,7 +642,10 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                     label: _registered
                         ? '${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
                         : '${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
-                    onTap: () => _registerToSchedule(client, items),
+                    onTap: () => _registerToSchedule(
+                      client,
+                      _generatedRecommendations[client.id] ?? items,
+                    ),
                   ),
                   if (_registered)
                     Padding(
@@ -803,7 +822,7 @@ class _DietSummaryCard extends StatelessWidget {
   }
 }
 
-/// Full-width, conversation-style entry to the inline A/B assistant.
+/// Full-width, conversation-style entry to the inline routine assistant.
 ///
 /// This deliberately reads like a suggested AI prompt instead of a tiny
 /// utility chip: the trainer can understand what will happen before opening
@@ -845,7 +864,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const Text(
-                      'AI에게 루틴 옵션 요청하기',
+                      'AI에게 맞춤 루틴 요청하기',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -854,7 +873,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$clientName님의 데이터를 분석해 A/B 옵션을 만들고 '
+                      '$clientName님의 데이터를 분석해 회복형·강화형 후보를 만들고 '
                       '이 화면에서 비교·수정할 수 있어요.',
                       style: const TextStyle(
                         fontSize: 10.5,
