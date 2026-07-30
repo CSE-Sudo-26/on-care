@@ -3,51 +3,78 @@ import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_optio
 /// `RoutineOptionsOut` JSON → [RoutineOptions]. Kept separate from the Dio
 /// repository so the DTO ↔ domain mapping is unit-testable.
 RoutineOptions routineOptionsFromJson(Map<String, Object?> json) {
-  return RoutineOptions(
+  final options = RoutineOptions(
     analysis: _analysis(json['analysis']),
     planA: _plan(json['plan_a']),
     planB: _plan(json['plan_b']),
-    generatedBy: _str(json['generated_by']),
+    generatedBy: _requiredString(json, 'generated_by'),
   );
+  if (options.planA.key != 'A' || options.planB.key != 'B') {
+    throw const FormatException('routine-options must contain A and B plans.');
+  }
+  if (options.generatedBy != 'ai' && options.generatedBy != 'rule') {
+    throw const FormatException('Invalid routine-options generator.');
+  }
+  return options;
 }
 
 MemberAnalysis _analysis(Object? v) {
-  final m = v is Map<String, Object?> ? v : const <String, Object?>{};
+  final m = _requiredMap(v, 'analysis');
   return MemberAnalysis(
-    goal: _str(m['goal']),
-    sodiumTodayMg: _int(m['sodium_today_mg']),
-    sodiumOverTarget: m['sodium_over_target'] == true,
-    avgCompletionRate: _int(m['avg_completion_rate']),
-    latestRoutine: _str(m['latest_routine']),
-    note: _str(m['note']),
+    goal: _requiredString(m, 'goal'),
+    sodiumTodayMg: _requiredInt(m, 'sodium_today_mg'),
+    sodiumOverTarget: _requiredBool(m, 'sodium_over_target'),
+    avgCompletionRate: _requiredInt(m, 'avg_completion_rate'),
+    latestRoutine: _requiredString(m, 'latest_routine'),
+    note: _requiredString(m, 'note'),
   );
 }
 
 RoutinePlan _plan(Object? v) {
-  final m = v is Map<String, Object?> ? v : const <String, Object?>{};
+  final m = _requiredMap(v, 'plan');
   final ex = m['exercises'];
+  if (ex is! List) {
+    throw const FormatException('Invalid routine plan exercises.');
+  }
   return RoutinePlan(
-    key: _str(m['key']),
-    label: _str(m['label']),
-    totalMinutes: _int(m['total_minutes']),
-    intensity: _str(m['intensity']),
-    exercises: ex is List
-        ? ex
-            .whereType<Map<String, Object?>>()
-            .map(
-              (e) => RoutineExercise(
-                name: _str(e['name']),
-                minutes: _int(e['minutes']),
-                type: _str(e['type']),
-              ),
-            )
-            .toList(growable: false)
-        : const <RoutineExercise>[],
-    reason: _str(m['reason']),
-    rationale: _str(m['rationale']),
+    key: _requiredString(m, 'key'),
+    label: _requiredString(m, 'label'),
+    totalMinutes: _requiredInt(m, 'total_minutes'),
+    intensity: _requiredString(m, 'intensity'),
+    exercises: ex
+        .map((item) {
+          final exercise = _requiredMap(item, 'exercise');
+          return RoutineExercise(
+            name: _requiredString(exercise, 'name'),
+            minutes: _requiredInt(exercise, 'minutes'),
+            type: _requiredString(exercise, 'type'),
+          );
+        })
+        .toList(growable: false),
+    reason: _requiredString(m, 'reason'),
+    rationale: _requiredString(m, 'rationale'),
   );
 }
 
-String _str(Object? v) => v is String ? v : '';
+Map<String, Object?> _requiredMap(Object? value, String field) {
+  if (value is Map<String, Object?>) return value;
+  throw FormatException('Invalid routine-options $field.');
+}
 
-int _int(Object? v) => v is num ? v.toInt() : 0;
+String _requiredString(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is String) return value;
+  throw FormatException('Invalid routine-options $field.');
+}
+
+int _requiredInt(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is num) return value.toInt();
+  throw FormatException('Invalid routine-options $field.');
+}
+
+bool _requiredBool(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is bool) return value;
+  throw FormatException('Invalid routine-options $field.');
+}

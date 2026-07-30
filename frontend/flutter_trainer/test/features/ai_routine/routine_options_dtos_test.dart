@@ -49,10 +49,41 @@ void main() {
     expect(o.generatedBy, 'rule');
   });
 
-  test('tolerates missing/invalid fields', () {
-    final o = routineOptionsFromJson(<String, Object?>{});
-    expect(o.analysis.goal, '');
-    expect(o.planA.exercises, isEmpty);
-    expect(o.generatedBy, '');
+  test('rejects missing fields and invalid A/B keys', () {
+    expect(
+      () => routineOptionsFromJson(<String, Object?>{}),
+      throwsFormatException,
+    );
+
+    final invalid = <String, Object?>{
+      'analysis': <String, Object?>{
+        'goal': '',
+        'sodium_today_mg': 0,
+        'sodium_over_target': false,
+        'avg_completion_rate': 0,
+        'latest_routine': '',
+        'note': '',
+      },
+      'plan_a': <String, Object?>{
+        'key': 'B',
+        'label': '',
+        'total_minutes': 0,
+        'intensity': '',
+        'exercises': <Object?>[],
+        'reason': '',
+        'rationale': '',
+      },
+      'plan_b': <String, Object?>{
+        'key': 'A',
+        'label': '',
+        'total_minutes': 0,
+        'intensity': '',
+        'exercises': <Object?>[],
+        'reason': '',
+        'rationale': '',
+      },
+      'generated_by': 'rule',
+    };
+    expect(() => routineOptionsFromJson(invalid), throwsFormatException);
   });
 }

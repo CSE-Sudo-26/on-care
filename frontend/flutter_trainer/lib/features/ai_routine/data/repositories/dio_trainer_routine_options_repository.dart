@@ -20,9 +20,10 @@ class DioTrainerRoutineOptionsRepository
     required String intensityPreference,
     required String trainerNote,
   }) async {
+    final encodedId = Uri.encodeComponent(memberId);
     try {
       final res = await _dio.post<Map<String, Object?>>(
-        '/trainer/clients/$memberId/routine-options',
+        '/trainer/clients/$encodedId/routine-options',
         data: <String, Object?>{
           'available_minutes': availableMinutes,
           'intensity_preference': intensityPreference,

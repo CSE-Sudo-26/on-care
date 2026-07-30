@@ -89,9 +89,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   Future<void> _send() async {
     if (_sending) return;
     if (_edited.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('운동을 하나 이상 남겨 주세요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('운동을 하나 이상 남겨 주세요')));
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
@@ -131,12 +131,19 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       }
     });
     final comment = _comment.text.trim();
+    final exerciseSummary = _edited
+        .map((e) => '${e.name} ${e.minutes}분')
+        .join(', ');
+    final context = comment.isEmpty ? _selectedPlan.reason : comment;
     return AssignedRoutine(
       id: '',
       name: 'AI 맞춤 루틴 ($_selectedKey안)',
       minutes: total,
       type: type,
-      reason: comment.isEmpty ? _selectedPlan.reason : comment,
+      // RoutineAssignRequest is a summary record rather than a structured
+      // program. Preserve the trainer's actual edits in the member-visible
+      // reason instead of discarding every exercise on send.
+      reason: '$exerciseSummary · $context',
       source: 'ai',
     );
   }
@@ -202,8 +209,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               Wrap(
                 spacing: AppSpacing.sm,
                 children: <int>[20, 30, 45, 60]
-                    .map((m) => _choiceChip('$m분', _minutes == m,
-                        () => setState(() => _minutes = m)))
+                    .map(
+                      (m) => _choiceChip(
+                        '$m분',
+                        _minutes == m,
+                        () => setState(() => _minutes = m),
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -211,14 +223,20 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.sm,
-                children: <(String, String)>[
-                  ('낮음', 'low'),
-                  ('보통', 'moderate'),
-                  ('높음', 'high'),
-                ]
-                    .map((e) => _choiceChip(e.$1, _intensity == e.$2,
-                        () => setState(() => _intensity = e.$2)))
-                    .toList(),
+                children:
+                    <(String, String)>[
+                          ('낮음', 'low'),
+                          ('보통', 'moderate'),
+                          ('높음', 'high'),
+                        ]
+                        .map(
+                          (e) => _choiceChip(
+                            e.$1,
+                            _intensity == e.$2,
+                            () => setState(() => _intensity = e.$2),
+                          ),
+                        )
+                        .toList(),
               ),
               const SizedBox(height: AppSpacing.lg),
               const Text('주의사항 (선택)', style: _labelStyle),
@@ -311,18 +329,22 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                       ? Icons.radio_button_checked
                       : Icons.radio_button_unchecked,
                   size: 18,
-                  color: selected ? AppColors.accent : AppColors.mutedForeground,
+                  color: selected
+                      ? AppColors.accent
+                      : AppColors.mutedForeground,
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Text(
-                  '${plan.key}안 · ${plan.label}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.foreground,
+                Expanded(
+                  child: Text(
+                    '${plan.key}안 · ${plan.label}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.foreground,
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: AppSpacing.sm),
                 Text(
                   '총 ${plan.totalMinutes}분 · 강도 ${plan.intensity}',
                   style: const TextStyle(
@@ -397,15 +419,56 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: Text(
-                    '${_edited[i].name} · ${_edited[i].minutes}분 (${_edited[i].type})',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.foreground,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${_edited[i].name} (${_edited[i].type})',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_edited[i].minutes}분',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
+                  key: ValueKey<String>('routine-minute-minus-$i'),
+                  tooltip: '5분 줄이기',
+                  icon: const Icon(Icons.remove_circle_outline, size: 18),
+                  color: AppColors.mutedForeground,
+                  onPressed: _edited[i].minutes <= 5
+                      ? null
+                      : () => setState(() {
+                          _edited[i] = _edited[i].copyWith(
+                            minutes: _edited[i].minutes - 5,
+                          );
+                        }),
+                ),
+                IconButton(
+                  key: ValueKey<String>('routine-minute-plus-$i'),
+                  tooltip: '5분 늘리기',
+                  icon: const Icon(Icons.add_circle_outline, size: 18),
+                  color: AppColors.accent,
+                  onPressed: _edited[i].minutes >= 180
+                      ? null
+                      : () => setState(() {
+                          _edited[i] = _edited[i].copyWith(
+                            minutes: _edited[i].minutes + 5,
+                          );
+                        }),
+                ),
+                IconButton(
+                  tooltip: '운동 삭제',
                   icon: const Icon(Icons.close, size: 18),
                   color: AppColors.mutedForeground,
                   onPressed: () => setState(() => _edited.removeAt(i)),
@@ -440,29 +503,29 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   // ---- shared bits -------------------------------------------------------
 
   Widget _card({required String title, required Widget child}) => Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: const BorderRadius.all(AppRadius.card),
-          border: Border.all(color: AppColors.borderStrong),
-          boxShadow: kCardShadow,
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: const BorderRadius.all(AppRadius.card),
+      border: Border.all(color: AppColors.borderStrong),
+      boxShadow: kCardShadow,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.foreground,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.foreground,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            child,
-          ],
-        ),
-      );
+        const SizedBox(height: AppSpacing.md),
+        child,
+      ],
+    ),
+  );
 
   Widget _analysisRow(String label, String value, {bool warn = false}) =>
       Padding(
@@ -470,10 +533,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SizedBox(
-              width: 78,
-              child: Text(label, style: _labelStyle),
-            ),
+            SizedBox(width: 78, child: Text(label, style: _labelStyle)),
             Expanded(
               child: Text(
                 value,
@@ -488,7 +548,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         ),
       );
 
-  Widget _choiceChip(String label, bool on, VoidCallback onTap) => GestureDetector(
+  Widget _choiceChip(String label, bool on, VoidCallback onTap) =>
+      GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -504,7 +565,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: on ? AppColors.accentForeground : AppColors.mutedForeground,
+              color: on
+                  ? AppColors.accentForeground
+                  : AppColors.mutedForeground,
             ),
           ),
         ),
@@ -514,27 +577,26 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     required String label,
     required VoidCallback onTap,
     bool busy = false,
-  }) =>
-      Material(
-        color: busy ? AppColors.disabledForeground : AppColors.primary,
-        borderRadius: const BorderRadius.all(AppRadius.lg),
-        child: InkWell(
-          onTap: busy ? null : onTap,
-          borderRadius: const BorderRadius.all(AppRadius.lg),
-          child: Container(
-            height: 48,
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryForeground,
-              ),
-            ),
+  }) => Material(
+    color: busy ? AppColors.disabledForeground : AppColors.primary,
+    borderRadius: const BorderRadius.all(AppRadius.lg),
+    child: InkWell(
+      onTap: busy ? null : onTap,
+      borderRadius: const BorderRadius.all(AppRadius.lg),
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppColors.primaryForeground,
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 const TextStyle _labelStyle = TextStyle(
@@ -564,7 +626,9 @@ class _StepHeader extends StatelessWidget {
                 height: 30,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: i <= step ? AppColors.accent : AppColors.inputBackground,
+                  color: i <= step
+                      ? AppColors.accent
+                      : AppColors.inputBackground,
                   borderRadius: const BorderRadius.all(AppRadius.pill),
                 ),
                 child: Text(
