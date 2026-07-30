@@ -6,7 +6,16 @@ import json
 import pytest
 from sqlalchemy import delete
 
-from app.api.v1.dashboard import _build_sodium_warning, _rank_sodium_sources
+from app.api.v1.dashboard import (
+    _build_sodium_warning, _rank_sodium_sources, _score_for,
+)
+
+
+def test_score_for_combines_sodium_and_exercise():
+    assert _score_for(True, 200) == 100   # 50 + 20(나트륨) + 30(운동 150+)
+    assert _score_for(True, 100) == 85    # 50 + 20 + 15(운동 1~149)
+    assert _score_for(True, 0) == 70      # 50 + 20
+    assert _score_for(False, 0) == 50     # 기본만
 
 
 @pytest.mark.parametrize(
@@ -118,3 +127,14 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
     assert isinstance(body["exercise_minutes"], int)
     assert isinstance(body["exercise_calories"], int)
     assert isinstance(body["exercise_count"], int)
+
+    # 주간 추이(이번 주 월~일 7일) + 지난 주 비교선 7일
+    assert len(body["nutrition_week"]) == 7
+    assert len(body["nutrition_week_prev"]) == 7
+    assert [d["label"] for d in body["nutrition_week"]] == \
+        ["월", "화", "수", "목", "금", "토", "일"]
+    # 오늘 점심(780)+저녁(570)이 이번 주 어느 요일에 집계돼야 한다.
+    assert sum(d["calories"] for d in body["nutrition_week"]) >= 1350
+    # 소모 목표 필드(기본값) + 지난주 대비 변화량은 정수
+    assert body["exercise_burn_goal"] == 500
+    assert isinstance(body["week_score_delta"], int)
