@@ -8,6 +8,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
@@ -63,9 +64,10 @@ class _ExercisePageState extends State<ExercisePage> {
                   onChanged: (int i) => setState(() => _subTab = i),
                 ),
                 const SizedBox(height: 16),
-                if (_subTab == 0)
-                  const _RecordTab()
-                else
+                if (_subTab == 0) ...<Widget>[
+                  const CoachCard(),
+                  const _RecordTab(),
+                ] else
                   GymTab(
                     selectedSlot: _slot,
                     onSlot: (String s) =>
