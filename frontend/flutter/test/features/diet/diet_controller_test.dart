@@ -18,21 +18,20 @@ void main() {
 
     final day = await container.read(dietTodayProvider.future);
     expect(day, isA<DietDay>());
-    expect(day.entries.length, 4);
+    expect(day.entries.length, 3);
     expect(
       day.entries.map((DietEntry e) => e.mealType),
       containsAll(<MealType>[
         MealType.breakfast,
         MealType.lunch,
         MealType.snack,
-        MealType.dinner,
       ]),
     );
-    expect(day.totalCalories, 1860);
-    expect(day.totalSodiumMg, 2329);
-    expect(day.macros.carbsG, closeTo(203.6, 0.001));
-    expect(day.macros.proteinG, closeTo(109.3, 0.001));
-    expect(day.macros.fatG, closeTo(66.5, 0.001));
+    expect(day.totalCalories, 1067);
+    expect(day.totalSodiumMg, 3428);
+    expect(day.macros.carbsG, closeTo(113.0, 0.001));
+    expect(day.macros.proteinG, closeTo(46.0, 0.001));
+    expect(day.macros.fatG, closeTo(46.5, 0.001));
     expect(day.aiCoachMessage, isNotEmpty);
   });
 }

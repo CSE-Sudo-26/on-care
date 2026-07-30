@@ -38,13 +38,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('탄수화물 44%'), findsOneWidget);
-    expect(find.textContaining('203.6'), findsOneWidget);
-    expect(find.text('단백질 24%'), findsOneWidget);
-    expect(find.textContaining('109.3'), findsOneWidget);
-    expect(find.text('지방 32%'), findsOneWidget);
-    expect(find.textContaining('66.5'), findsOneWidget);
-    expect(find.text('김치찌개'), findsOneWidget);
+    expect(find.text('탄수화물 43%'), findsOneWidget);
+    expect(find.textContaining('113'), findsOneWidget);
+    expect(find.text('단백질 17%'), findsOneWidget);
+    // 단백질 46g / 지방 46.5g 이 '46' 을 공유하므로 단위까지 붙여 구분한다.
+    expect(find.textContaining('46 g'), findsOneWidget);
+    expect(find.text('지방 40%'), findsOneWidget);
+    expect(find.textContaining('46.5'), findsOneWidget);
+    expect(find.text('짬뽕'), findsOneWidget);
   });
 
   testWidgets('diet detail shows meal and food macro values', (tester) async {
@@ -60,9 +61,9 @@ void main() {
     await tester.pumpWidget(_app(DietEntryDetailPage(entry: lunch)));
     await tester.pump();
 
-    expect(find.text('탄수화물 86g · 단백질 40g · 지방 29.3g'), findsOneWidget);
+    expect(find.text('탄수화물 100g · 단백질 30g · 지방 24g'), findsOneWidget);
     expect(
-      find.text('탄수화물 16g · 단백질 20g · 지방 15.5g · 나트륨 900mg'),
+      find.text('탄수화물 100g · 단백질 30g · 지방 24g · 나트륨 3200mg'),
       findsOneWidget,
     );
   });

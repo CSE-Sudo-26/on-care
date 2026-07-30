@@ -62,7 +62,7 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v3'), today);
+      expect(await db.readValue('seeded_v4'), today);
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
@@ -82,12 +82,12 @@ void main() {
       await seedIfEmpty(db);
       final diet = await db.select(db.dietEntries).get();
 
-      expect(diet.length, 4);
+      expect(diet.length, 3);
       expect(
         diet.fold<int>(0, (sum, entry) => sum + entry.totalCalories),
-        1860,
+        1067,
       );
-      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 2329);
+      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 3428);
 
       for (final entry in diet) {
         final foods = (jsonDecode(entry.foodsJson) as List<Object?>)
@@ -112,7 +112,7 @@ void main() {
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v3', '2020-01-01');
+      await db.putValue('seeded_v4', '2020-01-01');
 
       await seedIfEmpty(db);
 
@@ -124,7 +124,7 @@ void main() {
         isTrue,
         reason: 're-seed must overwrite stale dates with today',
       );
-      expect(await db.readValue('seeded_v3'), today);
+      expect(await db.readValue('seeded_v4'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -151,7 +151,7 @@ void main() {
 
       // Legacy flag cleared, v3 flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v3'), _todayString());
+      expect(await db.readValue('seeded_v4'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -179,7 +179,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v3', '2020-01-01');
+      await db.putValue('seeded_v4', '2020-01-01');
       await seedIfEmpty(db);
 
       final vitals = await db.select(db.vitals).get();
