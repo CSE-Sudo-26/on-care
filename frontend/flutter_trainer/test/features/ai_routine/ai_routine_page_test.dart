@@ -13,7 +13,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import '../../helpers/pump_app.dart';
 
 /// A chat repository whose sends always fail.
-class _FailingChatRepository extends ChatRepository {
+class _FailingChatRepository extends DriftChatRepository {
   const _FailingChatRepository(super.db);
 
   @override
@@ -25,7 +25,7 @@ class _FailingChatRepository extends ChatRepository {
 
 /// A chat repository whose sends resolve slowly, so a client switch can
 /// land while a send is still in flight (review PR 239).
-class _SlowChatRepository extends ChatRepository {
+class _SlowChatRepository extends DriftChatRepository {
   const _SlowChatRepository(super.db);
 
   @override

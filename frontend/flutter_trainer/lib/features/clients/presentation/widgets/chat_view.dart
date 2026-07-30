@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -79,6 +80,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (!mounted) return;
     // Clear only after the insert succeeds so the text isn't lost on error.
     _input.clear();
+    // Drift streams re-emit on write; the Dio source is a single fetch, so
+    // refetch the thread + unread badges after a real-API send.
+    if (!ref.read(appConfigProvider).useMockApi) {
+      ref.invalidate(chatThreadProvider(widget.clientId));
+      ref.invalidate(unreadCountsProvider);
+    }
     _scrollToBottom();
   }
 
@@ -117,9 +124,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 // messages that arrive while it stays open. Deferred so
                 // the write never runs inside build.
                 final repo = ref.read(chatRepositoryProvider);
-                Future<void>.microtask(
-                  () => repo.markThreadRead(widget.clientId),
-                );
+                final realApi = !ref.read(appConfigProvider).useMockApi;
+                Future<void>.microtask(() async {
+                  await repo.markThreadRead(widget.clientId);
+                  // Drift updates unread via its stream; the Dio source
+                  // needs an explicit refetch of the badge counts.
+                  if (realApi && mounted) ref.invalidate(unreadCountsProvider);
+                });
               }
               return ListView(
                 controller: _scroll,

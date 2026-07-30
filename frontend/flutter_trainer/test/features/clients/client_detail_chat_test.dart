@@ -12,7 +12,7 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import '../../helpers/pump_app.dart';
 
 /// Delays every insert so tests can act while a send is in flight.
-class _SlowChatRepository extends ChatRepository {
+class _SlowChatRepository extends DriftChatRepository {
   const _SlowChatRepository(super.db);
 
   @override
@@ -28,7 +28,7 @@ class _SlowChatRepository extends ChatRepository {
 /// Blocks on a caller-controlled future so the test can decide exactly
 /// when (and whether) the send fails — used to fail AFTER the widget is
 /// disposed, deterministically exercising the catch path.
-class _ControllableChatRepository extends ChatRepository {
+class _ControllableChatRepository extends DriftChatRepository {
   const _ControllableChatRepository(super.db, this.gate);
 
   final Future<void> gate;
@@ -41,7 +41,7 @@ class _ControllableChatRepository extends ChatRepository {
 }
 
 void main() {
-  group('ChatRepository', () {
+  group('DriftChatRepository', () {
     late AppDatabase db;
 
     setUp(() async {
@@ -53,7 +53,7 @@ void main() {
     test(
       'watchThread returns a client thread in chronological order',
       () async {
-        final thread = await ChatRepository(
+        final thread = await DriftChatRepository(
           db,
         ).watchThread('seed-client-1').first;
         expect(thread, isNotEmpty);
@@ -73,7 +73,7 @@ void main() {
     test(
       'sendTrainerMessage appends a trainer message that sorts last',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
         await repo.sendTrainerMessage(
           clientId: 'seed-client-1',
           text: '  안녕하세요  ',
@@ -88,7 +88,7 @@ void main() {
     );
 
     test('sendTrainerMessage refreshes the client list preview', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
       await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '내일 봬요!');
       final row = await (db.select(
         db.trainerClients,
@@ -100,7 +100,7 @@ void main() {
     test(
       'watchUnreadCounts counts client messages until marked read',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
 
         // Seeded client replies: 김민수 2 · 이지수 1 · 박성호 1.
         var counts = await repo.watchUnreadCounts().first;
@@ -138,7 +138,7 @@ void main() {
     );
 
     test('markThreadRead is idempotent and skips redundant writes', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
 
       Future<String?> marker() => db.readValue('chat_read_seed-client-1');
 
@@ -185,7 +185,7 @@ void main() {
     test(
       'a same-second reply after markThreadRead still counts as unread',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
         // A fresh client with no seeded messages, so the count is only
         // what this test inserts.
         const cid = 'rowid-test-client';
@@ -229,13 +229,13 @@ void main() {
     test(
       'markThreadRead on a thread with no client message writes nothing',
       () async {
-        await ChatRepository(db).markThreadRead('no-such-client');
+        await DriftChatRepository(db).markThreadRead('no-such-client');
         expect(await db.readValue('chat_read_no-such-client'), isNull);
       },
     );
 
     test('sendTrainerMessage ignores empty/whitespace input', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
       final before = (await repo.watchThread('seed-client-1').first).length;
       await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '   ');
       final after = (await repo.watchThread('seed-client-1').first).length;
