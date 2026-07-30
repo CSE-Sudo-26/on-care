@@ -136,6 +136,54 @@ class RoutineAssignRequest(BaseModel):
     source: RoutineSource = "trainer"
 
 
+# ---- AI 루틴 A/B 생성 (routine-options) ----
+# 회원 실데이터로 A/B 두 계획을 "생성"만 한다(저장하지 않음). 트레이너가 선택·수정한
+# 뒤 기존 RoutineAssignRequest 로 저장한다.
+
+IntensityPref = Literal["low", "moderate", "high"]
+
+
+class RoutineOptionsRequest(BaseModel):
+    """A/B 생성 입력 — 트레이너가 조종하는 방향."""
+    available_minutes: int = Field(default=30, ge=5, le=180)
+    intensity_preference: IntensityPref = "moderate"
+    trainer_note: str = Field(default="", max_length=200)
+
+
+class RoutineExerciseOut(BaseModel):
+    name: str
+    minutes: int = Field(ge=0, le=600)
+    type: RoutineType
+
+
+class RoutinePlanOut(BaseModel):
+    """생성된 A/B 한 계획(아직 배정 아님)."""
+    key: Literal["A", "B"]
+    label: str
+    total_minutes: int
+    intensity: str                       # 낮음|보통|높음
+    exercises: list[RoutineExerciseOut]
+    reason: str                          # 한 줄 추천 이유
+    rationale: str                       # 회원 데이터 근거(수치 인용)
+
+
+class MemberAnalysisOut(BaseModel):
+    """생성 근거가 된 회원 상태 요약(1단계 화면용)."""
+    goal: str
+    sodium_today_mg: int
+    sodium_over_target: bool
+    avg_completion_rate: int             # 최근 완료율 평균(0..100)
+    latest_routine: str                  # 마지막 배정 루틴 라벨
+    note: str                            # trainer_note echo
+
+
+class RoutineOptionsOut(BaseModel):
+    analysis: MemberAnalysisOut
+    plan_a: RoutinePlanOut
+    plan_b: RoutinePlanOut
+    generated_by: Literal["ai", "rule"]  # LLM 성공 여부(폴백 가시화)
+
+
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 루프) ----
 
 ScheduleStatus = Literal["예정", "완료", "공백"]

@@ -20,9 +20,11 @@ from app.models.models import (
     TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
-    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut,
+    ChatMessageOut, ClientDietEntryOut, MemberAnalysisOut, MemberCoachOut, ProgramItem,
+    RoutineHistoryOut, RoutineOptionsOut, RoutineOut, RoutinePlanOut, ScheduleSessionOut,
+    TrainerClientOut, TrainerGymOut,
 )
+from app.services import routine_ai
 
 
 def _today() -> date:
@@ -449,6 +451,86 @@ def assign_routine(
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
+    )
+
+
+def build_routine_options(
+    db: Session,
+    member_id: str,
+    trainer_id: str,
+    *,
+    available_minutes: int,
+    intensity_preference: str,
+    trainer_note: str,
+) -> RoutineOptionsOut:
+    """회원 실데이터로 A/B 두 계획을 생성한다(저장하지 않음).
+
+    나트륨(오늘)·최근 완료율·목표를 근거로 A(회복·지속)/B(강도·운동량)를 만든다.
+    LLM 연동 지점(routine_ai.maybe_llm_plans)이 실패/미설정이면 규칙형으로 폴백한다.
+    소유권(담당 회원)은 라우터의 _require_client 가 이미 보장한다.
+    """
+    today = _today()
+    today_str = today.isoformat()
+    monday = today - timedelta(days=today.weekday())
+    week_ago_str = (today - timedelta(days=6)).isoformat()
+    monday_str = monday.isoformat()
+
+    diet_rows = db.scalars(
+        select(DietEntry).where(
+            DietEntry.user_id == member_id, DietEntry.date >= week_ago_str
+        )
+    ).all()
+    hist_rows = db.scalars(
+        select(RoutineHistory).where(
+            RoutineHistory.member_id == member_id,
+            RoutineHistory.date >= monday_str,
+            or_(RoutineHistory.trainer_id.is_(None), RoutineHistory.trainer_id == trainer_id),
+        )
+    ).all()
+
+    _, sodium_today, _ = _today_totals(diet_rows, today_str)
+    week = _week_completion(hist_rows, monday)
+    done_days = [c for c in week if c > 0]
+    avg_completion = round(sum(done_days) / len(done_days)) if done_days else 0
+
+    link = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.trainer_id == trainer_id,
+            TrainerClient.member_id == member_id,
+        )
+    )
+    goal = link.goal if link else ""
+    last_rt = _latest_by_member(db, TrainerRoutine, trainer_id, [member_id]).get(member_id)
+    latest_routine = last_rt.name if last_rt else "-"
+
+    kwargs = dict(
+        goal=goal,
+        sodium_today_mg=sodium_today,
+        avg_completion_rate=avg_completion,
+        available_minutes=available_minutes,
+        intensity_preference=intensity_preference,
+        trainer_note=trainer_note,
+    )
+    llm = routine_ai.maybe_llm_plans(**kwargs)
+    if llm is not None:
+        plan_a, plan_b = llm
+        generated_by = "ai"
+    else:
+        plan_a, plan_b = routine_ai.rule_based_plans(**kwargs)
+        generated_by = "rule"
+
+    return RoutineOptionsOut(
+        analysis=MemberAnalysisOut(
+            goal=goal,
+            sodium_today_mg=sodium_today,
+            sodium_over_target=sodium_today > routine_ai.SODIUM_TARGET_MG,
+            avg_completion_rate=avg_completion,
+            latest_routine=latest_routine,
+            note=trainer_note.strip(),
+        ),
+        plan_a=RoutinePlanOut(**plan_a),
+        plan_b=RoutinePlanOut(**plan_b),
+        generated_by=generated_by,
     )
 
 
