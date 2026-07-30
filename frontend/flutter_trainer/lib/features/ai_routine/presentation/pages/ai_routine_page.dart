@@ -16,6 +16,7 @@ import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -468,21 +469,37 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
         children: <Widget>[
           _sectionLabel('AI 추천 루틴'),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 2,
+          // Tappable entry into the 3-step AI A/B flow. Kept in the header
+          // row so it adds no vertical height to the routine editor.
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<bool>(
+                builder: (_) => AiRoutineOptionsFlow(client: client),
+              ),
             ),
-            decoration: const BoxDecoration(
-              color: AppColors.accentSurface,
-              borderRadius: BorderRadius.all(AppRadius.pill),
-            ),
-            child: const Text(
-              '✦ 자동 생성',
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: AppColors.accent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 2,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.accentSurface,
+                borderRadius: BorderRadius.all(AppRadius.pill),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(Icons.auto_awesome, size: 10, color: AppColors.accent),
+                  SizedBox(width: 3),
+                  Text(
+                    'AI A/B 생성',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
