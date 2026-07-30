@@ -187,6 +187,12 @@ _EXERCISE_WEEK: dict[str, list[tuple[str, str, int, int]]] = {
     ],
 }
 
+# day_label → 요일 인덱스(월=0 … 일=6, date.weekday() 와 동일). 운동 시드는 이 인덱스로
+# "오늘까지의 요일"만 넣어, 주중 실행 시 미래 요일이 이번 주 합계·streak 에 잡히는 것을 막는다.
+_WEEKDAY_INDEX: dict[str, int] = {
+    "월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6,
+}
+
 # 사용자 앱 데모 회원(김민수)의 건강 프로필 — 프론트 MockMyHealthRepository/프로필 목업과
 # 동일. 위험도·활동점수·기본정보 + 목표치는 구조화 컬럼(goal_*/daily_*)에 넣는다.
 # conditions 는 위험도 서술에서 추론(목업엔 명시 없음). 키(height_cm)·성별은 목업에 없어 비운다.
@@ -439,24 +445,30 @@ def _seed_history(db: Session, member_id: str) -> None:
 
 def _seed_exercise(db: Session, member_id: str) -> None:
     """회원 이번 주 운동 세션 시드(멱등, 날짜 인식) — 사용자 앱 운동 화면용.
-    이번 주 세션이 이미 있으면 스킵(주가 바뀌면 새 주로 시드되어 이력이 누적된다)."""
+
+    이번 주 세션 중 **오늘까지의 요일만** 넣는다. 주중에 실행돼도 미래 요일이 이번 주
+    합계·streak 에 잡히지 않도록(예: 수요일에 시드해도 목~일은 넣지 않음). 멱등은
+    세션 id 단위로 판정하므로, 주가 진행되며 재실행되면 새로 지난 요일이 채워지고
+    이미 있는 요일은 건너뛴다(중복·왜곡 없음). 주가 바뀌면 새 week_start 로 누적된다."""
     week = _EXERCISE_WEEK.get(member_id)
     if not week:
         return
     today = date.today()
     week_start = (today - timedelta(days=today.weekday())).isoformat()  # 이번 주 월요일
-    if db.scalar(
-        select(models.ExerciseSession.id)
-        .where(
-            models.ExerciseSession.user_id == member_id,
-            models.ExerciseSession.week_start == week_start,
-        )
-        .limit(1)
-    ) is not None:
-        return
+    added = False
     for day_label, ex_type, minutes, calories in week:
+        idx = _WEEKDAY_INDEX.get(day_label)
+        if idx is None or idx > today.weekday():
+            continue  # 미래(또는 알 수 없는) 요일은 아직 시드하지 않는다.
+        session_id = f"seed-ex-{member_id}-{week_start}-{day_label}"
+        if db.scalar(
+            select(models.ExerciseSession.id)
+            .where(models.ExerciseSession.id == session_id)
+            .limit(1)
+        ) is not None:
+            continue  # 멱등: 이미 있는 요일은 스킵.
         db.add(models.ExerciseSession(
-            id=f"seed-ex-{member_id}-{week_start}-{day_label}",
+            id=session_id,
             user_id=member_id,
             week_start=week_start,
             day_label=day_label,
@@ -465,7 +477,9 @@ def _seed_exercise(db: Session, member_id: str) -> None:
             calories=calories,
             intensity="moderate",
         ))
-    _safe_commit(db)
+        added = True
+    if added:
+        _safe_commit(db)
 
 
 def _seed_health_profile(db: Session, member_id: str) -> None:
