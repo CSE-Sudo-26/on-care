@@ -60,6 +60,7 @@ class SessionController extends StateNotifier<SessionState> {
     } catch (_) {
       // secure storage 저장 실패해도 세션 메모리 토큰으로 진행
     }
+    _ref.invalidate(consultationRequestControllerProvider);
     _setToken(access);
     state = const SessionState(status: SessionStatus.authenticated);
   }
