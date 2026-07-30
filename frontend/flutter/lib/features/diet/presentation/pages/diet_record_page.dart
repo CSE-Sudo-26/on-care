@@ -46,6 +46,12 @@ const Map<MealType, ({String emoji, Color bg})> _mealMeta =
       MealType.snack: (emoji: '🍎', bg: Color(0xFFFCE4EC)),
     };
 
+String _grams(double value) {
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+}
+
 /// Maps a backend [DietEntry] onto the Figma meal-card view model. [l] localizes
 /// the nutrient tag labels; the meal type is carried as a [MealType] so the badge
 /// text is resolved at render time.
@@ -152,7 +158,10 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                  weekLabel: l.dietWeekLabel(
+                    center.month,
+                    _weekOfMonth(center),
+                  ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
                   onPrev: () => setState(() => _weekShift -= 1),
@@ -464,6 +473,37 @@ class _NutritionSummary extends StatelessWidget {
                   value: _formatG(sugar),
                   unit: l.dietUnitG,
                   color: FigmaColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroCarbs} ${day.macros.carbsPct}%',
+                  value: _grams(day.macros.carbsG),
+                  unit: l.dietUnitG,
+                  color: FigmaColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroProtein} ${day.macros.proteinPct}%',
+                  value: _grams(day.macros.proteinG),
+                  unit: l.dietUnitG,
+                  color: FigmaColors.green,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroFat} ${day.macros.fatPct}%',
+                  value: _grams(day.macros.fatG),
+                  unit: l.dietUnitG,
+                  color: FigmaColors.orange,
                 ),
               ),
             ],
@@ -786,8 +826,7 @@ class _MealCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 2),
                               child: Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.baseline,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
                                 textBaseline: TextBaseline.alphabetic,
                                 children: <Widget>[
                                   Flexible(
