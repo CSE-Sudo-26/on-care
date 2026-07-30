@@ -26,7 +26,11 @@ if config.config_file_name is not None:
 # postgres:// · bare postgresql:// 를 psycopg v3 드라이버로 정규화한 값. Alembic 도
 # 앱과 동일한 URL 로 엔진을 만들어야 bare URL 에서 psycopg2 dialect 오류로 마이그레이션이
 # 실패하지 않는다(앱 기동 전 단계).
-config.set_main_option("sqlalchemy.url", get_settings().sqlalchemy_database_url)
+# set_main_option 값은 ConfigParser 를 거치므로 URL 의 '%'(예: 비밀번호의 %40)가
+# 보간 문법으로 해석돼 InterpolationSyntaxError 를 낼 수 있다. '%%' 로 이스케이프해
+# 앱은 뜨는데 마이그레이션만 깨지는 상황을 방지한다.
+sqlalchemy_url = get_settings().sqlalchemy_database_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", sqlalchemy_url)
 
 target_metadata = Base.metadata
 
