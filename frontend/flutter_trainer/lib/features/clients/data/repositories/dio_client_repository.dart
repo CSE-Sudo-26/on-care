@@ -21,6 +21,9 @@ class DioClientRepository implements ClientRepository {
   final Dio _dio;
 
   @override
+  bool get supportsRosterMutations => false;
+
+  @override
   Stream<List<TrainerClient>> watchClients() =>
       Stream<List<TrainerClient>>.fromFuture(_fetchClients());
 
@@ -45,20 +48,18 @@ class DioClientRepository implements ClientRepository {
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
       Stream<List<RoutineHistoryEntry>>.fromFuture(_fetchHistory(clientId));
 
-  Future<List<TrainerClient>> _fetchClients() => _getList(
-        '/trainer/clients',
-        trainerClientFromJson,
-      );
+  Future<List<TrainerClient>> _fetchClients() =>
+      _getList('/trainer/clients', trainerClientFromJson);
 
   Future<List<ClientDietEntry>> _fetchDiet(String clientId) => _getList(
-        '/trainer/clients/$clientId/diet',
-        clientDietEntryFromJson,
-      );
+    '/trainer/clients/${Uri.encodeComponent(clientId)}/diet',
+    clientDietEntryFromJson,
+  );
 
   Future<List<RoutineHistoryEntry>> _fetchHistory(String clientId) => _getList(
-        '/trainer/clients/$clientId/history',
-        routineHistoryEntryFromJson,
-      );
+    '/trainer/clients/${Uri.encodeComponent(clientId)}/history',
+    routineHistoryEntryFromJson,
+  );
 
   /// GETs a JSON array and maps each element with [fromJson]. Transport /
   /// HTTP failures (incl. 404 for a client that isn't this trainer's)
@@ -71,8 +72,14 @@ class DioClientRepository implements ClientRepository {
       final res = await _dio.get<List<dynamic>>(path);
       final data = res.data ?? const <dynamic>[];
       return data
-          .whereType<Map<String, Object?>>()
-          .map(fromJson)
+          .map((item) {
+            if (item is! Map<String, Object?>) {
+              throw FormatException(
+                'Expected an object in the response list for $path.',
+              );
+            }
+            return fromJson(item);
+          })
           .toList(growable: false);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
@@ -80,8 +87,9 @@ class DioClientRepository implements ClientRepository {
   }
 
   @override
-  Future<bool> clientNameExists(String name) =>
-      throw UnsupportedError('clientNameExists is demo-only (no backend endpoint).');
+  Future<bool> clientNameExists(String name) => throw UnsupportedError(
+    'clientNameExists is demo-only (no backend endpoint).',
+  );
 
   @override
   Future<bool> addClient({required String name, required String goal}) =>
@@ -89,5 +97,7 @@ class DioClientRepository implements ClientRepository {
 
   @override
   Future<void> setClientActive(String id, bool active) =>
-      throw UnsupportedError('setClientActive is demo-only (no backend endpoint).');
+      throw UnsupportedError(
+        'setClientActive is demo-only (no backend endpoint).',
+      );
 }

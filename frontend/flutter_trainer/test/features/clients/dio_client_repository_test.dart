@@ -15,13 +15,13 @@ Response<List<dynamic>> _okList(List<dynamic> body, String path) =>
     );
 
 DioException _httpError(int status, String path) => DioException(
-      requestOptions: RequestOptions(path: path),
-      type: DioExceptionType.badResponse,
-      response: Response<Object?>(
-        requestOptions: RequestOptions(path: path),
-        statusCode: status,
-      ),
-    );
+  requestOptions: RequestOptions(path: path),
+  type: DioExceptionType.badResponse,
+  response: Response<Object?>(
+    requestOptions: RequestOptions(path: path),
+    statusCode: status,
+  ),
+);
 
 void main() {
   late _MockDio dio;
@@ -34,13 +34,10 @@ void main() {
 
   test('watchClients parses the roster', () async {
     when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
-      (_) async => _okList(
-        <dynamic>[
-          <String, Object?>{'id': 'm1', 'name': '김민수', 'sodium_mg': 2100},
-          <String, Object?>{'id': 'm2', 'name': '이지수', 'sodium_mg': 1500},
-        ],
-        '/trainer/clients',
-      ),
+      (_) async => _okList(<dynamic>[
+        <String, Object?>{'id': 'm1', 'name': '김민수', 'sodium_mg': 2100},
+        <String, Object?>{'id': 'm2', 'name': '이지수', 'sodium_mg': 1500},
+      ], '/trainer/clients'),
     );
 
     final clients = await repo.watchClients().first;
@@ -50,13 +47,10 @@ void main() {
 
   test('watchClientsPrioritized puts the over-target client first', () async {
     when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
-      (_) async => _okList(
-        <dynamic>[
-          <String, Object?>{'id': 'ok', 'name': 'A', 'sodium_mg': 1500},
-          <String, Object?>{'id': 'over', 'name': 'B', 'sodium_mg': 2500},
-        ],
-        '/trainer/clients',
-      ),
+      (_) async => _okList(<dynamic>[
+        <String, Object?>{'id': 'ok', 'name': 'A', 'sodium_mg': 1500},
+        <String, Object?>{'id': 'over', 'name': 'B', 'sodium_mg': 2500},
+      ], '/trainer/clients'),
     );
 
     final clients = await repo.watchClientsPrioritized().first;
@@ -65,35 +59,78 @@ void main() {
 
   test('watchDiet parses the meals', () async {
     when(() => dio.get<List<dynamic>>('/trainer/clients/m1/diet')).thenAnswer(
-      (_) async => _okList(
-        <dynamic>[
-          <String, Object?>{'meal': '점심', 'items': '비빔밥', 'calories': 600, 'sodium_mg': 1200},
-        ],
-        '/trainer/clients/m1/diet',
-      ),
+      (_) async => _okList(<dynamic>[
+        <String, Object?>{
+          'meal': '점심',
+          'items': '비빔밥',
+          'calories': 600,
+          'sodium_mg': 1200,
+        },
+      ], '/trainer/clients/m1/diet'),
     );
 
     final meals = await repo.watchDiet('m1').first;
     expect(meals.single.meal, '점심');
   });
 
-  test('watchHistory surfaces a 404 (not this trainer\'s client) as NotFoundError',
-      () async {
-    when(() => dio.get<List<dynamic>>('/trainer/clients/x/history'))
-        .thenThrow(_httpError(404, '/trainer/clients/x/history'));
-
-    await expectLater(
-      repo.watchHistory('x'),
-      emitsError(isA<NotFoundError>()),
+  test('encodes an opaque client id as one path segment', () async {
+    when(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients/member%2Fwith%3Freserved/diet',
+      ),
+    ).thenAnswer(
+      (_) async => _okList(
+        const <dynamic>[],
+        '/trainer/clients/member%2Fwith%3Freserved/diet',
+      ),
     );
+
+    await repo.watchDiet('member/with?reserved').first;
+
+    verify(
+      () => dio.get<List<dynamic>>(
+        '/trainer/clients/member%2Fwith%3Freserved/diet',
+      ),
+    ).called(1);
   });
 
-  test('watchTodayReservationCount emits nothing (schedule wired later)',
-      () async {
-    expect(await repo.watchTodayReservationCount().isEmpty, isTrue);
+  test('malformed list entries fail instead of being silently dropped', () {
+    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+      (_) async => _okList(<dynamic>[
+        <String, Object?>{'id': 'm1'},
+        'not-an-object',
+      ], '/trainer/clients'),
+    );
+
+    expect(repo.watchClients(), emitsError(isA<FormatException>()));
   });
+
+  test(
+    'watchHistory surfaces a 404 (not this trainer\'s client) as NotFoundError',
+    () async {
+      when(
+        () => dio.get<List<dynamic>>('/trainer/clients/x/history'),
+      ).thenThrow(_httpError(404, '/trainer/clients/x/history'));
+
+      await expectLater(
+        repo.watchHistory('x'),
+        emitsError(isA<NotFoundError>()),
+      );
+    },
+  );
+
+  test(
+    'watchTodayReservationCount emits nothing (schedule wired later)',
+    () async {
+      expect(await repo.watchTodayReservationCount().isEmpty, isTrue);
+    },
+  );
 
   group('roster mutations are demo-only against the real API', () {
+    test('advertises the roster as read-only', () {
+      expect(repo.supportsRosterMutations, isFalse);
+    });
+
     test('addClient throws UnsupportedError', () {
       expect(
         () => repo.addClient(name: 'x', goal: 'y'),

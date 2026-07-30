@@ -23,6 +23,12 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 /// Dio source emits a single fetched value (loading/error surface through
 /// the consuming `AsyncValue`).
 abstract interface class ClientRepository {
+  /// Whether this source supports adding clients and changing roster status.
+  ///
+  /// The real roster is managed by trainer-member links on the backend and
+  /// currently has no mutation endpoints, so its UI must stay read-only.
+  bool get supportsRosterMutations;
+
   Stream<List<TrainerClient>> watchClients();
   Stream<List<TrainerClient>> watchClientsPrioritized();
   Stream<int> watchTodayReservationCount();
@@ -44,6 +50,9 @@ class DriftClientRepository implements ClientRepository {
   const DriftClientRepository(this._db);
 
   final AppDatabase _db;
+
+  @override
+  bool get supportsRosterMutations => true;
 
   /// All clients, ordered as seeded (sortOrder).
   @override

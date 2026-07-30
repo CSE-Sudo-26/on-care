@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -51,7 +50,9 @@ class ClientsPage extends ConsumerWidget {
     // Roster mutations exist only in demo/mock mode — the real backend has
     // no add-client endpoint (the roster is derived from trainer↔member
     // links), so hide the 신규 고객 등록 entry when hitting the real API.
-    final canManageRoster = ref.watch(appConfigProvider).useMockApi;
+    final canManageRoster = ref
+        .watch(clientRepositoryProvider)
+        .supportsRosterMutations;
 
     return Scaffold(
       backgroundColor: AppColors.background,
