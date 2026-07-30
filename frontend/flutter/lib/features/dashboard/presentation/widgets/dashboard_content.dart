@@ -13,6 +13,7 @@ import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
+import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
@@ -965,15 +966,15 @@ class _ExerciseCard extends StatelessWidget {
   final bool showCharts;
   final VoidCallback onOpen;
 
-  static const double _burnGoal = 500;
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final double burned = summary.exerciseCalories.toDouble();
-    final double pct = (burned / _burnGoal).clamp(0.0, 1.0);
+    // 소모 목표는 백엔드 summary 필드(개인화 전까지 서버 기본값)에서 온다.
+    final double burnGoal = summary.exerciseBurnGoal.toDouble();
+    final double pct = burnGoal <= 0 ? 0 : (burned / burnGoal).clamp(0.0, 1.0);
     // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
-    final double rawPct = burned / _burnGoal;
+    final double rawPct = burnGoal <= 0 ? 0 : burned / burnGoal;
     const week = _demoExerciseWeekCalories;
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
@@ -1072,7 +1073,7 @@ class _ExerciseCard extends StatelessWidget {
                     ),
                     TextSpan(
                       text:
-                          ' / ${nf.format(_burnGoal)} ${l.unitKcal}'
+                          ' / ${nf.format(burnGoal)} ${l.unitKcal}'
                           '  ·  ${(rawPct * 100).round()}%',
                       style: const TextStyle(
                         fontSize: 10,
@@ -1421,20 +1422,41 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
+double _nutritionValue(_NutTabKind kind, NutritionDay day) => switch (kind) {
+  _NutTabKind.calories => day.calories.toDouble(),
+  _NutTabKind.sodium => day.sodiumMg.toDouble(),
+  _NutTabKind.sugar => day.sugarG.toDouble(),
+};
+
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
     _NutTabKind.sodium: summary.sodiumIndicator,
     _NutTabKind.sugar: summary.sugarIndicator,
   };
+  // 실 주간 집계(월~일)가 있으면 7일 실데이터로 채운다(실모드). 비어 있으면
+  // (데모/목·데이터 없음) 기존 데모 상수를 유지하고 마지막 점만 오늘 실측치로
+  // 대체 — 데모 둘러보기 화면이 기존과 동일하게 보이도록 한다.
+  final bool hasWeek = summary.nutritionWeek.isNotEmpty;
+  final bool hasPrev = summary.nutritionWeekPrev.isNotEmpty;
   return <_NutTabKind, _NutData>{
     for (final entry in _demoNutritionHistory.entries)
       entry.key: _NutData(
-        cur: <double>[
-          ...entry.value.cur.take(6),
-          liveValues[entry.key]!.current.toDouble(),
-        ],
-        prev: entry.value.prev,
+        cur: hasWeek
+            ? <double>[
+                for (final NutritionDay day in summary.nutritionWeek)
+                  _nutritionValue(entry.key, day),
+              ]
+            : <double>[
+                ...entry.value.cur.take(6),
+                liveValues[entry.key]!.current.toDouble(),
+              ],
+        prev: hasPrev
+            ? <double>[
+                for (final NutritionDay day in summary.nutritionWeekPrev)
+                  _nutritionValue(entry.key, day),
+              ]
+            : entry.value.prev,
         unit: entry.value.unit,
         goal: liveValues[entry.key]!.max.toDouble(),
         ticks: entry.value.ticks,
@@ -1920,12 +1942,16 @@ class _RecommendedMeals extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                l.homeViewAll,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.go(AppRoutes.diet),
+                child: Text(
+                  l.homeViewAll,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -2073,12 +2099,16 @@ class _ScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              l.homeViewAll,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: FigmaColors.primary,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showScheduleCalendarSheet(context),
+              child: Text(
+                l.homeViewAll,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.primary,
+                ),
               ),
             ),
           ],
@@ -2115,49 +2145,57 @@ class _ScheduleItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: FigmaColors.softBlue,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.primaryA(0.12)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Text(
-            item.time,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.primary,
-              letterSpacing: -0.3,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showScheduleCalendarSheet(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: FigmaColors.softBlue,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: FigmaColors.primaryA(0.12)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Text(
+              item.time,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.primary,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Row(
-              children: <Widget>[
-                if (item.emoji.isNotEmpty) ...<Widget>[
-                  Text(item.emoji),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.ink,
+            const SizedBox(width: 16),
+            Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  if (item.emoji.isNotEmpty) ...<Widget>[
+                    Text(item.emoji),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right, size: 18, color: FigmaColors.primary),
-        ],
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: FigmaColors.primary,
+            ),
+          ],
+        ),
       ),
     );
   }
