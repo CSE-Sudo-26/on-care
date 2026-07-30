@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -203,14 +205,16 @@ void main() {
       );
       final controller = container.read(sessionControllerProvider.notifier);
 
-      // Let restore hit the 401 and start the slow refresh, then act.
-      await Future<void>.delayed(const Duration(milliseconds: 60));
+      // Wait for the signal that refresh is GENUINELY in flight (not a timing
+      // guess), then act — this guarantees the race the guard must win.
+      await fake.onRefreshEntered.future;
       controller.enterDemo();
       expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
 
       // The late refresh resolves — it must NOT overwrite the demo session.
       await Future<void>.delayed(const Duration(milliseconds: 300));
       expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
+      expect(fake.refreshCalls, 1);
     });
   });
 
@@ -320,6 +324,9 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   bool refreshReturnsEmptyRefresh = false;
   Duration profileDelay = Duration.zero;
   Duration refreshDelay = Duration.zero;
+  /// Completes the moment `refresh()` is entered (before its delay), so a
+  /// test can deterministically act while a refresh is genuinely in flight.
+  final Completer<void> onRefreshEntered = Completer<void>();
   int refreshCalls = 0;
   int _profileCalls = 0;
 
@@ -348,6 +355,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   @override
   Future<TrainerAuthTokens> refresh(String refreshToken) async {
     refreshCalls++;
+    if (!onRefreshEntered.isCompleted) onRefreshEntered.complete();
     if (refreshDelay > Duration.zero) await Future<void>.delayed(refreshDelay);
     if (refreshThrows) throw const AuthException('refresh failed');
     return TrainerAuthTokens(
