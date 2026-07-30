@@ -34,6 +34,7 @@ void main() {
       expect(after.totalCalories, 2475); // 1860 + 615
       expect(after.totalSodiumMg, 3529); // 2329 + 1200
       expect(after.totalSugarG, closeTo(52, 0.001)); // 43 + 9
+      _expectMacrosMatchEntries(after);
     });
 
     test(
@@ -112,10 +113,19 @@ void main() {
       },
     );
 
-    test('updateEntry edits a seeded entry and re-derives totals', () async {
+    test('updateEntry re-derives day totals and macros', () async {
       final repo = MockDietRepository();
       await repo.updateEntry(
         id: 'mock-lunch',
+        foods: const <FoodItem>[
+          FoodItem(
+            name: '수정된 점심',
+            calories: 500,
+            carbsG: 10,
+            proteinG: 20,
+            fatG: 5,
+          ),
+        ],
         totalCalories: 500, // 780 → 500
         sodiumMg: 1000, // 1643 → 1000
         sugarG: 4, // 7 → 4
@@ -126,6 +136,56 @@ void main() {
       expect(after.totalCalories, 1580); // 1860 - 780 + 500
       expect(after.totalSodiumMg, 1686); // 2329 - 1643 + 1000
       expect(after.totalSugarG, closeTo(40, 0.001)); // 43 - 7 + 4
+      expect(after.macros.carbsG, closeTo(127.6, 0.001));
+      expect(after.macros.proteinG, closeTo(89.3, 0.001));
+      expect(after.macros.fatG, closeTo(42.2, 0.001));
+      expect(
+        <int>[
+          after.macros.carbsPct,
+          after.macros.proteinPct,
+          after.macros.fatPct,
+        ],
+        <int>[41, 29, 30],
+      );
+      _expectMacrosMatchEntries(after);
+    });
+
+    test('deleteEntry re-derives day macros from remaining entries', () async {
+      final repo = MockDietRepository();
+
+      await repo.deleteEntry('mock-lunch');
+
+      final DietDay after = await repo.fetchToday();
+      expect(after.macros.carbsG, closeTo(117.6, 0.001));
+      expect(after.macros.proteinG, closeTo(69.3, 0.001));
+      expect(after.macros.fatG, closeTo(37.2, 0.001));
+      expect(
+        <int>[
+          after.macros.carbsPct,
+          after.macros.proteinPct,
+          after.macros.fatPct,
+        ],
+        <int>[43, 26, 31],
+      );
+      _expectMacrosMatchEntries(after);
+    });
+
+    test('empty entries return zero macros without throwing', () async {
+      final repo = MockDietRepository();
+      final DietDay before = await repo.fetchToday();
+
+      for (final entry in before.entries) {
+        await repo.deleteEntry(entry.id!);
+      }
+
+      final DietDay after = await repo.fetchToday();
+      expect(after.entries, isEmpty);
+      expect(after.macros.carbsG, 0);
+      expect(after.macros.proteinG, 0);
+      expect(after.macros.fatG, 0);
+      expect(after.macros.carbsPct, 0);
+      expect(after.macros.proteinPct, 0);
+      expect(after.macros.fatPct, 0);
     });
   });
 
@@ -226,4 +286,38 @@ void main() {
     expect(day.aiCoachMessage, contains('김치찌개와 배추김치'));
     expect(day.totalSodiumMg, greaterThan(2000));
   });
+}
+
+void _expectMacrosMatchEntries(DietDay day) {
+  expect(
+    day.macros.carbsG,
+    closeTo(
+      day.entries.fold<double>(
+        0,
+        (double sum, DietEntry entry) => sum + entry.carbsG,
+      ),
+      0.001,
+    ),
+  );
+  expect(
+    day.macros.proteinG,
+    closeTo(
+      day.entries.fold<double>(
+        0,
+        (double sum, DietEntry entry) => sum + entry.proteinG,
+      ),
+      0.001,
+    ),
+  );
+  expect(
+    day.macros.fatG,
+    closeTo(
+      day.entries.fold<double>(
+        0,
+        (double sum, DietEntry entry) => sum + entry.fatG,
+      ),
+      0.001,
+    ),
+  );
+  expect(day.macros.carbsPct + day.macros.proteinPct + day.macros.fatPct, 100);
 }
