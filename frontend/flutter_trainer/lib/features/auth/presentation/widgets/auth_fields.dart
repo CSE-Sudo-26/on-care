@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
-/// Trainer brand gradient (orange) used by the auth screens. Layout /
-/// widget shape mirrors the user app's auth fields, but every color is
-/// read from the trainer design tokens.
+// 로그인 화면을 사용자 앱과 픽셀 단위로 동일하게 맞추기 위해, 사용자 앱
+// AppColors 값을 그대로 사용한다(트레이너 로그인 전용).
+const Color _authText = Color(0xFF262626); // 사용자 앱 foreground
+const Color _authMutedText = Color(0xFF64748B); // 사용자 앱 mutedForeground / hint
+const Color _authInputBg = Color(0xFFF3F3F5); // 사용자 앱 inputBackground
+const Color _authLoadingBg = Color(0xFFE8F4F8); // 사용자 앱 muted
+const BorderRadius _authRadius =
+    BorderRadius.all(Radius.circular(14)); // 사용자 앱 AppRadius.lg
+
+/// Brand gradient for the auth screens — matched to the user app
+/// (primary #3EAFDF → secondary #277DA1).
 const LinearGradient authBrandGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: <Color>[AppColors.primary, AppColors.secondary],
+  colors: <Color>[Color(0xFF3EAFDF), Color(0xFF277DA1)],
 );
 
 /// Filled, icon-prefixed text field used on the trainer login screen.
@@ -58,18 +65,20 @@ class AuthField extends StatelessWidget {
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      style: const TextStyle(color: _authText),
       textInputAction:
           textInputAction ??
           (onSubmitted != null ? TextInputAction.done : TextInputAction.next),
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.subtleForeground, size: 20),
+        hintStyle: const TextStyle(color: _authMutedText),
+        prefixIcon: Icon(icon, color: _authMutedText, size: 20),
         suffixIcon: trailing,
         filled: true,
-        fillColor: AppColors.inputBackground,
+        fillColor: _authInputBg,
         border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(AppRadius.lg),
+          borderRadius: _authRadius,
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -105,16 +114,16 @@ class AuthGradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: const BorderRadius.all(AppRadius.lg),
+      borderRadius: _authRadius,
       child: InkWell(
         onTap: loading ? null : onTap,
-        borderRadius: const BorderRadius.all(AppRadius.lg),
+        borderRadius: _authRadius,
         child: Ink(
           height: 52,
           decoration: BoxDecoration(
             gradient: loading ? null : authBrandGradient,
-            color: loading ? AppColors.inputBackground : null,
-            borderRadius: const BorderRadius.all(AppRadius.lg),
+            color: loading ? _authLoadingBg : null,
+            borderRadius: _authRadius,
           ),
           child: Center(
             child: loading

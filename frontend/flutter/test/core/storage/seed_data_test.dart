@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,20 +35,32 @@ void main() {
       final exercise = await db.select(db.exerciseSessions).get();
 
       expect(diet, isNotEmpty);
-      expect(diet.every((r) => r.date == today), isTrue,
-          reason: 'all seeded diet rows must use today\'s date');
+      expect(
+        diet.every((r) => r.date == today),
+        isTrue,
+        reason: 'all seeded diet rows must use today\'s date',
+      );
       // Schedule seeds a couple of events on today (for the dashboard's
       // "오늘의 일정") plus a few spread across the current month (for the
       // calendar). All stay within the current month so the date-slide
       // keeps them visible.
       final ym = today.substring(0, 7);
       expect(sched, isNotEmpty);
-      expect(sched.every((r) => r.date.startsWith('$ym-')), isTrue,
-          reason: 'all seeded schedule rows must be in the current month');
-      expect(sched.any((r) => r.date == today), isTrue,
-          reason: 'at least one schedule row must be on today');
-      expect(exercise, isNotEmpty,
-          reason: 'exercise sessions for the current week must be seeded');
+      expect(
+        sched.every((r) => r.date.startsWith('$ym-')),
+        isTrue,
+        reason: 'all seeded schedule rows must be in the current month',
+      );
+      expect(
+        sched.any((r) => r.date == today),
+        isTrue,
+        reason: 'at least one schedule row must be on today',
+      );
+      expect(
+        exercise,
+        isNotEmpty,
+        reason: 'exercise sessions for the current week must be seeded',
+      );
 
       expect(await db.readValue('seeded_v3'), today);
     });
@@ -64,6 +78,37 @@ void main() {
       expect(exerciseAfter.length, exerciseBefore.length);
     });
 
+    test('diet seed has consistent realistic nutrition totals', () async {
+      await seedIfEmpty(db);
+      final diet = await db.select(db.dietEntries).get();
+
+      expect(diet.length, 4);
+      expect(
+        diet.fold<int>(0, (sum, entry) => sum + entry.totalCalories),
+        1860,
+      );
+      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 2329);
+
+      for (final entry in diet) {
+        final foods = (jsonDecode(entry.foodsJson) as List<Object?>)
+            .cast<Map<String, Object?>>();
+        expect(
+          foods.fold<int>(
+            0,
+            (sum, food) => sum + (food['calories']! as num).toInt(),
+          ),
+          entry.totalCalories,
+        );
+        expect(
+          foods.fold<int>(
+            0,
+            (sum, food) => sum + (food['sodium_mg']! as num).toInt(),
+          ),
+          entry.sodiumMg,
+        );
+      }
+    });
+
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
@@ -74,8 +119,11 @@ void main() {
       final today = _todayString();
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
-      expect(diet.every((r) => r.date == today), isTrue,
-          reason: 're-seed must overwrite stale dates with today');
+      expect(
+        diet.every((r) => r.date == today),
+        isTrue,
+        reason: 're-seed must overwrite stale dates with today',
+      );
       expect(await db.readValue('seeded_v3'), today);
     });
 

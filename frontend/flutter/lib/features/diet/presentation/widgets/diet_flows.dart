@@ -11,11 +11,14 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
-/// A single logged food item.
+/// A single logged food item, with the per-food nutrition shown on the meal
+/// card ([sodiumMg] / [sugarG] default to 0 for draft rows in the edit sheet).
 class DietFood {
-  const DietFood(this.name, this.kcal);
+  const DietFood(this.name, this.kcal, {this.sodiumMg = 0, this.sugarG = 0});
   final String name;
   final int kcal;
+  final int sodiumMg;
+  final double sugarG;
 }
 
 /// A nutrient chip on a meal card (`over` = above the daily target → red).
@@ -38,6 +41,8 @@ class DietMeal {
     required this.tags,
     required this.sodium,
     required this.sugar,
+    this.aiComment = '',
+    this.photoAsset,
     this.id,
   });
 
@@ -49,7 +54,13 @@ class DietMeal {
   final List<DietFood> items;
   final List<DietTag> tags;
   final int sodium;
-  final int sugar;
+  final double sugar;
+
+  /// Short per-meal AI feedback line shown under the food breakdown.
+  final String aiComment;
+
+  /// Bundled photo asset for the thumbnail; null falls back to [emoji].
+  final String? photoAsset;
   final String? id;
 }
 

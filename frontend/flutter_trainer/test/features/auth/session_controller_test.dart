@@ -100,6 +100,79 @@ void main() {
       expect(container.read(sessionTokenStoreProvider).readToken(), isNull);
     });
 
+    test(
+      'registered identity survives a restart (does not revert to seed)',
+      () async {
+        final container = await _makeContainer();
+        await container
+            .read(sessionControllerProvider.notifier)
+            .register(
+              email: 'hong@example.com',
+              password: 'pw',
+              name: '홍길동',
+            );
+
+        // Simulate a restart: a fresh container over the same prefs.
+        final prefs = await SharedPreferences.getInstance();
+        final restarted = ProviderContainer(
+          overrides: <Override>[
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+        );
+        addTearDown(restarted.dispose);
+
+        final state = restarted.read(sessionControllerProvider);
+        expect(state.status, SessionStatus.authenticated);
+        // 재시작 후에도 가입 이름/이메일 유지(시드로 되돌아가지 않음).
+        expect(state.profile?.name, '홍길동');
+        expect(state.profile?.email, 'hong@example.com');
+      },
+    );
+
+    test('login session restores to the seed identity after a restart', () async {
+      final container = await _makeContainer();
+      await container
+          .read(sessionControllerProvider.notifier)
+          .login(email: 'trainer@oncare.com', password: 'pw');
+
+      final prefs = await SharedPreferences.getInstance();
+      final restarted = ProviderContainer(
+        overrides: <Override>[
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(restarted.dispose);
+
+      final state = restarted.read(sessionControllerProvider);
+      expect(state.status, SessionStatus.authenticated);
+      expect(state.profile?.name, '김트레이너');
+      expect(state.profile?.email, 'trainer@oncare.com');
+    });
+
+    test(
+      'signOut clears the registered identity (next launch is signed out)',
+      () async {
+        final container = await _makeContainer();
+        final controller = container.read(sessionControllerProvider.notifier);
+        await controller.register(
+          email: 'hong@example.com',
+          password: 'pw',
+          name: '홍길동',
+        );
+
+        await controller.signOut();
+
+        expect(
+          container.read(sessionTokenStoreProvider).readProfileName(),
+          isNull,
+        );
+        expect(
+          container.read(sessionTokenStoreProvider).readProfileEmail(),
+          isNull,
+        );
+      },
+    );
+
     test('signOut clears the token and returns to signedOut', () async {
       final container = await _makeContainer();
       final controller = container.read(sessionControllerProvider.notifier);

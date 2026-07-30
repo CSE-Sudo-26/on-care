@@ -260,13 +260,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                     bottomRight: Radius.circular(16),
                   ),
                   border: Border.all(color: FigmaColors.hairline),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
-                      blurRadius: 14,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  boxShadow: kCardShadow,
                 ),
                 child: m.pending
                     ? const _TypingDots()
@@ -437,16 +431,10 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
               child: Container(
                 width: 32,
                 height: 32,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: FigmaColors.primary,
                   shape: BoxShape.circle,
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: FigmaColors.primaryA(0.45),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  boxShadow: kCardShadow,
                 ),
                 child: sending
                     ? const Padding(

@@ -1196,12 +1196,6 @@ BoxDecoration _cardDecoration() {
     color: Colors.white,
     borderRadius: BorderRadius.circular(20),
     border: Border.all(color: FigmaColors.hairline),
-    boxShadow: <BoxShadow>[
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.09),
-        blurRadius: 24,
-        offset: const Offset(0, 4),
-      ),
-    ],
+    boxShadow: kCardShadow,
   );
 }

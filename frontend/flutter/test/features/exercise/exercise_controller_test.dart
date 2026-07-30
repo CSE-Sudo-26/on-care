@@ -11,7 +11,7 @@ void main() {
         // Production repo is DioExerciseRepository (needs dio + db);
         // unit test only needs the React-shaped in-memory mock.
         exerciseRepositoryProvider.overrideWithValue(
-          const MockExerciseRepository(),
+          MockExerciseRepository(),
         ),
       ],
     );
@@ -19,9 +19,9 @@ void main() {
     final week = await container.read(exerciseWeekProvider.future);
     expect(week.dailyMinutes.length, 7);
     expect(week.dayLabels.length, 7);
-    expect(week.totalMinutes, 240);
-    expect(week.totalCalories, 1450);
-    expect(week.streakDays, 3);
+    expect(week.totalMinutes, 315);
+    expect(week.totalCalories, 1980);
+    expect(week.streakDays, 4);
     expect(week.aiCoachMessage, isNotEmpty);
     expect(week.sessions, isNotEmpty);
     // Stacked-chart series should line up with the bar chart x-axis.

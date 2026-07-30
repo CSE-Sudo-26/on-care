@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/network/auth_token.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/core/storage/secure_token_store.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 
 enum SessionStatus { unknown, signedOut, demo, authenticated }
 
@@ -59,6 +60,7 @@ class SessionController extends StateNotifier<SessionState> {
     } catch (_) {
       // secure storage 저장 실패해도 세션 메모리 토큰으로 진행
     }
+    _ref.invalidate(consultationRequestControllerProvider);
     _setToken(access);
     state = const SessionState(status: SessionStatus.authenticated);
   }
@@ -111,6 +113,7 @@ class SessionController extends StateNotifier<SessionState> {
   /// Skip auth — demo mode. No token; the backend demo-fallback serves data.
   void enterDemo() {
     _setToken(null);
+    _ref.invalidate(consultationRequestControllerProvider);
     state = const SessionState(status: SessionStatus.demo);
   }
 
@@ -119,6 +122,7 @@ class SessionController extends StateNotifier<SessionState> {
       await _ref.read(secureTokenStoreProvider).clear();
     } catch (_) {}
     _setToken(null);
+    _ref.invalidate(consultationRequestControllerProvider);
     state = const SessionState(status: SessionStatus.signedOut);
   }
 }

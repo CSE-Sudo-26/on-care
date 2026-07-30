@@ -153,7 +153,8 @@ class LocalApiInterceptor extends Interceptor {
     final type = (body['type'] as String? ?? existing.type).trim();
     final minutes = (body['minutes'] as num?)?.toInt() ?? existing.minutes;
     final calories = (body['calories'] as num?)?.toInt() ?? existing.calories;
-    final intensity = (body['intensity'] as String? ?? existing.intensity).trim();
+    final intensity = (body['intensity'] as String? ?? existing.intensity)
+        .trim();
     final dayRaw = (body['day_label'] as String? ?? '').trim();
     final dayLabel = dayRaw.isEmpty ? existing.dayLabel : dayRaw;
     await (_db.update(
@@ -189,24 +190,52 @@ class LocalApiInterceptor extends Interceptor {
     final body = _jsonBody(options);
     final mealType = (body['meal_type'] as String?)?.trim();
     final timeLabel = (body['time_label'] as String?)?.trim();
+    final Object? foodsValue = body['foods'];
+    if (body.containsKey('foods') &&
+        (foodsValue is! List || foodsValue.any((food) => food is! Map))) {
+      return _badRequest(options, 'foods must be a list of objects');
+    }
+    final List<Object?>? requestFoods = foodsValue is List
+        ? List<Object?>.from(foodsValue)
+        : null;
+    final Object? totalCaloriesValue = body['total_calories'];
+    final Object? sodiumMgValue = body['sodium_mg'];
+    final Object? sugarGValue = body['sugar_g'];
     await (_db.update(_db.dietEntries)..where((t) => t.id.equals(id))).write(
       DietEntriesCompanion(
         mealType: (mealType == null || mealType.isEmpty)
             ? const Value.absent()
             : Value(mealType),
         timeLabel: timeLabel == null ? const Value.absent() : Value(timeLabel),
+        foodsJson: requestFoods == null
+            ? const Value.absent()
+            : Value(jsonEncode(requestFoods)),
+        totalCalories:
+            body.containsKey('total_calories') && totalCaloriesValue is num
+            ? Value(totalCaloriesValue.toInt())
+            : const Value.absent(),
+        sodiumMg: body.containsKey('sodium_mg') && sodiumMgValue is num
+            ? Value(sodiumMgValue.toInt())
+            : const Value.absent(),
+        sugarG: body.containsKey('sugar_g') && sugarGValue is num
+            ? Value(sugarGValue.toInt())
+            : const Value.absent(),
       ),
     );
     final row = await (_db.select(
       _db.dietEntries,
     )..where((t) => t.id.equals(id))).getSingle();
     final foods = jsonDecode(row.foodsJson) as List<Object?>;
+    final macros = _foodMacroTotals(foods);
     return _ok(options, <String, Object?>{
       'id': row.id,
       'meal_type': row.mealType,
       'time_label': row.timeLabel,
       'foods': foods,
       'total_calories': row.totalCalories,
+      'carbs_g': macros.carbsG,
+      'protein_g': macros.proteinG,
+      'fat_g': macros.fatG,
       'sodium_mg': row.sodiumMg,
       'sugar_g': row.sugarG,
     });
@@ -244,24 +273,52 @@ class LocalApiInterceptor extends Interceptor {
     int totalCalories = 0;
     int totalSodium = 0;
     int totalSugar = 0;
+    var totalCarbs = 0.0;
+    var totalProtein = 0.0;
+    var totalFat = 0.0;
+    final sodiumByFoodName = <String, int>{};
     for (final r in dietRows) {
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
       totalSugar += r.sugarG;
+      final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
+      final macros = _foodMacroTotals(foods);
+      totalCarbs += macros.carbsG;
+      totalProtein += macros.proteinG;
+      totalFat += macros.fatG;
+      for (final food in foods) {
+        if (food is! Map) continue;
+        final name = (food['name'] as String? ?? '').trim();
+        final sodium = (food['sodium_mg'] as num?)?.toInt() ?? 0;
+        if (name.isNotEmpty && sodium > 0) {
+          sodiumByFoodName.update(
+            name,
+            (total) => total + sodium,
+            ifAbsent: () => sodium,
+          );
+        }
+      }
     }
+    final sodiumSources = sodiumByFoodName.entries.toList()
+      ..sort((a, b) {
+        final sodiumOrder = b.value.compareTo(a.value);
+        return sodiumOrder != 0 ? sodiumOrder : a.key.compareTo(b.key);
+      });
+    final sodiumSourceNames = sodiumSources
+        .take(2)
+        .map((source) => source.key)
+        .join('·');
 
-    // Exercise minutes for today's day-label.
-    final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+    // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
-    // Two chained .where() calls are AND-joined by drift.
-    final exerciseRows =
-        await (_db.select(_db.exerciseSessions)
-              ..where((t) => t.weekStart.equals(weekStart))
-              ..where((t) => t.dayLabel.equals(todayLabel)))
-            .get();
+    final exerciseRows = await (_db.select(
+      _db.exerciseSessions,
+    )..where((t) => t.weekStart.equals(weekStart))).get();
     int exerciseMinutes = 0;
+    int exerciseCalories = 0;
     for (final r in exerciseRows) {
       exerciseMinutes += r.minutes;
+      exerciseCalories += r.calories;
     }
 
     // (혈당 row removed from the home summary per the latest design ref —
@@ -304,18 +361,23 @@ class LocalApiInterceptor extends Interceptor {
           'unit': 'g',
         },
       ],
+      'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
+      'exercise_calories': exerciseCalories,
+      'exercise_count': exerciseRows.length,
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week
       // diff lands in a later phase.
       'week_score_delta': 12,
       'sodium_warning': totalSodium > 2000
-          ? '오늘의 나트륨 섭취량이 높아요. 저녁에는 담백한 구이나 샐러드를 추천해요!'
+          ? sodiumSourceNames.isNotEmpty
+                ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
+                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
-          ? '오늘 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
+          ? '이번 주 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
           : '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
     });
   }
@@ -331,17 +393,28 @@ class LocalApiInterceptor extends Interceptor {
     int totalCalories = 0;
     int totalSodium = 0;
     int totalSugar = 0;
+    double totalCarbs = 0;
+    double totalProtein = 0;
+    double totalFat = 0;
     final entriesJson = <Map<String, Object?>>[];
     for (final r in rows) {
+      final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
+      final macros = _foodMacroTotals(foods);
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
       totalSugar += r.sugarG;
+      totalCarbs += macros.carbsG;
+      totalProtein += macros.proteinG;
+      totalFat += macros.fatG;
       entriesJson.add(<String, Object?>{
         'id': r.id,
         'meal_type': r.mealType,
         'time_label': r.timeLabel,
-        'foods': (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>(),
+        'foods': foods,
         'total_calories': r.totalCalories,
+        'carbs_g': macros.carbsG,
+        'protein_g': macros.proteinG,
+        'fat_g': macros.fatG,
         'sodium_mg': r.sodiumMg,
         'sugar_g': r.sugarG,
       });
@@ -352,15 +425,9 @@ class LocalApiInterceptor extends Interceptor {
       'total_calories': totalCalories,
       'total_sodium_mg': totalSodium,
       'total_sugar_g': totalSugar,
-      // Macro breakdown isn't tracked per entry yet — return the
-      // demo split until a richer schema lands.
-      'macros': <String, Object?>{
-        'carbs_pct': 50,
-        'protein_pct': 30,
-        'fat_pct': 20,
-      },
+      'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'ai_coach_message': totalSodium > 2000
-          ? '오늘 점심에 나트륨이 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!'
+          ? '오늘 나트륨 섭취량이 권장량을 초과했어요. 점심의 김치찌개와 배추김치가 가장 큰 영향을 주었어요.'
           : '균형 잡힌 하루였어요. 내일도 이대로 가요!',
     });
   }
@@ -389,9 +456,10 @@ class LocalApiInterceptor extends Interceptor {
 
     // 같은 멱등키가 이미 저장돼 있으면 새로 저장하지 않고 기존 entry 를 반환(재시도 중복 방지).
     if (idempotencyKey != null) {
-      final existing = await (_db.select(
-        _db.dietEntries,
-      )..where((t) => t.idempotencyKey.equals(idempotencyKey!))).getSingleOrNull();
+      final existing =
+          await (_db.select(_db.dietEntries)
+                ..where((t) => t.idempotencyKey.equals(idempotencyKey!)))
+              .getSingleOrNull();
       if (existing != null) {
         final storedFoods = (jsonDecode(existing.foodsJson) as List<Object?>)
             .cast<Map<String, Object?>>();
@@ -415,6 +483,9 @@ class LocalApiInterceptor extends Interceptor {
         'calories': 600,
         'sodium_mg': 900,
         'sugar_g': 8,
+        'carbs_g': 91.0,
+        'protein_g': 18.0,
+        'fat_g': 18.0,
         'source': 'db',
       },
       <String, Object?>{
@@ -422,6 +493,9 @@ class LocalApiInterceptor extends Interceptor {
         'calories': 15,
         'sodium_mg': 300,
         'sugar_g': 1,
+        'carbs_g': 3.0,
+        'protein_g': 1.0,
+        'fat_g': 0.0,
         'source': 'db',
       },
     ];
@@ -822,48 +896,48 @@ class LocalApiInterceptor extends Interceptor {
     if (has(<String>['나트륨', '혈압', '짜', '소금', '국물'])) {
       return (
         '나트륨을 줄이려면 국물은 남기고 건더기 위주로 드시고, 소금 대신 후추·마늘·레몬으로 '
-        '간을 해보세요. 하루 나트륨을 2000mg 이하로 맞추면 혈압 관리에 큰 도움이 돼요. 🌿',
+            '간을 해보세요. 하루 나트륨을 2000mg 이하로 맞추면 혈압 관리에 큰 도움이 돼요. 🌿',
         <String>['나트륨 줄이기', 'DASH 식단 개요'],
       );
     }
     if (has(<String>['당', '혈당', '설탕', '단 것', '디저트'])) {
       return (
         '혈당 관리를 위해 가당 음료와 디저트 같은 단순당을 줄이고, 식이섬유가 풍부한 통곡물·채소를 '
-        '늘려보세요. 음료는 물이나 무가당 차로 바꾸는 것만으로도 효과가 좋아요. 🍵',
+            '늘려보세요. 음료는 물이나 무가당 차로 바꾸는 것만으로도 효과가 좋아요. 🍵',
         <String>['당류 관리'],
       );
     }
     if (has(<String>['운동', '걷', '헬스', '유산소', '근력'])) {
       return (
         '빠르게 걷기 같은 중강도 유산소를 주 5회, 하루 30분씩 해보세요. 여기에 주 2회 가벼운 근력 '
-        '운동을 더하면 혈압·혈당 관리에 특히 좋아요. 식후 10분 걷기도 큰 도움이 됩니다. 🚶',
+            '운동을 더하면 혈압·혈당 관리에 특히 좋아요. 식후 10분 걷기도 큰 도움이 됩니다. 🚶',
         <String>['고혈압과 운동', '유산소와 근력 균형'],
       );
     }
     if (has(<String>['뭐 먹', '식단', '점심', '저녁', '아침', '메뉴'])) {
       return (
         '채소·통곡물·저지방 단백질 위주의 DASH 식단을 추천해요. 국·찌개는 싱겁게, 튀김보다 구이·찜으로 '
-        '드시면 좋아요. 혹시 최근 나트륨이 높았다면 담백한 샐러드나 생선구이가 균형을 맞춰줘요. 🥗',
+            '드시면 좋아요. 혹시 최근 나트륨이 높았다면 담백한 샐러드나 생선구이가 균형을 맞춰줘요. 🥗',
         <String>['DASH 식단 개요'],
       );
     }
     if (has(<String>['물', '수분'])) {
       return (
         '하루 6~8잔의 물을 나눠 마시는 것이 혈압과 신진대사에 도움이 돼요. 카페인·가당 음료는 줄이고 '
-        '물로 대체해보세요. 💧',
+            '물로 대체해보세요. 💧',
         <String>['수분 섭취'],
       );
     }
     if (has(<String>['체중', '살', '다이어트', '몸무게'])) {
       return (
         '급격한 감량보다 식단과 운동을 병행한 완만한 감량이 안전해요. 체중을 5~10%만 줄여도 혈압·혈당 '
-        '지표가 눈에 띄게 좋아질 수 있어요. 함께 천천히 가봐요! 💪',
+            '지표가 눈에 띄게 좋아질 수 있어요. 함께 천천히 가봐요! 💪',
         <String>['체중 관리'],
       );
     }
     return (
       '좋은 질문이에요! 식단·운동·혈압·혈당·수분 관리에 대해 더 구체적으로 물어봐 주시면 온이가 '
-      '맞춤으로 도와드릴게요. 예를 들어 "나트륨 줄이는 법"이나 "오늘 뭐 먹을까?"처럼요. 😊',
+          '맞춤으로 도와드릴게요. 예를 들어 "나트륨 줄이는 법"이나 "오늘 뭐 먹을까?"처럼요. 😊',
       <String>[],
     );
   }
@@ -953,7 +1027,10 @@ class LocalApiInterceptor extends Interceptor {
   }
 
   Future<Map<String, Object?>> _mergedProfile() async {
-    return <String, Object?>{..._defaultProfile, ...await _readProfileOverlay()};
+    return <String, Object?>{
+      ..._defaultProfile,
+      ...await _readProfileOverlay(),
+    };
   }
 
   Future<void> _mergeProfileOverlay(Map<String, Object?> patch) async {
@@ -1053,7 +1130,20 @@ class LocalApiInterceptor extends Interceptor {
           'improving': true,
           'last_7_days': <double>[0.62, 0.58, 0.52, 0.45, 0.36, 0.28, 0.20],
           'chart_values': <double>[
-            82, 80, 79, 78, 78, 77, 77, 76, 75, 75, 74, 73, 73, 72,
+            82,
+            80,
+            79,
+            78,
+            78,
+            77,
+            77,
+            76,
+            75,
+            75,
+            74,
+            73,
+            73,
+            72,
           ],
           'chart_min_y': 70,
           'chart_max_y': 75,
@@ -1075,7 +1165,20 @@ class LocalApiInterceptor extends Interceptor {
           'improving': true,
           'last_7_days': <double>[0.80, 0.74, 0.66, 0.55, 0.42, 0.28, 0.16],
           'chart_values': <double>[
-            145, 144, 142, 140, 140, 138, 136, 134, 132, 130, 129, 127, 126, 124,
+            145,
+            144,
+            142,
+            140,
+            140,
+            138,
+            136,
+            134,
+            132,
+            130,
+            129,
+            127,
+            126,
+            124,
           ],
           'chart_min_y': 100,
           'chart_max_y': 140,
@@ -1097,7 +1200,20 @@ class LocalApiInterceptor extends Interceptor {
           'improving': true,
           'last_7_days': <double>[0.78, 0.70, 0.60, 0.50, 0.40, 0.30, 0.18],
           'chart_values': <double>[
-            128, 124, 120, 118, 116, 113, 110, 108, 106, 104, 102, 100, 98, 96,
+            128,
+            124,
+            120,
+            118,
+            116,
+            113,
+            110,
+            108,
+            106,
+            104,
+            102,
+            100,
+            98,
+            96,
           ],
           'chart_min_y': 80,
           'chart_max_y': 140,
@@ -1114,11 +1230,7 @@ class LocalApiInterceptor extends Interceptor {
       'activity_points': 1240,
       'activity_rank': 14,
       'settings': <Map<String, Object?>>[
-        <String, Object?>{
-          'label': '내 프로필',
-          'icon': '👤',
-          'kind': 'my-profile',
-        },
+        <String, Object?>{'label': '내 프로필', 'icon': '👤', 'kind': 'my-profile'},
         <String, Object?>{
           'label': '건강 목표',
           'icon': '📊',
@@ -1129,11 +1241,7 @@ class LocalApiInterceptor extends Interceptor {
           'icon': '🔔',
           'kind': 'notification',
         },
-        <String, Object?>{
-          'label': '고객 지원',
-          'icon': '💬',
-          'kind': 'support',
-        },
+        <String, Object?>{'label': '고객 지원', 'icon': '💬', 'kind': 'support'},
       ],
     });
   }
@@ -1289,7 +1397,8 @@ class LocalApiInterceptor extends Interceptor {
     final body = options.data;
     if (body is Map) return body.cast<String, Object?>();
     if (body is String && body.isNotEmpty) {
-      return (jsonDecode(body) as Map<Object?, Object?>).cast<String, Object?>();
+      return (jsonDecode(body) as Map<Object?, Object?>)
+          .cast<String, Object?>();
     }
     return <String, Object?>{};
   }
@@ -1326,3 +1435,56 @@ class LocalApiInterceptor extends Interceptor {
 }
 
 typedef _Handler = Future<Response<Object?>> Function(RequestOptions);
+
+typedef _MacroTotals = ({double carbsG, double proteinG, double fatG});
+
+_MacroTotals _foodMacroTotals(List<Object?> foods) {
+  var carbs = 0.0;
+  var protein = 0.0;
+  var fat = 0.0;
+  for (final food in foods) {
+    if (food is! Map) continue;
+    carbs += (food['carbs_g'] as num?)?.toDouble() ?? 0;
+    protein += (food['protein_g'] as num?)?.toDouble() ?? 0;
+    fat += (food['fat_g'] as num?)?.toDouble() ?? 0;
+  }
+  return (carbsG: carbs, proteinG: protein, fatG: fat);
+}
+
+// Keep this 4/4/9 largest-remainder calculation in sync with
+// the backend calculate_macros implementation.
+Map<String, Object?> _macroPayload(
+  double carbsG,
+  double proteinG,
+  double fatG,
+) {
+  final energies = <double>[carbsG * 4, proteinG * 4, fatG * 9];
+  final totalEnergy = energies.fold<double>(0, (sum, value) => sum + value);
+  final percentages = <int>[0, 0, 0];
+  if (totalEnergy > 0) {
+    final raw = energies.map((energy) => energy / totalEnergy * 100).toList();
+    for (var i = 0; i < percentages.length; i++) {
+      percentages[i] = raw[i].floor();
+    }
+    final ranked = <int>[0, 1, 2]
+      ..sort((a, b) {
+        final fraction = (raw[b] - percentages[b]).compareTo(
+          raw[a] - percentages[a],
+        );
+        return fraction == 0 ? b.compareTo(a) : fraction;
+      });
+    final remaining =
+        100 - percentages.fold<int>(0, (sum, value) => sum + value);
+    for (final index in ranked.take(remaining)) {
+      percentages[index]++;
+    }
+  }
+  return <String, Object?>{
+    'carbs_g': carbsG,
+    'protein_g': proteinG,
+    'fat_g': fatG,
+    'carbs_pct': percentages[0],
+    'protein_pct': percentages[1],
+    'fat_pct': percentages[2],
+  };
+}

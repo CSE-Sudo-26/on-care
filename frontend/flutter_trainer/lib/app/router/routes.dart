@@ -7,6 +7,9 @@ class AppRoutes {
   /// Trainer login screen (email/password + demo bypass).
   static const String signIn = '/auth/sign-in';
 
+  /// Trainer 회원가입 screen (name/email/password).
+  static const String signUp = '/auth/sign-up';
+
   // Main tabs (StatefulShellRoute branches).
 
   /// 고객 관리 — client list (home tab).

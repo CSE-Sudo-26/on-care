@@ -32,9 +32,16 @@ void main() {
   test('dio → LocalApi → DietDay.fromJson round-trips totals', () async {
     final res = await dio.get<Map<String, Object?>>('/diet/days/today');
     final day = DietDay.fromJson(res.data!);
-    expect(day.entries.length, 3);
-    expect(day.totalCalories, 315 + 530 + 575);
-    expect(day.totalSodiumMg, 380 + 1120 + 600);
+    expect(day.entries.length, 4);
+    expect(day.totalCalories, 1860);
+    expect(day.totalSodiumMg, 2329);
+    expect(day.macros.carbsG, closeTo(203.6, 0.001));
+    expect(day.macros.proteinG, closeTo(109.3, 0.001));
+    expect(day.macros.fatG, closeTo(66.5, 0.001));
+    expect(
+      <int>[day.macros.carbsPct, day.macros.proteinPct, day.macros.fatPct],
+      <int>[44, 24, 32],
+    );
   });
 
   test('dio → LocalApi → ExerciseWeek.fromJson stays Mon..Sun', () async {
@@ -54,14 +61,20 @@ void main() {
     // ends at 당류 (calories / sodium / sugar).
     expect(summary.indicators.length, 3);
     final cal = summary.indicators.firstWhere((i) => i.label == '칼로리');
-    expect(cal.current, 1420);
+    expect(cal.current, 1860);
     expect(
       summary.indicators.any((i) => i.label == '혈당'),
       isFalse,
       reason: '혈당 row should no longer be in the home summary',
     );
-    // 3 seeded meals.
-    expect(summary.dietEntries, 3);
+    // 4 seeded meals.
+    expect(summary.dietEntries, 4);
+    expect(summary.macros.carbsG, 203.6);
+    expect(summary.macros.proteinG, 109.3);
+    expect(summary.macros.fatG, 66.5);
+    expect(summary.macros.carbsPct, 44);
+    expect(summary.sodiumWarning, contains('김치찌개'));
+    expect(summary.sodiumWarning, contains('배추김치'));
     // Two baseline events always fall on today. One of the monthly demo
     // events can also land on today (5th/12th/22nd/26th), so keep this
     // assertion stable across the calendar while still checking the baseline.

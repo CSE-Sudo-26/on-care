@@ -48,13 +48,6 @@ List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
     body: l.coachCardExerciseBody,
     done: true,
   ),
-  _CoachCard(
-    tag: l.coachCardWaterTag,
-    tagColor: FigmaColors.primary,
-    title: l.coachCardWaterTitle,
-    body: l.coachCardWaterBody,
-    done: false,
-  ),
 ];
 
 class _CoachingSheet extends StatelessWidget {
@@ -64,8 +57,6 @@ class _CoachingSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final List<_CoachCard> cards = _cardsOf(l);
-    final int done = cards.where((_CoachCard c) => c.done).length;
-    final double pct = done / cards.length;
 
     return SafeArea(
       top: false,
@@ -135,48 +126,7 @@ class _CoachingSheet extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text(
-                          l.coachProgressLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: FigmaColors.textMuted,
-                          ),
-                        ),
-                        Text(
-                          l.coachProgressDone(done, cards.length),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: FigmaColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 8,
-                        backgroundColor: const Color(0xFFEEF2F6),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          FigmaColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
@@ -223,13 +173,7 @@ class _CoachCardTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: FigmaColors.hairline),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: kCardShadow,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

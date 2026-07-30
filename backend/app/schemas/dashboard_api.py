@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel
 
+from app.schemas.diet_api import Macros
+
 
 class DashboardIndicator(BaseModel):
     label: str            # 칼로리 | 나트륨 | 당류
@@ -23,8 +25,11 @@ class DashboardScheduleItem(BaseModel):
 
 class DashboardSummary(BaseModel):
     indicators: list[DashboardIndicator]
+    macros: Macros
     diet_entries: int
     exercise_minutes: int
+    exercise_calories: int
+    exercise_count: int
     today_schedule: list[DashboardScheduleItem]
     week_score: int
     week_score_delta: int

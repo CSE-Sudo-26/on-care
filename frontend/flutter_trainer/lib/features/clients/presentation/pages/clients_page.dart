@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -229,6 +230,12 @@ class _ClientsView extends StatelessWidget {
   }
 }
 
+/// 신규 고객 등록 시트의 입력칸 공통 테두리 — 검정 밑줄 대신 둥근 네모.
+const OutlineInputBorder _sheetInputBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.all(AppRadius.lg),
+  borderSide: BorderSide.none,
+);
+
 /// Bottom sheet collecting the new client's 이름/목표.
 class _AddClientSheet extends ConsumerStatefulWidget {
   const _AddClientSheet();
@@ -310,34 +317,22 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: <Widget>[
-              const Text(
-                '이름',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                '*필수',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.destructive.withValues(alpha: 0.85),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
           TextField(
             controller: _name,
             decoration: InputDecoration(
               hintText: '고객 이름',
+              hintStyle: const TextStyle(color: AppColors.subtleForeground),
               isDense: true,
+              filled: true,
+              fillColor: AppColors.inputBackground,
               errorText: _nameError,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              border: _sheetInputBorder,
+              enabledBorder: _sheetInputBorder,
+              focusedBorder: _sheetInputBorder,
             ),
             onChanged: (_) {
               if (_nameError != null) setState(() => _nameError = null);
@@ -348,7 +343,17 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
             controller: _goal,
             decoration: const InputDecoration(
               hintText: '목표 (예: 체중 감량 · 근력 향상)',
+              hintStyle: TextStyle(color: AppColors.subtleForeground),
               isDense: true,
+              filled: true,
+              fillColor: AppColors.inputBackground,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              border: _sheetInputBorder,
+              enabledBorder: _sheetInputBorder,
+              focusedBorder: _sheetInputBorder,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -400,6 +405,7 @@ class _AiSummaryCard extends StatelessWidget {
         ),
         borderRadius: const BorderRadius.all(AppRadius.card),
         border: Border.all(color: AppColors.borderStrong),
+        boxShadow: kCardShadow,
       ),
       child: Row(
         children: <Widget>[

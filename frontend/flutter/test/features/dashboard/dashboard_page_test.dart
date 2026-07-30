@@ -6,6 +6,8 @@ import 'package:logger/logger.dart';
 import 'package:oncare/app/app.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
+import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
+import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
 
 void main() {
@@ -25,14 +27,21 @@ void main() {
           appConfigProvider.overrideWithValue(config),
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           localeProvider.overrideWith((ref) => const Locale('ko')),
+          dashboardRepositoryProvider.overrideWithValue(
+            const MockDashboardRepository(),
+          ),
         ],
         child: const OncareApp(),
       ),
     );
     await tester.pumpAndSettle();
     // The app now boots into the sign-in screen; enter demo mode to reach
-    // the dashboard.
-    await tester.tap(find.text('데모로 시작'));
+    // the dashboard. Find by Key (locale-independent) and scroll it into view
+    // first (it sits below the fold on the compact test surface).
+    final demoButton = find.byKey(const Key('demoEnterButton'));
+    await tester.ensureVisible(demoButton);
+    await tester.pumpAndSettle();
+    await tester.tap(demoButton);
     await tester.pumpAndSettle();
   }
 
@@ -41,8 +50,11 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('오늘도 가볍게 시작해요 👋'), findsOneWidget);
-    expect(find.text('영양 현황'), findsOneWidget);
+    expect(find.text('식단 · 영양'), findsOneWidget);
+    expect(find.text('1,860'), findsWidgets);
+    expect(find.text('203.6g'), findsOneWidget);
+    expect(find.text('오늘 식단 기록 4개'), findsOneWidget);
     expect(find.text('오늘의 일정'), findsOneWidget);
-    expect(find.text('저녁 산책'), findsOneWidget);
+    expect(find.text('병원 정기검진'), findsOneWidget);
   });
 }

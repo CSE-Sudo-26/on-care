@@ -252,6 +252,60 @@ class Place(Base):
     kakao_place_id: Mapped[str] = mapped_column(String(50), default="")
 
 
+class ConsultationRequest(Base):
+    """회원의 헬스장·트레이너 상담 요청."""
+    __tablename__ = "consultation_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    target_type: Mapped[str] = mapped_column(String(20))
+    gym_id: Mapped[str | None] = mapped_column(
+        ForeignKey("places.id", ondelete="SET NULL"), nullable=True
+    )
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    exercise_goal: Mapped[str] = mapped_column(String(30))
+    health_purpose_type: Mapped[str] = mapped_column(String(30))
+    health_purpose_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preferred_date: Mapped[str] = mapped_column(String(10))
+    preferred_time_slot: Mapped[str] = mapped_column(String(20))
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_consultation_requests_pending_gym",
+            "member_id",
+            "gym_id",
+            unique=True,
+            postgresql_where=text("target_type = 'gym' AND status = 'pending'"),
+        ),
+        Index(
+            "uq_consultation_requests_pending_trainer",
+            "member_id",
+            "trainer_id",
+            unique=True,
+            postgresql_where=text("target_type = 'trainer' AND status = 'pending'"),
+        ),
+        Index(
+            "ix_consultation_requests_member_created_at",
+            "member_id",
+            "created_at",
+        ),
+    )
+
+
 #
 # ---------------------------------------------------------------------------
 # 트레이너 도메인 — 트레이너↔회원 데이터 공유의 뼈대.

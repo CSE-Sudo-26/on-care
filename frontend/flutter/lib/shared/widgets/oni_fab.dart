@@ -6,7 +6,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 /// coaching sheet. A red badge shows the number of pending suggestions.
 /// Mirrors the Figma FAB.
 class OniFab extends StatelessWidget {
-  const OniFab({super.key, required this.onTap, this.badgeCount = 3});
+  const OniFab({super.key, required this.onTap, this.badgeCount = 2});
 
   final VoidCallback onTap;
   final int badgeCount;

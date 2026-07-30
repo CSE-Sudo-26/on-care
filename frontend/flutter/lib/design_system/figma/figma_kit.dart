@@ -29,12 +29,13 @@ class FigmaColors {
   static const Color greenTag = Color(0xFF34C782); // coaching 운동 tag
   static const Color orange = Color(0xFFFF953C); // fat bar / warn fill
   static const Color orangeText = Color(0xFFE8760A); // warn text
-  static const Color heartOrange = Color(0xFFFF7A45); // spark / trainer accent
+  static const Color heartOrange = Color(0xFFFF953C); // spark accent(주의 오렌지로 통일)
   static const Color sugarPurple = Color(0xFF9B8FD4); // 당류 chart
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
   // Dots / status
   static const Color redDot = Color(0xFFFF3B5C);
+  static const Color dangerRed = Color(0xFFF04438); // 초과/경고 강조(나트륨 초과 등)
   static const Color statusGreen = Color(0xFF34C759);
   static const Color onlineGreen = Color(0xFF4ADE80);
 
@@ -52,6 +53,17 @@ class FigmaColors {
   static Color greenA(double a) => green.withValues(alpha: a);
   static Color orangeA(double a) => orange.withValues(alpha: a);
 }
+
+/// Shared soft-blue card shadow used by every card across all tabs so the
+/// elevation reads identically everywhere. (primary #3EAFDF @ ~0.125 (0x20),
+/// blur 10, y+3). Apply as `boxShadow: kCardShadow` on any white content card.
+const List<BoxShadow> kCardShadow = <BoxShadow>[
+  BoxShadow(
+    color: Color(0x203EAFDF),
+    blurRadius: 10,
+    offset: Offset(0, 3),
+  ),
+];
 
 /// The On-Care mascot ("Oni") — a teal gradient disc with two eyes and a
 /// smile. Used in the coaching banner, coaching sheet, chat and the FAB.
@@ -104,17 +116,19 @@ class _OniFacePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
-    canvas.drawCircle(Offset(8.5 * s, 10 * s), 1.5 * s, fill);
-    canvas.drawCircle(Offset(15.5 * s, 10 * s), 1.5 * s, fill);
+    // Eyes wider apart and set higher, with a bigger smile lower down so the
+    // eye-to-mouth gap reads clearly (per reference smiley).
+    canvas.drawCircle(Offset(7.6 * s, 8.7 * s), 1.5 * s, fill);
+    canvas.drawCircle(Offset(16.4 * s, 8.7 * s), 1.5 * s, fill);
     final Paint stroke = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6 * s
+      ..strokeWidth = 1.7 * s
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
     final Path smile = Path()
-      ..moveTo(8.5 * s, 14.5 * s)
-      ..quadraticBezierTo(12 * s, 17 * s, 15.5 * s, 14.5 * s);
+      ..moveTo(7.2 * s, 15 * s)
+      ..quadraticBezierTo(12 * s, 19.2 * s, 16.8 * s, 15 * s);
     canvas.drawPath(smile, stroke);
   }
 
@@ -131,12 +145,14 @@ class AiPill extends StatelessWidget {
     this.color = FigmaColors.primary,
     this.background,
     this.fontSize = 8.5,
+    this.fontWeight = FontWeight.w700,
   });
 
   final String text;
   final Color color;
   final Color? background;
   final double fontSize;
+  final FontWeight fontWeight;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +166,7 @@ class AiPill extends StatelessWidget {
         text,
         style: TextStyle(
           fontSize: fontSize,
-          fontWeight: FontWeight.w700,
+          fontWeight: fontWeight,
           color: color,
           height: 1.1,
         ),

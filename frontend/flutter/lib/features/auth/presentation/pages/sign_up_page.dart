@@ -128,7 +128,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '온케어 계정을 만들어 건강 관리를 시작하세요',
+                        'On-Care 계정을 만들어 건강 관리를 시작하세요',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
