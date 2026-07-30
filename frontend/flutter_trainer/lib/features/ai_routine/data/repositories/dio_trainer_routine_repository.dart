@@ -15,9 +15,10 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
 
   @override
   Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+    final encodedId = Uri.encodeComponent(memberId);
     try {
       await _dio.post<Map<String, Object?>>(
-        '/trainer/clients/$memberId/routines',
+        '/trainer/clients/$encodedId/routines',
         data: assignRoutineToJson(routine),
       );
     } on DioException catch (e) {
@@ -30,14 +31,21 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
       Stream<List<AssignedRoutine>>.fromFuture(_fetch(memberId));
 
   Future<List<AssignedRoutine>> _fetch(String memberId) async {
+    final encodedId = Uri.encodeComponent(memberId);
     try {
       final res = await _dio.get<List<dynamic>>(
-        '/trainer/clients/$memberId/routines',
+        '/trainer/clients/$encodedId/routines',
       );
       final data = res.data ?? const <dynamic>[];
       return data
-          .whereType<Map<String, Object?>>()
-          .map(assignedRoutineFromJson)
+          .map((item) {
+            if (item is! Map<String, Object?>) {
+              throw const FormatException(
+                'Expected an object in the assigned-routine response.',
+              );
+            }
+            return assignedRoutineFromJson(item);
+          })
           .toList(growable: false);
     } on DioException catch (e) {
       throw AppError.fromDio(e);

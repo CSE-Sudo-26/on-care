@@ -121,17 +121,16 @@ class DriftChatRepository implements ChatRepository {
   /// and rebuild the list on every call (review PR 241).
   @override
   Future<void> markThreadRead(String clientId) async {
-    final row =
-        await _db
-            .customSelect(
-              'SELECT MAX(rowid) AS r FROM client_chat_messages '
-              "WHERE client_id = ?1 AND sender = 'client'",
-              variables: <Variable<Object>>[Variable<String>(clientId)],
-              readsFrom: <ResultSetImplementation<Object?, Object?>>{
-                _db.clientChatMessages,
-              },
-            )
-            .getSingleOrNull();
+    final row = await _db
+        .customSelect(
+          'SELECT MAX(rowid) AS r FROM client_chat_messages '
+          "WHERE client_id = ?1 AND sender = 'client'",
+          variables: <Variable<Object>>[Variable<String>(clientId)],
+          readsFrom: <ResultSetImplementation<Object?, Object?>>{
+            _db.clientChatMessages,
+          },
+        )
+        .getSingleOrNull();
     // MAX over no client message returns NULL — nothing could be unread.
     final marker = row?.read<int?>('r');
     if (marker == null) return;
@@ -176,7 +175,7 @@ final unreadCountsProvider = StreamProvider<Map<String, int>>((ref) {
 });
 
 /// Streams a client's chat thread by client id.
-final chatThreadProvider =
-    StreamProvider.family<List<ClientChatMessage>, String>((ref, clientId) {
+final chatThreadProvider = StreamProvider.autoDispose
+    .family<List<ClientChatMessage>, String>((ref, clientId) {
       return ref.watch(chatRepositoryProvider).watchThread(clientId);
     });

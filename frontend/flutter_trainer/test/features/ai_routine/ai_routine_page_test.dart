@@ -84,6 +84,20 @@ void main() {
     });
 
     test(
+      'resolves live backend ids through the matching client name',
+      () async {
+        final repo = AiRoutineRepository(db);
+
+        final minsu = await repo
+            .watchRoutine('user-demo', clientName: '김민수')
+            .first;
+
+        expect(minsu.length, 3);
+        expect(minsu.first.name, '저강도 유산소 (걷기)');
+      },
+    );
+
+    test(
       'registerToTodaySchedule attaches to an existing 예정 session',
       () async {
         final repo = AiRoutineRepository(db);

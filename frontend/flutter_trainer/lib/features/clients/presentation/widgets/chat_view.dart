@@ -103,6 +103,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(chatThreadProvider(widget.clientId));
+    final showDemoBanners = ref.watch(appConfigProvider).useMockApi;
 
     return Column(
       children: <Widget>[
@@ -126,23 +127,34 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 final repo = ref.read(chatRepositoryProvider);
                 final realApi = !ref.read(appConfigProvider).useMockApi;
                 Future<void>.microtask(() async {
-                  await repo.markThreadRead(widget.clientId);
-                  // Drift updates unread via its stream; the Dio source
-                  // needs an explicit refetch of the badge counts.
-                  if (realApi && mounted) ref.invalidate(unreadCountsProvider);
+                  try {
+                    await repo.markThreadRead(widget.clientId);
+                    // Drift updates unread via its stream; the Dio source
+                    // needs an explicit refetch of the badge counts.
+                    if (realApi && mounted) {
+                      ref.invalidate(unreadCountsProvider);
+                    }
+                  } catch (_) {
+                    // Reading the thread still succeeded. A transient read
+                    // receipt failure may leave the badge visible, but must
+                    // not escape as an unhandled async error.
+                  }
                 });
               }
               return ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: <Widget>[
-                  _SystemBanner(clientName: widget.clientName),
-                  const SizedBox(height: AppSpacing.md),
+                  if (showDemoBanners) ...<Widget>[
+                    _SystemBanner(clientName: widget.clientName),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   for (final m in list) ...<Widget>[
                     _Bubble(message: m, avatar: widget.clientAvatar),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  _SentBanner(clientName: widget.clientName),
+                  if (showDemoBanners)
+                    _SentBanner(clientName: widget.clientName),
                 ],
               );
             },

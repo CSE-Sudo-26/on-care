@@ -23,14 +23,21 @@ class DioChatRepository implements ChatRepository {
       Stream<List<ClientChatMessage>>.fromFuture(_fetchThread(clientId));
 
   Future<List<ClientChatMessage>> _fetchThread(String clientId) async {
+    final encodedId = Uri.encodeComponent(clientId);
     try {
       final res = await _dio.get<List<dynamic>>(
-        '/trainer/clients/$clientId/chat',
+        '/trainer/clients/$encodedId/chat',
       );
       final data = res.data ?? const <dynamic>[];
       return data
-          .whereType<Map<String, Object?>>()
-          .map(chatMessageFromJson)
+          .map((item) {
+            if (item is! Map<String, Object?>) {
+              throw const FormatException(
+                'Expected an object in the trainer chat response.',
+              );
+            }
+            return chatMessageFromJson(item);
+          })
           .toList(growable: false);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
@@ -44,9 +51,10 @@ class DioChatRepository implements ChatRepository {
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    final encodedId = Uri.encodeComponent(clientId);
     try {
       await _dio.post<Map<String, Object?>>(
-        '/trainer/clients/$clientId/chat',
+        '/trainer/clients/$encodedId/chat',
         data: <String, Object?>{'text': trimmed},
       );
     } on DioException catch (e) {
@@ -73,9 +81,10 @@ class DioChatRepository implements ChatRepository {
 
   @override
   Future<void> markThreadRead(String clientId) async {
+    final encodedId = Uri.encodeComponent(clientId);
     try {
       await _dio.post<Map<String, Object?>>(
-        '/trainer/clients/$clientId/chat/read',
+        '/trainer/clients/$encodedId/chat/read',
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);

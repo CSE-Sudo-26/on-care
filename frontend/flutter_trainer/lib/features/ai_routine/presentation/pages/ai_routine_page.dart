@@ -216,6 +216,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     for (final i in active) {
       counts[i.type] = (counts[i.type] ?? 0) + 1;
     }
+    for (final c in _custom) {
+      counts[c.type] = (counts[c.type] ?? 0) + 1;
+    }
     var type = '근력';
     var best = 0;
     counts.forEach((t, c) {
@@ -449,7 +452,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
 
   /// The routine editor column (right column on wide).
   List<Widget> _editorChildren(TrainerClient client) {
-    final routineAsync = ref.watch(aiRoutineProvider(client.id));
+    final routineAsync = ref.watch(
+      aiRoutineProvider((id: client.id, name: client.name)),
+    );
 
     return <Widget>[
       Row(

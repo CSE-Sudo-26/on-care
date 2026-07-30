@@ -20,7 +20,7 @@ void main() {
       expect(m.createdAt, DateTime.parse('2026-07-30T18:10:00'));
     });
 
-    test('maps any non-trainer sender to client', () {
+    test('maps the client sender', () {
       final m = chatMessageFromJson(<String, Object?>{
         'id': 'c2',
         'sender': 'client',
@@ -32,15 +32,26 @@ void main() {
       expect(m.fromTrainer, isFalse);
     });
 
-    test('falls back to epoch on a malformed created_at', () {
-      final m = chatMessageFromJson(<String, Object?>{
+    test('rejects malformed sender and created_at values', () {
+      Map<String, Object?> message({
+        Object? sender = 'client',
+        Object? createdAt = '2026-07-30T18:12:00',
+      }) => <String, Object?>{
         'id': 'c3',
-        'sender': 'client',
+        'sender': sender,
         'body': 'x',
         'time_label': '',
-        'created_at': 'not-a-date',
-      });
-      expect(m.createdAt, DateTime.fromMillisecondsSinceEpoch(0));
+        'created_at': createdAt,
+      };
+
+      expect(
+        () => chatMessageFromJson(message(sender: 'me')),
+        throwsFormatException,
+      );
+      expect(
+        () => chatMessageFromJson(message(createdAt: 'not-a-date')),
+        throwsFormatException,
+      );
     });
   });
 }

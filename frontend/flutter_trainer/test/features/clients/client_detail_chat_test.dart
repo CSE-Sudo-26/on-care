@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
@@ -38,6 +40,33 @@ class _ControllableChatRepository extends DriftChatRepository {
     required String clientId,
     required String text,
   }) => gate;
+}
+
+class _StaticLiveChatRepository implements ChatRepository {
+  @override
+  Stream<List<ClientChatMessage>> watchThread(String clientId) =>
+      Stream<List<ClientChatMessage>>.value(<ClientChatMessage>[
+        ClientChatMessage(
+          id: 'live-1',
+          sender: ChatSender.client,
+          body: '실제 회원 답장',
+          timeLabel: '09:00',
+          createdAt: DateTime.utc(2026, 7, 31, 9),
+        ),
+      ]);
+
+  @override
+  Future<void> markThreadRead(String clientId) async {}
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async {}
+
+  @override
+  Stream<Map<String, int>> watchUnreadCounts() =>
+      Stream<Map<String, int>>.value(const <String, int>{});
 }
 
 void main() {
@@ -244,6 +273,42 @@ void main() {
   });
 
   group('ClientDetailPage chat', () {
+    testWidgets('real chat omits demo-only analysis and sent banners', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appConfigProvider.overrideWithValue(
+              const AppConfig(
+                environment: Environment.dev,
+                apiBaseUrl: 'http://localhost/v1',
+                useMockApi: false,
+              ),
+            ),
+            chatRepositoryProvider.overrideWithValue(
+              _StaticLiveChatRepository(),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ChatView(
+                clientId: 'user-demo',
+                clientAvatar: '김',
+                clientName: '김민수',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('실제 회원 답장'), findsOneWidget);
+      expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
+      expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
+    });
+
     Future<void> openDetail(WidgetTester tester) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token');
       await tester.tap(find.text('김민수'));
