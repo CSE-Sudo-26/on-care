@@ -24,6 +24,10 @@ void main() {
     ) async {
       final container = await pumpTrainerApp(tester);
 
+      // The demo link sits below the fold on the (taller, redesigned)
+      // login screen — scroll it into view before tapping.
+      await tester.ensureVisible(find.text('로그인 없이 데모 둘러보기'));
+      await tester.pump();
       await tester.tap(find.text('로그인 없이 데모 둘러보기'));
       await settle(tester);
 

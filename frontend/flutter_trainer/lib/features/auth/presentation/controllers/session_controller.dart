@@ -1,131 +1,214 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:oncare_trainer/core/storage/session_token_store.dart';
-import 'package:oncare_trainer/features/auth/data/repositories/mock_trainer_auth_repository.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/network/auth_token.dart';
+import 'package:oncare_trainer/core/storage/secure_token_store.dart';
+import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart';
+import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
-import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 
-/// Owns the trainer session lifecycle: restore-on-launch, mock login,
-/// demo bypass, and sign-out.
+/// Owns the trainer session lifecycle: restore-on-launch (with token
+/// refresh), login / register / social login, demo bypass, and sign-out.
 ///
-/// Designed fresh for the trainer app (the user app's SessionController
-/// is not reused — it has no trainer-account concept). On a successful
-/// login the single fixed [seedTrainerProfile] is attached to the
-/// session; the persisted token lets the session survive an app
-/// restart.
+/// Real credentials now: login exchanges email/password for JWT tokens,
+/// the profile comes from `GET /v1/trainer/me`, and a non-trainer account
+/// is rejected (the trainer and member apps use separate accounts). In
+/// `USE_MOCK_API=true` / demo mode the same flow runs against the
+/// in-memory mock repository.
 class SessionController extends StateNotifier<SessionState> {
-  /// Creates the controller and kicks off session restore.
-  SessionController(this._authRepository, this._tokenStore)
-    : super(const SessionState()) {
+  SessionController(this._ref) : super(const SessionState()) {
     _restore();
   }
 
-  final TrainerAuthRepository _authRepository;
-  final SessionTokenStore _tokenStore;
+  final Ref _ref;
 
-  /// Resolves the initial session from persisted state. A stored token
-  /// means the trainer stays logged in; the profile identity submitted at
-  /// 회원가입 (name/email) is restored from persistence so a restart keeps
-  /// the registered account instead of reverting to the seed. Otherwise
-  /// they land signed out. Demo mode is never persisted.
-  void _restore() {
-    final token = _tokenStore.readToken();
-    if (token != null) {
+  /// Set once the user drives an explicit auth action (login / register /
+  /// social / demo / sign-out). The launch-time [_restore] is async, so on
+  /// a slow real-backend `/me` the login screen (shown during
+  /// [SessionStatus.unknown]) is interactive while restore is still in
+  /// flight — this flag stops a late-resolving restore from clobbering the
+  /// state the user just chose.
+  bool _userActionStarted = false;
+
+  TrainerAuthRepository get _repo => _ref.read(trainerAuthRepositoryProvider);
+  SecureTokenStore get _tokens => _ref.read(secureTokenStoreProvider);
+
+  void _setAccessToken(String? token) {
+    _ref.read(authAccessTokenProvider.notifier).state = token;
+  }
+
+  // --- restore ------------------------------------------------------------
+
+  /// Resolves the initial session from persisted tokens. A valid token
+  /// (optionally after a refresh) plus a trainer `/me` lands authenticated;
+  /// anything else lands signed out. Demo mode is never persisted.
+  Future<void> _restore() async {
+    String? access;
+    String? refresh;
+    try {
+      access = await _tokens.readAccessToken();
+      refresh = await _tokens.readRefreshToken();
+    } catch (_) {
+      access = null; // secure storage unavailable → treat as signed out
+    }
+    if (!mounted || _userActionStarted) return;
+    if (access == null || access.isEmpty) {
+      state = const SessionState(status: SessionStatus.signedOut);
+      return;
+    }
+    await _resolveSession(access: access, refresh: refresh ?? '', allowRefresh: true);
+  }
+
+  /// Attempts to authenticate with [access]; on 401 rotates once with
+  /// [refresh]. Auth/role failures clear the session; transient failures
+  /// (network/server) sign out without discarding the stored tokens so a
+  /// later relaunch can retry.
+  Future<void> _resolveSession({
+    required String access,
+    required String refresh,
+    required bool allowRefresh,
+  }) async {
+    if (_userActionStarted) return;
+    _setAccessToken(access);
+    try {
+      final profile = await _repo.fetchProfile(access);
+      if (!mounted || _userActionStarted) return;
       state = SessionState(
         status: SessionStatus.authenticated,
-        // 저장된 이름/이메일이 있으면 복원(가입 세션), 없으면 시드 유지(로그인 세션).
-        profile: seedTrainerProfile.copyWith(
-          name: _tokenStore.readProfileName(),
-          email: _tokenStore.readProfileEmail(),
-        ),
+        profile: profile,
       );
-    } else {
+    } on NotTrainerException {
+      if (_userActionStarted) return;
+      await _expire();
+    } on UnauthorizedError {
+      if (_userActionStarted) return;
+      if (allowRefresh && refresh.isNotEmpty) {
+        await _refreshAndResolve(refresh);
+      } else {
+        await _expire();
+      }
+    } on AuthException {
+      if (_userActionStarted) return;
+      await _expire();
+    } catch (_) {
+      // Transient (network/server) — keep tokens, just show signed out.
+      if (!mounted || _userActionStarted) return;
+      _setAccessToken(null);
       state = const SessionState(status: SessionStatus.signedOut);
     }
   }
 
-  /// Logs in with email/password (mock: any non-empty credentials
-  /// succeed). Persists the token and attaches the seed profile.
-  /// Throws [AuthException] on failure.
-  Future<void> login({required String email, required String password}) async {
-    final token = await _authRepository.login(email: email, password: password);
-    // 로그인은 시드 정체성 — 저장된 가입 이름/이메일이 있으면 지워 시드로 복원되게 한다.
-    await _tokenStore.saveSession(token: token);
-    state = const SessionState(
-      status: SessionStatus.authenticated,
-      profile: seedTrainerProfile,
-    );
+  Future<void> _refreshAndResolve(String refresh) async {
+    if (_userActionStarted) return;
+    try {
+      final tokens = await _repo.refresh(refresh);
+      await _persist(tokens);
+      await _resolveSession(
+        access: tokens.access,
+        refresh: tokens.refresh,
+        allowRefresh: false,
+      );
+    } catch (_) {
+      await _expire();
+    }
   }
 
-  /// 회원가입 — creates an account and signs in. Mock: reuses the login
-  /// exchange (any non-empty credentials succeed) and attaches the seed
-  /// profile. The real backend (POST /auth/register) replaces this later.
+  // --- login flows --------------------------------------------------------
+
+  /// Email/password login. Throws [AuthException] on failure and
+  /// [NotTrainerException] when the account is not a trainer.
+  Future<void> login({required String email, required String password}) async {
+    _userActionStarted = true;
+    final tokens = await _repo.login(email: email, password: password);
+    await _establish(tokens);
+  }
+
+  /// Creates a trainer account then signs in. Throws [AuthException].
   Future<void> register({
     required String email,
     required String password,
     required String name,
   }) async {
-    final token = await _authRepository.register(
+    _userActionStarted = true;
+    final tokens = await _repo.register(
       email: email,
       password: password,
       name: name,
     );
-    final trimmedName = name.trim();
-    final trimmedEmail = email.trim();
-    // 데모: 제출한 이름/이메일을 토큰과 함께 영속화해 앱 재시작 후에도 가입 정체성이
-    // 시드 계정으로 되돌아가지 않게 한다(빈 값이면 저장하지 않아 시드 값 유지).
-    await _tokenStore.saveSession(
-      token: token,
-      name: trimmedName.isEmpty ? null : trimmedName,
-      email: trimmedEmail.isEmpty ? null : trimmedEmail,
-    );
-    state = SessionState(
-      status: SessionStatus.authenticated,
-      profile: seedTrainerProfile.copyWith(
-        name: trimmedName.isEmpty ? null : trimmedName,
-        email: trimmedEmail.isEmpty ? null : trimmedEmail,
-      ),
-    );
+    await _establish(tokens);
   }
 
-  /// Social sign-in (kakao / google). Mirrors the user app: until the
-  /// real provider SDK lands, this exchanges a demo credential through the
-  /// mock repo, persists the token, and attaches the seed profile.
+  /// Social sign-in (kakao / google). Throws [AuthException].
   Future<void> socialLogin({required String provider}) async {
-    // 사용자 앱과 동일: 실기기 SDK 연동 전까지 데모 토큰을 보내고, 실서버가
-    // provider 토큰을 검증한다(트레이너 auth는 아직 전부 mock).
-    final token = await _authRepository.socialLogin(
+    _userActionStarted = true;
+    final tokens = await _repo.socialLogin(
       provider: provider,
       token: 'demo-$provider-token',
     );
-    // 소셜 로그인도 시드 정체성 — 저장된 가입 이름/이메일이 있으면 지운다.
-    await _tokenStore.saveSession(token: token);
-    state = const SessionState(
-      status: SessionStatus.authenticated,
-      profile: seedTrainerProfile,
-    );
+    await _establish(tokens);
   }
+
+  /// Persists fresh tokens and attaches the trainer profile from `/me`.
+  /// Any failure clears the just-issued tokens and rethrows an
+  /// [AuthException] (role rejection keeps its specific message).
+  Future<void> _establish(TrainerAuthTokens tokens) async {
+    await _persist(tokens);
+    _setAccessToken(tokens.access);
+    try {
+      final profile = await _repo.fetchProfile(tokens.access);
+      if (!mounted) return;
+      state = SessionState(
+        status: SessionStatus.authenticated,
+        profile: profile,
+      );
+    } catch (e) {
+      await _expire();
+      if (e is AuthException) rethrow;
+      throw const AuthException('로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+
+  // --- demo / sign-out ----------------------------------------------------
 
   /// Enters demo mode — skip login, no token, browse with mock data.
   /// Not persisted, so a restart returns to the signed-out state.
   void enterDemo() {
+    _userActionStarted = true;
+    _setAccessToken(null);
     state = const SessionState(status: SessionStatus.demo);
   }
 
-  /// Signs out — clears the persisted token and returns to the login
-  /// screen.
+  /// Signs out — clears persisted tokens and returns to the login screen.
   Future<void> signOut() async {
-    await _tokenStore.clear();
+    _userActionStarted = true;
+    await _expire();
+  }
+
+  // --- helpers ------------------------------------------------------------
+
+  Future<void> _persist(TrainerAuthTokens tokens) async {
+    try {
+      await _tokens.saveTokens(access: tokens.access, refresh: tokens.refresh);
+    } catch (_) {
+      // Secure storage unavailable — proceed with the in-memory token.
+    }
+  }
+
+  /// Clears tokens + in-memory state and lands signed out.
+  Future<void> _expire() async {
+    try {
+      await _tokens.clear();
+    } catch (_) {}
+    _setAccessToken(null);
+    if (!mounted) return;
     state = const SessionState(status: SessionStatus.signedOut);
   }
 }
 
 /// Exposes the trainer session state + controller app-wide.
 final sessionControllerProvider =
-    StateNotifierProvider<SessionController, SessionState>((ref) {
-      return SessionController(
-        ref.watch(trainerAuthRepositoryProvider),
-        ref.watch(sessionTokenStoreProvider),
-      );
-    }, name: 'trainerSession');
+    StateNotifierProvider<SessionController, SessionState>(
+      (ref) => SessionController(ref),
+      name: 'trainerSession',
+    );

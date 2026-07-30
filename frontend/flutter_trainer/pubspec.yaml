@@ -22,10 +22,17 @@ dependencies:
   # --- Routing ---
   go_router: ^14.6.2
 
+  # --- Networking (real backend) ---
+  # 사용자 앱(frontend/flutter)과 동일한 Dio 스택. USE_MOCK_API=false 일 때
+  # 트레이너 API(POST /v1/auth/login, GET /v1/trainer/me, ...)를 호출한다.
+  dio: ^5.7.0
+
+  # 세션 access/refresh 토큰을 플랫폼 보안 저장소(Keychain/Keystore/웹)에
+  # 보관한다. 기존 SharedPreferences 기반 SessionTokenStore 를 대체한다.
+  flutter_secure_storage: ^9.2.2
+
   # --- Local persistence ---
-  # 세션 토큰(현재는 mock 데모 토큰)을 저장해 앱 재시작 시 세션을 복원한다.
-  # 실 백엔드 연동 시 secure storage 로 교체하기 쉽도록 SessionTokenStore
-  # 뒤에 감춰둔다.
+  # drift 시드/데모 및 기타 기능이 사용하는 앱 공용 prefs.
   shared_preferences: ^2.3.2
 
   # drift(SQLite) 로컬 백엔드 — 백엔드 미연결 동안 고객/스케줄 등 mock
@@ -44,6 +51,9 @@ dev_dependencies:
 
   # 런처/파비콘 아이콘을 온케어 로고에서 생성 (dart run flutter_launcher_icons).
   flutter_launcher_icons: ^0.14.1
+
+  # 실 API repository / 세션 로직 단위 테스트용 목킹(사용자 앱과 동일).
+  mocktail: ^1.0.4
 
   # --- Codegen (drift) ---
   build_runner: ^2.4.13
