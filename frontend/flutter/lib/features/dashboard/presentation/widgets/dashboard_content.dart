@@ -1446,14 +1446,16 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
 
 /// Presentation-only history until the dashboard API exposes daily exercise
 /// series. Weekly live totals are shown separately in the metrics above.
+// 운동 탭 '운동 현황(이번 주)' 일별 소모 칼로리와 일치시킨다(수 휴식, 일 활동).
+// 월300·화420·목480·금400·토330·일520 = 운동 페이지 시드 하루 총합.
 const List<double> _demoExerciseWeekCalories = <double>[
   300,
-  430,
+  420,
   0,
-  470,
+  480,
   400,
-  320,
-  0,
+  330,
+  520,
 ];
 
 List<String> _weekDayLabels(AppLocalizations l) => <String>[
