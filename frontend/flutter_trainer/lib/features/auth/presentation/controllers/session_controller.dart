@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
@@ -30,6 +32,11 @@ class SessionController extends StateNotifier<SessionState> {
   /// flight — this flag stops a late-resolving restore from clobbering the
   /// state the user just chose.
   bool _userActionStarted = false;
+
+  /// Secure-storage mutations must finish in invocation order. In particular,
+  /// a sign-out that starts while a refresh token save is in flight must clear
+  /// after that save, otherwise the stale refresh can resurrect credentials.
+  Future<void> _tokenStorageTail = Future<void>.value();
 
   TrainerAuthRepository get _repo => _ref.read(trainerAuthRepositoryProvider);
   SecureTokenStore get _tokens => _ref.read(secureTokenStoreProvider);
@@ -130,6 +137,9 @@ class SessionController extends StateNotifier<SessionState> {
       refresh: tokens.refresh.isEmpty ? refresh : tokens.refresh,
     );
     await _persist(rotated);
+    // A login/demo/sign-out may have started while secure storage was saving.
+    // Its queued storage mutation runs after this stale save and must win.
+    if (_userActionStarted) return;
     await _resolveSession(
       access: rotated.access,
       refresh: rotated.refresh,
@@ -198,6 +208,9 @@ class SessionController extends StateNotifier<SessionState> {
   /// Not persisted, so a restart returns to the signed-out state.
   void enterDemo() {
     _userActionStarted = true;
+    // Demo is intentionally in-memory only. Queue the clear so it also wins
+    // over any launch-time refresh save that is already in flight.
+    unawaited(_clearPersistedTokens());
     _setAccessToken(null);
     state = const SessionState(status: SessionStatus.demo);
   }
@@ -212,17 +225,35 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> _persist(TrainerAuthTokens tokens) async {
     try {
-      await _tokens.saveTokens(access: tokens.access, refresh: tokens.refresh);
+      await _serializeTokenStorage(
+        () =>
+            _tokens.saveTokens(access: tokens.access, refresh: tokens.refresh),
+      );
     } catch (_) {
       // Secure storage unavailable — proceed with the in-memory token.
     }
   }
 
+  Future<void> _clearPersistedTokens() async {
+    try {
+      await _serializeTokenStorage(_tokens.clear);
+    } catch (_) {}
+  }
+
+  Future<void> _serializeTokenStorage(Future<void> Function() operation) {
+    final result = _tokenStorageTail.then((_) => operation());
+    // Keep the queue usable even when a platform storage operation fails;
+    // the caller still receives [result] and applies its existing error policy.
+    _tokenStorageTail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
+
   /// Clears tokens + in-memory state and lands signed out.
   Future<void> _expire() async {
-    try {
-      await _tokens.clear();
-    } catch (_) {}
+    await _clearPersistedTokens();
     // `_setAccessToken` reads a provider — guard it behind the mounted check
     // so it never runs against a disposed container during teardown.
     if (!mounted) return;
