@@ -154,7 +154,7 @@ void main() {
       // 김민수 (2100mg, over) → cardio-boost verdict.
       expect(find.text('✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
-      expect(find.text('💡 혈압 안정에 효과적'), findsOneWidget);
+      expect(find.text('혈압 안정에 효과적'), findsOneWidget);
     });
 
     testWidgets('switching client updates the verdict and suggestions', (
@@ -197,7 +197,7 @@ void main() {
       );
 
       expect(find.text('레그프레스 5세트'), findsOneWidget);
-      expect(find.text('💡 트레이너 추가'), findsOneWidget);
+      expect(find.text('트레이너 추가'), findsOneWidget);
 
       // Delete it again.
       await tester.tap(find.byIcon(Icons.close).last);
@@ -273,16 +273,16 @@ void main() {
       await settle(tester);
 
       await tester.scrollUntilVisible(
-        find.text('📅 오늘 PT 스케줄에 등록'),
+        find.text('오늘 PT 스케줄에 등록'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
-      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
       await settle(tester);
 
-      expect(find.text('✓ 오늘 스케줄에 등록됨'), findsOneWidget);
+      expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
       expect(find.text('스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요'), findsOneWidget);
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
@@ -342,7 +342,7 @@ void main() {
 
       await tester.tap(find.textContaining('내일 PT 스케줄에 등록'));
       await settle(tester);
-      expect(find.text('✓ 내일 스케줄에 등록됨'), findsOneWidget);
+      expect(find.text('내일 스케줄에 등록됨'), findsOneWidget);
 
       // Booked under tomorrow's date, not today's. Reading a drift stream
       // must run outside the fake-async zone (`runAsync`), otherwise the
@@ -397,13 +397,13 @@ void main() {
       await settle(tester);
 
       await tester.scrollUntilVisible(
-        find.text('📅 오늘 PT 스케줄에 등록'),
+        find.text('오늘 PT 스케줄에 등록'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
-      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump(const Duration(milliseconds: 50));
       // Second tap lands mid-flight — the button is now disabled and its
       // label has flipped, so this must NOT trigger a second register.
@@ -435,13 +435,13 @@ void main() {
       await settle(tester);
 
       await tester.scrollUntilVisible(
-        find.text('📅 오늘 PT 스케줄에 등록'),
+        find.text('오늘 PT 스케줄에 등록'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
-      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump(const Duration(milliseconds: 50));
 
       // Switch client while the write for 김민수 is still in flight —
@@ -458,8 +458,8 @@ void main() {
 
       // 이지수's card must not claim the registration, and her button
       // must not be left disabled by the previous client's guard.
-      expect(find.text('✓ 오늘 스케줄에 등록됨'), findsNothing);
-      expect(find.text('📅 오늘 PT 스케줄에 등록'), findsOneWidget);
+      expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
+      expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
     });
 
     testWidgets('a failed chat write does not show the send confirmation', (
@@ -629,13 +629,13 @@ void main() {
       }
 
       await tester.scrollUntilVisible(
-        find.text('📅 오늘 PT 스케줄에 등록'),
+        find.text('오늘 PT 스케줄에 등록'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
-      await tester.tap(find.text('📅 오늘 PT 스케줄에 등록'));
+      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
 
       expect(find.text('운동을 하나 이상 추가해 주세요'), findsOneWidget);
