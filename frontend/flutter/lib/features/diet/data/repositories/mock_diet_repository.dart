@@ -13,18 +13,10 @@ import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 ///
 /// Per-food nutrition is the single source of truth for the seeded meal and
 /// daily totals. CRUD applies calories, sodium, and sugar deltas on top of the
-/// seed; macro totals remain the server-style daily summary.
+/// seed; macro totals are derived from the current entries.
 class MockDietRepository implements DietRepository {
   MockDietRepository();
 
-  static const DietMacros _macros = DietMacros(
-    carbsG: 203.6,
-    proteinG: 109.3,
-    fatG: 66.5,
-    carbsPct: 44,
-    proteinPct: 24,
-    fatPct: 32,
-  );
   static const String _aiCoachMessage =
       '오늘 나트륨 섭취량이 권장량을 초과했어요. 점심의 김치찌개와 배추김치가 가장 큰 영향을 주었어요.';
 
@@ -278,7 +270,7 @@ class MockDietRepository implements DietRepository {
       totalCalories: _totalCalories,
       totalSodiumMg: _totalSodiumMg,
       totalSugarG: _totalSugarG,
-      macros: _macros,
+      macros: _toDietMacros(_sumMacroGrams(_entries)),
       aiCoachMessage: _aiCoachMessage,
     );
   }
@@ -370,4 +362,64 @@ class MockDietRepository implements DietRepository {
 
   int _nonNegInt(int v) => v < 0 ? 0 : v;
   double _nonNegDouble(double v) => v < 0 ? 0 : v;
+}
+
+typedef _MacroGrams = ({double carbsG, double proteinG, double fatG});
+
+_MacroGrams _sumMacroGrams(Iterable<DietEntry> entries) => (
+  carbsG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.carbsG,
+  ),
+  proteinG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.proteinG,
+  ),
+  fatG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.fatG,
+  ),
+);
+
+// Keep this 4/4/9 largest-remainder calculation in sync with
+// the backend calculate_macros implementation.
+DietMacros _toDietMacros(_MacroGrams grams) {
+  final energies = <double>[
+    grams.carbsG * 4,
+    grams.proteinG * 4,
+    grams.fatG * 9,
+  ];
+  final totalEnergy = energies.fold<double>(
+    0,
+    (double sum, double energy) => sum + energy,
+  );
+  final percentages = <int>[0, 0, 0];
+  if (totalEnergy > 0) {
+    final raw = energies
+        .map((double energy) => energy / totalEnergy * 100)
+        .toList();
+    for (var index = 0; index < percentages.length; index++) {
+      percentages[index] = raw[index].floor();
+    }
+    final ranked = <int>[0, 1, 2]
+      ..sort((int a, int b) {
+        final fraction = (raw[b] - percentages[b]).compareTo(
+          raw[a] - percentages[a],
+        );
+        return fraction == 0 ? b.compareTo(a) : fraction;
+      });
+    final remaining =
+        100 - percentages.fold<int>(0, (int sum, int value) => sum + value);
+    for (final index in ranked.take(remaining)) {
+      percentages[index]++;
+    }
+  }
+  return DietMacros(
+    carbsG: grams.carbsG,
+    proteinG: grams.proteinG,
+    fatG: grams.fatG,
+    carbsPct: percentages[0],
+    proteinPct: percentages[1],
+    fatPct: percentages[2],
+  );
 }

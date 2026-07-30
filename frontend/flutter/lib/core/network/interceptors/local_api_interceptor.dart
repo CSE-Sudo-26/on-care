@@ -1418,6 +1418,8 @@ _MacroTotals _foodMacroTotals(List<Object?> foods) {
   return (carbsG: carbs, proteinG: protein, fatG: fat);
 }
 
+// Keep this 4/4/9 largest-remainder calculation in sync with
+// the backend calculate_macros implementation.
 Map<String, Object?> _macroPayload(
   double carbsG,
   double proteinG,
