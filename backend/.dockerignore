@@ -1,0 +1,27 @@
+# 빌드 컨텍스트에서 제외 — 이미지 경량화 + 시크릿·캐시 유입 방지.
+# (현재 Dockerfile 은 app/·migrations/·scripts/ 만 선택 COPY 하지만, 이후 COPY . .
+#  로 바뀌어도 .env 나 캐시가 이미지에 섞이지 않도록 방어한다.)
+
+# 시크릿 — 절대 이미지에 넣지 않는다(.env.example 만 허용).
+.env
+.env.*
+!.env.example
+
+# 파이썬 캐시/빌드 산물
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# 테스트·문서·개발 자산(런타임 불필요)
+tests/
+docs/
+*.md
+
+# VCS / 에디터
+.git/
+.gitignore
+.idea/
+.vscode/
