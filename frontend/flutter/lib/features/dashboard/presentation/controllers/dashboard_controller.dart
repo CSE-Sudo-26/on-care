@@ -10,7 +10,9 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>(
   name: 'dashboardRepository',
 );
 
-final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) {
+final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((
+  ref,
+) {
   final repo = ref.watch(dashboardRepositoryProvider);
   return repo.fetchSummary();
 }, name: 'dashboardSummary');

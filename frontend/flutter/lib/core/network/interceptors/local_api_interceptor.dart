@@ -273,24 +273,52 @@ class LocalApiInterceptor extends Interceptor {
     int totalCalories = 0;
     int totalSodium = 0;
     int totalSugar = 0;
+    var totalCarbs = 0.0;
+    var totalProtein = 0.0;
+    var totalFat = 0.0;
+    final sodiumByFoodName = <String, int>{};
     for (final r in dietRows) {
       totalCalories += r.totalCalories;
       totalSodium += r.sodiumMg;
       totalSugar += r.sugarG;
+      final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
+      final macros = _foodMacroTotals(foods);
+      totalCarbs += macros.carbsG;
+      totalProtein += macros.proteinG;
+      totalFat += macros.fatG;
+      for (final food in foods) {
+        if (food is! Map) continue;
+        final name = (food['name'] as String? ?? '').trim();
+        final sodium = (food['sodium_mg'] as num?)?.toInt() ?? 0;
+        if (name.isNotEmpty && sodium > 0) {
+          sodiumByFoodName.update(
+            name,
+            (total) => total + sodium,
+            ifAbsent: () => sodium,
+          );
+        }
+      }
     }
+    final sodiumSources = sodiumByFoodName.entries.toList()
+      ..sort((a, b) {
+        final sodiumOrder = b.value.compareTo(a.value);
+        return sodiumOrder != 0 ? sodiumOrder : a.key.compareTo(b.key);
+      });
+    final sodiumSourceNames = sodiumSources
+        .take(2)
+        .map((source) => source.key)
+        .join('·');
 
-    // Exercise minutes for today's day-label.
-    final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+    // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
-    // Two chained .where() calls are AND-joined by drift.
-    final exerciseRows =
-        await (_db.select(_db.exerciseSessions)
-              ..where((t) => t.weekStart.equals(weekStart))
-              ..where((t) => t.dayLabel.equals(todayLabel)))
-            .get();
+    final exerciseRows = await (_db.select(
+      _db.exerciseSessions,
+    )..where((t) => t.weekStart.equals(weekStart))).get();
     int exerciseMinutes = 0;
+    int exerciseCalories = 0;
     for (final r in exerciseRows) {
       exerciseMinutes += r.minutes;
+      exerciseCalories += r.calories;
     }
 
     // (혈당 row removed from the home summary per the latest design ref —
@@ -333,18 +361,23 @@ class LocalApiInterceptor extends Interceptor {
           'unit': 'g',
         },
       ],
+      'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
+      'exercise_calories': exerciseCalories,
+      'exercise_count': exerciseRows.length,
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week
       // diff lands in a later phase.
       'week_score_delta': 12,
       'sodium_warning': totalSodium > 2000
-          ? '오늘의 나트륨 섭취량이 높아요. 저녁에는 담백한 구이나 샐러드를 추천해요!'
+          ? sodiumSourceNames.isNotEmpty
+                ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
+                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
-          ? '오늘 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
+          ? '이번 주 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
           : '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
     });
   }

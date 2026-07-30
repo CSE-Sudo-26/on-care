@@ -69,6 +69,12 @@ void main() {
     );
     // 4 seeded meals.
     expect(summary.dietEntries, 4);
+    expect(summary.macros.carbsG, 203.6);
+    expect(summary.macros.proteinG, 109.3);
+    expect(summary.macros.fatG, 66.5);
+    expect(summary.macros.carbsPct, 44);
+    expect(summary.sodiumWarning, contains('김치찌개'));
+    expect(summary.sodiumWarning, contains('배추김치'));
     // Two baseline events always fall on today. One of the monthly demo
     // events can also land on today (5th/12th/22nd/26th), so keep this
     // assertion stable across the calendar while still checking the baseline.

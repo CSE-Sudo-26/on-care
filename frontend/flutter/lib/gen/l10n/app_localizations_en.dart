@@ -136,6 +136,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreetingGeneric => 'Let\'s ease into the day 👋';
 
   @override
+  String get homeDashboardLoadError => 'Could not load the dashboard.';
+
+  @override
+  String get homeDashboardEmpty =>
+      'No records yet today. Add a meal or workout to get started.';
+
+  @override
+  String homeDietRecordCount(int count) {
+    return '$count diet records today';
+  }
+
+  @override
+  String get homeScheduleEmpty => 'No events scheduled for today.';
+
+  @override
   String get homeCoachingPill => '✦ AI Coaching';
 
   @override
@@ -248,16 +263,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeeklyTrend => 'Weekly trend';
 
   @override
-  String get homeExerciseActiveTime => 'Active time';
+  String get homeExerciseActiveTime => 'Weekly active time';
 
   @override
-  String get homeExerciseBurned => 'Calories';
+  String get homeExerciseBurned => 'Weekly calories';
 
   @override
-  String get homeExerciseCount => 'Workouts';
+  String get homeExerciseCount => 'Weekly workouts';
 
   @override
-  String get homeExerciseBurnProgress => 'Burn goal';
+  String get homeExerciseBurnProgress => 'Weekly burn goal';
 
   @override
   String get unitTimes => '×';

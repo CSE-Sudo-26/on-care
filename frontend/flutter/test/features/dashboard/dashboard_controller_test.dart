@@ -34,6 +34,9 @@ void main() {
     expect(summary.indicators.length, 3);
     expect(summary.todaySchedule.length, 2);
     expect(summary.weekScore, 85);
+    expect(summary.exerciseMinutes, 45);
+    expect(summary.exerciseCalories, 520);
+    expect(summary.exerciseCount, 4);
   });
 
   test('dashboardSummaryProvider propagates repository failures', () async {
@@ -60,5 +63,47 @@ void main() {
     );
     expect(sodium.overBudget, isTrue);
     expect(sodium.progress, 1.0); // clamped
+    expect(s.macros.carbsG, 203.6);
+    expect(s.macros.proteinG, 109.3);
+    expect(s.macros.fatG, 66.5);
+  });
+
+  test('DashboardSummary parses macros and supports older responses', () {
+    Map<String, Object?> payload({Map<String, Object?>? macros}) {
+      final result = <String, Object?>{
+        'indicators': <Object?>[],
+        'diet_entries': 0,
+        'exercise_minutes': 0,
+        'today_schedule': <Object?>[],
+        'week_score': 50,
+        'week_score_delta': 0,
+        'sodium_warning': null,
+        'exercise_feedback': null,
+      };
+      if (macros != null) result['macros'] = macros;
+      return result;
+    }
+
+    final parsed = DashboardSummary.fromJson(
+      payload(
+        macros: <String, Object?>{
+          'carbs_g': 203.6,
+          'protein_g': 109.3,
+          'fat_g': 66.5,
+          'carbs_pct': 44,
+          'protein_pct': 24,
+          'fat_pct': 32,
+        },
+      ),
+    );
+    expect(parsed.macros.carbsG, 203.6);
+    expect(parsed.macros.carbsPct, 44);
+    expect(parsed.exerciseCalories, 0);
+    expect(parsed.exerciseCount, 0);
+
+    final legacy = DashboardSummary.fromJson(payload());
+    expect(legacy.macros.carbsG, 0);
+    expect(legacy.macros.carbsPct, 0);
+    expect(legacy.isEmpty, isTrue);
   });
 }
