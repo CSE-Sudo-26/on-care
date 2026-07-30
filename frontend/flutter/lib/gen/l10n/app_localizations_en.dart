@@ -136,6 +136,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreetingGeneric => 'Let\'s ease into the day 👋';
 
   @override
+  String get homeDashboardLoadError => 'Could not load the dashboard.';
+
+  @override
+  String get homeDashboardEmpty =>
+      'No records yet today. Add a meal or workout to get started.';
+
+  @override
+  String homeDietRecordCount(int count) {
+    return '$count diet records today';
+  }
+
+  @override
+  String get homeScheduleEmpty => 'No events scheduled for today.';
+
+  @override
   String get homeCoachingPill => '✦ AI Coaching';
 
   @override

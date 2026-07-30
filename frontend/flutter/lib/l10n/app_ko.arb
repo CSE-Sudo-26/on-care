@@ -40,6 +40,17 @@
   "dashboardWeightDelta": "{sign}{delta} (지난주 대비)",
   "homeGreeting": "{name}님, 오늘도 가볍게 시작해요 👋",
   "homeGreetingGeneric": "오늘도 가볍게 시작해요 👋",
+  "homeDashboardLoadError": "대시보드 정보를 불러오지 못했어요.",
+  "homeDashboardEmpty": "아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.",
+  "homeDietRecordCount": "오늘 식단 기록 {count}개",
+  "@homeDietRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeScheduleEmpty": "오늘 예정된 일정이 없어요.",
   "homeCoachingPill": "✦ AI 코칭",
   "homeCoachingTitle": "오늘의 맞춤 조언",
   "homeCoachingBody": "저녁은 나트륨을 줄이고\n20분 정도 걸어보세요",

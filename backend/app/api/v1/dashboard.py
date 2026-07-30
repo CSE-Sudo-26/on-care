@@ -94,6 +94,8 @@ def dashboard_summary(
         .where(ExerciseSession.week_start == week)
     ).all()
     exercise_minutes = sum(r.minutes for r in ex_rows)
+    exercise_calories = sum(r.calories for r in ex_rows)
+    exercise_count = len(ex_rows)
     if exercise_minutes >= 150:
         exercise_feedback = f"이번 주 {exercise_minutes}분 운동했어요. 목표 달성 중이에요!"
     elif exercise_minutes > 0:
@@ -127,6 +129,8 @@ def dashboard_summary(
         macros=macros,
         diet_entries=len(diet_rows),
         exercise_minutes=exercise_minutes,
+        exercise_calories=exercise_calories,
+        exercise_count=exercise_count,
         today_schedule=today_schedule,
         week_score=score,
         week_score_delta=5,  # 지난주 대비(추세 추적 전까지 데모 고정값)

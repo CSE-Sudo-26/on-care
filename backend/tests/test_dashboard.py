@@ -66,3 +66,6 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
     }
     assert "김치찌개" in body["sodium_warning"]
     assert "배추김치" in body["sodium_warning"]
+    assert isinstance(body["exercise_minutes"], int)
+    assert isinstance(body["exercise_calories"], int)
+    assert isinstance(body["exercise_count"], int)

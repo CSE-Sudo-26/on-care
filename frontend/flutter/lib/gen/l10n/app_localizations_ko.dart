@@ -135,6 +135,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGreetingGeneric => '오늘도 가볍게 시작해요 👋';
 
   @override
+  String get homeDashboardLoadError => '대시보드 정보를 불러오지 못했어요.';
+
+  @override
+  String get homeDashboardEmpty => '아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.';
+
+  @override
+  String homeDietRecordCount(int count) {
+    return '오늘 식단 기록 $count개';
+  }
+
+  @override
+  String get homeScheduleEmpty => '오늘 예정된 일정이 없어요.';
+
+  @override
   String get homeCoachingPill => '✦ AI 코칭';
 
   @override

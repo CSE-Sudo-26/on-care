@@ -30,6 +30,8 @@ class MockDashboardRepository implements DashboardRepository {
       ),
       dietEntries: 4,
       exerciseMinutes: 45,
+      exerciseCalories: 520,
+      exerciseCount: 4,
       todaySchedule: <ScheduleItem>[
         ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),
         ScheduleItem(time: '18:00', title: '헬스장 운동', emoji: '💪'),

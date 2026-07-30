@@ -28,6 +28,8 @@ class DashboardSummary(BaseModel):
     macros: Macros
     diet_entries: int
     exercise_minutes: int
+    exercise_calories: int
+    exercise_count: int
     today_schedule: list[DashboardScheduleItem]
     week_score: int
     week_score_delta: int

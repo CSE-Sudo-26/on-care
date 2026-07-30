@@ -273,18 +273,16 @@ class LocalApiInterceptor extends Interceptor {
     }
     sodiumSources.sort((a, b) => b.sodiumMg.compareTo(a.sodiumMg));
 
-    // Exercise minutes for today's day-label.
-    final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+    // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
-    // Two chained .where() calls are AND-joined by drift.
-    final exerciseRows =
-        await (_db.select(_db.exerciseSessions)
-              ..where((t) => t.weekStart.equals(weekStart))
-              ..where((t) => t.dayLabel.equals(todayLabel)))
-            .get();
+    final exerciseRows = await (_db.select(
+      _db.exerciseSessions,
+    )..where((t) => t.weekStart.equals(weekStart))).get();
     int exerciseMinutes = 0;
+    int exerciseCalories = 0;
     for (final r in exerciseRows) {
       exerciseMinutes += r.minutes;
+      exerciseCalories += r.calories;
     }
 
     // (혈당 row removed from the home summary per the latest design ref —
@@ -330,6 +328,8 @@ class LocalApiInterceptor extends Interceptor {
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
+      'exercise_calories': exerciseCalories,
+      'exercise_count': exerciseRows.length,
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week

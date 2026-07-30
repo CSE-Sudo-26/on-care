@@ -338,6 +338,30 @@ abstract class AppLocalizations {
   /// **'Let\'s ease into the day 👋'**
   String get homeGreetingGeneric;
 
+  /// No description provided for @homeDashboardLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the dashboard.'**
+  String get homeDashboardLoadError;
+
+  /// No description provided for @homeDashboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet today. Add a meal or workout to get started.'**
+  String get homeDashboardEmpty;
+
+  /// No description provided for @homeDietRecordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} diet records today'**
+  String homeDietRecordCount(int count);
+
+  /// No description provided for @homeScheduleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events scheduled for today.'**
+  String get homeScheduleEmpty;
+
   /// No description provided for @homeCoachingPill.
   ///
   /// In en, this message translates to:

@@ -34,6 +34,9 @@ void main() {
     expect(summary.indicators.length, 3);
     expect(summary.todaySchedule.length, 2);
     expect(summary.weekScore, 85);
+    expect(summary.exerciseMinutes, 45);
+    expect(summary.exerciseCalories, 520);
+    expect(summary.exerciseCount, 4);
   });
 
   test('dashboardSummaryProvider propagates repository failures', () async {
@@ -95,6 +98,8 @@ void main() {
     );
     expect(parsed.macros.carbsG, 203.6);
     expect(parsed.macros.carbsPct, 44);
+    expect(parsed.exerciseCalories, 0);
+    expect(parsed.exerciseCount, 0);
 
     final legacy = DashboardSummary.fromJson(payload());
     expect(legacy.macros.carbsG, 0);

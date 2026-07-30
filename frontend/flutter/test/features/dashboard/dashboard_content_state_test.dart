@@ -13,11 +13,45 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 void main() {
+  const liveSummary = DashboardSummary(
+    indicators: <HealthIndicator>[
+      HealthIndicator(label: '칼로리', current: 1860, max: 2000, unit: 'kcal'),
+      HealthIndicator(
+        label: '나트륨',
+        current: 2329,
+        max: 2000,
+        unit: 'mg',
+        overBudget: true,
+      ),
+      HealthIndicator(label: '당류', current: 43, max: 50, unit: 'g'),
+    ],
+    macros: DietMacros(
+      carbsG: 203.6,
+      proteinG: 109.3,
+      fatG: 66.5,
+      carbsPct: 44,
+      proteinPct: 24,
+      fatPct: 32,
+    ),
+    dietEntries: 4,
+    exerciseMinutes: 45,
+    exerciseCalories: 520,
+    exerciseCount: 4,
+    todaySchedule: <ScheduleItem>[
+      ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),
+    ],
+    weekScore: 85,
+    weekScoreDelta: 12,
+    sodiumWarning: '김치찌개와 배추김치로 나트륨이 높아요.',
+    exerciseFeedback: '이번 주 운동 목표의 80%를 달성했어요.',
+  );
+
   Future<void> pumpDashboard(
     WidgetTester tester, {
     required Future<DashboardSummary> Function() load,
+    Size size = const Size(800, 1600),
   }) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
@@ -86,6 +120,33 @@ void main() {
 
     expect(find.text('아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.'), findsOneWidget);
     expect(find.text('오늘 예정된 일정이 없어요.'), findsOneWidget);
-    expect(find.text('0.0g'), findsNWidgets(3));
+    expect(find.text('0g'), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
   });
+
+  for (final width in <double>[360, 480, 800]) {
+    testWidgets('renders live PR #293 layout without overflow at ${width}px', (
+      WidgetTester tester,
+    ) async {
+      await pumpDashboard(
+        tester,
+        load: () async => liveSummary,
+        size: Size(width, 2200),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('식단 · 영양'), findsOneWidget);
+      expect(find.text('1,860'), findsWidgets);
+      expect(find.text('203.6g'), findsOneWidget);
+      expect(find.text('109.3g'), findsOneWidget);
+      expect(find.text('66.5g'), findsOneWidget);
+      expect(find.text('오늘 식단 기록 4개'), findsOneWidget);
+      expect(find.text('45'), findsOneWidget);
+      expect(find.text('520'), findsWidgets);
+      expect(find.text('4'), findsWidgets);
+      expect(find.text('병원 정기검진'), findsOneWidget);
+      expect(find.textContaining('김치찌개와 배추김치'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

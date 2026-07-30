@@ -60,6 +60,8 @@ class DashboardSummary {
     required this.macros,
     required this.dietEntries,
     required this.exerciseMinutes,
+    this.exerciseCalories = 0,
+    this.exerciseCount = 0,
     required this.todaySchedule,
     required this.weekScore,
     required this.weekScoreDelta,
@@ -78,6 +80,12 @@ class DashboardSummary {
 
   /// `quickStats` right tile — total exercise minutes today.
   final int exerciseMinutes;
+
+  /// Total calories burned by the exercise sessions included in this summary.
+  final int exerciseCalories;
+
+  /// Number of exercise sessions included in this summary.
+  final int exerciseCount;
 
   /// Today's schedule list (병원 정기검진 / 헬스장 운동 …).
   final List<ScheduleItem> todaySchedule;
@@ -136,6 +144,8 @@ class DashboardSummary {
             : const DietMacros.zero(),
         dietEntries: (json['diet_entries']! as num).toInt(),
         exerciseMinutes: (json['exercise_minutes']! as num).toInt(),
+        exerciseCalories: (json['exercise_calories'] as num?)?.toInt() ?? 0,
+        exerciseCount: (json['exercise_count'] as num?)?.toInt() ?? 0,
         todaySchedule: (json['today_schedule']! as List<Object?>)
             .cast<Map<String, Object?>>()
             .map(ScheduleItem.fromJson)

@@ -193,6 +193,8 @@ void main() {
       // Quick stats.
       expect(body['diet_entries'], 3);
       expect(body['exercise_minutes'], 45);
+      expect(body['exercise_calories'], 320);
+      expect(body['exercise_count'], 1);
 
       // Schedule.
       final schedule = (body['today_schedule']! as List<Object?>)
