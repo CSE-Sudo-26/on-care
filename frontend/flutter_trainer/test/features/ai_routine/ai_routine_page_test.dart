@@ -310,6 +310,21 @@ void main() {
       expect(find.text('혈압 안정에 효과적'), findsOneWidget);
     });
 
+    testWidgets('opens the A/B assistant inline in the AI routine tab', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      expect(find.text('AI에게 루틴 옵션 요청하기'), findsOneWidget);
+      await tester.tap(find.text('AI에게 루틴 옵션 요청하기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
+      expect(find.text('추천 목록으로'), findsOneWidget);
+      // The persistent shell proves this was not opened as a dialog/page.
+      expect(find.text('AI루틴'), findsOneWidget);
+    });
+
     testWidgets('switching client updates the verdict and suggestions', (
       tester,
     ) async {
@@ -404,11 +419,21 @@ void main() {
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       // Every card carries an X now — the first belongs to the first
       // AI suggestion.
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, -160),
+      );
+      await tester.pump();
       await tester.tap(find.byIcon(Icons.close).first);
       await tester.pump();
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
 
       // Switching clients and back restores the full suggestion list.
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, 1000),
+      );
+      await tester.pump();
       await tester.tap(find.text('이지수'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
@@ -776,6 +801,11 @@ void main() {
       await openTab(tester);
 
       // Remove all three seeded AI suggestions for 김민수.
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, -160),
+      );
+      await tester.pump();
       for (var i = 0; i < 3; i++) {
         await tester.tap(find.byIcon(Icons.close).first);
         await tester.pump();

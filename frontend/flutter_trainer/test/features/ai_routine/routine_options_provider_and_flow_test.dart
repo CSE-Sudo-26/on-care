@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_options_flow.dart';
+import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -46,6 +50,31 @@ class _CapturingRoutineRepository implements TrainerRoutineRepository {
       Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
 }
 
+class _CapturingChatRepository implements ChatRepository {
+  String? clientId;
+  String? text;
+
+  @override
+  Future<void> markThreadRead(String clientId) async {}
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async {
+    this.clientId = clientId;
+    this.text = text;
+  }
+
+  @override
+  Stream<List<ClientChatMessage>> watchThread(String clientId) =>
+      Stream<List<ClientChatMessage>>.value(const <ClientChatMessage>[]);
+
+  @override
+  Stream<Map<String, int>> watchUnreadCounts() =>
+      Stream<Map<String, int>>.value(const <String, int>{});
+}
+
 void main() {
   group('trainerRoutineOptionsRepositoryProvider', () {
     test('mock when USE_MOCK_API=true', () {
@@ -75,7 +104,7 @@ void main() {
     });
   });
 
-  testWidgets('3-step flow: steer → generate → compare → select → edit/send', (
+  testWidgets('inline flow: analyse → horizontal options → edit/send', (
     tester,
   ) async {
     // Tall viewport so every step's content fits (buttons sit at the bottom
@@ -86,46 +115,72 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final assigned = _CapturingRoutineRepository();
+    final chat = _CapturingChatRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(_mockConfig),
           trainerRoutineRepositoryProvider.overrideWithValue(assigned),
+          chatRepositoryProvider.overrideWithValue(chat),
         ],
-        child: const MaterialApp(home: AiRoutineOptionsFlow(client: _client)),
+        child: const MaterialApp(
+          home: AiRoutineOptionsFlow(
+            client: _client,
+            recommendedExercises: <RoutineExercise>[
+              RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+            ],
+            recommendedReason: '기존 회원 데이터 기반 추천',
+          ),
+        ),
       ),
     );
 
-    // Step 1 — steering visible.
-    expect(find.text('회원 분석'), findsOneWidget);
-    expect(find.text('✦ AI로 A/B 루틴 생성'), findsOneWidget);
+    // The assistant analysis is editable, while its suggestion remains a
+    // muted placeholder until the trainer types a memo.
+    expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
+    final initialMemo = tester.widget<TextField>(
+      find.byKey(const ValueKey<String>('analysis-trainer-memo')),
+    );
+    expect(initialMemo.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('analysis-trainer-memo')),
+      '무릎 충격 주의',
+    );
 
-    // Generate (mock has a short delay). The button sits below the fold in
-    // the default test viewport — scroll it in first.
-    await tester.ensureVisible(find.text('✦ AI로 A/B 루틴 생성'));
-    await tester.tap(find.text('✦ AI로 A/B 루틴 생성'));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('generate-routine-options')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generate-routine-options')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    // Step 2 — both plans shown.
+    // A/B + the existing recommendation share one horizontal option rail.
+    expect(
+      find.byKey(const ValueKey<String>('routine-options-horizontal-scroll')),
+      findsOneWidget,
+    );
     expect(find.textContaining('A안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('B안 · 강도·운동량 중심'), findsOneWidget);
+    expect(find.textContaining('추천안 · 기존 AI 추천'), findsOneWidget);
 
-    // Select B, then move to edit/send.
-    await tester.tap(find.textContaining('B안 · 강도·운동량 중심'));
-    await tester.pump();
-    await tester.ensureVisible(find.text('B안 선택하고 수정'));
-    await tester.tap(find.text('B안 선택하고 수정'));
+    // Select B and edit its first exercise in the common inline editor.
+    await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
     await tester.pumpAndSettle();
-
-    // Step 3 — edit the selected plan, then send the exact edited summary.
-    expect(find.text('회원에게 전송'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
     await tester.tap(
-      find.byKey(const ValueKey<String>('routine-minute-plus-0')),
+      find.byKey(const ValueKey<String>('routine-minute-0-20')),
     );
-    await tester.enterText(find.byType(TextField), '무릎 충격 주의');
-    await tester.tap(find.text('회원에게 전송'));
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('send-selected-routine')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('send-selected-routine')),
+    );
     await tester.pumpAndSettle();
 
     expect(assigned.memberId, 'm1');
@@ -133,6 +188,16 @@ void main() {
     expect(assigned.assigned!.name, 'AI 맞춤 루틴 (B안)');
     expect(assigned.assigned!.minutes, 35);
     expect(assigned.assigned!.reason, contains('무릎 충격 주의'));
-    expect(assigned.assigned!.reason, contains('인터벌 러닝 20분'));
+    expect(assigned.assigned!.reason, contains('인터벌 걷기 20분'));
+    expect(chat.clientId, 'm1');
+    expect(chat.text, contains('무릎 충격 주의'));
+    expect(
+      find.byKey(const ValueKey<String>('routine-sent-confirmation')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('open-client-chat')),
+      findsOneWidget,
+    );
   });
 }
