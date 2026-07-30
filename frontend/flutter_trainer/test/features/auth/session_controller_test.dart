@@ -141,6 +141,56 @@ void main() {
         isNull,
       );
     });
+
+    test('keeps the stored tokens on a transient network failure at restore',
+        () async {
+      final fake = _FakeAuthRepository()..profileThrowsNetwork = true;
+      final container = _makeContainer(
+        tokens: <String, String>{
+          'access_token': 'valid',
+          'refresh_token': 'valid-refresh',
+        },
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+      );
+      container.read(sessionControllerProvider.notifier);
+      await _settle();
+
+      // Transient failure → signed out, but the tokens survive so a later
+      // relaunch can restore (not a forced sign-out that discards a valid
+      // session).
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.signedOut,
+      );
+      final store = container.read(secureTokenStoreProvider);
+      expect(await store.readAccessToken(), 'valid');
+      expect(await store.readRefreshToken(), 'valid-refresh');
+    });
+
+    test('refresh keeps the existing refresh token when the response omits one',
+        () async {
+      final fake = _FakeAuthRepository()
+        ..profileFailuresBeforeSuccess = 1 // first fetch 401 → triggers refresh
+        ..refreshReturnsEmptyRefresh = true;
+      final container = _makeContainer(
+        tokens: <String, String>{
+          'access_token': 'stale',
+          'refresh_token': 'keep-me',
+        },
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+      );
+      container.read(sessionControllerProvider.notifier);
+      await _settle();
+
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.authenticated,
+      );
+      final store = container.read(secureTokenStoreProvider);
+      expect(await store.readAccessToken(), 'rotated-access');
+      // Backend rotated only the access token → the old refresh is preserved.
+      expect(await store.readRefreshToken(), 'keep-me');
+    });
   });
 
   group('SessionController login', () {
@@ -244,7 +294,9 @@ void main() {
 class _FakeAuthRepository implements TrainerAuthRepository {
   int profileFailuresBeforeSuccess = 0;
   bool profileThrowsNotTrainer = false;
+  bool profileThrowsNetwork = false;
   bool refreshThrows = false;
+  bool refreshReturnsEmptyRefresh = false;
   Duration profileDelay = Duration.zero;
   int refreshCalls = 0;
   int _profileCalls = 0;
@@ -275,7 +327,10 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   Future<TrainerAuthTokens> refresh(String refreshToken) async {
     refreshCalls++;
     if (refreshThrows) throw const AuthException('refresh failed');
-    return _tokens('rotated');
+    return TrainerAuthTokens(
+      access: 'rotated-access',
+      refresh: refreshReturnsEmptyRefresh ? '' : 'rotated-refresh',
+    );
   }
 
   @override
@@ -283,6 +338,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
     _profileCalls++;
     if (profileDelay > Duration.zero) await Future<void>.delayed(profileDelay);
     if (profileThrowsNotTrainer) throw const NotTrainerException();
+    if (profileThrowsNetwork) throw const NetworkError(message: 'net down');
     if (_profileCalls <= profileFailuresBeforeSuccess) {
       throw const UnauthorizedError(message: '401');
     }

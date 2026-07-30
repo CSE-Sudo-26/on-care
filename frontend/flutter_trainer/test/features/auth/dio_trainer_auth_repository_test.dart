@@ -176,5 +176,25 @@ void main() {
         throwsA(isA<UnauthorizedError>()),
       );
     });
+
+    test('maps a network failure to NetworkError, NOT AuthException '
+        '(so restore keeps the tokens)', () async {
+      when(
+        () => dio.get<Map<String, Object?>>(
+          '/trainer/me',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/trainer/me'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
+
+      await expectLater(
+        repo.fetchProfile('valid'),
+        throwsA(isA<NetworkError>()),
+      );
+    });
   });
 }

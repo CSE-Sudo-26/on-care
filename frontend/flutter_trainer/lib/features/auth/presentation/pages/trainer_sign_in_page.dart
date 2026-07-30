@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
@@ -91,6 +92,8 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Self sign-up only makes sense in demo/mock mode (see below).
+    final signUpEnabled = ref.watch(appConfigProvider).useMockApi;
     return Scaffold(
       // 사용자 앱 로그인 화면과 동일한 흰색 배경.
       backgroundColor: Colors.white,
@@ -172,22 +175,29 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                     onTap: _loading ? null : () => _social('google'),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      const Text(
-                        '계정이 없으신가요?',
-                        style: TextStyle(color: Color(0xFF64748B)),
-                      ),
-                      TextButton(
-                        onPressed: _loading ? null : _onSignUp,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
+                  // Self sign-up is demo-only: POST /auth/register creates a
+                  // MEMBER account (no role param), so against the real
+                  // backend a registered account gets a permanent 403 from
+                  // /trainer/me — trainer accounts are provisioned server-side
+                  // (seed/admin). Hide the entry when hitting the real API so
+                  // it isn't a dead end. (Follow-up: trainer provisioning.)
+                  if (signUpEnabled)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        const Text(
+                          '계정이 없으신가요?',
+                          style: TextStyle(color: Color(0xFF64748B)),
                         ),
-                        child: const Text('회원가입'),
-                      ),
-                    ],
-                  ),
+                        TextButton(
+                          onPressed: _loading ? null : _onSignUp,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                          ),
+                          child: const Text('회원가입'),
+                        ),
+                      ],
+                    ),
                   Center(
                     child: TextButton(
                       onPressed: _loading ? null : _enterDemo,

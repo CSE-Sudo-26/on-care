@@ -64,6 +64,8 @@ abstract class TrainerAuthRepository {
   ///  * 403 → [NotTrainerException] — the account is not a trainer;
   ///  * 401 → `UnauthorizedError` (from `core/errors`), surfaced so
   ///    `SessionController` can attempt a token refresh;
-  ///  * other transport / empty-body failures → [AuthException].
+  ///  * transport / empty-body failures → a typed `AppError`
+  ///    (`NetworkError` / `ServerError`), NOT [AuthException], so restore
+  ///    treats a transient failure as recoverable and keeps the tokens.
   Future<TrainerProfile> fetchProfile(String accessToken);
 }

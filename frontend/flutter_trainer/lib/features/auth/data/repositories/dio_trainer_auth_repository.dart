@@ -93,7 +93,7 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
       );
       final data = res.data;
       if (data == null) {
-        throw const AuthException('프로필을 불러오지 못했어요.');
+        throw const ServerError(message: '프로필 응답이 비어 있어요.');
       }
       return trainerProfileFromJson(data);
     } on DioException catch (e) {
@@ -105,7 +105,11 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
         // Surfaced to SessionController so it can attempt a token refresh.
         throw UnauthorizedError(message: e.message);
       }
-      throw _asAuth(e);
+      // Transport failures (network/timeout/5xx) surface as a typed
+      // [AppError] — NOT [AuthException] — so SessionController's restore
+      // keeps the stored tokens on a transient failure instead of forcing
+      // a sign-out (review: don't discard a valid session on a blip).
+      throw AppError.fromDio(e);
     }
   }
 

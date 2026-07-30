@@ -103,10 +103,18 @@ class SessionController extends StateNotifier<SessionState> {
     if (_userActionStarted) return;
     try {
       final tokens = await _repo.refresh(refresh);
-      await _persist(tokens);
-      await _resolveSession(
+      // Some backends rotate only the access token and omit a new refresh
+      // token — keep the existing one then, or the next expiry can never
+      // restore (review). An empty access is still a failure (fromJson
+      // guards it), so only the refresh needs the fallback.
+      final rotated = TrainerAuthTokens(
         access: tokens.access,
-        refresh: tokens.refresh,
+        refresh: tokens.refresh.isEmpty ? refresh : tokens.refresh,
+      );
+      await _persist(rotated);
+      await _resolveSession(
+        access: rotated.access,
+        refresh: rotated.refresh,
         allowRefresh: false,
       );
     } catch (_) {

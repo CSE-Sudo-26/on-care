@@ -112,7 +112,7 @@ lib/
 
 - 트레이너 CI/배포 파이프라인 (analyze·test·web build + wasm fetch,
   `dart format --set-exit-if-changed` 포함)
-- 실 백엔드(FastAPI) 연동 — `TrainerAuthRepository`/`SessionTokenStore` 교체 지점 주석 참조
+- 실 백엔드(FastAPI) 연동 — `TrainerAuthRepository`(Dio 구현)/`SecureTokenStore` 참조
 - 자정 넘김 시 '오늘' 스케줄/예약 수 자동 갱신, DB JSON 역직렬화 방어
   (백엔드 연동과 함께 처리)
 - **복수 헬스장 소속**: 현재 트레이너는 헬스장 1곳(seedTrainerProfile.gym)에
