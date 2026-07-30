@@ -19,14 +19,21 @@ def _this_monday_iso() -> str:
 
 
 def test_exercise_seed_has_this_week_start(client, db_session):
-    """시드된 운동 세션의 week_start 는 이번 주 월요일이다."""
+    """시드가 이번 주(월요일 기준) 세션을 적재한다 — 하드코딩된 과거 주가 아니라.
+
+    조회를 이번 주로 스코프한다: `_seed_exercise` 는 주가 바뀌면 지난주 행을
+    지우지 않고 새 주 행을 덧붙이므로, 유저 전체를 조회하면 다음 주부터 지난주
+    행까지 섞여 들어와 단정이 깨진다.
+    """
     from app.models.models import ExerciseSession
 
     rows = db_session.scalars(
-        select(ExerciseSession).where(ExerciseSession.user_id == _MEMBER_ID)
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == _MEMBER_ID,
+            ExerciseSession.week_start == _this_monday_iso(),
+        )
     ).all()
-    assert rows, "운동 시드가 없습니다."
-    assert all(r.week_start == _this_monday_iso() for r in rows)
+    assert rows, "이번 주 운동 시드가 없습니다."
 
 
 def test_exercise_seed_skips_future_weekdays(client, db_session):
