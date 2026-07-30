@@ -12,13 +12,19 @@ class NotificationController extends StateNotifier<NotificationState> {
   /// 데모 둘러보기 화면이 기존과 동일하게 보이도록 유지한다. 실모드는 seed=null
   /// 로 생성해 백엔드(`/notifications`)에서 최신 알림을 불러온다.
   NotificationController(this._repo, {List<AlertItem>? seed})
-    : super(NotificationState(items: seed ?? const <AlertItem>[])) {
+    : _allowSimulatePush = seed != null,
+      super(NotificationState(items: seed ?? const <AlertItem>[])) {
     if (seed == null) {
       _load();
     }
   }
 
   final NotificationRepository _repo;
+
+  /// 가상 푸시 주입은 목/데모 모드에서만 허용한다(seed 가 주어진 경우).
+  /// 실모드는 서버가 진실원본이라, 로컬 팬텀을 넣으면 다음 [refresh] 에서
+  /// 사라져 상태가 어긋난다.
+  final bool _allowSimulatePush;
 
   Future<void> _load() async {
     try {
@@ -59,9 +65,10 @@ class NotificationController extends StateNotifier<NotificationState> {
   }
 
   /// Q9: in-app panel + simulated push. Inserts a new unread item
-  /// at the top, as if a real FCM notification had landed. 실모드에서도
-  /// 로컬로만 주입한다(서버 미전송, 개발/데모용).
+  /// at the top, as if a real FCM notification had landed. 목/데모 모드
+  /// 전용(개발용) — 실모드에서는 서버에 없는 팬텀을 만들지 않도록 무시한다.
   void simulatePush() {
+    if (!_allowSimulatePush) return;
     final id = 'sim-${DateTime.now().millisecondsSinceEpoch}';
     final injected = AlertItem(
       id: id,

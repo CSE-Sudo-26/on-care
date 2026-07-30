@@ -55,7 +55,9 @@ class NotificationPage extends ConsumerWidget {
                 );
               },
             ),
-      floatingActionButton: !config.isProd
+      // 가상 푸시는 목/데모 모드 전용 개발 도구 — 실모드에서는 버튼을 숨긴다
+      // (서버에 없는 팬텀 알림 방지, 죽은 버튼 방지).
+      floatingActionButton: config.useMockApi
           ? FloatingActionButton.extended(
               icon: const Icon(Icons.notification_add_outlined),
               label: const Text('Simulate push'),
