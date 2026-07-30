@@ -44,13 +44,19 @@ class SessionController extends StateNotifier<SessionState> {
   /// (optionally after a refresh) plus a trainer `/me` lands authenticated;
   /// anything else lands signed out. Demo mode is never persisted.
   Future<void> _restore() async {
+    // Read the two tokens independently: a refresh-token read failure must
+    // not discard an access token that read back fine (review).
     String? access;
     String? refresh;
     try {
       access = await _tokens.readAccessToken();
-      refresh = await _tokens.readRefreshToken();
     } catch (_) {
       access = null; // secure storage unavailable → treat as signed out
+    }
+    try {
+      refresh = await _tokens.readRefreshToken();
+    } catch (_) {
+      refresh = null; // no refresh available; access alone can still restore
     }
     if (!mounted || _userActionStarted) return;
     if (access == null || access.isEmpty) {
@@ -101,25 +107,34 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> _refreshAndResolve(String refresh) async {
     if (_userActionStarted) return;
+    final TrainerAuthTokens tokens;
     try {
-      final tokens = await _repo.refresh(refresh);
-      // Some backends rotate only the access token and omit a new refresh
-      // token — keep the existing one then, or the next expiry can never
-      // restore (review). An empty access is still a failure (fromJson
-      // guards it), so only the refresh needs the fallback.
-      final rotated = TrainerAuthTokens(
-        access: tokens.access,
-        refresh: tokens.refresh.isEmpty ? refresh : tokens.refresh,
-      );
-      await _persist(rotated);
-      await _resolveSession(
-        access: rotated.access,
-        refresh: rotated.refresh,
-        allowRefresh: false,
-      );
+      tokens = await _repo.refresh(refresh);
     } catch (_) {
+      // The refresh failed — but a user action (login/demo/sign-out) may
+      // have landed during the slow call; don't clobber it. Otherwise the
+      // session really is expired.
+      if (_userActionStarted) return;
       await _expire();
+      return;
     }
+    // Re-check the race guard after the await, like every _resolveSession
+    // branch does — a user action during a slow refresh must win.
+    if (_userActionStarted) return;
+    // Some backends rotate only the access token and omit a new refresh
+    // token — keep the existing one then, or the next expiry can never
+    // restore. An empty access is still a failure (fromJson guards it), so
+    // only the refresh needs the fallback.
+    final rotated = TrainerAuthTokens(
+      access: tokens.access,
+      refresh: tokens.refresh.isEmpty ? refresh : tokens.refresh,
+    );
+    await _persist(rotated);
+    await _resolveSession(
+      access: rotated.access,
+      refresh: rotated.refresh,
+      allowRefresh: false,
+    );
   }
 
   // --- login flows --------------------------------------------------------
@@ -208,8 +223,10 @@ class SessionController extends StateNotifier<SessionState> {
     try {
       await _tokens.clear();
     } catch (_) {}
-    _setAccessToken(null);
+    // `_setAccessToken` reads a provider — guard it behind the mounted check
+    // so it never runs against a disposed container during teardown.
     if (!mounted) return;
+    _setAccessToken(null);
     state = const SessionState(status: SessionStatus.signedOut);
   }
 }

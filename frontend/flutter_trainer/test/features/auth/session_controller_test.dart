@@ -191,6 +191,27 @@ void main() {
       // Backend rotated only the access token → the old refresh is preserved.
       expect(await store.readRefreshToken(), 'keep-me');
     });
+
+    test('a user action during a slow refresh is not clobbered', () async {
+      // stale access → 401 → refresh (slow); the user picks demo mid-refresh.
+      final fake = _FakeAuthRepository()
+        ..profileFailuresBeforeSuccess = 1
+        ..refreshDelay = const Duration(milliseconds: 200);
+      final container = _makeContainer(
+        tokens: <String, String>{'access_token': 'stale', 'refresh_token': 'r'},
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+      );
+      final controller = container.read(sessionControllerProvider.notifier);
+
+      // Let restore hit the 401 and start the slow refresh, then act.
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      controller.enterDemo();
+      expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
+
+      // The late refresh resolves — it must NOT overwrite the demo session.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
+    });
   });
 
   group('SessionController login', () {
@@ -298,6 +319,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   bool refreshThrows = false;
   bool refreshReturnsEmptyRefresh = false;
   Duration profileDelay = Duration.zero;
+  Duration refreshDelay = Duration.zero;
   int refreshCalls = 0;
   int _profileCalls = 0;
 
@@ -326,6 +348,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   @override
   Future<TrainerAuthTokens> refresh(String refreshToken) async {
     refreshCalls++;
+    if (refreshDelay > Duration.zero) await Future<void>.delayed(refreshDelay);
     if (refreshThrows) throw const AuthException('refresh failed');
     return TrainerAuthTokens(
       access: 'rotated-access',
