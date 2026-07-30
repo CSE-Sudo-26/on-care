@@ -1,6 +1,6 @@
 """Merge consultation request and trainer index migration heads.
 
-Revision ID: 0015_merge_consultation_and_trainer_heads
+Revision ID: 0015_merge_alembic_heads
 Revises: 0014_consultation_requests, 0014_drop_trainer_prof_ix
 Create Date: 2026-07-30
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-revision: str = "0015_merge_consultation_and_trainer_heads"
+revision: str = "0015_merge_alembic_heads"
 down_revision: str | Sequence[str] | None = (
     "0014_consultation_requests",
     "0014_drop_trainer_prof_ix",
