@@ -203,8 +203,7 @@ void main() {
       expect(schedule.first['title'], '병원 정기검진');
 
       // Sodium warning is set when total > 2000.
-      expect(body['sodium_warning'], contains('김치찌개'));
-      expect(body['sodium_warning'], contains('배추김치'));
+      expect(body['sodium_warning'], '김치찌개·배추김치 섭취로 나트륨이 높아요.');
 
       // Week score is in the 0..100 band.
       final score = body['week_score']! as int;
@@ -232,5 +231,52 @@ void main() {
 
     final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
     expect(res.data!['sodium_warning'], isNull);
+  });
+
+  test(
+    'sodium_warning handles one source name with a final consonant',
+    () async {
+      await (db.delete(db.dietEntries)).go();
+      await db
+          .into(db.dietEntries)
+          .insert(
+            DietEntriesCompanion.insert(
+              id: 'd-ramen',
+              date: _todayDateString(),
+              mealType: 'lunch',
+              timeLabel: '12:00',
+              foodsJson: jsonEncode(<Object?>[
+                <String, Object?>{'name': '라면', 'sodium_mg': 2100},
+              ]),
+              totalCalories: 500,
+              sodiumMg: const Value(2100),
+              sugarG: const Value(2),
+            ),
+          );
+
+      final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
+      expect(res.data!['sodium_warning'], '라면 섭취로 나트륨이 높아요.');
+    },
+  );
+
+  test('sodium_warning falls back when source names are empty', () async {
+    await (db.delete(db.dietEntries)).go();
+    await db
+        .into(db.dietEntries)
+        .insert(
+          DietEntriesCompanion.insert(
+            id: 'd-unknown',
+            date: _todayDateString(),
+            mealType: 'lunch',
+            timeLabel: '12:00',
+            foodsJson: jsonEncode(<Object?>[]),
+            totalCalories: 500,
+            sodiumMg: const Value(2100),
+            sugarG: const Value(2),
+          ),
+        );
+
+    final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
+    expect(res.data!['sodium_warning'], '오늘 나트륨이 2100mg 으로 권장량(2000mg)을 넘었어요.');
   });
 }

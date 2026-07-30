@@ -42,7 +42,7 @@ void main() {
     ],
     weekScore: 85,
     weekScoreDelta: 12,
-    sodiumWarning: '김치찌개와 배추김치로 나트륨이 높아요.',
+    sodiumWarning: '김치찌개·배추김치 섭취로 나트륨이 높아요.',
     exerciseFeedback: '이번 주 운동 목표의 80%를 달성했어요.',
   );
 
@@ -145,7 +145,7 @@ void main() {
       expect(find.text('520'), findsWidgets);
       expect(find.text('4'), findsWidgets);
       expect(find.text('병원 정기검진'), findsOneWidget);
-      expect(find.textContaining('김치찌개와 배추김치'), findsOneWidget);
+      expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

@@ -33,6 +33,22 @@ _MAX_SODIUM_MG = 2000
 _MAX_SUGAR_G = 50
 
 
+def _build_sodium_warning(
+    total_sodium_mg: int,
+    source_names: list[str],
+) -> str | None:
+    if total_sodium_mg <= _MAX_SODIUM_MG:
+        return None
+    if not source_names:
+        return (
+            f"오늘 나트륨이 {total_sodium_mg}mg 으로 "
+            f"권장량({_MAX_SODIUM_MG}mg)을 넘었어요."
+        )
+
+    top_source_names = "·".join(source_names[:2])
+    return f"{top_source_names} 섭취로 나트륨이 높아요."
+
+
 @router.get("/dashboard/summary", response_model=DashboardSummary)
 def dashboard_summary(
     current_user: CurrentUser,
@@ -75,17 +91,8 @@ def dashboard_summary(
             if name and isinstance(sodium, (int, float)):
                 sodium_sources.append((name, int(sodium)))
     sodium_sources.sort(key=lambda item: item[1], reverse=True)
-    source_names = [name for name, _ in sodium_sources[:2]]
-    if total_na > _MAX_SODIUM_MG and source_names:
-        sodium_warning = (
-            f"{'와 '.join(source_names)}로 나트륨이 높아요."
-        )
-    elif total_na > _MAX_SODIUM_MG:
-        sodium_warning = (
-            f"오늘 나트륨이 {total_na}mg 으로 권장량({_MAX_SODIUM_MG}mg)을 넘었어요."
-        )
-    else:
-        sodium_warning = None
+    source_names = [name for name, _ in sodium_sources]
+    sodium_warning = _build_sodium_warning(total_na, source_names)
 
     # --- 이번 주 운동 집계 ---
     week = monday_of_this_week_str()

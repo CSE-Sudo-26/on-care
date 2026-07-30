@@ -38,7 +38,7 @@ class MockDashboardRepository implements DashboardRepository {
       ],
       weekScore: 85,
       weekScoreDelta: 12,
-      sodiumWarning: '김치찌개와 배추김치로 나트륨이 높아요.',
+      sodiumWarning: '김치찌개·배추김치 섭취로 나트륨이 높아요.',
       exerciseFeedback: '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
     );
   }

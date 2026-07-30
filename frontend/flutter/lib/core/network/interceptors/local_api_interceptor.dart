@@ -272,6 +272,10 @@ class LocalApiInterceptor extends Interceptor {
       }
     }
     sodiumSources.sort((a, b) => b.sodiumMg.compareTo(a.sodiumMg));
+    final sodiumSourceNames = sodiumSources
+        .take(2)
+        .map((source) => source.name)
+        .join('·');
 
     // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
@@ -336,9 +340,9 @@ class LocalApiInterceptor extends Interceptor {
       // diff lands in a later phase.
       'week_score_delta': 12,
       'sodium_warning': totalSodium > 2000
-          ? sodiumSources.length >= 2
-                ? '${sodiumSources[0].name}와 ${sodiumSources[1].name}로 나트륨이 높아요.'
-                : '오늘 나트륨 섭취량이 권장량을 초과했어요.'
+          ? sodiumSourceNames.isNotEmpty
+                ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
+                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
           ? '오늘 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'

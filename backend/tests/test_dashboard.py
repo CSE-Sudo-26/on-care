@@ -1,9 +1,38 @@
-"""대시보드 요약 집계 — DB 필요(로컬 skip, CI 실행)."""
+"""대시보드 요약 집계."""
 from __future__ import annotations
 
 import json
 
+import pytest
 from sqlalchemy import delete
+
+from app.api.v1.dashboard import _build_sodium_warning
+
+
+@pytest.mark.parametrize(
+    ("total_sodium_mg", "source_names", "expected"),
+    [
+        (2000, ["라면"], None),
+        (
+            2100,
+            [],
+            "오늘 나트륨이 2100mg 으로 권장량(2000mg)을 넘었어요.",
+        ),
+        (2100, ["라면"], "라면 섭취로 나트륨이 높아요."),
+        (2100, ["김밥", "라면"], "김밥·라면 섭취로 나트륨이 높아요."),
+        (
+            2100,
+            ["김치찌개", "배추김치", "라면"],
+            "김치찌개·배추김치 섭취로 나트륨이 높아요.",
+        ),
+    ],
+)
+def test_build_sodium_warning(
+    total_sodium_mg: int,
+    source_names: list[str],
+    expected: str | None,
+):
+    assert _build_sodium_warning(total_sodium_mg, source_names) == expected
 
 
 def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session):
@@ -64,8 +93,7 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
         "protein_pct": 24,
         "fat_pct": 30,
     }
-    assert "김치찌개" in body["sodium_warning"]
-    assert "배추김치" in body["sodium_warning"]
+    assert body["sodium_warning"] == "김치찌개·배추김치 섭취로 나트륨이 높아요."
     assert isinstance(body["exercise_minutes"], int)
     assert isinstance(body["exercise_calories"], int)
     assert isinstance(body["exercise_count"], int)
