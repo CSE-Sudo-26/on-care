@@ -365,7 +365,9 @@ class LocalApiInterceptor extends Interceptor {
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
       'exercise_calories': exerciseCalories,
-      'exercise_count': exerciseRows.length,
+      // 운동 횟수 = 운동한 '일수'(활성 일수). 운동 화면의 workoutCount 와 정의를
+      // 맞춰, 하루에 여러 세션을 기록해도 1회로 센다(세션 행 수가 아니라 distinct 요일).
+      'exercise_count': exerciseRows.map((r) => r.dayLabel).toSet().length,
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week

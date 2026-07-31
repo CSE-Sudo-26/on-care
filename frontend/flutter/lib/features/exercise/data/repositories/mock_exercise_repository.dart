@@ -31,38 +31,104 @@ class MockExerciseRepository implements ExerciseRepository {
       '12회차 PT 완료! 코치님이 강조하신 어깨 회전근개 스트레칭과 마무리 유산소로 완벽히 정리해보세요.';
 
   // 오늘 PT 시나리오 시드. 목·금·토·일 4일 연속 운동 → "4일 연속"과 일치.
+  //
+  // 월·화·목·금은 실제 운동처럼 유산소/근력/스트레칭을 섞어 하루에 여러 세션으로
+  // 시드한다. 그래야 운동 현황 차트의 누적 막대가 유형별로 채워진다(#294 리팩터
+  // 이전 화면 복원). 하루 총합은 daily==cardio+strength+stretching 불변식을 지키며
+  // 이전과 동일(월40·화60·목65·금55). "운동 횟수"는 세션 수가 아니라 활성 일수로
+  // 표시하므로(주간 요약) 세션이 늘어도 값은 그대로다.
   final List<ExerciseSession> _sessions = <ExerciseSession>[
+    // 월 40분 = 유산소 30 + 스트레칭 10
     const ExerciseSession(
-      id: 's-mon',
+      id: 's-mon-cardio',
       dateLabel: '월요일',
       dayLabel: '월',
       type: ExerciseType.cardio,
-      minutes: 40,
-      calories: 300,
+      minutes: 30,
+      calories: 225,
     ),
     const ExerciseSession(
-      id: 's-tue',
+      id: 's-mon-stretch',
+      dateLabel: '월요일',
+      dayLabel: '월',
+      type: ExerciseType.stretching,
+      minutes: 10,
+      calories: 75,
+    ),
+    // 화 60분 = 유산소 45 + 근력 10 + 스트레칭 5
+    const ExerciseSession(
+      id: 's-tue-cardio',
+      dateLabel: '화요일',
+      dayLabel: '화',
+      type: ExerciseType.cardio,
+      minutes: 45,
+      calories: 315,
+    ),
+    const ExerciseSession(
+      id: 's-tue-strength',
       dateLabel: '화요일',
       dayLabel: '화',
       type: ExerciseType.strength,
-      minutes: 60,
-      calories: 420,
+      minutes: 10,
+      calories: 70,
     ),
     const ExerciseSession(
-      id: 's-thu',
+      id: 's-tue-stretch',
+      dateLabel: '화요일',
+      dayLabel: '화',
+      type: ExerciseType.stretching,
+      minutes: 5,
+      calories: 35,
+    ),
+    // 목 65분 = 유산소 50 + 근력 10 + 스트레칭 5
+    const ExerciseSession(
+      id: 's-thu-cardio',
       dateLabel: '목요일',
       dayLabel: '목',
       type: ExerciseType.cardio,
-      minutes: 65,
-      calories: 480,
+      minutes: 50,
+      calories: 370,
     ),
     const ExerciseSession(
-      id: 's-fri',
+      id: 's-thu-strength',
+      dateLabel: '목요일',
+      dayLabel: '목',
+      type: ExerciseType.strength,
+      minutes: 10,
+      calories: 73,
+    ),
+    const ExerciseSession(
+      id: 's-thu-stretch',
+      dateLabel: '목요일',
+      dayLabel: '목',
+      type: ExerciseType.stretching,
+      minutes: 5,
+      calories: 37,
+    ),
+    // 금 55분 = 유산소 45 + 근력 5 + 스트레칭 5
+    const ExerciseSession(
+      id: 's-fri-cardio',
       dateLabel: '금요일',
       dayLabel: '금',
       type: ExerciseType.cardio,
-      minutes: 55,
-      calories: 400,
+      minutes: 45,
+      calories: 328,
+    ),
+    const ExerciseSession(
+      id: 's-fri-strength',
+      dateLabel: '금요일',
+      dayLabel: '금',
+      type: ExerciseType.strength,
+      minutes: 5,
+      calories: 36,
+    ),
+    const ExerciseSession(
+      id: 's-fri-stretch',
+      dateLabel: '금요일',
+      dayLabel: '금',
+      type: ExerciseType.stretching,
+      minutes: 5,
+      calories: 36,
     ),
     const ExerciseSession(
       id: 's-sat',

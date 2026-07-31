@@ -203,7 +203,10 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
           children: <Widget>[
             Text(
               l.exLoadError,
-              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              style: const TextStyle(
+                fontSize: 13,
+                color: FigmaColors.textMuted,
+              ),
             ),
             const SizedBox(height: 14),
             OutlinedButton(
@@ -240,93 +243,95 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
           if (!atToday)
             const _ExerciseOtherDay()
           else ...<Widget>[
-          // 1) 이번 주 운동 요약
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-            child: Text(
-              l.exWeekSummary,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
+            // 1) 이번 주 운동 요약
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Text(
+                l.exWeekSummary,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.ink,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: _StatCard(
-                    label: l.exThisWeek,
-                    value: '${week.sessions.length}',
-                    unit: l.exUnitCount,
-                    accent: true,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _StatCard(
+                      label: l.exThisWeek,
+                      // 운동 횟수 = 운동한 '일수'(활성 일수). 하루에 유형을 나눠
+                      // 여러 세션으로 기록해도 1회로 센다(workoutCount = 요일 수).
+                      value: '${week.workoutCount}',
+                      unit: l.exUnitCount,
+                      accent: true,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    label: l.exStatTime,
-                    value: '${week.totalMinutes}',
-                    unit: l.unitMinutes,
-                    accent: true,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: l.exStatTime,
+                      value: '${week.totalMinutes}',
+                      unit: l.unitMinutes,
+                      accent: true,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    label: l.exStatCalories,
-                    value: '${week.totalCalories}',
-                    unit: l.unitKcal,
-                    accent: true,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: l.exStatCalories,
+                      value: '${week.totalCalories}',
+                      unit: l.unitKcal,
+                      accent: true,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatCard(
-                    label: l.exStatStreak,
-                    value: '${week.streakDays}',
-                    unit: l.exUnitStreakDays,
-                    streak: true,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: l.exStatStreak,
+                      value: '${week.streakDays}',
+                      unit: l.exUnitStreakDays,
+                      streak: true,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          // 2) AI 피드백
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _ExerciseFeedback(message: week.aiCoachMessage),
-          ),
-          const SizedBox(height: 20),
-          // 3) 운동 현황 (오늘 / 이번 주 / 이번 달)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _ActivityStatus(
-              week: week,
-              todayCardio: todayCardio,
-              todayStrength: todayStrength,
-              todayStretch: todayStretch,
+            const SizedBox(height: 20),
+            // 2) AI 피드백
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _ExerciseFeedback(message: week.aiCoachMessage),
             ),
-          ),
-          const SizedBox(height: 20),
-          // 4) 오늘 완료한 PT 일지 (트레이너 연동)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: _PtLogCard(),
-          ),
-          const SizedBox(height: 20),
-          // 5) PT 맞춤 연계 AI 루틴
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _PtAiRoutineCard(
-              done: _routineDone,
-              onToggle: (int i) =>
-                  setState(() => _routineDone[i] = !_routineDone[i]),
+            const SizedBox(height: 20),
+            // 3) 운동 현황 (오늘 / 이번 주 / 이번 달)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _ActivityStatus(
+                week: week,
+                todayCardio: todayCardio,
+                todayStrength: todayStrength,
+                todayStretch: todayStretch,
+              ),
             ),
-          ),
+            const SizedBox(height: 20),
+            // 4) 오늘 완료한 PT 일지 (트레이너 연동)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: _PtLogCard(),
+            ),
+            const SizedBox(height: 20),
+            // 5) PT 맞춤 연계 AI 루틴
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _PtAiRoutineCard(
+                done: _routineDone,
+                onToggle: (int i) =>
+                    setState(() => _routineDone[i] = !_routineDone[i]),
+              ),
+            ),
           ],
         ],
       ),
@@ -715,11 +720,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
       for (int i = 0; i < n; i++)
         // 마지막(오늘) 막대는 실시간 오늘 활동으로 대체 → 오늘 도넛과 항상 일치.
         if (i == n - 1)
-          _Bar(
-            widget.todayCardio,
-            widget.todayStrength,
-            widget.todayStretch,
-          )
+          _Bar(widget.todayCardio, widget.todayStrength, widget.todayStretch)
         else if (hasBreakdown)
           _Bar(w.cardioMinutes[i], w.strengthMinutes[i], w.stretchingMinutes[i])
         else
@@ -819,6 +820,9 @@ class _TodayDonut extends StatelessWidget {
   Widget build(BuildContext context) {
     final int total = segs.fold<int>(0, (int a, _DonutSeg s) => a + s.minutes);
     return Container(
+      // 이번 주/이번 달 막대 차트 카드와 동일하게 가로 전체를 채운다(오늘 카드만
+      // 내용 폭으로 좁아 보이던 문제 수정). 도넛+범례는 FittedBox 로 가운데 정렬.
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -835,66 +839,66 @@ class _TodayDonut extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-            SizedBox(
-              width: 116,
-              height: 116,
-              child: Stack(
-                alignment: Alignment.center,
-                children: <Widget>[
-                  CustomPaint(
-                    size: const Size.square(116),
-                    painter: _DonutPainter(segs),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        '$total',
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
-                          height: 1,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const Text(
-                        '분',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: FigmaColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 48),
-            SizedBox(
-              width: 160,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    '오늘 총 운동 시간',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: FigmaColors.textMuted,
+              SizedBox(
+                width: 116,
+                height: 116,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    CustomPaint(
+                      size: const Size.square(116),
+                      painter: _DonutPainter(segs),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final _DonutSeg s in segs) ...<Widget>[
-                    _DonutLegendRow(seg: s),
-                    const SizedBox(height: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          '$total',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.ink,
+                            height: 1,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const Text(
+                          '분',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: FigmaColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 48),
+              SizedBox(
+                width: 160,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      '오늘 총 운동 시간',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    for (final _DonutSeg s in segs) ...<Widget>[
+                      _DonutLegendRow(seg: s),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1059,7 +1063,11 @@ class _ActivityChart extends StatelessWidget {
     final List<({Color color, String label, int min})> rows =
         <({Color color, String label, int min})>[
           if (b.cardio > 0)
-            (color: FigmaColors.primary, label: l.exTypeCardio, min: b.cardio.round()),
+            (
+              color: FigmaColors.primary,
+              label: l.exTypeCardio,
+              min: b.cardio.round(),
+            ),
           if (b.strength > 0)
             (
               color: const Color(0xFF1B6FA8),
@@ -1451,7 +1459,6 @@ class _ExerciseFeedback extends StatelessWidget {
   }
 }
 
-
 // ───────────────────────────────────── 오늘 완료한 PT 일지 ──
 
 /// Trainer-linked card summarising today's completed PT session and the
@@ -1675,11 +1682,7 @@ class _PtAiRoutineCard extends StatelessWidget {
           // Title (with AI glyph) on the left, the "반영" badge on the right.
           const Row(
             children: <Widget>[
-              Icon(
-                Icons.auto_awesome,
-                size: 16,
-                color: FigmaColors.primary,
-              ),
+              Icon(Icons.auto_awesome, size: 16, color: FigmaColors.primary),
               SizedBox(width: 6),
               Text(
                 'AI 추천 운동',
