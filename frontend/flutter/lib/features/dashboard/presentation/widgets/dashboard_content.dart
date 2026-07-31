@@ -527,10 +527,11 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final nutrition = _nutritionFor(widget.summary);
     final _NutData cfg = nutrition[_tab]!;
     final List<String> days = _weekDayLabels(l);
-    final (double lo, double hi) = _trendScale(cfg);
+    final int todayIdx = _weekTodayIndex();
+    final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
     // 오늘 값의 목표 대비 상태색(안전 초록 / 근접 주황 / 초과 빨강).
-    final Color todayColor = _nutStatusColor(cfg.cur.last, cfg.goal);
+    final Color todayColor = _nutStatusColor(cfg.cur[todayIdx], cfg.goal);
 
     return _StripeCard(
       child: Column(
@@ -740,6 +741,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                       ticks: cfg.ticks,
                                       lo: lo,
                                       hi: hi,
+                                      todayIndex: todayIdx,
                                     ),
                                   ),
                                 ),
@@ -754,7 +756,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                         style: TextStyle(
                                           fontSize: 8,
                                           fontWeight: FontWeight.w600,
-                                          color: i == 6
+                                          color: i == todayIdx
                                               ? todayColor
                                               : FigmaColors.textFaint,
                                         ),
@@ -1255,9 +1257,16 @@ class _MetricTile extends StatelessWidget {
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
 /// a nearly flat line.
-(double, double) _trendScale(_NutData c) {
+(double, double) _trendScale(_NutData c, int todayIndex) {
   // 데이터와 눈금(ticks)을 모두 포함하도록 스케일을 잡아 눈금선이 항상 보이게 한다.
-  final List<double> all = <double>[...c.cur, ...c.prev, ...c.ticks, c.goal];
+  // 이번 주(cur)는 오늘까지만 반영해 미래 요일의 0값이 축 바닥을 끌어내리지 않게 한다.
+  final int lastIdx = todayIndex.clamp(0, c.cur.length - 1);
+  final List<double> all = <double>[
+    ...c.cur.take(lastIdx + 1),
+    ...c.prev,
+    ...c.ticks,
+    c.goal,
+  ];
   double lo = all.reduce(math.min);
   double hi = all.reduce(math.max);
   final double range = (hi - lo) == 0 ? 1 : (hi - lo);
@@ -1422,6 +1431,11 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
+/// 오늘 요일 인덱스(월=0 … 일=6). 주간 추이 차트에서 "오늘"을 고정 일요일이
+/// 아니라 실제 오늘로 강조하고, 오늘 이후(미래) 요일의 0값이 실제 급락처럼
+/// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
+int _weekTodayIndex() => DateTime.now().weekday - 1;
+
 double _nutritionValue(_NutTabKind kind, NutritionDay day) => switch (kind) {
   _NutTabKind.calories => day.calories.toDouble(),
   _NutTabKind.sodium => day.sodiumMg.toDouble(),
@@ -1448,8 +1462,12 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
                   _nutritionValue(entry.key, day),
               ]
             : <double>[
-                ...entry.value.cur.take(6),
-                liveValues[entry.key]!.current.toDouble(),
+                // 데모 모드에서도 오늘 실측치는 마지막(일요일)이 아니라 실제
+                // 오늘 요일 슬롯에 놓는다.
+                for (int i = 0; i < entry.value.cur.length; i++)
+                  i == _weekTodayIndex()
+                      ? liveValues[entry.key]!.current.toDouble()
+                      : entry.value.cur[i],
               ],
         prev: hasPrev
             ? <double>[
@@ -1633,6 +1651,7 @@ class _TrendChartPainter extends CustomPainter {
     required this.ticks,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
   });
 
   final List<double> cur;
@@ -1641,6 +1660,9 @@ class _TrendChartPainter extends CustomPainter {
   final List<double> ticks;
   final double lo;
   final double hi;
+
+  /// 이번 주 꺾은선은 오늘까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
+  final int todayIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1682,8 +1704,11 @@ class _TrendChartPainter extends CustomPainter {
       );
     }
 
+    // 이번 주 선/점은 오늘까지만 그린다 — 아직 오지 않은 요일(=0)을 실제 급락으로
+    // 오해하지 않도록. x 좌표는 여전히 월~일 7칸 기준이라 지난 주 선과 정렬된다.
+    final int lastIdx = todayIndex.clamp(0, cur.length - 1);
     final List<Offset> pts = <Offset>[
-      for (int i = 0; i < cur.length; i++) Offset(dx(i), dy(cur[i])),
+      for (int i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
     ];
 
     // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
@@ -1702,9 +1727,9 @@ class _TrendChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    for (int i = 0; i < cur.length; i++) {
+    for (int i = 0; i <= lastIdx; i++) {
       final Color sc = _nutStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 4.2 : 3.4);
+      _dot(canvas, pts[i], sc, r: i == lastIdx ? 4.2 : 3.4);
       _text(canvas, _fmt(cur[i]), pts[i], w, sc);
     }
   }
@@ -1771,7 +1796,8 @@ class _TrendChartPainter extends CustomPainter {
       old.goal != goal ||
       old.ticks != ticks ||
       old.lo != lo ||
-      old.hi != hi;
+      old.hi != hi ||
+      old.todayIndex != todayIndex;
 }
 
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline

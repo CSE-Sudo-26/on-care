@@ -161,7 +161,10 @@ class DashboardSummary {
       dietEntries == 0 &&
       exerciseMinutes == 0 &&
       todaySchedule.isEmpty &&
-      calorieIndicator.current == 0;
+      calorieIndicator.current == 0 &&
+      // 오늘 기록이 없어도 이번 주(과거 요일)에 실제 식단 기록이 있으면 홈은
+      // 비어 있지 않다 — 주간 추이 차트가 표시돼야 한다.
+      !nutritionWeek.any((NutritionDay day) => day.calories > 0);
 
   factory DashboardSummary.fromJson(
     Map<String, Object?> json,

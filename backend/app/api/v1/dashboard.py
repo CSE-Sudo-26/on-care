@@ -50,6 +50,18 @@ def _score_for(sodium_ok: bool, exercise_minutes: int) -> int:
     return min(score, 100)
 
 
+def _avg_sodium_of_logged(days: list[DashboardNutritionDay]) -> float | None:
+    """기록된(칼로리>0) 날짜들의 평균 나트륨(mg). 기록이 없으면 None.
+
+    주간 점수를 이번 주·지난 주 모두 "기록된 날짜들의 평균 나트륨"으로 계산해
+    하루치와 주간 평균을 비교하는 왜곡을 막는다.
+    """
+    logged = [d for d in days if d.calories > 0]
+    if not logged:
+        return None
+    return sum(d.sodium_mg for d in logged) / len(logged)
+
+
 def _nutrition_week(
     db: Session, uid: str, monday: datetime,
 ) -> list[DashboardNutritionDay]:
@@ -185,7 +197,14 @@ def dashboard_summary(
     ]
 
     # --- 주간 점수 + 지난주 대비 변화량(동일 공식으로 실제 차이 집계) ---
-    score = _score_for(total_na <= _MAX_SODIUM_MG, exercise_minutes)
+    # 이번 주 점수도 지난주와 같은 방식(기록된 날짜들의 평균 나트륨)으로 계산한다.
+    # 하루치(total_na)를 주간 평균과 비교하면 왜곡되고, 오늘 아직 식사를 기록하지
+    # 않았을 때 total_na==0 이라 주간 식습관과 무관하게 나트륨 조건을 통과하는
+    # 문제가 있었다. 이번 주 기록이 아직 없으면 오늘 하루치로 폴백한다.
+    this_avg_sodium = _avg_sodium_of_logged(nutrition_week)
+    if this_avg_sodium is None:
+        this_avg_sodium = total_na
+    score = _score_for(this_avg_sodium <= _MAX_SODIUM_MG, exercise_minutes)
     last_week = (today_dt - timedelta(days=today_dt.weekday() + 7)).strftime("%Y-%m-%d")
     last_ex_minutes = sum(
         r.minutes for r in db.scalars(
@@ -193,11 +212,7 @@ def dashboard_summary(
             .where(ExerciseSession.week_start == last_week)
         ).all()
     )
-    prev_days_logged = [d for d in nutrition_week_prev if d.calories > 0]
-    last_avg_sodium = (
-        sum(d.sodium_mg for d in prev_days_logged) / len(prev_days_logged)
-        if prev_days_logged else 0
-    )
+    last_avg_sodium = _avg_sodium_of_logged(nutrition_week_prev) or 0
     last_week_score = _score_for(last_avg_sodium <= _MAX_SODIUM_MG, last_ex_minutes)
     week_score_delta = score - last_week_score
 
