@@ -50,16 +50,8 @@ class LocalApiInterceptor extends Interceptor {
     'PUT /users/me': _usersMeUpdate,
     'DELETE /users/me': _usersMeDelete,
     'POST /users/me/onboarding': _usersMeOnboarding,
-    'PUT /users/me/health-goals': _usersMeHealthGoals,
     'GET /users/me/health': _usersMeHealth,
     'GET /places/nearby': _placesNearby,
-    // Vitals — three fixed kinds (weight | blood-pressure | blood-sugar).
-    'POST /vitals/weight': _vitalsSubmit,
-    'POST /vitals/blood-pressure': _vitalsSubmit,
-    'POST /vitals/blood-sugar': _vitalsSubmit,
-    'GET /vitals/weight/latest': _vitalsLatest,
-    'GET /vitals/blood-pressure/latest': _vitalsLatest,
-    'GET /vitals/blood-sugar/latest': _vitalsLatest,
   };
 
   @override
@@ -1011,9 +1003,6 @@ class LocalApiInterceptor extends Interceptor {
     'gender': '',
     'conditions': '',
     'goals': '',
-    'goal_weight_kg': 70,
-    'goal_bp_systolic': 120,
-    'goal_blood_sugar': 100,
     'daily_calories': 2000,
     'daily_sodium_mg': 2000,
     'daily_sugar_g': 50,
@@ -1062,23 +1051,6 @@ class LocalApiInterceptor extends Interceptor {
     return _ok(options, await _mergedProfile());
   }
 
-  Future<Response<Object?>> _usersMeHealthGoals(RequestOptions options) async {
-    final body = _jsonBody(options);
-    final patch = <String, Object?>{};
-    for (final String k in <String>[
-      'goal_weight_kg',
-      'goal_bp_systolic',
-      'goal_blood_sugar',
-      'daily_calories',
-      'daily_sodium_mg',
-      'daily_sugar_g',
-    ]) {
-      if (body[k] != null) patch[k] = body[k];
-    }
-    await _mergeProfileOverlay(patch);
-    return _ok(options, await _mergedProfile());
-  }
-
   /// DELETE /users/me — withdraw. The demo wipes the profile overlay so a
   /// subsequent session starts clean, mirroring FastAPI's cascade delete.
   Future<Response<Object?>> _usersMeDelete(RequestOptions options) async {
@@ -1096,12 +1068,8 @@ class LocalApiInterceptor extends Interceptor {
       'birth_date',
       'gender',
       'height_cm',
-      'weight_kg',
       'conditions',
       'goals',
-      'goal_weight_kg',
-      'goal_bp_systolic',
-      'goal_blood_sugar',
       'daily_calories',
       'daily_sodium_mg',
     ]) {
@@ -1120,122 +1088,10 @@ class LocalApiInterceptor extends Interceptor {
         'body': '최근 혈압과 혈당 추세가 다소 높습니다. 식단·운동 관리에 신경 써주세요.',
         'level': 'medium',
       },
-      'indicators': <Map<String, Object?>>[
-        <String, Object?>{
-          'kind': 'weight',
-          'label': '체중',
-          'latest_value': '72',
-          'unit': 'kg',
-          'delta_text': '-10kg (2주 전 대비)',
-          'improving': true,
-          'last_7_days': <double>[0.62, 0.58, 0.52, 0.45, 0.36, 0.28, 0.20],
-          'chart_values': <double>[
-            82,
-            80,
-            79,
-            78,
-            78,
-            77,
-            77,
-            76,
-            75,
-            75,
-            74,
-            73,
-            73,
-            72,
-          ],
-          'chart_min_y': 70,
-          'chart_max_y': 75,
-          'chart_interval': 1,
-          'recent_records': <Map<String, Object?>>[
-            <String, Object?>{'label': '오늘', 'value': '72 kg'},
-            <String, Object?>{'label': '1일 전', 'value': '72 kg'},
-            <String, Object?>{'label': '2일 전', 'value': '73 kg'},
-            <String, Object?>{'label': '3일 전', 'value': '73 kg'},
-            <String, Object?>{'label': '4일 전', 'value': '74 kg'},
-          ],
-        },
-        <String, Object?>{
-          'kind': 'blood-pressure',
-          'label': '혈압',
-          'latest_value': '124',
-          'unit': 'mmHg',
-          'delta_text': '-21mmHg (2주 전 대비)',
-          'improving': true,
-          'last_7_days': <double>[0.80, 0.74, 0.66, 0.55, 0.42, 0.28, 0.16],
-          'chart_values': <double>[
-            145,
-            144,
-            142,
-            140,
-            140,
-            138,
-            136,
-            134,
-            132,
-            130,
-            129,
-            127,
-            126,
-            124,
-          ],
-          'chart_min_y': 100,
-          'chart_max_y': 140,
-          'chart_interval': 10,
-          'recent_records': <Map<String, Object?>>[
-            <String, Object?>{'label': '오늘', 'value': '124 mmHg'},
-            <String, Object?>{'label': '1일 전', 'value': '125 mmHg'},
-            <String, Object?>{'label': '2일 전', 'value': '126 mmHg'},
-            <String, Object?>{'label': '3일 전', 'value': '127 mmHg'},
-            <String, Object?>{'label': '4일 전', 'value': '128 mmHg'},
-          ],
-        },
-        <String, Object?>{
-          'kind': 'blood-sugar',
-          'label': '혈당',
-          'latest_value': '96',
-          'unit': 'mg/dL',
-          'delta_text': '-32mg/dL (2주 전 대비)',
-          'improving': true,
-          'last_7_days': <double>[0.78, 0.70, 0.60, 0.50, 0.40, 0.30, 0.18],
-          'chart_values': <double>[
-            128,
-            124,
-            120,
-            118,
-            116,
-            113,
-            110,
-            108,
-            106,
-            104,
-            102,
-            100,
-            98,
-            96,
-          ],
-          'chart_min_y': 80,
-          'chart_max_y': 140,
-          'chart_interval': 20,
-          'recent_records': <Map<String, Object?>>[
-            <String, Object?>{'label': '오늘', 'value': '96 mg/dL'},
-            <String, Object?>{'label': '1일 전', 'value': '98 mg/dL'},
-            <String, Object?>{'label': '2일 전', 'value': '99 mg/dL'},
-            <String, Object?>{'label': '3일 전', 'value': '100 mg/dL'},
-            <String, Object?>{'label': '4일 전', 'value': '102 mg/dL'},
-          ],
-        },
-      ],
       'activity_points': 1240,
       'activity_rank': 14,
       'settings': <Map<String, Object?>>[
         <String, Object?>{'label': '내 프로필', 'icon': '👤', 'kind': 'my-profile'},
-        <String, Object?>{
-          'label': '건강 목표',
-          'icon': '📊',
-          'kind': 'health-goal',
-        },
         <String, Object?>{
           'label': '알림 설정',
           'icon': '🔔',
@@ -1303,91 +1159,6 @@ class LocalApiInterceptor extends Interceptor {
     return '${monday.year.toString().padLeft(4, '0')}-'
         '${monday.month.toString().padLeft(2, '0')}-'
         '${monday.day.toString().padLeft(2, '0')}';
-  }
-
-  // ---- Vitals ----
-
-  /// Path tail → drift `kind` value. Centralised so POST and GET
-  /// agree on the same string.
-  String? _kindFromPath(String path) {
-    if (path.startsWith('/vitals/weight')) return 'weight';
-    if (path.startsWith('/vitals/blood-pressure')) return 'blood-pressure';
-    if (path.startsWith('/vitals/blood-sugar')) return 'blood-sugar';
-    return null;
-  }
-
-  Future<Response<Object?>> _vitalsSubmit(RequestOptions options) async {
-    final kind = _kindFromPath(options.path);
-    if (kind == null) {
-      return _badRequest(options, 'unknown vital kind: ${options.path}');
-    }
-
-    final body = options.data;
-    Map<String, Object?> payload;
-    if (body is Map) {
-      payload = body.cast<String, Object?>();
-    } else if (body is String && body.isNotEmpty) {
-      payload = (jsonDecode(body) as Map<Object?, Object?>)
-          .cast<String, Object?>();
-    } else {
-      payload = <String, Object?>{};
-    }
-
-    // Pluck `recorded_at` off the payload (if provided) and store the
-    // rest as the value blob.
-    final recordedAtRaw = payload.remove('recorded_at');
-    final recordedAt = recordedAtRaw is String && recordedAtRaw.isNotEmpty
-        ? DateTime.parse(recordedAtRaw)
-        : DateTime.now();
-
-    final id = 'v-${DateTime.now().microsecondsSinceEpoch}';
-    await _db
-        .into(_db.vitals)
-        .insert(
-          VitalsCompanion(
-            id: Value<String>(id),
-            kind: Value<String>(kind),
-            valueJson: Value<String>(jsonEncode(payload)),
-            recordedAt: Value<DateTime>(recordedAt),
-          ),
-        );
-
-    return _ok(options, <String, Object?>{
-      'id': id,
-      'kind': kind,
-      'value': payload,
-      'recorded_at': recordedAt.toIso8601String(),
-    });
-  }
-
-  Future<Response<Object?>> _vitalsLatest(RequestOptions options) async {
-    final kind = _kindFromPath(options.path);
-    if (kind == null) {
-      return _badRequest(options, 'unknown vital kind: ${options.path}');
-    }
-
-    final query = _db.select(_db.vitals)
-      ..where((t) => t.kind.equals(kind))
-      ..orderBy(<OrderClauseGenerator<$VitalsTable>>[
-        (t) => OrderingTerm(expression: t.recordedAt, mode: OrderingMode.desc),
-      ])
-      ..limit(1);
-    final row = await query.getSingleOrNull();
-
-    if (row == null) {
-      // No reading yet — return a 200 with empty body so the client
-      // can treat null as "no data". (FastAPI will mirror this with
-      // an explicit nullable response model.)
-      return _ok(options, <String, Object?>{});
-    }
-
-    return _ok(options, <String, Object?>{
-      'id': row.id,
-      'kind': row.kind,
-      'value': (jsonDecode(row.valueJson) as Map<Object?, Object?>)
-          .cast<String, Object?>(),
-      'recorded_at': row.recordedAt.toIso8601String(),
-    });
   }
 
   // ---- helpers ----

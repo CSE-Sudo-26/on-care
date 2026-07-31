@@ -14,11 +14,7 @@ abstract class AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
-    num? weightKg,
     String? conditions,
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
     int? dailySodiumMg,
   });
 
@@ -28,15 +24,5 @@ abstract class AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
-  });
-
-  /// PUT /users/me/health-goals — update goal targets.
-  Future<UserProfile> updateHealthGoals({
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
   });
 }

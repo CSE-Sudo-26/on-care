@@ -34,11 +34,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final TextEditingController _birthDate = TextEditingController();
   String? _gender; // 'male' | 'female' | 'other'
   final TextEditingController _height = TextEditingController();
-  final TextEditingController _weight = TextEditingController();
   final Set<String> _conditions = <String>{};
-  final TextEditingController _goalWeight = TextEditingController();
-  final TextEditingController _goalBp = TextEditingController();
-  final TextEditingController _goalSugar = TextEditingController();
   final TextEditingController _dailySodium = TextEditingController();
 
   @override
@@ -46,10 +42,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     _pager.dispose();
     _birthDate.dispose();
     _height.dispose();
-    _weight.dispose();
-    _goalWeight.dispose();
-    _goalBp.dispose();
-    _goalSugar.dispose();
     _dailySodium.dispose();
     super.dispose();
   }
@@ -89,11 +81,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             birthDate: birth.isEmpty ? null : birth,
             gender: _gender,
             heightCm: _num(_height),
-            weightKg: _num(_weight),
             conditions: _conditions.isEmpty ? null : _conditions.join(', '),
-            goalWeightKg: _num(_goalWeight),
-            goalBpSystolic: _int(_goalBp),
-            goalBloodSugar: _int(_goalSugar),
             dailySodiumMg: _int(_dailySodium),
           );
       ref.invalidate(profileProvider);
@@ -262,13 +250,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           icon: Icons.straighten,
           keyboardType: TextInputType.number,
         ),
-        const SizedBox(height: AppSpacing.md),
-        AuthField(
-          controller: _weight,
-          hint: '몸무게 (kg)',
-          icon: Icons.monitor_weight_outlined,
-          keyboardType: TextInputType.number,
-        ),
       ],
     );
   }
@@ -307,27 +288,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       title: '건강 목표',
       subtitle: '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.',
       children: <Widget>[
-        AuthField(
-          controller: _goalWeight,
-          hint: '목표 체중 (kg)',
-          icon: Icons.flag_outlined,
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AuthField(
-          controller: _goalBp,
-          hint: '목표 혈압 - 수축기 (mmHg)',
-          icon: Icons.favorite_outline,
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AuthField(
-          controller: _goalSugar,
-          hint: '목표 공복 혈당 (mg/dL)',
-          icon: Icons.water_drop_outlined,
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: AppSpacing.md),
         AuthField(
           controller: _dailySodium,
           hint: '하루 나트륨 목표 (mg)',

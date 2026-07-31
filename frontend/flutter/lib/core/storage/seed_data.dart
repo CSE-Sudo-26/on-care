@@ -25,8 +25,7 @@ import 'package:oncare/core/storage/app_database.dart';
 ///
 /// **User data is preserved.** Only rows whose `id` starts with
 /// `seed-` are wiped — anything the app or user has inserted directly
-/// (e.g. vitals from the quick-input dialog) keeps its independent
-/// `id` and survives the slide.
+/// keeps its independent `id` and survives the slide.
 ///
 /// v2 (vs v1) introduced multi-type exercise sessions per day so the
 /// `WeeklyActivity` stacked-bar chart renders the 유산소 / 근력 /
@@ -54,7 +53,6 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     await (db.delete(
       db.scheduleEvents,
     )..where((t) => t.id.like('seed-%'))).go();
-    await (db.delete(db.vitals)..where((t) => t.id.like('seed-%'))).go();
     await (db.delete(
       db.notificationItems,
     )..where((t) => t.id.like('seed-%'))).go();
@@ -423,18 +421,6 @@ Future<void> seedIfEmpty(AppDatabase db) async {
         ),
       ]);
     });
-
-    // ---- Vitals (latest blood sugar, matches React mock 95 mg/dL) ----
-    await db
-        .into(db.vitals)
-        .insert(
-          VitalsCompanion.insert(
-            id: 'seed-vital-bs',
-            kind: 'blood-sugar',
-            valueJson: jsonEncode(<String, Object?>{'mg_per_dl': 95}),
-            recordedAt: DateTime.now().subtract(const Duration(hours: 1)),
-          ),
-        );
 
     // ---- Notifications ----
     final now = DateTime.now();

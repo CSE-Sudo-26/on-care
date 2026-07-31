@@ -12,9 +12,6 @@ class MockAccountRepository implements AccountRepository {
     email: 'minsu@oncare.com',
     phone: '010-1234-5678',
     birthDate: '1990-01-15',
-    goalWeightKg: 70,
-    goalBpSystolic: 120,
-    goalBloodSugar: 100,
     dailyCalories: 2000,
     dailySodiumMg: 2000,
     dailySugarG: 50,
@@ -31,11 +28,7 @@ class MockAccountRepository implements AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
-    num? weightKg,
     String? conditions,
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
     int? dailySodiumMg,
   }) async => _demo;
 
@@ -45,15 +38,5 @@ class MockAccountRepository implements AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
-  }) async => _demo;
-
-  @override
-  Future<UserProfile> updateHealthGoals({
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
   }) async => _demo;
 }

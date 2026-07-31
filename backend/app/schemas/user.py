@@ -28,26 +28,6 @@ class RiskInfo(BaseModel):
     level: str  # low | medium | high
 
 
-class RecentRecord(BaseModel):
-    label: str
-    value: str
-
-
-class HealthIndicator(BaseModel):
-    kind: str  # weight | blood-pressure | blood-sugar
-    label: str
-    latest_value: str
-    unit: str
-    delta_text: str
-    improving: bool
-    last_7_days: list[float]
-    chart_values: list[float]
-    chart_min_y: float
-    chart_max_y: float
-    chart_interval: float
-    recent_records: list[RecentRecord]
-
-
 class SettingItem(BaseModel):
     label: str
     icon: str
@@ -57,7 +37,6 @@ class SettingItem(BaseModel):
 class UserHealth(BaseModel):
     profile: HealthProfileBrief
     risk: RiskInfo
-    indicators: list[HealthIndicator]
     activity_points: int
     activity_rank: Optional[int]
     settings: list[SettingItem]
@@ -95,12 +74,8 @@ class ProfileView(BaseModel):
     birth_date: str = ""
     gender: str = ""
     height_cm: Optional[float] = None
-    weight_kg: Optional[float] = None
     conditions: str = ""
     goals: str = ""
-    goal_weight_kg: Optional[float] = None
-    goal_bp_systolic: Optional[int] = None
-    goal_blood_sugar: Optional[int] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
     daily_sugar_g: Optional[int] = None
@@ -116,12 +91,8 @@ class OnboardingRequest(BaseModel):
     birth_date: Optional[str] = None       # YYYY-MM-DD
     gender: Optional[str] = None           # male|female|other
     height_cm: Optional[float] = None
-    weight_kg: Optional[float] = None
     conditions: Optional[str] = None       # "고혈압, 당뇨 전단계"
     goals: Optional[str] = None
-    goal_weight_kg: Optional[float] = None
-    goal_bp_systolic: Optional[int] = None
-    goal_blood_sugar: Optional[int] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
     daily_sugar_g: Optional[int] = None
@@ -133,13 +104,3 @@ class ProfileUpdate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     birth_date: Optional[str] = None
-
-
-class HealthGoalsUpdate(BaseModel):
-    """PUT /users/me/health-goals — 건강 목표 모달."""
-    goal_weight_kg: Optional[float] = None
-    goal_bp_systolic: Optional[int] = None
-    goal_blood_sugar: Optional[int] = None
-    daily_calories: Optional[int] = None
-    daily_sodium_mg: Optional[int] = None
-    daily_sugar_g: Optional[int] = None

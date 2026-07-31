@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
@@ -114,23 +113,19 @@ Widget _card(List<Widget> children) => Container(
   ),
 );
 
-/// Figma-styled label + editable text field used by the profile and goal
-/// sheets. White fill on the `statBg` card, brand-blue focus ring.
+/// Figma-styled label + editable text field used by the profile sheet.
+/// White fill on the `statBg` card, brand-blue focus ring.
 class _SheetField extends StatelessWidget {
   const _SheetField({
     required this.label,
     required this.controller,
     this.keyboardType,
-    this.inputFormatters,
-    this.suffix,
     this.hintText,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
-  final String? suffix;
   final String? hintText;
 
   @override
@@ -150,7 +145,6 @@ class _SheetField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -165,12 +159,6 @@ class _SheetField extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: FigmaColors.textFaint,
-            ),
-            suffixText: suffix,
-            suffixStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -410,135 +398,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           label: l.myFieldBirth,
           controller: _birth,
           hintText: '1996-03-21',
-        ),
-      ]),
-      const SizedBox(height: 16),
-      _saveRow(context: context, saving: _saving, onSave: _save),
-    ], saving: _saving);
-  }
-}
-
-// ───────────────────────────────────────────────────────── 건강 목표 ──
-
-/// Health goals editor — pre-fills from `profileProvider` and persists via
-/// `AccountRepository.updateHealthGoals`.
-Future<void> showGoalsSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => const _GoalsSheet(),
-  );
-}
-
-class _GoalsSheet extends ConsumerWidget {
-  const _GoalsSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
-    return profile.when(
-      data: (UserProfile p) => _GoalsForm(initial: p),
-      loading: () => _shell(context, l.myGoalsTitle, const <Widget>[_SheetLoader()]),
-      error: (_, _) => const _GoalsForm(
-        initial: UserProfile(id: '', name: '', email: ''),
-      ),
-    );
-  }
-}
-
-class _GoalsForm extends ConsumerStatefulWidget {
-  const _GoalsForm({required this.initial});
-  final UserProfile initial;
-
-  @override
-  ConsumerState<_GoalsForm> createState() => _GoalsFormState();
-}
-
-class _GoalsFormState extends ConsumerState<_GoalsForm> {
-  late final TextEditingController _kcal = TextEditingController(
-    text: '${widget.initial.dailyCalories ?? 2000}',
-  );
-  late final TextEditingController _sodium = TextEditingController(
-    text: '${widget.initial.dailySodiumMg ?? 2000}',
-  );
-  late final TextEditingController _sugarLimit = TextEditingController(
-    text: '${widget.initial.dailySugarG ?? 50}',
-  );
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _kcal.dispose();
-    _sodium.dispose();
-    _sugarLimit.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (_saving) return;
-    final AppLocalizations l = AppLocalizations.of(context);
-    final NavigatorState navigator = Navigator.of(context);
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    setState(() => _saving = true);
-    try {
-      await ref.read(accountRepositoryProvider).updateHealthGoals(
-        dailyCalories: int.tryParse(_kcal.text.trim()),
-        dailySodiumMg: int.tryParse(_sodium.text.trim()),
-        dailySugarG: int.tryParse(_sugarLimit.text.trim()),
-      );
-      // Sheet dismissed mid-save → don't touch ref/pop the page below.
-      if (!mounted) return;
-      ref.invalidate(profileProvider);
-      navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.myGoalsSaved)),
-      );
-    } catch (_) {
-      if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.mySaveFailed)),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final List<TextInputFormatter> digitsOnly = <TextInputFormatter>[
-      FilteringTextInputFormatter.digitsOnly,
-    ];
-    return _shell(context, l.myGoalsTitle, <Widget>[
-      Text(
-        l.myGoalsDesc,
-        style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
-      ),
-      const SizedBox(height: 12),
-      _card(<Widget>[
-        _SheetField(
-          label: l.myGoalCalories,
-          controller: _kcal,
-          suffix: l.unitKcal,
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalSodium,
-          controller: _sodium,
-          suffix: 'mg',
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
-        ),
-        const SizedBox(height: 12),
-        _SheetField(
-          label: l.myGoalSugar,
-          controller: _sugarLimit,
-          suffix: l.dietUnitG,
-          keyboardType: TextInputType.number,
-          inputFormatters: digitsOnly,
         ),
       ]),
       const SizedBox(height: 16),

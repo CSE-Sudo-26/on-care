@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -121,21 +120,18 @@ class _RoundCloseButton extends StatelessWidget {
   }
 }
 
-/// Field-label + TextField pair used by the my-profile and
-/// health-goal forms.
+/// Field-label + TextField pair used by the my-profile form.
 class _LabeledField extends StatelessWidget {
   const _LabeledField({
     required this.label,
     required this.controller,
     this.keyboardType,
-    this.inputFormatters,
     this.suffixIcon,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
   final IconData? suffixIcon;
 
   @override
@@ -155,7 +151,6 @@ class _LabeledField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.inputBackground,
@@ -305,141 +300,6 @@ class _LoadingDialog extends StatelessWidget {
       body: const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 건강 목표 modal
-// ---------------------------------------------------------------------------
-
-Future<void> showHealthGoalModal(BuildContext context) {
-  return showDialog<void>(
-    context: context,
-    builder: (_) => const _HealthGoalDialog(),
-  );
-}
-
-class _HealthGoalDialog extends ConsumerWidget {
-  const _HealthGoalDialog();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(profileProvider);
-    return async.when(
-      data: (UserProfile p) => _HealthGoalForm(initial: p),
-      loading: () => const _LoadingDialog(title: '건강 목표'),
-      error: (_, _) => const _HealthGoalForm(
-        initial: UserProfile(id: '', name: '', email: ''),
-      ),
-    );
-  }
-}
-
-class _HealthGoalForm extends ConsumerStatefulWidget {
-  const _HealthGoalForm({required this.initial});
-  final UserProfile initial;
-
-  @override
-  ConsumerState<_HealthGoalForm> createState() => _HealthGoalFormState();
-}
-
-class _HealthGoalFormState extends ConsumerState<_HealthGoalForm> {
-  late final TextEditingController _weight =
-      TextEditingController(text: '${(widget.initial.goalWeightKg ?? 70).round()}');
-  late final TextEditingController _bp =
-      TextEditingController(text: '${widget.initial.goalBpSystolic ?? 120}');
-  late final TextEditingController _sugar =
-      TextEditingController(text: '${widget.initial.goalBloodSugar ?? 100}');
-  late final TextEditingController _kcal =
-      TextEditingController(text: '${widget.initial.dailyCalories ?? 2000}');
-  late final TextEditingController _sodium =
-      TextEditingController(text: '${widget.initial.dailySodiumMg ?? 2000}');
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _weight.dispose();
-    _bp.dispose();
-    _sugar.dispose();
-    _kcal.dispose();
-    _sodium.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (_saving) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    setState(() => _saving = true);
-    try {
-      await ref.read(accountRepositoryProvider).updateHealthGoals(
-        goalWeightKg: int.tryParse(_weight.text.trim()),
-        goalBpSystolic: int.tryParse(_bp.text.trim()),
-        goalBloodSugar: int.tryParse(_sugar.text.trim()),
-        dailyCalories: int.tryParse(_kcal.text.trim()),
-        dailySodiumMg: int.tryParse(_sodium.text.trim()),
-      );
-      ref.invalidate(profileProvider);
-      navigator.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('건강 목표가 저장되었어요')));
-    } catch (_) {
-      if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final digitsOnly = <TextInputFormatter>[
-      FilteringTextInputFormatter.digitsOnly,
-    ];
-    return _SettingsDialog(
-      title: '건강 목표',
-      footerLabel: '저장하기',
-      onFooter: _save,
-      saving: _saving,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _LabeledField(
-            label: '목표 체중 (kg)',
-            controller: _weight,
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _LabeledField(
-            label: '목표 혈압 (수축기 mmHg)',
-            controller: _bp,
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _LabeledField(
-            label: '목표 혈당 (mg/dL)',
-            controller: _sugar,
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _LabeledField(
-            label: '일일 칼로리 목표 (kcal)',
-            controller: _kcal,
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _LabeledField(
-            label: '일일 나트륨 제한 (mg)',
-            controller: _sodium,
-            keyboardType: TextInputType.number,
-            inputFormatters: digitsOnly,
-          ),
-        ],
       ),
     );
   }

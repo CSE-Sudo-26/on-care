@@ -1022,9 +1022,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myProfileTitle => '내 프로필';
 
   @override
-  String get myGoalsTitle => '건강 목표';
-
-  @override
   String get myNotifTitle => '알림 설정';
 
   @override
@@ -1046,9 +1043,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myProfileSaved => '프로필이 저장되었어요';
 
   @override
-  String get myGoalsSaved => '건강 목표가 저장되었어요';
-
-  @override
   String get mySaveFailed => '저장에 실패했어요. 잠시 후 다시 시도해 주세요';
 
   @override
@@ -1062,27 +1056,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myFieldBirth => '생년월일';
-
-  @override
-  String get myGoalsDesc => '앱 곳곳의 요약·피드백이 이 목표를 기준으로 계산돼요.';
-
-  @override
-  String get myGoalWeight => '목표 체중';
-
-  @override
-  String get myGoalBp => '목표 혈압 (수축기)';
-
-  @override
-  String get myGoalBloodSugar => '목표 혈당';
-
-  @override
-  String get myGoalCalories => '일일 칼로리';
-
-  @override
-  String get myGoalSodium => '나트륨 제한';
-
-  @override
-  String get myGoalSugar => '당류 제한';
 
   @override
   String get myNotifDietLog => '식단 기록 알림';
