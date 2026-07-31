@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 
-/// The blue gradient circle + initial used for a client everywhere they
+/// The navy gradient circle + initial used for a client everywhere they
 /// appear (list card, detail header, chat bubbles). Optionally shows an
 /// active-status dot.
 class ClientAvatar extends StatelessWidget {

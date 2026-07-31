@@ -2,8 +2,8 @@ import 'package:flutter/painting.dart';
 
 /// Trainer-app palette. Derived from the On-Care Figma trainer mock
 /// (`On-Care_figma/src/app/App.tsx`, TrainerApp section). The trainer
-/// experience is branded **orange** (vs. the user app's teal-blue),
-/// while blue is kept as the accent used for client avatars / info chips.
+/// experience is branded **남색 (navy)** (연한 #9DC3E0 ~ 진한 #2E7DAB), with
+/// orange kept only as a small identity/warning accent.
 ///
 /// Values are picked to match the mock and are the single source of
 /// truth — widgets must read from here (STRUCTURE.md §2.5: no hardcoded
@@ -11,42 +11,42 @@ import 'package:flutter/painting.dart';
 class AppColors {
   AppColors._();
 
-  // --- Brand (service = blue; orange demoted to identity/warning accents) ---
-  /// Primary blue used for CTAs / active nav / links — the service's
-  /// main color (matches the member app's teal-blue).
-  static const Color primary = Color(0xFF3EAFDF);
+  // --- Brand (service = navy; orange demoted to identity/warning accents) ---
+  /// Primary navy used for CTAs / active nav / links — the service's
+  /// main color.
+  static const Color primary = Color(0xFF2E7DAB);
   static const Color primaryForeground = Color(0xFFFFFFFF);
 
-  /// Deeper blue — gradient second stop for primary CTAs.
-  static const Color secondary = Color(0xFF2A8FBD);
+  /// Deeper navy — gradient second stop for primary CTAs.
+  static const Color secondary = Color(0xFF1E5F86);
   static const Color secondaryForeground = Color(0xFFFFFFFF);
 
   /// Trainer identity orange — kept only as a small accent (the
   /// "트레이너" brand word, MY-tab highlights), not as the main color.
   static const Color brandOrange = Color(0xFFFF953C); // 주의 오렌지(#FF953C)로 통일
 
-  // --- Accent (client blue) ---
-  /// Blue used for client avatars, info chips, and the "AI 요약" card.
-  static const Color accent = Color(0xFF3EAFDF);
+  // --- Accent (client navy) ---
+  /// Navy used for client avatars, info chips, and the "AI 요약" card.
+  static const Color accent = Color(0xFF2E7DAB);
   static const Color accentForeground = Color(0xFFFFFFFF);
 
-  /// Deeper blue — second stop of the client-avatar gradient.
-  static const Color accentDark = Color(0xFF2A8FBD);
+  /// Deeper navy — second stop of the client-avatar gradient.
+  static const Color accentDark = Color(0xFF1E5F86);
 
   /// AI-summary card gradient (mock: `linear-gradient(135deg,#C8E8F6,
   /// #A8D8F0)` on the 고객 탭 "AI 요약" card).
-  static const Color aiCardGradientStart = Color(0xFFC8E8F6);
-  static const Color aiCardGradientEnd = Color(0xFFA8D8F0);
+  static const Color aiCardGradientStart = Color(0xFFDCEAF4);
+  static const Color aiCardGradientEnd = Color(0xFF9DC3E0);
 
   /// MY 탭 "이번 달 통계" warm gradient (mock: `linear-gradient(135deg,
   /// #FFF4EE,#FFE8D8)`) — kept orange as a trainer-identity block.
   static const Color statsGradientStart = Color(0xFFFFF4EE);
   static const Color statsGradientEnd = Color(0xFFFFE8D8);
 
-  /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 블루). 통계 카드 등
-  /// 블루 톤으로 통일할 때 사용.
-  static const Color bannerStart = Color(0xFFEDF7FC);
-  static const Color bannerEnd = Color(0xFFD6EEF8);
+  /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). 통계 카드 등
+  /// 남색 톤으로 통일할 때 사용.
+  static const Color bannerStart = Color(0xFFEAF2F9);
+  static const Color bannerEnd = Color(0xFFD6E7F3);
 
   // --- Surface / text ---
   /// App canvas behind cards (mock uses `#F8FAFC`).
@@ -84,12 +84,12 @@ class AppColors {
   /// Card hairline border (`rgba(0,0,0,0.05)`).
   static const Color border = Color(0x0D000000);
 
-  /// Stronger divider / input border (`#E8EFF5`).
-  static const Color borderStrong = Color(0xFFE8EFF5);
+  /// Stronger divider / input border (navy-tinted grey).
+  static const Color borderStrong = Color(0xFFDEE8F1);
 
-  /// Soft blue-grey fill for input backgrounds / list rows (`#F2F4F7`).
+  /// Soft neutral grey fill for input backgrounds / list rows (`#F2F4F7`).
   static const Color inputBackground = Color(0xFFF2F4F7);
 
-  /// Blue-tinted fill used behind client sub-sections (`#F2F9FB`).
-  static const Color accentSurface = Color(0xFFF2F9FB);
+  /// Navy-tinted fill used behind client sub-sections (`#F2F9FB`).
+  static const Color accentSurface = Color(0xFFEAF2F9);
 }
