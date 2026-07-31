@@ -81,12 +81,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
     // Clear only after the insert succeeds so the text isn't lost on error.
     _input.clear();
     // Drift streams re-emit on write; the Dio source is a single fetch, so
-    // refetch the thread + unread badges after a real-API send.
+    // refetch the thread + unread badges after a real-API send. NOTE: don't
+    // scroll here — `ref.invalidate` only *starts* an async refetch, so the
+    // list the user is looking at right now is still the pre-send one; the
+    // `data:` branch below already scrolls to bottom once the new message
+    // actually renders (it fires on every list-length change, which covers
+    // both the reactive Drift path and this refetch) (review).
     if (!ref.read(appConfigProvider).useMockApi) {
       ref.invalidate(chatThreadProvider(widget.clientId));
       ref.invalidate(unreadCountsProvider);
     }
-    _scrollToBottom();
   }
 
   void _scrollToBottom() {
