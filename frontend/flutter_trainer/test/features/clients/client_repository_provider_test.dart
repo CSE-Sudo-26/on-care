@@ -154,31 +154,37 @@ void main() {
         ],
       );
 
-      final emissions = <List<String>>[];
-      final sub = container.listen(prioritizedClientsProvider, (
-        _,
-        next,
-      ) {
-        next.whenData(
-          (clients) => emissions.add(clients.map((c) => c.id).toList()),
-        );
-      });
-      addTearDown(sub.close);
-
       // Each addition needs a couple of real event-loop ticks to travel
       // clientsProvider's stream -> its AsyncValue -> the rebuilt
       // Stream.value(...) -> prioritizedClientsProvider's own AsyncValue ->
-      // this listener — a plain `Duration.zero` delay only drains
-      // microtasks, not far enough through that chain.
+      // this listener. Rather than guess how long that takes (a fixed
+      // delay is flaky on a slow CI runner), wait on a Completer that the
+      // listener itself completes the moment each emission actually
+      // arrives (review).
+      final emissions = <List<String>>[];
+      final gotFirst = Completer<void>();
+      final gotSecond = Completer<void>();
+      final sub = container.listen(prioritizedClientsProvider, (_, next) {
+        next.whenData((clients) {
+          emissions.add(clients.map((c) => c.id).toList());
+          if (emissions.length == 1) {
+            gotFirst.complete();
+          } else if (emissions.length == 2) {
+            gotSecond.complete();
+          }
+        });
+      });
+      addTearDown(sub.close);
+
       controller.add(<TrainerClient>[_client('a', sodiumMg: 100)]);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await gotFirst.future.timeout(const Duration(seconds: 5));
       // A second emission on the SAME provider instance (no invalidation) —
       // an over-target client now leads the roster.
       controller.add(<TrainerClient>[
         _client('over', sodiumMg: 2500),
         _client('a', sodiumMg: 100),
       ]);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await gotSecond.future.timeout(const Duration(seconds: 5));
 
       expect(emissions, <List<String>>[
         <String>['a'],
