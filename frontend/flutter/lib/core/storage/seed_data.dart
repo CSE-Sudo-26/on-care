@@ -65,6 +65,10 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // existing install to re-seed once (식단 3끼·짬뽕·통합 조언 반영).
   await db.deleteValue('seeded_v2');
   await db.deleteValue('seeded_v3');
+  // Also clear the curated KV advice so re-seed state is fully reset: this
+  // version re-writes it below, but if a later seed drops or renames the key
+  // an existing install would otherwise keep the stale text forever.
+  await db.deleteValue('dashboard_ai_advice');
 
   await db.transaction(() async {
     // ---- Diet entries (3 meals for today) ----
