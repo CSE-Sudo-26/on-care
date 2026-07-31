@@ -634,6 +634,7 @@
   "exGymConsultRequest": "Request a Gym Consultation",
   "exTrainerConsultRequest": "Request a Trainer Consultation",
   "exConsultPendingCta": "Consultation Request Pending",
+  "exViewConsultationRequest": "View consultation request",
   "exConsultTarget": "Consultation Target",
   "exGymConsultType": "Gym Consultation",
   "exTrainerConsultType": "Trainer Consultation",

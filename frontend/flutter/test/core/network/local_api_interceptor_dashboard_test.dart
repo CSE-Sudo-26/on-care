@@ -343,4 +343,41 @@ void main() {
     final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
     expect(res.data!['sodium_warning'], '오늘 나트륨이 2100mg 으로 권장량(2000mg)을 넘었어요.');
   });
+
+  test(
+    'exercise_count counts distinct workout days, not session rows',
+    () async {
+      // 운동 화면 workoutCount(활성 일수)와 정의를 맞춘다: 같은 날 유산소+근력을
+      // 각각 기록해도 운동 횟수는 1(하루)로 센다.
+      await (db.delete(db.exerciseSessions)).go();
+      final ws = _currentMonday();
+      final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+      await db.batch((b) {
+        b.insertAll(db.exerciseSessions, <ExerciseSessionsCompanion>[
+          ExerciseSessionsCompanion.insert(
+            id: 'ex-same-1',
+            weekStart: ws,
+            dayLabel: todayLabel,
+            type: 'cardio',
+            minutes: 30,
+            calories: 200,
+          ),
+          ExerciseSessionsCompanion.insert(
+            id: 'ex-same-2',
+            weekStart: ws,
+            dayLabel: todayLabel,
+            type: 'strength',
+            minutes: 20,
+            calories: 150,
+          ),
+        ]);
+      });
+
+      final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
+      final body = res.data!;
+      expect(body['exercise_count'], 1); // 세션 2개지만 활성 일수는 1
+      expect(body['exercise_minutes'], 50);
+      expect(body['exercise_calories'], 350);
+    },
+  );
 }

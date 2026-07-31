@@ -1222,6 +1222,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exConsultPendingCta => '상담 요청 대기 중';
 
   @override
+  String get exViewConsultationRequest => '상담 요청 확인';
+
+  @override
   String get exConsultTarget => '상담 대상';
 
   @override

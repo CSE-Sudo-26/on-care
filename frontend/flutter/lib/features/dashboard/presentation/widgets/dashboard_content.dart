@@ -13,6 +13,7 @@ import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
+import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
@@ -526,7 +527,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final nutrition = _nutritionFor(widget.summary);
     final _NutData cfg = nutrition[_tab]!;
     final List<String> days = _weekDayLabels(l);
-    final (double lo, double hi) = _trendScale(cfg);
+    final int todayIdx = _weekTodayIndex();
+    final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
 
     return _StripeCard(
@@ -736,6 +738,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                       ticks: cfg.ticks,
                                       lo: lo,
                                       hi: hi,
+                                      todayIndex: todayIdx,
                                     ),
                                   ),
                                 ),
@@ -980,16 +983,22 @@ class _ExerciseCard extends StatelessWidget {
   final bool showCharts;
   final VoidCallback onOpen;
 
-  static const double _burnGoal = 500;
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final double burned = summary.exerciseCalories.toDouble();
-    final double pct = (burned / _burnGoal).clamp(0.0, 1.0);
+    // 소모 목표는 백엔드 summary 필드(개인화 전까지 서버 기본값)에서 온다.
+    final double burnGoal = summary.exerciseBurnGoal.toDouble();
+    final double pct = burnGoal <= 0 ? 0 : (burned / burnGoal).clamp(0.0, 1.0);
     // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
-    final double rawPct = burned / _burnGoal;
-    const week = _demoExerciseWeekCalories;
+    final double rawPct = burnGoal <= 0 ? 0 : burned / burnGoal;
+    // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
+    // 두고, '오늘' 강조도 마지막(일) 고정이 아니라 실제 오늘 요일에 붙인다.
+    final int todayIdx = DateTime.now().weekday - 1;
+    final List<double> week = <double>[
+      for (int i = 0; i < _demoExerciseWeekCalories.length; i++)
+        i <= todayIdx ? _demoExerciseWeekCalories[i] : 0,
+    ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
@@ -1087,7 +1096,7 @@ class _ExerciseCard extends StatelessWidget {
                     ),
                     TextSpan(
                       text:
-                          ' / ${nf.format(_burnGoal)} ${l.unitKcal}'
+                          ' / ${nf.format(burnGoal)} ${l.unitKcal}'
                           '  ·  ${(rawPct * 100).round()}%',
                       style: const TextStyle(
                         fontSize: 10,
@@ -1149,6 +1158,7 @@ class _ExerciseCard extends StatelessWidget {
                   data: week,
                   lo: lo,
                   hi: hi,
+                  todayIndex: todayIdx,
                   color: FigmaColors.primary,
                 ),
               ),
@@ -1165,7 +1175,7 @@ class _ExerciseCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 8,
                           fontWeight: FontWeight.w600,
-                          color: i == 6
+                          color: i == todayIdx
                               ? FigmaColors.primary
                               : FigmaColors.textFaint,
                         ),
@@ -1269,7 +1279,7 @@ class _MetricTile extends StatelessWidget {
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
 /// a nearly flat line.
-(double, double) _trendScale(_NutData c) {
+(double, double) _trendScale(_NutData c, int todayIndex) {
   // 데이터와 눈금(ticks)을 모두 포함하도록 스케일을 잡아 눈금선이 항상 보이게 한다.
   final List<double> all = <double>[...c.cur, ...c.ticks, c.goal];
   double lo = all.reduce(math.min);
@@ -1431,6 +1441,17 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
+/// 오늘 요일 인덱스(월=0 … 일=6). 주간 추이 차트에서 "오늘"을 고정 일요일이
+/// 아니라 실제 오늘로 강조하고, 오늘 이후(미래) 요일의 0값이 실제 급락처럼
+/// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
+int _weekTodayIndex() => DateTime.now().weekday - 1;
+
+double _nutritionValue(_NutTabKind kind, NutritionDay day) => switch (kind) {
+  _NutTabKind.calories => day.calories.toDouble(),
+  _NutTabKind.sodium => day.sodiumMg.toDouble(),
+  _NutTabKind.sugar => day.sugarG.toDouble(),
+};
+
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
@@ -1459,14 +1480,16 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
 
 /// Presentation-only history until the dashboard API exposes daily exercise
 /// series. Weekly live totals are shown separately in the metrics above.
+// 운동 탭 '운동 현황(이번 주)' 일별 소모 칼로리와 일치시킨다(수 휴식, 일 활동).
+// 월300·화420·목480·금400·토330·일520 = 운동 페이지 시드 하루 총합.
 const List<double> _demoExerciseWeekCalories = <double>[
   300,
-  430,
+  420,
   0,
-  470,
+  480,
   400,
-  320,
-  0,
+  330,
+  520,
 ];
 
 List<String> _weekDayLabels(AppLocalizations l) => <String>[
@@ -1595,6 +1618,7 @@ class _TrendChartPainter extends CustomPainter {
     required this.ticks,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
   });
 
   final List<double> cur;
@@ -1602,6 +1626,9 @@ class _TrendChartPainter extends CustomPainter {
   final List<double> ticks;
   final double lo;
   final double hi;
+
+  /// 이번 주 꺾은선은 오늘까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
+  final int todayIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1623,8 +1650,11 @@ class _TrendChartPainter extends CustomPainter {
     // 목표선은 따로 그리지 않는다 — 목표값이 눈금과 겹치면 선이 두꺼워 보였다.
     // 목표는 상단 라벨(목표 N)과 데이터 포인트 상태색으로만 표현한다.
 
+    // 이번 주 선/점은 오늘까지만 그린다 — 아직 오지 않은 요일(=0)을 실제 급락으로
+    // 오해하지 않도록. x 좌표는 여전히 월~일 7칸 기준이라 지난 주 선과 정렬된다.
+    final int lastIdx = todayIndex.clamp(0, cur.length - 1);
     final List<Offset> pts = <Offset>[
-      for (int i = 0; i < cur.length; i++) Offset(dx(i), dy(cur[i])),
+      for (int i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
     ];
 
     // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
@@ -1643,7 +1673,7 @@ class _TrendChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    for (int i = 0; i < cur.length; i++) {
+    for (int i = 0; i <= lastIdx; i++) {
       final Color sc = _nutStatusColor(cur[i], goal);
       _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
       _text(canvas, _fmt(cur[i]), pts[i], w, sc);
@@ -1696,7 +1726,8 @@ class _TrendChartPainter extends CustomPainter {
       old.goal != goal ||
       old.ticks != ticks ||
       old.lo != lo ||
-      old.hi != hi;
+      old.hi != hi ||
+      old.todayIndex != todayIndex;
 }
 
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
@@ -1707,12 +1738,16 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.data,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
     required this.color,
   });
 
   final List<double> data;
   final double lo;
   final double hi;
+
+  /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
+  final int todayIndex;
   final Color color;
 
   @override
@@ -1738,7 +1773,7 @@ class _ExerciseBarPainter extends CustomPainter {
       final double bh = ((v - lo) / span) * (h - labelGap);
       final double cx = slot * i + slot / 2;
       final double top = h - bh;
-      final bool today = i == n - 1;
+      final bool today = i == todayIndex;
       final Color c = today ? color : color.withValues(alpha: 0.30);
       canvas.drawRRect(
         RRect.fromRectAndCorners(
@@ -1766,7 +1801,11 @@ class _ExerciseBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ExerciseBarPainter old) =>
-      old.data != data || old.lo != lo || old.hi != hi || old.color != color;
+      old.data != data ||
+      old.lo != lo ||
+      old.hi != hi ||
+      old.todayIndex != todayIndex ||
+      old.color != color;
 }
 
 // ───────────────────────────────────────────────────── recommended meals ──
@@ -1867,12 +1906,16 @@ class _RecommendedMeals extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                l.homeViewAll,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.go(AppRoutes.diet),
+                child: Text(
+                  l.homeViewAll,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -2020,12 +2063,16 @@ class _ScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              l.homeViewAll,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: FigmaColors.primary,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showScheduleCalendarSheet(context),
+              child: Text(
+                l.homeViewAll,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.primary,
+                ),
               ),
             ),
           ],
@@ -2062,49 +2109,57 @@ class _ScheduleItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: FigmaColors.softBlue,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.primaryA(0.12)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Text(
-            item.time,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.primary,
-              letterSpacing: -0.3,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showScheduleCalendarSheet(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: FigmaColors.softBlue,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: FigmaColors.primaryA(0.12)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Text(
+              item.time,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.primary,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Row(
-              children: <Widget>[
-                if (item.emoji.isNotEmpty) ...<Widget>[
-                  Text(item.emoji),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.ink,
+            const SizedBox(width: 16),
+            Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  if (item.emoji.isNotEmpty) ...<Widget>[
+                    Text(item.emoji),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right, size: 18, color: FigmaColors.primary),
-        ],
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: FigmaColors.primary,
+            ),
+          ],
+        ),
       ),
     );
   }
