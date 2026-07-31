@@ -1446,12 +1446,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
 /// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
 int _weekTodayIndex() => DateTime.now().weekday - 1;
 
-double _nutritionValue(_NutTabKind kind, NutritionDay day) => switch (kind) {
-  _NutTabKind.calories => day.calories.toDouble(),
-  _NutTabKind.sodium => day.sodiumMg.toDouble(),
-  _NutTabKind.sugar => day.sugarG.toDouble(),
-};
-
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
