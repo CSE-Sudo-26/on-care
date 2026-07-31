@@ -55,6 +55,9 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
     // into an empty list (an unknown id used to render a nameless
     // "고객" chat and never-ending 식단/운동 spinners — codex review).
     final clientsAsync = ref.watch(clientsProvider);
+    final canManageRoster = ref
+        .watch(clientRepositoryProvider)
+        .supportsRosterMutations;
     return clientsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _StatusView(
@@ -81,9 +84,11 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
               client: client,
               showBack: widget.showBack,
               onClose: widget.onClose,
-              onToggleActive: () => ref
-                  .read(clientRepositoryProvider)
-                  .setClientActive(client.id, !client.active),
+              onToggleActive: canManageRoster
+                  ? () => ref
+                        .read(clientRepositoryProvider)
+                        .setClientActive(client.id, !client.active)
+                  : null,
             ),
             _SubTabs(current: _tab, onChanged: (i) => setState(() => _tab = i)),
             Expanded(child: _body(client)),
@@ -171,7 +176,7 @@ class _Header extends StatelessWidget {
   final VoidCallback? onClose;
 
   /// Flips the client between 활성 and 휴면.
-  final VoidCallback onToggleActive;
+  final VoidCallback? onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +226,9 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          // Tappable status chip — toggles 활성/휴면.
+          // The backend roster has no status mutation endpoint yet. Keep the
+          // status visible in real mode, but only make it interactive when
+          // the selected repository supports roster mutations.
           Material(
             color:
                 (client.active
@@ -230,6 +237,7 @@ class _Header extends StatelessWidget {
                     .withValues(alpha: 0.12),
             borderRadius: const BorderRadius.all(AppRadius.pill),
             child: InkWell(
+              key: const ValueKey<String>('client-status-toggle'),
               onTap: onToggleActive,
               borderRadius: const BorderRadius.all(AppRadius.pill),
               child: Padding(

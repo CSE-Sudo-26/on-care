@@ -13,6 +13,7 @@ import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
+import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
@@ -526,10 +527,9 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final nutrition = _nutritionFor(widget.summary);
     final _NutData cfg = nutrition[_tab]!;
     final List<String> days = _weekDayLabels(l);
-    final (double lo, double hi) = _trendScale(cfg);
+    final int todayIdx = _weekTodayIndex();
+    final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
-    // 오늘 값의 목표 대비 상태색(안전 초록 / 근접 주황 / 초과 빨강).
-    final Color todayColor = _nutStatusColor(cfg.cur.last, cfg.goal);
 
     return _StripeCard(
       child: Column(
@@ -734,11 +734,11 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                     size: Size.infinite,
                                     painter: _TrendChartPainter(
                                       cur: cfg.cur,
-                                      prev: cfg.prev,
                                       goal: cfg.goal,
                                       ticks: cfg.ticks,
                                       lo: lo,
                                       hi: hi,
+                                      todayIndex: todayIdx,
                                     ),
                                   ),
                                 ),
@@ -748,16 +748,34 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                       MainAxisAlignment.spaceBetween,
                                   children: <Widget>[
                                     for (int i = 0; i < days.length; i++)
-                                      Text(
-                                        days[i],
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w600,
-                                          color: i == 6
-                                              ? todayColor
-                                              : FigmaColors.textFaint,
+                                      if (i == _todayIndex())
+                                        // 오늘: #3EAFDF 원형 안에 흰색 요일 글씨.
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          alignment: Alignment.center,
+                                          decoration: const BoxDecoration(
+                                            color: FigmaColors.primary,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            days[i],
+                                            style: const TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Text(
+                                          days[i],
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w600,
+                                            color: FigmaColors.textFaint,
+                                          ),
                                         ),
-                                      ),
                                   ],
                                 ),
                               ],
@@ -965,16 +983,22 @@ class _ExerciseCard extends StatelessWidget {
   final bool showCharts;
   final VoidCallback onOpen;
 
-  static const double _burnGoal = 500;
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final double burned = summary.exerciseCalories.toDouble();
-    final double pct = (burned / _burnGoal).clamp(0.0, 1.0);
+    // 소모 목표는 백엔드 summary 필드(개인화 전까지 서버 기본값)에서 온다.
+    final double burnGoal = summary.exerciseBurnGoal.toDouble();
+    final double pct = burnGoal <= 0 ? 0 : (burned / burnGoal).clamp(0.0, 1.0);
     // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
-    final double rawPct = burned / _burnGoal;
-    const week = _demoExerciseWeekCalories;
+    final double rawPct = burnGoal <= 0 ? 0 : burned / burnGoal;
+    // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
+    // 두고, '오늘' 강조도 마지막(일) 고정이 아니라 실제 오늘 요일에 붙인다.
+    final int todayIdx = DateTime.now().weekday - 1;
+    final List<double> week = <double>[
+      for (int i = 0; i < _demoExerciseWeekCalories.length; i++)
+        i <= todayIdx ? _demoExerciseWeekCalories[i] : 0,
+    ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
@@ -1072,7 +1096,7 @@ class _ExerciseCard extends StatelessWidget {
                     ),
                     TextSpan(
                       text:
-                          ' / ${nf.format(_burnGoal)} ${l.unitKcal}'
+                          ' / ${nf.format(burnGoal)} ${l.unitKcal}'
                           '  ·  ${(rawPct * 100).round()}%',
                       style: const TextStyle(
                         fontSize: 10,
@@ -1134,6 +1158,7 @@ class _ExerciseCard extends StatelessWidget {
                   data: week,
                   lo: lo,
                   hi: hi,
+                  todayIndex: todayIdx,
                   color: FigmaColors.primary,
                 ),
               ),
@@ -1150,7 +1175,7 @@ class _ExerciseCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 8,
                           fontWeight: FontWeight.w600,
-                          color: i == 6
+                          color: i == todayIdx
                               ? FigmaColors.primary
                               : FigmaColors.textFaint,
                         ),
@@ -1254,9 +1279,9 @@ class _MetricTile extends StatelessWidget {
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
 /// a nearly flat line.
-(double, double) _trendScale(_NutData c) {
+(double, double) _trendScale(_NutData c, int todayIndex) {
   // 데이터와 눈금(ticks)을 모두 포함하도록 스케일을 잡아 눈금선이 항상 보이게 한다.
-  final List<double> all = <double>[...c.cur, ...c.prev, ...c.ticks, c.goal];
+  final List<double> all = <double>[...c.cur, ...c.ticks, c.goal];
   double lo = all.reduce(math.min);
   double hi = all.reduce(math.max);
   final double range = (hi - lo) == 0 ? 1 : (hi - lo);
@@ -1364,7 +1389,6 @@ class _RingPainter extends CustomPainter {
 class _NutData {
   const _NutData({
     required this.cur,
-    required this.prev,
     required this.unit,
     required this.goal,
     required this.ticks,
@@ -1372,7 +1396,6 @@ class _NutData {
     required this.warn,
   });
   final List<double> cur;
-  final List<double> prev;
   final String unit;
   final double goal;
 
@@ -1394,7 +1417,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   _NutTabKind.calories: _NutData(
     // Monday through Saturday are demo history. Sunday is replaced at runtime.
     cur: <double>[1650, 2100, 1480, 1720, 1390, 1860, 967],
-    prev: <double>[1820, 1950, 1700, 1800, 1650, 2050, 1610],
     unit: 'kcal',
     goal: 2000,
     ticks: <double>[1000, 1500, 2000, 2500],
@@ -1403,7 +1425,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
   _NutTabKind.sodium: _NutData(
     cur: <double>[1600, 1900, 2200, 1550, 1850, 2600, 3421],
-    prev: <double>[1900, 2000, 1950, 2100, 2050, 2200, 2180],
     unit: 'mg',
     goal: 2000,
     ticks: <double>[1500, 2500, 3500],
@@ -1412,7 +1433,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
   _NutTabKind.sugar: _NutData(
     cur: <double>[30, 48, 22, 55, 18, 47, 14.8],
-    prev: <double>[35, 38, 30, 40, 28, 44, 32],
     unit: 'g',
     goal: 50,
     ticks: <double>[0, 25, 50],
@@ -1421,20 +1441,28 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
+/// 오늘 요일 인덱스(월=0 … 일=6). 주간 추이 차트에서 "오늘"을 고정 일요일이
+/// 아니라 실제 오늘로 강조하고, 오늘 이후(미래) 요일의 0값이 실제 급락처럼
+/// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
+int _weekTodayIndex() => DateTime.now().weekday - 1;
+
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
     _NutTabKind.sodium: summary.sodiumIndicator,
     _NutTabKind.sugar: summary.sugarIndicator,
   };
+  // 오늘 라이브 값은 '마지막(일) 고정'이 아니라 실제 오늘 요일 자리에 넣는다.
+  final int todayIdx = _todayIndex();
   return <_NutTabKind, _NutData>{
     for (final entry in _demoNutritionHistory.entries)
       entry.key: _NutData(
         cur: <double>[
-          ...entry.value.cur.take(6),
-          liveValues[entry.key]!.current.toDouble(),
+          for (int i = 0; i < entry.value.cur.length; i++)
+            i == todayIdx
+                ? liveValues[entry.key]!.current.toDouble()
+                : entry.value.cur[i],
         ],
-        prev: entry.value.prev,
         unit: entry.value.unit,
         goal: liveValues[entry.key]!.max.toDouble(),
         ticks: entry.value.ticks,
@@ -1446,14 +1474,16 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
 
 /// Presentation-only history until the dashboard API exposes daily exercise
 /// series. Weekly live totals are shown separately in the metrics above.
+// 운동 탭 '운동 현황(이번 주)' 일별 소모 칼로리와 일치시킨다(수 휴식, 일 활동).
+// 월300·화420·목480·금400·토330·일520 = 운동 페이지 시드 하루 총합.
 const List<double> _demoExerciseWeekCalories = <double>[
   300,
-  430,
+  420,
   0,
-  470,
+  480,
   400,
-  320,
-  0,
+  330,
+  520,
 ];
 
 List<String> _weekDayLabels(AppLocalizations l) => <String>[
@@ -1465,6 +1495,10 @@ List<String> _weekDayLabels(AppLocalizations l) => <String>[
   l.dietWeekdaySat,
   l.dietWeekdaySun,
 ];
+
+/// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
+/// 주간 영양 차트에서 '오늘' 배지·라이브 값을 실제 요일 칸에 배치한다.
+int _todayIndex() => DateTime.now().weekday - 1;
 
 /// Maps an internal nutrition key (used for tab identity) to its localized
 /// display label.
@@ -1534,16 +1568,7 @@ class _NutTab extends StatelessWidget {
 }
 
 const Color _nutLineGray = Color(0xFF98A2B3); // 이번 주 꺾은선(회색)
-const Color _nutGoalGray = Color(0xFFCBD2DA); // 목표 점선(옅은 회색)
-const Color _nutLastWeek = Color(
-  0xFFAC93F2,
-); // 지난 주 꺾은선(sugarPurple 기반, 살짝 쨍·살짝 연하게)
 const Color _nutLabelBg = Color(0xFFEFF1F4); // 데이터 값 라벨 배경(연한 회색)
-const TextStyle _legendStyle = TextStyle(
-  fontSize: 9,
-  fontWeight: FontWeight.w600,
-  color: FigmaColors.textMuted,
-);
 
 class _ChartLegend extends StatelessWidget {
   const _ChartLegend({required this.goalText});
@@ -1553,30 +1578,15 @@ class _ChartLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 범례(이번 주/지난 주)는 제거. 목표 수치만 카드 우측 끝('자세히 >')과 같은
+    // 열에 오도록 오른쪽 정렬한다.
     return Row(
       children: <Widget>[
-        _item(
-          const SizedBox(
-            width: 16,
-            child: Divider(color: _nutLineGray, thickness: 2, height: 2),
-          ),
-          AppLocalizations.of(context).homeLegendThisWeek,
-        ),
-        const SizedBox(width: 8),
-        _item(
-          const SizedBox(
-            width: 16,
-            child: Divider(color: _nutLastWeek, thickness: 1.6, height: 2),
-          ),
-          AppLocalizations.of(context).homeLegendLastWeek,
-        ),
-        const Spacer(),
-        // 목표 수치는 그래프 오른쪽 상단에 브랜드 블루로 크게 배치.
-        // 좁은 화면·영어 로케일에서 범례가 넘치지 않도록 Flexible+말줄임.
-        Flexible(
+        Expanded(
           child: Text(
             goalText,
             maxLines: 1,
+            textAlign: TextAlign.right,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 12,
@@ -1588,37 +1598,31 @@ class _ChartLegend extends StatelessWidget {
       ],
     );
   }
-
-  Widget _item(Widget swatch, String text) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      swatch,
-      const SizedBox(width: 4),
-      Text(text, style: _legendStyle),
-    ],
-  );
 }
 
-/// The weekly nutrition trend line: a dashed previous week, a filled current
-/// week with gradient area, a dashed goal line, and value labels on the peak
-/// and today's point. The [lo]/[hi] scale is padded away from zero so the
-/// line reads as a dynamic slope rather than a flat trace.
+/// The weekly nutrition trend line: a solid current-week line, solid
+/// horizontal tick gridlines (uniform weight), and value labels on each
+/// point. The goal is shown via the top label + point status colors, not a
+/// separate line. The [lo]/[hi] scale is padded away from zero so the line
+/// reads as a dynamic slope rather than a flat trace.
 class _TrendChartPainter extends CustomPainter {
   _TrendChartPainter({
     required this.cur,
-    required this.prev,
     required this.goal,
     required this.ticks,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
   });
 
   final List<double> cur;
-  final List<double> prev;
   final double goal;
   final List<double> ticks;
   final double lo;
   final double hi;
+
+  /// 이번 주 꺾은선은 오늘까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
+  final int todayIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1637,31 +1641,14 @@ class _TrendChartPainter extends CustomPainter {
       final double gy = dy(t);
       canvas.drawLine(Offset(0, gy), Offset(w, gy), grid);
     }
+    // 목표선은 따로 그리지 않는다 — 목표값이 눈금과 겹치면 선이 두꺼워 보였다.
+    // 목표는 상단 라벨(목표 N)과 데이터 포인트 상태색으로만 표현한다.
 
-    // 목표선(옅은 회색 점선).
-    if (goal >= lo && goal <= hi) {
-      _dash(
-        canvas,
-        Offset(0, dy(goal)),
-        Offset(w, dy(goal)),
-        _nutGoalGray,
-        1.2,
-      );
-    }
-
-    // 지난 주(연한 보라 점선).
-    for (int i = 0; i < prev.length - 1; i++) {
-      _dash(
-        canvas,
-        Offset(dx(i), dy(prev[i])),
-        Offset(dx(i + 1), dy(prev[i + 1])),
-        _nutLastWeek,
-        1.4,
-      );
-    }
-
+    // 이번 주 선/점은 오늘까지만 그린다 — 아직 오지 않은 요일(=0)을 실제 급락으로
+    // 오해하지 않도록. x 좌표는 여전히 월~일 7칸 기준이라 지난 주 선과 정렬된다.
+    final int lastIdx = todayIndex.clamp(0, cur.length - 1);
     final List<Offset> pts = <Offset>[
-      for (int i = 0; i < cur.length; i++) Offset(dx(i), dy(cur[i])),
+      for (int i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
     ];
 
     // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
@@ -1680,9 +1667,9 @@ class _TrendChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    for (int i = 0; i < cur.length; i++) {
+    for (int i = 0; i <= lastIdx; i++) {
       final Color sc = _nutStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 4.2 : 3.4);
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
       _text(canvas, _fmt(cur[i]), pts[i], w, sc);
     }
   }
@@ -1727,29 +1714,14 @@ class _TrendChartPainter extends CustomPainter {
     tp.paint(c, Offset(bx + padX, by + padY));
   }
 
-  void _dash(Canvas c, Offset a, Offset b, Color color, double width) {
-    final Paint p = Paint()
-      ..color = color
-      ..strokeWidth = width;
-    const double dash = 3, gap = 3;
-    final double total = (b - a).distance;
-    if (total == 0) return;
-    final Offset dir = (b - a) / total;
-    double d = 0;
-    while (d < total) {
-      c.drawLine(a + dir * d, a + dir * math.min(d + dash, total), p);
-      d += dash + gap;
-    }
-  }
-
   @override
   bool shouldRepaint(covariant _TrendChartPainter old) =>
       old.cur != cur ||
-      old.prev != prev ||
       old.goal != goal ||
       old.ticks != ticks ||
       old.lo != lo ||
-      old.hi != hi;
+      old.hi != hi ||
+      old.todayIndex != todayIndex;
 }
 
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
@@ -1760,12 +1732,16 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.data,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
     required this.color,
   });
 
   final List<double> data;
   final double lo;
   final double hi;
+
+  /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
+  final int todayIndex;
   final Color color;
 
   @override
@@ -1791,7 +1767,7 @@ class _ExerciseBarPainter extends CustomPainter {
       final double bh = ((v - lo) / span) * (h - labelGap);
       final double cx = slot * i + slot / 2;
       final double top = h - bh;
-      final bool today = i == n - 1;
+      final bool today = i == todayIndex;
       final Color c = today ? color : color.withValues(alpha: 0.30);
       canvas.drawRRect(
         RRect.fromRectAndCorners(
@@ -1819,7 +1795,11 @@ class _ExerciseBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ExerciseBarPainter old) =>
-      old.data != data || old.lo != lo || old.hi != hi || old.color != color;
+      old.data != data ||
+      old.lo != lo ||
+      old.hi != hi ||
+      old.todayIndex != todayIndex ||
+      old.color != color;
 }
 
 // ───────────────────────────────────────────────────── recommended meals ──
@@ -1920,12 +1900,16 @@ class _RecommendedMeals extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                l.homeViewAll,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.primary,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.go(AppRoutes.diet),
+                child: Text(
+                  l.homeViewAll,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -2073,12 +2057,16 @@ class _ScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              l.homeViewAll,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: FigmaColors.primary,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showScheduleCalendarSheet(context),
+              child: Text(
+                l.homeViewAll,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.primary,
+                ),
               ),
             ),
           ],
@@ -2115,49 +2103,57 @@ class _ScheduleItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: FigmaColors.softBlue,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.primaryA(0.12)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Text(
-            item.time,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.primary,
-              letterSpacing: -0.3,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showScheduleCalendarSheet(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: FigmaColors.softBlue,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: FigmaColors.primaryA(0.12)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Text(
+              item.time,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.primary,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Row(
-              children: <Widget>[
-                if (item.emoji.isNotEmpty) ...<Widget>[
-                  Text(item.emoji),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.ink,
+            const SizedBox(width: 16),
+            Container(width: 1, height: 34, color: FigmaColors.primaryA(0.35)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  if (item.emoji.isNotEmpty) ...<Widget>[
+                    Text(item.emoji),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right, size: 18, color: FigmaColors.primary),
-        ],
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: FigmaColors.primary,
+            ),
+          ],
+        ),
       ),
     );
   }

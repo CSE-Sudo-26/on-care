@@ -302,6 +302,10 @@ class LocalApiInterceptor extends Interceptor {
         .map((source) => source.key)
         .join('·');
 
+    // 데모 시드가 제공하는 큐레이션된 '통합 조언'이 있으면 우선 노출하고, 없으면
+    // (시드 없는 테스트 DB 등) 나트륨 상위 급원 기반 경고를 동적으로 생성한다.
+    final seededAdvice = await _db.readValue('dashboard_ai_advice');
+
     // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
     final exerciseRows = await (_db.select(
@@ -358,13 +362,17 @@ class LocalApiInterceptor extends Interceptor {
       'diet_entries': dietRows.length,
       'exercise_minutes': exerciseMinutes,
       'exercise_calories': exerciseCalories,
-      'exercise_count': exerciseRows.length,
+      // 운동 횟수 = 운동한 '일수'(활성 일수). 운동 화면의 workoutCount 와 정의를
+      // 맞춰, 하루에 여러 세션을 기록해도 1회로 센다(세션 행 수가 아니라 distinct 요일).
+      'exercise_count': exerciseRows.map((r) => r.dayLabel).toSet().length,
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week
       // diff lands in a later phase.
       'week_score_delta': 12,
-      'sodium_warning': totalSodium > 2000
+      'sodium_warning': seededAdvice != null && seededAdvice.isNotEmpty
+          ? seededAdvice
+          : totalSodium > 2000
           ? sodiumSourceNames.isNotEmpty
                 ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
                 : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'

@@ -1212,6 +1212,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exConsultPendingCta => 'Consultation Request Pending';
 
   @override
+  String get exViewConsultationRequest => 'View consultation request';
+
+  @override
   String get exConsultTarget => 'Consultation Target';
 
   @override

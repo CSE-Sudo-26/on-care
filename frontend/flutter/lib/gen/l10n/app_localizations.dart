@@ -2318,6 +2318,12 @@ abstract class AppLocalizations {
   /// **'Consultation Request Pending'**
   String get exConsultPendingCta;
 
+  /// No description provided for @exViewConsultationRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'View consultation request'**
+  String get exViewConsultationRequest;
+
   /// No description provided for @exConsultTarget.
   ///
   /// In en, this message translates to:

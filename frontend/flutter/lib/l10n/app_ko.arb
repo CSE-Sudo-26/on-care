@@ -377,6 +377,7 @@
   "exGymConsultRequest": "헬스장 상담 요청하기",
   "exTrainerConsultRequest": "트레이너 상담 요청하기",
   "exConsultPendingCta": "상담 요청 대기 중",
+  "exViewConsultationRequest": "상담 요청 확인",
   "exConsultTarget": "상담 대상",
   "exGymConsultType": "헬스장 상담",
   "exTrainerConsultType": "트레이너 상담",

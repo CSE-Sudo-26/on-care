@@ -18,7 +18,7 @@ void main() {
     tearDown(() => db.close());
 
     test('returns 3 seeded workouts in order with decoded exercises', () async {
-      final history = await ClientRepository(
+      final history = await DriftClientRepository(
         db,
       ).watchHistory('seed-client-1').first;
       expect(history.length, 3);
@@ -31,7 +31,7 @@ void main() {
     });
 
     test('returns per-client data (clients differ)', () async {
-      final seongho = await ClientRepository(
+      final seongho = await DriftClientRepository(
         db,
       ).watchHistory('seed-client-3').first;
       expect(seongho.last.completionRate, 0); // 7/3 · all skipped

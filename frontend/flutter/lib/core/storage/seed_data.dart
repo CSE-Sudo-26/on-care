@@ -6,7 +6,7 @@ import 'package:oncare/core/storage/app_database.dart';
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v3+).** `AppKeyValues['seeded_v3']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v4']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -34,7 +34,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   final today = _fmtDate(DateTime.now());
   final weekStart = _fmtDate(_mondayOfThisWeek(DateTime.now()));
 
-  final seedDate = await db.readValue('seeded_v3');
+  final seedDate = await db.readValue('seeded_v4');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -58,12 +58,18 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     )..where((t) => t.id.like('seed-%'))).go();
   });
 
-  // Drop the legacy boolean flag if it's still around, so a fresh
-  // `readValue` next boot only sees the v3-shaped key.
+  // Drop legacy flags (v2 boolean, v3 date) if still around, so a fresh
+  // `readValue` next boot only sees the v4 key. Bumping v3→v4 forces every
+  // existing install to re-seed once (식단 3끼·짬뽕·통합 조언 반영).
   await db.deleteValue('seeded_v2');
+  await db.deleteValue('seeded_v3');
+  // Also clear the curated KV advice so re-seed state is fully reset: this
+  // version re-writes it below, but if a later seed drops or renames the key
+  // an existing install would otherwise keep the stale text forever.
+  await db.deleteValue('dashboard_ai_advice');
 
   await db.transaction(() async {
-    // ---- Diet entries (4 meals for today) ----
+    // ---- Diet entries (3 meals for today) ----
     await db.batch((Batch b) {
       b.insertAll(db.dietEntries, <DietEntriesCompanion>[
         DietEntriesCompanion.insert(
@@ -73,36 +79,27 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           timeLabel: '08:20',
           foodsJson: jsonEncode(<Map<String, Object?>>[
             <String, Object?>{
-              'name': '그릭요거트',
-              'calories': 150,
-              'sodium_mg': 70,
-              'sugar_g': 8,
-              'carbs_g': 12.0,
-              'protein_g': 14.0,
-              'fat_g': 4.0,
+              'name': '스크램블 에그',
+              'calories': 185,
+              'sodium_mg': 220,
+              'sugar_g': 0.8,
+              'carbs_g': 2.0,
+              'protein_g': 13.0,
+              'fat_g': 14.0,
             },
             <String, Object?>{
-              'name': '바나나',
-              'calories': 105,
+              'name': '딸기',
+              'calories': 32,
               'sodium_mg': 1,
-              'sugar_g': 14,
-              'carbs_g': 27.0,
-              'protein_g': 1.3,
-              'fat_g': 0.4,
-            },
-            <String, Object?>{
-              'name': '삶은 달걀',
-              'calories': 75,
-              'sodium_mg': 65,
-              'sugar_g': 0,
-              'carbs_g': 0.6,
-              'protein_g': 6.5,
-              'fat_g': 5.3,
+              'sugar_g': 5.5,
+              'carbs_g': 8.0,
+              'protein_g': 0.5,
+              'fat_g': 0.5,
             },
           ]),
-          totalCalories: 330,
-          sodiumMg: const Value(136),
-          sugarG: const Value(22),
+          totalCalories: 217,
+          sodiumMg: const Value(221),
+          sugarG: const Value(6),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-lunch',
@@ -111,45 +108,18 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           timeLabel: '12:40',
           foodsJson: jsonEncode(<Map<String, Object?>>[
             <String, Object?>{
-              'name': '김치찌개',
-              'calories': 285,
-              'sodium_mg': 900,
-              'sugar_g': 4,
-              'carbs_g': 16.0,
-              'protein_g': 20.0,
-              'fat_g': 15.5,
-            },
-            <String, Object?>{
-              'name': '흰쌀밥',
-              'calories': 280,
-              'sodium_mg': 3,
-              'sugar_g': 0,
-              'carbs_g': 61.0,
-              'protein_g': 5.5,
-              'fat_g': 0.5,
-            },
-            <String, Object?>{
-              'name': '계란말이',
-              'calories': 190,
-              'sodium_mg': 320,
-              'sugar_g': 1,
-              'carbs_g': 5.0,
-              'protein_g': 13.0,
-              'fat_g': 13.0,
-            },
-            <String, Object?>{
-              'name': '배추김치',
-              'calories': 25,
-              'sodium_mg': 420,
-              'sugar_g': 2,
-              'carbs_g': 4.0,
-              'protein_g': 1.5,
-              'fat_g': 0.3,
+              'name': '짬뽕',
+              'calories': 750,
+              'sodium_mg': 3200,
+              'sugar_g': 8.5,
+              'carbs_g': 100.0,
+              'protein_g': 30.0,
+              'fat_g': 24.0,
             },
           ]),
-          totalCalories: 780,
-          sodiumMg: const Value(1643),
-          sugarG: const Value(7),
+          totalCalories: 750,
+          sodiumMg: const Value(3200),
+          sugarG: const Value(9),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-snack',
@@ -160,7 +130,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
             <String, Object?>{
               'name': '아이스 아메리카노',
               'calories': 10,
-              'sodium_mg': 10,
+              'sodium_mg': 5,
               'sugar_g': 0,
               'carbs_g': 2.0,
               'protein_g': 0.5,
@@ -168,55 +138,17 @@ Future<void> seedIfEmpty(AppDatabase db) async {
             },
             <String, Object?>{
               'name': '견과류 한 봉',
-              'calories': 170,
-              'sodium_mg': 5,
-              'sugar_g': 3,
-              'carbs_g': 7.0,
-              'protein_g': 6.0,
-              'fat_g': 13.0,
-            },
-          ]),
-          totalCalories: 180,
-          sodiumMg: const Value(15),
-          sugarG: const Value(3),
-        ),
-        DietEntriesCompanion.insert(
-          id: 'seed-diet-dinner',
-          date: today,
-          mealType: 'dinner',
-          timeLabel: '19:00',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '닭가슴살 샐러드',
-              'calories': 260,
-              'sodium_mg': 180,
-              'sugar_g': 4,
-              'carbs_g': 14.0,
-              'protein_g': 36.0,
-              'fat_g': 6.7,
-            },
-            <String, Object?>{
-              'name': '현미밥',
-              'calories': 220,
-              'sodium_mg': 5,
-              'sugar_g': 1,
-              'carbs_g': 46.0,
-              'protein_g': 5.0,
-              'fat_g': 1.8,
-            },
-            <String, Object?>{
-              'name': '오리엔탈 드레싱',
               'calories': 90,
-              'sodium_mg': 350,
-              'sugar_g': 6,
-              'carbs_g': 9.0,
-              'protein_g': 0.0,
-              'fat_g': 6.0,
+              'sodium_mg': 2,
+              'sugar_g': 3,
+              'carbs_g': 1.0,
+              'protein_g': 2.0,
+              'fat_g': 8.0,
             },
           ]),
-          totalCalories: 570,
-          sodiumMg: const Value(535),
-          sugarG: const Value(11),
+          totalCalories: 100,
+          sodiumMg: const Value(7),
+          sugarG: const Value(3),
         ),
       ]);
     });
@@ -452,7 +384,14 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
   });
 
-  await db.putValue('seeded_v3', today);
+  // 홈 '오늘의 AI 통합 조언' 문구(큐레이션). 대시보드 요약이 이 값이 있으면
+  // 나트륨 급원 기반 동적 경고 대신 이 통합 조언을 노출한다.
+  await db.putValue(
+    'dashboard_ai_advice',
+    '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 마무리해 보세요.',
+  );
+
+  await db.putValue('seeded_v4', today);
 }
 
 String _fmtDate(DateTime d) =>

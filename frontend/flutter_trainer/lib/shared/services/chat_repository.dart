@@ -1,17 +1,42 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/dio_chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
+/// Reads and sends messages in a trainer↔member chat thread.
+///
+/// Two implementations sit behind this contract (selected by
+/// [chatRepositoryProvider] via [AppConfig.useMockApi]):
+///  * [DriftChatRepository] — local drift, demo / `USE_MOCK_API=true`;
+///  * [DioChatRepository] — the real FastAPI backend (thread shared with
+///    the member app).
+///
+/// The drift source is reactive (streams re-emit on write); the Dio source
+/// emits a single fetch, so callers invalidate the thread/unread providers
+/// after send/read (see [ChatView]).
+abstract interface class ChatRepository {
+  Stream<List<ClientChatMessage>> watchThread(String clientId);
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  });
+  Stream<Map<String, int>> watchUnreadCounts();
+  Future<void> markThreadRead(String clientId);
+}
+
 /// Reads and appends messages in a client's chat thread (drift-backed).
-class ChatRepository {
+class DriftChatRepository implements ChatRepository {
   /// Creates the repository over [_db].
-  const ChatRepository(this._db);
+  const DriftChatRepository(this._db);
 
   final AppDatabase _db;
 
   /// Streams a client's messages in chronological order.
+  @override
   Stream<List<ClientChatMessage>> watchThread(String clientId) {
     final query = _db.select(_db.clientChatMessages)
       ..where((t) => t.clientId.equals(clientId))
@@ -25,6 +50,7 @@ class ChatRepository {
   /// preview (`lastMessage`/`lastTime`) in one transaction. The `chat-`
   /// id (no `seed-` prefix) means it survives re-seeding, and `now()`
   /// sorts it after the seed thread.
+  @override
   Future<void> sendTrainerMessage({
     required String clientId,
     required String text,
@@ -59,6 +85,7 @@ class ChatRepository {
   /// Per-client unread counts — client-sent messages after the trainer's
   /// last-read marker (an `AppKeyValues` row per client, so no schema
   /// migration). Clients with zero unread are absent.
+  @override
   Stream<Map<String, int>> watchUnreadCounts() {
     // The marker is a monotonic `rowid`, not an epoch second: two client
     // messages that land in the same second share a `created_at` value,
@@ -92,18 +119,18 @@ class ChatRepository {
   /// write entirely. That matters because `watchUnreadCounts` watches
   /// `app_key_values` — an unconditional write would emit on that stream
   /// and rebuild the list on every call (review PR 241).
+  @override
   Future<void> markThreadRead(String clientId) async {
-    final row =
-        await _db
-            .customSelect(
-              'SELECT MAX(rowid) AS r FROM client_chat_messages '
-              "WHERE client_id = ?1 AND sender = 'client'",
-              variables: <Variable<Object>>[Variable<String>(clientId)],
-              readsFrom: <ResultSetImplementation<Object?, Object?>>{
-                _db.clientChatMessages,
-              },
-            )
-            .getSingleOrNull();
+    final row = await _db
+        .customSelect(
+          'SELECT MAX(rowid) AS r FROM client_chat_messages '
+          "WHERE client_id = ?1 AND sender = 'client'",
+          variables: <Variable<Object>>[Variable<String>(clientId)],
+          readsFrom: <ResultSetImplementation<Object?, Object?>>{
+            _db.clientChatMessages,
+          },
+        )
+        .getSingleOrNull();
     // MAX over no client message returns NULL — nothing could be unread.
     final marker = row?.read<int?>('r');
     if (marker == null) return;
@@ -132,9 +159,14 @@ class ChatRepository {
       '${t.minute.toString().padLeft(2, '0')}';
 }
 
-/// Provides the [ChatRepository].
+/// Provides the [ChatRepository]: the real Dio-backed source (thread shared
+/// with the member app) or the local drift source for demo / `USE_MOCK_API`.
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  return ChatRepository(ref.watch(appDatabaseProvider));
+  final config = ref.watch(appConfigProvider);
+  if (config.useMockApi) {
+    return DriftChatRepository(ref.watch(appDatabaseProvider));
+  }
+  return DioChatRepository(ref.watch(dioProvider));
 });
 
 /// Streams per-client unread message counts for the 고객 list badges.
@@ -143,7 +175,7 @@ final unreadCountsProvider = StreamProvider<Map<String, int>>((ref) {
 });
 
 /// Streams a client's chat thread by client id.
-final chatThreadProvider =
-    StreamProvider.family<List<ClientChatMessage>, String>((ref, clientId) {
+final chatThreadProvider = StreamProvider.autoDispose
+    .family<List<ClientChatMessage>, String>((ref, clientId) {
       return ref.watch(chatRepositoryProvider).watchThread(clientId);
     });
