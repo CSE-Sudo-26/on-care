@@ -441,14 +441,6 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           category: 'achievement',
         ),
         NotificationItemsCompanion.insert(
-          id: 'seed-noti-3',
-          createdAt: now.subtract(const Duration(hours: 3)),
-          title: '체중 측정 권장',
-          body: '오늘 체중을 기록해 보세요.',
-          category: 'health_check',
-          read: const Value(true),
-        ),
-        NotificationItemsCompanion.insert(
           id: 'seed-noti-4',
           createdAt: now.subtract(const Duration(days: 1)),
           title: '서비스 점검 안내',

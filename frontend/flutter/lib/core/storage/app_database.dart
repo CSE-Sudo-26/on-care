@@ -131,7 +131,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         // 바이탈(체중/혈압/혈당) 기능 제거 — 기존 vitals 테이블 폐기.
-        await m.deleteTable('vitals');
+        // v2~v4 에서만 vitals 가 생성됐고 v1 DB 에는 없으므로, 없는 테이블을
+        // 지우다 실패하지 않도록 IF EXISTS 로 안전하게 드롭한다.
+        await customStatement('DROP TABLE IF EXISTS vitals');
       }
     },
   );
