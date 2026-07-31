@@ -30,8 +30,9 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.models import HealthProfile, User
 from app.schemas.user import (
-    HealthProfileBrief, OnboardingRequest, ProfileUpdate, ProfileView,
-    RefreshRequest, RiskInfo, SettingItem, Token, UserHealth, UserMe, UserRegister,
+    HealthGoalsUpdate, HealthProfileBrief, OnboardingRequest, ProfileUpdate,
+    ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, UserHealth,
+    UserMe, UserRegister,
 )
 from app.services.health_service import DEMO_SETTINGS
 
@@ -100,6 +101,14 @@ def _profile_view(user: User) -> ProfileView:
         daily_calories=p.daily_calories if p else None,
         daily_sodium_mg=p.daily_sodium_mg if p else None,
         daily_sugar_g=p.daily_sugar_g if p else None,
+        daily_carbs_g=p.daily_carbs_g if p else None,
+        daily_protein_g=p.daily_protein_g if p else None,
+        daily_fat_g=p.daily_fat_g if p else None,
+        weekly_workout_goal=p.weekly_workout_goal if p else None,
+        weekly_exercise_minutes_goal=(
+            p.weekly_exercise_minutes_goal if p else None
+        ),
+        weekly_burn_goal=p.weekly_burn_goal if p else None,
         onboarded=p.onboarded if p else False,
     )
 
@@ -128,6 +137,21 @@ def submit_onboarding(
         setattr(profile, field, value)
     profile.onboarded = True
 
+    db.commit()
+    db.refresh(user)
+    return _profile_view(user)
+
+
+@router.put("/users/me/health-goals", response_model=ProfileView)
+def update_health_goals(
+    payload: HealthGoalsUpdate,
+    user: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> ProfileView:
+    """건강 목표(식단 일일 6종 + 주간 운동 3종) 저장. 제공된 필드만 반영."""
+    profile = _get_or_create_profile(db, user)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(profile, field, value)
     db.commit()
     db.refresh(user)
     return _profile_view(user)

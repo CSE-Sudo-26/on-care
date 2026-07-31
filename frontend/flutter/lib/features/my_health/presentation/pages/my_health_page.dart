@@ -18,7 +18,7 @@ import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 /// the settings list, and logout.
 /// Stable identifiers for the settings rows, decoupled from their localized
 /// display labels so the switch never keys off a translated string.
-enum _MySetting { profile, notif, support }
+enum _MySetting { profile, goals, notif, support }
 
 class MyHealthPage extends ConsumerWidget {
   const MyHealthPage({super.key});
@@ -27,6 +27,8 @@ class MyHealthPage extends ConsumerWidget {
     switch (id) {
       case _MySetting.profile:
         showProfileSheet(context);
+      case _MySetting.goals:
+        showGoalsSheet(context);
       case _MySetting.notif:
         showNotifSheet(context);
       case _MySetting.support:
@@ -381,6 +383,7 @@ class _Settings extends StatelessWidget {
 
   static const List<_SettingItem> _items = <_SettingItem>[
     _SettingItem(Icons.person_outline, _MySetting.profile),
+    _SettingItem(Icons.flag_outlined, _MySetting.goals),
     _SettingItem(Icons.notifications_none_rounded, _MySetting.notif),
     _SettingItem(Icons.chat_bubble_outline_rounded, _MySetting.support),
   ];
@@ -389,6 +392,8 @@ class _Settings extends StatelessWidget {
     switch (id) {
       case _MySetting.profile:
         return l.myProfileTitle;
+      case _MySetting.goals:
+        return '건강 목표';
       case _MySetting.notif:
         return l.myNotifTitle;
       case _MySetting.support:

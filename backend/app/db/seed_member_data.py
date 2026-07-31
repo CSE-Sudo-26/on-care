@@ -210,6 +210,13 @@ _HEALTH_PROFILE: dict[str, dict] = {
         "daily_calories": 2000,
         "daily_sodium_mg": 2000,
         "daily_sugar_g": 50,
+        "daily_carbs_g": 275,
+        "daily_protein_g": 100,
+        "daily_fat_g": 55,
+        # 주간 운동 목표
+        "weekly_workout_goal": 7,
+        "weekly_exercise_minutes_goal": 150,
+        "weekly_burn_goal": 1500,
         "onboarded": True,
     },
 }

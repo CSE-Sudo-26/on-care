@@ -50,6 +50,7 @@ class LocalApiInterceptor extends Interceptor {
     'PUT /users/me': _usersMeUpdate,
     'DELETE /users/me': _usersMeDelete,
     'POST /users/me/onboarding': _usersMeOnboarding,
+    'PUT /users/me/health-goals': _usersMeHealthGoals,
     'GET /users/me/health': _usersMeHealth,
     'GET /places/nearby': _placesNearby,
   };
@@ -1006,6 +1007,12 @@ class LocalApiInterceptor extends Interceptor {
     'daily_calories': 2000,
     'daily_sodium_mg': 2000,
     'daily_sugar_g': 50,
+    'daily_carbs_g': 275,
+    'daily_protein_g': 100,
+    'daily_fat_g': 55,
+    'weekly_workout_goal': 7,
+    'weekly_exercise_minutes_goal': 150,
+    'weekly_burn_goal': 1500,
     'onboarded': true,
   };
 
@@ -1045,6 +1052,28 @@ class LocalApiInterceptor extends Interceptor {
     final body = _jsonBody(options);
     final patch = <String, Object?>{};
     for (final String k in <String>['name', 'email', 'phone', 'birth_date']) {
+      if (body[k] != null) patch[k] = body[k];
+    }
+    await _mergeProfileOverlay(patch);
+    return _ok(options, await _mergedProfile());
+  }
+
+  /// PUT /users/me/health-goals — 식단 일일 목표(6종) + 주간 운동 목표(3종)를
+  /// 프로필 오버레이에 병합한다(체중/혈압/혈당 목표는 다루지 않음).
+  Future<Response<Object?>> _usersMeHealthGoals(RequestOptions options) async {
+    final body = _jsonBody(options);
+    final patch = <String, Object?>{};
+    for (final String k in <String>[
+      'daily_calories',
+      'daily_sodium_mg',
+      'daily_sugar_g',
+      'daily_carbs_g',
+      'daily_protein_g',
+      'daily_fat_g',
+      'weekly_workout_goal',
+      'weekly_exercise_minutes_goal',
+      'weekly_burn_goal',
+    ]) {
       if (body[k] != null) patch[k] = body[k];
     }
     await _mergeProfileOverlay(patch);

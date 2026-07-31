@@ -39,4 +39,17 @@ class MockAccountRepository implements AccountRepository {
     String? phone,
     String? birthDate,
   }) async => _demo;
+
+  @override
+  Future<UserProfile> updateHealthGoals({
+    int? dailyCalories,
+    int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? weeklyWorkoutGoal,
+    int? weeklyExerciseMinutesGoal,
+    int? weeklyBurnGoal,
+  }) async => _demo;
 }

@@ -72,6 +72,14 @@ class HealthProfile(Base):
     daily_calories: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_sodium_mg: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_sugar_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_carbs_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_protein_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_fat_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # 주간 운동 목표(운동 관리용)
+    weekly_workout_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_exercise_minutes_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_burn_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)

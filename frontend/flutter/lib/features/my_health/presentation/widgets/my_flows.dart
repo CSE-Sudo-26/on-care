@@ -406,6 +406,152 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   }
 }
 
+// ───────────────────────────────────────────────────────── 건강 목표 ──
+
+/// 건강 목표 시트 — 식단 일일 목표(6종) + 주간 운동 목표(3종)를 수정한다.
+/// 체중/혈압/혈당(vitals) 목표는 다루지 않는다.
+Future<void> showGoalsSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: FigmaColors.sheetScrim,
+    builder: (BuildContext ctx) => const _GoalsSheet(),
+  );
+}
+
+class _GoalsSheet extends ConsumerWidget {
+  const _GoalsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
+    return profile.when(
+      data: (UserProfile p) => _GoalsForm(initial: p),
+      loading: () => _shell(context, '건강 목표', const <Widget>[_SheetLoader()]),
+      error: (_, _) => const _GoalsForm(
+        initial: UserProfile(id: '', name: '', email: ''),
+      ),
+    );
+  }
+}
+
+class _GoalsForm extends ConsumerStatefulWidget {
+  const _GoalsForm({required this.initial});
+  final UserProfile initial;
+
+  @override
+  ConsumerState<_GoalsForm> createState() => _GoalsFormState();
+}
+
+class _GoalsFormState extends ConsumerState<_GoalsForm> {
+  late final TextEditingController _kcal = _ctl(widget.initial.dailyCalories, 2000);
+  late final TextEditingController _sodium = _ctl(widget.initial.dailySodiumMg, 2000);
+  late final TextEditingController _sugar = _ctl(widget.initial.dailySugarG, 50);
+  late final TextEditingController _carbs = _ctl(widget.initial.dailyCarbsG, 275);
+  late final TextEditingController _protein = _ctl(widget.initial.dailyProteinG, 100);
+  late final TextEditingController _fat = _ctl(widget.initial.dailyFatG, 55);
+  late final TextEditingController _workouts = _ctl(widget.initial.weeklyWorkoutGoal, 7);
+  late final TextEditingController _minutes = _ctl(widget.initial.weeklyExerciseMinutesGoal, 150);
+  late final TextEditingController _burn = _ctl(widget.initial.weeklyBurnGoal, 1500);
+  bool _saving = false;
+
+  static TextEditingController _ctl(int? value, int fallback) =>
+      TextEditingController(text: '${value ?? fallback}');
+
+  @override
+  void dispose() {
+    for (final TextEditingController c in <TextEditingController>[
+      _kcal, _sodium, _sugar, _carbs, _protein, _fat,
+      _workouts, _minutes, _burn,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  int? _val(TextEditingController c) => int.tryParse(c.text.trim());
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final NavigatorState navigator = Navigator.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() => _saving = true);
+    try {
+      await ref.read(accountRepositoryProvider).updateHealthGoals(
+        dailyCalories: _val(_kcal),
+        dailySodiumMg: _val(_sodium),
+        dailySugarG: _val(_sugar),
+        dailyCarbsG: _val(_carbs),
+        dailyProteinG: _val(_protein),
+        dailyFatG: _val(_fat),
+        weeklyWorkoutGoal: _val(_workouts),
+        weeklyExerciseMinutesGoal: _val(_minutes),
+        weeklyBurnGoal: _val(_burn),
+      );
+      if (!mounted) return;
+      ref.invalidate(profileProvider);
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('건강 목표가 저장되었어요')));
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+      messenger.showSnackBar(SnackBar(content: Text(l.mySaveFailed)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _shell(context, '건강 목표', <Widget>[
+      const _GoalsSectionLabel('식단 일일 목표'),
+      const SizedBox(height: 8),
+      _card(<Widget>[
+        _SheetField(label: '일일 칼로리 제한 (kcal)', controller: _kcal, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '일일 나트륨 제한 (mg)', controller: _sodium, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '일일 당류 제한 (g)', controller: _sugar, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '일일 탄수화물 제한 (g)', controller: _carbs, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '일일 단백질 제한 (g)', controller: _protein, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '일일 지방 제한 (g)', controller: _fat, keyboardType: TextInputType.number),
+      ]),
+      const SizedBox(height: 20),
+      const _GoalsSectionLabel('주간 운동 목표'),
+      const SizedBox(height: 8),
+      _card(<Widget>[
+        _SheetField(label: '주간 운동 횟수 목표 (회)', controller: _workouts, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '주간 운동 시간 목표 (분)', controller: _minutes, keyboardType: TextInputType.number),
+        const SizedBox(height: 12),
+        _SheetField(label: '주간 소모 칼로리 목표 (kcal)', controller: _burn, keyboardType: TextInputType.number),
+      ]),
+      const SizedBox(height: 16),
+      _saveRow(context: context, saving: _saving, onSave: _save),
+    ], saving: _saving);
+  }
+}
+
+/// Small section heading between the two goal groups.
+class _GoalsSectionLabel extends StatelessWidget {
+  const _GoalsSectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: FigmaColors.ink,
+      ),
+    );
+  }
+}
+
 // ───────────────────────────────────────────────────────── 알림 설정 ──
 
 /// One notification toggle: SharedPreferences key and the default used before

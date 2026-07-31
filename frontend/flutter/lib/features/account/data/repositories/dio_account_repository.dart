@@ -57,4 +57,33 @@ class DioAccountRepository implements AccountRepository {
     );
     return UserProfile.fromJson(res.data!);
   }
+
+  @override
+  Future<UserProfile> updateHealthGoals({
+    int? dailyCalories,
+    int? dailySodiumMg,
+    int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? weeklyWorkoutGoal,
+    int? weeklyExerciseMinutesGoal,
+    int? weeklyBurnGoal,
+  }) async {
+    final res = await _dio.put<Map<String, Object?>>(
+      '/users/me/health-goals',
+      data: <String, Object?>{
+        'daily_calories': ?dailyCalories,
+        'daily_sodium_mg': ?dailySodiumMg,
+        'daily_sugar_g': ?dailySugarG,
+        'daily_carbs_g': ?dailyCarbsG,
+        'daily_protein_g': ?dailyProteinG,
+        'daily_fat_g': ?dailyFatG,
+        'weekly_workout_goal': ?weeklyWorkoutGoal,
+        'weekly_exercise_minutes_goal': ?weeklyExerciseMinutesGoal,
+        'weekly_burn_goal': ?weeklyBurnGoal,
+      },
+    );
+    return UserProfile.fromJson(res.data!);
+  }
 }
