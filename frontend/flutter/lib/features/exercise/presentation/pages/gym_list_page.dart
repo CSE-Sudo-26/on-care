@@ -76,6 +76,8 @@ class _GymListPageState extends ConsumerState<GymListPage> {
                     onChanged: (String value) => setState(() => _query = value),
                   ),
                   const SizedBox(height: 16),
+                  const _GymMiniMap(pinCount: 3),
+                  const SizedBox(height: 16),
                   Expanded(
                     child: gymsAsync.when(
                       loading: () => const Center(
@@ -426,4 +428,136 @@ class _EmptyResults extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lightweight illustrative map for the 헬스장 찾기 페이지 — a soft map backdrop
+/// with [pinCount] location pins (헬스장 하나당 핀 하나) and a center "내 위치"
+/// dot. Purely decorative (no real map/tiles/network) for the demo.
+class _GymMiniMap extends StatelessWidget {
+  const _GymMiniMap({required this.pinCount});
+
+  final int pinCount;
+
+  static const List<Alignment> _pinSpots = <Alignment>[
+    Alignment(-0.55, -0.4),
+    Alignment(0.5, -0.55),
+    Alignment(0.42, 0.42),
+    Alignment(-0.35, 0.55),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE9F0F4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: FigmaColors.hairline),
+        ),
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(child: CustomPaint(painter: _MapRoadsPainter())),
+            const Align(child: _MyLocationDot()),
+            for (int i = 0; i < pinCount && i < _pinSpots.length; i++)
+              Align(alignment: _pinSpots[i], child: const _MapPin()),
+            Positioned(
+              right: 10,
+              bottom: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  '내 주변 헬스장',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(
+      Icons.location_on,
+      size: 30,
+      color: FigmaColors.primary,
+      shadows: <Shadow>[
+        Shadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
+      ],
+    );
+  }
+}
+
+class _MyLocationDot extends StatelessWidget {
+  const _MyLocationDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: FigmaColors.primary,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(0, 1)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MapRoadsPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint road = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 7
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(0, size.height * 0.62),
+      Offset(size.width, size.height * 0.5),
+      road,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.32, 0),
+      Offset(size.width * 0.46, size.height),
+      road,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.7, size.height * 0.1),
+      Offset(size.width * 0.86, size.height),
+      road,
+    );
+    final Paint grid = Paint()
+      ..color = const Color(0x0F1A1A1A)
+      ..strokeWidth = 1;
+    for (double x = size.width * 0.16; x < size.width; x += size.width * 0.22) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
+    }
+    for (double y = size.height * 0.28; y < size.height; y += size.height * 0.32) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MapRoadsPainter oldDelegate) => false;
 }

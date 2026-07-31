@@ -1349,7 +1349,7 @@ abstract class AppLocalizations {
   /// No description provided for @exTrainerRecommendationReason.
   ///
   /// In en, this message translates to:
-  /// **'A good fit for your health goals'**
+  /// **'A good fit for improving my delivery-and-eating-out habits'**
   String get exTrainerRecommendationReason;
 
   /// No description provided for @exWeekSummary.

@@ -669,7 +669,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerAffiliation => '소속 헬스장';
 
   @override
-  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+  String get exTrainerRecommendationReason => '배달·외식이 많은 내 식습관 개선에 잘 맞아요';
 
   @override
   String get exWeekSummary => '이번 주 운동 요약';
