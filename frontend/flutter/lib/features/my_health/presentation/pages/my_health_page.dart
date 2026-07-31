@@ -70,7 +70,6 @@ class MyHealthPage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _PointsBanner(
                     points: health.valueOrNull?.activityPoints,
-                    rank: health.valueOrNull?.activityRank,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -196,54 +195,343 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _PointsBanner extends StatelessWidget {
-  const _PointsBanner({required this.points, required this.rank});
+  const _PointsBanner({required this.points});
 
   final int? points;
-  final int? rank;
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _showPointsBenefitsSheet(context, points),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: FigmaColors.primary,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: kCardShadow,
+        ),
+        child: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.star_border_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              points != null ? '${points}P' : '—P',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const _PointsInfoButton(),
+            const Spacer(),
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens the "포인트 사용처" sheet — a new modal window (not an inline
+/// expansion) listing what points can be redeemed for.
+Future<void> _showPointsBenefitsSheet(BuildContext context, int? points) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: FigmaColors.sheetScrim,
+    builder: (BuildContext ctx) => _PointsBenefitsSheet(points: points),
+  );
+}
+
+/// A point redemption option shown in the benefits sheet.
+class _PointBenefit {
+  const _PointBenefit({
+    required this.icon,
+    required this.title,
+    required this.desc,
+    required this.cost,
+  });
+  final IconData icon;
+  final String title;
+  final String desc;
+  final String cost;
+}
+
+const List<_PointBenefit> _pointBenefits = <_PointBenefit>[
+  _PointBenefit(
+    icon: Icons.savings_rounded,
+    title: '포인트 차감 현금성 할인',
+    desc: '1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.',
+    cost: '최대 10%',
+  ),
+  _PointBenefit(
+    icon: Icons.lock_open_rounded,
+    title: '혈당·혈압 예측 리포트 잠금 해제',
+    desc: '주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.',
+    cost: '500P',
+  ),
+  _PointBenefit(
+    icon: Icons.menu_book_rounded,
+    title: '맞춤형 건강 식단 레시피 패키지',
+    desc: '건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.',
+    cost: '500P',
+  ),
+];
+
+/// Bottom-sheet window listing the point redemption options.
+class _PointsBenefitsSheet extends StatelessWidget {
+  const _PointsBenefitsSheet({required this.points});
+
+  final int? points;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          maxWidth: 480,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3E8EE),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 10),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: <Color>[
+                            FigmaColors.primary,
+                            FigmaColors.primaryDeep,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.star_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text(
+                            '포인트 사용처',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            points != null
+                                ? '보유 ${points}P'
+                                : '포인트로 받을 수 있는 혜택',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: FigmaColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _SheetCloseButton(onTap: () => Navigator.of(context).pop()),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
+                  itemCount: _pointBenefits.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (_, int i) =>
+                      _PointBenefitCard(benefit: _pointBenefits[i]),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 6, 20, 18),
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: FigmaColors.textMuted,
+                    ),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: FigmaColors.textMuted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PointBenefitCard extends StatelessWidget {
+  const _PointBenefitCard({required this.benefit});
+
+  final _PointBenefit benefit;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: FigmaColors.primary,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FigmaColors.hairline),
         boxShadow: kCardShadow,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(Icons.star_border_rounded, color: Colors.white, size: 24),
-          const SizedBox(width: 12),
-          Text(
-            points != null ? '${points}P' : '—P',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: FigmaColors.iconTint,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(benefit.icon, size: 22, color: FigmaColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        benefit.title,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.ink,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: FigmaColors.primaryA(0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        benefit.cost,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  benefit.desc,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: FigmaColors.textBody,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          if (rank != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                l.myRank(rank!),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          const SizedBox(width: 8),
-          const _PointsInfoButton(),
         ],
+      ),
+    );
+  }
+}
+
+class _SheetCloseButton extends StatelessWidget {
+  const _SheetCloseButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF4F6F8),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(Icons.close_rounded, size: 17, color: FigmaColors.textSub),
+        ),
       ),
     );
   }
