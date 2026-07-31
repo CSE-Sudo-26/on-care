@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
@@ -7,6 +8,12 @@ import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// 숫자 전용 입력 필터 — 붙여넣기/외부 키보드로 문자가 들어와 저장 시 int
+/// 파싱이 null 로 날아가는 것을 막는다.
+final List<TextInputFormatter> _digitsOnly = <TextInputFormatter>[
+  FilteringTextInputFormatter.digitsOnly,
+];
 
 Widget _shell(
   BuildContext context,
@@ -121,12 +128,14 @@ class _SheetField extends StatelessWidget {
     required this.controller,
     this.keyboardType,
     this.hintText,
+    this.inputFormatters,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final String? hintText;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +154,7 @@ class _SheetField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -170,7 +180,10 @@ class _SheetField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: FigmaColors.primary, width: 1.4),
+              borderSide: const BorderSide(
+                color: FigmaColors.primary,
+                width: 1.4,
+              ),
             ),
           ),
         ),
@@ -218,7 +231,9 @@ class _SheetLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 40),
-      child: Center(child: CircularProgressIndicator(color: FigmaColors.primary)),
+      child: Center(
+        child: CircularProgressIndicator(color: FigmaColors.primary),
+      ),
     );
   }
 }
@@ -272,7 +287,10 @@ Widget _saveRow({
                 )
               : Text(
                   l.mySave,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
         ),
       ),
@@ -303,7 +321,8 @@ class _ProfileSheet extends ConsumerWidget {
     final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
     return profile.when(
       data: (UserProfile p) => _ProfileForm(initial: p),
-      loading: () => _shell(context, l.myProfileTitle, const <Widget>[_SheetLoader()]),
+      loading: () =>
+          _shell(context, l.myProfileTitle, const <Widget>[_SheetLoader()]),
       error: (_, _) => const _ProfileForm(
         initial: UserProfile(id: '', name: '', email: ''),
       ),
@@ -350,24 +369,22 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
-      await ref.read(accountRepositoryProvider).updateProfile(
-        name: _name.text.trim(),
-        email: _email.text.trim(),
-        phone: _phone.text.trim(),
-        birthDate: _birth.text.trim(),
-      );
+      await ref
+          .read(accountRepositoryProvider)
+          .updateProfile(
+            name: _name.text.trim(),
+            email: _email.text.trim(),
+            phone: _phone.text.trim(),
+            birthDate: _birth.text.trim(),
+          );
       // Sheet dismissed mid-save → don't touch ref/pop the page below.
       if (!mounted) return;
       ref.invalidate(profileProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.myProfileSaved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.myProfileSaved)));
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.mySaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.mySaveFailed)));
     }
   }
 
@@ -445,15 +462,39 @@ class _GoalsForm extends ConsumerStatefulWidget {
 }
 
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
-  late final TextEditingController _kcal = _ctl(widget.initial.dailyCalories, 2000);
-  late final TextEditingController _sodium = _ctl(widget.initial.dailySodiumMg, 2000);
-  late final TextEditingController _sugar = _ctl(widget.initial.dailySugarG, 50);
-  late final TextEditingController _carbs = _ctl(widget.initial.dailyCarbsG, 275);
-  late final TextEditingController _protein = _ctl(widget.initial.dailyProteinG, 100);
+  late final TextEditingController _kcal = _ctl(
+    widget.initial.dailyCalories,
+    2000,
+  );
+  late final TextEditingController _sodium = _ctl(
+    widget.initial.dailySodiumMg,
+    2000,
+  );
+  late final TextEditingController _sugar = _ctl(
+    widget.initial.dailySugarG,
+    50,
+  );
+  late final TextEditingController _carbs = _ctl(
+    widget.initial.dailyCarbsG,
+    275,
+  );
+  late final TextEditingController _protein = _ctl(
+    widget.initial.dailyProteinG,
+    100,
+  );
   late final TextEditingController _fat = _ctl(widget.initial.dailyFatG, 55);
-  late final TextEditingController _workouts = _ctl(widget.initial.weeklyWorkoutGoal, 7);
-  late final TextEditingController _minutes = _ctl(widget.initial.weeklyExerciseMinutesGoal, 150);
-  late final TextEditingController _burn = _ctl(widget.initial.weeklyBurnGoal, 1500);
+  late final TextEditingController _workouts = _ctl(
+    widget.initial.weeklyWorkoutGoal,
+    7,
+  );
+  late final TextEditingController _minutes = _ctl(
+    widget.initial.weeklyExerciseMinutesGoal,
+    150,
+  );
+  late final TextEditingController _burn = _ctl(
+    widget.initial.weeklyBurnGoal,
+    1500,
+  );
   bool _saving = false;
 
   static TextEditingController _ctl(int? value, int fallback) =>
@@ -462,8 +503,15 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   @override
   void dispose() {
     for (final TextEditingController c in <TextEditingController>[
-      _kcal, _sodium, _sugar, _carbs, _protein, _fat,
-      _workouts, _minutes, _burn,
+      _kcal,
+      _sodium,
+      _sugar,
+      _carbs,
+      _protein,
+      _fat,
+      _workouts,
+      _minutes,
+      _burn,
     ]) {
       c.dispose();
     }
@@ -479,17 +527,19 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
-      await ref.read(accountRepositoryProvider).updateHealthGoals(
-        dailyCalories: _val(_kcal),
-        dailySodiumMg: _val(_sodium),
-        dailySugarG: _val(_sugar),
-        dailyCarbsG: _val(_carbs),
-        dailyProteinG: _val(_protein),
-        dailyFatG: _val(_fat),
-        weeklyWorkoutGoal: _val(_workouts),
-        weeklyExerciseMinutesGoal: _val(_minutes),
-        weeklyBurnGoal: _val(_burn),
-      );
+      await ref
+          .read(accountRepositoryProvider)
+          .updateHealthGoals(
+            dailyCalories: _val(_kcal),
+            dailySodiumMg: _val(_sodium),
+            dailySugarG: _val(_sugar),
+            dailyCarbsG: _val(_carbs),
+            dailyProteinG: _val(_protein),
+            dailyFatG: _val(_fat),
+            weeklyWorkoutGoal: _val(_workouts),
+            weeklyExerciseMinutesGoal: _val(_minutes),
+            weeklyBurnGoal: _val(_burn),
+          );
       if (!mounted) return;
       ref.invalidate(profileProvider);
       navigator.pop();
@@ -506,27 +556,72 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       const _GoalsSectionLabel('식단 일일 목표'),
       const SizedBox(height: 8),
       _card(<Widget>[
-        _SheetField(label: '일일 칼로리 제한 (kcal)', controller: _kcal, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 칼로리 제한 (kcal)',
+          controller: _kcal,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '일일 나트륨 제한 (mg)', controller: _sodium, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 나트륨 제한 (mg)',
+          controller: _sodium,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '일일 당류 제한 (g)', controller: _sugar, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 당류 제한 (g)',
+          controller: _sugar,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '일일 탄수화물 제한 (g)', controller: _carbs, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 탄수화물 제한 (g)',
+          controller: _carbs,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '일일 단백질 제한 (g)', controller: _protein, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 단백질 제한 (g)',
+          controller: _protein,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '일일 지방 제한 (g)', controller: _fat, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '일일 지방 제한 (g)',
+          controller: _fat,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
       ]),
       const SizedBox(height: 20),
       const _GoalsSectionLabel('주간 운동 목표'),
       const SizedBox(height: 8),
       _card(<Widget>[
-        _SheetField(label: '주간 운동 횟수 목표 (회)', controller: _workouts, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '주간 운동 횟수 목표 (회)',
+          controller: _workouts,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '주간 운동 시간 목표 (분)', controller: _minutes, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '주간 운동 시간 목표 (분)',
+          controller: _minutes,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
         const SizedBox(height: 12),
-        _SheetField(label: '주간 소모 칼로리 목표 (kcal)', controller: _burn, keyboardType: TextInputType.number),
+        _SheetField(
+          label: '주간 소모 칼로리 목표 (kcal)',
+          controller: _burn,
+          keyboardType: TextInputType.number,
+          inputFormatters: _digitsOnly,
+        ),
       ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
@@ -761,10 +856,12 @@ class _LegalDocSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String title =
-        doc == _LegalDoc.terms ? l.myLegalTermsTitle : l.myLegalPrivacyTitle;
-    final String body =
-        doc == _LegalDoc.terms ? l.myLegalTermsBody : l.myLegalPrivacyBody;
+    final String title = doc == _LegalDoc.terms
+        ? l.myLegalTermsTitle
+        : l.myLegalPrivacyTitle;
+    final String body = doc == _LegalDoc.terms
+        ? l.myLegalTermsBody
+        : l.myLegalPrivacyBody;
     return _shell(context, title, <Widget>[
       _card(<Widget>[
         Text(
