@@ -10,8 +10,10 @@ void main() {
       overrides: <Override>[
         // Production repo is DioExerciseRepository (needs dio + db);
         // unit test only needs the React-shaped in-memory mock.
+        // Inject a fixed Friday so the date-relative seed (오늘 + 직전 3일)
+        // is deterministic: 활성일 화·수·목·금 → 210분 / 1,675kcal / 연속 4일.
         exerciseRepositoryProvider.overrideWithValue(
-          MockExerciseRepository(),
+          MockExerciseRepository(today: DateTime(2024, 1, 5)),
         ),
       ],
     );
@@ -19,8 +21,8 @@ void main() {
     final week = await container.read(exerciseWeekProvider.future);
     expect(week.dailyMinutes.length, 7);
     expect(week.dayLabels.length, 7);
-    expect(week.totalMinutes, 315);
-    expect(week.totalCalories, 1980);
+    expect(week.totalMinutes, 210);
+    expect(week.totalCalories, 1675);
     expect(week.streakDays, 4);
     expect(week.aiCoachMessage, isNotEmpty);
     expect(week.sessions, isNotEmpty);

@@ -74,6 +74,7 @@ class ExerciseWeek {
     required this.totalCalories,
     required this.streakDays,
     required this.aiCoachMessage,
+    this.dailyCalories = const <double>[],
     this.cardioMinutes = const <double>[],
     this.strengthMinutes = const <double>[],
     this.stretchingMinutes = const <double>[],
@@ -86,6 +87,10 @@ class ExerciseWeek {
   final int totalCalories;
   final int streakDays;
   final String aiCoachMessage;
+
+  /// Per-day burned calories (same length/indexing as [dailyMinutes]), used
+  /// by the home "주간 추이" chart so it shares one source with this tab.
+  final List<double> dailyCalories;
 
   /// Per-day minutes broken out by type for the stacked weekly chart.
   /// All three lists are the same length as [dailyMinutes] when the
@@ -118,6 +123,7 @@ class ExerciseWeek {
       totalCalories: (json['total_calories']! as num).toInt(),
       streakDays: (json['streak_days']! as num).toInt(),
       aiCoachMessage: json['ai_coach_message']! as String,
+      dailyCalories: parseDoubleList('daily_calories'),
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
       stretchingMinutes: parseDoubleList('stretching_minutes'),

@@ -158,9 +158,6 @@ class _RecordTab extends ConsumerStatefulWidget {
 }
 
 class _RecordTabState extends ConsumerState<_RecordTab> {
-  // AI 추천 운동 완료 체크([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
-  final List<bool> _routineDone = <bool>[false, false];
-
   // 오늘 기본 운동(분): 유산소 / 근력 / 스트레칭.
   static const double _baseCardio = 15;
   static const double _baseStrength = 40;
@@ -175,17 +172,35 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     return DateTime(n.year, n.month, n.day);
   }
 
+  void _toggleRoutine(int i) {
+    final List<bool> cur = ref.read(exerciseRoutineDoneProvider);
+    final List<bool> next = List<bool>.of(cur);
+    if (i >= 0 && i < next.length) next[i] = !next[i];
+    ref.read(exerciseRoutineDoneProvider.notifier).state = next;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(exerciseWeekProvider);
+    // AI 추천 운동 완료 체크는 공유 provider에 둬서 홈 운동 카드의 '주간 추이'
+    // 오늘 막대에도 반영된다([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
+    final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
     // 체크한 추천 운동 시간을 오늘 활동에 더한다(인터벌 러닝→유산소, 어깨→스트레칭).
-    final double todayCardio = _baseCardio + (_routineDone[1] ? 30 : 0);
+    double bonusCardio = 0;
+    double bonusStretch = 0;
+    for (int i = 0; i < routineDone.length && i < kAiRoutineDeltas.length; i++) {
+      if (routineDone[i]) {
+        bonusCardio += kAiRoutineDeltas[i].cardioMin;
+        bonusStretch += kAiRoutineDeltas[i].stretchMin;
+      }
+    }
+    final double todayCardio = _baseCardio + bonusCardio;
     const double todayStrength = _baseStrength;
-    final double todayStretch = _baseStretch + (_routineDone[0] ? 8 : 0);
+    final double todayStretch = _baseStretch + bonusStretch;
     return weekAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 64),
@@ -261,11 +276,13 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                 children: <Widget>[
                   Expanded(
                     child: _StatCard(
-                      label: l.exThisWeek,
-                      // 운동 횟수 = 운동한 '일수'(활성 일수). 하루에 유형을 나눠
-                      // 여러 세션으로 기록해도 1회로 센다(workoutCount = 요일 수).
+                      label: '일수',
+                      // 운동 일수 = 운동한 활성 일수(workoutCount). 하루에 유형을
+                      // 나눠 여러 세션으로 기록해도 1일로 센다(요일 수).
+                      // 홈 운동 카드의 '주간 운동 일수'와 동일한 정의.
                       value: '${week.workoutCount}',
-                      unit: l.exUnitCount,
+                      unit: '일',
+                      goal: '3', // 주 3일 이상
                       accent: true,
                     ),
                   ),
@@ -275,6 +292,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       label: l.exStatTime,
                       value: '${week.totalMinutes}',
                       unit: l.unitMinutes,
+                      goal: '150',
                       accent: true,
                     ),
                   ),
@@ -284,6 +302,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       label: l.exStatCalories,
                       value: '${week.totalCalories}',
                       unit: l.unitKcal,
+                      goal: '1,500',
                       accent: true,
                     ),
                   ),
@@ -327,9 +346,8 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _PtAiRoutineCard(
-                done: _routineDone,
-                onToggle: (int i) =>
-                    setState(() => _routineDone[i] = !_routineDone[i]),
+                done: routineDone,
+                onToggle: _toggleRoutine,
               ),
             ),
           ],
@@ -579,6 +597,7 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.unit,
+    this.goal,
     this.accent = false,
     this.streak = false,
   });
@@ -586,6 +605,9 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final String unit;
+
+  /// Optional small "/목표" suffix shown after the value (e.g. "/150").
+  final String? goal;
   final bool accent;
   final bool streak;
 
@@ -651,18 +673,21 @@ class _StatCard extends StatelessWidget {
                     letterSpacing: -0.4,
                   ),
                 ),
-                TextSpan(
-                  text: ' $unit',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: streak
-                        ? Colors.white.withValues(alpha: 0.85)
-                        : accent
-                        ? FigmaColors.primary.withValues(alpha: 0.7)
-                        : FigmaColors.textMuted,
+                if (goal != null)
+                  TextSpan(text: ' /$goal$unit', style: kGoalSuffixStyle)
+                else
+                  TextSpan(
+                    text: ' $unit',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: streak
+                          ? Colors.white.withValues(alpha: 0.85)
+                          : accent
+                          ? FigmaColors.primary.withValues(alpha: 0.7)
+                          : FigmaColors.textMuted,
+                    ),
                   ),
-                ),
               ],
             ),
             maxLines: 1,
@@ -708,9 +733,15 @@ class _ActivityStatus extends StatefulWidget {
 class _ActivityStatusState extends State<_ActivityStatus> {
   int _period = 1; // 0 = 오늘, 1 = 이번 주, 2 = 이번 달
 
+  /// 오늘 요일 인덱스(0=월 … 6=일)를 이번 주 범위로 클램프. 홈 주간추이와 같은
+  /// 실제 오늘을 가리키도록 해, '오늘=일 고정' 문제를 없앤다.
+  int _weekTodayIndex(int n) =>
+      n <= 0 ? -1 : (DateTime.now().weekday - 1).clamp(0, n - 1);
+
   List<_Bar> _weekBars() {
     final ExerciseWeek w = widget.week;
     final int n = w.dailyMinutes.length;
+    final int todayIdx = _weekTodayIndex(n);
     final bool hasBreakdown =
         n > 0 &&
         w.cardioMinutes.length == n &&
@@ -718,8 +749,8 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         w.stretchingMinutes.length == n;
     return <_Bar>[
       for (int i = 0; i < n; i++)
-        // 마지막(오늘) 막대는 실시간 오늘 활동으로 대체 → 오늘 도넛과 항상 일치.
-        if (i == n - 1)
+        // 오늘 막대는 실시간 오늘 활동으로 대체 → 오늘 도넛과 항상 일치.
+        if (i == todayIdx)
           _Bar(widget.todayCardio, widget.todayStrength, widget.todayStretch)
         else if (hasBreakdown)
           _Bar(w.cardioMinutes[i], w.strengthMinutes[i], w.stretchingMinutes[i])
@@ -746,7 +777,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         return _ChartPeriod(
           _weekBars(),
           widget.week.dayLabels,
-          widget.week.dailyMinutes.length - 1,
+          _weekTodayIndex(widget.week.dailyMinutes.length),
         );
     }
   }
