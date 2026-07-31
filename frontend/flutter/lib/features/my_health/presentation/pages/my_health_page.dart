@@ -521,16 +521,43 @@ class _SheetCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFF4F6F8),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: const SizedBox(
-          width: 32,
-          height: 32,
-          child: Icon(Icons.close_rounded, size: 17, color: FigmaColors.textSub),
+    // 로케일에 맞는 "닫기"/"Close" 레이블(추가 ARB 키 없이 프레임워크 제공).
+    final String label = MaterialLocalizations.of(context).closeButtonTooltip;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            // 시각적 원은 32 유지, 탭 영역은 접근성 최소 48×48 보장.
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF4F6F8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 17,
+                      color: FigmaColors.textSub,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
