@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/app_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -27,13 +29,39 @@ const AppConfig _config = AppConfig(
   useMockApi: true,
 );
 
+ConsultationRequest _consultation(ConsultationStatus status) {
+  return ConsultationRequest(
+    id: 'consultation-${status.name}',
+    targetType: ConsultationTargetType.trainer,
+    gymId: _gym.id,
+    gymName: _gym.name,
+    trainerName: _gym.trainerName,
+    trainerRole: _gym.trainerRole,
+    exerciseGoal: '체중 감량',
+    healthPurpose: '해당 없음',
+    preferredDate: DateTime(2026, 8),
+    preferredTimeSlot: '오후',
+    message: null,
+    status: status,
+    createdAt: DateTime(2026, 7, 31),
+  );
+}
+
 void main() {
   late GoRouter router;
+  late ConsultationRequestController consultationController;
 
-  Future<void> pumpGymTab(WidgetTester tester) async {
+  Future<void> pumpGymTab(
+    WidgetTester tester, {
+    ConsultationRequest? consultation,
+  }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    consultationController = ConsultationRequestController();
+    if (consultation != null) {
+      consultationController.add(consultation);
+    }
     router = buildAppRouter(config: _config);
     addTearDown(router.dispose);
     router.go(AppRoutes.exerciseGym);
@@ -43,6 +71,9 @@ void main() {
         overrides: <Override>[
           myGymProvider.overrideWith((ref) async => _gym),
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+          consultationRequestControllerProvider.overrideWith(
+            (ref) => consultationController,
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -82,6 +113,7 @@ void main() {
     );
     expect(find.text(l.exGymInfo), findsNothing);
     expect(find.text(l.exConsultButton), findsNothing);
+    expect(find.text(l.exViewConsultationRequest), findsNothing);
 
     expect(find.text(l.exAiSlotTitle), findsOneWidget);
     expect(
@@ -90,6 +122,51 @@ void main() {
       17,
     );
   });
+
+  testWidgets('pending consultation shows one action and reuses status UI', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(ConsultationStatus.pending),
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+    expect(find.text(l.exGymInfo), findsNothing);
+    expect(find.text(l.exConsultButton), findsNothing);
+
+    final Finder statusSection = find.text(l.exConsultStatusSection);
+    final double statusTopBeforeTap = tester.getTopLeft(statusSection).dy;
+    final int requestCountBeforeTap = consultationController.state.length;
+
+    await tester.tap(find.text(l.exViewConsultationRequest));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(statusSection).dy, lessThan(statusTopBeforeTap));
+    expect(consultationController.state, hasLength(requestCountBeforeTap));
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  for (final ConsultationStatus status in <ConsultationStatus>[
+    ConsultationStatus.accepted,
+    ConsultationStatus.rejected,
+  ]) {
+    testWidgets('${status.name} consultation does not show an action', (
+      WidgetTester tester,
+    ) async {
+      await pumpGymTab(tester, consultation: _consultation(status));
+      await scrollToCard(tester);
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(Scaffold).first),
+      );
+      expect(find.text(l.exViewConsultationRequest), findsNothing);
+    });
+  }
 
   testWidgets('gym and trainer information areas keep their detail routes', (
     WidgetTester tester,

@@ -33,6 +33,22 @@ class GymTab extends ConsumerWidget {
     final ConsultationRequest? recentRequest = requests.isEmpty
         ? null
         : requests.first;
+    final ConsultationRequest? pendingRequest =
+        recentRequest?.status == ConsultationStatus.pending
+        ? recentRequest
+        : null;
+    final GlobalKey recentConsultationKey = GlobalKey();
+
+    void showRecentConsultation() {
+      final BuildContext? targetContext = recentConsultationKey.currentContext;
+      if (targetContext == null) return;
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignment: 0.1,
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -47,10 +63,16 @@ class GymTab extends ConsumerWidget {
             onSlot: onSlot,
             onFind: onFind,
             onRetry: () => ref.invalidate(myGymProvider),
+            onPendingConsultationTap: pendingRequest == null
+                ? null
+                : showRecentConsultation,
           ),
           if (recentRequest != null) ...<Widget>[
             const SizedBox(height: 28),
-            _RecentConsultationSection(request: recentRequest),
+            _RecentConsultationSection(
+              key: recentConsultationKey,
+              request: recentRequest,
+            ),
           ],
           const SizedBox(height: 28),
           _RecommendedGymSection(
@@ -71,7 +93,7 @@ class GymTab extends ConsumerWidget {
 }
 
 class _RecentConsultationSection extends StatelessWidget {
-  const _RecentConsultationSection({required this.request});
+  const _RecentConsultationSection({required this.request, super.key});
 
   final ConsultationRequest request;
 
@@ -202,6 +224,7 @@ class _MyGymTrainerSection extends StatelessWidget {
     required this.onSlot,
     required this.onFind,
     required this.onRetry,
+    required this.onPendingConsultationTap,
   });
 
   final AsyncValue<Gym?> gymAsync;
@@ -209,6 +232,7 @@ class _MyGymTrainerSection extends StatelessWidget {
   final ValueChanged<String> onSlot;
   final VoidCallback onFind;
   final VoidCallback onRetry;
+  final VoidCallback? onPendingConsultationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +249,7 @@ class _MyGymTrainerSection extends StatelessWidget {
               onTrainerTap: gym.trainerName?.isNotEmpty ?? false
                   ? () => context.push(AppRoutes.trainerDetailPath(gym.id))
                   : null,
+              onPendingConsultationTap: onPendingConsultationTap,
             ),
     );
   }
@@ -237,6 +262,7 @@ class _MyGymTrainerCard extends StatelessWidget {
     required this.onSlot,
     required this.onGymTap,
     required this.onTrainerTap,
+    required this.onPendingConsultationTap,
   });
 
   final Gym gym;
@@ -244,6 +270,7 @@ class _MyGymTrainerCard extends StatelessWidget {
   final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
   final VoidCallback? onTrainerTap;
+  final VoidCallback? onPendingConsultationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -411,6 +438,29 @@ class _MyGymTrainerCard extends StatelessWidget {
             selectedSlot: selectedSlot,
             onSlot: onSlot,
           ),
+          if (onPendingConsultationTap != null) ...<Widget>[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onPendingConsultationTap,
+                style: FilledButton.styleFrom(
+                  backgroundColor: FigmaColors.primary,
+                  minimumSize: const Size(0, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  l.exViewConsultationRequest,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
