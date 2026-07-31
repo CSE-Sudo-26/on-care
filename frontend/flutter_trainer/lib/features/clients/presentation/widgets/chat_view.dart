@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -37,6 +38,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
+  /// Mirrors the backend's `ChatSendRequest.text` cap (`max_length=2000`)
+  /// so an over-long message is rejected here, with a clear message,
+  /// instead of round-tripping to the server for a 422 (review).
+  static const int _maxMessageLength = 2000;
+
   /// A send is in flight — blocks re-entry (button mash / IME send)
   /// from inserting the same message twice.
   bool _sending = false;
@@ -57,6 +63,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final text = _input.text;
     if (text.trim().isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+    if (text.trim().length > _maxMessageLength) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('메시지가 너무 길어요 (최대 2000자)')),
+      );
+      return;
+    }
     setState(() => _sending = true);
     try {
       await ref
@@ -79,7 +91,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (!mounted) return;
     // Clear only after the insert succeeds so the text isn't lost on error.
     _input.clear();
-    _scrollToBottom();
+    // Drift streams re-emit on write; the Dio source is a single fetch, so
+    // refetch the thread + unread badges after a real-API send. NOTE: don't
+    // scroll here — `ref.invalidate` only *starts* an async refetch, so the
+    // list the user is looking at right now is still the pre-send one; the
+    // `data:` branch below already scrolls to bottom once the new message
+    // actually renders (it fires on every list-length change, which covers
+    // both the reactive Drift path and this refetch) (review).
+    if (!ref.read(appConfigProvider).useMockApi) {
+      ref.invalidate(chatThreadProvider(widget.clientId));
+      ref.invalidate(unreadCountsProvider);
+    }
   }
 
   void _scrollToBottom() {
@@ -96,6 +118,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(chatThreadProvider(widget.clientId));
+    final showDemoBanners = ref.watch(appConfigProvider).useMockApi;
 
     return Column(
       children: <Widget>[
@@ -117,21 +140,36 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 // messages that arrive while it stays open. Deferred so
                 // the write never runs inside build.
                 final repo = ref.read(chatRepositoryProvider);
-                Future<void>.microtask(
-                  () => repo.markThreadRead(widget.clientId),
-                );
+                final realApi = !ref.read(appConfigProvider).useMockApi;
+                Future<void>.microtask(() async {
+                  try {
+                    await repo.markThreadRead(widget.clientId);
+                    // Drift updates unread via its stream; the Dio source
+                    // needs an explicit refetch of the badge counts.
+                    if (realApi && mounted) {
+                      ref.invalidate(unreadCountsProvider);
+                    }
+                  } catch (_) {
+                    // Reading the thread still succeeded. A transient read
+                    // receipt failure may leave the badge visible, but must
+                    // not escape as an unhandled async error.
+                  }
+                });
               }
               return ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: <Widget>[
-                  _SystemBanner(clientName: widget.clientName),
-                  const SizedBox(height: AppSpacing.md),
+                  if (showDemoBanners) ...<Widget>[
+                    _SystemBanner(clientName: widget.clientName),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   for (final m in list) ...<Widget>[
                     _Bubble(message: m, avatar: widget.clientAvatar),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  _SentBanner(clientName: widget.clientName),
+                  if (showDemoBanners)
+                    _SentBanner(clientName: widget.clientName),
                 ],
               );
             },
