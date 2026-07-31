@@ -13,7 +13,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import '../../helpers/pump_app.dart';
 
 /// A chat repository whose sends always fail.
-class _FailingChatRepository extends ChatRepository {
+class _FailingChatRepository extends DriftChatRepository {
   const _FailingChatRepository(super.db);
 
   @override

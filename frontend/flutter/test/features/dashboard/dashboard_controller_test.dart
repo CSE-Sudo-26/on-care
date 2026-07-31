@@ -106,4 +106,109 @@ void main() {
     expect(legacy.macros.carbsPct, 0);
     expect(legacy.isEmpty, isTrue);
   });
+
+  test('DashboardSummary parses nutrition_week + burn goal, defaults older', () {
+    final parsed = DashboardSummary.fromJson(<String, Object?>{
+      'indicators': <Object?>[],
+      'diet_entries': 0,
+      'exercise_minutes': 0,
+      'exercise_burn_goal': 700,
+      'nutrition_week': <Object?>[
+        <String, Object?>{
+          'label': '월',
+          'calories': 1650,
+          'sodium_mg': 1600,
+          'sugar_g': 30,
+        },
+        <String, Object?>{
+          'label': '화',
+          'calories': 2100,
+          'sodium_mg': 1900,
+          'sugar_g': 48,
+        },
+      ],
+      'nutrition_week_prev': <Object?>[
+        <String, Object?>{
+          'label': '월',
+          'calories': 1820,
+          'sodium_mg': 1900,
+          'sugar_g': 35,
+        },
+      ],
+      'today_schedule': <Object?>[],
+      'week_score': 70,
+      'week_score_delta': -5,
+      'sodium_warning': null,
+      'exercise_feedback': null,
+    });
+    expect(parsed.exerciseBurnGoal, 700);
+    expect(parsed.nutritionWeek.length, 2);
+    expect(parsed.nutritionWeek.first.label, '월');
+    expect(parsed.nutritionWeek.first.calories, 1650);
+    expect(parsed.nutritionWeek.first.sodiumMg, 1600);
+    expect(parsed.nutritionWeekPrev.length, 1);
+    expect(parsed.weekScoreDelta, -5);
+
+    // 구버전 응답: 새 필드가 없으면 기본값(빈 주간·소모목표 500)으로 폴백.
+    final legacy = DashboardSummary.fromJson(<String, Object?>{
+      'indicators': <Object?>[],
+      'diet_entries': 0,
+      'exercise_minutes': 0,
+      'today_schedule': <Object?>[],
+      'week_score': 50,
+      'week_score_delta': 0,
+      'sodium_warning': null,
+      'exercise_feedback': null,
+    });
+    expect(legacy.exerciseBurnGoal, 500);
+    expect(legacy.nutritionWeek, isEmpty);
+    expect(legacy.nutritionWeekPrev, isEmpty);
+  });
+
+  test('isEmpty stays false when only past weekdays have diet records', () {
+    Map<String, Object?> base(List<Object?> week) => <String, Object?>{
+      'indicators': <Object?>[],
+      'diet_entries': 0,
+      'exercise_minutes': 0,
+      'today_schedule': <Object?>[],
+      'nutrition_week': week,
+      'week_score': 50,
+      'week_score_delta': 0,
+      'sodium_warning': null,
+      'exercise_feedback': null,
+    };
+
+    // 오늘 기록이 없어도(diet_entries=0, 칼로리 지표 0) 이번 주 과거 요일에
+    // 실제 식단 기록이 있으면 홈은 비어 있지 않다 — 주간 추이 차트가 표시돼야 한다.
+    final withPastWeek = DashboardSummary.fromJson(
+      base(<Object?>[
+        <String, Object?>{
+          'label': '월',
+          'calories': 1650,
+          'sodium_mg': 1600,
+          'sugar_g': 30,
+        },
+        <String, Object?>{
+          'label': '화',
+          'calories': 0,
+          'sodium_mg': 0,
+          'sugar_g': 0,
+        },
+      ]),
+    );
+    expect(withPastWeek.isEmpty, isFalse);
+
+    // 주간에도 유효 기록이 하나도 없으면(모두 0) 여전히 비어 있다.
+    final allZero = DashboardSummary.fromJson(
+      base(<Object?>[
+        <String, Object?>{
+          'label': '월',
+          'calories': 0,
+          'sodium_mg': 0,
+          'sugar_g': 0,
+        },
+      ]),
+    );
+    expect(allZero.isEmpty, isTrue);
+  });
 }

@@ -15,14 +15,33 @@ class AiRoutineRepository {
   final AppDatabase _db;
 
   /// The AI suggestions for [clientId], in seeded order.
-  Stream<List<AiRoutineItem>> watchRoutine(String clientId) {
-    final query = _db.select(_db.clientAiRoutines)
-      ..where((t) => t.clientId.equals(clientId))
-      ..orderBy(<OrderingTerm Function($ClientAiRoutinesTable)>[
-        (t) => OrderingTerm(expression: t.sortOrder),
-      ]);
-    return query.watch().map(
-      (rows) => rows
+  ///
+  /// Real API clients use backend ids (`user-demo`) while the bundled
+  /// suggestions use demo ids (`seed-client-1`). [clientName] lets a live
+  /// roster resolve the corresponding local suggestion set.
+  Stream<List<AiRoutineItem>> watchRoutine(
+    String clientId, {
+    String? clientName,
+  }) {
+    final routines = _db.clientAiRoutines;
+    final clients = _db.trainerClients;
+    final query = _db.select(routines).join(<Join>[
+      innerJoin(
+        clients,
+        clients.id.equalsExp(routines.clientId),
+        useColumns: false,
+      ),
+    ]);
+    query.where(
+      routines.clientId.equals(clientId) |
+          (clientName == null
+              ? const Constant<bool>(false)
+              : clients.name.equals(clientName)),
+    );
+    return query.watch().map((rows) {
+      final localRows = rows.map((row) => row.readTable(routines)).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      return localRows
           .map(
             (row) => AiRoutineItem(
               id: row.id,
@@ -32,8 +51,8 @@ class AiRoutineRepository {
               reason: row.reason,
             ),
           )
-          .toList(),
-    );
+          .toList();
+    });
   }
 
   /// Registers the composed routine as [clientName]'s PT program on
@@ -105,10 +124,13 @@ final aiRoutineRepositoryProvider = Provider<AiRoutineRepository>((ref) {
   return AiRoutineRepository(ref.watch(appDatabaseProvider));
 });
 
+/// A stable key for local suggestions when the live and demo ids differ.
+typedef AiRoutineClientKey = ({String id, String name});
+
 /// Streams a client's AI routine suggestions.
-final aiRoutineProvider = StreamProvider.family<List<AiRoutineItem>, String>((
-  ref,
-  clientId,
-) {
-  return ref.watch(aiRoutineRepositoryProvider).watchRoutine(clientId);
-});
+final aiRoutineProvider =
+    StreamProvider.family<List<AiRoutineItem>, AiRoutineClientKey>((ref, key) {
+      return ref
+          .watch(aiRoutineRepositoryProvider)
+          .watchRoutine(key.id, clientName: key.name);
+    });

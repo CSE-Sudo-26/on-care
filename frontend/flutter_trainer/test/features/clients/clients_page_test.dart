@@ -9,6 +9,13 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
 
+class _ReadOnlyClientRepository extends DriftClientRepository {
+  const _ReadOnlyClientRepository(super.db);
+
+  @override
+  bool get supportsRosterMutations => false;
+}
+
 void main() {
   group('ClientRepository', () {
     late AppDatabase db;
@@ -20,7 +27,7 @@ void main() {
     tearDown(() => db.close());
 
     test('watchClients returns the 3 seeded clients in order', () async {
-      final clients = await ClientRepository(db).watchClients().first;
+      final clients = await DriftClientRepository(db).watchClients().first;
       expect(clients.map((c) => c.name).toList(), <String>[
         '김민수',
         '이지수',
@@ -29,7 +36,7 @@ void main() {
     });
 
     test('sodiumOverBudget flags only clients above 2000mg', () async {
-      final clients = await ClientRepository(db).watchClients().first;
+      final clients = await DriftClientRepository(db).watchClients().first;
       expect(
         clients.where((c) => c.sodiumOverBudget).map((c) => c.name).toSet(),
         <String>{'김민수', '박성호'}, // 2100, 2400; 이지수 1800 is under
@@ -37,7 +44,7 @@ void main() {
     });
 
     test('addClient appends a fresh profile after the seeded roster', () async {
-      final repo = ClientRepository(db);
+      final repo = DriftClientRepository(db);
       await repo.addClient(name: '  최수진  ', goal: '체중 감량');
 
       final clients = await repo.watchClients().first;
@@ -55,7 +62,7 @@ void main() {
     test(
       'addClient ignores an empty name and defaults an empty goal',
       () async {
-        final repo = ClientRepository(db);
+        final repo = DriftClientRepository(db);
         expect(await repo.addClient(name: '   ', goal: '아무거나'), isFalse);
         expect((await repo.watchClients().first).length, 3);
 
@@ -66,7 +73,7 @@ void main() {
     );
 
     test('addClient rejects a duplicate name', () async {
-      final repo = ClientRepository(db);
+      final repo = DriftClientRepository(db);
 
       // Schedules resolve their client by NAME, so a second 김민수 could
       // receive the first one's chat/운동기록 (review PR 243).
@@ -85,7 +92,7 @@ void main() {
     });
 
     test('concurrent addClient of the same name inserts exactly one', () async {
-      final repo = ClientRepository(db);
+      final repo = DriftClientRepository(db);
 
       // Fire both adds without awaiting between them: the check and the
       // insert share one transaction, so only one can pass the duplicate
@@ -103,7 +110,8 @@ void main() {
     });
 
     test('setClientActive flips the 활성/휴면 state', () async {
-      final repo = ClientRepository(db);
+      final repo = DriftClientRepository(db);
+      expect(repo.supportsRosterMutations, isTrue);
       await repo.setClientActive('seed-client-1', false);
       var clients = await repo.watchClients().first;
       expect(clients.firstWhere((c) => c.name == '김민수').active, isFalse);
@@ -114,7 +122,7 @@ void main() {
     });
 
     test('reservation count excludes 공백 slots', () async {
-      final count = await ClientRepository(
+      final count = await DriftClientRepository(
         db,
       ).watchTodayReservationCount().first;
       expect(count, 4); // 6 slots − 2 공백
@@ -134,7 +142,7 @@ void main() {
             ),
           );
 
-      final count = await ClientRepository(
+      final count = await DriftClientRepository(
         db,
       ).watchTodayReservationCount().first;
       expect(count, 4); // still 4 — the 2020 row is excluded
@@ -251,6 +259,32 @@ void main() {
       await tester.tap(find.text('○ 휴면'));
       await settle(tester);
       expect(find.text('● 활성'), findsOneWidget);
+    });
+
+    testWidgets('read-only repositories disable every roster mutation entry', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        extraOverrides: [
+          clientRepositoryProvider.overrideWith(
+            (ref) => _ReadOnlyClientRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+
+      await tester.scrollUntilVisible(find.text('박성호'), 150);
+      expect(find.text('＋ 신규 고객 등록'), findsNothing);
+
+      await tester.tap(find.text('박성호'));
+      await settle(tester);
+
+      final statusInkWell = find.byKey(
+        const ValueKey<String>('client-status-toggle'),
+      );
+      expect(statusInkWell, findsOneWidget);
+      expect(tester.widget<InkWell>(statusInkWell).onTap, isNull);
     });
   });
 }
