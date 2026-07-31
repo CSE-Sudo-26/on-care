@@ -1,66 +1,74 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/notification/data/repositories/dio_notification_repository.dart';
+import 'package:oncare/features/notification/data/repositories/mock_notification_repository.dart';
 import 'package:oncare/features/notification/domain/entities/alert_item.dart';
 import 'package:oncare/features/notification/domain/repositories/notification_repository.dart';
 
 class NotificationController extends StateNotifier<NotificationState> {
-  NotificationController() : super(_seed());
-
-  static NotificationState _seed() {
-    return const NotificationState(
-      items: <AlertItem>[
-        AlertItem(
-          id: 'a1',
-          title: '나트륨 섭취 주의',
-          body: '점심 짬뽕으로 오늘 나트륨이 3,421mg까지 올랐어요. 물을 충분히 드세요.',
-          timeAgo: '10분 전',
-          category: AlertCategory.reminder,
-        ),
-        AlertItem(
-          id: 'a2',
-          title: 'PT 수업 완료',
-          body: '오늘 18:00 김트레이너와 12회차 PT를 마쳤어요!',
-          timeAgo: '1시간 전',
-          category: AlertCategory.achievement,
-        ),
-        AlertItem(
-          id: 'a3',
-          title: '트레이너 피드백 도착',
-          body: '마무리로 어깨 회전근개 스트레칭을 꼭 해주세요.',
-          timeAgo: '2시간 전',
-          category: AlertCategory.reminder,
-        ),
-        AlertItem(
-          id: 'a4',
-          title: '서비스 점검 안내',
-          body: '내일 02:00~03:00 점검 예정입니다.',
-          timeAgo: '어제',
-          category: AlertCategory.system,
-          read: true,
-        ),
-      ],
-    );
+  /// [seed] 가 주어지면(데모/목 모드) 즉시 노출하고 네트워크 로드를 건너뛴다 —
+  /// 데모 둘러보기 화면이 기존과 동일하게 보이도록 유지한다. 실모드는 seed=null
+  /// 로 생성해 백엔드(`/notifications`)에서 최신 알림을 불러온다.
+  NotificationController(this._repo, {List<AlertItem>? seed})
+    : _allowSimulatePush = seed != null,
+      super(NotificationState(items: seed ?? const <AlertItem>[])) {
+    if (seed == null) {
+      _load();
+    }
   }
 
-  void markRead(String id) {
+  final NotificationRepository _repo;
+
+  /// 가상 푸시 주입은 목/데모 모드에서만 허용한다(seed 가 주어진 경우).
+  /// 실모드는 서버가 진실원본이라, 로컬 팬텀을 넣으면 다음 [refresh] 에서
+  /// 사라져 상태가 어긋난다.
+  final bool _allowSimulatePush;
+
+  Future<void> _load() async {
+    try {
+      final items = await _repo.fetchAll();
+      if (mounted) {
+        state = NotificationState(items: items);
+      }
+    } catch (_) {
+      // 알림 로드 실패는 화면 접근을 막지 않는다(빈 목록 유지).
+    }
+  }
+
+  /// 실모드에서 서버 알림을 다시 불러온다.
+  Future<void> refresh() => _load();
+
+  Future<void> markRead(String id) async {
     state = NotificationState(
       items: state.items
           .map((AlertItem i) => i.id == id ? i.copyWith(read: true) : i)
           .toList(),
     );
+    try {
+      await _repo.markRead(id);
+    } catch (_) {
+      // 낙관적 업데이트 유지 — 영속화 실패는 다음 로드에서 정정된다.
+    }
   }
 
-  void markAllRead() {
+  Future<void> markAllRead() async {
     state = NotificationState(
       items: state.items.map((AlertItem i) => i.copyWith(read: true)).toList(),
     );
+    try {
+      await _repo.markAllRead();
+    } catch (_) {
+      // 낙관적 업데이트 유지.
+    }
   }
 
   /// Q9: in-app panel + simulated push. Inserts a new unread item
-  /// at the top, as if a real FCM notification had landed.
+  /// at the top, as if a real FCM notification had landed. 목/데모 모드
+  /// 전용(개발용) — 실모드에서는 서버에 없는 팬텀을 만들지 않도록 무시한다.
   void simulatePush() {
+    if (!_allowSimulatePush) return;
     final id = 'sim-${DateTime.now().millisecondsSinceEpoch}';
     final injected = AlertItem(
       id: id,
@@ -73,24 +81,24 @@ class NotificationController extends StateNotifier<NotificationState> {
   }
 }
 
+/// 데모/로컬 모드는 목, 실모드는 백엔드(`/notifications`) 리포.
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  if (ref.watch(appConfigProvider).useMockApi) {
+    return const MockNotificationRepository();
+  }
+  return DioNotificationRepository(ref.watch(dioProvider));
+}, name: 'notificationRepository');
+
+/// 알림 목록 + 세션 변이(읽음/전체읽음/가상푸시)를 담는 컨트롤러.
+/// 목 모드는 [demoAlerts] 를 즉시 시드로 사용하고, 실모드는 백엔드에서 로드한다.
 final notificationControllerProvider =
-    StateNotifierProvider<NotificationController, NotificationState>(
-      (ref) => NotificationController(),
-      name: 'notifications',
-    );
+    StateNotifierProvider<NotificationController, NotificationState>((ref) {
+      final useMock = ref.watch(appConfigProvider).useMockApi;
+      final repo = ref.watch(notificationRepositoryProvider);
+      return NotificationController(repo, seed: useMock ? demoAlerts : null);
+    }, name: 'notifications');
 
-/// Network-side notification source. Production code talks to dio →
-/// LocalApiInterceptor (drift) → FastAPI. Tests override this with a
-/// `MockNotificationRepository`.
-final notificationRepositoryProvider = Provider<NotificationRepository>(
-  (ref) => DioNotificationRepository(ref.watch(dioProvider)),
-  name: 'notificationRepository',
-);
-
-/// FutureProvider variant of the notifications list, sourced from the
-/// repo. The legacy [notificationControllerProvider] still holds the
-/// in-session mutations (markRead / simulatePush) — wholesale unifying
-/// is intentionally deferred to keep the UI/test surface stable.
+/// 안읽음 배지 등 가벼운 소비처용 목록(리포 직접). 컨트롤러와 별개로 유지한다.
 final notificationListProvider = FutureProvider.autoDispose<List<AlertItem>>(
   (ref) => ref.watch(notificationRepositoryProvider).fetchAll(),
   name: 'notificationList',

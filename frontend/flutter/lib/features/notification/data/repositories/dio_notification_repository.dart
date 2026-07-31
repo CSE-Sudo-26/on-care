@@ -16,6 +16,16 @@ class DioNotificationRepository implements NotificationRepository {
     return rows.cast<Map<String, Object?>>().map(_fromJson).toList();
   }
 
+  @override
+  Future<void> markRead(String id) async {
+    await _dio.post<Object?>('/notifications/$id/read');
+  }
+
+  @override
+  Future<void> markAllRead() async {
+    await _dio.post<Object?>('/notifications/read-all');
+  }
+
   static AlertItem _fromJson(Map<String, Object?> json) {
     return AlertItem(
       id: json['id']! as String,
