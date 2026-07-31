@@ -1988,12 +1988,6 @@ abstract class AppLocalizations {
   /// **'My Profile'**
   String get myProfileTitle;
 
-  /// No description provided for @myGoalsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Health Goals'**
-  String get myGoalsTitle;
-
   /// No description provided for @myNotifTitle.
   ///
   /// In en, this message translates to:
@@ -2036,12 +2030,6 @@ abstract class AppLocalizations {
   /// **'Profile saved'**
   String get myProfileSaved;
 
-  /// No description provided for @myGoalsSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Health goals saved'**
-  String get myGoalsSaved;
-
   /// No description provided for @mySaveFailed.
   ///
   /// In en, this message translates to:
@@ -2071,48 +2059,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date of birth'**
   String get myFieldBirth;
-
-  /// No description provided for @myGoalsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Summaries and feedback across the app are based on these goals.'**
-  String get myGoalsDesc;
-
-  /// No description provided for @myGoalWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Target weight'**
-  String get myGoalWeight;
-
-  /// No description provided for @myGoalBp.
-  ///
-  /// In en, this message translates to:
-  /// **'Target blood pressure (systolic)'**
-  String get myGoalBp;
-
-  /// No description provided for @myGoalBloodSugar.
-  ///
-  /// In en, this message translates to:
-  /// **'Target blood sugar'**
-  String get myGoalBloodSugar;
-
-  /// No description provided for @myGoalCalories.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily calories'**
-  String get myGoalCalories;
-
-  /// No description provided for @myGoalSodium.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium limit'**
-  String get myGoalSodium;
-
-  /// No description provided for @myGoalSugar.
-  ///
-  /// In en, this message translates to:
-  /// **'Sugar limit'**
-  String get myGoalSugar;
 
   /// No description provided for @myNotifDietLog.
   ///

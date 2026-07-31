@@ -1041,9 +1041,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myProfileTitle => 'My Profile';
 
   @override
-  String get myGoalsTitle => 'Health Goals';
-
-  @override
   String get myNotifTitle => 'Notification Settings';
 
   @override
@@ -1065,9 +1062,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myProfileSaved => 'Profile saved';
 
   @override
-  String get myGoalsSaved => 'Health goals saved';
-
-  @override
   String get mySaveFailed => 'Couldn\'t save. Please try again in a moment';
 
   @override
@@ -1081,28 +1075,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myFieldBirth => 'Date of birth';
-
-  @override
-  String get myGoalsDesc =>
-      'Summaries and feedback across the app are based on these goals.';
-
-  @override
-  String get myGoalWeight => 'Target weight';
-
-  @override
-  String get myGoalBp => 'Target blood pressure (systolic)';
-
-  @override
-  String get myGoalBloodSugar => 'Target blood sugar';
-
-  @override
-  String get myGoalCalories => 'Daily calories';
-
-  @override
-  String get myGoalSodium => 'Sodium limit';
-
-  @override
-  String get myGoalSugar => 'Sugar limit';
 
   @override
   String get myNotifDietLog => 'Diet log reminder';

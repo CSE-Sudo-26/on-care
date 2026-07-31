@@ -6,7 +6,7 @@ import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 
 void main() {
-  test('myHealthStateProvider returns full state with 3 indicators', () async {
+  test('myHealthStateProvider returns the account-hub state', () async {
     final container = ProviderContainer(
       overrides: <Override>[
         // Default repo is DioMyHealthRepository (Stage 9.9); use the
@@ -21,13 +21,15 @@ void main() {
     expect(state.profile.name, '김민수');
     expect(state.profile.email, 'minsu@oncare.com');
     expect(state.risk.level, RiskLevel.medium);
-    expect(state.indicators.length, 3);
-    expect(state.indicators.map((IndicatorTrend t) => t.kind), <IndicatorKind>[
-      IndicatorKind.weight,
-      IndicatorKind.bloodPressure,
-      IndicatorKind.bloodSugar,
-    ]);
     expect(state.activityPoints, 1240);
-    expect(state.settings.length, 4);
+    expect(state.settings.length, 3);
+    expect(
+      state.settings.map((SettingsItem s) => s.kind),
+      <SettingsKind>[
+        SettingsKind.myProfile,
+        SettingsKind.notification,
+        SettingsKind.support,
+      ],
+    );
   });
 }

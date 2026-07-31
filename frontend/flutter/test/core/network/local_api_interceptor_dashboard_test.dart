@@ -121,18 +121,6 @@ void main() {
           ),
         );
 
-    // Latest blood-sugar reading.
-    await db
-        .into(db.vitals)
-        .insert(
-          VitalsCompanion.insert(
-            id: 'v-bs',
-            kind: 'blood-sugar',
-            valueJson: jsonEncode(<String, Object?>{'mg_per_dl': 95}),
-            recordedAt: DateTime.now().subtract(const Duration(minutes: 30)),
-          ),
-        );
-
     // Today's schedule (matches the React mock).
     await db.batch((b) {
       b.insertAll(db.scheduleEvents, <ScheduleEventsCompanion>[

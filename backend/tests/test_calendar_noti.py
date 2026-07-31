@@ -102,7 +102,7 @@ def test_notification_action_derived(client):
     # 시드: reminder / achievement / health_check → 파생 액션 존재
     if "reminder" in by_cat:
         assert by_cat["reminder"]["action"]["label"] == "기록하러 가기"
-        assert by_cat["reminder"]["action"]["target"] == "vitals"
+        assert by_cat["reminder"]["action"]["target"] == "dashboard"
     if "health_check" in by_cat:
         assert by_cat["health_check"]["action"]["target"] == "schedule"
 

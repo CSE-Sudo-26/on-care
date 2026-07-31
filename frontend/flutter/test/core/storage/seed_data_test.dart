@@ -167,13 +167,15 @@ void main() {
     test('user-added (non-seed) rows survive a re-seed', () async {
       // First boot: drop a row the user "entered" directly.
       await db
-          .into(db.vitals)
+          .into(db.dietEntries)
           .insert(
-            VitalsCompanion.insert(
-              id: 'user-vital-1',
-              kind: 'weight',
-              valueJson: '{"kg":72.5}',
-              recordedAt: DateTime.now(),
+            DietEntriesCompanion.insert(
+              id: 'user-diet-1',
+              date: _todayString(),
+              mealType: 'lunch',
+              timeLabel: '12:00',
+              foodsJson: '[]',
+              totalCalories: 300,
             ),
           );
 
@@ -182,9 +184,9 @@ void main() {
       await db.putValue('seeded_v4', '2020-01-01');
       await seedIfEmpty(db);
 
-      final vitals = await db.select(db.vitals).get();
+      final diet = await db.select(db.dietEntries).get();
       expect(
-        vitals.any((r) => r.id == 'user-vital-1'),
+        diet.any((r) => r.id == 'user-diet-1'),
         isTrue,
         reason: 'rows without a seed- prefix must never be touched',
       );
