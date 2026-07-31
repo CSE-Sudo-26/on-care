@@ -115,5 +115,47 @@ void main() {
       ]);
       expect(ordered.map((c) => c.id).toList(), <String>['a', 'b']);
     });
+
+    test(
+      'keeps server order within each priority group past the 32-item '
+      'insertion-sort threshold (Dart TimSort only needs to prove stable '
+      'above it — a smaller list can pass by accident, review)',
+      () {
+        // 40 clients, alternating over/under target, id = server position.
+        final input = <TrainerClient>[
+          for (var i = 0; i < 40; i++)
+            _client('c$i', sodiumMg: i.isEven ? 2500 : 500),
+        ];
+
+        final ordered = prioritizeClients(input);
+
+        final overIds = ordered
+            .where((c) => c.sodiumOverBudget)
+            .map((c) => int.parse(c.id.substring(1)))
+            .toList();
+        final underIds = ordered
+            .where((c) => !c.sodiumOverBudget)
+            .map((c) => int.parse(c.id.substring(1)))
+            .toList();
+
+        // Every over-target client precedes every under-target client...
+        expect(ordered.take(20).every((c) => c.sodiumOverBudget), isTrue);
+        expect(ordered.skip(20).every((c) => !c.sodiumOverBudget), isTrue);
+        // ...and each group is internally still in server (ascending) order.
+        expect(overIds, List<int>.generate(20, (i) => i * 2));
+        expect(underIds, List<int>.generate(20, (i) => i * 2 + 1));
+      },
+    );
+
+    test('a duplicate id does not corrupt the ordering (decorate-sort, '
+        'not an id-keyed tie-breaker, review)', () {
+      final ordered = prioritizeClients(<TrainerClient>[
+        _client('dup', sodiumMg: 2500), // index 0, over
+        _client('dup', sodiumMg: 500), // index 1, under — same id as above
+        _client('c', sodiumMg: 2600), // index 2, over
+      ]);
+
+      expect(ordered.map((c) => c.sodiumMg).toList(), <int>[2500, 2600, 500]);
+    });
   });
 }

@@ -52,21 +52,23 @@ RoutineHistoryEntry routineHistoryEntryFromJson(Map<String, Object?> json) {
 /// target ("확인 필요") first, keeping the server order otherwise. Pure and
 /// stable so both the Dio and drift repositories can share it and tests
 /// can assert it directly.
+///
+/// `List.sort` isn't guaranteed stable, so the original position travels
+/// with each client as a decorate-sort tie-breaker (undecorate after) —
+/// unlike an id-keyed lookup, this can't collide on a duplicate/missing id
+/// (review).
 List<TrainerClient> prioritizeClients(List<TrainerClient> clients) {
-  final ordered = List<TrainerClient>.of(clients);
-  // List.sort is not guaranteed stable; use the original index as a
-  // tie-breaker so same-priority clients keep the server order.
-  final index = <String, int>{
-    for (var i = 0; i < ordered.length; i++) ordered[i].id: i,
-  };
-  ordered.sort((a, b) {
-    final over = (b.sodiumOverBudget ? 1 : 0).compareTo(
-      a.sodiumOverBudget ? 1 : 0,
+  final decorated = <(TrainerClient client, int index)>[
+    for (var i = 0; i < clients.length; i++) (clients[i], i),
+  ];
+  decorated.sort((a, b) {
+    final over = (b.$1.sodiumOverBudget ? 1 : 0).compareTo(
+      a.$1.sodiumOverBudget ? 1 : 0,
     );
     if (over != 0) return over;
-    return (index[a.id] ?? 0).compareTo(index[b.id] ?? 0);
+    return a.$2.compareTo(b.$2);
   });
-  return ordered;
+  return <TrainerClient>[for (final d in decorated) d.$1];
 }
 
 String _str(Object? v) => v is String ? v : '';

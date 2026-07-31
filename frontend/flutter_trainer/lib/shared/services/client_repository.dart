@@ -7,6 +7,7 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart' show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
@@ -31,6 +32,14 @@ abstract interface class ClientRepository {
 
   Stream<List<TrainerClient>> watchClients();
   Stream<List<TrainerClient>> watchClientsPrioritized();
+
+  /// Today's booked-session count for the header badge.
+  ///
+  /// Contract: an implementation with no reservation data source (the real
+  /// API doesn't wire `/trainer/schedule` yet) should emit nothing rather
+  /// than `0` — the consuming `StreamProvider` then stays in its initial
+  /// loading state, whose `valueOrNull` is `null`, and the UI hides the
+  /// badge instead of showing a misleading "0명 예약".
   Stream<int> watchTodayReservationCount();
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
@@ -294,10 +303,26 @@ final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   return ref.watch(clientRepositoryProvider).watchClients();
 });
 
-/// Streams the coaching-priority ordering of the client list (sodium
-/// over-target first, then most recent chat) for the 고객 관리 tab.
+/// Streams the coaching-priority ordering of the client list for the
+/// 고객 관리 tab.
+///
+///  * demo/mock — sodium over-target first, ties broken by most recent
+///    chat activity (Drift's own reactive SQL query);
+///  * real API — sodium over-target first, ties broken by server order.
+///    There is no chat-recency signal yet on this endpoint, so this is
+///    derived from [clientsProvider]'s already-fetched data (via the pure
+///    [prioritizeClients]) rather than calling `watchClientsPrioritized()`
+///    independently — the two providers would otherwise each trigger their
+///    own `GET /trainer/clients` when a screen watches both at once (e.g.
+///    the list + detail split view) (review).
 final prioritizedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
-  return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
+  if (ref.watch(appConfigProvider).useMockApi) {
+    return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
+  }
+  // `.future` (not the deprecated `.stream`) — a single-emission stream is
+  // enough since the real source is itself one-shot; invalidating
+  // clientsProvider still re-triggers this via the ref.watch dependency.
+  return ref.watch(clientsProvider.future).asStream().map(prioritizeClients);
 });
 
 /// Streams today's booked-session count for the header badge.
