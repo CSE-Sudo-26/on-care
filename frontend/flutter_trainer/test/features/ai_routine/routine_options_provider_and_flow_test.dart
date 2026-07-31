@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
@@ -46,6 +47,53 @@ class _CapturingRoutineRepository implements TrainerRoutineRepository {
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
       Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
+}
+
+/// Always throws [error] from `assignRoutine`, to exercise the send
+/// button's failure-message branching (network vs. other).
+class _ThrowingRoutineRepository implements TrainerRoutineRepository {
+  _ThrowingRoutineRepository(this.error);
+
+  final Object error;
+
+  @override
+  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+    throw error;
+  }
+
+  @override
+  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
+      Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
+}
+
+/// Drives the flow from the initial analysis stage to the send button
+/// being visible and tappable, without actually tapping it — mirrors the
+/// setup half of the "inline flow" test above.
+Future<void> _driveToSendReady(WidgetTester tester) async {
+  await tester.ensureVisible(
+    find.byKey(const ValueKey<String>('generate-routine-options')),
+  );
+  await tester.tap(
+    find.byKey(const ValueKey<String>('generate-routine-options')),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 700));
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(
+    find.byKey(const ValueKey<String>('complete-routine-review')),
+  );
+  await tester.tap(
+    find.byKey(const ValueKey<String>('complete-routine-review')),
+  );
+  await tester.pumpAndSettle();
+
+  await tester.ensureVisible(
+    find.byKey(const ValueKey<String>('send-selected-routine')),
+  );
 }
 
 void main() {
@@ -194,4 +242,87 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'a network/timeout assign failure shows the ambiguous verify-first '
+    "message, not '다시 시도' (assign is not idempotent — retrying on an "
+    'ambiguous failure risks a duplicate routine)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appConfigProvider.overrideWithValue(_mockConfig),
+            trainerRoutineRepositoryProvider.overrideWithValue(
+              _ThrowingRoutineRepository(const NetworkError()),
+            ),
+          ],
+          child: MaterialApp(
+            home: AiRoutineOptionsFlow(
+              client: _client,
+              recommendedExercises: <RoutineExercise>[
+                RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+              ],
+              recommendedReason: '기존 회원 데이터 기반 추천',
+            ),
+          ),
+        ),
+      );
+
+      await _driveToSendReady(tester);
+      await tester.tap(find.byKey(const ValueKey<String>('send-selected-routine')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+        findsOneWidget,
+      );
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a non-network assign failure shows the generic retry message '
+    '(a clear failure, safe to retry)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appConfigProvider.overrideWithValue(_mockConfig),
+            trainerRoutineRepositoryProvider.overrideWithValue(
+              _ThrowingRoutineRepository(const ServerError()),
+            ),
+          ],
+          child: MaterialApp(
+            home: AiRoutineOptionsFlow(
+              client: _client,
+              recommendedExercises: <RoutineExercise>[
+                RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+              ],
+              recommendedReason: '기존 회원 데이터 기반 추천',
+            ),
+          ),
+        ),
+      );
+
+      await _driveToSendReady(tester);
+      await tester.tap(find.byKey(const ValueKey<String>('send-selected-routine')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(
+        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+        findsNothing,
+      );
+    },
+  );
 }

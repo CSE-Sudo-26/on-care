@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -203,14 +204,32 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
     setState(() => _sending = true);
     try {
+      // Assigning the routine IS the delivery — the member receives it via
+      // /me/coach/routines. No chat note is sent here: routine delivery is
+      // shown in the member's routine feed, not as a chat bubble (matches
+      // the legacy single-shot editor's _send in ai_routine_page.dart).
       await ref
           .read(trainerRoutineRepositoryProvider)
           .assignRoutine(widget.client.id, routine);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
+      // A network/timeout failure is AMBIGUOUS: the backend may already
+      // have committed the assign before the client gave up waiting for a
+      // response (POST /routines is not idempotent — every attempt inserts
+      // a new row). Blindly telling the trainer to "다시 시도" risks a
+      // duplicate routine landing on the member's app, so this case gets a
+      // different message asking them to verify first (review; a real
+      // fix needs a backend idempotency/dedup key — tracked separately).
+      final ambiguousOutcome = e is NetworkError;
       messenger.showSnackBar(
-        const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(
+          content: Text(
+            ambiguousOutcome
+                ? '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'
+                : '전송에 실패했어요. 다시 시도해 주세요',
+          ),
+        ),
       );
       return;
     }

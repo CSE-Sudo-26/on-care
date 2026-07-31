@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -19,7 +18,6 @@ import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_rout
 import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/content_frame.dart';
@@ -131,33 +129,15 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     // the starting client, not whoever is on screen when it resolves
     // (review PR 239).
     final sentFor = client.id;
-    final noteText =
-        '📋 AI 루틴 숙제를 보냈어요 · ${program.length}개 운동 · 총 ${total + custom}분';
     setState(() => _sending = true);
     try {
-      if (!ref.read(appConfigProvider).useMockApi) {
-        // Real API: assigning the routine IS the delivery — the member
-        // receives it via /me/coach/routines. This is fatal (its failure
-        // blocks the "전송 완료" claim). The chat summary note is cosmetic,
-        // so a failed note must NOT report a failed send — otherwise the
-        // trainer re-sends and assigns a duplicate routine.
-        await ref
-            .read(trainerRoutineRepositoryProvider)
-            .assignRoutine(client.id, _summaryRoutine(items, total + custom));
-        try {
-          await ref
-              .read(chatRepositoryProvider)
-              .sendTrainerMessage(clientId: client.id, text: noteText);
-        } catch (_) {
-          // Routine already delivered — swallow the note failure.
-        }
-      } else {
-        // Demo/mock: no member backend, so the chat note is the visible
-        // "sent" feedback and stays fatal.
-        await ref
-            .read(chatRepositoryProvider)
-            .sendTrainerMessage(clientId: client.id, text: noteText);
-      }
+      // Assigning the routine IS the delivery — the member receives it via
+      // /me/coach/routines (and, in demo mode, MockTrainerRoutineRepository
+      // succeeds silently). No chat note is sent here: routine delivery is
+      // shown in the member's routine feed, not as a chat bubble.
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .assignRoutine(client.id, _summaryRoutine(items, total + custom));
     } catch (e) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);

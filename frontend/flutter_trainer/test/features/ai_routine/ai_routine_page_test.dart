@@ -136,9 +136,10 @@ class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
       Stream.value(const <AssignedRoutine>[]);
 }
 
-/// A real-API-mode chat repository whose note send can be made to fail,
-/// to prove a failed note doesn't block the "전송 완료" claim once the
-/// routine itself was assigned (subin21cc review Major#2a).
+/// A real-API-mode chat repository whose send can be made to fail, to
+/// prove routine delivery (assignRoutine) doesn't touch chat at all — a
+/// failing chat repo must have zero effect on the "전송 완료" claim
+/// (subin21cc review Major#2a).
 class _FakeRealChatRepository implements ChatRepository {
   _FakeRealChatRepository({this.failSend = false});
 
@@ -926,8 +927,9 @@ void main() {
     }
 
     testWidgets(
-      'assign succeeds even when the chat note fails: still shows the '
-      'send confirmation (assigning IS the delivery; the note is cosmetic)',
+      'real-API assign delivery does not depend on the chat repository '
+      '(routine delivery shows in the member routine feed, not as a chat '
+      'bubble)',
       (tester) async {
         final routineRepo = await openRealApiTab(tester, chatFails: true);
 
@@ -977,9 +979,19 @@ void main() {
       (tester) async {
         final routineRepo = await openRealApiTab(tester);
 
-        // Remove all 3 seeded AI suggestions for 김민수.
+        // Remove all 3 seeded AI suggestions for 김민수. Scroll each delete
+        // icon into view first — the new AI-assistant prompt banner above
+        // the routine cards can push the first card below the fold.
         for (var i = 0; i < 3; i++) {
-          await tester.tap(find.byIcon(Icons.close).first);
+          final closeIcon = find.byIcon(Icons.close).first;
+          await tester.scrollUntilVisible(
+            closeIcon,
+            150,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.ensureVisible(closeIcon);
+          await tester.pump();
+          await tester.tap(closeIcon);
           await tester.pump();
         }
 
