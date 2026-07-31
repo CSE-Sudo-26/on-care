@@ -77,6 +77,11 @@ class DioDietRepository implements DietRepository {
                 (FoodItem food) => <String, Object?>{
                   'name': food.name,
                   'calories': food.calories,
+                  'sodium_mg': food.sodiumMg,
+                  'sugar_g': food.sugarG,
+                  'carbs_g': food.carbsG,
+                  'protein_g': food.proteinG,
+                  'fat_g': food.fatG,
                 },
               )
               .toList(),
@@ -86,16 +91,36 @@ class DioDietRepository implements DietRepository {
       },
     );
     final returned = DietEntry.fromJson(res.data!);
+    final updatedFoods = foods ?? returned.foods;
+    final editedMacros = foods == null
+        ? null
+        : (
+            carbsG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.carbsG,
+            ),
+            proteinG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.proteinG,
+            ),
+            fatG: updatedFoods.fold<double>(
+              0,
+              (double sum, FoodItem food) => sum + food.fatG,
+            ),
+          );
     final updated = DietEntry(
       id: returned.id,
       mealType: mealType == null
           ? returned.mealType
           : MealType.values.byName(mealType),
       timeLabel: timeLabel ?? returned.timeLabel,
-      foods: foods ?? returned.foods,
+      foods: updatedFoods,
       totalCalories: totalCalories ?? returned.totalCalories,
       sodiumMg: sodiumMg ?? returned.sodiumMg,
       sugarG: sugarG ?? returned.sugarG,
+      carbsG: editedMacros?.carbsG ?? returned.carbsG,
+      proteinG: editedMacros?.proteinG ?? returned.proteinG,
+      fatG: editedMacros?.fatG ?? returned.fatG,
     );
     _entryOverrides[id] = updated;
     _entryOverrideUpdatedAt[id] = DateTime.now();
@@ -138,7 +163,7 @@ class DioDietRepository implements DietRepository {
         0,
         (int total, DietEntry entry) => total + entry.totalCalories,
       ),
-      macros: day.macros,
+      macros: _toDietMacros(_sumMacroGrams(entries)),
       totalSodiumMg: entries.fold<int>(
         0,
         (int total, DietEntry entry) => total + entry.sodiumMg,
@@ -150,4 +175,64 @@ class DioDietRepository implements DietRepository {
       aiCoachMessage: day.aiCoachMessage,
     );
   }
+}
+
+typedef _MacroGrams = ({double carbsG, double proteinG, double fatG});
+
+_MacroGrams _sumMacroGrams(Iterable<DietEntry> entries) => (
+  carbsG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.carbsG,
+  ),
+  proteinG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.proteinG,
+  ),
+  fatG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.fatG,
+  ),
+);
+
+// Keep this 4/4/9 largest-remainder calculation in sync with
+// the backend calculate_macros implementation.
+DietMacros _toDietMacros(_MacroGrams grams) {
+  final energies = <double>[
+    grams.carbsG * 4,
+    grams.proteinG * 4,
+    grams.fatG * 9,
+  ];
+  final totalEnergy = energies.fold<double>(
+    0,
+    (double sum, double energy) => sum + energy,
+  );
+  final percentages = <int>[0, 0, 0];
+  if (totalEnergy > 0) {
+    final raw = energies
+        .map((double energy) => energy / totalEnergy * 100)
+        .toList();
+    for (var index = 0; index < percentages.length; index++) {
+      percentages[index] = raw[index].floor();
+    }
+    final ranked = <int>[0, 1, 2]
+      ..sort((int a, int b) {
+        final fraction = (raw[b] - percentages[b]).compareTo(
+          raw[a] - percentages[a],
+        );
+        return fraction == 0 ? b.compareTo(a) : fraction;
+      });
+    final remaining =
+        100 - percentages.fold<int>(0, (int sum, int value) => sum + value);
+    for (final index in ranked.take(remaining)) {
+      percentages[index]++;
+    }
+  }
+  return DietMacros(
+    carbsG: grams.carbsG,
+    proteinG: grams.proteinG,
+    fatG: grams.fatG,
+    carbsPct: percentages[0],
+    proteinPct: percentages[1],
+    fatPct: percentages[2],
+  );
 }

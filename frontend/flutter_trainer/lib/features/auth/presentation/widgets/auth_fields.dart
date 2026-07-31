@@ -6,18 +6,18 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 // 로그인 화면을 사용자 앱과 픽셀 단위로 동일하게 맞추기 위해, 사용자 앱
 // AppColors 값을 그대로 사용한다(트레이너 로그인 전용).
 const Color _authText = Color(0xFF262626); // 사용자 앱 foreground
-const Color _authMutedText = Color(0xFF64748B); // 사용자 앱 mutedForeground / hint
+const Color _authMutedText = Color(0xFF64748B); // 연한 남색 로딩 배경Foreground / hint
 const Color _authInputBg = Color(0xFFF3F3F5); // 사용자 앱 inputBackground
-const Color _authLoadingBg = Color(0xFFE8F4F8); // 사용자 앱 muted
+const Color _authLoadingBg = Color(0xFFE6EFF7); // 연한 남색 로딩 배경
 const BorderRadius _authRadius =
     BorderRadius.all(Radius.circular(14)); // 사용자 앱 AppRadius.lg
 
-/// Brand gradient for the auth screens — matched to the user app
-/// (primary #3EAFDF → secondary #277DA1).
+/// Brand gradient for the auth screens — for the trainer auth screens
+/// (primary #2E7DAB → 진한 남색 #17435F).
 const LinearGradient authBrandGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: <Color>[Color(0xFF3EAFDF), Color(0xFF277DA1)],
+  colors: <Color>[Color(0xFF2E7DAB), Color(0xFF17435F)],
 );
 
 /// Filled, icon-prefixed text field used on the trainer login screen.

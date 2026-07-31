@@ -25,12 +25,14 @@ const _mockConfig = AppConfig(
 ProviderContainer _makeContainer({
   Map<String, String> tokens = const <String, String>{},
   Override? repoOverride,
+  Override? tokenStoreOverride,
 }) {
   FlutterSecureStorage.setMockInitialValues(Map<String, String>.of(tokens));
   final container = ProviderContainer(
     overrides: <Override>[
       appConfigProvider.overrideWithValue(_mockConfig),
       ?repoOverride,
+      ?tokenStoreOverride,
     ],
   );
   addTearDown(container.dispose);
@@ -216,6 +218,37 @@ void main() {
       expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
       expect(fake.refreshCalls, 1);
     });
+
+    test('sign-out wins over an in-flight refresh token save', () async {
+      final fake = _FakeAuthRepository()..profileFailuresBeforeSuccess = 1;
+      final store = _BlockingTokenStore(<String, String>{
+        'access_token': 'stale',
+        'refresh_token': 'r',
+      });
+      final container = _makeContainer(
+        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+        tokenStoreOverride: secureTokenStoreProvider.overrideWithValue(store),
+      );
+      final controller = container.read(sessionControllerProvider.notifier);
+
+      await fake.onRefreshEntered.future;
+      await store.onSaveEntered.future;
+
+      // The rotated-token save is paused. Sign-out must queue its clear after
+      // that save so the late write cannot resurrect credentials on disk.
+      final signOut = controller.signOut();
+      store.releaseSave.complete();
+      await store.onSaveFinished.future;
+      await signOut;
+
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.signedOut,
+      );
+      expect(await store.readAccessToken(), isNull);
+      expect(await store.readRefreshToken(), isNull);
+      expect(fake.refreshCalls, 1);
+    });
   });
 
   group('SessionController login', () {
@@ -375,4 +408,39 @@ class _FakeAuthRepository implements TrainerAuthRepository {
     }
     return seedTrainerProfile;
   }
+}
+
+/// Secure-token fake that pauses one save after it has entered storage.
+/// Without serialized save/clear mutations, sign-out can clear first and this
+/// late save will put the rotated credentials back on disk.
+class _BlockingTokenStore extends SecureTokenStore {
+  _BlockingTokenStore(Map<String, String> initialValues)
+    : _values = Map<String, String>.of(initialValues),
+      super(const FlutterSecureStorage());
+
+  final Map<String, String> _values;
+  final Completer<void> onSaveEntered = Completer<void>();
+  final Completer<void> releaseSave = Completer<void>();
+  final Completer<void> onSaveFinished = Completer<void>();
+
+  @override
+  Future<void> saveTokens({
+    required String access,
+    required String refresh,
+  }) async {
+    onSaveEntered.complete();
+    await releaseSave.future;
+    _values['access_token'] = access;
+    _values['refresh_token'] = refresh;
+    onSaveFinished.complete();
+  }
+
+  @override
+  Future<String?> readAccessToken() async => _values['access_token'];
+
+  @override
+  Future<String?> readRefreshToken() async => _values['refresh_token'];
+
+  @override
+  Future<void> clear() async => _values.clear();
 }

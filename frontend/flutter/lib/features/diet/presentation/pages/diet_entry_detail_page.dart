@@ -8,6 +8,7 @@ import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 enum DietEntryDetailResult { updated, deleted }
 
@@ -84,6 +85,11 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
           (_FoodControllers food) => FoodItem(
             name: food.name.text.trim(),
             calories: int.parse(food.calories.text.trim()),
+            sodiumMg: food.original.sodiumMg,
+            sugarG: food.original.sugarG,
+            carbsG: food.original.carbsG,
+            proteinG: food.original.proteinG,
+            fatG: food.original.fatG,
           ),
         )
         .toList();
@@ -162,6 +168,7 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = AppLocalizations.of(context);
     final calories = _currentCalories;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -194,6 +201,10 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
                 'g',
                 decimal: true,
               ),
+              macroLabel:
+                  '${l.homeMacroCarbs} ${_formatGrams(widget.entry.carbsG)}g · '
+                  '${l.homeMacroProtein} ${_formatGrams(widget.entry.proteinG)}g · '
+                  '${l.homeMacroFat} ${_formatGrams(widget.entry.fatG)}g',
             ),
             const SizedBox(height: AppSpacing.md),
             _SectionCard(
@@ -393,6 +404,12 @@ String _nutrientLabel(String raw, String unit, {bool decimal = false}) {
   return '$value$unit';
 }
 
+String _formatGrams(double value) {
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+}
+
 String? _requiredText(String? value) {
   if (value == null || value.trim().isEmpty) return '값을 입력해 주세요.';
   return null;
@@ -423,16 +440,24 @@ String? _mealTimeValidator(String? value) {
 }
 
 class _FoodControllers {
-  _FoodControllers({required String name, required int calories})
-    : name = TextEditingController(text: name),
-      calories = TextEditingController(text: calories.toString());
+  _FoodControllers({
+    required String name,
+    required int calories,
+    required this.original,
+  }) : name = TextEditingController(text: name),
+       calories = TextEditingController(text: calories.toString());
 
   factory _FoodControllers.fromFood(FoodItem food) {
-    return _FoodControllers(name: food.name, calories: food.calories);
+    return _FoodControllers(
+      name: food.name,
+      calories: food.calories,
+      original: food,
+    );
   }
 
   final TextEditingController name;
   final TextEditingController calories;
+  final FoodItem original;
 
   void dispose() {
     name.dispose();
@@ -465,11 +490,13 @@ class _SummarySection extends StatelessWidget {
     required this.caloriesLabel,
     required this.sodiumLabel,
     required this.sugarLabel,
+    required this.macroLabel,
   });
 
   final String caloriesLabel;
   final String sodiumLabel;
   final String sugarLabel;
+  final String macroLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -490,6 +517,14 @@ class _SummarySection extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             '나트륨 $sodiumLabel · 당류 $sugarLabel',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.mutedForeground,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            macroLabel,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.mutedForeground,
               fontWeight: FontWeight.w600,
@@ -544,6 +579,7 @@ class _FoodFields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -592,6 +628,16 @@ class _FoodFields extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          '${l.homeMacroCarbs} ${_formatGrams(controllers.original.carbsG)}g · '
+          '${l.homeMacroProtein} ${_formatGrams(controllers.original.proteinG)}g · '
+          '${l.homeMacroFat} ${_formatGrams(controllers.original.fatG)}g · '
+          '${l.dietSodium} ${controllers.original.sodiumMg}mg',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.mutedForeground,
+          ),
         ),
       ],
     );

@@ -4,25 +4,19 @@ import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
-/// In-memory stateful mock for demo mode (`useMockApi`). Seeds today's
-/// "짬뽕 점심" scenario, then keeps analyze(=add)/update/delete in memory for
+/// In-memory stateful mock for demo mode (`useMockApi`). Seeds a realistic day,
+/// then keeps analyze(=add)/update/delete in memory for
 /// the app session so the diet-tab list and the "오늘의 영양 요약" totals
 /// reflect edits made through the app (issue #294). A single instance is
 /// created by [dietRepositoryProvider] and lives for the session, so the drift
 /// persists until the app is restarted.
 ///
-/// Per-food nutrition of the two seeded meals is the single source of truth
-/// (아침 217/221/6.3 + 점심 750/3,200/8.5 = 967/3,421/14.8); CRUD only applies
-/// deltas on top of the seeded totals. Macro percentages aren't derivable from
-/// per-food data, so they stay fixed.
+/// Per-food nutrition is the single source of truth for the seeded meal and
+/// daily totals. CRUD applies calories, sodium, and sugar deltas on top of the
+/// seed; macro totals are derived from the current entries.
 class MockDietRepository implements DietRepository {
   MockDietRepository();
 
-  static const DietMacros _macros = DietMacros(
-    carbsPct: 50,
-    proteinPct: 30,
-    fatPct: 20,
-  );
   static const String _aiCoachMessage =
       '점심 짬뽕으로 나트륨과 혈당 부담이 크게 높아졌어요! 오늘 저녁은 간을 하지 않은 두부/닭가슴살 샐러드나 채소 위주 식단으로 가볍게 드시고, 물을 자주 드셔주세요.';
 
@@ -34,11 +28,30 @@ class MockDietRepository implements DietRepository {
       totalCalories: 217,
       sodiumMg: 221,
       sugarG: 6.3,
+      carbsG: 10,
+      proteinG: 13.5,
+      fatG: 14.5,
       photoAsset: 'assets/images/breakfast-scrambled-egg-strawberry.jpg',
       aiComment: '단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.',
       foods: <FoodItem>[
-        FoodItem(name: '스크램블 에그', calories: 185, sodiumMg: 220, sugarG: 0.8),
-        FoodItem(name: '딸기', calories: 32, sodiumMg: 1, sugarG: 5.5),
+        FoodItem(
+          name: '스크램블 에그',
+          calories: 185,
+          sodiumMg: 220,
+          sugarG: 0.8,
+          carbsG: 2,
+          proteinG: 13,
+          fatG: 14,
+        ),
+        FoodItem(
+          name: '딸기',
+          calories: 32,
+          sodiumMg: 1,
+          sugarG: 5.5,
+          carbsG: 8,
+          proteinG: 0.5,
+          fatG: 0.5,
+        ),
       ],
     ),
     const DietEntry(
@@ -48,22 +61,65 @@ class MockDietRepository implements DietRepository {
       totalCalories: 750,
       sodiumMg: 3200,
       sugarG: 8.5,
+      carbsG: 100,
+      proteinG: 30,
+      fatG: 24,
       photoAsset: 'assets/images/lunch-jjamppong.jpg',
-      aiComment: '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 해물과 야채 위주로 드시는 것이 좋습니다.',
+      aiComment: '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
       foods: <FoodItem>[
-        FoodItem(name: '짬뽕', calories: 750, sodiumMg: 3200, sugarG: 8.5),
+        FoodItem(
+          name: '짬뽕',
+          calories: 750,
+          sodiumMg: 3200,
+          sugarG: 8.5,
+          carbsG: 100,
+          proteinG: 30,
+          fatG: 24,
+        ),
+      ],
+    ),
+    const DietEntry(
+      id: 'mock-snack',
+      mealType: MealType.snack,
+      timeLabel: '15:30',
+      totalCalories: 100,
+      sodiumMg: 7,
+      sugarG: 3,
+      carbsG: 3,
+      proteinG: 2.5,
+      fatG: 8,
+      photoAsset: 'assets/images/snack-coffee-nuts.jpg',
+      aiComment: '당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.',
+      foods: <FoodItem>[
+        FoodItem(
+          name: '아이스 아메리카노',
+          calories: 10,
+          sodiumMg: 5,
+          carbsG: 2,
+          proteinG: 0.5,
+        ),
+        FoodItem(
+          name: '견과류 한 봉',
+          calories: 90,
+          sodiumMg: 2,
+          sugarG: 3,
+          carbsG: 1,
+          proteinG: 2,
+          fatG: 8,
+        ),
       ],
     ),
   ];
 
-  int _totalCalories = 967;
-  int _totalSodiumMg = 3421;
-  double _totalSugarG = 14.8;
+  int _totalCalories = 1067;
+  int _totalSodiumMg = 3428;
+  double _totalSugarG = 17.8;
   int _seq = 0;
 
   // idempotencyKey → 이미 기록한 분석 결과. 응답 유실 후 재시도(같은 키)에
   // 중복 기록되지 않도록 실제 서버의 멱등 동작을 흉내낸다.
-  final Map<String, DietAnalysisResult> _analyzed = <String, DietAnalysisResult>{};
+  final Map<String, DietAnalysisResult> _analyzed =
+      <String, DietAnalysisResult>{};
 
   @override
   Future<DietAnalysisResult> analyze({
@@ -145,7 +201,7 @@ class MockDietRepository implements DietRepository {
       totalCalories: _totalCalories,
       totalSodiumMg: _totalSodiumMg,
       totalSugarG: _totalSugarG,
-      macros: _macros,
+      macros: _toDietMacros(_sumMacroGrams(_entries)),
       aiCoachMessage: _aiCoachMessage,
     );
   }
@@ -163,9 +219,7 @@ class MockDietRepository implements DietRepository {
     // 이 항목을 가리키던 멱등 캐시 키를 제거한다. 안 그러면 삭제 후 같은
     // idempotencyKey 로 재요청할 때 이미 사라진 항목의 낡은 결과만 반환되고
     // 목록에는 다시 추가되지 않는다(같은 키를 재기록 가능 상태로 되돌린다).
-    _analyzed.removeWhere(
-      (String _, DietAnalysisResult r) => r.entryId == id,
-    );
+    _analyzed.removeWhere((String _, DietAnalysisResult r) => r.entryId == id);
   }
 
   @override
@@ -194,6 +248,18 @@ class MockDietRepository implements DietRepository {
           updatedFoods.fold<int>(0, (int sum, FoodItem f) => sum + f.calories),
       sodiumMg: sodiumMg ?? old?.sodiumMg ?? 0,
       sugarG: sugarG ?? old?.sugarG ?? 0,
+      carbsG: updatedFoods.fold<double>(
+        0,
+        (double sum, FoodItem food) => sum + food.carbsG,
+      ),
+      proteinG: updatedFoods.fold<double>(
+        0,
+        (double sum, FoodItem food) => sum + food.proteinG,
+      ),
+      fatG: updatedFoods.fold<double>(
+        0,
+        (double sum, FoodItem food) => sum + food.fatG,
+      ),
       aiComment: old?.aiComment ?? '',
       photoAsset: old?.photoAsset,
       foods: updatedFoods,
@@ -205,9 +271,7 @@ class MockDietRepository implements DietRepository {
       _totalSodiumMg = _nonNegInt(
         _totalSodiumMg + updated.sodiumMg - old.sodiumMg,
       );
-      _totalSugarG = _nonNegDouble(
-        _totalSugarG + updated.sugarG - old.sugarG,
-      );
+      _totalSugarG = _nonNegDouble(_totalSugarG + updated.sugarG - old.sugarG);
       _entries[idx] = updated;
     }
     return updated;
@@ -229,4 +293,64 @@ class MockDietRepository implements DietRepository {
 
   int _nonNegInt(int v) => v < 0 ? 0 : v;
   double _nonNegDouble(double v) => v < 0 ? 0 : v;
+}
+
+typedef _MacroGrams = ({double carbsG, double proteinG, double fatG});
+
+_MacroGrams _sumMacroGrams(Iterable<DietEntry> entries) => (
+  carbsG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.carbsG,
+  ),
+  proteinG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.proteinG,
+  ),
+  fatG: entries.fold<double>(
+    0,
+    (double sum, DietEntry entry) => sum + entry.fatG,
+  ),
+);
+
+// Keep this 4/4/9 largest-remainder calculation in sync with
+// the backend calculate_macros implementation.
+DietMacros _toDietMacros(_MacroGrams grams) {
+  final energies = <double>[
+    grams.carbsG * 4,
+    grams.proteinG * 4,
+    grams.fatG * 9,
+  ];
+  final totalEnergy = energies.fold<double>(
+    0,
+    (double sum, double energy) => sum + energy,
+  );
+  final percentages = <int>[0, 0, 0];
+  if (totalEnergy > 0) {
+    final raw = energies
+        .map((double energy) => energy / totalEnergy * 100)
+        .toList();
+    for (var index = 0; index < percentages.length; index++) {
+      percentages[index] = raw[index].floor();
+    }
+    final ranked = <int>[0, 1, 2]
+      ..sort((int a, int b) {
+        final fraction = (raw[b] - percentages[b]).compareTo(
+          raw[a] - percentages[a],
+        );
+        return fraction == 0 ? b.compareTo(a) : fraction;
+      });
+    final remaining =
+        100 - percentages.fold<int>(0, (int sum, int value) => sum + value);
+    for (final index in ranked.take(remaining)) {
+      percentages[index]++;
+    }
+  }
+  return DietMacros(
+    carbsG: grams.carbsG,
+    proteinG: grams.proteinG,
+    fatG: grams.fatG,
+    carbsPct: percentages[0],
+    proteinPct: percentages[1],
+    fatPct: percentages[2],
+  );
 }

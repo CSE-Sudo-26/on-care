@@ -65,3 +65,33 @@ def test_demo_fallback_gated_by_env():
     assert _prod(allow_demo_fallback=True).demo_fallback_enabled is False
     # 명시적으로 끄면 개발에서도 비활성
     assert Settings(_env_file=None, allow_demo_fallback=False).demo_fallback_enabled is False
+
+
+# --- DB URL 정규화(psycopg v3) 회귀 (#308, CodeRabbit 리뷰 반영) ---
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # Railway/Heroku 스타일 postgres:// → psycopg v3 로 정규화
+        (
+            "postgres://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        # 드라이버 없는 bare postgresql:// (Neon/Supabase) → psycopg v3
+        (
+            "postgresql://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        # 이미 psycopg v3 명시 → 그대로
+        (
+            "postgresql+psycopg://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        # 비-Postgres URL → 손대지 않음
+        ("sqlite:///./local.db", "sqlite:///./local.db"),
+    ],
+)
+def test_sqlalchemy_database_url_normalizes_to_psycopg_v3(raw: str, expected: str):
+    s = Settings(_env_file=None, database_url=raw)
+    assert s.sqlalchemy_database_url == expected

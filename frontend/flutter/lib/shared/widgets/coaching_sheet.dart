@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/ai_coach/domain/entities/ai_coach_state.dart';
+import 'package:oncare/features/ai_coach/presentation/controllers/ai_coach_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// "AI 건강 도우미" bottom sheet — the daily coaching digest opened from the
@@ -50,13 +54,49 @@ List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
   ),
 ];
 
-class _CoachingSheet extends StatelessWidget {
+String _suggestionTagLabel(AiSuggestionTag tag) => switch (tag) {
+  AiSuggestionTag.diet => '식단',
+  AiSuggestionTag.exercise => '운동',
+  AiSuggestionTag.sleep => '수면',
+  AiSuggestionTag.hydration => '수분',
+};
+
+Color _suggestionTagColor(AiSuggestionTag tag) => switch (tag) {
+  AiSuggestionTag.diet => FigmaColors.orange,
+  AiSuggestionTag.exercise => FigmaColors.greenTag,
+  AiSuggestionTag.sleep => FigmaColors.sugarPurple,
+  AiSuggestionTag.hydration => FigmaColors.primary,
+};
+
+_CoachCard _cardFromSuggestion(AiSuggestion s) => _CoachCard(
+  tag: _suggestionTagLabel(s.tag),
+  tagColor: _suggestionTagColor(s.tag),
+  title: s.title,
+  body: s.body,
+  done: false,
+);
+
+class _CoachingSheet extends ConsumerWidget {
   const _CoachingSheet();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final List<_CoachCard> cards = _cardsOf(l);
+    // 데모/목 모드는 기존 하드코딩 카드를 유지(둘러보기 화면 동일). 실모드에서만
+    // /ai-coach/feedback 의 실제 제안을 렌더하고, 로딩/에러/빈 응답은 기존 카드로 폴백.
+    final List<_CoachCard> cards;
+    if (ref.watch(appConfigProvider).useMockApi) {
+      cards = _cardsOf(l);
+    } else {
+      final List<AiSuggestion>? live = ref
+          .watch(aiCoachStateProvider)
+          .asData
+          ?.value
+          .suggestions;
+      cards = (live == null || live.isEmpty)
+          ? _cardsOf(l)
+          : live.map(_cardFromSuggestion).toList();
+    }
 
     return SafeArea(
       top: false,
@@ -142,7 +182,10 @@ class _CoachingSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 19),
+                    icon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 19,
+                    ),
                     label: Text(
                       l.coachCtaChat,
                       style: const TextStyle(

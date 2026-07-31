@@ -338,6 +338,30 @@ abstract class AppLocalizations {
   /// **'Let\'s ease into the day 👋'**
   String get homeGreetingGeneric;
 
+  /// No description provided for @homeDashboardLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the dashboard.'**
+  String get homeDashboardLoadError;
+
+  /// No description provided for @homeDashboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet today. Add a meal or workout to get started.'**
+  String get homeDashboardEmpty;
+
+  /// No description provided for @homeDietRecordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} diet records today'**
+  String homeDietRecordCount(int count);
+
+  /// No description provided for @homeScheduleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events scheduled for today.'**
+  String get homeScheduleEmpty;
+
   /// No description provided for @homeCoachingPill.
   ///
   /// In en, this message translates to:
@@ -557,25 +581,25 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
-  /// **'Active time'**
+  /// **'Weekly active time'**
   String get homeExerciseActiveTime;
 
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
-  /// **'Calories'**
+  /// **'Weekly calories'**
   String get homeExerciseBurned;
 
   /// No description provided for @homeExerciseCount.
   ///
   /// In en, this message translates to:
-  /// **'Workouts'**
+  /// **'Weekly workouts'**
   String get homeExerciseCount;
 
   /// No description provided for @homeExerciseBurnProgress.
   ///
   /// In en, this message translates to:
-  /// **'Burn goal'**
+  /// **'Weekly burn goal'**
   String get homeExerciseBurnProgress;
 
   /// No description provided for @unitTimes.
@@ -2347,6 +2371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation Request Pending'**
   String get exConsultPendingCta;
+
+  /// No description provided for @exViewConsultationRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'View consultation request'**
+  String get exViewConsultationRequest;
 
   /// No description provided for @exConsultTarget.
   ///

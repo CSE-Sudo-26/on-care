@@ -33,8 +33,15 @@ void main() {
     final res = await dio.get<Map<String, Object?>>('/diet/days/today');
     final day = DietDay.fromJson(res.data!);
     expect(day.entries.length, 3);
-    expect(day.totalCalories, 315 + 530 + 575);
-    expect(day.totalSodiumMg, 380 + 1120 + 600);
+    expect(day.totalCalories, 1067);
+    expect(day.totalSodiumMg, 3428);
+    expect(day.macros.carbsG, closeTo(113.0, 0.001));
+    expect(day.macros.proteinG, closeTo(46.0, 0.001));
+    expect(day.macros.fatG, closeTo(46.5, 0.001));
+    expect(
+      <int>[day.macros.carbsPct, day.macros.proteinPct, day.macros.fatPct],
+      <int>[43, 17, 40],
+    );
   });
 
   test('dio → LocalApi → ExerciseWeek.fromJson stays Mon..Sun', () async {
@@ -54,14 +61,20 @@ void main() {
     // ends at 당류 (calories / sodium / sugar).
     expect(summary.indicators.length, 3);
     final cal = summary.indicators.firstWhere((i) => i.label == '칼로리');
-    expect(cal.current, 1420);
+    expect(cal.current, 1067);
     expect(
       summary.indicators.any((i) => i.label == '혈당'),
       isFalse,
       reason: '혈당 row should no longer be in the home summary',
     );
-    // 3 seeded meals.
+    // 3 seeded meals (아침·점심·간식).
     expect(summary.dietEntries, 3);
+    expect(summary.macros.carbsG, 113.0);
+    expect(summary.macros.proteinG, 46.0);
+    expect(summary.macros.fatG, 46.5);
+    expect(summary.macros.carbsPct, 43);
+    // 시드가 큐레이션한 '통합 조언'(짬뽕 시나리오)이 동적 경고 대신 노출된다.
+    expect(summary.sodiumWarning, contains('짬뽕'));
     // Two baseline events always fall on today. One of the monthly demo
     // events can also land on today (5th/12th/22nd/26th), so keep this
     // assertion stable across the calendar while still checking the baseline.
