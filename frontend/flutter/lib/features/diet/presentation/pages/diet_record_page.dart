@@ -488,6 +488,7 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: '${l.homeMacroCarbs} ${day.macros.carbsPct}%',
                   value: _grams(day.macros.carbsG),
+                  goal: '275',
                   unit: l.dietUnitG,
                   color: FigmaColors.primary,
                 ),
@@ -497,8 +498,9 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: '${l.homeMacroProtein} ${day.macros.proteinPct}%',
                   value: _grams(day.macros.proteinG),
+                  goal: '100',
                   unit: l.dietUnitG,
-                  color: FigmaColors.green,
+                  color: FigmaColors.primary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -506,8 +508,9 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: '${l.homeMacroFat} ${day.macros.fatPct}%',
                   value: _grams(day.macros.fatG),
+                  goal: '55',
                   unit: l.dietUnitG,
-                  color: FigmaColors.orange,
+                  color: FigmaColors.primary,
                 ),
               ),
             ],
@@ -572,23 +575,16 @@ class _SummaryTile extends StatelessWidget {
                   ),
                 ),
                 if (goal != null)
+                  TextSpan(text: ' /$goal$unit', style: kGoalSuffixStyle)
+                else
                   TextSpan(
-                    text: ' / $goal',
+                    text: ' $unit',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.w600,
                       color: FigmaColors.textMuted,
                     ),
                   ),
-                TextSpan(
-                  text: ' $unit',
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    // 단위(kcal/mg/g)도 목표치와 같은 회색으로 통일.
-                    color: FigmaColors.textMuted,
-                  ),
-                ),
               ],
             ),
             maxLines: 1,

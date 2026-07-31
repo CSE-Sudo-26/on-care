@@ -65,6 +65,15 @@ const List<BoxShadow> kCardShadow = <BoxShadow>[
   ),
 ];
 
+/// Shared "/(목표|제한치)(단위)" suffix style, e.g. the "/275g" after a macro
+/// value. Standardized to the home 식단 영양 카드 탄단지 look — small, faint —
+/// so every "(현재)/(목표)(단위)" reads consistently across the app.
+const TextStyle kGoalSuffixStyle = TextStyle(
+  fontSize: 9,
+  fontWeight: FontWeight.w600,
+  color: FigmaColors.textFaint,
+);
+
 /// The On-Care mascot ("Oni") — a teal gradient disc with two eyes and a
 /// smile. Used in the coaching banner, coaching sheet, chat and the FAB.
 class OniAvatar extends StatelessWidget {

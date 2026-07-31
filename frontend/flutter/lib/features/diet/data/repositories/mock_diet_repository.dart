@@ -61,9 +61,11 @@ class MockDietRepository implements DietRepository {
       totalCalories: 750,
       sodiumMg: 3200,
       sugarG: 8.5,
-      carbsG: 100,
-      proteinG: 30,
-      fatG: 24,
+      // 오늘 3끼 합계가 탄120·단45·지45g(→ 45/17/38%)이 되도록 맞춘 값.
+      // 홈 대시보드 시드(seed_data.dart)의 짬뽕과 동일하게 유지한다.
+      carbsG: 107,
+      proteinG: 29,
+      fatG: 22.5,
       photoAsset: 'assets/images/lunch-jjamppong.jpg',
       aiComment: '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
       foods: <FoodItem>[
@@ -72,9 +74,9 @@ class MockDietRepository implements DietRepository {
           calories: 750,
           sodiumMg: 3200,
           sugarG: 8.5,
-          carbsG: 100,
-          proteinG: 30,
-          fatG: 24,
+          carbsG: 107,
+          proteinG: 29,
+          fatG: 22.5,
         ),
       ],
     ),

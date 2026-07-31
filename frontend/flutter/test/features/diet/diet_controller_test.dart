@@ -29,9 +29,9 @@ void main() {
     );
     expect(day.totalCalories, 1067);
     expect(day.totalSodiumMg, 3428);
-    expect(day.macros.carbsG, closeTo(113.0, 0.001));
-    expect(day.macros.proteinG, closeTo(46.0, 0.001));
-    expect(day.macros.fatG, closeTo(46.5, 0.001));
+    expect(day.macros.carbsG, closeTo(120.0, 0.001));
+    expect(day.macros.proteinG, closeTo(45.0, 0.001));
+    expect(day.macros.fatG, closeTo(45.0, 0.001));
     expect(day.aiCoachMessage, isNotEmpty);
   });
 }
