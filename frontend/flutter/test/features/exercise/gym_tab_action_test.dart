@@ -116,10 +116,11 @@ void main() {
     expect(find.text(l.exViewConsultationRequest), findsNothing);
 
     expect(find.text(l.exAiSlotTitle), findsOneWidget);
+    const double expectedBottomInset = 17; // 16px padding + 1px border.
     expect(
       tester.getBottomRight(myGymCard()).dy -
           tester.getBottomRight(reservationPanel()).dy,
-      17,
+      expectedBottomInset,
     );
   });
 
@@ -173,12 +174,15 @@ void main() {
   ) async {
     await pumpGymTab(tester);
     await scrollToCard(tester);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
 
     await tester.tap(
       find.descendant(of: myGymCard(), matching: find.text(_gym.name)),
     );
     await tester.pumpAndSettle();
-    expect(find.text('헬스장 상세'), findsOneWidget);
+    expect(find.text(l.exGymDetailTitle), findsOneWidget);
 
     router.go(AppRoutes.exerciseGym);
     await tester.pumpAndSettle();
@@ -187,6 +191,6 @@ void main() {
       find.descendant(of: myGymCard(), matching: find.text(_gym.trainerName!)),
     );
     await tester.pumpAndSettle();
-    expect(find.text('트레이너 상세'), findsOneWidget);
+    expect(find.text(l.exTrainerDetailTitle), findsOneWidget);
   });
 }
