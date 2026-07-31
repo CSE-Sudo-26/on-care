@@ -72,7 +72,16 @@ class DioChatRepository implements ChatRepository {
       final data = res.data ?? const <String, Object?>{};
       return <String, int>{
         for (final entry in data.entries)
-          if (entry.value is num) entry.key: (entry.value! as num).toInt(),
+          // Fail loud on a non-numeric count instead of silently dropping
+          // it, matching every other response parser in this class —
+          // a malformed entry here previously vanished from the roster
+          // badges with no signal (review).
+          entry.key: switch (entry.value) {
+            final num n => n.toInt(),
+            _ => throw FormatException(
+              'Expected a numeric unread count for "${entry.key}".',
+            ),
+          },
       };
     } on DioException catch (e) {
       throw AppError.fromDio(e);

@@ -38,6 +38,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
+  /// Mirrors the backend's `ChatSendRequest.text` cap (`max_length=2000`)
+  /// so an over-long message is rejected here, with a clear message,
+  /// instead of round-tripping to the server for a 422 (review).
+  static const int _maxMessageLength = 2000;
+
   /// A send is in flight — blocks re-entry (button mash / IME send)
   /// from inserting the same message twice.
   bool _sending = false;
@@ -58,6 +63,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final text = _input.text;
     if (text.trim().isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+    if (text.trim().length > _maxMessageLength) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('메시지가 너무 길어요 (최대 2000자)')),
+      );
+      return;
+    }
     setState(() => _sending = true);
     try {
       await ref

@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/ai_routine/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
@@ -154,11 +156,25 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
             .read(chatRepositoryProvider)
             .sendTrainerMessage(clientId: client.id, text: noteText);
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
+      // A network/timeout failure is AMBIGUOUS: the backend may already
+      // have committed the assign before the client gave up waiting for a
+      // response (POST /routines is not idempotent — every attempt inserts
+      // a new row). Blindly telling the trainer to "다시 시도" risks a
+      // duplicate routine landing on the member's app, so this case gets a
+      // different message asking them to verify first (review; a real
+      // fix needs a backend idempotency/dedup key — tracked separately).
+      final ambiguousOutcome = e is NetworkError;
       messenger.showSnackBar(
-        const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(
+          content: Text(
+            ambiguousOutcome
+                ? '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'
+                : '전송에 실패했어요. 다시 시도해 주세요',
+          ),
+        ),
       );
       return;
     }
@@ -208,25 +224,16 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   }
 
   /// A single summary [AssignedRoutine] for the real routine-assign API
-  /// (`RoutineOut` is one routine, not a per-exercise program): [type] is
-  /// the dominant AI-item type and the reason lists the exercise names.
+  /// (`RoutineOut` is one routine, not a per-exercise program): [type] and
+  /// [source] come from [summaryTypeAndSource] (extracted so the
+  /// all-custom-exercises path is directly unit-testable — review) and the
+  /// reason lists the exercise names.
   AssignedRoutine _summaryRoutine(List<AiRoutineItem> items, int totalMinutes) {
     final active = items.where((i) => !_removed.contains(i.id)).toList();
-    final counts = <String, int>{};
-    for (final i in active) {
-      counts[i.type] = (counts[i.type] ?? 0) + 1;
-    }
-    for (final c in _custom) {
-      counts[c.type] = (counts[c.type] ?? 0) + 1;
-    }
-    var type = '근력';
-    var best = 0;
-    counts.forEach((t, c) {
-      if (c > best) {
-        best = c;
-        type = t;
-      }
-    });
+    final result = summaryTypeAndSource(
+      aiItemTypes: <String>[for (final i in active) i.type],
+      customItemTypes: <String>[for (final c in _custom) c.type],
+    );
     final names = <String>[
       for (final i in active) _nameEdits[i.id] ?? i.name,
       for (final c in _custom) c.name,
@@ -235,9 +242,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       id: '',
       name: 'AI 맞춤 루틴',
       minutes: totalMinutes,
-      type: type,
+      type: result.type,
       reason: names.join(', '),
-      source: 'ai',
+      source: result.source,
     );
   }
 

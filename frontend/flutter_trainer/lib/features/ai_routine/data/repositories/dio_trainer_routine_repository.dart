@@ -13,6 +13,16 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
 
   final Dio _dio;
 
+  /// Assigns [routine] to [memberId].
+  ///
+  /// NOT idempotent: `POST /trainer/clients/{id}/routines` inserts a fresh
+  /// `rt-{uuid}` row on every call, with no client-request-id/dedup key
+  /// today. If this throws after a network timeout, the backend may have
+  /// already committed the assign before the client gave up waiting —
+  /// blindly retrying can leave the member with two copies of the same
+  /// routine. Callers that retry on failure should special-case a network/
+  /// timeout error (ambiguous outcome) rather than assume a clean retry is
+  /// always safe (review; a full fix needs a backend idempotency key).
   @override
   Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
     final encodedId = Uri.encodeComponent(memberId);

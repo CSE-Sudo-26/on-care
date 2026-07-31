@@ -63,4 +63,44 @@ void main() {
       expect(assignRoutineToJson(_routine(source: 'anything'))['source'], 'ai');
     });
   });
+
+  group('summaryTypeAndSource', () {
+    test(
+      'an all-custom routine (every AI suggestion removed) is type + '
+      "source from the custom exercises, not '근력'/'ai' by default "
+      '(review: this used to silently drop custom types, defaulting to '
+      "근력/ai even when every exercise was a trainer-added 스트레칭)",
+      () {
+        final result = summaryTypeAndSource(
+          aiItemTypes: const <String>[], // every AI suggestion was removed
+          customItemTypes: const <String>['스트레칭', '스트레칭', '스트레칭'],
+        );
+        expect(result.type, '스트레칭');
+        expect(result.source, 'trainer');
+      },
+    );
+
+    test('mixed AI + custom: source is ai when any AI item remains', () {
+      final result = summaryTypeAndSource(
+        aiItemTypes: const <String>['유산소'],
+        customItemTypes: const <String>['스트레칭', '스트레칭'],
+      );
+      // 2 스트레칭 outvotes 1 유산소, but an AI item is still present.
+      expect(result.type, '스트레칭');
+      expect(result.source, 'ai');
+    });
+
+    test(
+      'defaults type to 근력 when there are no exercises at all (source '
+      'still trainer — no AI item is present to attribute it to)',
+      () {
+        final result = summaryTypeAndSource(
+          aiItemTypes: const <String>[],
+          customItemTypes: const <String>[],
+        );
+        expect(result.type, '근력');
+        expect(result.source, 'trainer');
+      },
+    );
+  });
 }
