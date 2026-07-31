@@ -974,7 +974,13 @@ class _ExerciseCard extends StatelessWidget {
     final double pct = (burned / _burnGoal).clamp(0.0, 1.0);
     // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
     final double rawPct = burned / _burnGoal;
-    const week = _demoExerciseWeekCalories;
+    // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
+    // 두고, '오늘' 강조도 마지막(일) 고정이 아니라 실제 오늘 요일에 붙인다.
+    final int todayIdx = DateTime.now().weekday - 1;
+    final List<double> week = <double>[
+      for (int i = 0; i < _demoExerciseWeekCalories.length; i++)
+        i <= todayIdx ? _demoExerciseWeekCalories[i] : 0,
+    ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
@@ -1134,6 +1140,7 @@ class _ExerciseCard extends StatelessWidget {
                   data: week,
                   lo: lo,
                   hi: hi,
+                  todayIndex: todayIdx,
                   color: FigmaColors.primary,
                 ),
               ),
@@ -1150,7 +1157,7 @@ class _ExerciseCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 8,
                           fontWeight: FontWeight.w600,
-                          color: i == 6
+                          color: i == todayIdx
                               ? FigmaColors.primary
                               : FigmaColors.textFaint,
                         ),
@@ -1762,12 +1769,16 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.data,
     required this.lo,
     required this.hi,
+    required this.todayIndex,
     required this.color,
   });
 
   final List<double> data;
   final double lo;
   final double hi;
+
+  /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
+  final int todayIndex;
   final Color color;
 
   @override
@@ -1793,7 +1804,7 @@ class _ExerciseBarPainter extends CustomPainter {
       final double bh = ((v - lo) / span) * (h - labelGap);
       final double cx = slot * i + slot / 2;
       final double top = h - bh;
-      final bool today = i == n - 1;
+      final bool today = i == todayIndex;
       final Color c = today ? color : color.withValues(alpha: 0.30);
       canvas.drawRRect(
         RRect.fromRectAndCorners(
@@ -1821,7 +1832,11 @@ class _ExerciseBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ExerciseBarPainter old) =>
-      old.data != data || old.lo != lo || old.hi != hi || old.color != color;
+      old.data != data ||
+      old.lo != lo ||
+      old.hi != hi ||
+      old.todayIndex != todayIndex ||
+      old.color != color;
 }
 
 // ───────────────────────────────────────────────────── recommended meals ──
