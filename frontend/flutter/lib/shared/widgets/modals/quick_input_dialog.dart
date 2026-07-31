@@ -15,15 +15,20 @@ enum QuickInputKind { weight, bloodPressure, bloodSugar }
 /// 입력" modal. Submitting now persists through [VitalsRepository] so
 /// the value survives the drift round-trip; the `latestVitalProvider`
 /// family is invalidated on success so MyHealth/Dashboard can refetch.
-Future<void> showQuickInputDialog(
+///
+/// Resolves to `true` when a value was saved (the caller can then refresh
+/// its own aggregates, e.g. `myHealthStateProvider`), and `false` when the
+/// dialog was cancelled/dismissed.
+Future<bool> showQuickInputDialog(
   BuildContext context, {
   required QuickInputKind kind,
-}) {
-  return showDialog<void>(
+}) async {
+  final bool? saved = await showDialog<bool>(
     context: context,
     barrierColor: Colors.black54,
     builder: (BuildContext ctx) => _QuickInputDialog(kind: kind),
   );
+  return saved ?? false;
 }
 
 class _QuickInputDialog extends ConsumerStatefulWidget {
@@ -87,7 +92,7 @@ class _QuickInputDialogState extends ConsumerState<_QuickInputDialog> {
       // Refresh listeners (MyHealth IndicatorTile / Dashboard tiles).
       ref.invalidate(latestVitalProvider(submission.kind));
       if (!mounted) return;
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     } catch (e) {
       setState(() {
         _saving = false;
