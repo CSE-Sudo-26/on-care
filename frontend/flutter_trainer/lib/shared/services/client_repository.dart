@@ -310,19 +310,28 @@ final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
 ///    chat activity (Drift's own reactive SQL query);
 ///  * real API — sodium over-target first, ties broken by server order.
 ///    There is no chat-recency signal yet on this endpoint, so this is
-///    derived from [clientsProvider]'s already-fetched data (via the pure
+///    derived from [clientsProvider]'s `AsyncValue` (via the pure
 ///    [prioritizeClients]) rather than calling `watchClientsPrioritized()`
 ///    independently — the two providers would otherwise each trigger their
 ///    own `GET /trainer/clients` when a screen watches both at once (e.g.
 ///    the list + detail split view) (review).
+///
+/// Watching the `AsyncValue` itself (not `.future`, which only ever
+/// resolves once) means this rebuilds on every state `clientsProvider`
+/// passes through — not just its first value — so it can't go stale if
+/// `clientsProvider` is ever backed by something that re-emits without a
+/// full provider invalidation (e.g. a future polling/live source) (review).
 final prioritizedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   if (ref.watch(appConfigProvider).useMockApi) {
     return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
   }
-  // `.future` (not the deprecated `.stream`) — a single-emission stream is
-  // enough since the real source is itself one-shot; invalidating
-  // clientsProvider still re-triggers this via the ref.watch dependency.
-  return ref.watch(clientsProvider.future).asStream().map(prioritizeClients);
+  return ref
+      .watch(clientsProvider)
+      .when(
+        data: (clients) => Stream.value(prioritizeClients(clients)),
+        loading: () => const Stream<List<TrainerClient>>.empty(),
+        error: Stream<List<TrainerClient>>.error,
+      );
 });
 
 /// Streams today's booked-session count for the header badge.
