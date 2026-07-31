@@ -18,7 +18,7 @@ class AppColors {
   static const Color primaryForeground = Color(0xFFFFFFFF);
 
   /// Deeper navy — gradient second stop for primary CTAs.
-  static const Color secondary = Color(0xFF1E5F86);
+  static const Color secondary = Color(0xFF17435F);
   static const Color secondaryForeground = Color(0xFFFFFFFF);
 
   /// Trainer identity orange — kept only as a small accent (the
@@ -31,7 +31,7 @@ class AppColors {
   static const Color accentForeground = Color(0xFFFFFFFF);
 
   /// Deeper navy — second stop of the client-avatar gradient.
-  static const Color accentDark = Color(0xFF1E5F86);
+  static const Color accentDark = Color(0xFF17435F);
 
   /// AI-summary card gradient (mock: `linear-gradient(135deg,#C8E8F6,
   /// #A8D8F0)` on the 고객 탭 "AI 요약" card).
@@ -90,6 +90,6 @@ class AppColors {
   /// Soft neutral grey fill for input backgrounds / list rows (`#F2F4F7`).
   static const Color inputBackground = Color(0xFFF2F4F7);
 
-  /// Navy-tinted fill used behind client sub-sections (`#F2F9FB`).
+  /// Navy-tinted fill used behind client sub-sections.
   static const Color accentSurface = Color(0xFFEAF2F9);
 }

@@ -13,11 +13,11 @@ const BorderRadius _authRadius =
     BorderRadius.all(Radius.circular(14)); // 사용자 앱 AppRadius.lg
 
 /// Brand gradient for the auth screens — for the trainer auth screens
-/// (primary #2E7DAB → 진한 남색 #1E5F86).
+/// (primary #2E7DAB → 진한 남색 #17435F).
 const LinearGradient authBrandGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: <Color>[Color(0xFF2E7DAB), Color(0xFF1E5F86)],
+  colors: <Color>[Color(0xFF2E7DAB), Color(0xFF17435F)],
 );
 
 /// Filled, icon-prefixed text field used on the trainer login screen.
