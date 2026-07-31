@@ -6,7 +6,7 @@ import 'package:oncare/core/storage/app_database.dart';
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v4']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v5']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -58,8 +58,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     )..where((t) => t.id.like('seed-%'))).go();
   });
 
-  // Drop legacy flags (v2 boolean, v3 date) if still around, so a fresh
-  // `readValue` next boot only sees the v4 key. Bumping v3→v4 forces every
+  // Drop legacy flags (v2 boolean, v3/v4 date) if still around, so a fresh
+  // `readValue` next boot only sees the v5 key. Bumping v4→v5 forces every
   // existing install to re-seed once (식단 3끼·짬뽕·통합 조언 반영).
   await db.deleteValue('seeded_v2');
   await db.deleteValue('seeded_v3');

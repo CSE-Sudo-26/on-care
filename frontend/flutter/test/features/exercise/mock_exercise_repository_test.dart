@@ -25,6 +25,18 @@ void main() {
       expect(w.dailyCalories, <double>[0, 330, 387, 438, 520, 0, 0]);
     });
 
+    test('월요일이면 직전 3일이 이전 주로 빠져 오늘 1건만 남는다', () async {
+      // 월요일(2024-01-01, weekday=월 → index 0)을 주입하면 offset 1..3의
+      // wi(= -1..-3)가 모두 음수라 _seed 가 건너뛰고, 오늘 PT 1건만 시드된다.
+      final ExerciseWeek w =
+          await MockExerciseRepository(today: DateTime(2024)) // 2024-01-01(월)
+              .fetchThisWeek();
+      expect(w.sessions.length, 1);
+      expect(w.workoutCount, 1);
+      expect(w.streakDays, 1);
+      expect(w.dailyMinutes, <double>[50, 0, 0, 0, 0, 0, 0]);
+    });
+
     test('daily == cardio + strength + stretching for every day', () async {
       final ExerciseWeek w = await repo().fetchThisWeek();
       for (int i = 0; i < w.dailyMinutes.length; i++) {

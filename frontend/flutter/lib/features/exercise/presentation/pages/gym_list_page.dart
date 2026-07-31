@@ -447,6 +447,7 @@ class _GymMiniMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -471,9 +472,9 @@ class _GymMiniMap extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
-                  '내 주변 헬스장',
-                  style: TextStyle(
+                child: Text(
+                  l.exNearbyGymsMapLabel,
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.textMuted,

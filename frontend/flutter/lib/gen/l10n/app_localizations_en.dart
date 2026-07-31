@@ -679,7 +679,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exTrainerRecommendationReason =>
-      'A good fit for improving my delivery-and-eating-out habits';
+      'A great fit for reaching my health goals';
+
+  @override
+  String get exNearbyGymsMapLabel => 'Gyms near me';
 
   @override
   String get exWeekSummary => 'This Week\'s Summary';

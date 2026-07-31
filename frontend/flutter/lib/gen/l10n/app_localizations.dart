@@ -1349,8 +1349,14 @@ abstract class AppLocalizations {
   /// No description provided for @exTrainerRecommendationReason.
   ///
   /// In en, this message translates to:
-  /// **'A good fit for improving my delivery-and-eating-out habits'**
+  /// **'A great fit for reaching my health goals'**
   String get exTrainerRecommendationReason;
+
+  /// No description provided for @exNearbyGymsMapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gyms near me'**
+  String get exNearbyGymsMapLabel;
 
   /// No description provided for @exWeekSummary.
   ///
