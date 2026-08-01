@@ -3,6 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 
 void main() {
+  test('longestActiveStreak counts the longest run, not the active days', () {
+    // 월·수·금 — 활성 일수는 3이지만 '연속'은 1.
+    expect(longestActiveStreak(<double>[30, 0, 45, 0, 60, 0, 0]), 1);
+    // 수·목·금 연속 3일 (앞뒤 휴식일 포함).
+    expect(longestActiveStreak(<double>[0, 0, 40, 40, 50, 0, 0]), 3);
+    // 가장 긴 구간을 고른다: 1일 구간과 3일 구간이 섞이면 3.
+    expect(longestActiveStreak(<double>[30, 0, 20, 20, 20, 0, 0]), 3);
+    expect(longestActiveStreak(<double>[0, 0, 0, 0, 0, 0, 0]), 0);
+    expect(longestActiveStreak(<double>[]), 0);
+  });
+
   test('ExerciseWeek exposes workoutCount and stays const-constructible', () {
     const week = ExerciseWeek(
       sessions: <ExerciseSession>[],

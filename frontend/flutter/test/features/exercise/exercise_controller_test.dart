@@ -104,6 +104,33 @@ void main() {
       expect(out.workoutCount, 2);
       expect(out.totalMinutes, 80);
       expect(out.totalCalories, 550);
+      // 월과 금은 떨어져 있으므로 활성 일수는 2여도 '연속'은 1을 유지한다.
+      // 활성 일수 합계로 세면 2가 나와 '연속' 카드가 거짓말을 하게 된다.
+      expect(out.streakDays, 1);
+    });
+
+    test('streak grows with the bonus when it extends a run', () async {
+      // 오늘(금, index 4) 직전 목요일까지 이어진 주 — 오늘을 채우면 연속 3일.
+      const ExerciseWeek week = ExerciseWeek(
+        sessions: <ExerciseSession>[],
+        dailyMinutes: <double>[0, 0, 40, 40, 0, 0, 0],
+        dailyCalories: <double>[0, 0, 250, 250, 0, 0, 0],
+        cardioMinutes: <double>[0, 0, 40, 40, 0, 0, 0],
+        strengthMinutes: <double>[0, 0, 0, 0, 0, 0, 0],
+        stretchingMinutes: <double>[0, 0, 0, 0, 0, 0, 0],
+        dayLabels: <String>['월', '화', '수', '목', '금', '토', '일'],
+        totalMinutes: 80,
+        totalCalories: 500,
+        streakDays: 2,
+        aiCoachMessage: 'hi',
+      );
+      final ExerciseWeek out = applyTodayBonus(
+        week,
+        const ExerciseTodayBonus(cardioMinutes: 30, calories: 250),
+        now: friday,
+      );
+      expect(out.streakDays, 3);
+      expect(out.workoutCount, 3);
     });
 
     test('no checked routine leaves the week untouched', () async {

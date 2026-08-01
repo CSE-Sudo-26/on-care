@@ -78,8 +78,9 @@ void main() {
 
       expect(body['total_minutes'], 135);
       expect(body['total_calories'], 1050);
-      // Three non-zero days.
-      expect(body['streak_days'], 3);
+      // "N일 연속" = 가장 긴 연속 구간. 월·수·금은 서로 떨어져 있으므로 활성
+      // 일수는 3이지만 연속은 1이다.
+      expect(body['streak_days'], 1);
       // Day labels are always Mon..Sun in Korean.
       expect(body['day_labels'], <String>['월', '화', '수', '목', '금', '토', '일']);
     },

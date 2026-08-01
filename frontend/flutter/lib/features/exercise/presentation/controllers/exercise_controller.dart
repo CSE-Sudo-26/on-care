@@ -111,9 +111,11 @@ ExerciseWeek applyTodayBonus(
     ];
   }
 
+  final List<double> dailyMinutes = bump(week.dailyMinutes, bonus.minutes);
+
   return ExerciseWeek(
     sessions: week.sessions,
-    dailyMinutes: bump(week.dailyMinutes, bonus.minutes),
+    dailyMinutes: dailyMinutes,
     dailyCalories: bump(week.dailyCalories, bonus.calories.toDouble()),
     cardioMinutes: bump(week.cardioMinutes, bonus.cardioMinutes),
     strengthMinutes: week.strengthMinutes,
@@ -121,7 +123,9 @@ ExerciseWeek applyTodayBonus(
     dayLabels: week.dayLabels,
     totalMinutes: week.totalMinutes + bonus.minutes.round(),
     totalCalories: week.totalCalories + bonus.calories,
-    streakDays: week.streakDays,
+    // 휴식일이던 오늘이 보너스로 활성일이 되면 연속 일수도 늘어야 한다. 저장된
+    // 값을 그대로 넘기면 '운동 일수'(dailyMinutes 기반)와 '연속' 카드가 어긋난다.
+    streakDays: longestActiveStreak(dailyMinutes),
     aiCoachMessage: week.aiCoachMessage,
   );
 }

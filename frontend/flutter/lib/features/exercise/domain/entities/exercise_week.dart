@@ -1,3 +1,24 @@
+/// "N일 연속" — 운동한 요일 중 **가장 긴 연속 구간**의 길이. 활성 일수의 단순
+/// 합계가 아니다(월·수·금 운동은 3일이 아니라 1일 연속).
+///
+/// 요일별 분 하나만 보고 계산하므로 저장된 세션 목록이 없어도, 그리고 세션에
+/// 없는 분(오늘 체크한 AI 추천 운동)이 더해진 뒤에도 같은 규칙으로 다시 셀 수
+/// 있다. 세 생산자(mock 저장소·LocalApiInterceptor·FastAPI)가 이 정의를 공유해
+/// 운동 탭의 '연속' 카드가 어느 경로에서든 같은 뜻이 된다.
+int longestActiveStreak(List<double> dailyMinutes) {
+  int best = 0;
+  int run = 0;
+  for (final double m in dailyMinutes) {
+    if (m > 0) {
+      run += 1;
+      if (run > best) best = run;
+    } else {
+      run = 0;
+    }
+  }
+  return best;
+}
+
 enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 
 ExerciseType _exerciseTypeFromString(String s) => ExerciseType.values

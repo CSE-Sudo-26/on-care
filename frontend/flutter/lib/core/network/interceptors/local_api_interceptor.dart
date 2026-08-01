@@ -638,9 +638,7 @@ class LocalApiInterceptor extends Interceptor {
       for (final l in _weekdayLabels) perDayStretching[l] ?? 0,
     ];
 
-    // "Streak" = consecutive non-zero days ending at today's weekday
-    // (or simply the count of non-zero days for the simple mock).
-    final streak = dailyMinutes.where((m) => m > 0).length;
+    final streak = _longestActiveStreak(dailyMinutes);
 
     return _ok(options, <String, Object?>{
       'sessions': sessionsJson,
@@ -657,6 +655,25 @@ class LocalApiInterceptor extends Interceptor {
           ? '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요.'
           : '이번 주는 운동량이 조금 부족해요. 가벼운 산책부터 다시 시작해 봐요.',
     });
+  }
+
+  /// "N일 연속" — 운동한 요일 중 가장 긴 연속 구간의 길이. 활성 일수의 단순
+  /// 합계가 아니다(월·수·금 운동은 3일이 아니라 1일 연속). FastAPI
+  /// `exercise_service._longest_streak`, 그리고 클라이언트의
+  /// `longestActiveStreak` 와 같은 정의라야 '연속' 카드가 어느 경로에서든
+  /// 같은 값을 보인다.
+  int _longestActiveStreak(List<num> dailyMinutes) {
+    int best = 0;
+    int run = 0;
+    for (final num m in dailyMinutes) {
+      if (m > 0) {
+        run += 1;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+    }
+    return best;
   }
 
   /// "오늘 / 어제 / N요일 / MM월 DD일" for a given weekday label.

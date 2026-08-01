@@ -6,7 +6,9 @@
 - 타입 버킷: cardio|walking → 유산소, strength → 근력, yoga|stretching → 스트레칭
 - date_label: 오늘/어제/MM월 DD일/N요일 (요일 라벨 → 날짜 환산)
 - time_label, items: 타입별 기본값 합성 (drift 스키마에 없는 표시용 데이터)
-- streak: 0분 초과인 날의 수 (프론트의 단순 버전과 동일)
+- streak: 운동한 요일 중 가장 긴 연속 구간의 길이 ("N일 연속"). 활성 일수의 단순
+  합계가 아니다 — 월·수·금 운동은 3일이 아니라 1일 연속. 프론트의
+  `longestActiveStreak` 와 같은 정의.
 - sessions 정렬: 최근 요일 먼저
 """
 from __future__ import annotations
@@ -65,6 +67,19 @@ def _bucket(t: str) -> str:
     return "cardio"
 
 
+def _longest_streak(daily: list[int]) -> int:
+    """'N일 연속' — 운동한 요일 중 가장 긴 연속 구간의 길이.
+
+    활성 일수의 단순 합계가 아니다: 월·수·금 운동은 3일이 아니라 1일 연속.
+    프론트 `longestActiveStreak` / LocalApiInterceptor 와 같은 정의.
+    """
+    best = run = 0
+    for m in daily:
+        run = run + 1 if m > 0 else 0
+        best = max(best, run)
+    return best
+
+
 def build_current_week(rows: list) -> dict:
     """ExerciseSession row 리스트 → 프론트 계약 형태의 dict."""
     per_day = {l: 0 for l in WEEKDAY_LABELS}
@@ -97,7 +112,7 @@ def build_current_week(rows: list) -> dict:
     sessions.sort(key=lambda s: WEEKDAY_LABELS.index(s["day_label"]), reverse=True)
 
     daily = [per_day[l] for l in WEEKDAY_LABELS]
-    streak = len([m for m in daily if m > 0])
+    streak = _longest_streak(daily)
 
     msg = (
         "주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요."

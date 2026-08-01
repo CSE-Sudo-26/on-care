@@ -197,7 +197,7 @@ class MockExerciseRepository implements ExerciseRepository {
       dayLabels: List<String>.of(_dayLabels),
       totalMinutes: totalMinutes,
       totalCalories: _totalCalories,
-      streakDays: _streakDays(daily),
+      streakDays: longestActiveStreak(daily),
       aiCoachMessage: _aiCoachMessage,
       sessions: List<ExerciseSession>.of(_sessions),
     );
@@ -215,21 +215,6 @@ class MockExerciseRepository implements ExerciseRepository {
     ExerciseType.stretching || ExerciseType.yoga => stretching,
     ExerciseType.other => cardio,
   };
-
-  /// 운동한 요일 중 가장 긴 연속 구간 길이 → "N일 연속".
-  int _streakDays(List<double> daily) {
-    int best = 0;
-    int run = 0;
-    for (final double m in daily) {
-      if (m > 0) {
-        run += 1;
-        if (run > best) best = run;
-      } else {
-        run = 0;
-      }
-    }
-    return best;
-  }
 
   int _nonNeg(int v) => v < 0 ? 0 : v;
 }

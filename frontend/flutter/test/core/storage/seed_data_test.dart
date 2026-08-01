@@ -149,7 +149,7 @@ void main() {
 
       await seedIfEmpty(db);
 
-      // Legacy flag cleared, v3 flag set to today.
+      // Legacy flag cleared, v5 flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
       expect(await db.readValue('seeded_v5'), _todayString());
 
@@ -159,7 +159,7 @@ void main() {
       expect(
         diet.any((r) => r.id == 'seed-diet-stale'),
         isFalse,
-        reason: 'stale v2 seed rows must be wiped on v3 migration',
+        reason: 'stale v2 seed rows must be wiped on v5 migration',
       );
       expect(diet.every((r) => r.date == _todayString()), isTrue);
     });
