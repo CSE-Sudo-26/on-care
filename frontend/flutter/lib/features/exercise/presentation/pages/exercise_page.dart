@@ -158,11 +158,6 @@ class _RecordTab extends ConsumerStatefulWidget {
 }
 
 class _RecordTabState extends ConsumerState<_RecordTab> {
-  // 오늘 기본 운동(분): 유산소 / 근력 / 스트레칭.
-  static const double _baseCardio = 15;
-  static const double _baseStrength = 40;
-  static const double _baseStretch = 10;
-
   // 주간 달력에서 선택한 날짜(기본=오늘)와 주 단위 이동.
   late DateTime _selected = _today;
   int _weekShift = 0;
@@ -182,25 +177,16 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<ExerciseWeek> weekAsync = ref.watch(exerciseWeekProvider);
-    // AI 추천 운동 완료 체크는 공유 provider에 둬서 홈 운동 카드의 '주간 추이'
-    // 오늘 막대에도 반영된다([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
+    // 저장소 주간 데이터에 오늘 체크한 AI 추천 운동을 더한 단일 소스. 주간 요약
+    // 카드·오늘 도넛·이번 주 차트가 모두 여기서 나오고, 홈 운동 카드도 같은
+    // provider 를 읽는다([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
+    final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
+      exerciseWeekViewProvider,
+    );
     final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
-    // 체크한 추천 운동 시간을 오늘 활동에 더한다(인터벌 러닝→유산소, 어깨→스트레칭).
-    double bonusCardio = 0;
-    double bonusStretch = 0;
-    for (int i = 0; i < routineDone.length && i < kAiRoutineDeltas.length; i++) {
-      if (routineDone[i]) {
-        bonusCardio += kAiRoutineDeltas[i].cardioMin;
-        bonusStretch += kAiRoutineDeltas[i].stretchMin;
-      }
-    }
-    final double todayCardio = _baseCardio + bonusCardio;
-    const double todayStrength = _baseStrength;
-    final double todayStretch = _baseStretch + bonusStretch;
     return weekAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 64),
@@ -276,12 +262,12 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                 children: <Widget>[
                   Expanded(
                     child: _StatCard(
-                      label: '일수',
+                      label: l.exStatDays,
                       // 운동 일수 = 운동한 활성 일수(workoutCount). 하루에 유형을
                       // 나눠 여러 세션으로 기록해도 1일로 센다(요일 수).
                       // 홈 운동 카드의 '주간 운동 일수'와 동일한 정의.
                       value: '${week.workoutCount}',
-                      unit: '일',
+                      unit: l.unitDays,
                       goal: '3', // 주 3일 이상
                       accent: true,
                     ),
@@ -328,12 +314,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
             // 3) 운동 현황 (오늘 / 이번 주 / 이번 달)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _ActivityStatus(
-                week: week,
-                todayCardio: todayCardio,
-                todayStrength: todayStrength,
-                todayStretch: todayStretch,
-              ),
+              child: _ActivityStatus(week: week),
             ),
             const SizedBox(height: 20),
             // 4) 오늘 완료한 PT 일지 (트레이너 연동)
@@ -712,19 +693,12 @@ class _ChartPeriod {
 /// stacked-bar chart. All three views share the chart's legend and styling so
 /// the section stays visually consistent with the rest of the tab.
 class _ActivityStatus extends StatefulWidget {
-  const _ActivityStatus({
-    required this.week,
-    required this.todayCardio,
-    required this.todayStrength,
-    required this.todayStretch,
-  });
-  final ExerciseWeek week;
+  const _ActivityStatus({required this.week});
 
-  /// Today's live activity minutes (base + any checked AI routines), shared with
-  /// the 오늘 donut and the 이번 주 chart's today bar so both always agree.
-  final double todayCardio;
-  final double todayStrength;
-  final double todayStretch;
+  /// Weekly data with today's checked AI routines already folded in
+  /// (`exerciseWeekViewProvider`), so the 오늘 donut, the 이번 주 chart and the
+  /// 주간 요약 tiles above all read the same numbers.
+  final ExerciseWeek week;
 
   @override
   State<_ActivityStatus> createState() => _ActivityStatusState();
@@ -738,21 +712,29 @@ class _ActivityStatusState extends State<_ActivityStatus> {
   int _weekTodayIndex(int n) =>
       n <= 0 ? -1 : (DateTime.now().weekday - 1).clamp(0, n - 1);
 
-  List<_Bar> _weekBars() {
+  bool get _hasBreakdown {
     final ExerciseWeek w = widget.week;
     final int n = w.dailyMinutes.length;
-    final int todayIdx = _weekTodayIndex(n);
-    final bool hasBreakdown =
-        n > 0 &&
+    return n > 0 &&
         w.cardioMinutes.length == n &&
         w.strengthMinutes.length == n &&
         w.stretchingMinutes.length == n;
+  }
+
+  /// 오늘의 유형별 활동 분. 주간 데이터에서 그대로 읽으므로 오늘 도넛과
+  /// 이번 주 차트의 오늘 막대가 언제나 같은 값이다.
+  double _today(List<double> series) {
+    final int i = _weekTodayIndex(widget.week.dailyMinutes.length);
+    return i >= 0 && i < series.length ? series[i] : 0;
+  }
+
+  List<_Bar> _weekBars() {
+    final ExerciseWeek w = widget.week;
+    final int n = w.dailyMinutes.length;
+    final bool hasBreakdown = _hasBreakdown;
     return <_Bar>[
       for (int i = 0; i < n; i++)
-        // 오늘 막대는 실시간 오늘 활동으로 대체 → 오늘 도넛과 항상 일치.
-        if (i == todayIdx)
-          _Bar(widget.todayCardio, widget.todayStrength, widget.todayStretch)
-        else if (hasBreakdown)
+        if (hasBreakdown)
           _Bar(w.cardioMinutes[i], w.strengthMinutes[i], w.stretchingMinutes[i])
         else
           _Bar(w.dailyMinutes[i], 0, 0),
@@ -811,15 +793,23 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         if (_period == 0)
           _TodayDonut(
             segs: <_DonutSeg>[
-              _DonutSeg('유산소', widget.todayCardio.round(), FigmaColors.primary),
+              _DonutSeg(
+                '유산소',
+                _today(
+                  _hasBreakdown
+                      ? widget.week.cardioMinutes
+                      : widget.week.dailyMinutes,
+                ).round(),
+                FigmaColors.primary,
+              ),
               _DonutSeg(
                 '근력',
-                widget.todayStrength.round(),
+                _today(widget.week.strengthMinutes).round(),
                 const Color(0xFF1B6FA8),
               ),
               _DonutSeg(
                 '스트레칭',
-                widget.todayStretch.round(),
+                _today(widget.week.stretchingMinutes).round(),
                 const Color(0xFFD4EEF8),
               ),
             ],

@@ -272,6 +272,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeExerciseCount => 'Weekly workouts';
 
   @override
+  String get homeExerciseDays => 'Weekly workout days';
+
+  @override
   String get homeExerciseBurnProgress => 'Weekly burn goal';
 
   @override
@@ -370,6 +373,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unitMinutes => 'min';
+
+  @override
+  String get unitDays => 'days';
 
   @override
   String unitKcalValue(int count) {
@@ -695,6 +701,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exAiRoutineToday => 'AI Routine · Today';
+
+  @override
+  String get exStatDays => 'Days';
 
   @override
   String get exStatTime => 'Time';

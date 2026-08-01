@@ -101,9 +101,15 @@ class ExerciseWeek {
   final List<double> stretchingMinutes;
 
   /// Count of distinct days on which the user worked out, matching
-  /// the prototype's "이번 주 N회" tile semantics. Multiple sessions
-  /// on the same day collapse to one.
-  int get workoutCount => sessions.map((s) => s.dayLabel).toSet().length;
+  /// the prototype's "이번 주 N회" tile semantics. Derived from
+  /// [dailyMinutes] so every day carrying minutes counts exactly once —
+  /// multiple sessions on one day collapse, and minutes layered on top of
+  /// the stored sessions (a checked AI routine) are counted by the same
+  /// rule. Falls back to the session day labels for payloads that carry
+  /// no per-day series.
+  int get workoutCount => dailyMinutes.isNotEmpty
+      ? dailyMinutes.where((double m) => m > 0).length
+      : sessions.map((s) => s.dayLabel).toSet().length;
 
   factory ExerciseWeek.fromJson(Map<String, Object?> json) {
     List<double> parseDoubleList(String key) {
@@ -112,18 +118,36 @@ class ExerciseWeek {
       return raw.map((v) => (v! as num).toDouble()).toList();
     }
 
+    final List<ExerciseSession> sessions = (json['sessions']! as List<Object?>)
+        .cast<Map<String, Object?>>()
+        .map(ExerciseSession.fromJson)
+        .toList();
+    final List<String> dayLabels = (json['day_labels']! as List<Object?>)
+        .cast<String>()
+        .toList();
+
+    // 홈 '주간 추이' 차트가 읽는 일별 칼로리. 아직 이 필드를 내려주지 않는
+    // 응답(구버전 페이로드)에서는 이미 받은 세션에서 요일별로 합산해, 실제
+    // 데이터가 있는데도 차트만 데모 상수로 폴백하는 일이 없도록 한다.
+    List<double> dailyCalories = parseDoubleList('daily_calories');
+    if (dailyCalories.isEmpty && dayLabels.isNotEmpty) {
+      final List<double> derived = List<double>.filled(dayLabels.length, 0);
+      for (final ExerciseSession s in sessions) {
+        final int i = dayLabels.indexOf(s.dayLabel);
+        if (i >= 0) derived[i] += s.calories;
+      }
+      dailyCalories = derived;
+    }
+
     return ExerciseWeek(
-      sessions: (json['sessions']! as List<Object?>)
-          .cast<Map<String, Object?>>()
-          .map(ExerciseSession.fromJson)
-          .toList(),
+      sessions: sessions,
       dailyMinutes: parseDoubleList('daily_minutes'),
-      dayLabels: (json['day_labels']! as List<Object?>).cast<String>().toList(),
+      dayLabels: dayLabels,
       totalMinutes: (json['total_minutes']! as num).toInt(),
       totalCalories: (json['total_calories']! as num).toInt(),
       streakDays: (json['streak_days']! as num).toInt(),
       aiCoachMessage: json['ai_coach_message']! as String,
-      dailyCalories: parseDoubleList('daily_calories'),
+      dailyCalories: dailyCalories,
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
       stretchingMinutes: parseDoubleList('stretching_minutes'),

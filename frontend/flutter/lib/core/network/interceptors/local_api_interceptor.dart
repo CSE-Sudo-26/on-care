@@ -565,6 +565,9 @@ class LocalApiInterceptor extends Interceptor {
     // Aggregate minutes per day-label so the bar chart can render even
     // when a day is missing (React mock left Tue=0).
     final perDay = <String, int>{for (final l in _weekdayLabels) l: 0};
+    // 일별 소모 칼로리 — 홈 '주간 추이' 차트가 읽는 시리즈. 없으면 클라이언트가
+    // 데모 상수로 폴백하므로 분(minutes) 시리즈와 같이 내려준다.
+    final perDayCalories = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayCardio = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStrength = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStretching = <String, int>{
@@ -581,6 +584,11 @@ class LocalApiInterceptor extends Interceptor {
         r.dayLabel,
         (m) => m + r.minutes,
         ifAbsent: () => r.minutes,
+      );
+      perDayCalories.update(
+        r.dayLabel,
+        (c) => c + r.calories,
+        ifAbsent: () => r.calories,
       );
       final bucket = switch (r.type) {
         'cardio' || 'walking' => perDayCardio,
@@ -617,6 +625,9 @@ class LocalApiInterceptor extends Interceptor {
     });
 
     final dailyMinutes = <num>[for (final l in _weekdayLabels) perDay[l] ?? 0];
+    final dailyCalories = <num>[
+      for (final l in _weekdayLabels) perDayCalories[l] ?? 0,
+    ];
     final cardioSeries = <num>[
       for (final l in _weekdayLabels) perDayCardio[l] ?? 0,
     ];
@@ -634,6 +645,7 @@ class LocalApiInterceptor extends Interceptor {
     return _ok(options, <String, Object?>{
       'sessions': sessionsJson,
       'daily_minutes': dailyMinutes,
+      'daily_calories': dailyCalories,
       'cardio_minutes': cardioSeries,
       'strength_minutes': strengthSeries,
       'stretching_minutes': stretchingSeries,

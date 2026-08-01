@@ -999,29 +999,25 @@ class _ExerciseCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // 운동 탭과 같은 단일 소스(exerciseWeekProvider)에서 주간 수치·일별 칼로리를
-    // 읽어 홈 카드와 운동 탭이 항상 일치한다. 로딩 전에는 summary 값으로 폴백.
-    final ExerciseWeek? wk = ref.watch(exerciseWeekProvider).valueOrNull;
-    final int bonusKcal = ref.watch(exerciseTodayBonusCaloriesProvider);
+    // 운동 탭과 같은 단일 소스(exerciseWeekViewProvider)에서 주간 수치·일별
+    // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
+    // AI 추천 운동까지 이미 더한 값이라, 아래 3지표와 주간 추이 차트가 같이 움직인다.
+    // 로딩 전에는 summary 값으로 폴백.
+    final ExerciseWeek? wk = ref.watch(exerciseWeekViewProvider).valueOrNull;
     final int minutes = wk?.totalMinutes ?? summary.exerciseMinutes;
     final int count = wk?.workoutCount ?? summary.exerciseCount;
     final double burned =
         (wk?.totalCalories ?? summary.exerciseCalories).toDouble();
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
-    // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다. 오늘 막대엔 AI 추천 체크 보너스
-    // 칼로리를 더해, 운동 탭의 추천 체크가 홈 주간추이에도 반영된다.
+    // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = DateTime.now().weekday - 1;
-    final List<double> baseCal = (wk != null && wk.dailyCalories.length == 7)
+    // 데모 상수는 주간 데이터가 아직 로드되지 않았을 때만 쓴다. 실제 데이터가
+    // 있으면 그 일별 칼로리를 그대로 그린다(값이 없는 주는 빈 차트가 정답).
+    final List<double> baseCal = (wk != null && wk.dailyCalories.isNotEmpty)
         ? wk.dailyCalories
         : _demoExerciseWeekCalories;
     final List<double> week = <double>[
-      for (int i = 0; i < baseCal.length; i++)
-        if (i > todayIdx)
-          0
-        else if (i == todayIdx)
-          baseCal[i] + bonusKcal
-        else
-          baseCal[i],
+      for (int i = 0; i < baseCal.length; i++) if (i > todayIdx) 0 else baseCal[i],
     ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
@@ -1077,8 +1073,8 @@ class _ExerciseCard extends ConsumerWidget {
                   // 값 = 주간 운동한 날짜 수(workoutCount), 목표 = 주 3일 이상.
                   value: '$count',
                   goal: '3',
-                  unit: '일',
-                  label: '주간 운동 일수',
+                  unit: l.unitDays,
+                  label: l.homeExerciseDays,
                   color: FigmaColors.green,
                 ),
               ),

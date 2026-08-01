@@ -130,6 +130,7 @@
   "homeExerciseActiveTime": "Weekly active time",
   "homeExerciseBurned": "Weekly calories",
   "homeExerciseCount": "Weekly workouts",
+  "homeExerciseDays": "Weekly workout days",
   "homeExerciseBurnProgress": "Weekly burn goal",
   "unitTimes": "×",
   "homeVsLastWeek": "vs last week",
@@ -185,6 +186,7 @@
   "homeScheduleWalkDetail": "Around home · 20 min",
   "unitKcal": "kcal",
   "unitMinutes": "min",
+  "unitDays": "days",
   "unitKcalValue": "{count} kcal",
   "@unitKcalValue": {
     "placeholders": {
@@ -331,6 +333,7 @@
   "exActivityTitle": "Activity",
   "exThisWeek": "This week",
   "exAiRoutineToday": "AI Routine · Today",
+  "exStatDays": "Days",
   "exStatTime": "Time",
   "exStatCalories": "Calories",
   "exStatStreak": "Streak",

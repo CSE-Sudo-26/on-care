@@ -53,15 +53,89 @@ final exerciseRoutineDoneProvider = StateProvider<List<bool>>(
   name: 'exerciseRoutineDone',
 );
 
-/// Bonus calories from checked AI routines, added to today's home trend bar.
-final exerciseTodayBonusCaloriesProvider = Provider<int>((ref) {
+/// Today's activity added by the checked AI routines, summed across
+/// [kAiRoutineDeltas].
+class ExerciseTodayBonus {
+  const ExerciseTodayBonus({
+    this.cardioMinutes = 0,
+    this.stretchMinutes = 0,
+    this.calories = 0,
+  });
+
+  final double cardioMinutes;
+  final double stretchMinutes;
+  final int calories;
+
+  double get minutes => cardioMinutes + stretchMinutes;
+  bool get isEmpty => minutes == 0 && calories == 0;
+}
+
+/// Activity delta from the AI routines checked today.
+final exerciseTodayBonusProvider = Provider<ExerciseTodayBonus>((ref) {
   final List<bool> done = ref.watch(exerciseRoutineDoneProvider);
+  double cardio = 0;
+  double stretch = 0;
   int kcal = 0;
   for (int i = 0; i < done.length && i < kAiRoutineDeltas.length; i++) {
-    if (done[i]) kcal += kAiRoutineDeltas[i].calories;
+    if (!done[i]) continue;
+    cardio += kAiRoutineDeltas[i].cardioMin;
+    stretch += kAiRoutineDeltas[i].stretchMin;
+    kcal += kAiRoutineDeltas[i].calories;
   }
-  return kcal;
-}, name: 'exerciseTodayBonusCalories');
+  return ExerciseTodayBonus(
+    cardioMinutes: cardio,
+    stretchMinutes: stretch,
+    calories: kcal,
+  );
+}, name: 'exerciseTodayBonus');
+
+/// [week] with [bonus] folded into today's column and the weekly totals, so
+/// the per-day series, the 주간 합계 tiles and the 운동 일수 count all move
+/// together instead of the chart alone. Returns [week] untouched when there
+/// is nothing to add. [now] is injectable for deterministic tests.
+ExerciseWeek applyTodayBonus(
+  ExerciseWeek week,
+  ExerciseTodayBonus bonus, {
+  DateTime? now,
+}) {
+  final int n = week.dailyMinutes.length;
+  if (bonus.isEmpty || n == 0) return week;
+  final int today = ((now ?? DateTime.now()).weekday - 1).clamp(0, n - 1);
+
+  /// Adds [delta] to today's slot, leaving series the payload omitted
+  /// (length mismatch) alone so a partial payload can't be misaligned.
+  List<double> bump(List<double> series, double delta) {
+    if (series.length != n || delta == 0) return series;
+    return <double>[
+      for (int i = 0; i < n; i++) i == today ? series[i] + delta : series[i],
+    ];
+  }
+
+  return ExerciseWeek(
+    sessions: week.sessions,
+    dailyMinutes: bump(week.dailyMinutes, bonus.minutes),
+    dailyCalories: bump(week.dailyCalories, bonus.calories.toDouble()),
+    cardioMinutes: bump(week.cardioMinutes, bonus.cardioMinutes),
+    strengthMinutes: week.strengthMinutes,
+    stretchingMinutes: bump(week.stretchingMinutes, bonus.stretchMinutes),
+    dayLabels: week.dayLabels,
+    totalMinutes: week.totalMinutes + bonus.minutes.round(),
+    totalCalories: week.totalCalories + bonus.calories,
+    streakDays: week.streakDays,
+    aiCoachMessage: week.aiCoachMessage,
+  );
+}
+
+/// The week as the UI shows it: stored data plus today's checked AI routines.
+/// 홈 운동 카드와 운동 탭이 모두 이 provider 를 읽어, 오늘 막대·도넛뿐 아니라
+/// 주간 시간·칼로리·일수 합계까지 하나의 값에서 나온다. Invalidate the
+/// underlying [exerciseWeekProvider] to refetch.
+final exerciseWeekViewProvider = Provider<AsyncValue<ExerciseWeek>>((ref) {
+  final ExerciseTodayBonus bonus = ref.watch(exerciseTodayBonusProvider);
+  return ref
+      .watch(exerciseWeekProvider)
+      .whenData((ExerciseWeek w) => applyTodayBonus(w, bonus));
+}, name: 'exerciseWeekView');
 
 /// Gym data has no backend endpoint yet — the prototype shipped only
 /// mock data, so wire the page to a static repository for now. A real

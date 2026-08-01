@@ -68,6 +68,7 @@ def _bucket(t: str) -> str:
 def build_current_week(rows: list) -> dict:
     """ExerciseSession row 리스트 → 프론트 계약 형태의 dict."""
     per_day = {l: 0 for l in WEEKDAY_LABELS}
+    per_day_cal = {l: 0 for l in WEEKDAY_LABELS}
     per_cardio = {l: 0 for l in WEEKDAY_LABELS}
     per_strength = {l: 0 for l in WEEKDAY_LABELS}
     per_stretch = {l: 0 for l in WEEKDAY_LABELS}
@@ -79,7 +80,8 @@ def build_current_week(rows: list) -> dict:
         total_minutes += r.minutes
         total_calories += r.calories
         per_day[r.day_label] = per_day.get(r.day_label, 0) + r.minutes
-        bucket_map = {"cardio": per_cardio, "strength": per_strength, "stretching": per_stretch}
+        per_day_cal[r.day_label] = per_day_cal.get(r.day_label, 0) + r.calories
+        bucket_map ={"cardio": per_cardio, "strength": per_strength, "stretching": per_stretch}
         target = bucket_map[_bucket(r.type)]
         target[r.day_label] = target.get(r.day_label, 0) + r.minutes
         sessions.append({
@@ -106,6 +108,7 @@ def build_current_week(rows: list) -> dict:
     return {
         "sessions": sessions,
         "daily_minutes": daily,
+        "daily_calories": [per_day_cal[l] for l in WEEKDAY_LABELS],
         "cardio_minutes": [per_cardio[l] for l in WEEKDAY_LABELS],
         "strength_minutes": [per_strength[l] for l in WEEKDAY_LABELS],
         "stretching_minutes": [per_stretch[l] for l in WEEKDAY_LABELS],
