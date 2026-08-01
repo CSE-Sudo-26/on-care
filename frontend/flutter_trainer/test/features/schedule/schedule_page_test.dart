@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -121,6 +122,31 @@ void main() {
       expect(moved.time, '19:30');
       expect(moved.durationMinutes, 90);
     });
+
+    test(
+      'updateProgram changes exercises without changing the booking',
+      () async {
+        final repo = ScheduleRepository(db);
+        final before = await repo.watchToday().first;
+        final target = before.firstWhere((s) => s.clientName == '박성호');
+
+        await repo.updateProgram(
+          target.id,
+          program: const <ProgramItem>[
+            ProgramItem(name: '덤벨 프레스', sets: 4, reps: '12회', weight: '16kg'),
+          ],
+          note: '마지막 세트 RPE 8 확인',
+        );
+
+        final after = await repo.watchToday().first;
+        final updated = after.firstWhere((s) => s.id == target.id);
+        expect(updated.time, target.time);
+        expect(updated.clientName, target.clientName);
+        expect(updated.program.single.name, '덤벨 프레스');
+        expect(updated.program.single.sets, 4);
+        expect(updated.note, '마지막 세트 RPE 8 확인');
+      },
+    );
 
     test('completeSession flips 예정 to 완료 and logs the 운동기록', () async {
       final repo = ScheduleRepository(db);
@@ -365,8 +391,10 @@ void main() {
       await tester.tap(find.text('박성호'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('✎ 수정'), 120);
+      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
       expect(find.text('벤치프레스'), findsOneWidget); // planned program
+      expect(find.text('일정 수정'), findsOneWidget);
+      expect(find.text('프로그램 수정'), findsOneWidget);
       expect(find.text('삭제'), findsOneWidget);
       expect(find.text('💬 채팅'), findsOneWidget);
     });
@@ -404,7 +432,7 @@ void main() {
       expect(find.text('10:15'), findsOneWidget);
     });
 
-    testWidgets('수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
+    testWidgets('일정 수정 moves 박성호 to a 15-minute step (15:00 → 15:30)', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -415,22 +443,23 @@ void main() {
       await tester.tap(find.text('박성호'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('✎ 수정'), 120);
-      await tester.ensureVisible(find.text('✎ 수정'));
+      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
+      await tester.ensureVisible(find.text('일정 수정'));
       await tester.pump();
-      await tester.tap(find.text('✎ 수정'));
+      await tester.tap(find.text('일정 수정'));
       await settle(tester);
 
-      // Editing stays inside the expanded schedule card and supports memo.
+      // Booking details stay inside the expanded schedule card. Program and
+      // trainer memo editing have their own separate action.
       expect(
         find.byKey(
           const ValueKey<String>('inline-session-editor-seed-schedule-3'),
         ),
         findsOneWidget,
       );
-      await tester.enterText(
+      expect(
         find.byKey(const ValueKey<String>('schedule-trainer-note')),
-        '오른쪽 어깨 가동범위 확인',
+        findsNothing,
       );
 
       // Change 00분 → 30분 in the time picker and save.
@@ -445,7 +474,69 @@ void main() {
 
       expect(find.text('15:30'), findsOneWidget);
       expect(find.text('15:00'), findsNothing);
-      expect(find.text('오른쪽 어깨 가동범위 확인'), findsOneWidget);
+    });
+
+    testWidgets('프로그램 수정 edits exercises and memo inside the card', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+
+      await tester.scrollUntilVisible(find.text('박성호'), 120);
+      await tester.ensureVisible(find.text('박성호'));
+      await tester.pump();
+      await tester.tap(find.text('박성호'));
+      await tester.pump();
+
+      await tester.scrollUntilVisible(find.text('프로그램 수정'), 120);
+      await tester.ensureVisible(find.text('프로그램 수정'));
+      await tester.pump();
+      await tester.tap(find.text('프로그램 수정'));
+      await settle(tester);
+
+      expect(
+        find.byKey(
+          const ValueKey<String>('inline-program-editor-seed-schedule-3'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey<String>('inline-session-editor-seed-schedule-3'),
+        ),
+        findsNothing,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('program-name-0')),
+        '덤벨 플라이',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('program-sets-0')),
+        '4',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('program-trainer-note')),
+        '견갑 고정 확인',
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('save-program')),
+      );
+      await tester.pump();
+      final save = tester.widget<FilledButton>(
+        find.byKey(const ValueKey<String>('save-program')),
+      );
+      save.onPressed!();
+      await settle(tester);
+
+      expect(
+        find.byKey(
+          const ValueKey<String>('inline-program-editor-seed-schedule-3'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('15:00'), findsOneWidget);
+      expect(find.text('덤벨 플라이'), findsOneWidget);
+      expect(find.textContaining('4세트 × 8회'), findsOneWidget);
+      expect(find.text('견갑 고정 확인'), findsOneWidget);
     });
 
     testWidgets('삭제 removes the session after confirmation', (tester) async {
@@ -551,7 +642,8 @@ void main() {
 
       // Manage actions are there, but 완료 is not — the class is in the
       // future (review PR 245).
-      expect(find.text('✎ 수정'), findsOneWidget);
+      expect(find.text('일정 수정'), findsOneWidget);
+      expect(find.text('프로그램 수정'), findsOneWidget);
       expect(find.text('💬 채팅'), findsOneWidget);
       expect(find.text('✓ 완료'), findsNothing);
     });
@@ -658,10 +750,10 @@ void main() {
       await tester.tap(find.text('신규 회원'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('✎ 수정'), 120);
-      await tester.ensureVisible(find.text('✎ 수정'));
+      await tester.scrollUntilVisible(find.text('일정 수정'), 120);
+      await tester.ensureVisible(find.text('일정 수정'));
       await tester.pump();
-      await tester.tap(find.text('✎ 수정'));
+      await tester.tap(find.text('일정 수정'));
       await settle(tester);
 
       // Save without changing anything — the sheet must have prefilled

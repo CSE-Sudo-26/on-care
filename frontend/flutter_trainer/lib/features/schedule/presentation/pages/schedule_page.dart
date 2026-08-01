@@ -45,7 +45,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   final Set<String> _expanded = <String>{};
   final Set<String> _sent = <String>{};
-  String? _editingSessionId;
+  String? _editingScheduleId;
+  String? _editingProgramId;
   // 단일 플래시: 연속 전송 시 직전 카드의 확인 플래시는 새 플래시로
   // 대체된다(의도된 단순화 — 전송 결과는 '전송됨' 칩으로 남는다).
   String? _flash;
@@ -363,8 +364,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           flashing: _flash == s.id,
           onToggle: () => _toggle(s),
           onSend: () => _send(s),
-          onEdit: () => setState(() {
-            _editingSessionId = s.id;
+          onEditSchedule: () => setState(() {
+            _editingScheduleId = s.id;
+            _editingProgramId = null;
+            _expanded.add(s.id);
+          }),
+          onEditProgram: () => setState(() {
+            _editingProgramId = s.id;
+            _editingScheduleId = null;
             _expanded.add(s.id);
           }),
           onDelete: () => _confirmDelete(s),
@@ -373,15 +380,22 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ? () => _confirmComplete(s)
               : null,
           programDateLabel: dateLabel,
-          inlineEditor: _editingSessionId == s.id
+          inlineEditor: _editingScheduleId == s.id
               ? _SessionSheet(
                   key: ValueKey<String>('inline-session-editor-${s.id}'),
                   clientNames: clients.map((c) => c.name).toList(),
                   date: _selectedYmd,
                   existing: s,
                   inline: true,
-                  onSaved: () => setState(() => _editingSessionId = null),
-                  onCancel: () => setState(() => _editingSessionId = null),
+                  onSaved: () => setState(() => _editingScheduleId = null),
+                  onCancel: () => setState(() => _editingScheduleId = null),
+                )
+              : _editingProgramId == s.id
+              ? _ProgramEditor(
+                  key: ValueKey<String>('inline-program-editor-${s.id}'),
+                  session: s,
+                  onSaved: () => setState(() => _editingProgramId = null),
+                  onCancel: () => setState(() => _editingProgramId = null),
                 )
               : null,
         ),
@@ -700,20 +714,21 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                 onChanged: (v) => setState(() => _duration = v ?? _duration),
               ),
             ),
-            _sheetField(
-              label: '트레이너 메모',
-              child: TextField(
-                key: const ValueKey<String>('schedule-trainer-note'),
-                controller: _note,
-                minLines: 2,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: '수업 준비사항이나 고객 특이사항을 입력하세요',
-                  hintStyle: TextStyle(color: AppColors.mutedForeground),
-                  isDense: true,
+            if (widget.existing == null)
+              _sheetField(
+                label: '트레이너 메모',
+                child: TextField(
+                  key: const ValueKey<String>('schedule-trainer-note'),
+                  controller: _note,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    hintText: '수업 준비사항이나 고객 특이사항을 입력하세요',
+                    hintStyle: TextStyle(color: AppColors.mutedForeground),
+                    isDense: true,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: AppSpacing.lg),
             Row(
               children: <Widget>[
@@ -773,6 +788,298 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             ),
           ),
           Expanded(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramEditor extends ConsumerStatefulWidget {
+  const _ProgramEditor({
+    required this.session,
+    required this.onSaved,
+    required this.onCancel,
+    super.key,
+  });
+
+  final ScheduleSession session;
+  final VoidCallback onSaved;
+  final VoidCallback onCancel;
+
+  @override
+  ConsumerState<_ProgramEditor> createState() => _ProgramEditorState();
+}
+
+class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
+  late final TextEditingController _note;
+  late final List<_ProgramDraft> _items;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _note = TextEditingController(text: widget.session.note);
+    _items = widget.session.program.map(_ProgramDraft.fromItem).toList();
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    for (final item in _items) {
+      item.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addItem() {
+    setState(() => _items.add(_ProgramDraft.empty()));
+  }
+
+  void _removeItem(int index) {
+    setState(() => _items.removeAt(index).dispose());
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final program = <ProgramItem>[];
+    for (final item in _items) {
+      final name = item.name.text.trim();
+      final sets = int.tryParse(item.sets.text.trim());
+      if (name.isEmpty || sets == null || sets < 1 || sets > 100) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('운동 이름과 세트 수를 확인해 주세요')));
+        return;
+      }
+      program.add(
+        ProgramItem(
+          name: name,
+          sets: sets,
+          reps: item.reps.text.trim().isEmpty ? '-' : item.reps.text.trim(),
+          weight: item.weight.text.trim().isEmpty
+              ? '-'
+              : item.weight.text.trim(),
+        ),
+      );
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .updateProgram(
+            widget.session.id,
+            program: program,
+            note: _note.text.trim(),
+          );
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로그램 저장에 실패했어요. 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _saving = false);
+    widget.onSaved();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: const BorderRadius.all(AppRadius.lg),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Text(
+            '프로그램 수정',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (var index = 0; index < _items.length; index++) ...<Widget>[
+            _ProgramDraftFields(
+              index: index,
+              draft: _items[index],
+              onRemove: () => _removeItem(index),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _addItem,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('운동 추가'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            '트레이너 메모',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextField(
+            key: const ValueKey<String>('program-trainer-note'),
+            controller: _note,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: '프로그램 진행 시 참고할 내용을 입력하세요',
+              hintStyle: TextStyle(color: AppColors.mutedForeground),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _saving ? null : widget.onCancel,
+                  child: const Text('취소'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey<String>('save-program'),
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? '저장 중...' : '프로그램 저장'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramDraft {
+  _ProgramDraft({
+    required String name,
+    required String sets,
+    required String reps,
+    required String weight,
+  }) : name = TextEditingController(text: name),
+       sets = TextEditingController(text: sets),
+       reps = TextEditingController(text: reps),
+       weight = TextEditingController(text: weight);
+
+  factory _ProgramDraft.fromItem(ProgramItem item) => _ProgramDraft(
+    name: item.name,
+    sets: '${item.sets}',
+    reps: item.reps,
+    weight: item.weight == '-' ? '' : item.weight,
+  );
+
+  factory _ProgramDraft.empty() =>
+      _ProgramDraft(name: '', sets: '3', reps: '10회', weight: '');
+
+  final TextEditingController name;
+  final TextEditingController sets;
+  final TextEditingController reps;
+  final TextEditingController weight;
+
+  void dispose() {
+    name.dispose();
+    sets.dispose();
+    reps.dispose();
+    weight.dispose();
+  }
+}
+
+class _ProgramDraftFields extends StatelessWidget {
+  const _ProgramDraftFields({
+    required this.index,
+    required this.draft,
+    required this.onRemove,
+  });
+
+  final int index;
+  final _ProgramDraft draft;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-name-$index'),
+                  controller: draft.name,
+                  decoration: const InputDecoration(
+                    labelText: '운동 이름',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '운동 삭제',
+                onPressed: onRemove,
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppColors.destructive,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-sets-$index'),
+                  controller: draft.sets,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '세트',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-reps-$index'),
+                  controller: draft.reps,
+                  decoration: const InputDecoration(
+                    labelText: '횟수/시간',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-weight-$index'),
+                  controller: draft.weight,
+                  decoration: const InputDecoration(
+                    labelText: '중량',
+                    hintText: '선택',
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1035,7 +1342,8 @@ class _TimelineRow extends StatelessWidget {
     required this.flashing,
     required this.onToggle,
     required this.onSend,
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -1049,7 +1357,8 @@ class _TimelineRow extends StatelessWidget {
   final bool flashing;
   final VoidCallback onToggle;
   final VoidCallback onSend;
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final String programDateLabel;
@@ -1090,7 +1399,8 @@ class _TimelineRow extends StatelessWidget {
                   flashing: flashing,
                   onToggle: onToggle,
                   onSend: onSend,
-                  onEdit: onEdit,
+                  onEditSchedule: onEditSchedule,
+                  onEditProgram: onEditProgram,
                   onDelete: onDelete,
                   onChat: onChat,
                   onComplete: onComplete,
@@ -1135,7 +1445,8 @@ class _SessionCard extends StatelessWidget {
     required this.flashing,
     required this.onToggle,
     required this.onSend,
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
@@ -1149,7 +1460,8 @@ class _SessionCard extends StatelessWidget {
   final bool flashing;
   final VoidCallback onToggle;
   final VoidCallback onSend;
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final String programDateLabel;
@@ -1277,7 +1589,8 @@ class _SessionCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                     ],
                     _ManageRow(
-                      onEdit: onEdit,
+                      onEditSchedule: onEditSchedule,
+                      onEditProgram: onEditProgram,
                       onDelete: onDelete,
                       onChat: onChat,
                       onComplete: onComplete,
@@ -1449,33 +1762,42 @@ class _NoPlanBox extends StatelessWidget {
 /// 수정 · 삭제 · 채팅 바로가기 actions for a booked session.
 class _ManageRow extends StatelessWidget {
   const _ManageRow({
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
   });
 
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
       children: <Widget>[
-        if (onComplete != null) ...<Widget>[
+        if (onComplete != null)
           _ActionChip(
             label: '✓ 완료',
             color: AppColors.success,
             onTap: onComplete!,
           ),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-        _ActionChip(label: '✎ 수정', color: AppColors.accent, onTap: onEdit),
-        const SizedBox(width: AppSpacing.xs),
+        _ActionChip(
+          label: '일정 수정',
+          color: AppColors.accent,
+          onTap: onEditSchedule,
+        ),
+        _ActionChip(
+          label: '프로그램 수정',
+          color: AppColors.secondary,
+          onTap: onEditProgram,
+        ),
         _ActionChip(label: '삭제', color: AppColors.destructive, onTap: onDelete),
-        const Spacer(),
         _ActionChip(label: '💬 채팅', color: AppColors.accent, onTap: onChat),
       ],
     );
