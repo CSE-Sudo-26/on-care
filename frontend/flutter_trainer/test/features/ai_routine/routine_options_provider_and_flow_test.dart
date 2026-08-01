@@ -199,15 +199,19 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
-    final minutesField = find.descendant(
+    final minutesSlider = find.descendant(
       of: find.byKey(const ValueKey<String>('routine-minutes-0')),
-      matching: find.byType(TextField),
+      matching: find.byType(Slider),
     );
-    await tester.enterText(minutesField, '20');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    tester.widget<Slider>(minutesSlider).onChanged?.call(20);
     await tester.pump();
-    final savedMinutesField = tester.widget<TextField>(minutesField);
-    expect(savedMinutesField.decoration?.fillColor, AppColors.accentSurface);
+    expect(find.text('20분'), findsWidgets);
+    for (final category in <String>['걷기', '유산소', '근력', '요가', '스트레칭', '기타']) {
+      expect(
+        find.byKey(ValueKey<String>('routine-category-B-0-$category')),
+        findsOneWidget,
+      );
+    }
     await tester.pump();
 
     await tester.ensureVisible(

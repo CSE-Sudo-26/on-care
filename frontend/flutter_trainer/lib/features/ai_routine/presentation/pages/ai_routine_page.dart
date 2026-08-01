@@ -954,23 +954,23 @@ class _RoutineCard extends StatelessWidget {
             children: <Widget>[
               if (onType == null)
                 Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.all(AppRadius.pill),
-                ),
-                child: Text(
-                  type,
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: const BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Text(
+                    type,
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
                   ),
                 ),
-              ),
               if (onType == null) const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: editingName
@@ -1045,14 +1045,18 @@ class _RoutineCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           if (onType != null) ...<Widget>[
-            RoutineCategoryDropdown(value: type, onChanged: onType!),
+            RoutineCategoryChips(
+              keyPrefix: 'routine-card-$name-category',
+              value: type,
+              onChanged: onType!,
+            ),
             const SizedBox(height: AppSpacing.sm),
           ],
           if (onMinutes != null)
-            RoutineMinutesField(
+            RoutineMinutesSlider(
               key: ValueKey<String>('routine-minutes-$name'),
-              recommendedMinutes: minutes,
-              onSaved: onMinutes!,
+              minutes: minutes,
+              onChanged: onMinutes!,
             )
           else
             Text(
@@ -1162,7 +1166,7 @@ class _AddExerciseButton extends StatelessWidget {
   }
 }
 
-/// The "운동 추가" form — name, category, keyboard minutes, 취소/추가하기.
+/// The "운동 추가" form — member-app style type chips and duration slider.
 class _AddExerciseForm extends StatefulWidget {
   const _AddExerciseForm({required this.onCancel, required this.onAdd});
 
@@ -1176,8 +1180,7 @@ class _AddExerciseForm extends StatefulWidget {
 class _AddExerciseFormState extends State<_AddExerciseForm> {
   final TextEditingController _name = TextEditingController();
   String _type = '근력';
-  int _minutes = 15;
-  bool _minutesConfirmed = false;
+  int _minutes = 30;
 
   @override
   void dispose() {
@@ -1227,18 +1230,17 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineCategoryDropdown(
+          RoutineCategoryChips(
+            keyPrefix: 'custom-exercise-category',
             value: _type,
             onChanged: (type) => setState(() => _type = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesField(
+          RoutineMinutesSlider(
             key: const ValueKey<String>('custom-exercise-minutes'),
-            recommendedMinutes: 15,
-            requiredConfirmation: true,
-            onSaved: (minutes) => setState(() {
+            minutes: _minutes,
+            onChanged: (minutes) => setState(() {
               _minutes = minutes;
-              _minutesConfirmed = true;
             }),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1260,7 +1262,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
                   foreground: AppColors.accentForeground,
                   onTap: () {
                     final name = _name.text.trim();
-                    if (name.isEmpty || !_minutesConfirmed) return;
+                    if (name.isEmpty) return;
                     widget.onAdd(name, _minutes, _type);
                   },
                 ),

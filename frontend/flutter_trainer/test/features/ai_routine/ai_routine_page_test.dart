@@ -391,12 +391,6 @@ void main() {
         find.byKey(const ValueKey<String>('custom-exercise-name')),
         '레그프레스 5세트',
       );
-      final minutesField = find.descendant(
-        of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
-        matching: find.byType(TextField),
-      );
-      await tester.enterText(minutesField, '15');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -822,12 +816,6 @@ void main() {
         find.byKey(const ValueKey<String>('custom-exercise-name')),
         '레그프레스 5세트',
       );
-      final minutesField = find.descendant(
-        of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
-        matching: find.byType(TextField),
-      );
-      await tester.enterText(minutesField, '15');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -1025,16 +1013,9 @@ void main() {
         // Default category is 근력 — switch to 스트레칭 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
-        await tester.tap(find.text('근력').last);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('스트레칭').last);
-        await tester.pump();
-        final minutesField = find.descendant(
-          of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
-          matching: find.byType(TextField),
+        await tester.tap(
+          find.byKey(const ValueKey<String>('custom-exercise-category-스트레칭')),
         );
-        await tester.enterText(minutesField, '15');
-        await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pump();
         await tester.ensureVisible(find.text('추가하기'));
         await tester.pump();

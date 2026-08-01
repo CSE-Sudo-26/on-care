@@ -49,8 +49,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   int _minutes = 30;
   String _intensity = 'moderate';
   String _newExerciseType = '근력';
-  int _newExerciseMinutes = 15;
-  bool _newExerciseMinutesConfirmed = false;
+  int _newExerciseMinutes = 30;
 
   bool _generating = false;
   bool _sending = false;
@@ -153,10 +152,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   void _addExercise() {
     final name = _newExerciseName.text.trim();
-    if (name.isEmpty || !_newExerciseMinutesConfirmed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('운동 이름과 시간을 입력하고 Enter로 저장해 주세요')),
-      );
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('운동 이름을 입력해 주세요')));
       return;
     }
     setState(() {
@@ -169,8 +168,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       );
       _newExerciseName.clear();
       _newExerciseType = '근력';
-      _newExerciseMinutes = 15;
-      _newExerciseMinutesConfirmed = false;
+      _newExerciseMinutes = 30;
       _showAddExercise = false;
     });
   }
@@ -399,40 +397,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         children: <Widget>[
           const Text('생성 조건', style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.md),
-          const Text('가능한 운동 시간', style: _labelStyle),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: <int>[20, 30, 45, 60]
-                .map(
-                  (minutes) => _choiceChip(
-                    '$minutes분',
-                    _minutes == minutes,
-                    () => setState(() => _minutes = minutes),
-                  ),
-                )
-                .toList(),
+          RoutineMinutesSlider(
+            key: const ValueKey<String>('generation-minutes'),
+            minutes: _minutes,
+            onChanged: (minutes) => setState(() => _minutes = minutes),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const Text('강도', style: _labelStyle),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            children:
-                <(String, String)>[
-                      ('낮음', 'low'),
-                      ('보통', 'moderate'),
-                      ('높음', 'high'),
-                    ]
-                    .map(
-                      (item) => _choiceChip(
-                        item.$1,
-                        _intensity == item.$2,
-                        () => setState(() => _intensity = item.$2),
-                      ),
-                    )
-                    .toList(),
+          RoutineIntensityChips(
+            value: _intensity,
+            onChanged: (intensity) => setState(() => _intensity = intensity),
           ),
         ],
       ),
@@ -614,10 +587,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           Row(
             children: <Widget>[
               Expanded(
-                child: RoutineCategoryDropdown(
-                  key: ValueKey<String>(
-                    'routine-category-$_selectedKey-$index-${exercise.type}',
-                  ),
+                child: RoutineCategoryChips(
+                  keyPrefix: 'routine-category-$_selectedKey-$index',
                   value: exercise.type,
                   onChanged: (type) => setState(() {
                     _edited[index] = exercise.copyWith(type: type);
@@ -652,10 +623,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             decoration: _inputDecoration(hintText: '운동 이름'),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesField(
+          RoutineMinutesSlider(
             key: ValueKey<String>('routine-minutes-$index'),
-            recommendedMinutes: exercise.minutes,
-            onSaved: (minutes) => setState(() {
+            minutes: exercise.minutes,
+            onChanged: (minutes) => setState(() {
               _edited[index] = _edited[index].copyWith(minutes: minutes);
             }),
           ),
@@ -681,18 +652,17 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          RoutineCategoryDropdown(
+          RoutineCategoryChips(
+            keyPrefix: 'new-exercise-category',
             value: _newExerciseType,
             onChanged: (type) => setState(() => _newExerciseType = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesField(
+          RoutineMinutesSlider(
             key: const ValueKey<String>('new-exercise-minutes'),
-            recommendedMinutes: 15,
-            requiredConfirmation: true,
-            onSaved: (minutes) => setState(() {
+            minutes: _newExerciseMinutes,
+            onChanged: (minutes) => setState(() {
               _newExerciseMinutes = minutes;
-              _newExerciseMinutesConfirmed = true;
             }),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -961,39 +931,6 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _choiceChip(
-    String label,
-    bool selected,
-    VoidCallback onTap, {
-    Key? key,
-  }) {
-    return Material(
-      key: key,
-      color: selected ? AppColors.accent : AppColors.inputBackground,
-      borderRadius: const BorderRadius.all(AppRadius.pill),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? AppColors.accentForeground
-                  : AppColors.mutedForeground,
-            ),
-          ),
-        ),
       ),
     );
   }
