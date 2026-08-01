@@ -110,7 +110,7 @@ class ChatSendRequest(BaseModel):
     text: str = Field(max_length=2000)
 
 
-RoutineType = Literal["유산소", "근력", "스트레칭"]
+RoutineType = Literal["걷기", "유산소", "근력", "요가", "스트레칭", "기타"]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
 

@@ -56,6 +56,7 @@ class ScheduleRepository {
     required String time,
     required String type,
     required int durationMinutes,
+    String note = '',
   }) async {
     await _db
         .into(_db.trainerScheduleEntries)
@@ -69,6 +70,7 @@ class ScheduleRepository {
             durationMinutes: Value(durationMinutes),
             status: '예정',
             programJson: const Value('[]'),
+            note: Value(note),
           ),
         );
   }
@@ -80,6 +82,7 @@ class ScheduleRepository {
     required String time,
     required String type,
     required int durationMinutes,
+    required String note,
   }) async {
     await (_db.update(
       _db.trainerScheduleEntries,
@@ -89,6 +92,7 @@ class ScheduleRepository {
         time: Value(time),
         type: Value(type),
         durationMinutes: Value(durationMinutes),
+        note: Value(note),
       ),
     );
   }

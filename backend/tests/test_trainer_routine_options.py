@@ -3,7 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.schemas.trainer_api import RoutineOptionAnalysisOut, RoutineOptionsRequest
+import pytest
+from pydantic import ValidationError
+
+from app.schemas.trainer_api import (
+    RoutineOptionAnalysisOut,
+    RoutineOptionExerciseOut,
+    RoutineOptionsRequest,
+)
 from app.services import trainer_routine_options_service
 
 
@@ -50,6 +57,18 @@ def _analysis() -> RoutineOptionAnalysisOut:
         latest_routine="걷기",
         note="무릎 부담 낮게",
     )
+
+
+def test_routine_categories_match_the_member_app():
+    categories = ("걷기", "유산소", "근력", "요가", "스트레칭", "기타")
+    for category in categories:
+        exercise = RoutineOptionExerciseOut(
+            name="테스트 운동", minutes=10, type=category
+        )
+        assert exercise.type == category
+
+    with pytest.raises(ValidationError):
+        RoutineOptionExerciseOut(name="테스트 운동", minutes=10, type="미지원")
 
 
 def test_rule_fallback_respects_requested_minutes():

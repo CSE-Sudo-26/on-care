@@ -199,7 +199,15 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
-    await tester.tap(find.byKey(const ValueKey<String>('routine-minute-0-20')));
+    final minutesField = find.descendant(
+      of: find.byKey(const ValueKey<String>('routine-minutes-0')),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(minutesField, '20');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    final savedMinutesField = tester.widget<TextField>(minutesField);
+    expect(savedMinutesField.decoration?.fillColor, AppColors.accentSurface);
     await tester.pump();
 
     await tester.ensureVisible(
@@ -218,6 +226,10 @@ void main() {
 
     expect(assigned.memberId, isNull);
     expect(assigned.assigned, isNull);
+    expect(
+      find.byKey(const ValueKey<String>('open-client-chat')),
+      findsNothing,
+    );
 
     await tester.ensureVisible(
       find.byKey(const ValueKey<String>('send-selected-routine')),
@@ -274,7 +286,9 @@ void main() {
       );
 
       await _driveToSendReady(tester);
-      await tester.tap(find.byKey(const ValueKey<String>('send-selected-routine')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('send-selected-routine')),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -285,44 +299,43 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a non-network assign failure shows the generic retry message '
-    '(a clear failure, safe to retry)',
-    (tester) async {
-      tester.view.physicalSize = const Size(1000, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('a non-network assign failure shows the generic retry message '
+      '(a clear failure, safe to retry)', (tester) async {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: <Override>[
-            appConfigProvider.overrideWithValue(_mockConfig),
-            trainerRoutineRepositoryProvider.overrideWithValue(
-              _ThrowingRoutineRepository(const ServerError()),
-            ),
-          ],
-          child: MaterialApp(
-            home: AiRoutineOptionsFlow(
-              client: _client,
-              recommendedExercises: <RoutineExercise>[
-                RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
-              ],
-              recommendedReason: '기존 회원 데이터 기반 추천',
-            ),
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_mockConfig),
+          trainerRoutineRepositoryProvider.overrideWithValue(
+            _ThrowingRoutineRepository(const ServerError()),
+          ),
+        ],
+        child: MaterialApp(
+          home: AiRoutineOptionsFlow(
+            client: _client,
+            recommendedExercises: <RoutineExercise>[
+              RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+            ],
+            recommendedReason: '기존 회원 데이터 기반 추천',
           ),
         ),
-      );
+      ),
+    );
 
-      await _driveToSendReady(tester);
-      await tester.tap(find.byKey(const ValueKey<String>('send-selected-routine')));
-      await tester.pumpAndSettle();
+    await _driveToSendReady(tester);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('send-selected-routine')),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-      expect(
-        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-        findsNothing,
-      );
-    },
-  );
+    expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+    expect(
+      find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+      findsNothing,
+    );
+  });
 }

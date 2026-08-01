@@ -17,14 +17,12 @@ import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_it
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_options_flow.dart';
+import 'package:oncare_trainer/features/ai_routine/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
-
-/// Minute options offered for every routine item (mock: 10~45분 chips).
-const List<int> _minuteOptions = <int>[10, 15, 20, 30, 45];
 
 /// A trainer-added exercise (kept in-memory like the mock).
 class _CustomExercise {
@@ -54,6 +52,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   String? _clientId; // null until clients load (defaults to the first)
   final Map<String, int> _minuteEdits = <String, int>{};
   final Map<String, String> _nameEdits = <String, String>{};
+  final Map<String, String> _typeEdits = <String, String>{};
 
   /// AI suggestions the trainer removed for this round (in-memory,
   /// like the other edits).
@@ -96,6 +95,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       // A different client gets a clean slate, like the mock.
       _minuteEdits.clear();
       _nameEdits.clear();
+      _typeEdits.clear();
       _removed.clear();
       _editingNameId = null;
       _custom.clear();
@@ -174,6 +174,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
         _custom.clear();
         _minuteEdits.clear();
         _nameEdits.clear();
+        _typeEdits.clear();
         _removed.clear();
         // Close any editing UI too — otherwise an open name editor or
         // add-form would survive the "next round" reset (PR review).
@@ -213,7 +214,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   AssignedRoutine _summaryRoutine(List<AiRoutineItem> items, int totalMinutes) {
     final active = items.where((i) => !_removed.contains(i.id)).toList();
     final result = summaryTypeAndSource(
-      aiItemTypes: <String>[for (final i in active) i.type],
+      aiItemTypes: <String>[for (final i in active) _typeEdits[i.id] ?? i.type],
       customItemTypes: <String>[for (final c in _custom) c.type],
     );
     final names = <String>[
@@ -479,7 +480,7 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                       (item) => RoutineExercise(
                         name: item.name,
                         minutes: item.minutes,
-                        type: item.type,
+                        type: _typeEdits[item.id] ?? item.type,
                       ),
                     )
                     .toList(growable: false),
@@ -525,6 +526,8 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                         onNameDone: () => setState(() => _editingNameId = null),
                         onMinutes: (m) =>
                             setState(() => _minuteEdits[item.id] = m),
+                        onType: (type) =>
+                            setState(() => _typeEdits[item.id] = type),
                         // AI suggestions can be dropped from this round too.
                         onDelete: () => setState(() {
                           _removed.add(item.id);
@@ -540,6 +543,34 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
                       type: _custom[i].type,
                       reason: '트레이너 추가',
                       isCustom: true,
+                      editingName: _editingNameId == 'custom-$i',
+                      onNameTap: () =>
+                          setState(() => _editingNameId = 'custom-$i'),
+                      onNameChanged: (name) {
+                        final current = _custom[i];
+                        _custom[i] = _CustomExercise(
+                          name: name,
+                          minutes: current.minutes,
+                          type: current.type,
+                        );
+                      },
+                      onNameDone: () => setState(() => _editingNameId = null),
+                      onMinutes: (minutes) => setState(() {
+                        final current = _custom[i];
+                        _custom[i] = _CustomExercise(
+                          name: current.name,
+                          minutes: minutes,
+                          type: current.type,
+                        );
+                      }),
+                      onType: (type) => setState(() {
+                        final current = _custom[i];
+                        _custom[i] = _CustomExercise(
+                          name: current.name,
+                          minutes: current.minutes,
+                          type: type,
+                        );
+                      }),
                       onDelete: () => setState(() => _custom.removeAt(i)),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -755,7 +786,7 @@ class _DietSummaryCard extends StatelessWidget {
                 label: '칼로리',
                 value: client.calories,
                 unit: 'kcal',
-                color: AppColors.accent,
+                color: AppColors.accentDark,
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
@@ -874,8 +905,7 @@ class _AiAssistantPrompt extends StatelessWidget {
   }
 }
 
-/// One routine card — AI items are editable (name + minutes); custom
-/// items carry the orange trainer accent and a delete button.
+/// One routine card — AI and trainer-added items share the same editor.
 class _RoutineCard extends StatelessWidget {
   const _RoutineCard({
     required this.name,
@@ -888,6 +918,7 @@ class _RoutineCard extends StatelessWidget {
     this.onNameChanged,
     this.onNameDone,
     this.onMinutes,
+    this.onType,
     this.onDelete,
   });
 
@@ -901,22 +932,19 @@ class _RoutineCard extends StatelessWidget {
   final ValueChanged<String>? onNameChanged;
   final VoidCallback? onNameDone;
   final ValueChanged<int>? onMinutes;
+  final ValueChanged<String>? onType;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final accent = isCustom ? AppColors.warning : AppColors.accent;
+    const accent = AppColors.accent;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
-        border: Border.all(
-          color: isCustom
-              ? AppColors.warning.withValues(alpha: 0.35)
-              : AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,7 +952,8 @@ class _RoutineCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
+              if (onType == null)
+                Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: 2,
@@ -942,7 +971,7 @@ class _RoutineCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              if (onType == null) const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: editingName
                     ? _NameEditField(
@@ -1015,28 +1044,25 @@ class _RoutineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              for (final m in _minuteOptions) ...<Widget>[
-                _MinuteChip(
-                  minutes: m,
-                  selected: minutes == m,
-                  accent: accent,
-                  onTap: onMinutes == null ? null : () => onMinutes!(m),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              const Spacer(),
-              Text(
-                '$minutes분',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: accent,
-                ),
+          if (onType != null) ...<Widget>[
+            RoutineCategoryDropdown(value: type, onChanged: onType!),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (onMinutes != null)
+            RoutineMinutesField(
+              key: ValueKey<String>('routine-minutes-$name'),
+              recommendedMinutes: minutes,
+              onSaved: onMinutes!,
+            )
+          else
+            Text(
+              '$minutes분',
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accent,
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -1102,47 +1128,6 @@ class _NameEditFieldState extends State<_NameEditField> {
   }
 }
 
-class _MinuteChip extends StatelessWidget {
-  const _MinuteChip({
-    required this.minutes,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final int minutes;
-  final bool selected;
-  final Color accent;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 4,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? accent : AppColors.inputBackground,
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-        ),
-        child: Text(
-          '$minutes분',
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: selected
-                ? AppColors.primaryForeground
-                : AppColors.subtleForeground,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _AddExerciseButton extends StatelessWidget {
   const _AddExerciseButton({required this.onTap});
 
@@ -1151,7 +1136,7 @@ class _AddExerciseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.warning.withValues(alpha: 0.04),
+      color: AppColors.accentSurface,
       borderRadius: const BorderRadius.all(AppRadius.card),
       child: InkWell(
         onTap: onTap,
@@ -1161,14 +1146,14 @@ class _AddExerciseButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+            border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
           ),
           child: const Text(
             '＋ 운동 직접 추가',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: AppColors.warning,
+              color: AppColors.accent,
             ),
           ),
         ),
@@ -1177,8 +1162,7 @@ class _AddExerciseButton extends StatelessWidget {
   }
 }
 
-/// The "운동 추가" form — name, type, minutes, 취소/추가하기. Keeps the
-/// orange trainer accent from the mock to distinguish manual additions.
+/// The "운동 추가" form — name, category, keyboard minutes, 취소/추가하기.
 class _AddExerciseForm extends StatefulWidget {
   const _AddExerciseForm({required this.onCancel, required this.onAdd});
 
@@ -1193,8 +1177,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
   final TextEditingController _name = TextEditingController();
   String _type = '근력';
   int _minutes = 15;
-
-  static const List<String> _types = <String>['유산소', '근력', '스트레칭'];
+  bool _minutesConfirmed = false;
 
   @override
   void dispose() {
@@ -1210,7 +1193,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
         color: AppColors.card,
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1225,6 +1208,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
+            key: const ValueKey<String>('custom-exercise-name'),
             controller: _name,
             decoration: InputDecoration(
               hintText: '운동 이름 (예: 레그프레스 3세트)',
@@ -1243,70 +1227,19 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              for (final t in _types) ...<Widget>[
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _type = t),
-                    child: Container(
-                      height: 32,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _type == t
-                            ? AppColors.warning
-                            : AppColors.inputBackground,
-                        borderRadius: const BorderRadius.all(AppRadius.md),
-                      ),
-                      child: Text(
-                        t,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _type == t
-                              ? AppColors.warningForeground
-                              : AppColors.subtleForeground,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (t != _types.last) const SizedBox(width: AppSpacing.xs),
-              ],
-            ],
+          RoutineCategoryDropdown(
+            value: _type,
+            onChanged: (type) => setState(() => _type = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              for (final m in _minuteOptions) ...<Widget>[
-                GestureDetector(
-                  onTap: () => setState(() => _minutes = m),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _minutes == m
-                          ? AppColors.warning
-                          : AppColors.inputBackground,
-                      borderRadius: const BorderRadius.all(AppRadius.pill),
-                    ),
-                    child: Text(
-                      '$m분',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: _minutes == m
-                            ? AppColors.warningForeground
-                            : AppColors.subtleForeground,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-            ],
+          RoutineMinutesField(
+            key: const ValueKey<String>('custom-exercise-minutes'),
+            recommendedMinutes: 15,
+            requiredConfirmation: true,
+            onSaved: (minutes) => setState(() {
+              _minutes = minutes;
+              _minutesConfirmed = true;
+            }),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -1323,11 +1256,11 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
               Expanded(
                 child: _FormButton(
                   label: '추가하기',
-                  background: AppColors.warning,
-                  foreground: AppColors.warningForeground,
+                  background: AppColors.accent,
+                  foreground: AppColors.accentForeground,
                   onTap: () {
                     final name = _name.text.trim();
-                    if (name.isEmpty) return;
+                    if (name.isEmpty || !_minutesConfirmed) return;
                     widget.onAdd(name, _minutes, _type);
                   },
                 ),

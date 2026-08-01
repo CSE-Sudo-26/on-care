@@ -66,7 +66,8 @@ class _SlowCountingRoutineRepository extends AiRoutineRepository {
     required List<Map<String, Object?>> program,
   }) async {
     registerCalls++;
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Keep the write in flight across client-switching/scroll animations.
+    await Future<void>.delayed(const Duration(seconds: 5));
     return super.registerToSchedule(
       date: date,
       clientName: clientName,
@@ -386,7 +387,16 @@ void main() {
       await tester.tap(find.text('＋ 운동 직접 추가'));
       await tester.pump();
 
-      await tester.enterText(find.byType(TextField), '레그프레스 5세트');
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+        '레그프레스 5세트',
+      );
+      final minutesField = find.descendant(
+        of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(minutesField, '15');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -453,20 +463,14 @@ void main() {
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       // Every card carries an X now — the first belongs to the first
       // AI suggestion.
-      await tester.drag(
-        find.byType(Scrollable).first,
-        const Offset(0, -160),
-      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
       await tester.pump();
       await tester.tap(find.byIcon(Icons.close).first);
       await tester.pump();
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
 
       // Switching clients and back restores the full suggestion list.
-      await tester.drag(
-        find.byType(Scrollable).first,
-        const Offset(0, 1000),
-      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 1000));
       await tester.pump();
       await tester.tap(find.text('이지수'));
       await settle(tester);
@@ -631,6 +635,8 @@ void main() {
           container.read(aiRoutineRepositoryProvider)
               as _SlowCountingRoutineRepository;
       expect(repo.registerCalls, 1);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
     testWidgets('switching clients mid-registration does not flash success '
@@ -674,6 +680,8 @@ void main() {
       // must not be left disabled by the previous client's guard.
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
       expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
     testWidgets('homework delivery does not depend on the chat repository', (
@@ -761,6 +769,8 @@ void main() {
           container.read(aiRoutineRepositoryProvider)
               as _SlowCountingRoutineRepository;
       expect(repo.registerCalls, 1);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
     testWidgets('switching clients mid-send does not flash send success '
@@ -808,7 +818,16 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('＋ 운동 직접 추가'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), '레그프레스 5세트');
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+        '레그프레스 5세트',
+      );
+      final minutesField = find.descendant(
+        of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(minutesField, '15');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -834,10 +853,7 @@ void main() {
       await openTab(tester);
 
       // Remove all three seeded AI suggestions for 김민수.
-      await tester.drag(
-        find.byType(Scrollable).first,
-        const Offset(0, -160),
-      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
       await tester.pump();
       for (var i = 0; i < 3; i++) {
         await tester.tap(find.byIcon(Icons.close).first);
@@ -957,21 +973,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'a non-network assign failure shows the generic retry message '
-      '(a clear failure, safe to retry)',
-      (tester) async {
-        await openRealApiTab(tester, assignError: const ServerError());
+    testWidgets('a non-network assign failure shows the generic retry message '
+        '(a clear failure, safe to retry)', (tester) async {
+      await openRealApiTab(tester, assignError: const ServerError());
 
-        await tapSend(tester);
+      await tapSend(tester);
 
-        expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-        expect(
-          find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-          findsNothing,
-        );
-      },
-    );
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(
+        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+        findsNothing,
+      );
+    });
 
     testWidgets(
       'an all-custom send (every AI suggestion removed) assigns type/source '
@@ -1005,11 +1018,23 @@ void main() {
         await tester.tap(find.text('＋ 운동 직접 추가'));
         await tester.pump();
 
-        await tester.enterText(find.byType(TextField), '스트레칭 A');
-        // Default type chip is 근력 — switch to 스트레칭 so the assigned
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('custom-exercise-name')),
+          '스트레칭 A',
+        );
+        // Default category is 근력 — switch to 스트레칭 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
-        await tester.tap(find.text('스트레칭'));
+        await tester.tap(find.text('근력').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('스트레칭').last);
+        await tester.pump();
+        final minutesField = find.descendant(
+          of: find.byKey(const ValueKey<String>('custom-exercise-minutes')),
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(minutesField, '15');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pump();
         await tester.ensureVisible(find.text('추가하기'));
         await tester.pump();

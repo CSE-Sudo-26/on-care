@@ -34,6 +34,7 @@ class _ThrowingScheduleRepository extends ScheduleRepository {
     required String time,
     required String type,
     required int durationMinutes,
+    String note = '',
   }) async => throw Exception('add failed');
 
   @override
@@ -113,6 +114,7 @@ void main() {
         time: '19:30',
         type: target.type,
         durationMinutes: 90,
+        note: target.note,
       );
       final after = await repo.watchToday().first;
       final moved = after.firstWhere((s) => s.clientName == '박성호');
@@ -419,16 +421,31 @@ void main() {
       await tester.tap(find.text('✎ 수정'));
       await settle(tester);
 
+      // Editing stays inside the expanded schedule card and supports memo.
+      expect(
+        find.byKey(
+          const ValueKey<String>('inline-session-editor-seed-schedule-3'),
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('schedule-trainer-note')),
+        '오른쪽 어깨 가동범위 확인',
+      );
+
       // Change 00분 → 30분 in the time picker and save.
       await tester.tap(find.text('00분'));
       await settle(tester);
       await tester.tap(find.text('30분').last);
       await settle(tester);
+      await tester.ensureVisible(find.text('저장하기'));
+      await tester.pump();
       await tester.tap(find.text('저장하기'));
       await settle(tester);
 
       expect(find.text('15:30'), findsOneWidget);
       expect(find.text('15:00'), findsNothing);
+      expect(find.text('오른쪽 어깨 가동범위 확인'), findsOneWidget);
     });
 
     testWidgets('삭제 removes the session after confirmation', (tester) async {
@@ -649,6 +666,8 @@ void main() {
 
       // Save without changing anything — the sheet must have prefilled
       // the session's own values, not snapped to defaults.
+      await tester.ensureVisible(find.text('저장하기'));
+      await tester.pump();
       await tester.tap(find.text('저장하기'));
       await settle(tester);
 

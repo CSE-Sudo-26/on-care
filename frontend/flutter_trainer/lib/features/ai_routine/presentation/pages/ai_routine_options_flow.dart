@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_rou
 import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/routine_options.dart';
+import 'package:oncare_trainer/features/ai_routine/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Conversation-style AI routine builder.
@@ -49,6 +50,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   String _intensity = 'moderate';
   String _newExerciseType = '근력';
   int _newExerciseMinutes = 15;
+  bool _newExerciseMinutesConfirmed = false;
 
   bool _generating = false;
   bool _sending = false;
@@ -151,7 +153,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   void _addExercise() {
     final name = _newExerciseName.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty || !_newExerciseMinutesConfirmed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('운동 이름과 시간을 입력하고 Enter로 저장해 주세요')),
+      );
+      return;
+    }
     setState(() {
       _edited.add(
         RoutineExercise(
@@ -163,6 +170,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _newExerciseName.clear();
       _newExerciseType = '근력';
       _newExerciseMinutes = 15;
+      _newExerciseMinutesConfirmed = false;
       _showAddExercise = false;
     });
   }
@@ -363,34 +371,22 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           ),
           _analysisRow('최근 루틴', client.lastRoutine),
           const SizedBox(height: AppSpacing.md),
-          if (_options == null) ...<Widget>[
-            TextField(
-              key: const ValueKey<String>('analysis-trainer-memo'),
-              controller: _trainerMemo,
-              minLines: 2,
-              maxLines: 4,
-              style: const TextStyle(color: AppColors.foreground),
-              decoration: _inputDecoration(
-                hintText: _analysisSuggestion,
-                labelText: '트레이너 메모 · 수정 가능',
-              ),
+          TextField(
+            key: const ValueKey<String>('analysis-trainer-memo'),
+            controller: _trainerMemo,
+            minLines: 2,
+            maxLines: 4,
+            style: const TextStyle(color: AppColors.foreground),
+            decoration: _inputDecoration(
+              hintText: _analysisSuggestion,
+              labelText: '트레이너 메모 · 수정 가능',
             ),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(
-              '회색 제안 문구는 입력 전 참고용이며, 직접 입력한 메모만 저장·전송돼요.',
-              style: TextStyle(fontSize: 9.5, color: AppColors.mutedForeground),
-            ),
-          ] else
-            Text(
-              _trainerMemo.text.trim().isEmpty
-                  ? _analysisSuggestion
-                  : _trainerMemo.text.trim(),
-              style: const TextStyle(
-                fontSize: 11,
-                height: 1.4,
-                color: AppColors.mutedForeground,
-              ),
-            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            '회색 제안 문구는 입력 전 참고용이며, 직접 입력한 메모만 저장·전송돼요.',
+            style: TextStyle(fontSize: 9.5, color: AppColors.mutedForeground),
+          ),
         ],
       ),
     );
@@ -598,6 +594,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         else
           OutlinedButton.icon(
             onPressed: () => setState(() => _showAddExercise = true),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.accent,
+              side: const BorderSide(color: AppColors.accent),
+            ),
             icon: const Icon(Icons.add, size: 17),
             label: const Text('운동 직접 등록'),
           ),
@@ -613,25 +613,17 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 3,
-                ),
-                decoration: const BoxDecoration(
-                  color: AppColors.accentSurface,
-                  borderRadius: BorderRadius.all(AppRadius.pill),
-                ),
-                child: Text(
-                  exercise.type,
-                  style: const TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
+              Expanded(
+                child: RoutineCategoryDropdown(
+                  key: ValueKey<String>(
+                    'routine-category-$_selectedKey-$index-${exercise.type}',
                   ),
+                  value: exercise.type,
+                  onChanged: (type) => setState(() {
+                    _edited[index] = exercise.copyWith(type: type);
+                  }),
                 ),
               ),
-              const Spacer(),
               IconButton(
                 tooltip: '운동 삭제',
                 visualDensity: VisualDensity.compact,
@@ -660,23 +652,12 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             decoration: _inputDecoration(hintText: '운동 이름'),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: <int>[10, 15, 20, 30, 45, 60]
-                .map(
-                  (minutes) => _choiceChip(
-                    '$minutes분',
-                    exercise.minutes == minutes,
-                    () => setState(() {
-                      _edited[index] = _edited[index].copyWith(
-                        minutes: minutes,
-                      );
-                    }),
-                    key: ValueKey<String>('routine-minute-$index-$minutes'),
-                  ),
-                )
-                .toList(),
+          RoutineMinutesField(
+            key: ValueKey<String>('routine-minutes-$index'),
+            recommendedMinutes: exercise.minutes,
+            onSaved: (minutes) => setState(() {
+              _edited[index] = _edited[index].copyWith(minutes: minutes);
+            }),
           ),
         ],
       ),
@@ -700,32 +681,19 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: <String>['유산소', '근력', '스트레칭']
-                .map(
-                  (type) => _choiceChip(
-                    type,
-                    _newExerciseType == type,
-                    () => setState(() => _newExerciseType = type),
-                  ),
-                )
-                .toList(),
+          RoutineCategoryDropdown(
+            value: _newExerciseType,
+            onChanged: (type) => setState(() => _newExerciseType = type),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: <int>[10, 15, 20, 30, 45]
-                .map(
-                  (minutes) => _choiceChip(
-                    '$minutes분',
-                    _newExerciseMinutes == minutes,
-                    () => setState(() => _newExerciseMinutes = minutes),
-                  ),
-                )
-                .toList(),
+          RoutineMinutesField(
+            key: const ValueKey<String>('new-exercise-minutes'),
+            recommendedMinutes: 15,
+            requiredConfirmation: true,
+            onSaved: (minutes) => setState(() {
+              _newExerciseMinutes = minutes;
+              _newExerciseMinutesConfirmed = true;
+            }),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -891,52 +859,33 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _reviewActions() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final send = FilledButton.icon(
-          key: const ValueKey<String>('send-selected-routine'),
-          onPressed: _sending || _sent ? null : _send,
-          icon: _sending
-              ? const SizedBox.square(
-                  dimension: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primaryForeground,
-                  ),
-                )
-              : Icon(_sent ? Icons.check : Icons.send_rounded, size: 17),
-          label: Text(
-            _sending
-                ? '전송 중…'
-                : _sent
-                ? '전송 완료'
-                : '고객에게 전송',
-          ),
-        );
-        final chat = OutlinedButton.icon(
+    if (_sent) {
+      return SizedBox(
+        height: 48,
+        child: OutlinedButton.icon(
           key: const ValueKey<String>('open-client-chat'),
           onPressed: _openClientChat,
           icon: const Icon(Icons.chat_bubble_outline, size: 17),
-          label: const Text('채팅으로 이동'),
-        );
-        if (constraints.maxWidth < 420) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              SizedBox(height: 48, child: send),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(height: 48, child: chat),
-            ],
-          );
-        }
-        return Row(
-          children: <Widget>[
-            Expanded(child: SizedBox(height: 48, child: send)),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: SizedBox(height: 48, child: chat)),
-          ],
-        );
-      },
+          label: Text('${widget.client.name}님 채팅으로 이동'),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 48,
+      child: FilledButton.icon(
+        key: const ValueKey<String>('send-selected-routine'),
+        onPressed: _sending ? null : _send,
+        icon: _sending
+            ? const SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primaryForeground,
+                ),
+              )
+            : const Icon(Icons.send_rounded, size: 17),
+        label: Text(_sending ? '전송 중…' : '고객에게 전송'),
+      ),
     );
   }
 
@@ -1145,76 +1094,90 @@ class _ProgressStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: '맞춤 루틴 생성 진행 단계',
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: <Widget>[
-          for (var index = 0; index < _steps.length; index++) ...<Widget>[
-            Expanded(
-              child: InkWell(
-                key: ValueKey<String>('routine-stage-$index'),
-                onTap: index <= maxReachedStage
-                    ? () => onStageTap(index)
-                    : null,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+          Positioned(
+            top: 19,
+            left: 0,
+            right: 0,
+            child: Row(
+              children: <Widget>[
+                const Spacer(),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 2,
+                    color: maxReachedStage >= 1
+                        ? AppColors.accent
+                        : AppColors.borderStrong,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 2,
+                    color: maxReachedStage >= 2
+                        ? AppColors.accent
+                        : AppColors.borderStrong,
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+          Row(
+            children: <Widget>[
+              for (var index = 0; index < _steps.length; index++)
+                Expanded(
                   child: Column(
                     children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          if (index > 0)
-                            Expanded(
-                              child: Container(
-                                height: 2,
+                      Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          key: ValueKey<String>('routine-stage-$index'),
+                          customBorder: const CircleBorder(),
+                          onTap: index <= maxReachedStage
+                              ? () => onStageTap(index)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              width: 30,
+                              height: 30,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
                                 color: index <= maxReachedStage
                                     ? AppColors.accent
-                                    : AppColors.borderStrong,
+                                    : AppColors.inputBackground,
+                                border: Border.all(
+                                  color: index == stage
+                                      ? AppColors.primary
+                                      : AppColors.borderStrong,
+                                  width: index == stage ? 2 : 1,
+                                ),
                               ),
-                            ),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            width: 30,
-                            height: 30,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: index <= maxReachedStage
-                                  ? AppColors.accent
-                                  : AppColors.inputBackground,
-                              border: Border.all(
-                                color: index == stage
-                                    ? AppColors.primary
-                                    : AppColors.borderStrong,
-                                width: index == stage ? 2 : 1,
-                              ),
-                            ),
-                            child: index < stage
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: AppColors.accentForeground,
-                                  )
-                                : Text(
-                                    _steps[index].$1,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: index <= maxReachedStage
-                                          ? AppColors.accentForeground
-                                          : AppColors.mutedForeground,
+                              child: index < stage
+                                  ? const Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: AppColors.accentForeground,
+                                    )
+                                  : Text(
+                                      _steps[index].$1,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: index <= maxReachedStage
+                                            ? AppColors.accentForeground
+                                            : AppColors.mutedForeground,
+                                      ),
                                     ),
-                                  ),
-                          ),
-                          if (index < _steps.length - 1)
-                            Expanded(
-                              child: Container(
-                                height: 2,
-                                color: index < maxReachedStage
-                                    ? AppColors.accent
-                                    : AppColors.borderStrong,
-                              ),
                             ),
-                        ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -1232,9 +1195,8 @@ class _ProgressStepper extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ],
       ),
     );

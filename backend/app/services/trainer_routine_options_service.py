@@ -37,7 +37,7 @@ _SYSTEM_PROMPT = """\
     "total_minutes": 30,
     "intensity": "낮음|보통|높음",
     "exercises": [
-      {"name": "운동명", "minutes": 15, "type": "유산소|근력|스트레칭"}
+      {"name": "운동명", "minutes": 15, "type": "걷기|유산소|근력|요가|스트레칭|기타"}
     ],
     "reason": "회원에게 보여줄 짧은 추천 이유",
     "rationale": "트레이너가 확인할 데이터 근거"
@@ -48,7 +48,7 @@ _SYSTEM_PROMPT = """\
     "total_minutes": 30,
     "intensity": "낮음|보통|높음",
     "exercises": [
-      {"name": "운동명", "minutes": 15, "type": "유산소|근력|스트레칭"}
+      {"name": "운동명", "minutes": 15, "type": "걷기|유산소|근력|요가|스트레칭|기타"}
     ],
     "reason": "회원에게 보여줄 짧은 추천 이유",
     "rationale": "트레이너가 확인할 데이터 근거"
