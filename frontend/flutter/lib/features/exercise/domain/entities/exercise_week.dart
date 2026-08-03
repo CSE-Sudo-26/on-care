@@ -1,3 +1,24 @@
+/// "N일 연속" — 운동한 요일 중 **가장 긴 연속 구간**의 길이. 활성 일수의 단순
+/// 합계가 아니다(월·수·금 운동은 3일이 아니라 1일 연속).
+///
+/// 요일별 분 하나만 보고 계산하므로 저장된 세션 목록이 없어도, 그리고 세션에
+/// 없는 분(오늘 체크한 AI 추천 운동)이 더해진 뒤에도 같은 규칙으로 다시 셀 수
+/// 있다. 세 생산자(mock 저장소·LocalApiInterceptor·FastAPI)가 이 정의를 공유해
+/// 운동 탭의 '연속' 카드가 어느 경로에서든 같은 뜻이 된다.
+int longestActiveStreak(List<double> dailyMinutes) {
+  int best = 0;
+  int run = 0;
+  for (final double m in dailyMinutes) {
+    if (m > 0) {
+      run += 1;
+      if (run > best) best = run;
+    } else {
+      run = 0;
+    }
+  }
+  return best;
+}
+
 enum ExerciseType { cardio, strength, yoga, walking, stretching, other }
 
 ExerciseType _exerciseTypeFromString(String s) => ExerciseType.values
@@ -74,6 +95,7 @@ class ExerciseWeek {
     required this.totalCalories,
     required this.streakDays,
     required this.aiCoachMessage,
+    this.dailyCalories = const <double>[],
     this.cardioMinutes = const <double>[],
     this.strengthMinutes = const <double>[],
     this.stretchingMinutes = const <double>[],
@@ -87,6 +109,10 @@ class ExerciseWeek {
   final int streakDays;
   final String aiCoachMessage;
 
+  /// Per-day burned calories (same length/indexing as [dailyMinutes]), used
+  /// by the home "주간 추이" chart so it shares one source with this tab.
+  final List<double> dailyCalories;
+
   /// Per-day minutes broken out by type for the stacked weekly chart.
   /// All three lists are the same length as [dailyMinutes] when the
   /// payload includes them; otherwise empty and the chart falls back
@@ -96,9 +122,15 @@ class ExerciseWeek {
   final List<double> stretchingMinutes;
 
   /// Count of distinct days on which the user worked out, matching
-  /// the prototype's "이번 주 N회" tile semantics. Multiple sessions
-  /// on the same day collapse to one.
-  int get workoutCount => sessions.map((s) => s.dayLabel).toSet().length;
+  /// the prototype's "이번 주 N회" tile semantics. Derived from
+  /// [dailyMinutes] so every day carrying minutes counts exactly once —
+  /// multiple sessions on one day collapse, and minutes layered on top of
+  /// the stored sessions (a checked AI routine) are counted by the same
+  /// rule. Falls back to the session day labels for payloads that carry
+  /// no per-day series.
+  int get workoutCount => dailyMinutes.isNotEmpty
+      ? dailyMinutes.where((double m) => m > 0).length
+      : sessions.map((s) => s.dayLabel).toSet().length;
 
   factory ExerciseWeek.fromJson(Map<String, Object?> json) {
     List<double> parseDoubleList(String key) {
@@ -107,17 +139,36 @@ class ExerciseWeek {
       return raw.map((v) => (v! as num).toDouble()).toList();
     }
 
+    final List<ExerciseSession> sessions = (json['sessions']! as List<Object?>)
+        .cast<Map<String, Object?>>()
+        .map(ExerciseSession.fromJson)
+        .toList();
+    final List<String> dayLabels = (json['day_labels']! as List<Object?>)
+        .cast<String>()
+        .toList();
+
+    // 홈 '주간 추이' 차트가 읽는 일별 칼로리. 아직 이 필드를 내려주지 않는
+    // 응답(구버전 페이로드)에서는 이미 받은 세션에서 요일별로 합산해, 실제
+    // 데이터가 있는데도 차트만 데모 상수로 폴백하는 일이 없도록 한다.
+    List<double> dailyCalories = parseDoubleList('daily_calories');
+    if (dailyCalories.isEmpty && dayLabels.isNotEmpty) {
+      final List<double> derived = List<double>.filled(dayLabels.length, 0);
+      for (final ExerciseSession s in sessions) {
+        final int i = dayLabels.indexOf(s.dayLabel);
+        if (i >= 0) derived[i] += s.calories;
+      }
+      dailyCalories = derived;
+    }
+
     return ExerciseWeek(
-      sessions: (json['sessions']! as List<Object?>)
-          .cast<Map<String, Object?>>()
-          .map(ExerciseSession.fromJson)
-          .toList(),
+      sessions: sessions,
       dailyMinutes: parseDoubleList('daily_minutes'),
-      dayLabels: (json['day_labels']! as List<Object?>).cast<String>().toList(),
+      dayLabels: dayLabels,
       totalMinutes: (json['total_minutes']! as num).toInt(),
       totalCalories: (json['total_calories']! as num).toInt(),
       streakDays: (json['streak_days']! as num).toInt(),
       aiCoachMessage: json['ai_coach_message']! as String,
+      dailyCalories: dailyCalories,
       cardioMinutes: parseDoubleList('cardio_minutes'),
       strengthMinutes: parseDoubleList('strength_minutes'),
       stretchingMinutes: parseDoubleList('stretching_minutes'),

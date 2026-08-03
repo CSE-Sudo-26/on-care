@@ -11,6 +11,8 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
@@ -616,12 +618,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                           ),
                         ),
                         Text(
-                          '/ ${nf.format(calGoal)} ${l.unitKcal}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: FigmaColors.textMuted,
-                          ),
+                          '/${nf.format(calGoal)}${l.unitKcal}',
+                          style: kGoalSuffixStyle,
                         ),
                       ],
                     ),
@@ -637,6 +635,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                 child: _MacroMetric(
                   label: l.homeMacroCarbs,
                   grams: widget.summary.macros.carbsG,
+                  goalG: 275,
                   color: FigmaColors.primary,
                 ),
               ),
@@ -645,7 +644,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                 child: _MacroMetric(
                   label: l.homeMacroProtein,
                   grams: widget.summary.macros.proteinG,
-                  color: FigmaColors.green,
+                  goalG: 100,
+                  color: FigmaColors.primary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -653,7 +653,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                 child: _MacroMetric(
                   label: l.homeMacroFat,
                   grams: widget.summary.macros.fatG,
-                  color: FigmaColors.orange,
+                  goalG: 55,
+                  color: FigmaColors.primary,
                 ),
               ),
             ],
@@ -836,11 +837,15 @@ class _MacroMetric extends StatelessWidget {
     required this.label,
     required this.grams,
     required this.color,
+    this.goalG,
   });
 
   final String label;
   final double grams;
   final Color color;
+
+  /// Optional daily target in grams, shown as a small "/275g" suffix.
+  final int? goalG;
 
   @override
   Widget build(BuildContext context) {
@@ -852,6 +857,7 @@ class _MacroMetric extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,14 +873,21 @@ class _MacroMetric extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            '${value}g',
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: <Widget>[
+              Text(
+                '${value}g',
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+              if (goalG != null)
+                Text(' /${goalG}g', maxLines: 1, style: kGoalSuffixStyle),
+            ],
           ),
         ],
       ),
@@ -973,7 +986,7 @@ class _AxisLabel extends StatelessWidget {
 
 /// The full-width 운동 card: activity metrics (time / kcal / count), the burn
 /// goal progress, and a weekly burned-calories trend chart with value labels.
-class _ExerciseCard extends StatelessWidget {
+class _ExerciseCard extends ConsumerWidget {
   const _ExerciseCard({
     required this.summary,
     required this.showCharts,
@@ -984,20 +997,27 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final double burned = summary.exerciseCalories.toDouble();
-    // 소모 목표는 백엔드 summary 필드(개인화 전까지 서버 기본값)에서 온다.
-    final double burnGoal = summary.exerciseBurnGoal.toDouble();
-    final double pct = burnGoal <= 0 ? 0 : (burned / burnGoal).clamp(0.0, 1.0);
-    // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
-    final double rawPct = burnGoal <= 0 ? 0 : burned / burnGoal;
+    // 운동 탭과 같은 단일 소스(exerciseWeekViewProvider)에서 주간 수치·일별
+    // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
+    // AI 추천 운동까지 이미 더한 값이라, 아래 3지표와 주간 추이 차트가 같이 움직인다.
+    // 로딩 전에는 summary 값으로 폴백.
+    final ExerciseWeek? wk = ref.watch(exerciseWeekViewProvider).valueOrNull;
+    final int minutes = wk?.totalMinutes ?? summary.exerciseMinutes;
+    final int count = wk?.workoutCount ?? summary.exerciseCount;
+    final double burned =
+        (wk?.totalCalories ?? summary.exerciseCalories).toDouble();
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
-    // 두고, '오늘' 강조도 마지막(일) 고정이 아니라 실제 오늘 요일에 붙인다.
+    // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = DateTime.now().weekday - 1;
+    // 데모 상수는 주간 데이터가 아직 로드되지 않았을 때만 쓴다. 실제 데이터가
+    // 있으면 그 일별 칼로리를 그대로 그린다(값이 없는 주는 빈 차트가 정답).
+    final List<double> baseCal = (wk != null && wk.dailyCalories.isNotEmpty)
+        ? wk.dailyCalories
+        : _demoExerciseWeekCalories;
     final List<double> week = <double>[
-      for (int i = 0; i < _demoExerciseWeekCalories.length; i++)
-        i <= todayIdx ? _demoExerciseWeekCalories[i] : 0,
+      for (int i = 0; i < baseCal.length; i++) if (i > todayIdx) 0 else baseCal[i],
     ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
@@ -1028,7 +1048,8 @@ class _ExerciseCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   icon: Icons.timer_outlined,
-                  value: '${summary.exerciseMinutes}',
+                  value: '$minutes',
+                  goal: '150',
                   unit: l.unitMinutes,
                   label: l.homeExerciseActiveTime,
                   color: FigmaColors.primary,
@@ -1039,6 +1060,7 @@ class _ExerciseCard extends StatelessWidget {
                 child: _MetricTile(
                   icon: Icons.local_fire_department_rounded,
                   value: nf.format(burned),
+                  goal: '1,500',
                   unit: l.unitKcal,
                   label: l.homeExerciseBurned,
                   color: FigmaColors.orange,
@@ -1048,76 +1070,17 @@ class _ExerciseCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   icon: Icons.check_circle_outline_rounded,
-                  value: '${summary.exerciseCount}',
-                  unit: l.unitTimes,
-                  label: l.homeExerciseCount,
+                  // 값 = 주간 운동한 날짜 수(workoutCount), 목표 = 주 3일 이상.
+                  value: '$count',
+                  goal: '3',
+                  unit: l.unitDays,
+                  label: l.homeExerciseDays,
                   color: FigmaColors.green,
                 ),
               ),
             ],
           ),
-          if (summary.exerciseFeedback case final feedback?) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              feedback,
-              style: const TextStyle(
-                fontSize: 10,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-                color: FigmaColors.textMuted,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 4,
-            children: <Widget>[
-              Text(
-                l.homeExerciseBurnProgress,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textSub,
-                ),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text: nf.format(burned),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.primary,
-                      ),
-                    ),
-                    TextSpan(
-                      text:
-                          ' / ${nf.format(burnGoal)} ${l.unitKcal}'
-                          '  ·  ${(rawPct * 100).round()}%',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _Fill(
-            pct: pct,
-            height: 8,
-            gradient: const LinearGradient(
-              colors: <Color>[FigmaColors.primary, FigmaColors.primaryStripe],
-            ),
-          ),
-          if (showCharts) const SizedBox(height: 6),
+          if (showCharts) const SizedBox(height: 12),
           if (showCharts) const _SoftDivider(),
           if (showCharts) const SizedBox(height: 10),
           if (showCharts)
@@ -1170,16 +1133,34 @@ class _ExerciseCard extends StatelessWidget {
                 for (int i = 0; i < days.length; i++)
                   Expanded(
                     child: Center(
-                      child: Text(
-                        days[i],
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w600,
-                          color: i == todayIdx
-                              ? FigmaColors.primary
-                              : FigmaColors.textFaint,
-                        ),
-                      ),
+                      // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF 원형 안에 흰색
+                      // 요일 글씨로 표기한다.
+                      child: i == todayIdx
+                          ? Container(
+                              width: 16,
+                              height: 16,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                color: FigmaColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                days[i],
+                                style: const TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              days[i],
+                              style: const TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w600,
+                                color: FigmaColors.textFaint,
+                              ),
+                            ),
                     ),
                   ),
               ],
@@ -1198,12 +1179,16 @@ class _MetricTile extends StatelessWidget {
     required this.unit,
     required this.label,
     required this.color,
+    this.goal,
   });
   final IconData icon;
   final String value;
   final String unit;
   final String label;
   final Color color;
+
+  /// Optional small "/목표" suffix shown after the value (e.g. "/150").
+  final String? goal;
 
   @override
   Widget build(BuildContext context) {
@@ -1257,14 +1242,17 @@ class _MetricTile extends StatelessWidget {
                         height: 1,
                       ),
                     ),
-                    Text(
-                      unit,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
+                    if (goal != null)
+                      Text(' /$goal$unit', maxLines: 1, style: kGoalSuffixStyle)
+                    else
+                      Text(
+                        unit,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: FigmaColors.textMuted,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -1311,39 +1299,6 @@ Color _nutStatusColor(double v, double goal) {
 /// An intrinsic-safe horizontal progress fill. Uses a flex split rather than
 /// [FractionallySizedBox] so it survives [IntrinsicHeight]'s intrinsic-sizing
 /// pass (FractionallySizedBox throws during that pass).
-class _Fill extends StatelessWidget {
-  const _Fill({required this.pct, this.gradient, this.height = 4});
-
-  final double pct;
-  final Gradient? gradient;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final int filled = (pct.clamp(0.0, 1.0) * 1000).round();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              flex: filled,
-              child: DecoratedBox(
-                decoration: BoxDecoration(gradient: gradient),
-              ),
-            ),
-            Expanded(
-              flex: 1000 - filled,
-              child: const ColoredBox(color: FigmaColors.track),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RingPainter extends CustomPainter {
   _RingPainter({
     required this.pct,
@@ -1897,19 +1852,6 @@ class _RecommendedMeals extends StatelessWidget {
                       background: FigmaColors.primaryA(0.10),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.go(AppRoutes.diet),
-                child: Text(
-                  l.homeViewAll,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.primary,
-                  ),
                 ),
               ),
             ],

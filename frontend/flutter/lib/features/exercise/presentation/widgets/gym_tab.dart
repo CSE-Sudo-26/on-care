@@ -598,12 +598,12 @@ class _RecommendedGymSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         gymsAsync.when(
-          loading: () => const _SectionLoading(height: 184),
+          loading: () => const _SectionLoading(height: 140),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
           data: (List<Gym> gyms) => gyms.isEmpty
               ? _EmptyRecommendation(message: l.exNoRecommendedGyms)
               : SizedBox(
-                  height: 184,
+                  height: 140,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: gyms.length,
@@ -690,7 +690,7 @@ class _GymRecommendationCard extends StatelessWidget {
               for (final String tag in gym.tags.take(2)) _TagChip(label: tag),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           if (gym.weekdayHours != null)
             Row(
               children: <Widget>[
@@ -743,7 +743,7 @@ class _RecommendedTrainerSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         gymsAsync.when(
-          loading: () => const _SectionLoading(height: 156),
+          loading: () => const _SectionLoading(height: 120),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
           data: (List<Gym> gyms) {
             final List<Gym> trainerGyms = gyms
@@ -753,7 +753,7 @@ class _RecommendedTrainerSection extends StatelessWidget {
               return _EmptyRecommendation(message: l.exNoRecommendedTrainers);
             }
             return SizedBox(
-              height: 156,
+              height: 120,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: trainerGyms.length,
@@ -820,8 +820,9 @@ class _TrainerRecommendationCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
+                // '전담 트레이너'가 있던 자리·스타일에 소속 헬스장을 표기.
                 Text(
-                  gym.trainerRole ?? l.exTrainerDedicated,
+                  gym.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -829,26 +830,16 @@ class _TrainerRecommendationCard extends StatelessWidget {
                     color: FigmaColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 10),
                 Text(
-                  '${l.exTrainerAffiliation} · ${gym.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.textBody,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  l.exTrainerRecommendationReason,
-                  maxLines: 1,
+                  gym.trainerReason ?? l.exTrainerRecommendationReason,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.primary,
+                    height: 1.3,
                   ),
                 ),
               ],

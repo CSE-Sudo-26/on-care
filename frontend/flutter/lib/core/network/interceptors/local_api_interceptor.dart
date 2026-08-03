@@ -565,6 +565,9 @@ class LocalApiInterceptor extends Interceptor {
     // Aggregate minutes per day-label so the bar chart can render even
     // when a day is missing (React mock left Tue=0).
     final perDay = <String, int>{for (final l in _weekdayLabels) l: 0};
+    // 일별 소모 칼로리 — 홈 '주간 추이' 차트가 읽는 시리즈. 없으면 클라이언트가
+    // 데모 상수로 폴백하므로 분(minutes) 시리즈와 같이 내려준다.
+    final perDayCalories = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayCardio = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStrength = <String, int>{for (final l in _weekdayLabels) l: 0};
     final perDayStretching = <String, int>{
@@ -581,6 +584,11 @@ class LocalApiInterceptor extends Interceptor {
         r.dayLabel,
         (m) => m + r.minutes,
         ifAbsent: () => r.minutes,
+      );
+      perDayCalories.update(
+        r.dayLabel,
+        (c) => c + r.calories,
+        ifAbsent: () => r.calories,
       );
       final bucket = switch (r.type) {
         'cardio' || 'walking' => perDayCardio,
@@ -617,6 +625,9 @@ class LocalApiInterceptor extends Interceptor {
     });
 
     final dailyMinutes = <num>[for (final l in _weekdayLabels) perDay[l] ?? 0];
+    final dailyCalories = <num>[
+      for (final l in _weekdayLabels) perDayCalories[l] ?? 0,
+    ];
     final cardioSeries = <num>[
       for (final l in _weekdayLabels) perDayCardio[l] ?? 0,
     ];
@@ -627,13 +638,12 @@ class LocalApiInterceptor extends Interceptor {
       for (final l in _weekdayLabels) perDayStretching[l] ?? 0,
     ];
 
-    // "Streak" = consecutive non-zero days ending at today's weekday
-    // (or simply the count of non-zero days for the simple mock).
-    final streak = dailyMinutes.where((m) => m > 0).length;
+    final streak = _longestActiveStreak(dailyMinutes);
 
     return _ok(options, <String, Object?>{
       'sessions': sessionsJson,
       'daily_minutes': dailyMinutes,
+      'daily_calories': dailyCalories,
       'cardio_minutes': cardioSeries,
       'strength_minutes': strengthSeries,
       'stretching_minutes': stretchingSeries,
@@ -645,6 +655,25 @@ class LocalApiInterceptor extends Interceptor {
           ? '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요.'
           : '이번 주는 운동량이 조금 부족해요. 가벼운 산책부터 다시 시작해 봐요.',
     });
+  }
+
+  /// "N일 연속" — 운동한 요일 중 가장 긴 연속 구간의 길이. 활성 일수의 단순
+  /// 합계가 아니다(월·수·금 운동은 3일이 아니라 1일 연속). FastAPI
+  /// `exercise_service._longest_streak`, 그리고 클라이언트의
+  /// `longestActiveStreak` 와 같은 정의라야 '연속' 카드가 어느 경로에서든
+  /// 같은 값을 보인다.
+  int _longestActiveStreak(List<num> dailyMinutes) {
+    int best = 0;
+    int run = 0;
+    for (final num m in dailyMinutes) {
+      if (m > 0) {
+        run += 1;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+    }
+    return best;
   }
 
   /// "오늘 / 어제 / N요일 / MM월 DD일" for a given weekday label.

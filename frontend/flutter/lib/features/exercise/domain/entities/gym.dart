@@ -11,6 +11,7 @@ class Gym {
     required this.tags,
     this.trainerName,
     this.trainerRole,
+    this.trainerReason,
     this.weekdayHours,
     this.weekendHours,
     this.phone,
@@ -24,6 +25,10 @@ class Gym {
   final List<String> tags;
   final String? trainerName;
   final String? trainerRole;
+
+  /// Per-trainer recommendation reason shown on the 추천 트레이너 card/detail.
+  /// Null falls back to the generic localized reason.
+  final String? trainerReason;
   final String? weekdayHours;
   final String? weekendHours;
   final String? phone;

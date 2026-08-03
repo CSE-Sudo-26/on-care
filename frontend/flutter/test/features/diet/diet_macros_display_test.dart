@@ -38,13 +38,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('탄수화물 43%'), findsOneWidget);
-    expect(find.textContaining('113'), findsOneWidget);
+    // 오늘 3끼 합계 = 탄120·단45·지45g → 45/17/38%.
+    expect(find.text('탄수화물 45%'), findsOneWidget);
+    expect(find.textContaining('120 /275g'), findsOneWidget);
     expect(find.text('단백질 17%'), findsOneWidget);
-    // 단백질 46g / 지방 46.5g 이 '46' 을 공유하므로 단위까지 붙여 구분한다.
-    expect(find.textContaining('46 g'), findsOneWidget);
-    expect(find.text('지방 40%'), findsOneWidget);
-    expect(find.textContaining('46.5'), findsOneWidget);
+    expect(find.textContaining('45 /100g'), findsOneWidget); // 단백질 45g
+    expect(find.text('지방 38%'), findsOneWidget);
+    expect(find.textContaining('45 /55g'), findsOneWidget); // 지방 45g
     expect(find.text('짬뽕'), findsOneWidget);
   });
 
@@ -61,9 +61,9 @@ void main() {
     await tester.pumpWidget(_app(DietEntryDetailPage(entry: lunch)));
     await tester.pump();
 
-    expect(find.text('탄수화물 100g · 단백질 30g · 지방 24g'), findsOneWidget);
+    expect(find.text('탄수화물 107g · 단백질 29g · 지방 22.5g'), findsOneWidget);
     expect(
-      find.text('탄수화물 100g · 단백질 30g · 지방 24g · 나트륨 3200mg'),
+      find.text('탄수화물 107g · 단백질 29g · 지방 22.5g · 나트륨 3200mg'),
       findsOneWidget,
     );
   });

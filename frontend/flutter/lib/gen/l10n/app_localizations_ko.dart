@@ -269,6 +269,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseCount => '주간 운동 횟수';
 
   @override
+  String get homeExerciseDays => '주간 운동 일수';
+
+  @override
   String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
 
   @override
@@ -367,6 +370,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unitMinutes => '분';
+
+  @override
+  String get unitDays => '일';
 
   @override
   String unitKcalValue(int count) {
@@ -669,7 +675,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerAffiliation => '소속 헬스장';
 
   @override
-  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+  String get exTrainerRecommendationReason => '내 건강 목표 달성에 잘 맞는 트레이너예요';
+
+  @override
+  String get exNearbyGymsMapLabel => '내 주변 헬스장';
 
   @override
   String get exWeekSummary => '이번 주 운동 요약';
@@ -682,6 +691,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exAiRoutineToday => 'AI 맞춤 루틴 · 오늘';
+
+  @override
+  String get exStatDays => '일수';
 
   @override
   String get exStatTime => '시간';

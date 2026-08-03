@@ -596,6 +596,12 @@ abstract class AppLocalizations {
   /// **'Weekly workouts'**
   String get homeExerciseCount;
 
+  /// No description provided for @homeExerciseDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly workout days'**
+  String get homeExerciseDays;
+
   /// No description provided for @homeExerciseBurnProgress.
   ///
   /// In en, this message translates to:
@@ -787,6 +793,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'min'**
   String get unitMinutes;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get unitDays;
 
   /// No description provided for @unitKcalValue.
   ///
@@ -1349,8 +1361,14 @@ abstract class AppLocalizations {
   /// No description provided for @exTrainerRecommendationReason.
   ///
   /// In en, this message translates to:
-  /// **'A good fit for your health goals'**
+  /// **'A great fit for reaching my health goals'**
   String get exTrainerRecommendationReason;
+
+  /// No description provided for @exNearbyGymsMapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gyms near me'**
+  String get exNearbyGymsMapLabel;
 
   /// No description provided for @exWeekSummary.
   ///
@@ -1375,6 +1393,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI Routine · Today'**
   String get exAiRoutineToday;
+
+  /// No description provided for @exStatDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get exStatDays;
 
   /// No description provided for @exStatTime.
   ///
