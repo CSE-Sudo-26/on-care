@@ -27,11 +27,11 @@ const TextStyle _kGoalSuffix = TextStyle(
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
-/// Sections (top → bottom): header, greeting, AI coaching banner, a merged
-/// 식단·영양 card (calorie ring + weekly nutrition trend) and a full-width
-/// 운동 card (activity metrics + burn goal + weekly trend),
-/// 이번 주 AI 추천 식단 carousel, 오늘의 일정. Per the product decision the
-/// 건강 지표 (심박수·수면) cards and the sleep AI-coaching banner are omitted.
+/// Sections (top → bottom): header, AI coaching banner, a 식단·영양 card
+/// (칼로리·나트륨·당류 지표 카드 + 탄단지 + 선택한 지표의 주간 추이) and a
+/// 운동 card (좌측 지표 3종 + 우측 주간 추이), 이번 주 AI 추천 식단 carousel,
+/// 오늘의 일정. Per the product decision the 건강 지표 (심박수·수면) cards and
+/// the sleep AI-coaching banner are omitted.
 class DashboardContent extends StatelessWidget {
   const DashboardContent({
     super.key,
@@ -742,7 +742,7 @@ class _MetricStatCard extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                NumberFormat('#,###').format(indicator.current),
+                _metricNumber(indicator.current),
                 maxLines: 1,
                 style: const TextStyle(
                   fontSize: 22,
@@ -760,7 +760,7 @@ class _MetricStatCard extends StatelessWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  '/${NumberFormat('#,###').format(indicator.max)}',
+                  '/${_metricNumber(indicator.max)}',
                   maxLines: 1,
                   style: const TextStyle(
                     fontSize: 9.5,
@@ -1340,6 +1340,13 @@ String _nutLabel(AppLocalizations l, _NutTabKind key) => switch (key) {
   _NutTabKind.sugar => l.dietSugar,
 };
 
+/// 지표 수치 표기. 정수는 천단위 콤마만 붙이고, 소수가 있으면 한 자리까지
+/// 남긴다(당류 17.8 이 18 로 반올림돼 지표 카드와 그래프 라벨·식단 탭 수치가
+/// 서로 어긋나던 문제).
+String _metricNumber(num v) => v == v.roundToDouble()
+    ? NumberFormat('#,###').format(v)
+    : NumberFormat('#,##0.#').format(v);
+
 /// 지표 키 → 오늘 수치(현재값·목표·초과 여부).
 HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
     switch (key) {
@@ -1355,7 +1362,7 @@ const Color _nutLineGray = Color(0xFFDDE2E8);
 class _ChartLegend extends StatelessWidget {
   const _ChartLegend({required this.title, required this.goalText});
 
-  /// "주간 칼로리 추이" — 그래프 왼쪽 상단 제목.
+  /// "주간 {지표} 추이" — 선택된 지표에 따라 바뀌는 그래프 왼쪽 상단 제목.
   final String title;
 
   /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
@@ -1468,15 +1475,9 @@ class _TrendChartPainter extends CustomPainter {
     for (int i = 0; i <= lastIdx; i++) {
       final Color sc = _nutStatusColor(cur[i], goal);
       _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
-      _text(canvas, _fmt(cur[i]), pts[i], w, sc);
+      _text(canvas, _metricNumber(cur[i]), pts[i], w, sc);
     }
   }
-
-  // Keep one decimal for fractional values (당류 14.8g stays 14.8, not 15) so
-  // the home bubble matches the 식단 탭 요약 수치.
-  String _fmt(double v) => v == v.roundToDouble()
-      ? NumberFormat('#,###').format(v)
-      : NumberFormat('#,##0.#').format(v);
 
   void _dot(Canvas c, Offset o, Color color, {double r = 3.0}) {
     c.drawCircle(o, r + 1.3, Paint()..color = Colors.white); // 흰 테두리(halo)

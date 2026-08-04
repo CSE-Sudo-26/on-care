@@ -132,6 +132,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('지표 카드는 소수 수치를 반올림하지 않는다 (당류 17.8)', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1067, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 3428, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 17.8, max: 50, unit: 'g'),
+        ],
+        macros: DietMacros(
+          carbsG: 120,
+          proteinG: 45,
+          fatG: 45,
+          carbsPct: 45,
+          proteinPct: 17,
+          fatPct: 38,
+        ),
+        dietEntries: 3,
+        exerciseMinutes: 0,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 60,
+        weekScoreDelta: 0,
+        sodiumWarning: null,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 식단 탭·그래프 라벨과 같은 표기(17.8)여야 한다 — 18 로 반올림되면 회귀.
+    expect(find.text('17.8'), findsOneWidget);
+    expect(find.text('18'), findsNothing);
+    // 정수 수치는 천단위 콤마 표기를 유지한다.
+    expect(find.text('1,067'), findsOneWidget);
+    expect(find.text('3,428'), findsOneWidget);
+  });
+
   for (final width in <double>[360, 480, 800]) {
     testWidgets('renders live PR #293 layout without overflow at ${width}px', (
       WidgetTester tester,
