@@ -263,6 +263,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeeklyTrend => 'Weekly trend';
 
   @override
+  String homeWeeklyMetricTrend(String metric) {
+    return 'Weekly $metric trend';
+  }
+
+  @override
+  String get homeWeeklyExerciseTrend => 'Weekly exercise trend';
+
+  @override
+  String get homeMetricOver => 'Over';
+
+  @override
+  String get homeMetricNormal => 'On track';
+
+  @override
   String get homeExerciseActiveTime => 'Weekly active time';
 
   @override

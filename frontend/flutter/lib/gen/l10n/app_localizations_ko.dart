@@ -260,6 +260,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeWeeklyTrend => '주간 추이';
 
   @override
+  String homeWeeklyMetricTrend(String metric) {
+    return '주간 $metric 추이';
+  }
+
+  @override
+  String get homeWeeklyExerciseTrend => '주간 운동 추이';
+
+  @override
+  String get homeMetricOver => '초과';
+
+  @override
+  String get homeMetricNormal => '정상';
+
+  @override
   String get homeExerciseActiveTime => '주간 운동 시간';
 
   @override
