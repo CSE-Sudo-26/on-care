@@ -2,8 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// NumberFormat 만 가져온다 — intl 의 TextDirection 이 dart:ui 것과 충돌한다.
+import 'package:intl/intl.dart' show NumberFormat;
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
+import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -184,6 +188,11 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
       exerciseWeekViewProvider,
     );
     final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
+    // 주간 소모 목표는 서버(exercise_burn_goal)에서 온다. 홈 운동 카드도 같은
+    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 로딩 전에는 엔티티 기본값.
+    final int burnGoal =
+        ref.watch(dashboardSummaryProvider).valueOrNull?.exerciseBurnGoal ??
+        DashboardSummary.defaultExerciseBurnGoal;
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
@@ -288,7 +297,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       label: l.exStatCalories,
                       value: '${week.totalCalories}',
                       unit: l.unitKcal,
-                      goal: '1,500',
+                      goal: NumberFormat('#,###').format(burnGoal),
                       accent: true,
                     ),
                   ),

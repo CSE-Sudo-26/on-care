@@ -509,7 +509,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final Map<_NutTabKind, _NutData> nutrition = _nutritionFor(summary);
     final _NutData cfg = nutrition[_tab]!;
     final List<String> days = _weekDayLabels(l);
-    final int todayIdx = _weekTodayIndex();
+    final int todayIdx = _todayIndex();
     final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
 
@@ -711,83 +711,90 @@ class _MetricStatCard extends StatelessWidget {
     final Color statusColor = over
         ? FigmaColors.dangerRed
         : FigmaColors.greenText;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : FigmaColors.statBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? FigmaColors.primary : Colors.transparent,
-            width: 1.4,
+    // 선택 상태를 흰 배경·파란 테두리로만 알리면 스크린리더 사용자는 어떤
+    // 지표가 켜져 있는지도, 이 카드가 누를 수 있는 요소인지도 알 수 없다.
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label (${indicator.unit})',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : FigmaColors.statBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? FigmaColors.primary : Colors.transparent,
+              width: 1.4,
+            ),
           ),
-        ),
-        child: Column(
-          children: <Widget>[
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                '$label (${indicator.unit})',
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textMuted,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                _metricNumber(indicator.current),
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
-                  letterSpacing: -0.5,
-                  height: 1,
-                ),
-              ),
-            ),
-            if (indicator.max > 0) ...<Widget>[
-              const SizedBox(height: 3),
-              // 목표치는 회색 작은 글씨로 현재 수치 바로 아래. 단위는 위쪽
-              // 라벨("칼로리 (kcal)")이 이미 달고 있어 숫자만 적는다.
+          child: Column(
+            children: <Widget>[
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  '/${_metricNumber(indicator.max)}',
+                  '$label (${indicator.unit})',
                   maxLines: 1,
                   style: const TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.textMuted,
                   ),
                 ),
               ),
-            ],
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                over ? l.homeMetricOver : l.homeMetricNormal,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: statusColor,
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _metricNumber(indicator.current),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                    letterSpacing: -0.5,
+                    height: 1,
+                  ),
                 ),
               ),
-            ),
-          ],
+              if (indicator.max > 0) ...<Widget>[
+                const SizedBox(height: 3),
+                // 목표치는 회색 작은 글씨로 현재 수치 바로 아래. 단위는 위쪽
+                // 라벨("칼로리 (kcal)")이 이미 달고 있어 숫자만 적는다.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '/${_metricNumber(indicator.max)}',
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  over ? l.homeMetricOver : l.homeMetricNormal,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -996,7 +1003,10 @@ class _ExerciseCard extends ConsumerWidget {
                       icon: Icons.local_fire_department_rounded,
                       label: l.homeExerciseBurned,
                       value: nf.format(burned),
-                      goal: '1,500',
+                      // 주간 소모 목표는 서버(exercise_burn_goal) 값을 쓴다.
+                      // 운동 탭 '이번 주 운동 요약'도 같은 값을 읽어 두 화면이
+                      // 항상 일치한다.
+                      goal: nf.format(summary.exerciseBurnGoal),
                       unit: l.unitKcal,
                     ),
                     const SizedBox(height: 14),
@@ -1274,11 +1284,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
-/// 오늘 요일 인덱스(월=0 … 일=6). 주간 추이 차트에서 "오늘"을 고정 일요일이
-/// 아니라 실제 오늘로 강조하고, 오늘 이후(미래) 요일의 0값이 실제 급락처럼
-/// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
-int _weekTodayIndex() => DateTime.now().weekday - 1;
-
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
@@ -1330,7 +1335,9 @@ List<String> _weekDayLabels(AppLocalizations l) => <String>[
 ];
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
-/// 주간 영양 차트에서 '오늘' 배지·라이브 값을 실제 요일 칸에 배치한다.
+/// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
+/// 요일의 0값이 급락처럼 보이지 않도록 렌더 범위를 오늘까지로 제한한다.
+/// 홈 카드 전체가 이 하나만 쓴다(지표 카드·차트 기준이 어긋나지 않도록).
 int _todayIndex() => DateTime.now().weekday - 1;
 
 /// 지표 키 → 화면 라벨(칼로리/나트륨/당류).

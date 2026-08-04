@@ -169,6 +169,36 @@ void main() {
     expect(find.text('3,428'), findsOneWidget);
   });
 
+  testWidgets('운동 카드 소모 목표는 서버 값(exerciseBurnGoal)을 쓴다', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      // 화면에 하드코딩됐던 1,500 이 아니라 요약이 내려준 값이 보여야 한다.
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1067, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 900, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 20, max: 50, unit: 'g'),
+        ],
+        macros: DietMacros.zero(),
+        dietEntries: 1,
+        exerciseMinutes: 30,
+        exerciseCalories: 300,
+        exerciseCount: 1,
+        exerciseBurnGoal: 800,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 60,
+        weekScoreDelta: 0,
+        sodiumWarning: null,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(' /800kcal'), findsOneWidget);
+    expect(find.text(' /1,500kcal'), findsNothing);
+  });
+
   for (final width in <double>[360, 480, 800]) {
     testWidgets('renders live PR #293 layout without overflow at ${width}px', (
       WidgetTester tester,
