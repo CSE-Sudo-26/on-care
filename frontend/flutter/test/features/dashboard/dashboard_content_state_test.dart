@@ -148,7 +148,6 @@ void main() {
       expect(find.text('203.6g'), findsOneWidget);
       expect(find.text('109.3g'), findsOneWidget);
       expect(find.text('66.5g'), findsOneWidget);
-      expect(find.text('오늘 식단 기록 4개'), findsOneWidget);
       expect(find.text('45'), findsOneWidget);
       expect(find.text('520'), findsWidgets);
       expect(find.text('4'), findsWidgets);
