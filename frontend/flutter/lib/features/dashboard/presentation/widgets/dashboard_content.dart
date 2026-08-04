@@ -429,16 +429,8 @@ class _CoachingBanner extends StatelessWidget {
 
 // ────────────────────────────────────────────────────── summary cards ──
 
-/// Neutral grey card shadow for the 식단·운동 cards. Both the page and the
-/// cards are white, so this is what lifts a card off the surface — no border,
-/// no top stripe. Deliberately grey (black @ 10%) rather than the brand-blue
-/// [kCardShadow] the other tabs use.
-const List<BoxShadow> _kHomeCardShadow = <BoxShadow>[
-  BoxShadow(color: Color(0x1A000000), blurRadius: 14, offset: Offset(0, 4)),
-];
-
 /// Shared card chrome for the two Home summary cards: white fill, rounded
-/// corners and the grey shadow above. No border, no top stripe.
+/// corners and the shared grey [kCardShadow]. No border, no top stripe.
 class _HomeCard extends StatelessWidget {
   const _HomeCard({required this.child});
   final Widget child;
@@ -449,7 +441,7 @@ class _HomeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: _kHomeCardShadow,
+        boxShadow: kCardShadow,
       ),
       child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
@@ -1736,7 +1728,7 @@ class _RecMealCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: _kHomeCardShadow,
+        boxShadow: kCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
