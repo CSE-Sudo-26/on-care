@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
@@ -295,15 +296,17 @@ void main() {
 
   group('SchedulePage', () {
     Future<void> openSchedule(WidgetTester tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text('스케줄')); // bottom-nav label
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.schedule,
+      );
     }
 
     testWidgets('renders header, week strip, and the timeline', (tester) async {
       await openSchedule(tester);
 
-      expect(find.textContaining('온케어짐 신촌점'), findsOneWidget);
+      expect(find.text('스케줄'), findsWidgets);
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('이지수'), findsOneWidget);
       expect(find.text('1:1 PT · 60분'), findsWidgets);
@@ -387,7 +390,7 @@ void main() {
     testWidgets('새 일정 추가 books a session at a 15-minute step', (tester) async {
       await openSchedule(tester);
 
-      await tester.tap(find.text('＋ 새 일정 추가'));
+      await tester.tap(find.text('새 일정'));
       await settle(tester);
 
       // Change 00분 → 15분 in the time picker.
@@ -469,10 +472,10 @@ void main() {
       await settle(tester);
 
       // The 고객 tab's chat thread shows the send trace.
-      await tester.tap(find.text('고객'));
-      await settle(tester);
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
       expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsOneWidget);
     });
 
@@ -500,16 +503,11 @@ void main() {
       // The card flipped to 완료 (the ✓ 완료 action is gone).
       expect(find.text('✓ 완료'), findsNothing);
 
-      // …and the 운동기록 sub-tab shows the fresh PT entry on top.
-      await tester.tap(find.text('고객'));
-      await settle(tester);
-      await tester.scrollUntilVisible(find.text('박성호'), 150);
-      await tester.ensureVisible(find.text('박성호'));
-      await tester.pump();
-      await tester.tap(find.text('박성호'));
-      await settle(tester);
-      await tester.tap(find.text('운동기록'));
-      await settle(tester);
+      // …and the 운동 sub-tab shows the fresh PT entry on top.
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-3', section: 'workout'),
+      );
       expect(find.textContaining('(오늘)'), findsWidgets);
       expect(find.text('벤치 폼 안정적'), findsOneWidget);
     });
@@ -521,7 +519,7 @@ void main() {
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       await tester.tap(find.text('${tomorrow.day}').first);
       await settle(tester);
-      await tester.tap(find.text('＋ 새 일정 추가'));
+      await tester.tap(find.text('새 일정'));
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -543,7 +541,7 @@ void main() {
       await openSchedule(tester);
       expect(find.text('김민수'), findsOneWidget);
       // On today, the 오늘로 shortcut is hidden.
-      expect(find.text('오늘로'), findsNothing);
+      expect(find.text('오늘'), findsNothing);
 
       // Default window is centred on today (D-3…D+3); tap tomorrow.
       final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -553,10 +551,10 @@ void main() {
       // Tomorrow has no seeded sessions → empty state, and 오늘로 appears.
       expect(find.text('김민수'), findsNothing);
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsOneWidget);
-      expect(find.text('오늘로'), findsOneWidget);
+      expect(find.text('오늘'), findsOneWidget);
 
       // Book a session on the browsed day; the empty state clears.
-      await tester.tap(find.text('＋ 새 일정 추가'));
+      await tester.tap(find.text('새 일정'));
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -564,10 +562,10 @@ void main() {
       expect(find.textContaining('이 날짜에는 일정이 없어요'), findsNothing);
 
       // 오늘로 → today's seeded timeline is intact and the button hides.
-      await tester.tap(find.text('오늘로'));
+      await tester.tap(find.text('오늘'));
       await settle(tester);
       expect(find.text('김민수'), findsOneWidget);
-      expect(find.text('오늘로'), findsNothing);
+      expect(find.text('오늘'), findsNothing);
     });
 
     testWidgets('the week strip fits a narrow column without overflowing', (
@@ -599,7 +597,7 @@ void main() {
       await settle(tester);
       expect(find.text('김민수'), findsOneWidget);
       // Today is now off the visible window, so 오늘로 is offered.
-      expect(find.text('오늘로'), findsOneWidget);
+      expect(find.text('오늘'), findsOneWidget);
     });
 
     testWidgets('💬 채팅 jumps to the client detail chat', (tester) async {
@@ -617,9 +615,9 @@ void main() {
       await tester.tap(find.text('💬 채팅'));
       await settle(tester);
 
-      // Full-screen client detail with the chat sub-tab.
+      // Client detail opened on the chat sub-tab.
       expect(find.text('채팅'), findsOneWidget);
-      expect(find.text('운동기록'), findsOneWidget);
+      expect(find.text('운동'), findsOneWidget);
       expect(find.textContaining('AI가 박성호님의'), findsOneWidget);
     });
 
@@ -629,8 +627,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
       );
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.schedule);
 
       // 신규 회원 (상담, 30분) is booked but is NOT a registered client.
       await tester.scrollUntilVisible(find.text('신규 회원'), 120);
@@ -683,8 +680,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.schedule);
 
       await tester.tap(find.text('김민수')); // 완료 session with a program
       await tester.pump();
@@ -717,10 +713,9 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.schedule);
 
-      await tester.tap(find.text('＋ 새 일정 추가'));
+      await tester.tap(find.text('새 일정'));
       await settle(tester);
       await tester.tap(find.text('추가하기'));
       await settle(tester);
@@ -743,8 +738,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.schedule);
 
       await tester.scrollUntilVisible(find.text('박성호'), 120); // 예정 session
       await tester.ensureVisible(find.text('박성호'));
@@ -777,8 +771,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.schedule);
 
       await tester.scrollUntilVisible(find.text('박성호'), 120);
       await tester.ensureVisible(find.text('박성호'));

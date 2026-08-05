@@ -13,20 +13,34 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
-import 'package:oncare_trainer/shared/widgets/content_frame.dart';
-import 'package:oncare_trainer/shared/widgets/outlined_action_button.dart';
+import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 
-/// 스케줄 tab — today's PT timeline. Every booked session expands:
-/// 완료 shows the finished program and can be sent to the client (mock),
-/// 예정 shows the plan (or a no-plan hint) with a chat shortcut. The
-/// trainer can add, edit (15-minute steps), and delete sessions.
+/// 스케줄 tab — the trainer's calendar, in two views.
+///
+/// **일** is the timeline: every booked session expands, 완료 shows the
+/// finished program and can be sent to the client, 예정 shows the plan
+/// (or a no-plan hint) with a chat shortcut. Add / edit (15-minute
+/// steps) / delete / 완료 처리 all live here.
+///
+/// **주** is a seven-column overview for the question the timeline can't
+/// answer — where the gaps are. Picking a day from it drops back into
+/// the timeline.
+///
+/// Both the view and the browsed day come from the URL (`?v=week&d=…`)
+/// so the dashboard can link to a specific day and a refresh keeps it.
 class SchedulePage extends ConsumerStatefulWidget {
   /// Creates the schedule tab.
-  const SchedulePage({super.key});
+  const SchedulePage({super.key, this.view, this.date});
+
+  /// `day` (default) or `week`.
+  final String? view;
+
+  /// Browsed day as `YYYY-MM-DD`; invalid or absent means today.
+  final String? date;
 
   @override
   ConsumerState<SchedulePage> createState() => _SchedulePageState();
@@ -34,15 +48,55 @@ class SchedulePage extends ConsumerStatefulWidget {
 
 class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// The calendar day being browsed (defaults to today).
-  DateTime _selectedDay = _dateOnly(DateTime.now());
+  late DateTime _selectedDay = _resolveDay(widget.date);
 
   /// Leftmost day of the visible 7-day strip. Centred on today (D-3) so
   /// today sits in the middle; chevrons shift it a week at a time.
-  DateTime _weekAnchor = _dateOnly(
-    DateTime.now(),
-  ).subtract(const Duration(days: 3));
+  late DateTime _weekAnchor = _selectedDay.subtract(const Duration(days: 3));
+
+  /// Whether the week grid is showing.
+  late bool _weekView = widget.view == 'week';
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  /// Parses a `YYYY-MM-DD` route parameter, falling back to today. A
+  /// malformed date in the URL should land the trainer on today rather
+  /// than an error page.
+  static DateTime _resolveDay(String? raw) {
+    final parsed = raw == null ? null : DateTime.tryParse(raw);
+    return _dateOnly(parsed ?? DateTime.now());
+  }
+
+  @override
+  void didUpdateWidget(SchedulePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The URL is the source of truth: a link from the dashboard, or
+    // back/forward, must move the calendar.
+    if (widget.date != oldWidget.date) {
+      final next = _resolveDay(widget.date);
+      setState(() {
+        _selectedDay = next;
+        _weekAnchor = next.subtract(const Duration(days: 3));
+      });
+    }
+    if (widget.view != oldWidget.view) {
+      setState(() => _weekView = widget.view == 'week');
+    }
+  }
+
+  /// Moves to [day], keeping the URL in step so the view is shareable.
+  void _selectDay(DateTime day, {bool toTimeline = false}) {
+    setState(() {
+      _selectedDay = _dateOnly(day);
+      if (toTimeline) _weekView = false;
+    });
+    context.go(
+      AppRoutes.scheduleView(
+        _weekView ? 'week' : 'day',
+        date: ymd(_selectedDay),
+      ),
+    );
+  }
 
   final Set<String> _expanded = <String>{};
   final Set<String> _sent = <String>{};
@@ -186,9 +240,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     }
   }
 
-  /// Jumps to the client's 채팅 — the split panel on wide viewports,
-  /// the full-screen detail elsewhere. Falls back to the 고객 tab when
-  /// the name can't be resolved (e.g. a renamed client).
+  /// Jumps to the client's 채팅. The 고객 page decides whether that is a
+  /// split panel or a full-width detail, so one location covers both.
+  /// Falls back to the roster when the name can't be resolved (e.g. a
+  /// renamed client).
   void _openChat(ScheduleSession s) {
     final clients = ref.read(clientsProvider).valueOrNull ?? const [];
     final match = clients.where((c) => c.name == s.clientName);
@@ -196,14 +251,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context.go(AppRoutes.clients);
       return;
     }
-    final id = match.first.id;
-    final wide = MediaQuery.sizeOf(context).width >= AppLayout.splitBreakpoint;
-    if (wide) {
-      context.go(AppRoutes.clientsWithSelection(id));
-    } else {
-      context.go(AppRoutes.clients);
-      context.push(AppRoutes.clientDetail(id));
-    }
+    context.go(AppRoutes.clientDetail(match.first.id, section: 'chat'));
   }
 
   String get _selectedYmd => ymd(_selectedDay);
@@ -214,119 +262,134 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // Keep the client stream live so the booking sheet and the chat
     // shortcut have data even when this tab is the first one opened.
     ref.watch(clientsProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        // The date header, week strip and add button live OUTSIDE the
-        // async `when()`: switching days spins up a new provider that
-        // starts in `loading`, and blanking the whole page to a spinner
-        // each tap made the strip flicker. Only the timeline reacts to
-        // the async state now (review PR 245).
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
-            return wide
-                ? _buildWide(schedule)
-                : ContentFrame(child: _buildTimeline(schedule, true));
-          },
-        ),
-      ),
-    );
-  }
-
-  /// Wide viewports: the date/week overview docks left and the timeline
-  /// gets its own scrollable column.
-  Widget _buildWide(AsyncValue<List<ScheduleSession>> schedule) {
-    return ContentFrame(
-      maxWidth: AppLayout.wideMaxWidth,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: AppLayout.splitListWidth,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.lg,
-                AppSpacing.xl,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _overviewChildren(),
-              ),
-            ),
-          ),
-          const VerticalDivider(width: 1, color: AppColors.borderStrong),
-          Expanded(child: _buildTimeline(schedule, false)),
-        ],
-      ),
-    );
-  }
-
-  /// Title + optional 오늘로 button, the week strip, and the add button.
-  /// Shared by the wide left column and the single-column timeline.
-  List<Widget> _overviewChildren() {
     final today = _dateOnly(DateTime.now());
     final defaultAnchor = today.subtract(const Duration(days: 3));
-    // Offer 오늘로 whenever the view has drifted from its default
-    // (either a non-today selection or a scrubbed window).
     final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
-    return <Widget>[
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(child: _Header(date: _selectedDay)),
-          if (showToday)
-            _TodayButton(
-              onTap: () => setState(() {
-                _selectedDay = today;
-                _weekAnchor = defaultAnchor;
-              }),
-            ),
-        ],
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      _ScheduleWeekStrip(
-        weekAnchor: _weekAnchor,
-        selectedDay: _selectedDay,
-        bookedDates:
-            ref.watch(bookedDatesProvider).valueOrNull ?? const <String>{},
-        onSelect: (d) => setState(() => _selectedDay = d),
-        onShiftWeek: (dir) => setState(
-          () => _weekAnchor = _weekAnchor.add(Duration(days: 7 * dir)),
+
+    return PageScaffold(
+      title: '스케줄',
+      subtitle: koreanDateLabel(_selectedDay),
+      actions: <Widget>[
+        if (showToday)
+          ActionButton(
+            label: '오늘',
+            icon: Icons.today_outlined,
+            onPressed: () {
+              setState(() => _weekAnchor = defaultAnchor);
+              _selectDay(today);
+            },
+          ),
+        SegmentedSwitch(
+          labels: const <String>['일', '주'],
+          selected: _weekView ? 1 : 0,
+          onChanged: (i) {
+            setState(() => _weekView = i == 1);
+            context.go(
+              AppRoutes.scheduleView(
+                _weekView ? 'week' : 'day',
+                date: _selectedYmd,
+              ),
+            );
+          },
         ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
-      OutlinedActionButton(
-        label: '＋ 새 일정 추가',
-        color: AppColors.accent,
-        onTap: () => _openSessionSheet(),
-      ),
-    ];
+        ActionButton(
+          label: '새 일정',
+          icon: Icons.add,
+          primary: true,
+          onPressed: () => _openSessionSheet(),
+        ),
+      ],
+      scrollable: false,
+      contentPadding: EdgeInsets.zero,
+      // The week strip lives OUTSIDE the async `when()`: switching days
+      // spins up a new provider that starts in `loading`, and blanking
+      // the whole page to a spinner each tap made the strip flicker.
+      // Only the session list reacts to the async state (review PR 245).
+      child: _weekView ? _buildWeekGrid() : _buildDayView(schedule),
+    );
   }
 
-  /// The scrollable timeline; [withOverview] prepends the header, week
-  /// strip, and add button (single-column layout). The overview is always
-  /// rendered — only the session list swaps on the async [schedule] state,
-  /// so switching days never blanks the strip (review PR 245).
-  Widget _buildTimeline(
-    AsyncValue<List<ScheduleSession>> schedule,
-    bool withOverview,
-  ) {
+  /// 주 — a seven-column grid of the week's sessions. One range query
+  /// backs it, so switching weeks doesn't fan out into seven streams.
+  Widget _buildWeekGrid() {
+    final start = _dateOnly(_weekAnchor);
+    final end = start.add(const Duration(days: 6));
+    final range = (from: ymd(start), to: ymd(end));
+    final week = ref.watch(scheduleRangeProvider(range));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _WeekNav(
+          start: start,
+          end: end,
+          onShift: (dir) => setState(
+            () => _weekAnchor = _weekAnchor.add(Duration(days: 7 * dir)),
+          ),
+        ),
+        Expanded(
+          child: week.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => const Center(
+              child: Text(
+                '스케줄을 불러오지 못했어요',
+                style: TextStyle(color: AppColors.mutedForeground),
+              ),
+            ),
+            data: (sessions) => _WeekGrid(
+              start: start,
+              sessions: sessions,
+              selectedDay: _selectedDay,
+              onPickDay: (d) => _selectDay(d, toTimeline: true),
+              onPickSession: (s) {
+                final day = DateTime.tryParse(s.date);
+                if (day != null) _selectDay(day, toTimeline: true);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 일 — the week strip plus the day's timeline.
+  Widget _buildDayView(AsyncValue<List<ScheduleSession>> schedule) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppLayout.pagePadding,
+            AppSpacing.md,
+            AppLayout.pagePadding,
+            AppSpacing.sm,
+          ),
+          child: _ScheduleWeekStrip(
+            weekAnchor: _weekAnchor,
+            selectedDay: _selectedDay,
+            bookedDates:
+                ref.watch(bookedDatesProvider).valueOrNull ?? const <String>{},
+            onSelect: _selectDay,
+            onShiftWeek: (dir) => setState(
+              () => _weekAnchor = _weekAnchor.add(Duration(days: 7 * dir)),
+            ),
+          ),
+        ),
+        Expanded(child: _buildTimeline(schedule)),
+      ],
+    );
+  }
+
+  /// The scrollable timeline for the selected day.
+  Widget _buildTimeline(AsyncValue<List<ScheduleSession>> schedule) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
+        AppLayout.pagePadding,
+        AppSpacing.sm,
+        AppLayout.pagePadding,
         AppSpacing.xxl,
       ),
       children: <Widget>[
-        if (withOverview) ...<Widget>[
-          ..._overviewChildren(),
-          const SizedBox(height: AppSpacing.lg),
-        ],
         ...schedule.when(
           loading: () => const <Widget>[
             Padding(
@@ -730,77 +793,244 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
   }
 }
 
-/// "스케줄" title + "{선택 날짜} · {헬스장}" subtitle.
-class _Header extends StatelessWidget {
-  const _Header({required this.date});
+/// Week range label with the prev/next chevrons, above the week grid.
+class _WeekNav extends StatelessWidget {
+  const _WeekNav({
+    required this.start,
+    required this.end,
+    required this.onShift,
+  });
 
-  /// The calendar day being browsed.
-  final DateTime date;
+  final DateTime start;
+  final DateTime end;
 
-  static const List<String> _weekdays = <String>[
-    '월요일',
-    '화요일',
-    '수요일',
-    '목요일',
-    '금요일',
-    '토요일',
-    '일요일',
-  ];
+  /// -1 = previous week, +1 = next.
+  final ValueChanged<int> onShift;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final isToday =
-        date.year == now.year && date.month == now.month && date.day == now.day;
-    final subtitle =
-        '${date.month}월 ${date.day}일 ${_weekdays[date.weekday - 1]}'
-        '${isToday ? ' (오늘)' : ''} · ${seedTrainerProfile.gym.name}';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          '스케줄',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            color: AppColors.subtleForeground,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        AppSpacing.md,
+        AppLayout.pagePadding,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        children: <Widget>[
+          _ChevronButton(icon: Icons.chevron_left, onTap: () => onShift(-1)),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            '${start.month}월 ${start.day}일 – ${end.month}월 ${end.day}일',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.sm),
+          _ChevronButton(icon: Icons.chevron_right, onTap: () => onShift(1)),
+        ],
+      ),
     );
   }
 }
 
-/// "오늘로" pill — jumps the strip and selection back to today. Shown
-/// only when browsing another day (mirrors the user app's Diet tab).
-class _TodayButton extends StatelessWidget {
-  const _TodayButton({required this.onTap});
+/// Seven day-columns of the week's sessions.
+///
+/// Answers the question the day timeline can't: where the free slots
+/// are. Each column is a scroller of its own so a heavy Wednesday
+/// doesn't stretch the whole grid.
+class _WeekGrid extends StatelessWidget {
+  const _WeekGrid({
+    required this.start,
+    required this.sessions,
+    required this.selectedDay,
+    required this.onPickDay,
+    required this.onPickSession,
+  });
 
+  final DateTime start;
+  final List<ScheduleSession> sessions;
+  final DateTime selectedDay;
+  final ValueChanged<DateTime> onPickDay;
+  final ValueChanged<ScheduleSession> onPickSession;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = ymd(DateTime.now());
+    final byDate = <String, List<ScheduleSession>>{};
+    for (final s in sessions) {
+      if (s.isGap) continue;
+      byDate.putIfAbsent(s.date, () => <ScheduleSession>[]).add(s);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        0,
+        AppLayout.pagePadding,
+        AppSpacing.lg,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (var i = 0; i < 7; i++) ...<Widget>[
+            if (i > 0) const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _DayColumn(
+                day: start.add(Duration(days: i)),
+                today: today,
+                selected: ymd(start.add(Duration(days: i))) == ymd(selectedDay),
+                sessions:
+                    byDate[ymd(start.add(Duration(days: i)))] ??
+                    const <ScheduleSession>[],
+                onPickDay: onPickDay,
+                onPickSession: onPickSession,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DayColumn extends StatelessWidget {
+  const _DayColumn({
+    required this.day,
+    required this.today,
+    required this.selected,
+    required this.sessions,
+    required this.onPickDay,
+    required this.onPickSession,
+  });
+
+  final DateTime day;
+  final String today;
+  final bool selected;
+  final List<ScheduleSession> sessions;
+  final ValueChanged<DateTime> onPickDay;
+  final ValueChanged<ScheduleSession> onPickSession;
+
+  @override
+  Widget build(BuildContext context) {
+    final isToday = ymd(day) == today;
+    final weekend = day.weekday >= DateTime.saturday;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? AppColors.accentSurface : AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(
+          color: selected ? AppColors.primary : AppColors.borderStrong,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          InkWell(
+            onTap: () => onPickDay(day),
+            borderRadius: const BorderRadius.vertical(top: AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Column(
+                children: <Widget>[
+                  Text(
+                    koreanWeekdays[day.weekday - 1],
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: weekend
+                          ? AppColors.subtleForeground
+                          : AppColors.mutedForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: isToday ? AppColors.primary : AppColors.foreground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.borderStrong),
+          Expanded(
+            child: sessions.isEmpty
+                ? Center(
+                    child: Text(
+                      '비어 있음',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.disabledForeground,
+                      ),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(5),
+                    children: <Widget>[
+                      for (final s in sessions)
+                        _WeekChip(session: s, onTap: () => onPickSession(s)),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeekChip extends StatelessWidget {
+  const _WeekChip({required this.session, required this.onTap});
+
+  final ScheduleSession session;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.accentSurface,
-      borderRadius: const BorderRadius.all(AppRadius.pill),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
-          child: Text(
-            '오늘로',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.accent,
+    final color = session.isDone ? AppColors.success : AppColors.primary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: const BorderRadius.all(AppRadius.xs),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.xs),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(AppRadius.xs),
+              border: Border(left: BorderSide(color: color, width: 2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  session.time,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  session.clientName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
