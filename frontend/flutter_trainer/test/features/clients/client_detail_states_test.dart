@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -16,12 +15,12 @@ import '../../helpers/pump_app.dart';
 void main() {
   testWidgets('an unknown client id shows the not-found message instead '
       'of a nameless chat', (tester) async {
-    await pumpTrainerApp(tester, token: 'demo-trainer-token');
-
-    // Deep-link to a client that doesn't exist (stale link).
-    final ctx = tester.element(find.text('고객 관리'));
-    GoRouter.of(ctx).push(AppRoutes.clientDetail('no-such-client'));
-    await settle(tester);
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      // Deep-link to a client that doesn't exist (stale link).
+      at: AppRoutes.clientDetail('no-such-client'),
+    );
 
     expect(find.text('고객을 찾을 수 없어요'), findsOneWidget);
     // No chat composer / sub-tabs for a client that doesn't exist.
@@ -31,7 +30,7 @@ void main() {
     // The escape hatch returns to the client list.
     await tester.tap(find.text('고객 목록으로'));
     await settle(tester);
-    expect(find.text('고객 관리'), findsOneWidget);
+    expect(find.text('고객'), findsWidgets);
   });
 
   testWidgets('a provider error shows the failure message with 다시 시도', (
@@ -47,9 +46,7 @@ void main() {
       ],
     );
 
-    final ctx = tester.element(find.byType(Scaffold).first);
-    GoRouter.of(ctx).push(AppRoutes.clientDetail('seed-client-1'));
-    await settle(tester);
+    await goTo(tester, AppRoutes.clientDetail('seed-client-1'));
 
     expect(find.text('고객 정보를 불러오지 못했어요'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
@@ -68,11 +65,13 @@ void main() {
     testWidgets('sub-tabs are keyboard-reachable and activate on $keyName', (
       tester,
     ) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
-      expect(find.text('채팅'), findsOneWidget);
-      // Start on the 채팅 sub-tab (default), not the 식단 view.
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1'),
+      );
+      expect(find.text('개요'), findsOneWidget);
+      // Start on the 개요 sub-tab (default), not the 식단 view.
       expect(find.text('오늘 영양 요약'), findsNothing);
 
       // Whether the 식단 sub-tab currently holds keyboard focus.
@@ -109,17 +108,19 @@ void main() {
   testWidgets('the selected sub-tab exposes its state on the focus node', (
     tester,
   ) async {
-    await pumpTrainerApp(tester, token: 'demo-trainer-token');
-    await tester.tap(find.text('김민수'));
-    await settle(tester);
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientDetail('seed-client-1'),
+    );
 
     // MergeSemantics folds the selected/button flags into the node the
     // reader actually hits, so one node carries label + state.
-    final flags = tester.getSemantics(find.text('채팅')).flagsCollection;
+    final flags = tester.getSemantics(find.text('개요')).flagsCollection;
     expect(
       flags.isSelected,
       Tristate.isTrue,
-      reason: '기본 선택된 채팅 탭이 selected 로 안내돼야 함',
+      reason: '기본 선택된 개요 탭이 selected 로 안내돼야 함',
     );
     expect(flags.isButton, isTrue);
   });

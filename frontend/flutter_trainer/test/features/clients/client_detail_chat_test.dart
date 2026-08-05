@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
@@ -309,18 +310,23 @@ void main() {
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
     });
 
+    /// Opens 김민수's 채팅 section directly. The client detail defaults
+    /// to 개요 now, so the chat has to be addressed explicitly.
     Future<void> openDetail(WidgetTester tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
     }
 
     testWidgets('shows the header, sub-tabs, and seeded chat', (tester) async {
       await openDetail(tester);
 
+      expect(find.text('개요'), findsOneWidget);
       expect(find.text('채팅'), findsOneWidget);
       expect(find.text('식단'), findsOneWidget);
-      expect(find.text('운동기록'), findsOneWidget);
+      expect(find.text('운동'), findsOneWidget);
 
       // The thread auto-scrolls to the newest message; drag back up so
       // the lazily-built top of the thread (banner + early replies) exists.
@@ -352,8 +358,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '중복 방지 확인');
       await tester.tap(find.byIcon(Icons.send));
@@ -380,8 +388,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '이탈 중 전송');
       await tester.tap(find.byIcon(Icons.send));
@@ -392,7 +402,7 @@ void main() {
       await settle(tester);
 
       // Back on the list without a disposed-controller exception.
-      expect(find.text('고객 관리'), findsOneWidget);
+      expect(find.text('고객'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
 
@@ -414,8 +424,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '이탈 중 실패');
       await tester.tap(find.byIcon(Icons.send));
@@ -424,7 +436,7 @@ void main() {
       // the send resolves.
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await settle(tester);
-      expect(find.text('고객 관리'), findsOneWidget);
+      expect(find.text('고객'), findsWidgets);
 
       // Now fail — the catch must bail on !mounted, not show a snackbar.
       gate.completeError(Exception('send failed'));
@@ -435,16 +447,14 @@ void main() {
       expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
     });
 
-    testWidgets('switching sub-tabs shows the 식단 and 운동기록 views', (
-      tester,
-    ) async {
+    testWidgets('switching sub-tabs shows the 식단 and 운동 views', (tester) async {
       await openDetail(tester);
 
       await tester.tap(find.text('식단'));
       await settle(tester);
       expect(find.text('오늘 영양 요약'), findsOneWidget);
 
-      await tester.tap(find.text('운동기록'));
+      await tester.tap(find.text('운동'));
       await settle(tester);
       expect(find.text('이번 주 완료율'), findsOneWidget);
     });

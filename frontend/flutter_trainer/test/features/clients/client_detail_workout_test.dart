@@ -1,11 +1,19 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// Seeded client ids by display name — the detail is addressed by id.
+const Map<String, String> seedClientIds = <String, String>{
+  '김민수': 'seed-client-1',
+  '이지수': 'seed-client-2',
+  '박성호': 'seed-client-3',
+};
 
 void main() {
   group('ClientRepository.watchHistory', () {
@@ -41,11 +49,14 @@ void main() {
 
   group('WorkoutView', () {
     Future<void> openWorkout(WidgetTester tester, String clientName) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text(clientName));
-      await settle(tester);
-      await tester.tap(find.text('운동기록'));
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail(
+          seedClientIds[clientName]!,
+          section: 'workout',
+        ),
+      );
     }
 
     testWidgets('김민수 shows 76% weekly average, legend, and history', (
