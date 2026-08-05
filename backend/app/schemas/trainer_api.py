@@ -136,6 +136,66 @@ class RoutineAssignRequest(BaseModel):
     source: RoutineSource = "trainer"
 
 
+# ---- AI 루틴 A/B 생성 (routine-options) ----
+# 회원 실데이터로 A/B 두 계획을 "생성"만 한다(저장하지 않음). 트레이너가 선택·수정한
+# 뒤 기존 RoutineAssignRequest 로 저장한다.
+
+IntensityPref = Literal["low", "moderate", "high"]
+
+
+class RoutineOptionsRequest(BaseModel):
+    """A/B 생성 입력 — 트레이너가 조종하는 방향."""
+    available_minutes: int = Field(default=30, ge=10, le=180)
+    intensity_preference: IntensityPref = "moderate"
+    trainer_note: str = Field(default="", max_length=200)
+
+
+class RoutineExerciseOut(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=1, le=180)
+    type: RoutineType
+
+
+class RoutinePlanOut(BaseModel):
+    """생성된 A/B 한 계획(아직 배정 아님)."""
+    key: Literal["A", "B"]
+    label: str = Field(min_length=1, max_length=50)
+    total_minutes: int = Field(ge=1, le=180)
+    intensity: str = Field(min_length=1, max_length=20)  # 낮음|보통|높음
+    exercises: list[RoutineExerciseOut] = Field(min_length=1, max_length=12)
+    reason: str = Field(min_length=1, max_length=200)  # 한 줄 추천 이유
+    rationale: str = Field(min_length=1, max_length=500)  # 회원 데이터 근거(수치 인용)
+
+    @model_validator(mode="after")
+    def _total_matches_exercises(self) -> RoutinePlanOut:
+        if sum(exercise.minutes for exercise in self.exercises) != self.total_minutes:
+            raise ValueError("total_minutes 는 exercises 시간 합계와 같아야 합니다.")
+        return self
+
+
+class MemberAnalysisOut(BaseModel):
+    """생성 근거가 된 회원 상태 요약(1단계 화면용)."""
+    goal: str
+    sodium_today_mg: int
+    sodium_over_target: bool
+    avg_completion_rate: int             # 최근 완료율 평균(0..100)
+    latest_routine: str                  # 마지막 배정 루틴 라벨
+    note: str                            # trainer_note echo
+
+
+class RoutineOptionsOut(BaseModel):
+    analysis: MemberAnalysisOut
+    plan_a: RoutinePlanOut
+    plan_b: RoutinePlanOut
+    generated_by: Literal["ai", "rule"]  # LLM 성공 여부(폴백 가시화)
+
+    @model_validator(mode="after")
+    def _requires_distinct_a_and_b(self) -> RoutineOptionsOut:
+        if self.plan_a.key != "A" or self.plan_b.key != "B":
+            raise ValueError("plan_a/plan_b key 는 각각 A/B여야 합니다.")
+        return self
+
+
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 루프) ----
 
 ScheduleStatus = Literal["예정", "완료", "공백"]
