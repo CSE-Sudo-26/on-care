@@ -28,8 +28,8 @@ from app.schemas.trainer_api import (
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineOptionsOut, RoutineOptionsRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
-    TrainerClientOut, TrainerMe, TrainerMeUpdate, TrainerPasswordChange,
-    WeeklyReportOut,
+    TrainerClientOut, TrainerMe, TrainerMeUpdate, TrainerNotificationSettings,
+    TrainerNotificationSettingsUpdate, TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import trainer_routine_options_service, trainer_service
 from app.services.coach.chat import answer as coach_answer
@@ -113,6 +113,33 @@ def trainer_change_password(
     trainer.hashed_password = hash_password(payload.new_password)
     db.commit()
     return {"status": "changed"}
+
+
+@router.get("/trainer/me/settings", response_model=TrainerNotificationSettings)
+def trainer_settings(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerNotificationSettings:
+    """알림 수신 설정. 기본값은 서버가 소유한다 — 클라이언트마다 기본값을
+    들고 있으면 기기별로 갈라진다."""
+    return trainer_service.build_notification_settings(
+        _require_profile(db, trainer.id)
+    )
+
+
+@router.put("/trainer/me/settings", response_model=TrainerNotificationSettings)
+def trainer_update_settings(
+    payload: TrainerNotificationSettingsUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerNotificationSettings:
+    """알림 수신 설정 부분 수정."""
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    return trainer_service.update_notification_settings(
+        db, _require_profile(db, trainer.id), fields
+    )
 
 
 @router.get("/trainer/clients", response_model=list[TrainerClientOut])

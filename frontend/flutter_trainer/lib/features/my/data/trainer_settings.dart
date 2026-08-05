@@ -1,17 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:oncare_trainer/core/storage/prefs_provider.dart';
+import 'package:oncare_trainer/features/my/data/trainer_settings_repository.dart';
 
 /// How long before a session the trainer wants reminding.
+///
+/// Mirrors the server's `REMINDER_LEAD_OPTIONS` — the backend owns the
+/// contract and rejects anything else, so the picker must not offer more.
 const List<int> reminderLeadOptions = <int>[10, 30, 60];
 
 /// The trainer's notification preferences.
-///
-/// Stored on the device rather than the server: these decide what *this*
-/// browser/app shows, and there is no push infrastructure behind them
-/// yet. When server-side push lands, this class is what the sync layer
-/// reads — the screen doesn't change.
 class TrainerSettings {
   /// Creates a settings snapshot.
   const TrainerSettings({
@@ -43,51 +40,66 @@ class TrainerSettings {
   }
 }
 
-/// Reads/writes [TrainerSettings] in [SharedPreferences].
+/// Drives the 설정 screen's notification section.
+///
+/// Writes optimistically — a switch that waits for a round trip feels
+/// broken — but **rolls back and surfaces the error** if the write
+/// fails. Silently keeping a value the server rejected is how a settings
+/// screen starts lying about itself.
 class TrainerSettingsController extends StateNotifier<TrainerSettings> {
-  /// Loads the stored settings (defaults when absent).
-  TrainerSettingsController(this._prefs) : super(_read(_prefs));
+  /// Creates the controller and loads the stored settings.
+  TrainerSettingsController(this._repository) : super(const TrainerSettings()) {
+    _load();
+  }
 
-  final SharedPreferences _prefs;
+  final TrainerSettingsRepository _repository;
 
-  static const String _kNewMessage = 'trainer.notify.newMessage';
-  static const String _kSession = 'trainer.notify.session';
-  static const String _kLead = 'trainer.notify.leadMinutes';
+  /// Set when the last write failed; the UI shows it once and clears it.
+  String? lastError;
 
-  static TrainerSettings _read(SharedPreferences prefs) {
-    final lead = prefs.getInt(_kLead);
-    return TrainerSettings(
-      newMessageAlerts: prefs.getBool(_kNewMessage) ?? true,
-      sessionReminders: prefs.getBool(_kSession) ?? true,
-      // A value written by an older build (or a hand-edited store) must
-      // not put the picker into a state it cannot render.
-      reminderLeadMinutes: reminderLeadOptions.contains(lead) ? lead! : 30,
-    );
+  Future<void> _load() async {
+    try {
+      state = await _repository.load();
+    } catch (_) {
+      // Keep the defaults on screen — an unreachable settings endpoint
+      // shouldn't block the rest of the page.
+    }
   }
 
   /// Toggles new-message notifications.
-  Future<void> setNewMessageAlerts(bool value) async {
-    state = state.copyWith(newMessageAlerts: value);
-    await _prefs.setBool(_kNewMessage, value);
-  }
+  Future<void> setNewMessageAlerts(bool value) =>
+      _apply(state.copyWith(newMessageAlerts: value));
 
   /// Toggles pre-session reminders.
-  Future<void> setSessionReminders(bool value) async {
-    state = state.copyWith(sessionReminders: value);
-    await _prefs.setBool(_kSession, value);
+  Future<void> setSessionReminders(bool value) =>
+      _apply(state.copyWith(sessionReminders: value));
+
+  /// Sets the reminder lead time; ignores values the server would refuse.
+  Future<void> setReminderLead(int minutes) {
+    if (!reminderLeadOptions.contains(minutes)) return Future<void>.value();
+    return _apply(state.copyWith(reminderLeadMinutes: minutes));
   }
 
-  /// Sets the reminder lead time; ignores values outside
-  /// [reminderLeadOptions].
-  Future<void> setReminderLead(int minutes) async {
-    if (!reminderLeadOptions.contains(minutes)) return;
-    state = state.copyWith(reminderLeadMinutes: minutes);
-    await _prefs.setInt(_kLead, minutes);
+  Future<void> _apply(TrainerSettings next) async {
+    final previous = state;
+    state = next;
+    lastError = null;
+    try {
+      state = await _repository.save(next);
+    } catch (_) {
+      state = previous;
+      lastError = '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+    }
   }
+
+  /// Clears [lastError] once the UI has shown it.
+  void clearError() => lastError = null;
 }
 
 /// The trainer's notification settings.
 final trainerSettingsProvider =
     StateNotifierProvider<TrainerSettingsController, TrainerSettings>((ref) {
-      return TrainerSettingsController(ref.watch(sharedPreferencesProvider));
+      return TrainerSettingsController(
+        ref.watch(trainerSettingsRepositoryProvider),
+      );
     }, name: 'trainerSettings');

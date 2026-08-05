@@ -360,3 +360,46 @@ class TrainerPasswordChange(BaseModel):
     """
     current_password: str = Field(min_length=1, max_length=200)
     new_password: str = Field(min_length=8, max_length=200)
+
+
+# ---- 알림 수신 설정 (#379) ----
+
+#: 세션 알림 시점 선택지(분). 앱의 SegmentedSwitch 와 같은 목록 — 서버가
+#: 계약을 소유하고, 클라이언트는 이 중에서만 고른다.
+REMINDER_LEAD_OPTIONS: tuple[int, ...] = (10, 30, 60)
+
+
+class TrainerNotificationSettings(BaseModel):
+    """트레이너 알림 수신 설정."""
+    notify_new_message: bool
+    notify_session_reminder: bool
+    reminder_lead_minutes: int
+
+
+class TrainerNotificationSettingsUpdate(BaseModel):
+    """부분 수정 — 보낸 필드만 반영."""
+    notify_new_message: bool | None = None
+    notify_session_reminder: bool | None = None
+    reminder_lead_minutes: int | None = None
+
+    @field_validator("reminder_lead_minutes")
+    @classmethod
+    def _v_lead(cls, v: int | None) -> int | None:
+        if v is not None and v not in REMINDER_LEAD_OPTIONS:
+            raise ValueError(
+                f"reminder_lead_minutes 는 {list(REMINDER_LEAD_OPTIONS)} 중 하나여야 합니다."
+            )
+        return v
+
+    @model_validator(mode="after")
+    def _reject_explicit_null(self) -> TrainerNotificationSettingsUpdate:
+        """명시적 null 을 422 로 거른다.
+
+        세 컬럼 모두 DB NOT NULL 이라 null 을 그대로 반영하면 IntegrityError
+        500 이 난다. 누락은 '변경 없음', null 은 '잘못된 값' 으로 구분한다
+        (TrainerMeUpdate · ScheduleUpdateRequest 와 같은 규약).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self

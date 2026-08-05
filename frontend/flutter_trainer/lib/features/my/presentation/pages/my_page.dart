@@ -262,6 +262,23 @@ class _MyPageState extends ConsumerState<MyPage> {
     );
   }
 
+  /// Applies a settings change and tells the trainer if it didn't stick.
+  ///
+  /// The switch flips immediately (waiting on a round trip feels broken),
+  /// so a failed write has to be visible — otherwise the screen shows a
+  /// value the server never accepted.
+  Future<void> _applySetting(Future<void> Function() change) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await change();
+    if (!mounted) return;
+    final controller = ref.read(trainerSettingsProvider.notifier);
+    final error = controller.lastError;
+    if (error != null) {
+      controller.clearError();
+      messenger.showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
+
   Widget _buildSettings() {
     final settings = ref.watch(trainerSettingsProvider);
     final controller = ref.read(trainerSettingsProvider.notifier);
@@ -280,14 +297,16 @@ class _MyPageState extends ConsumerState<MyPage> {
                 label: '새 메시지 알림',
                 hint: '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요',
                 value: settings.newMessageAlerts,
-                onChanged: controller.setNewMessageAlerts,
+                onChanged: (v) =>
+                    _applySetting(() => controller.setNewMessageAlerts(v)),
               ),
               const Divider(height: 1, color: AppColors.borderStrong),
               _SwitchRow(
                 label: '수업 시작 전 알림',
                 hint: '예정된 세션이 다가오면 대시보드에서 강조해요',
                 value: settings.sessionReminders,
-                onChanged: controller.setSessionReminders,
+                onChanged: (v) =>
+                    _applySetting(() => controller.setSessionReminders(v)),
               ),
               if (settings.sessionReminders) ...<Widget>[
                 const SizedBox(height: AppSpacing.sm),
@@ -310,8 +329,10 @@ class _MyPageState extends ConsumerState<MyPage> {
                       selected: reminderLeadOptions.indexOf(
                         settings.reminderLeadMinutes,
                       ),
-                      onChanged: (i) =>
-                          controller.setReminderLead(reminderLeadOptions[i]),
+                      onChanged: (i) => _applySetting(
+                        () =>
+                            controller.setReminderLead(reminderLeadOptions[i]),
+                      ),
                     ),
                   ],
                 ),

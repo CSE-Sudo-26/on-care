@@ -59,6 +59,9 @@
 |---|---|---|
 | GET | `/trainer/me` | 내 트레이너 프로필 |
 | PUT | `/trainer/me` | 프로필 부분 수정(보낸 필드만; 이름/이메일은 계정 소관) |
+| POST | `/trainer/me/password` | 비밀번호 변경(현재 비밀번호 확인) |
+| GET | `/trainer/me/settings` | 알림 수신 설정 |
+| PUT | `/trainer/me/settings` | 알림 수신 설정 부분 수정 |
 | GET | `/trainer/clients` | 고객 로스터(회원 실데이터 집계) |
 | GET | `/trainer/clients/{member_id}/diet?date=` | 해당 회원의 실제 식단 기록 |
 | GET | `/trainer/clients/{member_id}/history` | 해당 회원 운동 기록(최신순) |
@@ -68,7 +71,8 @@
 | POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 |
 | POST | `/trainer/clients/{member_id}/chat/read` | 읽음 처리 |
 | GET | `/trainer/chat/unread` | 회원별 미확인 수 |
-| GET | `/trainer/schedule?date=` | 오늘 타임라인 |
+| GET | `/trainer/schedule?date=` | 하루 타임라인 |
+| GET | `/trainer/schedule?from=&to=&member_id=` | 구간 조회 / 고객 필터 |
 | GET | `/trainer/schedule/booked-dates` | 예약 있는 날짜 |
 | POST | `/trainer/schedule` | 예약 생성(예정) |
 | PUT | `/trainer/schedule/{id}` | 예약 수정 |
@@ -77,6 +81,21 @@
 | POST | `/trainer/clients/{member_id}/ai-coach` | 담당 고객 데이터 기반 AI 코칭 질의 |
 | GET | `/trainer/clients/{member_id}/report?week_start=` | 주간 리포트(어느 요일을 줘도 그 주 월요일로 정규화) |
 | POST | `/trainer/clients/{member_id}/report/send` | 리포트를 회원 채팅 스레드로 전송 |
+
+### 스케줄 구간 조회 (`from`/`to`)
+
+주 캘린더가 7일치를 한 번에 읽기 위한 것 — 하루짜리 요청을 요일마다 반복하면 요청이
+7배가 된다. `YYYY-MM-DD` 는 사전식 정렬이 곧 날짜순이라 문자열 범위 비교로 충분하다.
+한쪽 끝만 온 구간·뒤집힌 구간·잘못된 형식은 **422** 다. 조용히 하루로 떨어뜨리면
+클라이언트는 구간을 받았다고 믿는다. `member_id` 는 담당 링크를 먼저 확인한다.
+
+### 알림 수신 설정 (`/trainer/me/settings`)
+
+기기 로컬이 아니라 **계정 단위** — 트레이너는 센터 PC 와 태블릿을 오간다. 값이 3개뿐이고
+프로필과 수명이 같아 별도 테이블 대신 `trainer_profiles` 컬럼으로 뒀다
+(`0019_trainer_noti_settings`). **기본값은 서버가 소유한다**(모두 켬 / 30분 전) —
+클라이언트마다 기본값을 들고 있으면 기기별로 갈라진다. `reminder_lead_minutes` 는
+`REMINDER_LEAD_OPTIONS`(10/30/60) 밖의 값을 422 로 거부한다.
 
 ### 트레이너용 AI 코칭 (`/trainer/clients/{id}/ai-coach`)
 
