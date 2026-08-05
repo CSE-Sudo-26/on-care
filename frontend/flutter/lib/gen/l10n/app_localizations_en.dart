@@ -482,8 +482,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietLoadError => 'Couldn\'t load your diet.';
 
   @override
-  String get dietOtherDateEmpty =>
-      'Records for the selected date aren\'t available yet.\nPlease check your diet on today\'s date.';
+  String otherDateEmpty(Object section) {
+    return 'Records for the selected date aren\'t available yet.\nPlease check your $section records on today\'s date.';
+  }
 
   @override
   String dietTagSodium(int mg) {
@@ -712,6 +713,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exThisWeek => 'This week';
+
+  @override
+  String get exThisMonth => 'This month';
+
+  @override
+  String exWeekNumber(int n) {
+    return 'Week $n';
+  }
+
+  @override
+  String get exTodayTotalTime => 'Today\'s total time';
+
+  @override
+  String get exRest => 'Rest';
+
+  @override
+  String get exAiRecommendedExercise => 'AI recommended exercise';
 
   @override
   String get exAiRoutineToday => 'AI Routine · Today';

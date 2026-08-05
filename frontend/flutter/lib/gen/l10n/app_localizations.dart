@@ -974,11 +974,11 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your diet.'**
   String get dietLoadError;
 
-  /// No description provided for @dietOtherDateEmpty.
+  /// No description provided for @otherDateEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Records for the selected date aren\'t available yet.\nPlease check your diet on today\'s date.'**
-  String get dietOtherDateEmpty;
+  /// **'Records for the selected date aren\'t available yet.\nPlease check your {section} records on today\'s date.'**
+  String otherDateEmpty(Object section);
 
   /// No description provided for @dietTagSodium.
   ///
@@ -1411,6 +1411,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This week'**
   String get exThisWeek;
+
+  /// No description provided for @exThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get exThisMonth;
+
+  /// No description provided for @exWeekNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {n}'**
+  String exWeekNumber(int n);
+
+  /// No description provided for @exTodayTotalTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s total time'**
+  String get exTodayTotalTime;
+
+  /// No description provided for @exRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest'**
+  String get exRest;
+
+  /// No description provided for @exAiRecommendedExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'AI recommended exercise'**
+  String get exAiRecommendedExercise;
 
   /// No description provided for @exAiRoutineToday.
   ///
