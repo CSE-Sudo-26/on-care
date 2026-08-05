@@ -45,7 +45,7 @@ class AttentionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final shown = entries.take(maxRows).toList();
     return SectionCard(
-      title: '오늘 챙길 고객',
+      title: '확인 필요 회원',
       icon: Icons.priority_high,
       trailing: entries.length > maxRows
           ? CardLink(

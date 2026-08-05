@@ -47,9 +47,10 @@ void main() {
     expect(find.text('답장 필요'), findsOneWidget);
     expect(find.text('주의 고객'), findsOneWidget);
 
-    // 2 of 3 clients active, 4 unread across 3 threads.
+    // 2 of 3 clients active. 이지수·박성호 are waiting on a reply;
+    // 김민수's thread is seeded already answered.
     expect(find.text('휴면 1명'), findsOneWidget);
-    expect(find.text('고객 3명 대기 중'), findsOneWidget);
+    expect(find.text('고객 2명 대기 중'), findsOneWidget);
   });
 
   testWidgets('주의 고객 counts health signals, not the reply backlog', (
@@ -91,7 +92,7 @@ void main() {
       'fixes it', (tester) async {
     await openDashboard(tester);
 
-    expect(find.text('오늘 챙길 고객'), findsOneWidget);
+    expect(find.text('확인 필요 회원'), findsOneWidget);
     // All three seeded clients are waiting on a reply, but 김민수(2100mg)
     // and 박성호(2400mg) are also over the sodium target — and the badge
     // is the client's first alert, so theirs must be the health one.

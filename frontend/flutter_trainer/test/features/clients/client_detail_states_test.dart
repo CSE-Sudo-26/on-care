@@ -65,7 +65,9 @@ void main() {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
-      at: AppRoutes.clientDetail('seed-client-1'),
+      // 박성호 is the one still waiting — 김민수's thread is seeded
+      // already answered.
+      at: AppRoutes.clientDetail('seed-client-3'),
     );
 
     expect(find.text('답장 대기'), findsOneWidget);

@@ -131,31 +131,37 @@ class StatCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: <Widget>[
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        height: 1.1,
-                        color: _toneColor,
-                      ),
-                    ),
-                    if (unit != null) ...<Widget>[
-                      const SizedBox(width: 3),
+                // Fixed height: a baseline-aligned Row has no reliable
+                // intrinsic height, and the IntrinsicHeight that keeps the
+                // KPI tiles level then sized every card a pixel short.
+                SizedBox(
+                  height: 34,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: <Widget>[
                       Text(
-                        unit!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.subtleForeground,
+                        value,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                          color: _toneColor,
                         ),
                       ),
+                      if (unit != null) ...<Widget>[
+                        const SizedBox(width: 3),
+                        Text(
+                          unit!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.subtleForeground,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 if (hint != null) ...<Widget>[
                   const SizedBox(height: 2),
