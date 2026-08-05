@@ -429,27 +429,61 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Scrollbar(
-          controller: _optionScroll,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            key: const ValueKey<String>('routine-options-horizontal-scroll'),
-            controller: _optionScroll,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  for (final choice in _choices) ...<Widget>[
-                    SizedBox(width: 286, child: _optionCard(choice)),
-                    if (choice != _choices.last)
-                      const SizedBox(width: AppSpacing.md),
-                  ],
-                ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Side by side whenever they fit: this is a COMPARISON, and a
+            // comparison you have to scroll through isn't one. The console
+            // splits the workspace into two columns, so the editor column
+            // is narrower than the full-width page this flow was built
+            // for — a fixed 286px rail always clipped the third card.
+            const double minCardWidth = 220;
+            final needed =
+                _choices.length * minCardWidth +
+                (_choices.length - 1) * AppSpacing.md;
+            if (constraints.maxWidth >= needed) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (final choice in _choices) ...<Widget>[
+                        Expanded(child: _optionCard(choice)),
+                        if (choice != _choices.last)
+                          const SizedBox(width: AppSpacing.md),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }
+            // Too narrow for three — fall back to the scrolling rail so
+            // the cards stay readable instead of shrinking to nothing.
+            return Scrollbar(
+              controller: _optionScroll,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                key: const ValueKey<String>(
+                  'routine-options-horizontal-scroll',
+                ),
+                controller: _optionScroll,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (final choice in _choices) ...<Widget>[
+                        SizedBox(width: 286, child: _optionCard(choice)),
+                        if (choice != _choices.last)
+                          const SizedBox(width: AppSpacing.md),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
