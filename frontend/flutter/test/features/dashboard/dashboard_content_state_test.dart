@@ -169,6 +169,72 @@ void main() {
     expect(find.text('3,428'), findsOneWidget);
   });
 
+  testWidgets('지표 카드 단위는 라벨이 아니라 목표치 오른쪽에 붙는다', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      load: () async => liveSummary,
+      size: const Size(390, 2200),
+    );
+    await tester.pumpAndSettle();
+
+    // "칼로리" - "1,860" - "/2,000kcal" - "정상" 순으로 읽혀야 한다.
+    expect(find.text('/2,000kcal'), findsOneWidget);
+    expect(find.text('/2,000mg'), findsOneWidget);
+    expect(find.text('/50g'), findsOneWidget);
+
+    // 라벨에는 단위를 달지 않는다 — 좁은 카드에서 라벨이 먼저 축소되던 문제.
+    expect(find.text('칼로리'), findsOneWidget);
+    expect(find.text('칼로리 (kcal)'), findsNothing);
+    expect(find.text('나트륨 (mg)'), findsNothing);
+    expect(find.text('당류 (g)'), findsNothing);
+
+    // 단위 없는 예전 목표치 표기가 남아 있으면 회귀.
+    expect(find.text('/2,000'), findsNothing);
+    expect(find.text('/50'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('목표가 없는 지표(max=0)는 목표치 대신 단위만 남긴다', (
+    WidgetTester tester,
+  ) async {
+    // 단위가 목표치 줄로 옮겨간 뒤로는, 목표치 줄이 통째로 빠지면 큰 숫자가
+    // 단위를 잃는다. 그래서 max=0 이면 같은 자리에 단위만 적는다.
+    await pumpDashboard(
+      tester,
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1860, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 900, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 43, max: 0, unit: 'g'),
+        ],
+        macros: DietMacros(
+          carbsG: 203.6,
+          proteinG: 109.3,
+          fatG: 66.5,
+          carbsPct: 44,
+          proteinPct: 24,
+          fatPct: 32,
+        ),
+        dietEntries: 4,
+        exerciseMinutes: 45,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 85,
+        weekScoreDelta: 12,
+        sodiumWarning: null,
+      ),
+      size: const Size(390, 2200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('g'), findsOneWidget);
+    expect(find.text('/0g'), findsNothing);
+    // 목표가 있는 지표는 그대로 "/목표+단위".
+    expect(find.text('/2,000kcal'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('운동 카드 소모 목표는 서버 값(exerciseBurnGoal)을 쓴다', (
     WidgetTester tester,
   ) async {
