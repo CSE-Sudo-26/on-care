@@ -63,13 +63,13 @@ class NutritionDay {
   final String label; // 요일(월/화/…)
   final int calories;
   final int sodiumMg;
-  final int sugarG;
+  final double sugarG;
 
   factory NutritionDay.fromJson(Map<String, Object?> json) => NutritionDay(
     label: (json['label'] as String?) ?? '',
     calories: (json['calories'] as num?)?.toInt() ?? 0,
     sodiumMg: (json['sodium_mg'] as num?)?.toInt() ?? 0,
-    sugarG: (json['sugar_g'] as num?)?.toInt() ?? 0,
+    sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0,
   );
 }
 

@@ -188,7 +188,7 @@ class MockDietRepository implements DietRepository {
       foods: foods,
       totalCalories: cals,
       totalSodiumMg: sodium,
-      totalSugarG: sugar.toInt(),
+      totalSugarG: sugar,
       coachComment: coach,
     );
     if (idempotencyKey != null) _analyzed[idempotencyKey] = result;

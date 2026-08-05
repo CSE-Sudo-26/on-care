@@ -100,7 +100,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           ]),
           totalCalories: 217,
           sodiumMg: const Value(221),
-          sugarG: const Value(6),
+          sugarG: const Value(6.0),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-lunch',
@@ -121,7 +121,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           ]),
           totalCalories: 750,
           sodiumMg: const Value(3200),
-          sugarG: const Value(9),
+          sugarG: const Value(9.0),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-snack',
@@ -150,7 +150,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           ]),
           totalCalories: 100,
           sodiumMg: const Value(7),
-          sugarG: const Value(3),
+          sugarG: const Value(3.0),
         ),
       ]);
     });

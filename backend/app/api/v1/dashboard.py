@@ -76,7 +76,7 @@ def _nutrition_week(
     rows = db.scalars(
         select(DietEntry).where(DietEntry.user_id == uid).where(DietEntry.date.in_(dates))
     ).all()
-    acc: dict[str, list[int]] = {d: [0, 0, 0] for d in dates}  # [cal, na, sugar]
+    acc: dict[str, list[float]] = {d: [0, 0, 0] for d in dates}  # [cal, na, sugar]
     for r in rows:
         a = acc.get(r.date)
         if a is not None:
