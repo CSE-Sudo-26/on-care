@@ -131,7 +131,14 @@ void main() {
       // Server returns oldest→newest; the drift source is newest-first, so
       // both sources agree for the 루틴 tab.
       expect(slots.map((s) => s.id), <String>['new', 'old']);
-      expect(capturedQuery()['member_id'], 'm1');
+
+      final query = capturedQuery();
+      expect(query['member_id'], 'm1');
+      // No date bounds: a range would silently drop sessions outside it,
+      // and the 루틴 tab reads a missing row as "no record".
+      expect(query.containsKey('from'), isFalse);
+      expect(query.containsKey('to'), isFalse);
+      expect(query.containsKey('date'), isFalse);
     },
   );
 

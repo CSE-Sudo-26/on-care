@@ -78,20 +78,15 @@ class DioScheduleRepository implements ScheduleRepository {
   Stream<List<ScheduleSession>> watchRange(String fromDate, String toDate) =>
       _live(() => _fetch(<String, String>{'from': fromDate, 'to': toDate}));
 
-  /// The API filters by member id; a very wide range stands in for "all
-  /// of this client's sessions", which the endpoint has no verb for.
+  /// `member_id` on its own means "every session for this client" — no
+  /// date bounds. Standing in for that with a wide range would silently
+  /// drop anything older than the range, and the screen reads a missing
+  /// row as "no record" rather than "not fetched".
   /// Newest first, to match the drift source's ordering.
   @override
   Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
-    final today = DateTime.now();
-    final from = ymd(today.subtract(const Duration(days: 365)));
-    final to = ymd(today.add(const Duration(days: 365)));
     return _live(() async {
-      final sessions = await _fetch(<String, String>{
-        'from': from,
-        'to': to,
-        'member_id': client.id,
-      });
+      final sessions = await _fetch(<String, String>{'member_id': client.id});
       return sessions.reversed.toList();
     });
   }
