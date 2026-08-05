@@ -11,14 +11,18 @@ const int lowCompletionThreshold = 60;
 /// only those). One definition, so the dashboard count and the filtered
 /// list can never disagree.
 enum ClientAlert {
-  /// The member sent messages the trainer hasn't answered.
-  unanswered('답장 대기'),
-
   /// Today's sodium is over the daily target.
   sodiumOver('나트륨 초과'),
 
   /// This week's routine completion is low.
-  lowCompletion('이행률 저조');
+  lowCompletion('이행률 저조'),
+
+  /// The member sent messages the trainer hasn't answered.
+  ///
+  /// Last on purpose: a client's badge is their first alert, and while a
+  /// waiting message is urgent, it is also the one the 답장 필요 counter
+  /// already shows. Putting it first hid every sodium overshoot behind it.
+  unanswered('답장 대기');
 
   const ClientAlert(this.label);
 
@@ -27,10 +31,10 @@ enum ClientAlert {
 
   /// Whether this is a signal from the member's own health data.
   ///
-  /// '주의가 필요한 고객' means the member's numbers need looking at —
-  /// an unanswered message is the trainer's own inbox, tracked by the
-  /// 답장 필요 counter instead. Mixing the two made every client with a
-  /// message look like a health concern.
+  /// The 주의 고객 count is health only — an unanswered message is the
+  /// trainer's own inbox, and counting it as 주의 made every client with
+  /// a message look like a health concern. The list itself still shows
+  /// 답장 대기 rows; it just doesn't call them 주의.
   bool get isHealth => this != ClientAlert.unanswered;
 }
 
@@ -52,13 +56,13 @@ class AttentionClient {
 /// Every alert raised for [client], most urgent first. Empty means the
 /// client is fine today.
 ///
-/// This is the full picture, used by the client detail header. For the
-/// 주의가 필요한 고객 list use [healthAlertsFor].
+/// This is the full picture — what the 오늘 챙길 고객 list and the client
+/// detail header show. For the 주의 고객 *count* use [healthAlertsFor].
 List<ClientAlert> alertsFor(TrainerClient client, {int unread = 0}) {
   return <ClientAlert>[
-    if (unread > 0) ClientAlert.unanswered,
     if (client.sodiumOverBudget) ClientAlert.sodiumOver,
     if (isLowCompletion(client)) ClientAlert.lowCompletion,
+    if (unread > 0) ClientAlert.unanswered,
   ];
 }
 
