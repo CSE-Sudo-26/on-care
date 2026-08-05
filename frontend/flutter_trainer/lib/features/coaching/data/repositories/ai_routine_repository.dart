@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 
 /// Reads a client's AI-suggested routine from the local drift DB.
 class AiRoutineRepository {

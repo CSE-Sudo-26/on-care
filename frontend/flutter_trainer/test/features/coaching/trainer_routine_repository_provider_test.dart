@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/dio_trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/dio_trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 
 ProviderContainer _containerFor({required bool useMockApi}) {
   final container = ProviderContainer(

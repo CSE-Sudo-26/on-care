@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -66,7 +67,7 @@ class _SlowCountingRoutineRepository extends AiRoutineRepository {
     required List<Map<String, Object?>> program,
   }) async {
     registerCalls++;
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 900));
     return super.registerToSchedule(
       date: date,
       clientName: clientName,
@@ -90,8 +91,8 @@ class _FixedClientRepository implements ClientRepository {
   Stream<List<TrainerClient>> watchClients() => Stream.value(_clients);
 
   @override
-  Stream<List<TrainerClient>> watchClientsPrioritized() =>
-      Stream.value(_clients);
+  Stream<Map<String, DateTime>> watchLastChatAt() =>
+      Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
 
   @override
   Stream<int> watchTodayReservationCount() => const Stream<int>.empty();
@@ -291,11 +292,19 @@ void main() {
     );
   });
 
-  group('AiRoutinePage', () {
+  group('CoachingPage', () {
     Future<void> openTab(WidgetTester tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text('AI루틴')); // bottom-nav label
-      await settle(tester);
+      // Desktop surface: the workspace splits into overview | editor,
+      // so both columns are on screen the way a trainer sees them.
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 1200);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
     }
 
     testWidgets('defaults to the first client with verdict and routine', (
@@ -303,7 +312,7 @@ void main() {
     ) async {
       await openTab(tester);
 
-      expect(find.text('AI 루틴 생성'), findsOneWidget);
+      expect(find.text('AI 코칭'), findsWidgets);
       // 김민수 (2100mg, over) → cardio-boost verdict.
       expect(find.text('✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
@@ -439,14 +448,12 @@ void main() {
       expect(find.text('스케줄 탭에서 오늘 세션의 프로그램으로 확인할 수 있어요'), findsOneWidget);
 
       // The 스케줄 tab shows the registered plan on his 예정 session.
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
-      await tester.scrollUntilVisible(find.text('박성호'), 120);
+      await goTo(tester, AppRoutes.schedule);
       await tester.ensureVisible(find.text('박성호'));
       await tester.pump();
       await tester.tap(find.text('박성호'));
-      await tester.pump();
-      await tester.scrollUntilVisible(find.text('벤치프레스 4세트'), 120);
+      await settle(tester);
+      await tester.ensureVisible(find.text('벤치프레스 4세트'));
       expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
     });
 
@@ -466,11 +473,13 @@ void main() {
       await settle(tester);
 
       // The 고객 tab's chat thread now shows the homework message.
-      await tester.tap(find.text('고객'));
-      await settle(tester);
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
-      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsOneWidget);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
+      // On a desktop surface the roster card preview shows it too, so
+      // the thread bubble is not the only match.
+      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsWidgets);
     });
 
     testWidgets('내일 chip registers the routine on the next day', (
@@ -480,8 +489,7 @@ void main() {
         tester,
         token: 'demo-trainer-token',
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
         find.text('내일'),
@@ -546,8 +554,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
@@ -584,8 +591,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
         find.text('오늘 PT 스케줄에 등록'),
@@ -610,7 +616,13 @@ void main() {
       await settle(tester);
 
       // 이지수's card must not claim the registration, and her button
-      // must not be left disabled by the previous client's guard.
+      // must not be left disabled by the previous client's guard. The
+      // editor is a lazy list, so bring the button back into view first.
+      await tester.scrollUntilVisible(
+        find.text('오늘 PT 스케줄에 등록'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
       expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
     });
@@ -627,8 +639,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
         find.textContaining('님에게 전송'),
@@ -660,8 +671,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       // Matches both the idle '📅 …등록' and the in-flight/disabled
       // '✓ …등록됨' label so it works before and during a save.
@@ -716,8 +726,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
       await tester.scrollUntilVisible(
@@ -795,7 +804,7 @@ void main() {
     });
   });
 
-  group('AiRoutinePage — real API mode (subin21cc review)', () {
+  group('CoachingPage — real API mode (subin21cc review)', () {
     // Matches a seeded drift client by NAME so aiRoutineProvider's
     // clientName fallback still resolves local AI suggestions for a
     // client id the real API (not drift) issued.
@@ -846,8 +855,7 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('AI루틴'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.coaching);
       return routineRepo;
     }
 
@@ -893,21 +901,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'a non-network assign failure shows the generic retry message '
-      '(a clear failure, safe to retry)',
-      (tester) async {
-        await openRealApiTab(tester, assignError: const ServerError());
+    testWidgets('a non-network assign failure shows the generic retry message '
+        '(a clear failure, safe to retry)', (tester) async {
+      await openRealApiTab(tester, assignError: const ServerError());
 
-        await tapSend(tester);
+      await tapSend(tester);
 
-        expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-        expect(
-          find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-          findsNothing,
-        );
-      },
-    );
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(
+        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+        findsNothing,
+      );
+    });
 
     testWidgets(
       'an all-custom send (every AI suggestion removed) assigns type/source '

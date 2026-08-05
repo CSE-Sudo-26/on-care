@@ -1,4 +1,4 @@
-import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 
 /// Valid routine types accepted by the backend (`RoutineType` literal).
 const List<String> kRoutineTypes = <String>['유산소', '근력', '스트레칭'];
@@ -19,9 +19,7 @@ AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
 /// backend's validators (minutes 0–600, type literal, lengths) never 422.
 Map<String, Object?> assignRoutineToJson(AssignedRoutine r) {
   return <String, Object?>{
-    'name': r.name.trim().isEmpty
-        ? 'AI 맞춤 루틴'
-        : _truncate(r.name.trim(), 100),
+    'name': r.name.trim().isEmpty ? 'AI 맞춤 루틴' : _truncate(r.name.trim(), 100),
     'minutes': r.minutes.clamp(0, 600),
     'type': kRoutineTypes.contains(r.type) ? r.type : '근력',
     'reason': _truncate(r.reason, 200),

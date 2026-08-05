@@ -11,17 +11,20 @@ import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/ai_routine/data/dtos/routine_dtos.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
-import 'package:oncare_trainer/shared/widgets/content_frame.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
+import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
+import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// Minute options offered for every routine item (mock: 10~45분 chips).
 const List<int> _minuteOptions = <int>[10, 15, 20, 30, 45];
@@ -38,20 +41,31 @@ class _CustomExercise {
   final String type;
 }
 
-/// AI 루틴 tab — pick a client, review their diet summary + the AI's
-/// suggested routine, tweak names/minutes, add custom exercises, and
-/// send. Edits and the sent state are in-memory (mock), matching the
-/// Figma behaviour.
-class AiRoutinePage extends ConsumerStatefulWidget {
-  /// Creates the AI routine tab.
-  const AiRoutinePage({super.key});
+/// AI 코칭 — the workspace where a client's data becomes a routine.
+///
+/// Pick a client, read the AI's take on their diet and its reasoning,
+/// tweak names/minutes, drop suggestions, add your own exercises, then
+/// send it two ways: as homework to the member's app, or as the program
+/// attached to a PT session on the schedule.
+///
+/// This is a top-level destination rather than an action buried in the
+/// client detail because it is the product's differentiator, and because
+/// the trainer plans several clients in one sitting. Arriving from a
+/// client (`?client=<id>`) preselects them.
+class CoachingPage extends ConsumerStatefulWidget {
+  /// Creates the AI coaching workspace.
+  const CoachingPage({super.key, this.clientId});
+
+  /// Client to preselect, from the `client` query parameter.
+  final String? clientId;
 
   @override
-  ConsumerState<AiRoutinePage> createState() => _AiRoutinePageState();
+  ConsumerState<CoachingPage> createState() => _CoachingPageState();
 }
 
-class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
-  String? _clientId; // null until clients load (defaults to the first)
+class _CoachingPageState extends ConsumerState<CoachingPage> {
+  /// Selected client; null until clients load (defaults to the first).
+  late String? _clientId = widget.clientId;
   final Map<String, int> _minuteEdits = <String, int>{};
   final Map<String, String> _nameEdits = <String, String>{};
 
@@ -84,6 +98,16 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     _sentTimer?.cancel();
     _registerTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CoachingPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Following a second "AI 루틴 만들기" link (from another client's
+    // 개요) must switch the workspace, not silently keep the old one.
+    if (widget.clientId != null && widget.clientId != oldWidget.clientId) {
+      _selectClient(widget.clientId!);
+    }
   }
 
   void _selectClient(String id) {
@@ -318,116 +342,107 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
   Widget build(BuildContext context) {
     final clientsAsync = ref.watch(clientsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: clientsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => const Center(
-            child: Text(
-              '고객 정보를 불러오지 못했어요',
-              style: TextStyle(color: AppColors.mutedForeground),
-            ),
+    return PageScaffold(
+      title: 'AI 코칭',
+      subtitle: '고객 식단 · 건강 데이터를 근거로 루틴을 만듭니다',
+      scrollable: false,
+      contentPadding: EdgeInsets.zero,
+      child: clientsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const Center(
+          child: Text(
+            '고객 정보를 불러오지 못했어요',
+            style: TextStyle(color: AppColors.mutedForeground),
           ),
-          data: (clients) {
-            if (clients.isEmpty) {
-              return const Center(
-                child: Text(
-                  '등록된 고객이 없어요',
-                  style: TextStyle(color: AppColors.mutedForeground),
-                ),
-              );
-            }
-            final selected = clients.firstWhere(
-              (c) => c.id == _clientId,
-              orElse: () => clients.first,
+        ),
+        data: (clients) {
+          if (clients.isEmpty) {
+            return const Center(
+              child: Text(
+                '등록된 고객이 없어요',
+                style: TextStyle(color: AppColors.mutedForeground),
+              ),
             );
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
-                if (!wide) {
-                  return ContentFrame(
+          }
+          final selected = clients.firstWhere(
+            (c) => c.id == _clientId,
+            orElse: () => clients.first,
+          );
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
+              if (!wide) {
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppLayout.pagePadding,
+                    AppSpacing.lg,
+                    AppLayout.pagePadding,
+                    AppSpacing.xxl,
+                  ),
+                  children: <Widget>[
+                    // Single column: context, then the editor, then the
+                    // library. The editor is the task — pushing it below
+                    // the templates would bury it.
+                    ..._contextChildren(clients, selected),
+                    const SizedBox(height: AppSpacing.lg),
+                    ..._editorChildren(selected),
+                    const SizedBox(height: AppSpacing.lg),
+                    ..._libraryChildren(selected),
+                  ],
+                );
+              }
+              // Wide: client/diet overview docks left, the routine
+              // editor gets its own column.
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  SizedBox(
+                    width: AppLayout.splitListWidth,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.xl,
+                        AppLayout.pagePadding,
                         AppSpacing.lg,
-                        AppSpacing.xl,
+                        AppLayout.pagePadding,
                         AppSpacing.xxl,
                       ),
                       children: <Widget>[
-                        ..._overviewChildren(clients, selected),
+                        ..._contextChildren(clients, selected),
                         const SizedBox(height: AppSpacing.lg),
-                        ..._editorChildren(selected),
+                        ..._libraryChildren(selected),
                       ],
                     ),
-                  );
-                }
-                // Wide: client/diet overview docks left, the routine
-                // editor gets its own column.
-                return ContentFrame(
-                  maxWidth: AppLayout.wideMaxWidth,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      SizedBox(
-                        width: AppLayout.splitListWidth,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            AppSpacing.lg,
-                            AppSpacing.xl,
-                            AppSpacing.xxl,
-                          ),
-                          children: _overviewChildren(clients, selected),
-                        ),
-                      ),
-                      const VerticalDivider(
-                        width: 1,
-                        color: AppColors.borderStrong,
-                      ),
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            AppSpacing.lg,
-                            AppSpacing.xl,
-                            AppSpacing.xxl,
-                          ),
-                          children: _editorChildren(selected),
-                        ),
-                      ),
-                    ],
                   ),
-                );
-              },
-            );
-          },
-        ),
+                  const VerticalDivider(
+                    width: 1,
+                    color: AppColors.borderStrong,
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppLayout.pagePadding,
+                        AppSpacing.lg,
+                        AppLayout.pagePadding,
+                        AppSpacing.xxl,
+                      ),
+                      children: _editorChildren(selected),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  /// Title, client picker, and diet summary (left column on wide).
-  List<Widget> _overviewChildren(
+  /// Who the routine is for, and what their day looks like — the
+  /// context the editor is read against.
+  List<Widget> _contextChildren(
     List<TrainerClient> clients,
     TrainerClient client,
   ) {
     return <Widget>[
-      Text(
-        'AI 루틴 생성',
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const Text(
-        '고객 식단 · 건강 데이터 기반',
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w500,
-          color: AppColors.subtleForeground,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.lg),
       _sectionLabel('고객 선택'),
       const SizedBox(height: AppSpacing.sm),
       // Horizontal scroll instead of one cramped Row — stays usable as
@@ -454,6 +469,33 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
       _sectionLabel('오늘 식단 요약'),
       const SizedBox(height: AppSpacing.sm),
       _DietSummaryCard(client: client),
+    ];
+  }
+
+  /// Reusable blocks and what this client already received — reference
+  /// material, secondary to the editor.
+  List<Widget> _libraryChildren(TrainerClient client) {
+    return <Widget>[
+      _TemplateCard(
+        onApply: (template) => setState(() {
+          // Templates append to whatever is already composed rather than
+          // replacing it — the trainer usually wants the AI's base plus a
+          // known block, not one or the other.
+          for (final exercise in template.exercises) {
+            _custom.add(
+              _CustomExercise(
+                name: exercise.name,
+                minutes: exercise.minutes,
+                type: exercise.type,
+              ),
+            );
+          }
+          _registered = false;
+          _sent = false;
+        }),
+      ),
+      const SizedBox(height: AppSpacing.lg),
+      _SendHistoryCard(client: client),
     ];
   }
 
@@ -1422,6 +1464,178 @@ class _SendButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 프로그램 템플릿 — the trainer's own reusable blocks, one tap away.
+///
+/// The AI covers "what does this client's data suggest?"; templates
+/// cover "what do I always do for this kind of client?". Applying one
+/// appends its exercises to the composed routine.
+class _TemplateCard extends StatelessWidget {
+  const _TemplateCard({required this.onApply});
+
+  final ValueChanged<ProgramTemplate> onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: '프로그램 템플릿',
+      icon: Icons.dashboard_customize_outlined,
+      dense: true,
+      child: Column(
+        children: <Widget>[
+          for (final template in programTemplates)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Material(
+                color: AppColors.inputBackground,
+                borderRadius: const BorderRadius.all(AppRadius.md),
+                child: InkWell(
+                  onTap: () => onApply(template),
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                template.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              Text(
+                                '${template.goal} · '
+                                '${template.exercises.length}개 · '
+                                '${template.totalMinutes}분',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.subtleForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.add_circle_outline,
+                          size: 17,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 전송 이력 — what this client has already been given.
+///
+/// Without it the workspace has no memory: the trainer can't tell
+/// whether they already sent today's routine, and repeats it. Sourced
+/// from the schedule (PT 프로그램) and, on the real API, the member's
+/// assigned routines.
+class _SendHistoryCard extends ConsumerWidget {
+  const _SendHistoryCard({required this.client});
+
+  final TrainerClient client;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessions = ref.watch(clientSessionsProvider(client.name));
+    final today = ymd(DateTime.now());
+
+    return SectionCard(
+      title: '전송 이력',
+      icon: Icons.history,
+      dense: true,
+      child: sessions.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        error: (e, _) => const EmptyHint(message: '이력을 불러오지 못했어요'),
+        data: (list) {
+          final withProgram = list
+              .where((s) => s.program.isNotEmpty)
+              .take(4)
+              .toList();
+          if (withProgram.isEmpty) {
+            return const EmptyHint(
+              message: '아직 보낸 프로그램이 없어요',
+              icon: Icons.outbox_outlined,
+            );
+          }
+          return Column(
+            children: <Widget>[
+              for (final s in withProgram)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 46,
+                        child: Text(
+                          s.date == today
+                              ? '오늘'
+                              : s.date.substring(5).replaceAll('-', '/'),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: s.date == today
+                                ? AppColors.primary
+                                : AppColors.subtleForeground,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${s.type} · 운동 ${s.program.length}개',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        s.status,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: s.isDone
+                              ? AppColors.success
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

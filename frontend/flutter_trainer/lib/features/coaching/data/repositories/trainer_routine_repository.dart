@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
-import 'package:oncare_trainer/features/ai_routine/data/repositories/dio_trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/dio_trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 
 /// Assigns a routine to a member and reads their assigned routines.
 ///
@@ -47,3 +47,13 @@ final trainerRoutineRepositoryProvider = Provider<TrainerRoutineRepository>((
   }
   return DioTrainerRoutineRepository(ref.watch(dioProvider));
 }, name: 'trainerRoutineRepository');
+
+/// Streams the routines currently assigned to a member (newest first).
+/// Empty in demo mode — [MockTrainerRoutineRepository] has no member
+/// backend to deliver to.
+final assignedRoutinesProvider =
+    StreamProvider.family<List<AssignedRoutine>, String>((ref, memberId) {
+      return ref
+          .watch(trainerRoutineRepositoryProvider)
+          .watchAssignedRoutines(memberId);
+    });

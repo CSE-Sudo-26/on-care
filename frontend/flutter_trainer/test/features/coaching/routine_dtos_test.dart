@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare_trainer/features/ai_routine/data/dtos/routine_dtos.dart';
-import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 
 AssignedRoutine _routine({
   String name = 'AI 맞춤 루틴',
@@ -10,13 +10,13 @@ AssignedRoutine _routine({
   String reason = '걷기',
   String source = 'ai',
 }) => AssignedRoutine(
-      id: '',
-      name: name,
-      minutes: minutes,
-      type: type,
-      reason: reason,
-      source: source,
-    );
+  id: '',
+  name: name,
+  minutes: minutes,
+  type: type,
+  reason: reason,
+  source: source,
+);
 
 void main() {
   group('assignedRoutineFromJson', () {
@@ -55,30 +55,34 @@ void main() {
     test('defaults a blank name and truncates a long reason', () {
       expect(assignRoutineToJson(_routine(name: '   '))['name'], 'AI 맞춤 루틴');
       final longReason = 'x' * 250;
-      expect((assignRoutineToJson(_routine(reason: longReason))['reason']! as String).length, 200);
+      expect(
+        (assignRoutineToJson(_routine(reason: longReason))['reason']! as String)
+            .length,
+        200,
+      );
     });
 
     test('normalises source (trainer preserved, else ai)', () {
-      expect(assignRoutineToJson(_routine(source: 'trainer'))['source'], 'trainer');
+      expect(
+        assignRoutineToJson(_routine(source: 'trainer'))['source'],
+        'trainer',
+      );
       expect(assignRoutineToJson(_routine(source: 'anything'))['source'], 'ai');
     });
   });
 
   group('summaryTypeAndSource', () {
-    test(
-      'an all-custom routine (every AI suggestion removed) is type + '
-      "source from the custom exercises, not '근력'/'ai' by default "
-      '(review: this used to silently drop custom types, defaulting to '
-      "근력/ai even when every exercise was a trainer-added 스트레칭)",
-      () {
-        final result = summaryTypeAndSource(
-          aiItemTypes: const <String>[], // every AI suggestion was removed
-          customItemTypes: const <String>['스트레칭', '스트레칭', '스트레칭'],
-        );
-        expect(result.type, '스트레칭');
-        expect(result.source, 'trainer');
-      },
-    );
+    test('an all-custom routine (every AI suggestion removed) is type + '
+        "source from the custom exercises, not '근력'/'ai' by default "
+        '(review: this used to silently drop custom types, defaulting to '
+        "근력/ai even when every exercise was a trainer-added 스트레칭)", () {
+      final result = summaryTypeAndSource(
+        aiItemTypes: const <String>[], // every AI suggestion was removed
+        customItemTypes: const <String>['스트레칭', '스트레칭', '스트레칭'],
+      );
+      expect(result.type, '스트레칭');
+      expect(result.source, 'trainer');
+    });
 
     test('mixed AI + custom: source is ai when any AI item remains', () {
       final result = summaryTypeAndSource(
@@ -90,17 +94,14 @@ void main() {
       expect(result.source, 'ai');
     });
 
-    test(
-      'defaults type to 근력 when there are no exercises at all (source '
-      'still trainer — no AI item is present to attribute it to)',
-      () {
-        final result = summaryTypeAndSource(
-          aiItemTypes: const <String>[],
-          customItemTypes: const <String>[],
-        );
-        expect(result.type, '근력');
-        expect(result.source, 'trainer');
-      },
-    );
+    test('defaults type to 근력 when there are no exercises at all (source '
+        'still trainer — no AI item is present to attribute it to)', () {
+      final result = summaryTypeAndSource(
+        aiItemTypes: const <String>[],
+        customItemTypes: const <String>[],
+      );
+      expect(result.type, '근력');
+      expect(result.source, 'trainer');
+    });
   });
 }
