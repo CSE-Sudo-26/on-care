@@ -92,7 +92,7 @@ void main() {
       'fixes it', (tester) async {
     await openDashboard(tester);
 
-    expect(find.text('확인 필요 회원'), findsOneWidget);
+    expect(find.text('확인 필요 고객'), findsOneWidget);
     // All three seeded clients are waiting on a reply, but 김민수(2100mg)
     // and 박성호(2400mg) are also over the sodium target — and the badge
     // is the client's first alert, so theirs must be the health one.

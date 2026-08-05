@@ -572,7 +572,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
 
   // Option lists always CONTAIN the edited session's own values. Falling
   // back to a default instead would silently rewrite the session on an
-  // otherwise no-op save — e.g. a 상담 booked for '신규 회원' (not a
+  // otherwise no-op save — e.g. a 상담 booked for '신규 고객' (not a
   // registered client) would be reassigned to the first client, and a
   // 50-minute session would become 60 (review PR 218).
   late List<String> _clientOptions;
