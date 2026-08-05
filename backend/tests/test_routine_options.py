@@ -2,8 +2,14 @@
 from __future__ import annotations
 
 from uuid import uuid4
+from types import SimpleNamespace
+
+import pytest
+from pydantic import ValidationError
 
 from app.services import routine_ai
+from app.services import trainer_service
+from app.schemas.trainer_api import RoutineOptionsOut
 
 
 def _trainer_token(client) -> str:
@@ -41,6 +47,58 @@ def test_rule_based_plans_differ_and_respect_available_minutes():
         assert sum(e["minutes"] for e in plan["exercises"]) == plan["total_minutes"]
         assert all(e["type"] in {"유산소", "근력", "스트레칭"} for e in plan["exercises"])
         assert all(e["minutes"] >= 1 for e in plan["exercises"])
+
+
+@pytest.mark.parametrize("minutes", [10, 180])
+def test_rule_based_plans_never_exceed_requested_time(minutes):
+    a, b = routine_ai.rule_based_plans(
+        goal="체중 감량",
+        sodium_today_mg=1800,
+        avg_completion_rate=50,
+        available_minutes=minutes,
+        intensity_preference="low",
+        trainer_note="",
+    )
+    assert a["total_minutes"] <= minutes
+    assert b["total_minutes"] <= minutes
+    assert sum(e["minutes"] for e in a["exercises"]) == a["total_minutes"]
+    assert sum(e["minutes"] for e in b["exercises"]) == b["total_minutes"]
+
+
+def test_completion_average_includes_a_recorded_zero_percent_day():
+    rows = [
+        SimpleNamespace(date="2026-08-03", completion_rate=100),
+        SimpleNamespace(date="2026-08-04", completion_rate=0),
+    ]
+    assert trainer_service._average_recorded_completion(rows) == 50
+
+
+def test_options_schema_rejects_a_total_that_does_not_match_exercises():
+    plan = {
+        "key": "A",
+        "label": "회복",
+        "total_minutes": 20,
+        "intensity": "낮음",
+        "exercises": [{"name": "걷기", "minutes": 10, "type": "유산소"}],
+        "reason": "이유",
+        "rationale": "근거",
+    }
+    with pytest.raises(ValidationError):
+        RoutineOptionsOut.model_validate(
+            {
+                "analysis": {
+                    "goal": "체중 감량",
+                    "sodium_today_mg": 1000,
+                    "sodium_over_target": False,
+                    "avg_completion_rate": 50,
+                    "latest_routine": "-",
+                    "note": "",
+                },
+                "plan_a": plan,
+                "plan_b": {**plan, "key": "B"},
+                "generated_by": "rule",
+            }
+        )
 
 
 def test_rule_based_rationale_cites_member_numbers_and_over_target():
@@ -96,6 +154,33 @@ def test_routine_options_generates_ab_for_owned_member(client):
     assert isinstance(body["analysis"]["sodium_over_target"], bool)
 
 
+@pytest.mark.parametrize(
+    "llm_result",
+    [RuntimeError("provider unavailable"), ({"key": "A"}, {"key": "B"})],
+)
+def test_routine_options_falls_back_when_llm_fails_or_is_malformed(
+    client, monkeypatch, llm_result
+):
+    token = _trainer_token(client)
+    member_id = _first_client_id(client, token)
+    assert member_id
+
+    def fake_llm(**_kwargs):
+        if isinstance(llm_result, Exception):
+            raise llm_result
+        return llm_result
+
+    monkeypatch.setattr(routine_ai, "maybe_llm_plans", fake_llm)
+    response = client.post(
+        f"/v1/trainer/clients/{member_id}/routine-options",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"available_minutes": 30},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["generated_by"] == "rule"
+
+
 def test_routine_options_rejects_a_member_not_owned_by_this_trainer(client):
     token = _trainer_token(client)
     r = client.post(
@@ -122,6 +207,6 @@ def test_routine_options_validates_available_minutes(client):
     r = client.post(
         f"/v1/trainer/clients/{member_id}/routine-options",
         headers={"Authorization": f"Bearer {token}"},
-        json={"available_minutes": 1},  # below the ge=5 bound
+        json={"available_minutes": 9},  # below the ge=10 bound
     )
     assert r.status_code == 422

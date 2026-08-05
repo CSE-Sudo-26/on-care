@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
@@ -25,6 +26,8 @@ from app.schemas.trainer_api import (
     TrainerClientOut, TrainerGymOut,
 )
 from app.services import routine_ai
+
+logger = logging.getLogger(__name__)
 
 
 def _today() -> date:
@@ -127,6 +130,17 @@ def _week_completion(hist_rows: list[RoutineHistory], monday: date) -> list[int]
         vals = by_date.get((monday + timedelta(days=i)).isoformat())
         out.append(max(vals) if vals else 0)
     return out
+
+
+def _average_recorded_completion(hist_rows: list[RoutineHistory]) -> int:
+    """기록이 있는 날의 완료율 평균. 실제 0% 기록도 평균에 포함한다."""
+    by_date: dict[str, int] = {}
+    for history in hist_rows:
+        by_date[history.date] = max(
+            history.completion_rate,
+            by_date.get(history.date, 0),
+        )
+    return round(sum(by_date.values()) / len(by_date)) if by_date else 0
 
 
 def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]):
@@ -489,9 +503,7 @@ def build_routine_options(
     ).all()
 
     _, sodium_today, _ = _today_totals(diet_rows, today_str)
-    week = _week_completion(hist_rows, monday)
-    done_days = [c for c in week if c > 0]
-    avg_completion = round(sum(done_days) / len(done_days)) if done_days else 0
+    avg_completion = _average_recorded_completion(hist_rows)
 
     link = db.scalar(
         select(TrainerClient).where(
@@ -511,26 +523,39 @@ def build_routine_options(
         intensity_preference=intensity_preference,
         trainer_note=trainer_note,
     )
-    llm = routine_ai.maybe_llm_plans(**kwargs)
-    if llm is not None:
-        plan_a, plan_b = llm
-        generated_by = "ai"
-    else:
-        plan_a, plan_b = routine_ai.rule_based_plans(**kwargs)
-        generated_by = "rule"
+    analysis = MemberAnalysisOut(
+        goal=goal,
+        sodium_today_mg=sodium_today,
+        sodium_over_target=sodium_today > routine_ai.SODIUM_TARGET_MG,
+        avg_completion_rate=avg_completion,
+        latest_routine=latest_routine,
+        note=trainer_note.strip(),
+    )
+    try:
+        llm = routine_ai.maybe_llm_plans(**kwargs)
+        if llm is not None:
+            plan_a, plan_b = llm
+            # Validate provider output at the service boundary. A malformed
+            # response is equivalent to a provider failure and must not turn
+            # the endpoint into a 500.
+            return RoutineOptionsOut(
+                analysis=analysis,
+                plan_a=RoutinePlanOut(**plan_a),
+                plan_b=RoutinePlanOut(**plan_b),
+                generated_by="ai",
+            )
+    except Exception:  # noqa: BLE001 — provider/schema failures all fall back
+        logger.warning(
+            "routine-options LLM failed; using deterministic fallback",
+            exc_info=True,
+        )
 
+    plan_a, plan_b = routine_ai.rule_based_plans(**kwargs)
     return RoutineOptionsOut(
-        analysis=MemberAnalysisOut(
-            goal=goal,
-            sodium_today_mg=sodium_today,
-            sodium_over_target=sodium_today > routine_ai.SODIUM_TARGET_MG,
-            avg_completion_rate=avg_completion,
-            latest_routine=latest_routine,
-            note=trainer_note.strip(),
-        ),
+        analysis=analysis,
         plan_a=RoutinePlanOut(**plan_a),
         plan_b=RoutinePlanOut(**plan_b),
-        generated_by=generated_by,
+        generated_by="rule",
     )
 
 

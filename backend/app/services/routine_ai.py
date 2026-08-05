@@ -62,7 +62,7 @@ def rule_based_plans(
     goal_label = goal.strip() or "설정된 목표"
 
     # A안 — 회복·지속: 가능 시간의 ~70%, 낮은 강도, 유산소+스트레칭 중심.
-    total_a = max(10, round(available_minutes * 0.7))
+    total_a = min(available_minutes, max(5, round(available_minutes * 0.7)))
     parts_a = [(_CARDIO_EASY[0], _CARDIO_EASY[1], 3), (_STRETCH[0], _STRETCH[1], 2)]
     if over or low_adherence:
         # 부담을 더 낮추고 스트레칭 비중을 키운다.
@@ -87,7 +87,13 @@ def rule_based_plans(
     }
 
     # B안 — 강도·운동량: 가능 시간 전부(강도 선호로 스케일), 근력+유산소 중심.
-    total_b = max(total_a + 5, round(available_minutes * _B_SCALE.get(intensity_preference, 1.0)))
+    total_b = min(
+        available_minutes,
+        max(
+            total_a + 1,
+            round(available_minutes * _B_SCALE.get(intensity_preference, 1.0)),
+        ),
+    )
     parts_b = [
         (_CARDIO_HARD[0], _CARDIO_HARD[1], 3),
         (_STRENGTH[0], _STRENGTH[1], 2),
