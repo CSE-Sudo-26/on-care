@@ -371,6 +371,22 @@ def test_settings_reject_a_lead_time_outside_the_options(client):
     assert r.status_code == 422
 
 
+def test_settings_reject_an_explicit_null(client):
+    """명시적 null 은 422 — NOT NULL 컬럼에 그대로 넣으면 500 이 난다.
+
+    누락(변경 없음)과 null(잘못된 값)을 구분한다. TrainerMeUpdate ·
+    ScheduleUpdateRequest 와 같은 규약.
+    """
+    token = _trainer_token(client)
+    for payload in (
+        {"notify_new_message": None},
+        {"notify_session_reminder": None},
+        {"reminder_lead_minutes": None},
+    ):
+        r = client.put("/v1/trainer/me/settings", json=payload, headers=_auth(token))
+        assert r.status_code == 422, (payload, r.status_code, r.text)
+
+
 def test_settings_update_with_no_fields_is_rejected(client):
     token = _trainer_token(client)
     r = client.put("/v1/trainer/me/settings", json={}, headers=_auth(token))

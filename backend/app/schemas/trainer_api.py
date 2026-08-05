@@ -390,3 +390,16 @@ class TrainerNotificationSettingsUpdate(BaseModel):
                 f"reminder_lead_minutes 는 {list(REMINDER_LEAD_OPTIONS)} 중 하나여야 합니다."
             )
         return v
+
+    @model_validator(mode="after")
+    def _reject_explicit_null(self) -> TrainerNotificationSettingsUpdate:
+        """명시적 null 을 422 로 거른다.
+
+        세 컬럼 모두 DB NOT NULL 이라 null 을 그대로 반영하면 IntegrityError
+        500 이 난다. 누락은 '변경 없음', null 은 '잘못된 값' 으로 구분한다
+        (TrainerMeUpdate · ScheduleUpdateRequest 와 같은 규약).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
