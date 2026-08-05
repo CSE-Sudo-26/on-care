@@ -83,7 +83,7 @@ void main() {
       final seongho = slots.firstWhere((s) => s.clientName == '박성호');
       expect(seongho.expandable, isTrue); // 예정 now opens (plan preview)
       expect(seongho.isUpcoming, isTrue);
-      final consult = slots.firstWhere((s) => s.clientName == '신규 회원');
+      final consult = slots.firstWhere((s) => s.clientName == '신규 고객');
       expect(consult.program, isEmpty);
       expect(consult.expandable, isTrue); // opens with the no-plan hint
     });
@@ -230,14 +230,14 @@ void main() {
       () async {
         final repo = DriftScheduleRepository(db);
         final before = await repo.watchToday().first;
-        final consult = before.firstWhere((s) => s.clientName == '신규 회원');
+        final consult = before.firstWhere((s) => s.clientName == '신규 고객');
         final histBefore =
             (await db.select(db.clientRoutineHistory).get()).length;
 
         await repo.completeSession(consult.id);
 
         final after = await repo.watchToday().first;
-        expect(after.firstWhere((s) => s.clientName == '신규 회원').isDone, isTrue);
+        expect(after.firstWhere((s) => s.clientName == '신규 고객').isDone, isTrue);
         final histAfter =
             (await db.select(db.clientRoutineHistory).get()).length;
         expect(histAfter, histBefore); // no orphan history row
@@ -336,11 +336,11 @@ void main() {
     test('deleteSession removes the slot', () async {
       final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
-      final target = before.firstWhere((s) => s.clientName == '신규 회원');
+      final target = before.firstWhere((s) => s.clientName == '신규 고객');
       await repo.deleteSession(target.id);
       final after = await repo.watchToday().first;
       expect(after.length, before.length - 1);
-      expect(after.where((s) => s.clientName == '신규 회원'), isEmpty);
+      expect(after.where((s) => s.clientName == '신규 고객'), isEmpty);
     });
   });
 
@@ -363,7 +363,7 @@ void main() {
       // Two of the day's sessions are already 완료 — the status word on
       // the row, not the action chip.
       expect(find.text('완료'), findsNWidgets(2));
-      await tester.scrollUntilVisible(find.text('신규 회원'), 120);
+      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
       expect(find.text('박성호'), findsOneWidget);
       expect(find.text('상담 · 30분'), findsOneWidget);
       // Lazy list: off-screen rows are disposed, so assert presence
@@ -434,10 +434,10 @@ void main() {
     ) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('신규 회원'), 120);
-      await tester.ensureVisible(find.text('신규 회원'));
+      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
+      await tester.ensureVisible(find.text('신규 고객'));
       await tester.pump();
-      await tester.tap(find.text('신규 회원'));
+      await tester.tap(find.text('신규 고객'));
       await tester.pump();
 
       await tester.scrollUntilVisible(find.text('아직 계획된 프로그램이 없어요'), 120);
@@ -572,10 +572,10 @@ void main() {
     testWidgets('삭제 removes the session after confirmation', (tester) async {
       await openSchedule(tester);
 
-      await tester.scrollUntilVisible(find.text('신규 회원'), 120);
-      await tester.ensureVisible(find.text('신규 회원'));
+      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
+      await tester.ensureVisible(find.text('신규 고객'));
       await tester.pump();
-      await tester.tap(find.text('신규 회원'));
+      await tester.tap(find.text('신규 고객'));
       await tester.pump();
 
       await tester.scrollUntilVisible(find.text('삭제'), 120);
@@ -587,7 +587,7 @@ void main() {
       await tester.tap(find.text('삭제').last);
       await settle(tester);
 
-      expect(find.text('신규 회원'), findsNothing);
+      expect(find.text('신규 고객'), findsNothing);
     });
 
     testWidgets('program send does not create a trainer chat bubble', (
@@ -788,11 +788,11 @@ void main() {
       );
       await goTo(tester, AppRoutes.schedule);
 
-      // 신규 회원 (상담, 30분) is booked but is NOT a registered client.
-      await tester.scrollUntilVisible(find.text('신규 회원'), 120);
-      await tester.ensureVisible(find.text('신규 회원'));
+      // 신규 고객 (상담, 30분) is booked but is NOT a registered client.
+      await tester.scrollUntilVisible(find.text('신규 고객'), 120);
+      await tester.ensureVisible(find.text('신규 고객'));
       await tester.pump();
-      await tester.tap(find.text('신규 회원'));
+      await tester.tap(find.text('신규 고객'));
       await tester.pump();
 
       await tester.scrollUntilVisible(find.text('일정 수정'), 120);
@@ -824,7 +824,7 @@ void main() {
         duration = consult.durationMinutes;
       });
 
-      expect(clientName, '신규 회원'); // not reassigned to 김민수
+      expect(clientName, '신규 고객'); // not reassigned to 김민수
       expect(type, '상담');
       expect(duration, 30);
     });

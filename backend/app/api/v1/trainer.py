@@ -328,6 +328,10 @@ def trainer_schedule(
 
     주 캘린더가 7일치를 한 번에 읽기 위해 구간 조회를 지원한다 — 하루짜리
     요청을 요일마다 반복하면 요청이 7배가 된다.
+
+    `member_id` 만 주면 날짜 제한 없이 그 고객의 전체 세션을 준다. 고객
+    상세의 루틴 이력이 필요로 하는 것이고, 구간으로 흉내내면 그 구간보다
+    오래된 기록이 조용히 사라진다.
     """
     if member_id is not None:
         _require_client(db, trainer.id, member_id)
@@ -348,6 +352,9 @@ def trainer_schedule(
         return trainer_service.build_schedule_range(
             db, trainer.id, from_, to, member_id=member_id
         )
+
+    if member_id is not None and date is None:
+        return trainer_service.build_client_schedule(db, trainer.id, member_id)
 
     day = date or trainer_service.today_iso()
     if not _is_ymd(day):

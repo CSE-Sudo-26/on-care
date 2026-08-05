@@ -92,7 +92,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           intensity: '맞춤',
           exercises: widget.recommendedExercises,
           reason: widget.recommendedReason.isEmpty
-              ? '회원의 최근 식단과 운동 기록을 반영한 기존 추천이에요.'
+              ? '고객의 최근 식단과 운동 기록을 반영한 기존 추천이에요.'
               : widget.recommendedReason,
         ),
     ];
@@ -359,7 +359,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _AssistantLabel(text: '회원 데이터를 분석했어요'),
+          const _AssistantLabel(text: '고객 데이터를 분석했어요'),
           const SizedBox(height: AppSpacing.md),
           _analysisRow('목표', client.goal),
           _analysisRow(
@@ -731,7 +731,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           const Text('트레이너 메모', style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.sm),
           LabeledField(
-            label: '회원에게 함께 전달할 내용',
+            label: '고객에게 함께 전달할 내용',
             child: TextField(
               key: const ValueKey<String>('final-trainer-memo'),
               controller: _trainerMemo,

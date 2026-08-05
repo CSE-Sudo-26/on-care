@@ -406,6 +406,40 @@ def test_schedule_member_filter_returns_only_that_clients_sessions(client):
     assert all(s["status"] != "공백" for s in r.json())
 
 
+def test_schedule_member_only_returns_every_session_no_date_bound(client):
+    """`member_id` 만 주면 날짜 제한 없이 그 고객의 전체 세션.
+
+    구간으로 흉내내면 구간 밖의 오래된 세션이 조용히 빠지고, 고객 상세의
+    루틴 이력은 그걸 '기록 없음' 으로 읽는다.
+    """
+    token = _sched_token(client)
+    roster = client.get("/v1/trainer/clients", headers=_sched_auth(token)).json()
+    member_id = roster[0]["id"]
+
+    # 아주 오래된 세션 하나 — 어떤 '최근 N일' 구간에도 걸리지 않는다.
+    created = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": "2020-01-02", "time": "07:00", "client_name": roster[0]["name"],
+            "member_id": member_id, "type": "1:1 PT", "duration_minutes": 30,
+        },
+        headers=_sched_auth(token),
+    )
+    assert created.status_code == 201, created.text
+    old_id = created.json()["id"]
+
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"member_id": member_id},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    ids = [s["id"] for s in r.json()]
+    assert old_id in ids
+    # 여전히 그 고객 것만.
+    assert all(s["status"] != "공백" for s in r.json())
+
+
 def test_schedule_member_filter_rejects_someone_elses_client(client):
     token = _sched_token(client)
     r = client.get(

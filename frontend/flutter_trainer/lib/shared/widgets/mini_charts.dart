@@ -77,12 +77,11 @@ class BarSeriesChart extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2.5),
                     child: _Bar(
-                      value: i >= pendingFrom ? 0 : values[i],
+                      value: values[i],
                       ceiling: ceiling,
                       color: _colorFor(i),
-                      label: showValues && i < pendingFrom
-                          ? '${values[i]}$valueSuffix'
-                          : null,
+                      label: showValues ? '${values[i]}$valueSuffix' : null,
+                      pending: i >= pendingFrom,
                     ),
                   ),
                 ),
@@ -133,6 +132,7 @@ class _Bar extends StatelessWidget {
     required this.ceiling,
     required this.color,
     required this.label,
+    this.pending = false,
   });
 
   final int value;
@@ -140,14 +140,22 @@ class _Bar extends StatelessWidget {
   final Color color;
   final String? label;
 
+  /// The day hasn't happened yet: draw the empty track only.
+  ///
+  /// Distinct from `value == 0`, which is a real "recorded, nothing done"
+  /// and keeps its 2px stub — and from the value's own colour, which for
+  /// a future day would otherwise paint the track red on a series with an
+  /// `overThreshold`.
+  final bool pending;
+
   @override
   Widget build(BuildContext context) {
     // A zero value still draws a 2px stub so the day reads as "recorded,
     // nothing done" rather than "no data".
-    final ratio = (value / ceiling).clamp(0.0, 1.0);
+    final ratio = pending ? 0.0 : (value / ceiling).clamp(0.0, 1.0);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final labelHeight = label == null ? 0.0 : 14.0;
+        final labelHeight = label == null || pending ? 0.0 : 14.0;
         final plot = (constraints.maxHeight - labelHeight).clamp(
           0.0,
           constraints.maxHeight,
@@ -155,7 +163,7 @@ class _Bar extends StatelessWidget {
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
-            if (label != null)
+            if (label != null && !pending)
               SizedBox(
                 height: labelHeight,
                 child: FittedBox(
@@ -172,7 +180,7 @@ class _Bar extends StatelessWidget {
             Container(
               height: (plot * ratio).clamp(2.0, plot),
               decoration: BoxDecoration(
-                color: color,
+                color: pending ? AppColors.border : color,
                 borderRadius: const BorderRadius.vertical(top: AppRadius.xs),
               ),
             ),

@@ -498,6 +498,28 @@ def build_schedule(db: Session, trainer_id: str, day: str) -> list[ScheduleSessi
     return build_schedule_range(db, trainer_id, day, day)
 
 
+def build_client_schedule(
+    db: Session, trainer_id: str, member_id: str
+) -> list[ScheduleSessionOut]:
+    """한 고객의 전체 세션(날짜→시간 순), 기간 제한 없이.
+
+    고객 상세의 루틴 이력이 쓴다. 넓은 날짜 구간으로 흉내내면 그 구간보다
+    오래된 기록이 조용히 빠지고, 화면은 그걸 '기록 없음'으로 읽는다.
+    행 수는 트레이너-고객 한 쌍의 세션 수라 자연히 작다.
+    """
+    rows = db.scalars(
+        select(TrainerSchedule)
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+        )
+        .order_by(
+            TrainerSchedule.date, TrainerSchedule.time, TrainerSchedule.sort_order
+        )
+    ).all()
+    return [_schedule_out(s) for s in rows]
+
+
 def build_schedule_range(
     db: Session,
     trainer_id: str,
