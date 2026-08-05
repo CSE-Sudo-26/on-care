@@ -30,7 +30,7 @@ def _safe(db: Session, user_id: str, text: str, *, domain: str, source: str) -> 
 
 def record_diet(
     db: Session, user_id: str, *, date: str, foods: list[dict],
-    total_calories: int, sodium_mg: int, sugar_g: int,
+    total_calories: int, sodium_mg: int, sugar_g: float,
 ) -> None:
     names = ", ".join(f.get("name", "") for f in foods if f.get("name")) or "식단"
     text = (

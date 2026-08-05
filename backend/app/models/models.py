@@ -108,7 +108,9 @@ class DietEntry(Base):
     protein_g: Mapped[float] = mapped_column(Float, default=0.0)
     fat_g: Mapped[float] = mapped_column(Float, default=0.0)
     sodium_mg: Mapped[int] = mapped_column(Integer, default=0)
-    sugar_g: Mapped[int] = mapped_column(Integer, default=0)
+    # 당류는 소수. 음식 단위(FoodNutrient.sugar_g)가 이미 Float 이라 항목 단위만
+    # Integer 로 남아 있으면 6.3+8.5 같은 합이 절삭된다(프론트도 double 로 다룸).
+    sugar_g: Mapped[float] = mapped_column(Float, default=0.0)
     engine: Mapped[str] = mapped_column(String(20), default="")  # 인식 엔진(gemini|yolo)
     # 재시도 중복 저장 방지용 멱등키(클라 요청당 1회 생성). NULL 허용 → 기존/무키 요청은 제약 밖.
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)

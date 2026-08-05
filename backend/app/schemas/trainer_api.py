@@ -62,7 +62,7 @@ class TrainerClientOut(BaseModel):
     active: bool
     calories: int                # 오늘 총 칼로리(회원 실데이터)
     sodium_mg: int               # 오늘 총 나트륨
-    sugar_g: int                 # 오늘 총 당류
+    sugar_g: float               # 오늘 총 당류(소수)
     last_routine: str            # 마지막 루틴 전송 라벨(오늘/어제/N일 전)
     week_completion: list[int]   # 이번 주 일별 완료율 7개(월→일)
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
