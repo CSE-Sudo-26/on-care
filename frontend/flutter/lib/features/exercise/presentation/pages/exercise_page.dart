@@ -6,14 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
-import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -189,10 +188,9 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     );
     final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
     // 주간 소모 목표는 서버(exercise_burn_goal)에서 온다. 홈 운동 카드도 같은
-    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 로딩 전에는 엔티티 기본값.
-    final int burnGoal =
-        ref.watch(dashboardSummaryProvider).valueOrNull?.exerciseBurnGoal ??
-        DashboardSummary.defaultExerciseBurnGoal;
+    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 출처(대시보드 요약)와
+    // 로딩 전 기본값 처리는 공용 provider 안에 있다.
+    final int burnGoal = ref.watch(exerciseBurnGoalProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
