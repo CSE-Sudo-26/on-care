@@ -47,8 +47,8 @@ class _StreamingClientRepository implements ClientRepository {
   @override
   Stream<List<TrainerClient>> watchClients() => _controller.stream;
   @override
-  Stream<List<TrainerClient>> watchClientsPrioritized() =>
-      throw UnimplementedError('not exercised by this test');
+  Stream<Map<String, DateTime>> watchLastChatAt() =>
+      Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
   @override
   Stream<int> watchTodayReservationCount() => const Stream<int>.empty();
   @override
@@ -128,13 +128,13 @@ void main() {
       );
 
       final clients = await container.read(clientsProvider.future);
-      final prioritized = await container.read(
-        prioritizedClientsProvider.future,
-      );
+      // Derived synchronously from the roster — no second fetch, and no
+      // future to await.
+      final prioritized = container.read(prioritizedClientsProvider).valueOrNull;
 
       verify(() => dio.get<List<dynamic>>('/trainer/clients')).called(1);
       expect(clients.map((c) => c.id), <String>['a', 'b']);
-      expect(prioritized.map((c) => c.id), <String>['a', 'b']); // a is over
+      expect(prioritized!.map((c) => c.id), <String>['a', 'b']); // a is over
     },
   );
 

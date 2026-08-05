@@ -57,15 +57,27 @@ RoutineHistoryEntry routineHistoryEntryFromJson(Map<String, Object?> json) {
 /// with each client as a decorate-sort tie-breaker (undecorate after) —
 /// unlike an id-keyed lookup, this can't collide on a duplicate/missing id
 /// (review).
-List<TrainerClient> prioritizeClients(List<TrainerClient> clients) {
+List<TrainerClient> prioritizeClients(
+  List<TrainerClient> clients, {
+  Map<String, DateTime> lastChatAt = const <String, DateTime>{},
+}) {
   final decorated = <(TrainerClient client, int index)>[
     for (var i = 0; i < clients.length; i++) (clients[i], i),
   ];
+  final epoch = DateTime.utc(1970);
   decorated.sort((a, b) {
     final over = (b.$1.sodiumOverBudget ? 1 : 0).compareTo(
       a.$1.sodiumOverBudget ? 1 : 0,
     );
     if (over != 0) return over;
+    // Ties break on who spoke most recently — when two clients are both
+    // over target, the one mid-conversation is the one to open first.
+    // Absent when the source has no chat signal (the real API's roster
+    // endpoint doesn't carry one), which degrades to the incoming order.
+    final chat = (lastChatAt[b.$1.id] ?? epoch).compareTo(
+      lastChatAt[a.$1.id] ?? epoch,
+    );
+    if (chat != 0) return chat;
     return a.$2.compareTo(b.$2);
   });
   return <TrainerClient>[for (final d in decorated) d.$1];
