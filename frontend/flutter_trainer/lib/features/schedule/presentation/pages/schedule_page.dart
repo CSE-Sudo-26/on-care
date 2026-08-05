@@ -13,7 +13,6 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -100,8 +99,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   final Set<String> _expanded = <String>{};
   final Set<String> _sent = <String>{};
-  // Sends whose chat write is still in flight (blocks re-entry).
-  final Set<String> _sending = <String>{};
+  String? _editingScheduleId;
+  String? _editingProgramId;
   // 단일 플래시: 연속 전송 시 직전 카드의 확인 플래시는 새 플래시로
   // 대체된다(의도된 단순화 — 전송 결과는 '전송됨' 칩으로 남는다).
   String? _flash;
@@ -120,36 +119,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     });
   }
 
-  Future<void> _send(ScheduleSession s) async {
-    if (_sent.contains(s.id) || _sending.contains(s.id)) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // Persist a trace in the client's 채팅 thread (when the client is
-    // registered) so the send shows up outside this tab. AWAIT it —
-    // unawaited() showed '전송됨' even when the insert failed and
-    // swallowed the error (review PR 239).
-    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    final match = clients.where((c) => c.name == s.clientName);
-    if (match.isNotEmpty && s.program.isNotEmpty) {
-      setState(() => _sending.add(s.id));
-      try {
-        await ref
-            .read(chatRepositoryProvider)
-            .sendTrainerMessage(
-              clientId: match.first.id,
-              text: '📤 오늘 PT 프로그램을 보냈어요 · ${s.program.length}개 운동',
-            );
-      } catch (_) {
-        if (!mounted) return;
-        setState(() => _sending.remove(s.id));
-        messenger.showSnackBar(
-          const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
-        );
-        return;
-      }
-      if (!mounted) return;
-    }
+  void _send(ScheduleSession s) {
+    if (_sent.contains(s.id)) return;
     setState(() {
-      _sending.remove(s.id);
       _sent.add(s.id);
       _flash = s.id;
     });
@@ -159,9 +131,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     });
   }
 
-  /// Opens the add/edit sheet. Passing [existing] prefills it and turns
-  /// the save into an update.
-  Future<void> _openSessionSheet({ScheduleSession? existing}) async {
+  /// New schedules use a sheet; existing schedules are edited in their card.
+  Future<void> _openSessionSheet() async {
     final clients = ref.read(clientsProvider).valueOrNull ?? const [];
     if (clients.isEmpty) return;
     await showModalBottomSheet<void>(
@@ -174,7 +145,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       builder: (context) => _SessionSheet(
         clientNames: clients.map((c) => c.name).toList(),
         date: _selectedYmd,
-        existing: existing,
+        existing: null,
       ),
     );
   }
@@ -420,6 +391,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // future — you can't complete a class that hasn't happened yet. The
     // repository enforces the same rule (review PR 245).
     final isFuture = _selectedDay.isAfter(_dateOnly(DateTime.now()));
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+    final today = _dateOnly(DateTime.now());
+    final dateLabel = _selectedDay == today
+        ? '오늘'
+        : '${_selectedDay.month}월 ${_selectedDay.day}일';
     return <Widget>[
       if (sessions.isEmpty)
         Container(
@@ -451,11 +427,39 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           flashing: _flash == s.id,
           onToggle: () => _toggle(s),
           onSend: () => _send(s),
-          onEdit: () => _openSessionSheet(existing: s),
+          onEditSchedule: () => setState(() {
+            _editingScheduleId = s.id;
+            _editingProgramId = null;
+            _expanded.add(s.id);
+          }),
+          onEditProgram: () => setState(() {
+            _editingProgramId = s.id;
+            _editingScheduleId = null;
+            _expanded.add(s.id);
+          }),
           onDelete: () => _confirmDelete(s),
           onChat: () => _openChat(s),
           onComplete: (s.isUpcoming && !isFuture)
               ? () => _confirmComplete(s)
+              : null,
+          programDateLabel: dateLabel,
+          inlineEditor: _editingScheduleId == s.id
+              ? _SessionSheet(
+                  key: ValueKey<String>('inline-session-editor-${s.id}'),
+                  clientNames: clients.map((c) => c.name).toList(),
+                  date: _selectedYmd,
+                  existing: s,
+                  inline: true,
+                  onSaved: () => setState(() => _editingScheduleId = null),
+                  onCancel: () => setState(() => _editingScheduleId = null),
+                )
+              : _editingProgramId == s.id
+              ? _ProgramEditor(
+                  key: ValueKey<String>('inline-program-editor-${s.id}'),
+                  session: s,
+                  onSaved: () => setState(() => _editingProgramId = null),
+                  onCancel: () => setState(() => _editingProgramId = null),
+                )
               : null,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -534,6 +538,10 @@ class _SessionSheet extends ConsumerStatefulWidget {
     required this.clientNames,
     required this.date,
     required this.existing,
+    this.inline = false,
+    this.onSaved,
+    this.onCancel,
+    super.key,
   });
 
   final List<String> clientNames;
@@ -542,6 +550,9 @@ class _SessionSheet extends ConsumerStatefulWidget {
   final String date;
 
   final ScheduleSession? existing;
+  final bool inline;
+  final VoidCallback? onSaved;
+  final VoidCallback? onCancel;
 
   @override
   ConsumerState<_SessionSheet> createState() => _SessionSheetState();
@@ -557,6 +568,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
   late int _minute;
   late int _duration;
   bool _saving = false;
+  late final TextEditingController _note;
 
   // Option lists always CONTAIN the edited session's own values. Falling
   // back to a default instead would silently rewrite the session on an
@@ -579,6 +591,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
   void initState() {
     super.initState();
     final e = widget.existing;
+    _note = TextEditingController(text: e?.note ?? '');
 
     _client = e?.clientName.isNotEmpty ?? false
         ? e!.clientName
@@ -601,6 +614,12 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     _durationOptions = _withCurrent(_durations, _duration)..sort();
   }
 
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
   String get _time =>
       '${_hour.toString().padLeft(2, '0')}:'
       '${_minute.toString().padLeft(2, '0')}';
@@ -620,6 +639,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
           time: _time,
           type: _type,
           durationMinutes: _duration,
+          note: _note.text.trim(),
         );
       } else {
         await repo.updateSession(
@@ -628,6 +648,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
           time: _time,
           type: _type,
           durationMinutes: _duration,
+          note: _note.text.trim(),
         );
       }
     } catch (_) {
@@ -641,131 +662,174 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     }
     if (mounted) setState(() => _saving = false);
     if (!mounted) return;
-    navigator.pop();
+    if (widget.inline) {
+      widget.onSaved?.call();
+    } else {
+      navigator.pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // Keep the sheet above the keyboard/safe area.
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            widget.existing == null ? '새 일정 추가' : '일정 수정',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.foreground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _sheetField(
-            label: '고객',
-            child: DropdownButton<String>(
-              value: _client,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              items: <DropdownMenuItem<String>>[
-                for (final name in _clientOptions)
-                  DropdownMenuItem<String>(value: name, child: Text(name)),
-              ],
-              onChanged: (v) => setState(() => _client = v ?? _client),
-            ),
-          ),
-          _sheetField(
-            label: '유형',
-            child: DropdownButton<String>(
-              value: _type,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              items: <DropdownMenuItem<String>>[
-                for (final t in _typeOptions)
-                  DropdownMenuItem<String>(value: t, child: Text(t)),
-              ],
-              onChanged: (v) => setState(() => _type = v ?? _type),
-            ),
-          ),
-          _sheetField(
-            label: '시간',
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: DropdownButton<int>(
-                    value: _hour,
-                    isExpanded: true,
-                    underline: const SizedBox.shrink(),
-                    items: <DropdownMenuItem<int>>[
-                      for (final h in _hourOptions)
-                        DropdownMenuItem<int>(
-                          value: h,
-                          child: Text('${h.toString().padLeft(2, '0')}시'),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _hour = v ?? _hour),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: DropdownButton<int>(
-                    value: _minute,
-                    isExpanded: true,
-                    underline: const SizedBox.shrink(),
-                    items: <DropdownMenuItem<int>>[
-                      for (final m in _minuteOptions)
-                        DropdownMenuItem<int>(
-                          value: m,
-                          child: Text('${m.toString().padLeft(2, '0')}분'),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _minute = v ?? _minute),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _sheetField(
-            label: '소요 시간',
-            child: DropdownButton<int>(
-              value: _duration,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              items: <DropdownMenuItem<int>>[
-                for (final d in _durationOptions)
-                  DropdownMenuItem<int>(value: d, child: Text('$d분')),
-              ],
-              onChanged: (v) => setState(() => _duration = v ?? _duration),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Material(
-            color: AppColors.primary,
-            borderRadius: const BorderRadius.all(AppRadius.lg),
-            child: InkWell(
-              onTap: _saving ? null : _save,
+    return Container(
+      decoration: widget.inline
+          ? BoxDecoration(
+              color: AppColors.background,
               borderRadius: const BorderRadius.all(AppRadius.lg),
-              child: Container(
-                height: 44,
-                alignment: Alignment.center,
-                child: Text(
-                  widget.existing == null ? '추가하기' : '저장하기',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryForeground,
+              border: Border.all(color: AppColors.borderStrong),
+            )
+          : null,
+      child: Padding(
+        // Keep the sheet above the keyboard/safe area.
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.lg,
+          AppSpacing.xl,
+          AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              widget.existing == null ? '새 일정 추가' : '일정 수정',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.foreground,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _sheetField(
+              label: '고객',
+              child: DropdownButton<String>(
+                value: _client,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: <DropdownMenuItem<String>>[
+                  for (final name in _clientOptions)
+                    DropdownMenuItem<String>(value: name, child: Text(name)),
+                ],
+                onChanged: (v) => setState(() => _client = v ?? _client),
+              ),
+            ),
+            _sheetField(
+              label: '유형',
+              child: DropdownButton<String>(
+                value: _type,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: <DropdownMenuItem<String>>[
+                  for (final t in _typeOptions)
+                    DropdownMenuItem<String>(value: t, child: Text(t)),
+                ],
+                onChanged: (v) => setState(() => _type = v ?? _type),
+              ),
+            ),
+            _sheetField(
+              label: '시간',
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButton<int>(
+                      value: _hour,
+                      isExpanded: true,
+                      underline: const SizedBox.shrink(),
+                      items: <DropdownMenuItem<int>>[
+                        for (final h in _hourOptions)
+                          DropdownMenuItem<int>(
+                            value: h,
+                            child: Text('${h.toString().padLeft(2, '0')}시'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _hour = v ?? _hour),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: DropdownButton<int>(
+                      value: _minute,
+                      isExpanded: true,
+                      underline: const SizedBox.shrink(),
+                      items: <DropdownMenuItem<int>>[
+                        for (final m in _minuteOptions)
+                          DropdownMenuItem<int>(
+                            value: m,
+                            child: Text('${m.toString().padLeft(2, '0')}분'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _minute = v ?? _minute),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _sheetField(
+              label: '소요 시간',
+              child: DropdownButton<int>(
+                value: _duration,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                items: <DropdownMenuItem<int>>[
+                  for (final d in _durationOptions)
+                    DropdownMenuItem<int>(value: d, child: Text('$d분')),
+                ],
+                onChanged: (v) => setState(() => _duration = v ?? _duration),
+              ),
+            ),
+            if (widget.existing == null)
+              _sheetField(
+                label: '트레이너 메모',
+                child: TextField(
+                  key: const ValueKey<String>('schedule-trainer-note'),
+                  controller: _note,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    hintText: '수업 준비사항이나 고객 특이사항을 입력하세요',
+                    hintStyle: TextStyle(color: AppColors.mutedForeground),
+                    isDense: true,
                   ),
                 ),
               ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: <Widget>[
+                if (widget.inline) ...<Widget>[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _saving ? null : widget.onCancel,
+                      child: const Text('취소'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                Expanded(
+                  child: Material(
+                    color: AppColors.primary,
+                    borderRadius: const BorderRadius.all(AppRadius.lg),
+                    child: InkWell(
+                      onTap: _saving ? null : _save,
+                      borderRadius: const BorderRadius.all(AppRadius.lg),
+                      child: Container(
+                        height: 44,
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.existing == null ? '추가하기' : '저장하기',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryForeground,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -787,6 +851,298 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             ),
           ),
           Expanded(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramEditor extends ConsumerStatefulWidget {
+  const _ProgramEditor({
+    required this.session,
+    required this.onSaved,
+    required this.onCancel,
+    super.key,
+  });
+
+  final ScheduleSession session;
+  final VoidCallback onSaved;
+  final VoidCallback onCancel;
+
+  @override
+  ConsumerState<_ProgramEditor> createState() => _ProgramEditorState();
+}
+
+class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
+  late final TextEditingController _note;
+  late final List<_ProgramDraft> _items;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _note = TextEditingController(text: widget.session.note);
+    _items = widget.session.program.map(_ProgramDraft.fromItem).toList();
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    for (final item in _items) {
+      item.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addItem() {
+    setState(() => _items.add(_ProgramDraft.empty()));
+  }
+
+  void _removeItem(int index) {
+    setState(() => _items.removeAt(index).dispose());
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final program = <ProgramItem>[];
+    for (final item in _items) {
+      final name = item.name.text.trim();
+      final sets = int.tryParse(item.sets.text.trim());
+      if (name.isEmpty || sets == null || sets < 1 || sets > 100) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('운동 이름과 세트 수를 확인해 주세요')));
+        return;
+      }
+      program.add(
+        ProgramItem(
+          name: name,
+          sets: sets,
+          reps: item.reps.text.trim().isEmpty ? '-' : item.reps.text.trim(),
+          weight: item.weight.text.trim().isEmpty
+              ? '-'
+              : item.weight.text.trim(),
+        ),
+      );
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .updateProgram(
+            widget.session.id,
+            program: program,
+            note: _note.text.trim(),
+          );
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로그램 저장에 실패했어요. 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _saving = false);
+    widget.onSaved();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: const BorderRadius.all(AppRadius.lg),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Text(
+            '프로그램 수정',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (var index = 0; index < _items.length; index++) ...<Widget>[
+            _ProgramDraftFields(
+              index: index,
+              draft: _items[index],
+              onRemove: () => _removeItem(index),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _addItem,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('운동 추가'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            '트레이너 메모',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextField(
+            key: const ValueKey<String>('program-trainer-note'),
+            controller: _note,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: '프로그램 진행 시 참고할 내용을 입력하세요',
+              hintStyle: TextStyle(color: AppColors.mutedForeground),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _saving ? null : widget.onCancel,
+                  child: const Text('취소'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey<String>('save-program'),
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? '저장 중...' : '프로그램 저장'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramDraft {
+  _ProgramDraft({
+    required String name,
+    required String sets,
+    required String reps,
+    required String weight,
+  }) : name = TextEditingController(text: name),
+       sets = TextEditingController(text: sets),
+       reps = TextEditingController(text: reps),
+       weight = TextEditingController(text: weight);
+
+  factory _ProgramDraft.fromItem(ProgramItem item) => _ProgramDraft(
+    name: item.name,
+    sets: '${item.sets}',
+    reps: item.reps,
+    weight: item.weight == '-' ? '' : item.weight,
+  );
+
+  factory _ProgramDraft.empty() =>
+      _ProgramDraft(name: '', sets: '3', reps: '10회', weight: '');
+
+  final TextEditingController name;
+  final TextEditingController sets;
+  final TextEditingController reps;
+  final TextEditingController weight;
+
+  void dispose() {
+    name.dispose();
+    sets.dispose();
+    reps.dispose();
+    weight.dispose();
+  }
+}
+
+class _ProgramDraftFields extends StatelessWidget {
+  const _ProgramDraftFields({
+    required this.index,
+    required this.draft,
+    required this.onRemove,
+  });
+
+  final int index;
+  final _ProgramDraft draft;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-name-$index'),
+                  controller: draft.name,
+                  decoration: const InputDecoration(
+                    labelText: '운동 이름',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '운동 삭제',
+                onPressed: onRemove,
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppColors.destructive,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-sets-$index'),
+                  controller: draft.sets,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '세트',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-reps-$index'),
+                  controller: draft.reps,
+                  decoration: const InputDecoration(
+                    labelText: '횟수/시간',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  key: ValueKey<String>('program-weight-$index'),
+                  controller: draft.weight,
+                  decoration: const InputDecoration(
+                    labelText: '중량',
+                    hintText: '선택',
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1216,10 +1572,13 @@ class _TimelineRow extends StatelessWidget {
     required this.flashing,
     required this.onToggle,
     required this.onSend,
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
+    required this.programDateLabel,
+    required this.inlineEditor,
   });
 
   final ScheduleSession session;
@@ -1228,9 +1587,12 @@ class _TimelineRow extends StatelessWidget {
   final bool flashing;
   final VoidCallback onToggle;
   final VoidCallback onSend;
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
+  final String programDateLabel;
+  final Widget? inlineEditor;
 
   /// 예정 sessions only — flips to 완료 and logs the 운동기록.
   final VoidCallback? onComplete;
@@ -1267,10 +1629,13 @@ class _TimelineRow extends StatelessWidget {
                   flashing: flashing,
                   onToggle: onToggle,
                   onSend: onSend,
-                  onEdit: onEdit,
+                  onEditSchedule: onEditSchedule,
+                  onEditProgram: onEditProgram,
                   onDelete: onDelete,
                   onChat: onChat,
                   onComplete: onComplete,
+                  programDateLabel: programDateLabel,
+                  inlineEditor: inlineEditor,
                 ),
         ),
       ],
@@ -1310,10 +1675,13 @@ class _SessionCard extends StatelessWidget {
     required this.flashing,
     required this.onToggle,
     required this.onSend,
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
+    required this.programDateLabel,
+    required this.inlineEditor,
   });
 
   final ScheduleSession session;
@@ -1322,9 +1690,12 @@ class _SessionCard extends StatelessWidget {
   final bool flashing;
   final VoidCallback onToggle;
   final VoidCallback onSend;
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
+  final String programDateLabel;
+  final Widget? inlineEditor;
 
   /// 예정 sessions only — flips to 완료 and logs the 운동기록.
   final VoidCallback? onComplete;
@@ -1429,35 +1800,41 @@ class _SessionCard extends StatelessWidget {
                 children: <Widget>[
                   const Divider(height: 1, color: AppColors.borderStrong),
                   const SizedBox(height: AppSpacing.md),
-                  if (s.program.isNotEmpty)
-                    for (var i = 0; i < s.program.length; i++) ...<Widget>[
-                      _ProgramRow(index: i + 1, item: s.program[i]),
-                      const SizedBox(height: AppSpacing.sm),
-                    ]
-                  else if (s.isUpcoming) ...<Widget>[
-                    // 예정 session without a plan yet.
-                    const _NoPlanBox(),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  if (s.note.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AppSpacing.xs),
-                    _NoteBox(note: s.note),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  _ManageRow(
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                    onChat: onChat,
-                    onComplete: onComplete,
-                  ),
-                  if (s.isDone && s.program.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AppSpacing.md),
-                    _SendButton(
-                      clientName: s.clientName,
-                      sent: sent,
-                      flashing: flashing,
-                      onSend: onSend,
+                  if (inlineEditor != null)
+                    inlineEditor!
+                  else ...<Widget>[
+                    if (s.program.isNotEmpty)
+                      for (var i = 0; i < s.program.length; i++) ...<Widget>[
+                        _ProgramRow(index: i + 1, item: s.program[i]),
+                        const SizedBox(height: AppSpacing.sm),
+                      ]
+                    else if (s.isUpcoming) ...<Widget>[
+                      // 예정 session without a plan yet.
+                      const _NoPlanBox(),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    if (s.note.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      _NoteBox(note: s.note),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    _ManageRow(
+                      onEditSchedule: onEditSchedule,
+                      onEditProgram: onEditProgram,
+                      onDelete: onDelete,
+                      onChat: onChat,
+                      onComplete: onComplete,
                     ),
+                    if (s.isDone && s.program.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.md),
+                      _SendButton(
+                        clientName: s.clientName,
+                        sent: sent,
+                        flashing: flashing,
+                        onSend: onSend,
+                        dateLabel: programDateLabel,
+                      ),
+                    ],
                   ],
                 ],
               ),
@@ -1615,33 +1992,42 @@ class _NoPlanBox extends StatelessWidget {
 /// 수정 · 삭제 · 채팅 바로가기 actions for a booked session.
 class _ManageRow extends StatelessWidget {
   const _ManageRow({
-    required this.onEdit,
+    required this.onEditSchedule,
+    required this.onEditProgram,
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
   });
 
-  final VoidCallback onEdit;
+  final VoidCallback onEditSchedule;
+  final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
       children: <Widget>[
-        if (onComplete != null) ...<Widget>[
+        if (onComplete != null)
           _ActionChip(
             label: '✓ 완료',
             color: AppColors.success,
             onTap: onComplete!,
           ),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-        _ActionChip(label: '✎ 수정', color: AppColors.accent, onTap: onEdit),
-        const SizedBox(width: AppSpacing.xs),
+        _ActionChip(
+          label: '일정 수정',
+          color: AppColors.accent,
+          onTap: onEditSchedule,
+        ),
+        _ActionChip(
+          label: '프로그램 수정',
+          color: AppColors.secondary,
+          onTap: onEditProgram,
+        ),
         _ActionChip(label: '삭제', color: AppColors.destructive, onTap: onDelete),
-        const Spacer(),
         _ActionChip(label: '💬 채팅', color: AppColors.accent, onTap: onChat),
       ],
     );
@@ -1740,12 +2126,14 @@ class _SendButton extends StatelessWidget {
     required this.sent,
     required this.flashing,
     required this.onSend,
+    required this.dateLabel,
   });
 
   final String clientName;
   final bool sent;
   final bool flashing;
   final VoidCallback onSend;
+  final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1753,7 +2141,7 @@ class _SendButton extends StatelessWidget {
         ? '✓ 고객 앱으로 전송 완료!'
         : sent
         ? '✓ $clientName님에게 전송됨'
-        : '📤 $clientName님에게 오늘 PT 프로그램 전송';
+        : '📤 $clientName님에게 $dateLabel PT 프로그램 전송';
     return Material(
       color: sent
           ? AppColors.success.withValues(alpha: 0.1)

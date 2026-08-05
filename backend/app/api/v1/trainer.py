@@ -26,11 +26,12 @@ from app.models.models import TrainerClient, TrainerProfile
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
+    RoutineOptionsOut, RoutineOptionsRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerMe, TrainerMeUpdate, TrainerPasswordChange,
     WeeklyReportOut,
 )
-from app.services import trainer_service
+from app.services import trainer_routine_options_service, trainer_service
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
@@ -247,6 +248,30 @@ def trainer_assign_routine(
         db, trainer.id, member_id,
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
+    )
+
+
+@router.post(
+    "/trainer/clients/{member_id}/routine-options",
+    response_model=RoutineOptionsOut,
+)
+def trainer_routine_options(
+    member_id: str,
+    payload: RoutineOptionsRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOptionsOut:
+    """회원 실데이터를 LLM에 전달해 두 개의 맞춤 루틴 후보를 생성한다.
+
+    설정된 AI 공급자를 사용할 수 없거나 응답 계약이 잘못되면 동일 응답 형태의
+    규칙 기반 후보로 폴백한다.
+    """
+    _require_client(db, trainer.id, member_id)
+    return trainer_routine_options_service.generate_routine_options(
+        db,
+        trainer.id,
+        member_id,
+        payload,
     )
 
 

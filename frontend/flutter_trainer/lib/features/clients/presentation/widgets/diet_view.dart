@@ -87,7 +87,7 @@ class _NutritionSummary extends StatelessWidget {
                 label: '칼로리',
                 value: client.calories,
                 unit: 'kcal',
-                color: AppColors.accent,
+                color: AppColors.accentDark,
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
