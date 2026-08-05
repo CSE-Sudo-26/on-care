@@ -15,7 +15,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
-    func, text,
+    func, text, true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -333,6 +333,17 @@ class TrainerProfile(Base):
     gym_address: Mapped[str] = mapped_column(String(300), default="")
     gym_hours: Mapped[str] = mapped_column(String(50), default="")
     gym_phone: Mapped[str] = mapped_column(String(20), default="")
+    # 알림 수신 설정(#379). 기기 로컬이 아니라 계정 단위 — 트레이너는 센터 PC 와
+    # 태블릿을 오간다. 기본값은 서버가 정한다(모두 켬 / 30분 전).
+    notify_new_message: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    notify_session_reminder: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    reminder_lead_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="30", default=30
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

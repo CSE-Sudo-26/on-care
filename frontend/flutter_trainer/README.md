@@ -8,7 +8,7 @@ On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업
 > 5개 목적지(대시보드/고객/스케줄/AI 코칭/리포트) + 사이드바 하단 내 정보·설정.
 > 경로 기반 URL(`/clients/<id>/<section>`), 대시보드 딥링크, 주 캘린더,
 > 프로그램 템플릿, 주간 리포트 전송까지. 데모는 drift 로컬 DB, 실 API 모드는
-> `/v1/trainer/*` 연동(스케줄만 아직 로컬)
+> `/v1/trainer/*` 연동(스케줄·알림 설정 포함)
 
 ## 아키텍처 방향 (하이브리드)
 
@@ -169,11 +169,9 @@ lib/
 
 - 트레이너 CI/배포 파이프라인 (analyze·test·web build + wasm fetch,
   `dart format --set-exit-if-changed` 포함)
-- **스케줄 실 API 연동**: `ScheduleRepository`가 아직 drift 전용이라 실 API 모드에서
-  스케줄·주 캘린더·리포트의 세션 수가 로컬 값이다. 백엔드 `/trainer/schedule*` 는
-  이미 있으므로 Dio 구현만 추가하면 된다
-- **설정 실동작**: 알림 수신 설정·비밀번호 변경 엔드포인트가 생기면 `/my?t=settings`의
-  "준비 중" 행을 채운다 (프로필 편집은 `PUT /trainer/me` 로 이미 가능)
+- **오늘 예약 배지 실 API**: `DioClientRepository.watchTodayReservationCount()` 가
+  아직 빈 스트림이다(예약 수 출처가 없어 배지를 숨김). 스케줄이 붙었으니 여기서
+  파생할 수 있다
 - 실 백엔드(FastAPI) 연동 — `TrainerAuthRepository`(Dio 구현)/`SecureTokenStore` 참조
 - 자정 넘김 시 '오늘' 스케줄/예약 수 자동 갱신, DB JSON 역직렬화 방어
   (백엔드 연동과 함께 처리)

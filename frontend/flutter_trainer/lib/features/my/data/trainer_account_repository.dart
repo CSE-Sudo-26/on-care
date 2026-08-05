@@ -79,8 +79,9 @@ class DioTrainerAccountRepository implements TrainerAccountRepository {
 
   String? _detail(DioException e) {
     final data = e.response?.data;
-    if (data is Map && data['detail'] is String)
+    if (data is Map && data['detail'] is String) {
       return data['detail'] as String;
+    }
     return null;
   }
 }

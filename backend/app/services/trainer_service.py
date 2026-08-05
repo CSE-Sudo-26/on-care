@@ -22,7 +22,7 @@ from app.models.models import (
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
-    WeeklyReportOut,
+    TrainerNotificationSettings, WeeklyReportOut,
 )
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
@@ -942,3 +942,32 @@ def report_message(report: WeeklyReportOut) -> str:
         else "다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요."
     )
     return "\n".join(lines)
+
+
+# ---- 알림 수신 설정 ----
+
+def build_notification_settings(
+    profile: TrainerProfile,
+) -> TrainerNotificationSettings:
+    """`GET /trainer/me/settings` 응답."""
+    return TrainerNotificationSettings(
+        notify_new_message=profile.notify_new_message,
+        notify_session_reminder=profile.notify_session_reminder,
+        reminder_lead_minutes=profile.reminder_lead_minutes,
+    )
+
+
+def update_notification_settings(
+    db: Session, profile: TrainerProfile, fields: dict
+) -> TrainerNotificationSettings:
+    """보낸 필드만 반영한다."""
+    for column in (
+        "notify_new_message",
+        "notify_session_reminder",
+        "reminder_lead_minutes",
+    ):
+        if column in fields:
+            setattr(profile, column, fields[column])
+    db.commit()
+    db.refresh(profile)
+    return build_notification_settings(profile)

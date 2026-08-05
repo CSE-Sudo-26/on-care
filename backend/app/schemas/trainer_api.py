@@ -347,3 +347,33 @@ class TrainerPasswordChange(BaseModel):
     """
     current_password: str = Field(min_length=1, max_length=200)
     new_password: str = Field(min_length=8, max_length=200)
+
+
+# ---- 알림 수신 설정 (#379) ----
+
+#: 세션 알림 시점 선택지(분). 앱의 SegmentedSwitch 와 같은 목록 — 서버가
+#: 계약을 소유하고, 클라이언트는 이 중에서만 고른다.
+REMINDER_LEAD_OPTIONS: tuple[int, ...] = (10, 30, 60)
+
+
+class TrainerNotificationSettings(BaseModel):
+    """트레이너 알림 수신 설정."""
+    notify_new_message: bool
+    notify_session_reminder: bool
+    reminder_lead_minutes: int
+
+
+class TrainerNotificationSettingsUpdate(BaseModel):
+    """부분 수정 — 보낸 필드만 반영."""
+    notify_new_message: bool | None = None
+    notify_session_reminder: bool | None = None
+    reminder_lead_minutes: int | None = None
+
+    @field_validator("reminder_lead_minutes")
+    @classmethod
+    def _v_lead(cls, v: int | None) -> int | None:
+        if v is not None and v not in REMINDER_LEAD_OPTIONS:
+            raise ValueError(
+                f"reminder_lead_minutes 는 {list(REMINDER_LEAD_OPTIONS)} 중 하나여야 합니다."
+            )
+        return v

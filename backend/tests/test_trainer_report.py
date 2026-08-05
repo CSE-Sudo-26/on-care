@@ -297,3 +297,65 @@ def test_password_change_needs_a_trainer_account(client):
         headers=_auth(member),
     )
     assert r.status_code == 403
+
+
+# ---- 알림 수신 설정 (#379) ----
+
+def test_settings_defaults_come_from_the_server(client):
+    """클라이언트마다 기본값을 들고 있으면 기기별로 갈라진다."""
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/me/settings", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert set(body) == {
+        "notify_new_message", "notify_session_reminder", "reminder_lead_minutes",
+    }
+    assert body["notify_new_message"] is True
+    assert body["notify_session_reminder"] is True
+    assert body["reminder_lead_minutes"] == 30
+
+
+def test_settings_update_persists_and_is_partial(client):
+    token = _trainer_token(client)
+    before = client.get("/v1/trainer/me/settings", headers=_auth(token)).json()
+    try:
+        r = client.put(
+            "/v1/trainer/me/settings",
+            json={"notify_new_message": False},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["notify_new_message"] is False
+        # 보내지 않은 값은 그대로.
+        assert r.json()["reminder_lead_minutes"] == before["reminder_lead_minutes"]
+
+        # 다시 읽어도 유지된다(기기가 아니라 계정에 붙어 있다).
+        again = client.get("/v1/trainer/me/settings", headers=_auth(token)).json()
+        assert again["notify_new_message"] is False
+    finally:
+        client.put("/v1/trainer/me/settings", json=before, headers=_auth(token))
+
+
+def test_settings_reject_a_lead_time_outside_the_options(client):
+    token = _trainer_token(client)
+    r = client.put(
+        "/v1/trainer/me/settings",
+        json={"reminder_lead_minutes": 45},
+        headers=_auth(token),
+    )
+    assert r.status_code == 422
+
+
+def test_settings_update_with_no_fields_is_rejected(client):
+    token = _trainer_token(client)
+    r = client.put("/v1/trainer/me/settings", json={}, headers=_auth(token))
+    assert r.status_code == 400
+
+
+def test_settings_need_a_trainer_account(client):
+    email = f"member-{uuid4().hex[:8]}@oncare.com"
+    client.post("/v1/auth/register", json={"email": email, "password": "pw!", "name": "u"})
+    member = client.post(
+        "/v1/auth/login", data={"username": email, "password": "pw!"}
+    ).json()["access_token"]
+    assert client.get("/v1/trainer/me/settings", headers=_auth(member)).status_code == 403
