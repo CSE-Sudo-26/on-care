@@ -50,7 +50,7 @@ class _StaticLiveChatRepository implements ChatRepository {
         ClientChatMessage(
           id: 'live-1',
           sender: ChatSender.client,
-          body: '실제 회원 답장',
+          body: '실제 고객 답장',
           timeLabel: '09:00',
           createdAt: DateTime.utc(2026, 7, 31, 9),
         ),
@@ -306,7 +306,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('실제 회원 답장'), findsOneWidget);
+      expect(find.text('실제 고객 답장'), findsOneWidget);
       expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
     });

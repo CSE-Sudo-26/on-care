@@ -171,7 +171,7 @@ void main() {
             recommendedExercises: <RoutineExercise>[
               RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
             ],
-            recommendedReason: '기존 회원 데이터 기반 추천',
+            recommendedReason: '기존 고객 데이터 기반 추천',
             onReviewCompleted: (exercises) => reviewed = exercises,
           ),
         ),
@@ -180,7 +180,7 @@ void main() {
 
     // The assistant analysis is editable, while its suggestion remains a
     // muted placeholder until the trainer types a memo.
-    expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
+    expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
     final initialMemo = tester.widget<TextField>(
       find.byKey(const ValueKey<String>('analysis-trainer-memo')),
     );
@@ -304,7 +304,7 @@ void main() {
               recommendedExercises: <RoutineExercise>[
                 RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
               ],
-              recommendedReason: '기존 회원 데이터 기반 추천',
+              recommendedReason: '기존 고객 데이터 기반 추천',
             ),
           ),
         ),
@@ -345,7 +345,7 @@ void main() {
             recommendedExercises: <RoutineExercise>[
               RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
             ],
-            recommendedReason: '기존 회원 데이터 기반 추천',
+            recommendedReason: '기존 고객 데이터 기반 추천',
           ),
         ),
       ),

@@ -7,6 +7,11 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.12.0
+  # `Color.withValues` (used across the design system) landed in Flutter
+  # 3.27. The Dart constraint above already implies a much newer Flutter,
+  # but stating it means a wrong toolchain fails at `pub get` rather than
+  # at some random widget's compile error.
+  flutter: '>=3.27.0'
 
 dependencies:
   flutter:

@@ -330,7 +330,7 @@ void main() {
       await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
       await tester.pumpAndSettle();
 
-      expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
+      expect(find.text('고객 데이터를 분석했어요'), findsOneWidget);
       expect(find.text('추천 목록으로'), findsOneWidget);
       // The persistent shell proves this was not opened as a dialog/page.
       // Asserted on the sidebar's profile footer rather than a nav label,

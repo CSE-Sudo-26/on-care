@@ -409,6 +409,14 @@ class _ClientPicker extends StatelessWidget {
 }
 
 /// One client's week, ready to send.
+/// Colour for a figure that may be unknown.
+///
+/// A null value renders "-", and painting that with the good/bad colour
+/// would state a verdict the data can't support — an unknown week would
+/// read as a clean one. Unknown gets the neutral foreground.
+Color _verdictTone(int? value, Color Function(int) verdict) =>
+    value == null ? AppColors.subtleForeground : verdict(value);
+
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
@@ -452,9 +460,10 @@ class _ClientReport extends StatelessWidget {
                     ? '-'
                     : '${report.completionAvg}',
                 unit: '%',
-                tone: (report.completionAvg ?? 0) >= 70
-                    ? AppColors.success
-                    : AppColors.warning,
+                tone: _verdictTone(
+                  report.completionAvg,
+                  (v) => v >= 70 ? AppColors.success : AppColors.warning,
+                ),
               ),
               _Figure(
                 label: '나트륨 초과',
@@ -463,9 +472,10 @@ class _ClientReport extends StatelessWidget {
                 // number under last week's dates.
                 value: report.sodiumOverDays?.toString() ?? '-',
                 unit: '일',
-                tone: (report.sodiumOverDays ?? 0) > 2
-                    ? AppColors.overTarget
-                    : AppColors.success,
+                tone: _verdictTone(
+                  report.sodiumOverDays,
+                  (v) => v > 2 ? AppColors.overTarget : AppColors.success,
+                ),
               ),
             ],
           ),
@@ -481,7 +491,7 @@ class _ClientReport extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           if (!report.isCurrentWeek)
             // 요일별 시리즈는 이번 주 것뿐이다. 지난 주 제목 아래 이번 주
-            // 막대를 그리면 트레이너가 그대로 회원에게 보낸다.
+            // 막대를 그리면 트레이너가 그대로 고객에게 보낸다.
             const EmptyHint(message: '지난 주 요일별 기록은 아직 없어요')
           else if (client.weekCompletion.length == weekdayLabels.length)
             BarSeriesChart(
@@ -505,11 +515,17 @@ class _ClientReport extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Sparkline(
-            values: client.sodiumWeek,
-            threshold: sodiumTargetMg,
-            height: 56,
-          ),
+          if (report.isCurrentWeek)
+            Sparkline(
+              values: client.sodiumWeek,
+              threshold: sodiumTargetMg,
+              height: 56,
+            )
+          else
+            // `sodiumWeek` is this week's series, same as the weekday
+            // chart above — drawing it under a past week's dates would
+            // put today's numbers in a report the trainer can send.
+            const EmptyHint(message: '지난 주 나트륨 추이는 아직 없어요'),
           const SizedBox(height: AppSpacing.lg),
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -531,7 +547,7 @@ class _ClientReport extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: ActionButton(
-              label: sent ? '전송됨' : (sending ? '전송 중…' : '회원에게 전송'),
+              label: sent ? '전송됨' : (sending ? '전송 중…' : '고객에게 전송'),
               icon: sent ? Icons.check : Icons.send_outlined,
               primary: true,
               onPressed: sent || sending ? null : () => onSend(report),

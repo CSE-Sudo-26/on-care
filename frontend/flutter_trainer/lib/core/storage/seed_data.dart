@@ -604,7 +604,7 @@ const List<_Slot> _schedule = <_Slot>[
   ),
   _Slot(
     time: '17:00',
-    clientName: '신규 회원',
+    clientName: '신규 고객',
     type: '상담',
     durationMinutes: 30,
     status: '예정',

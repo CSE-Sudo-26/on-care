@@ -124,7 +124,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'On-Care 계정을 만들어 회원 관리를 시작하세요',
+                        'On-Care 계정을 만들어 고객 관리를 시작하세요',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: const Color(0xFF64748B),

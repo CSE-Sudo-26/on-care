@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 void main() {
@@ -47,6 +48,35 @@ void main() {
       // haven't come round yet.
       expect(find.text('금'), findsOneWidget);
       expect(find.text('일'), findsOneWidget);
+    });
+
+    testWidgets('a pending day never takes the over-target colour', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BarSeriesChart(
+              // Fri/Sat/Sun are over the threshold in the source data but
+              // haven't happened; painting their track red would report a
+              // bad day the member could not have had yet.
+              values: const <int>[10, 10, 10, 10, 90, 90, 90],
+              labels: const <String>['월', '화', '수', '목', '금', '토', '일'],
+              maxValue: 100,
+              overThreshold: 50,
+              pendingFromIndex: 4,
+            ),
+          ),
+        ),
+      );
+
+      final tracks = tester
+          .widgetList<Container>(find.byType(Container))
+          .map((c) => (c.decoration as BoxDecoration?)?.color)
+          .whereType<Color>()
+          .toList();
+      expect(tracks, isNot(contains(AppColors.overTarget)));
+      expect(tracks.where((c) => c == AppColors.border).length, 3);
     });
   });
 }

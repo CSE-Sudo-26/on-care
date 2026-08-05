@@ -61,7 +61,7 @@ void main() {
     // read it before sending rather than discovering it in the thread.
     expect(find.textContaining('주간 리포트'), findsWidgets);
     expect(find.textContaining('PT 세션'), findsWidgets);
-    expect(find.text('회원에게 전송'), findsOneWidget);
+    expect(find.text('고객에게 전송'), findsOneWidget);
   });
 
   testWidgets('전송 delivers the report into the client chat thread', (
@@ -69,7 +69,7 @@ void main() {
   ) async {
     final container = await openReports(tester);
 
-    await tester.tap(find.text('회원에게 전송'));
+    await tester.tap(find.text('고객에게 전송'));
     await settle(tester);
 
     // Button latches so a second tap can't double-send.
@@ -105,13 +105,13 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('회원에게 전송'));
+    await tester.tap(find.text('고객에게 전송'));
     await settle(tester);
 
     // No false "전송됨" — the trainer would otherwise believe the member
     // got a report that never arrived.
     expect(find.text('전송됨'), findsNothing);
-    expect(find.text('회원에게 전송'), findsOneWidget);
+    expect(find.text('고객에게 전송'), findsOneWidget);
     expect(find.text('리포트 전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
   });
 }
