@@ -85,7 +85,6 @@ class AppSidebar extends ConsumerWidget {
                 ),
                 children: <Widget>[
                   for (final group in NavGroup.values) ...<Widget>[
-                    if (expanded) _GroupLabel(label: group.label),
                     for (var i = 0; i < navDestinations.length; i++)
                       if (navDestinations[i].group == group)
                         _NavTile(
@@ -102,7 +101,9 @@ class AppSidebar extends ConsumerWidget {
                             onNavigate?.call();
                           },
                         ),
-                    const SizedBox(height: AppSpacing.sm),
+                    // The gap is what's left of the grouping now that the
+                    // headings are gone.
+                    const SizedBox(height: AppSpacing.lg),
                   ],
                 ],
               ),
@@ -135,8 +136,8 @@ class _Brand extends StatelessWidget {
     // The logo art is already a filled circle — putting it on a rounded
     // square tile drew a second, competing shape around it.
     final logo = SizedBox(
-      width: 30,
-      height: 30,
+      width: 40,
+      height: 40,
       child: ClipOval(
         child: Image.asset(
           'assets/images/oncare-logo.png',
@@ -144,18 +145,17 @@ class _Brand extends StatelessWidget {
           // The logo is a bundled asset; if it ever fails to decode, fall
           // back to a glyph rather than blowing a red box into the shell.
           errorBuilder: (context, error, stack) =>
-              const Icon(Icons.favorite, size: 20, color: AppColors.primary),
+              const Icon(Icons.favorite, size: 26, color: AppColors.primary),
         ),
       ),
     );
 
     return Container(
-      height: AppLayout.pageHeaderHeight,
+      // Taller than the page header so the brand has room to breathe now
+      // that no rule separates it from the nav.
+      height: AppLayout.pageHeaderHeight + AppSpacing.lg,
       padding: EdgeInsets.symmetric(
         horizontal: expanded ? AppSpacing.lg : AppSpacing.md,
-      ),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.borderStrong)),
       ),
       alignment: expanded ? Alignment.centerLeft : Alignment.center,
       child: expanded
@@ -177,7 +177,7 @@ class _Brand extends StatelessWidget {
                         ),
                       ],
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -187,33 +187,6 @@ class _Brand extends StatelessWidget {
               ],
             )
           : Tooltip(message: 'On-Care 트레이너', child: logo),
-    );
-  }
-}
-
-class _GroupLabel extends StatelessWidget {
-  const _GroupLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.xs,
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-          color: AppColors.subtleForeground,
-        ),
-      ),
     );
   }
 }
@@ -268,7 +241,7 @@ class _NavTile extends StatelessWidget {
                   ),
                 ),
                 if (badgeCount != null && badgeCount! > 0)
-                  _Badge(count: badgeCount!, alert: _isAlert),
+                  _Badge(count: badgeCount!),
               ],
             )
           : Stack(
@@ -280,7 +253,7 @@ class _NavTile extends StatelessWidget {
                   Positioned(
                     top: -4,
                     right: -10,
-                    child: _Badge(count: badgeCount!, alert: _isAlert),
+                    child: _Badge(count: badgeCount!),
                   ),
               ],
             ),
@@ -317,21 +290,15 @@ class _NavTile extends StatelessWidget {
       ),
     );
   }
-
-  /// Unread messages are a "you owe someone a reply" signal — red.
-  /// Reservations are neutral information — navy.
-  bool get _isAlert => destination.badge == NavBadge.unreadMessages;
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({required this.count, required this.alert});
+  const _Badge({required this.count});
 
   final int count;
-  final bool alert;
 
   @override
   Widget build(BuildContext context) {
-    final bg = alert ? AppColors.destructive : AppColors.primary;
     // A fixed circle, not a stretching pill: the counts here are small
     // (unread threads, today's bookings) and a dot that changes width
     // with the number makes the nav rows look ragged.
@@ -339,7 +306,10 @@ class _Badge extends StatelessWidget {
     return Container(
       width: 20,
       height: 20,
-      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        shape: BoxShape.circle,
+      ),
       alignment: Alignment.center,
       child: Text(
         label,

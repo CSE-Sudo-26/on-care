@@ -77,7 +77,7 @@ void main() {
       // Summary totals from the client row (also appears as the last
       // trend bar's label, so match ≥1).
       expect(find.text('2100'), findsWidgets);
-      expect(find.text('mg ⚠ 초과'), findsOneWidget);
+      expect(find.text('mg 초과'), findsOneWidget);
       // 아침 is above the fold; the 7-day trend card pushes 점심/저녁
       // lower, so reach them by scrolling.
       expect(find.text('아침'), findsOneWidget);
@@ -115,7 +115,7 @@ void main() {
       await openDiet(tester, '이지수');
 
       expect(find.text('그릭요거트, 과일'), findsOneWidget);
-      expect(find.text('mg ⚠ 초과'), findsNothing);
+      expect(find.text('mg 초과'), findsNothing);
       await tester.scrollUntilVisible(
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
         150,

@@ -109,7 +109,7 @@ class BarSeriesChart extends StatelessWidget {
 
   Color _colorFor(int index) {
     if (overThreshold != null && values[index] > overThreshold!) {
-      return AppColors.warning;
+      return AppColors.overTarget;
     }
     if (highlightIndex == index) return AppColors.primary;
     return AppColors.aiCardGradientEnd;
@@ -263,7 +263,7 @@ class _SparklinePainter extends CustomPainter {
     if (threshold != null) {
       final y = yFor(threshold!);
       final dash = Paint()
-        ..color = AppColors.warning.withValues(alpha: 0.6)
+        ..color = AppColors.overTarget.withValues(alpha: 0.6)
         ..strokeWidth = 1;
       for (var x = 0.0; x < size.width; x += 6) {
         canvas.drawLine(Offset(x, y), Offset(x + 3, y), dash);
@@ -290,7 +290,7 @@ class _SparklinePainter extends CustomPainter {
       canvas.drawCircle(
         points[i],
         over ? 3 : 2,
-        Paint()..color = over ? AppColors.warning : color,
+        Paint()..color = over ? AppColors.overTarget : color,
       );
     }
   }

@@ -206,7 +206,7 @@ class _Metric extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: warn ? AppColors.warning : AppColors.foreground,
+              color: warn ? AppColors.overTarget : AppColors.foreground,
             ),
           ),
         ],
