@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 
 class _MockDio extends Mock implements Dio {}
@@ -45,7 +46,7 @@ void main() {
     expect(clients.first.sodiumOverBudget, isTrue);
   });
 
-  test('watchClientsPrioritized puts the over-target client first', () async {
+  test('the roster ordering puts the over-target client first', () async {
     when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
       (_) async => _okList(<dynamic>[
         <String, Object?>{'id': 'ok', 'name': 'A', 'sodium_mg': 1500},
@@ -53,8 +54,11 @@ void main() {
       ], '/trainer/clients'),
     );
 
-    final clients = await repo.watchClientsPrioritized().first;
+    // Ordering is one shared pure function now; the API source has no
+    // chat-recency signal to feed it.
+    final clients = prioritizeClients(await repo.watchClients().first);
     expect(clients.first.id, 'over');
+    expect(await repo.watchLastChatAt().first, isEmpty);
   });
 
   test('watchDiet parses the meals', () async {

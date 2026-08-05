@@ -7,7 +7,8 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart' show prioritizeClients;
+import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
+    show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
@@ -31,7 +32,10 @@ abstract interface class ClientRepository {
   bool get supportsRosterMutations;
 
   Stream<List<TrainerClient>> watchClients();
-  Stream<List<TrainerClient>> watchClientsPrioritized();
+
+  /// Most recent chat activity per client id — the tiebreak used by
+  /// [prioritizeClients]. Sources without a chat signal emit `{}`.
+  Stream<Map<String, DateTime>> watchLastChatAt();
 
   /// Today's booked-session count for the header badge.
   ///
@@ -73,45 +77,28 @@ class DriftClientRepository implements ClientRepository {
     return query.watch().map((rows) => rows.map(_toEntity).toList());
   }
 
-  /// Clients ordered by coaching priority for the 고객 관리 list:
-  /// sodium-over-target clients first, ties broken by the most recent
-  /// chat activity, then by the seeded order.
+  /// Most recent message time per client.
+  ///
+  /// A plain grouped aggregate over the chat table — deliberately NOT a
+  /// join against `trainerClients`. The joined form (`select(t).join(...)
+  /// ..groupBy(...)`) never completes against the sqlite3 WASM build the
+  /// web app runs on, which stalled the roster and the dashboard on a
+  /// spinner with no error to show.
   @override
-  Stream<List<TrainerClient>> watchClientsPrioritized() {
-    final t = _db.trainerClients;
+  Stream<Map<String, DateTime>> watchLastChatAt() {
     final chat = _db.clientChatMessages;
-    final lastChatAt = chat.createdAt.max();
-    final query =
-        _db.select(t).join(<Join>[
-            leftOuterJoin(
-              chat,
-              chat.clientId.equalsExp(t.id),
-              useColumns: false,
-            ),
-          ])
-          ..addColumns(<Expression<Object>>[lastChatAt])
-          ..groupBy(<Expression<Object>>[t.id]);
+    final latest = chat.createdAt.max();
+    final query = _db.selectOnly(chat)
+      ..addColumns(<Expression<Object>>[chat.clientId, latest])
+      ..groupBy(<Expression<Object>>[chat.clientId]);
     return query.watch().map((rows) {
-      final entries = rows.map((r) {
-        final row = r.readTable(t);
-        return (
-          client: _toEntity(row),
-          lastChatAt: r.read(lastChatAt),
-          sortOrder: row.sortOrder,
-        );
-      }).toList();
-      entries.sort((a, b) {
-        final over = (b.client.sodiumOverBudget ? 1 : 0).compareTo(
-          a.client.sodiumOverBudget ? 1 : 0,
-        );
-        if (over != 0) return over;
-        final chatCmp = (b.lastChatAt ?? DateTime.utc(1970)).compareTo(
-          a.lastChatAt ?? DateTime.utc(1970),
-        );
-        if (chatCmp != 0) return chatCmp;
-        return a.sortOrder.compareTo(b.sortOrder);
-      });
-      return entries.map((e) => e.client).toList();
+      final out = <String, DateTime>{};
+      for (final row in rows) {
+        final id = row.read(chat.clientId);
+        final at = row.read(latest);
+        if (id != null && at != null) out[id] = at;
+      }
+      return out;
     });
   }
 
@@ -303,38 +290,38 @@ final clientsProvider = StreamProvider<List<TrainerClient>>((ref) {
   return ref.watch(clientRepositoryProvider).watchClients();
 });
 
-/// Streams the coaching-priority ordering of the client list for the
-/// 고객 관리 tab.
+/// Streams the coaching-priority ordering of the client list.
 ///
-///  * demo/mock — sodium over-target first, ties broken by most recent
-///    chat activity (Drift's own reactive SQL query);
-///  * real API — sodium over-target first, ties broken by server order.
-///    There is no chat-recency signal yet on this endpoint, so this is
-///    derived from [clientsProvider]'s `AsyncValue` (via the pure
-///    [prioritizeClients]) rather than calling `watchClientsPrioritized()`
-///    independently — the two providers would otherwise each trigger their
-///    own `GET /trainer/clients` when a screen watches both at once (e.g.
-///    the list + detail split view) (review).
+/// Sodium over-target first, ties broken by the most recent chat. ONE
+/// rule for both modes — the ordering lives in the pure
+/// [prioritizeClients], and each source just supplies what it has (drift
+/// has chat times, the real roster endpoint doesn't yet).
 ///
-/// Watching the `AsyncValue` itself (not `.future`, which only ever
-/// resolves once) means this rebuilds on every state `clientsProvider`
-/// passes through — not just its first value — so it can't go stale if
-/// `clientsProvider` is ever backed by something that re-emits without a
-/// full provider invalidation (e.g. a future polling/live source) (review).
-final prioritizedClientsProvider = StreamProvider<List<TrainerClient>>((ref) {
-  if (ref.watch(appConfigProvider).useMockApi) {
-    return ref.watch(clientRepositoryProvider).watchClientsPrioritized();
-  }
+/// Derived from [clientsProvider] rather than issuing its own read, so a
+/// screen watching both (the list + detail split) doesn't trigger two
+/// `GET /trainer/clients` calls.
+///
+/// A plain `Provider<AsyncValue<…>>`, not a `StreamProvider`: re-wrapping
+/// the roster in a stream meant the loading branch had to return an empty
+/// stream, and an empty stream *completes* — the provider then sat in
+/// `AsyncLoading` forever with nothing left to emit. Mapping the
+/// `AsyncValue` keeps loading/error/data flowing through untouched.
+final prioritizedClientsProvider = Provider<AsyncValue<List<TrainerClient>>>((
+  ref,
+) {
+  final lastChat =
+      ref.watch(lastChatAtProvider).valueOrNull ?? const <String, DateTime>{};
   return ref
       .watch(clientsProvider)
-      .when(
-        data: (clients) => Stream.value(prioritizeClients(clients)),
-        loading: () => const Stream<List<TrainerClient>>.empty(),
-        error: Stream<List<TrainerClient>>.error,
-      );
+      .whenData((clients) => prioritizeClients(clients, lastChatAt: lastChat));
 });
 
-/// Streams today's booked-session count for the header badge.
+/// Streams the last chat time per client (priority tiebreak).
+final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
+  return ref.watch(clientRepositoryProvider).watchLastChatAt();
+});
+
+/// Streams today's booked-session count for the sidebar badge.
 final todayReservationCountProvider = StreamProvider<int>((ref) {
   return ref.watch(clientRepositoryProvider).watchTodayReservationCount();
 });
@@ -346,7 +333,7 @@ final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
   },
 );
 
-/// Streams a client's workout history for the 운동기록 sub-tab.
+/// Streams a client's workout history for the 운동 sub-tab.
 final clientHistoryProvider =
     StreamProvider.family<List<RoutineHistoryEntry>, String>((ref, clientId) {
       return ref.watch(clientRepositoryProvider).watchHistory(clientId);

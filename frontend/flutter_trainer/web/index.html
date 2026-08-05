@@ -31,6 +31,59 @@
 
   <title>On-Care 트레이너</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Ensure full Korean + emoji glyph coverage for the HTML web renderer.
+       Flutter renders text inside the <flt-glass-pane> shadow DOM with an empty
+       font-family, which can drop some Hangul/emoji glyphs (칭/짐/촌 등이 두부로
+       보이는 증상). Setting the font on the shadow HOST (flt-glass-pane /
+       flutter-view / body) lets the shadow content inherit it. Native
+       (iOS/Android) rendering is unaffected. 사용자 앱(frontend/flutter)의
+       동일 픽스와 폰트 스택을 맞춘다 — 두 앱의 한글이 달라 보이면 안 된다. -->
+  <style>
+    flt-glass-pane, flutter-view, body {
+      font-family: 'Apple SD Gothic Neo', 'AppleGothic', 'Malgun Gothic',
+        'Noto Sans KR', 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Noto Color Emoji', sans-serif !important;
+    }
+  </style>
+  <script>
+    // Flutter's HTML web renderer draws text inside the <flt-glass-pane> shadow
+    // DOM and does not re-pick-up the inherited font until a style recalc; dev
+    // (DDC) loads also render well after any fixed timeout. A MutationObserver
+    // re-asserts the font whenever the shadow DOM changes, so it works at any
+    // load speed and after scroll/navigation. Native/CanvasKit are unaffected.
+    (function () {
+      var STACK =
+        "'Apple SD Gothic Neo','AppleGothic','Malgun Gothic','Noto Sans KR','Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+      var el, pending = false;
+      function reapply() {
+        pending = false;
+        if (el) el.remove();
+        el = document.createElement('style');
+        el.textContent =
+          'flt-glass-pane, flutter-view, body { font-family: ' + STACK + ' !important; }';
+        document.head.appendChild(el);
+      }
+      function schedule() {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(reapply);
+      }
+      (function watch() {
+        var gp = document.querySelector('flt-glass-pane');
+        if (gp && gp.shadowRoot) {
+          new MutationObserver(schedule).observe(gp.shadowRoot, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+          reapply();
+        } else {
+          setTimeout(watch, 150);
+        }
+      })();
+    })();
+  </script>
 </head>
 <body>
   <!--

@@ -65,9 +65,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('비밀번호가 일치하지 않아요')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('비밀번호가 일치하지 않아요')));
       return;
     }
     setState(() => _loading = true);
@@ -76,7 +74,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
           .read(sessionControllerProvider.notifier)
           .register(email: email, password: password, name: name);
       if (!mounted) return;
-      context.go(AppRoutes.clients);
+      context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
@@ -126,7 +124,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'On-Care 계정을 만들어 회원 관리를 시작하세요',
+                        'On-Care 계정을 만들어 고객 관리를 시작하세요',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: const Color(0xFF64748B),

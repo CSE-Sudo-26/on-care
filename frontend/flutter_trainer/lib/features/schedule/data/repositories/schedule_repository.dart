@@ -48,6 +48,51 @@ class ScheduleRepository {
         .map((rows) => rows.toSet());
   }
 
+  /// Every slot between [fromDate] and [toDate] inclusive (`YYYY-MM-DD`),
+  /// ordered by day then time. Backs the week calendar — one query for
+  /// the whole week rather than seven day subscriptions.
+  Stream<List<ScheduleSession>> watchRange(String fromDate, String toDate) {
+    final query = _db.select(_db.trainerScheduleEntries)
+      // `YYYY-MM-DD` is lexicographically ordered, so a string BETWEEN
+      // is a correct date-range filter here.
+      ..where(
+        (t) =>
+            t.date.isBiggerOrEqualValue(fromDate) &
+            t.date.isSmallerOrEqualValue(toDate),
+      )
+      ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
+        (t) => OrderingTerm(expression: t.date),
+        (t) => OrderingTerm(expression: t.time),
+        (t) => OrderingTerm(expression: t.sortOrder),
+      ]);
+    return query.watch().map((rows) => rows.map(_toEntity).toList());
+  }
+
+  /// A client's booked sessions, newest first. Drives the 고객 상세 루틴
+  /// tab (what programs this person has been given).
+  ///
+  /// Schedules reference a client by NAME — see `addClient`'s uniqueness
+  /// guard, which exists precisely so this lookup can't collide. Matched
+  /// on `lower(trim(name))`, the SAME normalisation that guard uses: an
+  /// exact compare would silently return nothing for a name stored with
+  /// stray whitespace or different case, and the weekly report would
+  /// then show 0 sessions for a client who clearly has some.
+  Stream<List<ScheduleSession>> watchClientSessions(String clientName) {
+    final query = _db.select(_db.trainerScheduleEntries)
+      ..where(
+        (t) =>
+            t.clientName.lower().trim().equals(
+              clientName.trim().toLowerCase(),
+            ) &
+            t.status.equals('공백').not(),
+      )
+      ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
+        (t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc),
+        (t) => OrderingTerm(expression: t.time, mode: OrderingMode.desc),
+      ]);
+    return query.watch().map((rows) => rows.map(_toEntity).toList());
+  }
+
   /// Books a new session on [date]'s timeline (status 예정). The
   /// non-`seed-` id survives the daily re-seed.
   Future<void> addSession({
@@ -227,6 +272,7 @@ class ScheduleRepository {
         .toList();
     return ScheduleSession(
       id: row.id,
+      date: row.date,
       time: row.time,
       clientName: row.clientName,
       type: row.type,
@@ -258,3 +304,22 @@ final scheduleForDateProvider =
 final bookedDatesProvider = StreamProvider<Set<String>>((ref) {
   return ref.watch(scheduleRepositoryProvider).watchBookedDates();
 });
+
+/// An inclusive `YYYY-MM-DD` date range, used to key the week query.
+typedef ScheduleRange = ({String from, String to});
+
+/// Streams every slot in a date range (week calendar).
+final scheduleRangeProvider =
+    StreamProvider.family<List<ScheduleSession>, ScheduleRange>((ref, range) {
+      return ref
+          .watch(scheduleRepositoryProvider)
+          .watchRange(range.from, range.to);
+    });
+
+/// Streams one client's booked sessions, newest first.
+final clientSessionsProvider =
+    StreamProvider.family<List<ScheduleSession>, String>((ref, clientName) {
+      return ref
+          .watch(scheduleRepositoryProvider)
+          .watchClientSessions(clientName);
+    });

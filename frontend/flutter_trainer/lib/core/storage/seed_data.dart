@@ -7,9 +7,13 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v2']` stores the date string
-/// (`YYYY-MM-DD`) the seed last ran with. Behaviour mirrors the user
-/// app's date-aware seeder (see the user app's `seed_data.dart`):
+/// **Flag.** `AppKeyValues['trainer_seeded_v3']` stores the date string
+/// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
+/// whenever the seeded *content* changes — otherwise a browser that
+/// already seeded today keeps the old data until the date rolls over.
+///
+/// Behaviour mirrors the user app's date-aware seeder (see the user
+/// app's `seed_data.dart`):
 ///
 /// - `flag == today` → no-op (already seeded for today).
 /// - otherwise (first boot or date rolled over) → wipe every
@@ -33,7 +37,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v2') == today) return;
+  if (await db.readValue('trainer_seeded_v3') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -150,6 +154,23 @@ Future<void> seedIfEmpty(AppDatabase db) async {
       });
     }
 
+    // ---- Read markers for threads that start answered ----
+    // The marker is the newest client message's rowid, exactly what
+    // `markThreadRead` writes — so opening the thread later is a no-op
+    // rather than a second, different value.
+    for (final client in _clients.where((c) => c.threadHandled)) {
+      final id = 'seed-client-${client.id}';
+      final row = await db
+          .customSelect(
+            'SELECT MAX(rowid) AS r FROM client_chat_messages '
+            "WHERE client_id = ?1 AND sender = 'client'",
+            variables: <Variable<Object>>[Variable<String>(id)],
+          )
+          .getSingleOrNull();
+      final marker = row?.read<int?>('r');
+      if (marker != null) await db.putValue('chat_read_$id', '$marker');
+    }
+
     // ---- Trainer's schedule for today ----
     await db.batch((Batch b) {
       b.insertAll(db.trainerScheduleEntries, <TrainerScheduleEntriesCompanion>[
@@ -170,7 +191,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v2', today);
+    await db.putValue('trainer_seeded_v3', today);
   });
 }
 
@@ -238,6 +259,7 @@ class _Client {
     required this.aiRoutine,
     required this.history,
     required this.chat,
+    this.threadHandled = false,
   });
   final int id;
   final String name;
@@ -256,6 +278,14 @@ class _Client {
   final List<_Routine> aiRoutine;
   final List<_History> history;
   final List<_Chat> chat;
+
+  /// Whether the demo starts with this thread already answered and read.
+  ///
+  /// Unread is "client messages with no read marker", so a thread that
+  /// merely ends with a trainer message still counts every reply the
+  /// member sent. Without this flag the demo opens with all three members
+  /// waiting, which is not the state we want to show.
+  final bool threadHandled;
 }
 
 class _Slot {
@@ -285,6 +315,7 @@ const List<_Client> _clients = <_Client>[
     goal: '혈압 관리 · 체중 감량',
     lastMessage: '오늘 식단 전송됐어요',
     lastTime: '방금',
+    threadHandled: true,
     active: true,
     calories: 1420,
     sodiumMg: 2100,
@@ -573,7 +604,7 @@ const List<_Slot> _schedule = <_Slot>[
   ),
   _Slot(
     time: '17:00',
-    clientName: '신규 회원',
+    clientName: '신규 고객',
     type: '상담',
     durationMinutes: 30,
     status: '예정',

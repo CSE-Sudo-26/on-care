@@ -27,6 +27,7 @@ class ScheduleSession {
   /// Creates a schedule slot.
   const ScheduleSession({
     required this.id,
+    required this.date,
     required this.time,
     required this.clientName,
     required this.type,
@@ -38,6 +39,11 @@ class ScheduleSession {
 
   /// Row id.
   final String id;
+
+  /// Calendar day (`YYYY-MM-DD`). Carried on the entity because the week
+  /// calendar and the client's 루틴 tab both render sessions from more
+  /// than one day at a time.
+  final String date;
 
   /// Slot time (e.g. "10:00").
   final String time;

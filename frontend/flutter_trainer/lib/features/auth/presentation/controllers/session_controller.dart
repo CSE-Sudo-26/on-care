@@ -70,7 +70,11 @@ class SessionController extends StateNotifier<SessionState> {
       state = const SessionState(status: SessionStatus.signedOut);
       return;
     }
-    await _resolveSession(access: access, refresh: refresh ?? '', allowRefresh: true);
+    await _resolveSession(
+      access: access,
+      refresh: refresh ?? '',
+      allowRefresh: true,
+    );
   }
 
   /// Attempts to authenticate with [access]; on 401 rotates once with

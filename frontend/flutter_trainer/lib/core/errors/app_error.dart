@@ -41,6 +41,12 @@ sealed class AppError implements Exception {
         if (code == 404) {
           return NotFoundError(message: e.message);
         }
+        if (code == 400 || code == 422) {
+          // The server rejected the INPUT, not the request. Callers show
+          // this inline on the offending field rather than as a "다시
+          // 시도해 주세요" retry — retrying the same value can't help.
+          return ValidationError(message: e.message);
+        }
         return ServerError(statusCode: code, message: e.message);
       case DioExceptionType.badCertificate:
       case DioExceptionType.unknown:
@@ -71,6 +77,13 @@ class ForbiddenError extends AppError {
 
 class NotFoundError extends AppError {
   const NotFoundError({super.message});
+}
+
+/// 400 / 422 — the request was understood and refused on its contents
+/// (wrong current password, a value out of range). [message] carries the
+/// server's own wording so the UI can show it verbatim.
+class ValidationError extends AppError {
+  const ValidationError({super.message});
 }
 
 class ServerError extends AppError {

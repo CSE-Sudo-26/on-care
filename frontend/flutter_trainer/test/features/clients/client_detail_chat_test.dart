@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
@@ -49,7 +50,7 @@ class _StaticLiveChatRepository implements ChatRepository {
         ClientChatMessage(
           id: 'live-1',
           sender: ChatSender.client,
-          body: '실제 회원 답장',
+          body: '실제 고객 답장',
           timeLabel: '09:00',
           createdAt: DateTime.utc(2026, 7, 31, 9),
         ),
@@ -131,22 +132,23 @@ void main() {
       () async {
         final repo = DriftChatRepository(db);
 
-        // Seeded client replies: 김민수 2 · 이지수 1 · 박성호 1.
+        // 이지수 · 박성호 are waiting on a reply; 김민수's thread is
+        // seeded already answered and read, so he has no badge.
         var counts = await repo.watchUnreadCounts().first;
-        expect(counts['seed-client-1'], 2);
+        expect(counts.containsKey('seed-client-1'), isFalse);
         expect(counts['seed-client-2'], 1);
         expect(counts['seed-client-3'], 1);
 
-        // Opening 김민수's thread clears his badge only.
-        await repo.markThreadRead('seed-client-1');
+        // Opening 이지수's thread clears her badge only.
+        await repo.markThreadRead('seed-client-2');
         counts = await repo.watchUnreadCounts().first;
-        expect(counts.containsKey('seed-client-1'), isFalse);
-        expect(counts['seed-client-2'], 1);
+        expect(counts.containsKey('seed-client-2'), isFalse);
+        expect(counts['seed-client-3'], 1);
 
         // A trainer message never counts as unread.
-        await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
+        await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '확인!');
         counts = await repo.watchUnreadCounts().first;
-        expect(counts.containsKey('seed-client-1'), isFalse);
+        expect(counts.containsKey('seed-client-2'), isFalse);
 
         // A NEW client reply after the marker counts again.
         await db
@@ -154,7 +156,7 @@ void main() {
             .insert(
               ClientChatMessagesCompanion.insert(
                 id: 'chat-reply-1',
-                clientId: 'seed-client-1',
+                clientId: 'seed-client-2',
                 sender: 'client',
                 body: '네 감사합니다!',
                 timeLabel: '09:00',
@@ -162,33 +164,33 @@ void main() {
               ),
             );
         counts = await repo.watchUnreadCounts().first;
-        expect(counts['seed-client-1'], 1);
+        expect(counts['seed-client-2'], 1);
       },
     );
 
     test('markThreadRead is idempotent and skips redundant writes', () async {
       final repo = DriftChatRepository(db);
 
-      Future<String?> marker() => db.readValue('chat_read_seed-client-1');
+      Future<String?> marker() => db.readValue('chat_read_seed-client-2');
 
       // First call stores the newest client message's rowid.
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       final first = await marker();
       expect(first, isNotNull);
-      expect((await repo.watchUnreadCounts().first)['seed-client-1'], isNull);
+      expect((await repo.watchUnreadCounts().first)['seed-client-2'], isNull);
 
       // Repeat calls must produce the SAME value — an unconditional
       // write would emit on app_key_values and rebuild the list, which
       // is what the write→watch→build concern was about (review PR 241).
       for (var i = 0; i < 3; i++) {
-        await repo.markThreadRead('seed-client-1');
+        await repo.markThreadRead('seed-client-2');
       }
       expect(await marker(), first);
 
       // A trainer message doesn't move the marker (only client messages
       // can be unread).
-      await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
-      await repo.markThreadRead('seed-client-1');
+      await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '확인!');
+      await repo.markThreadRead('seed-client-2');
       expect(await marker(), first);
 
       // A NEW client reply advances it exactly once.
@@ -197,17 +199,17 @@ void main() {
           .insert(
             ClientChatMessagesCompanion.insert(
               id: 'chat-reply-x',
-              clientId: 'seed-client-1',
+              clientId: 'seed-client-2',
               sender: 'client',
               body: '넵!',
               timeLabel: '09:00',
               createdAt: DateTime.now().add(const Duration(seconds: 5)),
             ),
           );
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       final second = await marker();
       expect(second, isNot(first));
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       expect(await marker(), second);
     });
 
@@ -304,23 +306,28 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('실제 회원 답장'), findsOneWidget);
+      expect(find.text('실제 고객 답장'), findsOneWidget);
       expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
     });
 
+    /// Opens 김민수's 채팅 section directly. The client detail defaults
+    /// to 개요 now, so the chat has to be addressed explicitly.
     Future<void> openDetail(WidgetTester tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
     }
 
     testWidgets('shows the header, sub-tabs, and seeded chat', (tester) async {
       await openDetail(tester);
 
+      expect(find.text('개요'), findsOneWidget);
       expect(find.text('채팅'), findsOneWidget);
       expect(find.text('식단'), findsOneWidget);
-      expect(find.text('운동기록'), findsOneWidget);
+      expect(find.text('운동'), findsOneWidget);
 
       // The thread auto-scrolls to the newest message; drag back up so
       // the lazily-built top of the thread (banner + early replies) exists.
@@ -352,8 +359,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '중복 방지 확인');
       await tester.tap(find.byIcon(Icons.send));
@@ -380,8 +389,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '이탈 중 전송');
       await tester.tap(find.byIcon(Icons.send));
@@ -392,7 +403,7 @@ void main() {
       await settle(tester);
 
       // Back on the list without a disposed-controller exception.
-      expect(find.text('고객 관리'), findsOneWidget);
+      expect(find.text('고객'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
 
@@ -414,8 +425,10 @@ void main() {
           ),
         ],
       );
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
 
       await tester.enterText(find.byType(TextField), '이탈 중 실패');
       await tester.tap(find.byIcon(Icons.send));
@@ -424,7 +437,7 @@ void main() {
       // the send resolves.
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await settle(tester);
-      expect(find.text('고객 관리'), findsOneWidget);
+      expect(find.text('고객'), findsWidgets);
 
       // Now fail — the catch must bail on !mounted, not show a snackbar.
       gate.completeError(Exception('send failed'));
@@ -435,16 +448,14 @@ void main() {
       expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
     });
 
-    testWidgets('switching sub-tabs shows the 식단 and 운동기록 views', (
-      tester,
-    ) async {
+    testWidgets('switching sub-tabs shows the 식단 and 운동 views', (tester) async {
       await openDetail(tester);
 
       await tester.tap(find.text('식단'));
       await settle(tester);
       expect(find.text('오늘 영양 요약'), findsOneWidget);
 
-      await tester.tap(find.text('운동기록'));
+      await tester.tap(find.text('운동'));
       await settle(tester);
       expect(find.text('이번 주 완료율'), findsOneWidget);
     });

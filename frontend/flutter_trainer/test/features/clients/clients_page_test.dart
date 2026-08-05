@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -153,19 +154,16 @@ void main() {
     testWidgets('renders the 3 clients, AI summary count, and badge', (
       tester,
     ) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-
-      // Top-of-list assertions first (the header/badge/AI card scroll away
-      // once we scroll down to reach the lazily-built third card).
-      expect(find.text('고객 관리'), findsWidgets);
-      // 2 clients over the sodium target (김민수 2100, 박성호 2400).
-      // The AI summary is a Text.rich, so match with findRichText.
-      expect(
-        find.textContaining('나트륨 초과 고객 2명', findRichText: true),
-        findsOneWidget,
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
       );
-      // 4 booked sessions today (6 slots − 2 gaps).
-      expect(find.text('오늘 4명 예약'), findsOneWidget);
+
+      // The roster header states the size; the coaching signals
+      // (나트륨 초과, 오늘 예약) now live on the 대시보드, not here.
+      expect(find.text('고객'), findsWidgets);
+      expect(find.text('3명 · 활성 2명'), findsOneWidget);
 
       // Priority order: sodium-over clients (김민수, 박성호) come first;
       // 이지수 is last and lazily built, so scroll to reach her.
@@ -178,40 +176,55 @@ void main() {
     testWidgets('unread badges show and clear after reading the thread', (
       tester,
     ) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
-      // 김민수 has 2 unseen client replies in the seed.
-      expect(find.text('2'), findsOneWidget);
+      // 이지수와 박성호가 각각 1건씩 답장을 기다린다. 김민수의 스레드는
+      // 이미 답장·읽음 처리된 상태로 시드된다.
+      expect(find.text('1'), findsNWidgets(2));
 
-      // Open his chat, then come back — badge cleared.
-      await tester.tap(find.text('김민수'));
-      await settle(tester);
+      // Open 박성호's chat, then come back — his badge cleared, 이지수's
+      // stays. Opening the client lands on 개요, which does NOT mark the
+      // thread read; the badge clears only once the messages are on screen.
+      await goTo(
+        tester,
+        AppRoutes.clientDetail('seed-client-3', section: 'chat'),
+      );
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await settle(tester);
 
-      expect(find.text('2'), findsNothing);
+      expect(find.text('1'), findsOneWidget);
     });
 
     testWidgets('tapping a client card opens the detail screen', (
       tester,
     ) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail screen opened — its 채팅/식단/운동기록 sub-tabs are unique to it.
+      // Detail opened — its 개요/채팅/식단/운동/루틴 sub-tabs are unique to it.
+      expect(find.text('개요'), findsOneWidget);
       expect(find.text('채팅'), findsOneWidget);
-      expect(find.text('운동기록'), findsOneWidget);
+      expect(find.text('운동'), findsOneWidget);
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
-      await tester.scrollUntilVisible(find.text('＋ 신규 고객 등록'), 150);
-      await tester.ensureVisible(find.text('＋ 신규 고객 등록'));
-      await tester.pump();
-      await tester.tap(find.text('＋ 신규 고객 등록'));
+      await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
       await tester.enterText(find.byType(TextField).first, '최수진');
@@ -228,12 +241,13 @@ void main() {
     testWidgets('registering a duplicate name is blocked with an error', (
       tester,
     ) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
-      await tester.scrollUntilVisible(find.text('＋ 신규 고객 등록'), 150);
-      await tester.ensureVisible(find.text('＋ 신규 고객 등록'));
-      await tester.pump();
-      await tester.tap(find.text('＋ 신규 고객 등록'));
+      await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
       await tester.enterText(find.byType(TextField).first, '김민수');
@@ -246,19 +260,23 @@ void main() {
     });
 
     testWidgets('the detail header chip toggles 활성/휴면', (tester) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+      );
 
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.text('● 활성'), findsOneWidget);
+      expect(find.text('활성'), findsOneWidget);
 
-      await tester.tap(find.text('● 활성'));
+      await tester.tap(find.text('활성'));
       await settle(tester);
-      expect(find.text('○ 휴면'), findsOneWidget);
+      expect(find.text('휴면'), findsOneWidget);
 
-      await tester.tap(find.text('○ 휴면'));
+      await tester.tap(find.text('휴면'));
       await settle(tester);
-      expect(find.text('● 활성'), findsOneWidget);
+      expect(find.text('활성'), findsOneWidget);
     });
 
     testWidgets('read-only repositories disable every roster mutation entry', (
@@ -267,6 +285,7 @@ void main() {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        at: AppRoutes.clients,
         extraOverrides: [
           clientRepositoryProvider.overrideWith(
             (ref) => _ReadOnlyClientRepository(ref.watch(appDatabaseProvider)),
@@ -275,7 +294,7 @@ void main() {
       );
 
       await tester.scrollUntilVisible(find.text('박성호'), 150);
-      expect(find.text('＋ 신규 고객 등록'), findsNothing);
+      expect(find.text('신규 고객'), findsNothing);
 
       await tester.tap(find.text('박성호'));
       await settle(tester);

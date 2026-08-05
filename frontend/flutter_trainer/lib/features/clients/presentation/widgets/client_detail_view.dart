@@ -8,26 +8,31 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/overview_view.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/routines_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
-/// The client detail body — header (avatar/name/goal/active dot) +
-/// 채팅/식단/운동기록 sub-tabs. Used in two hosts:
+/// Labels for [AppRoutes.clientSections], in the same order.
+const List<String> clientSectionLabels = <String>['개요', '채팅', '식단', '운동', '루틴'];
+
+/// The client detail body — header (avatar/name/goal/active toggle) plus
+/// the 개요/채팅/식단/운동/루틴 sub-tabs.
 ///
-/// - full-screen route (`ClientDetailPage`, [showBack] = true), and
-/// - the wide-viewport master-detail panel next to the client list
-///   ([showBack] = false — the list itself is the navigation).
-///
-/// Sub-tab state lives here and is intentionally KEPT when the host
-/// swaps [clientId] (switching clients in the split view stays on the
-/// same sub-tab).
-class ClientDetailView extends ConsumerStatefulWidget {
+/// The active sub-tab is **owned by the URL**, not by this widget: the
+/// dashboard links straight to a client's 식단 when sodium is over, and
+/// that only works if the section is addressable. [onSectionChange] asks
+/// the host to navigate; this widget never holds tab state.
+class ClientDetailView extends ConsumerWidget {
   /// Creates the detail body for [clientId].
   const ClientDetailView({
     super.key,
     required this.clientId,
+    required this.section,
+    required this.onSectionChange,
     this.showBack = true,
     this.onClose,
   });
@@ -35,22 +40,28 @@ class ClientDetailView extends ConsumerStatefulWidget {
   /// Id of the client being viewed.
   final String clientId;
 
-  /// Whether to render the back button (full-screen route only).
+  /// Active sub-section; unknown values fall back to the default.
+  final String? section;
+
+  /// Asks the host to navigate to another section.
+  final ValueChanged<String> onSectionChange;
+
+  /// Whether to render the back button (narrow, detail-only layout).
   final bool showBack;
 
-  /// When set (split-view panel), a close button is shown that collapses
-  /// the panel back to the plain client list.
+  /// Closes the panel and returns to the plain list.
   final VoidCallback? onClose;
 
-  @override
-  ConsumerState<ClientDetailView> createState() => _ClientDetailViewState();
-}
+  /// Index into [AppRoutes.clientSections] for the current [section].
+  int get _index {
+    final i = AppRoutes.clientSections.indexOf(section ?? '');
+    return i < 0
+        ? AppRoutes.clientSections.indexOf(AppRoutes.defaultClientSection)
+        : i;
+  }
 
-class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
-  int _tab = 0; // 0 채팅 · 1 식단 · 2 운동기록
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Distinguish loading / error / loaded instead of flattening them
     // into an empty list (an unknown id used to render a nameless
     // "고객" chat and never-ending 식단/운동 spinners — codex review).
@@ -58,21 +69,22 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
     final canManageRoster = ref
         .watch(clientRepositoryProvider)
         .supportsRosterMutations;
+
     return clientsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _StatusView(
         message: '고객 정보를 불러오지 못했어요',
-        showBack: widget.showBack,
+        showBack: showBack,
         // Re-subscribes the stream for a fresh attempt.
         onRetry: () => ref.invalidate(clientsProvider),
       ),
       data: (clients) {
-        final match = clients.where((c) => c.id == widget.clientId);
+        final match = clients.where((c) => c.id == clientId);
         if (match.isEmpty) {
           // Stale deep link / removed client.
           return _StatusView(
             message: '고객을 찾을 수 없어요',
-            showBack: widget.showBack,
+            showBack: showBack,
             onRetry: null,
           );
         }
@@ -82,15 +94,18 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
           children: <Widget>[
             _Header(
               client: client,
-              showBack: widget.showBack,
-              onClose: widget.onClose,
+              showBack: showBack,
+              onClose: onClose,
               onToggleActive: canManageRoster
                   ? () => ref
                         .read(clientRepositoryProvider)
                         .setClientActive(client.id, !client.active)
                   : null,
             ),
-            _SubTabs(current: _tab, onChanged: (i) => setState(() => _tab = i)),
+            _SubTabs(
+              current: _index,
+              onChanged: (i) => onSectionChange(AppRoutes.clientSections[i]),
+            ),
             Expanded(child: _body(client)),
           ],
         );
@@ -103,19 +118,27 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView> {
     // scroll position) resets when the split view swaps clients —
     // otherwise a message drafted for one client would linger in
     // another client's composer.
-    final key = ValueKey<String>(widget.clientId);
-    switch (_tab) {
-      case 0:
+    final key = ValueKey<String>(clientId);
+    switch (AppRoutes.clientSections[_index]) {
+      case 'chat':
         return ChatView(
           key: key,
-          clientId: widget.clientId,
+          clientId: clientId,
           clientAvatar: client.avatar,
           clientName: client.name,
         );
-      case 1:
+      case 'diet':
         return DietView(key: key, client: client);
-      default:
+      case 'workout':
         return WorkoutView(key: key, client: client);
+      case 'routines':
+        return RoutinesView(key: key, client: client);
+      default:
+        return OverviewView(
+          key: key,
+          client: client,
+          onOpenSection: onSectionChange,
+        );
     }
   }
 }
@@ -152,9 +175,7 @@ class _StatusView extends StatelessWidget {
             TextButton(onPressed: onRetry, child: const Text('다시 시도')),
           if (showBack)
             TextButton(
-              onPressed: () => context.canPop()
-                  ? context.pop()
-                  : context.go(AppRoutes.clients),
+              onPressed: () => context.go(AppRoutes.clients),
               child: const Text('고객 목록으로'),
             ),
         ],
@@ -195,11 +216,8 @@ class _Header extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.arrow_back_ios_new, size: 18),
               color: AppColors.accent,
-              // Fall back to the 고객 tab when there's nothing to pop
-              // (e.g. a web deep-link / refresh landed on the detail).
-              onPressed: () => context.canPop()
-                  ? context.pop()
-                  : context.go(AppRoutes.clients),
+              tooltip: '고객 목록',
+              onPressed: () => context.go(AppRoutes.clients),
             ),
           ClientAvatar(label: client.avatar, size: 36),
           const SizedBox(width: AppSpacing.md),
@@ -209,6 +227,7 @@ class _Header extends StatelessWidget {
               children: <Widget>[
                 Text(
                   client.name,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -217,6 +236,7 @@ class _Header extends StatelessWidget {
                 ),
                 Text(
                   client.goal,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
                     color: AppColors.subtleForeground,
@@ -245,15 +265,12 @@ class _Header extends StatelessWidget {
                   horizontal: AppSpacing.sm,
                   vertical: 3,
                 ),
-                child: Text(
-                  client.active ? '● 활성' : '○ 휴면',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: client.active
-                        ? AppColors.success
-                        : AppColors.disabledForeground,
-                  ),
+                child: StatusDotLabel(
+                  label: client.active ? '활성' : '휴면',
+                  filled: client.active,
+                  color: client.active
+                      ? AppColors.success
+                      : AppColors.disabledForeground,
                 ),
               ),
             ),
@@ -277,21 +294,19 @@ class _SubTabs extends StatelessWidget {
   final int current;
   final ValueChanged<int> onChanged;
 
-  static const List<String> _labels = <String>['채팅', '식단', '운동기록'];
-
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.card,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.sm,
+        0,
         AppSpacing.lg,
         AppSpacing.md,
       ),
       child: Row(
         children: <Widget>[
-          for (var i = 0; i < _labels.length; i++) ...<Widget>[
+          for (var i = 0; i < clientSectionLabels.length; i++) ...<Widget>[
             Expanded(
               // InkWell (over a Material) instead of GestureDetector so the
               // sub-tabs are keyboard-focusable and activate on Enter/Space
@@ -314,10 +329,10 @@ class _SubTabs extends StatelessWidget {
                       onTap: () => onChanged(i),
                       borderRadius: const BorderRadius.all(AppRadius.md),
                       child: Container(
-                        height: 34,
+                        height: 32,
                         alignment: Alignment.center,
                         child: Text(
-                          _labels[i],
+                          clientSectionLabels[i],
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -332,7 +347,8 @@ class _SubTabs extends StatelessWidget {
                 ),
               ),
             ),
-            if (i < _labels.length - 1) const SizedBox(width: AppSpacing.xs),
+            if (i < clientSectionLabels.length - 1)
+              const SizedBox(width: AppSpacing.xs),
           ],
         ],
       ),

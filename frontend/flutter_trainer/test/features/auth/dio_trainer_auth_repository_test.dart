@@ -16,13 +16,13 @@ Response<Map<String, Object?>> _ok(Map<String, Object?> body, String path) =>
     );
 
 DioException _httpError(int status, String path) => DioException(
-      requestOptions: RequestOptions(path: path),
-      type: DioExceptionType.badResponse,
-      response: Response<Object?>(
-        requestOptions: RequestOptions(path: path),
-        statusCode: status,
-      ),
-    );
+  requestOptions: RequestOptions(path: path),
+  type: DioExceptionType.badResponse,
+  response: Response<Object?>(
+    requestOptions: RequestOptions(path: path),
+    statusCode: status,
+  ),
+);
 
 void main() {
   late _MockDio dio;
@@ -44,10 +44,10 @@ void main() {
           options: any(named: 'options'),
         ),
       ).thenAnswer(
-        (_) async => _ok(
-          <String, Object?>{'access_token': 'a', 'refresh_token': 'r'},
-          '/auth/login',
-        ),
+        (_) async => _ok(<String, Object?>{
+          'access_token': 'a',
+          'refresh_token': 'r',
+        }, '/auth/login'),
       );
 
       final tokens = await repo.login(email: 'e@x.com', password: 'pw');
@@ -134,14 +134,11 @@ void main() {
           options: any(named: 'options'),
         ),
       ).thenAnswer(
-        (_) async => _ok(
-          <String, Object?>{
-            'name': '김트레이너',
-            'email': 'trainer@oncare.com',
-            'gym': <String, Object?>{'name': '온케어짐 신촌점'},
-          },
-          '/trainer/me',
-        ),
+        (_) async => _ok(<String, Object?>{
+          'name': '김트레이너',
+          'email': 'trainer@oncare.com',
+          'gym': <String, Object?>{'name': '온케어짐 신촌점'},
+        }, '/trainer/me'),
       );
 
       final profile = await repo.fetchProfile('token');

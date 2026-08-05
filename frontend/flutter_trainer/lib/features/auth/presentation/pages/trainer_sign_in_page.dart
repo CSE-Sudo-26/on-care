@@ -37,7 +37,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
 
   void _enterDemo() {
     ref.read(sessionControllerProvider.notifier).enterDemo();
-    context.go(AppRoutes.clients);
+    context.go(AppRoutes.dashboard);
   }
 
   void _onSignUp() => context.push(AppRoutes.signUp);
@@ -51,7 +51,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
           .read(sessionControllerProvider.notifier)
           .socialLogin(provider: provider);
       if (!mounted) return;
-      context.go(AppRoutes.clients);
+      context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(
@@ -77,7 +77,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
           .read(sessionControllerProvider.notifier)
           .login(email: email, password: password);
       if (!mounted) return;
-      context.go(AppRoutes.clients);
+      context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(SnackBar(content: Text(e.message)));

@@ -1,11 +1,21 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show elapsedWeekdays;
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// Seeded client ids by display name — the detail is addressed by id.
+const Map<String, String> seedClientIds = <String, String>{
+  '김민수': 'seed-client-1',
+  '이지수': 'seed-client-2',
+  '박성호': 'seed-client-3',
+};
 
 void main() {
   group('ClientRepository.watchHistory', () {
@@ -41,21 +51,32 @@ void main() {
 
   group('WorkoutView', () {
     Future<void> openWorkout(WidgetTester tester, String clientName) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      await tester.tap(find.text(clientName));
-      await settle(tester);
-      await tester.tap(find.text('운동기록'));
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail(
+          seedClientIds[clientName]!,
+          section: 'workout',
+        ),
+      );
     }
 
-    testWidgets('김민수 shows 76% weekly average, legend, and history', (
+    testWidgets('김민수 averages only the weekdays that have happened', (
       tester,
     ) async {
       await openWorkout(tester, '김민수');
 
-      // (100+67+100+0+100+67+100)/7 = 76.28 → 76%.
+      // 김민수's seeded week is [100, 67, 100, 0, 100, 67, 100]. Days
+      // after today haven't happened, so averaging all seven would report
+      // a number the member could not have earned yet.
+      const week = <int>[100, 67, 100, 0, 100, 67, 100];
+      final elapsed = elapsedWeekdays(DateTime.now());
+      final counted = week.take(elapsed).toList();
+      final expected = (counted.reduce((a, b) => a + b) / counted.length)
+          .round();
+
       expect(find.text('이번 주 완료율'), findsOneWidget);
-      expect(find.text('76%'), findsOneWidget);
+      expect(find.text('$expected%'), findsOneWidget);
       expect(find.text('완료'), findsOneWidget);
       expect(find.text('부분'), findsOneWidget);
       expect(find.text('미완료'), findsOneWidget);
@@ -69,8 +90,8 @@ void main() {
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
-      await tester.scrollUntilVisible(find.text('스트레칭 ✗ (생략)'), 150);
-      expect(find.text('스트레칭 ✗ (생략)'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('스트레칭 (생략)'), 150);
+      expect(find.text('스트레칭 (생략)'), findsOneWidget);
     });
   });
 }

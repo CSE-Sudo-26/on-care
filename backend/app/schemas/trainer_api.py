@@ -277,3 +277,86 @@ class MemberCoachOut(BaseModel):
     intro: str
     gym: TrainerGymOut
     goal: str            # 트레이너가 설정한 내 코칭 목표(TrainerClient.goal)
+
+
+# ---- 트레이너 프로필 수정 ----
+
+class TrainerMeUpdate(BaseModel):
+    """PUT /trainer/me — 보낸 필드만 반영(부분 수정).
+
+    이름/이메일은 계정(User)에 속하므로 여기서 바꾸지 않는다. 프로필 화면에서
+    바꿀 수 있는 값만 노출한다.
+    """
+    phone: str | None = Field(default=None, max_length=20)
+    specialty: str | None = Field(default=None, max_length=50)
+    career_years: int | None = Field(default=None, ge=0, le=80)
+    intro: str | None = Field(default=None, max_length=1000)
+    certifications: list[str] | None = Field(default=None, max_length=30)
+    gym_name: str | None = Field(default=None, max_length=100)
+    gym_address: str | None = Field(default=None, max_length=300)
+    gym_hours: str | None = Field(default=None, max_length=50)
+    gym_phone: str | None = Field(default=None, max_length=20)
+
+    @model_validator(mode="after")
+    def _reject_explicit_null(self) -> TrainerMeUpdate:
+        """명시적 null 을 422 로 거른다.
+
+        여기 필드는 전부 DB NOT NULL 컬럼이라 null 을 그대로 반영하면
+        IntegrityError 500 이 난다. 누락은 '변경 없음', null 은 '잘못된 값'
+        으로 구분한다(ScheduleUpdateRequest 와 같은 규약).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
+
+
+# ---- 트레이너용 AI 코칭 (회원 데이터 기반) ----
+
+class ClientCoachRequest(BaseModel):
+    """트레이너가 담당 고객에 대해 AI에게 묻는 질문."""
+    message: str = Field(min_length=1, max_length=1000)
+
+
+class ClientCoachOut(BaseModel):
+    """AI 답변 + 근거.
+
+    회원 앱의 `/ai-coach/chat` 과 같은 RAG 파이프라인이지만, 검색 스코프가
+    **호출한 트레이너가 아니라 담당 회원**이라는 점이 다르다 — 트레이너가
+    자기 자신의(비어 있는) 기록으로 코칭받는 일이 없도록.
+    """
+    member_id: str
+    reply: str
+    sources: list[str] = []
+
+
+# ---- 주간 리포트 (트레이너 → 회원) ----
+
+class WeeklyReportOut(BaseModel):
+    """담당 고객 한 명의 한 주 — 트레이너가 회원에게 보낼 수 있는 요약."""
+    member_id: str
+    member_name: str
+    week_start: str              # YYYY-MM-DD (월요일)
+    week_end: str                # YYYY-MM-DD (일요일)
+    sessions_booked: int
+    sessions_done: int
+    completion_avg: int | None   # 기록이 없으면 null (0% 아님)
+    sodium_over_days: int
+    sodium_avg: int | None
+    message: str                 # 회원에게 전송될 본문(미리보기와 동일)
+
+
+class ReportSendRequest(BaseModel):
+    """리포트 전송 — 본문을 직접 주면 그것을, 없으면 서버 생성본을 보낸다."""
+    week_start: str | None = Field(default=None, description="YYYY-MM-DD (기본: 이번 주)")
+    message: str | None = Field(default=None, max_length=2000)
+
+
+class TrainerPasswordChange(BaseModel):
+    """비밀번호 변경 — 현재 비밀번호 확인 후 교체.
+
+    현재 비밀번호를 요구하는 이유: 토큰이 탈취된 상태에서 비밀번호까지
+    바꿔 계정을 완전히 뺏기는 경로를 막는다.
+    """
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)

@@ -5,6 +5,7 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -201,14 +202,11 @@ class _SystemBanner extends StatelessWidget {
         ),
         child: Column(
           children: <Widget>[
-            Text(
-              '✦ AI가 $clientName님의 식단·운동 데이터를 분석했어요',
+            IconLabel(
+              icon: Icons.auto_awesome,
+              label: 'AI가 $clientName님의 식단·운동 데이터를 분석했어요',
+              color: AppColors.accent,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.accent,
-              ),
             ),
             const SizedBox(height: 2),
             const Text(
@@ -249,14 +247,11 @@ class _SentBanner extends StatelessWidget {
         ),
         child: Column(
           children: <Widget>[
-            Text(
-              '✓ AI 분석 기반 루틴이 $clientName님에게 전송됐어요',
+            IconLabel(
+              icon: Icons.check_circle_outline,
+              label: 'AI 분석 기반 루틴이 $clientName님에게 전송됐어요',
+              color: AppColors.success,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.success,
-              ),
             ),
             const SizedBox(height: 2),
             const Text(

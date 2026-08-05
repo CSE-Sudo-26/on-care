@@ -27,11 +27,12 @@ class DioClientRepository implements ClientRepository {
   Stream<List<TrainerClient>> watchClients() =>
       Stream<List<TrainerClient>>.fromFuture(_fetchClients());
 
+  /// The roster endpoint carries no chat-recency signal, so priority
+  /// ordering falls back to the server's own order. Emitting an empty map
+  /// (not nothing) lets the ordering resolve immediately.
   @override
-  Stream<List<TrainerClient>> watchClientsPrioritized() =>
-      Stream<List<TrainerClient>>.fromFuture(
-        _fetchClients().then(prioritizeClients),
-      );
+  Stream<Map<String, DateTime>> watchLastChatAt() =>
+      Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
 
   /// Today's booked-session count is schedule-derived (a later issue wires
   /// `/trainer/schedule`). Emitting nothing keeps the header badge hidden

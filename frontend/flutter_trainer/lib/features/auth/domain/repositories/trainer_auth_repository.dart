@@ -17,9 +17,7 @@ class AuthException implements Exception {
 /// answers `/trainer/me` with 403). The trainer app and the member app
 /// use fully separate accounts, so a member credential must be rejected.
 class NotTrainerException extends AuthException {
-  const NotTrainerException([
-    super.message = '트레이너 계정으로 로그인해 주세요.',
-  ]);
+  const NotTrainerException([super.message = '트레이너 계정으로 로그인해 주세요.']);
 }
 
 /// Authenticates a trainer against the backend and reads the trainer

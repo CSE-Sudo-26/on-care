@@ -2,16 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:oncare_trainer/app/router/main_shell.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/features/ai_routine/presentation/pages/ai_routine_page.dart';
+import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_in_page.dart';
 import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_up_page.dart';
-import 'package:oncare_trainer/features/clients/presentation/pages/client_detail_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
+import 'package:oncare_trainer/features/coaching/presentation/pages/coaching_page.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare_trainer/features/my/presentation/pages/my_page.dart';
+import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
 import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_page.dart';
 
 /// Pure auth-guard policy for the router's `redirect`. Kept free of
@@ -19,7 +20,7 @@ import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_pag
 ///
 /// - signed-out (or still restoring) → forced onto the sign-in screen;
 /// - in the app (demo or authenticated) → kept off sign-in (bounced to
-///   the 고객 tab).
+///   the 대시보드, the console's home).
 ///
 /// Returning `null` means "no redirect — stay put".
 String? sessionRedirect(SessionStatus status, String location) {
@@ -31,12 +32,22 @@ String? sessionRedirect(SessionStatus status, String location) {
       return onAuthRoute ? null : AppRoutes.signIn;
     case SessionStatus.demo:
     case SessionStatus.authenticated:
-      return onAuthRoute ? AppRoutes.clients : null;
+      return onAuthRoute ? AppRoutes.dashboard : null;
   }
 }
 
-/// Builds the trainer routing tree: a four-branch [StatefulShellRoute]
-/// (고객/스케줄/AI루틴/MY) behind an auth gate, plus the sign-in route.
+/// Normalises `/clients/<id>` (no section) onto the default section, so
+/// every client URL is fully qualified and the sub-tab state is always
+/// readable from the location.
+String? clientSectionRedirect(String? id) =>
+    id == null ? null : AppRoutes.clientDetail(id);
+
+/// Builds the trainer routing tree: a six-branch [StatefulShellRoute]
+/// behind an auth gate, plus the auth routes.
+///
+/// Branches 0–4 are the sidebar destinations (대시보드 / 고객 / 스케줄 /
+/// AI 코칭 / 리포트) in [navDestinations] order; branch 5 is 내 정보 —
+/// reachable from the sidebar footer but not a nav row.
 ///
 /// [readStatus] drives [sessionRedirect]; [refresh] should fire whenever
 /// the session changes so the guard re-evaluates without rebuilding the
@@ -53,13 +64,41 @@ GoRouter buildAppRouter({
     routes: <RouteBase>[
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
-            MainShell(navigationShell: navigationShell),
+            AppShell(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
+                path: AppRoutes.dashboard,
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
                 path: AppRoutes.clients,
-                builder: (context, state) => const ClientsPage(),
+                builder: (context, state) =>
+                    ClientsPage(filter: state.uri.queryParameters['f']),
+                routes: <RouteBase>[
+                  // `/clients/<id>` → `/clients/<id>/overview`.
+                  GoRoute(
+                    path: AppRoutes.clientBarePattern,
+                    redirect: (context, state) =>
+                        clientSectionRedirect(state.pathParameters['id']),
+                  ),
+                  // The detail is rendered BY the clients page (split
+                  // panel on wide, full-bleed on narrow) rather than as
+                  // a pushed screen — one widget owns the layout choice.
+                  GoRoute(
+                    path: AppRoutes.clientDetailPattern,
+                    builder: (context, state) => ClientsPage(
+                      selectedId: state.pathParameters['id'],
+                      section: state.pathParameters['section'],
+                      filter: state.uri.queryParameters['f'],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -67,15 +106,28 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.schedule,
-                builder: (context, state) => const SchedulePage(),
+                builder: (context, state) => SchedulePage(
+                  view: state.uri.queryParameters['v'],
+                  date: state.uri.queryParameters['d'],
+                ),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.aiRoutine,
-                builder: (context, state) => const AiRoutinePage(),
+                path: AppRoutes.coaching,
+                builder: (context, state) =>
+                    CoachingPage(clientId: state.uri.queryParameters['client']),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.reports,
+                builder: (context, state) =>
+                    ReportsPage(clientId: state.uri.queryParameters['client']),
               ),
             ],
           ),
@@ -83,17 +135,12 @@ GoRouter buildAppRouter({
             routes: <RouteBase>[
               GoRoute(
                 path: AppRoutes.my,
-                builder: (context, state) => const MyPage(),
+                builder: (context, state) =>
+                    MyPage(tab: state.uri.queryParameters['t']),
               ),
             ],
           ),
         ],
-      ),
-      // Full-screen client detail (over the shell — no bottom nav).
-      GoRoute(
-        path: AppRoutes.clientDetailPattern,
-        builder: (context, state) =>
-            ClientDetailPage(clientId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.signIn,

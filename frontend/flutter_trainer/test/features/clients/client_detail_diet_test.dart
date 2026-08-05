@@ -1,11 +1,19 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// Seeded client ids by display name — the detail is addressed by id.
+const Map<String, String> seedClientIds = <String, String>{
+  '김민수': 'seed-client-1',
+  '이지수': 'seed-client-2',
+  '박성호': 'seed-client-3',
+};
 
 void main() {
   group('ClientRepository.watchDiet', () {
@@ -18,7 +26,9 @@ void main() {
     tearDown(() => db.close());
 
     test('returns the 3 meals in seeded order for a client', () async {
-      final meals = await DriftClientRepository(db).watchDiet('seed-client-1').first;
+      final meals = await DriftClientRepository(
+        db,
+      ).watchDiet('seed-client-1').first;
       expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '저녁']);
       expect(meals.first.items, '오트밀, 바나나');
       expect(meals.first.calories, 315);
@@ -51,15 +61,11 @@ void main() {
 
   group('DietView', () {
     Future<void> openDiet(WidgetTester tester, String clientName) async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token');
-      // Lower-priority clients sit below the fold in the lazy list.
-      await tester.scrollUntilVisible(find.text(clientName), 150);
-      await tester.ensureVisible(find.text(clientName));
-      await tester.pump();
-      await tester.tap(find.text(clientName));
-      await settle(tester);
-      await tester.tap(find.text('식단'));
-      await settle(tester);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail(seedClientIds[clientName]!, section: 'diet'),
+      );
     }
 
     testWidgets('김민수 (sodium over target) shows warning + over AI comment', (
@@ -71,7 +77,7 @@ void main() {
       // Summary totals from the client row (also appears as the last
       // trend bar's label, so match ≥1).
       expect(find.text('2100'), findsWidgets);
-      expect(find.text('mg ⚠ 초과'), findsOneWidget);
+      expect(find.text('mg 초과'), findsOneWidget);
       // 아침 is above the fold; the 7-day trend card pushes 점심/저녁
       // lower, so reach them by scrolling.
       expect(find.text('아침'), findsOneWidget);
@@ -109,7 +115,7 @@ void main() {
       await openDiet(tester, '이지수');
 
       expect(find.text('그릭요거트, 과일'), findsOneWidget);
-      expect(find.text('mg ⚠ 초과'), findsNothing);
+      expect(find.text('mg 초과'), findsNothing);
       await tester.scrollUntilVisible(
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
         150,
