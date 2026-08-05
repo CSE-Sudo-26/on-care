@@ -1214,17 +1214,14 @@ class _ExerciseStat extends StatelessWidget {
   return (lo, hi);
 }
 
-/// 목표 대비 상태색: 초과(빨강) / 근접 90%↑(주황) / 안전(초록).
+/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
 ///
-/// 지표 카드의 초과·정상 뱃지와 같은 텍스트 계열 색을 쓴다 — 같은 카드 안에서
-/// 뱃지는 #22A882, 추이 그래프 점은 #34C759 로 초록이 두 종류로 보였다.
-/// 이 색은 점뿐 아니라 점 위 수치 라벨에도 쓰이므로 채움용(orange)이 아니라
-/// 글자용(orangeText) 톤이 가독성에도 맞다.
-Color _nutStatusColor(double v, double goal) {
-  if (v > goal) return FigmaColors.dangerRed;
-  if (v >= goal * 0.9) return FigmaColors.orangeText;
-  return FigmaColors.greenText;
-}
+/// 지표 카드의 초과·정상 뱃지와 같은 두 색(dangerRed/greenText)만 쓴다 —
+/// 같은 카드 안에서 뱃지는 2단계인데 그래프만 근접(주황) 3단계라, 뱃지가
+/// "정상"인 날의 점이 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
+/// 목표를 넘겼는지만 말한다.
+Color _nutStatusColor(double v, double goal) =>
+    v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
 
 /// Padded scale for the exercise bar chart. The baseline sits well below the
 /// smallest bar so the difference between days is visually pronounced.
