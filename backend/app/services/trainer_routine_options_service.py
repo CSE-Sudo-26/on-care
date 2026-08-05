@@ -15,11 +15,11 @@ from sqlalchemy.orm import Session
 from app.models.models import DietEntry, RoutineHistory, TrainerClient, TrainerRoutine
 from app.schemas.trainer_api import (
     RoutineOptionAnalysisOut,
-    RoutineOptionExerciseOut,
     RoutineOptionPlanOut,
     RoutineOptionsOut,
     RoutineOptionsRequest,
 )
+from app.services import routine_ai
 from app.services.coach.llm import get_coach_llm
 
 logger = logging.getLogger(__name__)
@@ -117,103 +117,23 @@ def build_member_analysis(
     )
 
 
-def _split_minutes(total: int, ratios: tuple[float, ...]) -> list[int]:
-    """양수 분량으로 나누되 반올림 오차를 마지막 항목에 모은다."""
-    parts: list[int] = []
-    remaining = total
-    for index, ratio in enumerate(ratios):
-        slots_left = len(ratios) - index - 1
-        if slots_left == 0:
-            parts.append(remaining)
-            break
-        part = max(1, round(total * ratio))
-        part = min(part, remaining - slots_left)
-        parts.append(part)
-        remaining -= part
-    return parts
-
-
 def build_rule_options(
     analysis: RoutineOptionAnalysisOut,
     request: RoutineOptionsRequest,
 ) -> RoutineOptionsOut:
-    """LLM을 사용할 수 없을 때도 동일 계약으로 동작하는 안전한 폴백."""
-    total_a = max(10, round(request.available_minutes * 0.7))
-    total_a = min(total_a, request.available_minutes)
-    total_b = request.available_minutes
-    a_walk, a_stretch = _split_minutes(total_a, (0.65, 0.35))
-    b_cardio, b_strength, b_cooldown = _split_minutes(
-        total_b,
-        (0.5, 0.35, 0.15),
+    """LLM 실패 시 공용 결정형 생성기로 동일 계약을 반환한다."""
+    plan_a, plan_b = routine_ai.rule_based_plans(
+        goal=analysis.goal,
+        sodium_today_mg=analysis.sodium_today_mg,
+        avg_completion_rate=analysis.avg_completion_rate,
+        available_minutes=request.available_minutes,
+        intensity_preference=request.intensity_preference,
+        trainer_note=analysis.note,
     )
-    note_suffix = (
-        f" 트레이너 메모({analysis.note})를 반영했습니다." if analysis.note else ""
-    )
-    sodium_context = (
-        f"오늘 나트륨 {analysis.sodium_today_mg}mg으로 목표를 초과해"
-        if analysis.sodium_over_target
-        else f"오늘 나트륨 {analysis.sodium_today_mg}mg과"
-    )
-    b_intensity = {
-        "low": "낮음",
-        "moderate": "보통",
-        "high": "높음",
-    }[request.intensity_preference]
-
     return RoutineOptionsOut(
         analysis=analysis,
-        plan_a=RoutineOptionPlanOut(
-            key="A",
-            label="회복 중심",
-            total_minutes=total_a,
-            intensity="낮음",
-            exercises=[
-                RoutineOptionExerciseOut(
-                    name="저강도 걷기",
-                    minutes=a_walk,
-                    type="유산소",
-                ),
-                RoutineOptionExerciseOut(
-                    name="전신 스트레칭",
-                    minutes=a_stretch,
-                    type="스트레칭",
-                ),
-            ],
-            reason="부담을 낮추고 꾸준히 이어가기 좋은 구성",
-            rationale=(
-                f"{sodium_context} 최근 완료율 {analysis.avg_completion_rate}%를 "
-                f"함께 고려한 회복 중심 후보입니다.{note_suffix}"
-            ),
-        ),
-        plan_b=RoutineOptionPlanOut(
-            key="B",
-            label="운동량 중심",
-            total_minutes=total_b,
-            intensity=b_intensity,
-            exercises=[
-                RoutineOptionExerciseOut(
-                    name="인터벌 유산소",
-                    minutes=b_cardio,
-                    type="유산소",
-                ),
-                RoutineOptionExerciseOut(
-                    name="전신 근력 운동",
-                    minutes=b_strength,
-                    type="근력",
-                ),
-                RoutineOptionExerciseOut(
-                    name="쿨다운 스트레칭",
-                    minutes=b_cooldown,
-                    type="스트레칭",
-                ),
-            ],
-            reason="설정한 시간 안에서 운동량을 충분히 확보한 구성",
-            rationale=(
-                f"목표({analysis.goal})와 희망 강도({b_intensity}), 최근 완료율 "
-                f"{analysis.avg_completion_rate}%를 반영한 운동량 중심 후보입니다."
-                f"{note_suffix}"
-            ),
-        ),
+        plan_a=RoutineOptionPlanOut.model_validate(plan_a),
+        plan_b=RoutineOptionPlanOut.model_validate(plan_b),
         generated_by="rule",
     )
 
