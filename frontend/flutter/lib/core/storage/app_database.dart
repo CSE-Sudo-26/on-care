@@ -24,7 +24,9 @@ class DietEntries extends Table {
   TextColumn get foodsJson => text()(); // [{ "name": "...", "calories": ... }]
   IntColumn get totalCalories => integer()();
   IntColumn get sodiumMg => integer().withDefault(const Constant(0))();
-  IntColumn get sugarG => integer().withDefault(const Constant(0))();
+  // 당류만 실수. 서버 계약(diet_entries.sugar_g)이 float 이고 도메인 엔티티도
+  // double 이라, 로컬 캐시만 정수면 데모 모드에서 8.5 가 8 로 잘린다.
+  RealColumn get sugarG => real().withDefault(const Constant(0.0))();
   // 재시도 중복 저장 방지 멱등키(요청당 1회). 무키 요청은 null.
   TextColumn get idempotencyKey => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -107,7 +109,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -134,6 +136,13 @@ class AppDatabase extends _$AppDatabase {
         // v2~v4 에서만 vitals 가 생성됐고 v1 DB 에는 없으므로, 없는 테이블을
         // 지우다 실패하지 않도록 IF EXISTS 로 안전하게 드롭한다.
         await customStatement('DROP TABLE IF EXISTS vitals');
+      }
+      if (from < 6) {
+        // 당류 sugar_g: INTEGER → REAL. 테이블을 다시 만들 필요는 없다.
+        // SQLite 의 INTEGER 친화도는 "무손실일 때만" 정수로 바꾸므로 8.5 는
+        // 그대로 REAL 로 저장되고, 읽을 때는 drift 가 선언 타입(double)으로
+        // 매핑한다. 기존 정수 값도 8 → 8.0 으로 읽혀 손실이 없다.
+        // 스키마 버전만 올려 이 결정을 기록해 둔다.
       }
     },
   );
