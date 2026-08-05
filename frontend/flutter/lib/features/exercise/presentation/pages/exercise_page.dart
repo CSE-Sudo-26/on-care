@@ -501,13 +501,15 @@ class _ExerciseOtherDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Center(
         child: Text(
-          '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 운동을 확인해 주세요.',
+          // 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 끼운다.
+          l.otherDateEmpty(l.pageExerciseTitle),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12.5,
             height: 1.5,
             fontWeight: FontWeight.w500,
@@ -792,7 +794,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
             const Spacer(),
             _PeriodToggle(
               active: _period,
-              labels: <String>[l.exToday, l.exThisWeek, '이번 달'],
+              labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
               onChanged: (int i) => setState(() => _period = i),
             ),
           ],
@@ -803,7 +805,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
           _TodayDonut(
             segs: <_DonutSeg>[
               _DonutSeg(
-                '유산소',
+                l.exTypeCardio,
                 _today(
                   _hasBreakdown
                       ? widget.week.cardioMinutes
@@ -812,12 +814,12 @@ class _ActivityStatusState extends State<_ActivityStatus> {
                 FigmaColors.primary,
               ),
               _DonutSeg(
-                '근력',
+                l.exTypeStrength,
                 _today(widget.week.strengthMinutes).round(),
                 const Color(0xFF1B6FA8),
               ),
               _DonutSeg(
-                '스트레칭',
+                l.exTypeStretching,
                 _today(widget.week.stretchingMinutes).round(),
                 const Color(0xFFD4EEF8),
               ),

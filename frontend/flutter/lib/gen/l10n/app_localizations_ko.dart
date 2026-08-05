@@ -478,8 +478,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietLoadError => '식단 정보를 불러오지 못했어요.';
 
   @override
-  String get dietOtherDateEmpty =>
-      '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 식단을 확인해 주세요.';
+  String otherDateEmpty(Object section) {
+    return '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 $section을 확인해 주세요.';
+  }
 
   @override
   String dietTagSodium(int mg) {
@@ -702,6 +703,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exThisWeek => '이번 주';
+
+  @override
+  String get exThisMonth => '이번 달';
 
   @override
   String get exAiRoutineToday => 'AI 맞춤 루틴 · 오늘';
