@@ -293,13 +293,13 @@ class $DietEntriesTable extends DietEntries
   );
   static const VerificationMeta _sugarGMeta = const VerificationMeta('sugarG');
   @override
-  late final GeneratedColumn<int> sugarG = GeneratedColumn<int>(
+  late final GeneratedColumn<double> sugarG = GeneratedColumn<double>(
     'sugar_g',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant(0.0),
   );
   static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
     'idempotencyKey',
@@ -462,7 +462,7 @@ class $DietEntriesTable extends DietEntries
         data['${effectivePrefix}sodium_mg'],
       )!,
       sugarG: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}sugar_g'],
       )!,
       idempotencyKey: attachedDatabase.typeMapping.read(
@@ -490,7 +490,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
   final String foodsJson;
   final int totalCalories;
   final int sodiumMg;
-  final int sugarG;
+  final double sugarG;
   final String? idempotencyKey;
   final DateTime createdAt;
   const DietEntryRow({
@@ -515,7 +515,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     map['foods_json'] = Variable<String>(foodsJson);
     map['total_calories'] = Variable<int>(totalCalories);
     map['sodium_mg'] = Variable<int>(sodiumMg);
-    map['sugar_g'] = Variable<int>(sugarG);
+    map['sugar_g'] = Variable<double>(sugarG);
     if (!nullToAbsent || idempotencyKey != null) {
       map['idempotency_key'] = Variable<String>(idempotencyKey);
     }
@@ -553,7 +553,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       foodsJson: serializer.fromJson<String>(json['foodsJson']),
       totalCalories: serializer.fromJson<int>(json['totalCalories']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
-      sugarG: serializer.fromJson<int>(json['sugarG']),
+      sugarG: serializer.fromJson<double>(json['sugarG']),
       idempotencyKey: serializer.fromJson<String?>(json['idempotencyKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -569,7 +569,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       'foodsJson': serializer.toJson<String>(foodsJson),
       'totalCalories': serializer.toJson<int>(totalCalories),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
-      'sugarG': serializer.toJson<int>(sugarG),
+      'sugarG': serializer.toJson<double>(sugarG),
       'idempotencyKey': serializer.toJson<String?>(idempotencyKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -583,7 +583,7 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     String? foodsJson,
     int? totalCalories,
     int? sodiumMg,
-    int? sugarG,
+    double? sugarG,
     Value<String?> idempotencyKey = const Value.absent(),
     DateTime? createdAt,
   }) => DietEntryRow(
@@ -673,7 +673,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
   final Value<String> foodsJson;
   final Value<int> totalCalories;
   final Value<int> sodiumMg;
-  final Value<int> sugarG;
+  final Value<double> sugarG;
   final Value<String?> idempotencyKey;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -716,7 +716,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Expression<String>? foodsJson,
     Expression<int>? totalCalories,
     Expression<int>? sodiumMg,
-    Expression<int>? sugarG,
+    Expression<double>? sugarG,
     Expression<String>? idempotencyKey,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -744,7 +744,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Value<String>? foodsJson,
     Value<int>? totalCalories,
     Value<int>? sodiumMg,
-    Value<int>? sugarG,
+    Value<double>? sugarG,
     Value<String?>? idempotencyKey,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -789,7 +789,7 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
       map['sodium_mg'] = Variable<int>(sodiumMg.value);
     }
     if (sugarG.present) {
-      map['sugar_g'] = Variable<int>(sugarG.value);
+      map['sugar_g'] = Variable<double>(sugarG.value);
     }
     if (idempotencyKey.present) {
       map['idempotency_key'] = Variable<String>(idempotencyKey.value);
@@ -2351,7 +2351,7 @@ typedef $$DietEntriesTableCreateCompanionBuilder =
       required String foodsJson,
       required int totalCalories,
       Value<int> sodiumMg,
-      Value<int> sugarG,
+      Value<double> sugarG,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2365,7 +2365,7 @@ typedef $$DietEntriesTableUpdateCompanionBuilder =
       Value<String> foodsJson,
       Value<int> totalCalories,
       Value<int> sodiumMg,
-      Value<int> sugarG,
+      Value<double> sugarG,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2415,7 +2415,7 @@ class $$DietEntriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get sugarG => $composableBuilder(
+  ColumnFilters<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
     builder: (column) => ColumnFilters(column),
   );
@@ -2475,7 +2475,7 @@ class $$DietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get sugarG => $composableBuilder(
+  ColumnOrderings<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
     builder: (column) => ColumnOrderings(column),
   );
@@ -2523,7 +2523,7 @@ class $$DietEntriesTableAnnotationComposer
   GeneratedColumn<int> get sodiumMg =>
       $composableBuilder(column: $table.sodiumMg, builder: (column) => column);
 
-  GeneratedColumn<int> get sugarG =>
+  GeneratedColumn<double> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
 
   GeneratedColumn<String> get idempotencyKey => $composableBuilder(
@@ -2573,7 +2573,7 @@ class $$DietEntriesTableTableManager
                 Value<String> foodsJson = const Value.absent(),
                 Value<int> totalCalories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
-                Value<int> sugarG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2599,7 +2599,7 @@ class $$DietEntriesTableTableManager
                 required String foodsJson,
                 required int totalCalories,
                 Value<int> sodiumMg = const Value.absent(),
-                Value<int> sugarG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),

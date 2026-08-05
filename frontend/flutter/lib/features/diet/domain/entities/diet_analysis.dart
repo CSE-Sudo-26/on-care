@@ -12,7 +12,7 @@ class RecognizedFood {
   final String name;
   final int calories;
   final int sodiumMg;
-  final int sugarG;
+  final double sugarG;
   final String source; // "db"(공공 영양 DB 매핑) | "estimate"(LLM 추정)
 
   bool get isFromDb => source == 'db';
@@ -21,7 +21,7 @@ class RecognizedFood {
     name: json['name']! as String,
     calories: (json['calories'] as num?)?.toInt() ?? 0,
     sodiumMg: (json['sodium_mg'] as num?)?.toInt() ?? 0,
-    sugarG: (json['sugar_g'] as num?)?.toInt() ?? 0,
+    sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0,
     source: (json['source'] as String?) ?? 'estimate',
   );
 }
@@ -40,7 +40,7 @@ class DietAnalysisResult {
   final List<RecognizedFood> foods;
   final int totalCalories;
   final int totalSodiumMg;
-  final int totalSugarG;
+  final double totalSugarG;
   final String coachComment;
 
   factory DietAnalysisResult.fromResponse(Map<String, Object?> json) {
@@ -54,7 +54,7 @@ class DietAnalysisResult {
           .toList(),
       totalCalories: (analysis['total_calories'] as num?)?.toInt() ?? 0,
       totalSodiumMg: (analysis['total_sodium_mg'] as num?)?.toInt() ?? 0,
-      totalSugarG: (analysis['total_sugar_g'] as num?)?.toInt() ?? 0,
+      totalSugarG: (analysis['total_sugar_g'] as num?)?.toDouble() ?? 0,
       coachComment: (analysis['coach_comment'] as String?) ?? '',
     );
   }
