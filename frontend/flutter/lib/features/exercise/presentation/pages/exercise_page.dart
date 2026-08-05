@@ -752,18 +752,18 @@ class _ActivityStatusState extends State<_ActivityStatus> {
     ];
   }
 
-  _ChartPeriod _dataFor(int period) {
+  _ChartPeriod _dataFor(AppLocalizations l, int period) {
     switch (period) {
       case 2: // 이번 달 — weekly buckets
-        return const _ChartPeriod(
-          <_Bar>[
+        return _ChartPeriod(
+          const <_Bar>[
             _Bar(120, 40, 30),
             _Bar(95, 60, 20),
             _Bar(140, 45, 35),
             _Bar(90, 55, 25),
             _Bar(60, 40, 20),
           ],
-          <String>['1주', '2주', '3주', '4주', '5주'],
+          <String>[for (int w = 1; w <= 5; w++) l.exWeekNumber(w)],
           -1,
         );
       default: // 이번 주
@@ -828,7 +828,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         else
           Builder(
             builder: (BuildContext context) {
-              final _ChartPeriod data = _dataFor(_period);
+              final _ChartPeriod data = _dataFor(l, _period);
               return _ActivityChart(
                 bars: data.bars,
                 dayLabels: data.labels,
@@ -850,6 +850,7 @@ class _TodayDonut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final int total = segs.fold<int>(0, (int a, _DonutSeg s) => a + s.minutes);
     return Container(
       // 이번 주/이번 달 막대 차트 카드와 동일하게 가로 전체를 채운다(오늘 카드만
@@ -894,9 +895,9 @@ class _TodayDonut extends StatelessWidget {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const Text(
-                          '분',
-                          style: TextStyle(
+                        Text(
+                          l.unitMinutes,
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: FigmaColors.textMuted,
@@ -914,9 +915,9 @@ class _TodayDonut extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      '오늘 총 운동 시간',
-                      style: TextStyle(
+                    Text(
+                      l.exTodayTotalTime,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: FigmaColors.textMuted,
@@ -951,6 +952,7 @@ class _DonutLegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Row(
       children: <Widget>[
         Container(
@@ -973,7 +975,7 @@ class _DonutLegendRow extends StatelessWidget {
           ),
         ),
         Text(
-          '${seg.minutes}분',
+          l.unitMinutesValue(seg.minutes),
           style: const TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
@@ -1113,7 +1115,7 @@ class _ActivityChart extends StatelessWidget {
               min: b.stretch.round(),
             ),
         ];
-    if (rows.isEmpty) return const <InlineSpan>[TextSpan(text: '휴식')];
+    if (rows.isEmpty) return <InlineSpan>[TextSpan(text: l.exRest)];
     final List<InlineSpan> spans = <InlineSpan>[];
     for (int k = 0; k < rows.length; k++) {
       final ({Color color, String label, int min}) r = rows[k];
@@ -1131,7 +1133,7 @@ class _ActivityChart extends StatelessWidget {
           ),
         ),
       );
-      spans.add(TextSpan(text: '${r.label}   ${r.min}분'));
+      spans.add(TextSpan(text: '${r.label}   ${l.unitMinutesValue(r.min)}'));
       if (k < rows.length - 1) spans.add(const TextSpan(text: '\n'));
     }
     return spans;
@@ -1700,6 +1702,7 @@ class _PtAiRoutineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1712,20 +1715,25 @@ class _PtAiRoutineCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // Title (with AI glyph) on the left, the "반영" badge on the right.
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(Icons.auto_awesome, size: 16, color: FigmaColors.primary),
-              SizedBox(width: 6),
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+              const SizedBox(width: 6),
               Text(
-                'AI 추천 운동',
-                style: TextStyle(
+                l.exAiRecommendedExercise,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: FigmaColors.ink,
                 ),
               ),
-              Spacer(),
-              AiPill(
+              const Spacer(),
+              // 데모/시드 성격 문구라 이번 l10n 범위 밖(#367 Out of scope).
+              const AiPill(
                 '트레이너 피드백 + 식단 반영',
                 fontSize: 10,
                 fontWeight: FontWeight.w500,

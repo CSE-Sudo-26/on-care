@@ -344,6 +344,17 @@
   "exActivityTitle": "Activity",
   "exThisWeek": "This week",
   "exThisMonth": "This month",
+  "exWeekNumber": "Week {n}",
+  "@exWeekNumber": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "exTodayTotalTime": "Today's total time",
+  "exRest": "Rest",
+  "exAiRecommendedExercise": "AI recommended exercise",
   "exAiRoutineToday": "AI Routine · Today",
   "exStatDays": "Days",
   "exStatTime": "Time",

@@ -176,4 +176,45 @@ void main() {
     );
     expect(RegExp('[가-힣]').hasMatch(en.otherDateEmpty(en.pageDietTitle)), isFalse);
   });
+
+  test('운동 탭 UI 골격 문구가 로케일을 따른다 (#367)', () {
+    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+    final RegExp hangul = RegExp('[가-힣]');
+
+    // 회귀: 운동 현황 카드·도넛·툴팁의 골격 문구가 한국어로 굳어 있어
+    // 영어 로케일에서 지표 라벨만 영어로 나왔다.
+    expect(en.exTodayTotalTime, "Today's total time");
+    expect(ko.exTodayTotalTime, '오늘 총 운동 시간');
+    expect(en.exRest, 'Rest');
+    expect(ko.exRest, '휴식');
+    expect(en.exAiRecommendedExercise, 'AI recommended exercise');
+    expect(ko.exAiRecommendedExercise, 'AI 추천 운동');
+
+    // 이번 달 막대 차트의 주차 라벨.
+    expect(en.exWeekNumber(3), 'Week 3');
+    expect(ko.exWeekNumber(3), '3주');
+
+    for (final String s in <String>[
+      en.exTodayTotalTime,
+      en.exRest,
+      en.exAiRecommendedExercise,
+      en.exWeekNumber(1),
+      en.unitMinutes,
+      en.unitMinutesValue(8),
+    ]) {
+      expect(hangul.hasMatch(s), isFalse, reason: s);
+    }
+  });
+
+  test('분 단위는 기존 공용 키를 재사용한다 (#367)', () {
+    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+
+    // 신규 키를 만들지 않고 unitMinutes/unitMinutesValue 를 그대로 쓴다.
+    expect(ko.unitMinutes, '분');
+    expect(en.unitMinutes, 'min');
+    expect(ko.unitMinutesValue(8), '8분');
+    expect(en.unitMinutesValue(8), '8 min');
+  });
 }

@@ -718,6 +718,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exThisMonth => 'This month';
 
   @override
+  String exWeekNumber(int n) {
+    return 'Week $n';
+  }
+
+  @override
+  String get exTodayTotalTime => 'Today\'s total time';
+
+  @override
+  String get exRest => 'Rest';
+
+  @override
+  String get exAiRecommendedExercise => 'AI recommended exercise';
+
+  @override
   String get exAiRoutineToday => 'AI Routine · Today';
 
   @override
