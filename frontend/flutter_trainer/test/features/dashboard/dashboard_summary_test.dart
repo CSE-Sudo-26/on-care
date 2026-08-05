@@ -41,7 +41,7 @@ void main() {
       expect(summary.unreadClients, 2);
     });
 
-    test('an unanswered client is not 주의 — only their health data is', () {
+    test('an unanswered client stays in the list but is not counted 주의', () {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[
           makeClient(id: 'sodium', sodiumMg: 2500),
@@ -50,25 +50,31 @@ void main() {
         unread: const <String, int>{'waiting': 1},
       );
 
-      // 'waiting' is counted by 답장 필요; listing them under 주의 too
-      // would chase the same person twice and bury the health signal.
-      expect(summary.attention.map((a) => a.client.id), <String>['sodium']);
-      expect(summary.attention.single.primary, ClientAlert.sodiumOver);
+      // The trainer still owes 'waiting' a reply, so the row stays.
+      expect(summary.attention.map((a) => a.client.id), <String>[
+        'sodium',
+        'waiting',
+      ]);
+      // …but 주의 means the member's own numbers, and 'waiting' has none.
+      expect(summary.healthAttentionCount, 1);
       expect(summary.unreadClients, 1);
     });
 
-    test('unread never changes the 주의 list', () {
-      final clients = <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)];
-      final without = buildDashboardSummary(
-        clients: clients,
-        unread: const <String, int>{},
-      );
-      final with_ = buildDashboardSummary(
-        clients: clients,
-        unread: const <String, int>{'a': 9},
+    test('a health alert outranks an unanswered one on the same client', () {
+      final summary = buildDashboardSummary(
+        clients: <TrainerClient>[makeClient(id: 'both', sodiumMg: 2500)],
+        unread: const <String, int>{'both': 3},
       );
 
-      expect(with_.attention.single.alerts, without.attention.single.alerts);
+      // The badge is the client's first alert. With 답장 대기 first, every
+      // sodium overshoot hid behind a message the 답장 필요 card already
+      // reported.
+      expect(summary.attention.single.primary, ClientAlert.sodiumOver);
+      expect(summary.attention.single.alerts, <ClientAlert>[
+        ClientAlert.sodiumOver,
+        ClientAlert.unanswered,
+      ]);
+      expect(summary.healthAttentionCount, 1);
     });
 
     test('within one alert type the incoming (priority) order is kept', () {

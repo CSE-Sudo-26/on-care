@@ -58,8 +58,9 @@ void main() {
     await openDashboard(tester);
 
     // All three seeded clients are waiting on a reply, but only 김민수
-    // (2100mg) and 박성호 (2400mg) are over the sodium target. If the two
-    // ever merge again the card reads 3 and stops meaning anything.
+    // (2100mg) and 박성호 (2400mg) are over the sodium target. 답장 대기
+    // still shows in the list; it just isn't 주의. If the two ever merge
+    // again the card reads 3 and stops meaning anything.
     final attention = tester.widget<StatCard>(
       find.ancestor(of: find.text('주의 고객'), matching: find.byType(StatCard)),
     );
@@ -90,13 +91,13 @@ void main() {
       'fixes it', (tester) async {
     await openDashboard(tester);
 
-    expect(find.text('주의가 필요한 고객'), findsOneWidget);
-    // 주의 = the member's own numbers. All three seeded clients have
-    // unread replies, but only 김민수(2100mg)/박성호(2400mg) are over the
-    // sodium target, so only those two are listed — 답장 대기 belongs to
-    // the 답장 필요 card instead.
+    expect(find.text('오늘 챙길 고객'), findsOneWidget);
+    // All three seeded clients are waiting on a reply, but 김민수(2100mg)
+    // and 박성호(2400mg) are also over the sodium target — and the badge
+    // is the client's first alert, so theirs must be the health one.
+    // 이지수 is within target, so their row stays 답장 대기.
     expect(find.text('나트륨 초과'), findsNWidgets(2));
-    expect(find.text('답장 대기'), findsNothing);
+    expect(find.text('답장 대기'), findsOneWidget);
 
     await tester.tap(find.text('나트륨 초과').first);
     await settle(tester);

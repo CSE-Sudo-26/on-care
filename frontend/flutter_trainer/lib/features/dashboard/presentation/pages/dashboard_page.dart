@@ -193,11 +193,13 @@ class _KpiRow extends StatelessWidget {
       ),
       StatCard(
         label: '주의 고객',
-        value: '${summary.attention.length}',
+        value: '${summary.healthAttentionCount}',
         unit: '명',
         icon: Icons.report_gmailerrorred_outlined,
-        tone: summary.attention.isEmpty ? StatTone.positive : StatTone.warn,
-        hint: summary.attention.isEmpty ? '이상 없음' : '나트륨·이행률 확인',
+        tone: summary.healthAttentionCount == 0
+            ? StatTone.positive
+            : StatTone.warn,
+        hint: summary.healthAttentionCount == 0 ? '이상 없음' : '나트륨·이행률 확인',
         onTap: () => context.go(AppRoutes.clientsFiltered('attention')),
       ),
     ];
