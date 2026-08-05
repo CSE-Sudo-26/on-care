@@ -1588,7 +1588,9 @@ class _SendHistoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(clientSessionsProvider(client.name));
+    final sessions = ref.watch(
+      clientSessionsProvider((id: client.id, name: client.name)),
+    );
     final today = ymd(DateTime.now());
 
     return SectionCard(

@@ -55,7 +55,7 @@ class LocalReportRepository implements ReportRepository {
     required DateTime weekStart,
   }) {
     return _schedule
-        .watchClientSessions(client.name)
+        .watchClientSessions((id: client.id, name: client.name))
         .map(
           (sessions) => buildWeeklyReport(
             client: client,

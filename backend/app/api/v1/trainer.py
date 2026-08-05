@@ -291,10 +291,43 @@ def trainer_schedule(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
     date: str | None = Query(None, description="YYYY-MM-DD (기본: 오늘)"),
+    from_: str | None = Query(
+        None, alias="from", description="구간 시작 YYYY-MM-DD (to 와 함께)"
+    ),
+    to: str | None = Query(None, description="구간 끝 YYYY-MM-DD (from 과 함께)"),
+    member_id: str | None = Query(None, description="담당 고객의 세션만"),
 ) -> list[ScheduleSessionOut]:
-    """하루 타임라인(시간순, 공백 포함)."""
+    """타임라인. 기본은 하루(`date`), `from`/`to` 를 주면 그 구간 전체.
+
+    주 캘린더가 7일치를 한 번에 읽기 위해 구간 조회를 지원한다 — 하루짜리
+    요청을 요일마다 반복하면 요청이 7배가 된다.
+    """
+    if member_id is not None:
+        _require_client(db, trainer.id, member_id)
+
+    if from_ is not None or to is not None:
+        # 한쪽만 오면 어느 구간인지 알 수 없다 — 조용히 하루로 떨어뜨리면
+        # 클라이언트는 구간을 받았다고 믿는다.
+        if from_ is None or to is None:
+            raise HTTPException(
+                status_code=422, detail="from 과 to 는 함께 지정해야 합니다."
+            )
+        if not _is_ymd(from_) or not _is_ymd(to):
+            raise HTTPException(
+                status_code=422, detail="from/to 는 YYYY-MM-DD 형식이어야 합니다."
+            )
+        if from_ > to:
+            raise HTTPException(status_code=422, detail="from 은 to 보다 늦을 수 없습니다.")
+        return trainer_service.build_schedule_range(
+            db, trainer.id, from_, to, member_id=member_id
+        )
+
     day = date or trainer_service.today_iso()
-    return trainer_service.build_schedule(db, trainer.id, day)
+    if not _is_ymd(day):
+        raise HTTPException(status_code=422, detail="date 는 YYYY-MM-DD 형식이어야 합니다.")
+    return trainer_service.build_schedule_range(
+        db, trainer.id, day, day, member_id=member_id
+    )
 
 
 @router.post("/trainer/schedule", response_model=ScheduleSessionOut, status_code=201)

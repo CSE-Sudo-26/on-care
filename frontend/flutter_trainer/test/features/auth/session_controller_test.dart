@@ -40,7 +40,8 @@ ProviderContainer _makeContainer({
 }
 
 /// Lets the async restore / login microtask chain settle.
-Future<void> _settle() => Future<void>.delayed(const Duration(milliseconds: 60));
+Future<void> _settle() =>
+    Future<void>.delayed(const Duration(milliseconds: 60));
 
 void main() {
   group('SessionController restore', () {
@@ -93,34 +94,36 @@ void main() {
       );
     });
 
-    test('a user action during restore is not clobbered by the late restore',
-        () async {
-      // Restore is in flight against a slow /me; the user picks demo before
-      // it resolves. The late restore must not overwrite the demo session.
-      final fake = _FakeAuthRepository()
-        ..profileDelay = const Duration(milliseconds: 200);
-      final container = _makeContainer(
-        tokens: <String, String>{
-          'access_token': 'stored',
-          'refresh_token': 'r',
-        },
-        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
-      );
-      final controller = container.read(sessionControllerProvider.notifier);
+    test(
+      'a user action during restore is not clobbered by the late restore',
+      () async {
+        // Restore is in flight against a slow /me; the user picks demo before
+        // it resolves. The late restore must not overwrite the demo session.
+        final fake = _FakeAuthRepository()
+          ..profileDelay = const Duration(milliseconds: 200);
+        final container = _makeContainer(
+          tokens: <String, String>{
+            'access_token': 'stored',
+            'refresh_token': 'r',
+          },
+          repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+        );
+        final controller = container.read(sessionControllerProvider.notifier);
 
-      // Do NOT settle — restore is still awaiting the token read + slow /me.
-      controller.enterDemo();
-      expect(
-        container.read(sessionControllerProvider).status,
-        SessionStatus.demo,
-      );
+        // Do NOT settle — restore is still awaiting the token read + slow /me.
+        controller.enterDemo();
+        expect(
+          container.read(sessionControllerProvider).status,
+          SessionStatus.demo,
+        );
 
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(
-        container.read(sessionControllerProvider).status,
-        SessionStatus.demo,
-      );
-    });
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(
+          container.read(sessionControllerProvider).status,
+          SessionStatus.demo,
+        );
+      },
+    );
 
     test('signs out when refresh also fails', () async {
       final fake = _FakeAuthRepository()
@@ -146,55 +149,60 @@ void main() {
       );
     });
 
-    test('keeps the stored tokens on a transient network failure at restore',
-        () async {
-      final fake = _FakeAuthRepository()..profileThrowsNetwork = true;
-      final container = _makeContainer(
-        tokens: <String, String>{
-          'access_token': 'valid',
-          'refresh_token': 'valid-refresh',
-        },
-        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
-      );
-      container.read(sessionControllerProvider.notifier);
-      await _settle();
+    test(
+      'keeps the stored tokens on a transient network failure at restore',
+      () async {
+        final fake = _FakeAuthRepository()..profileThrowsNetwork = true;
+        final container = _makeContainer(
+          tokens: <String, String>{
+            'access_token': 'valid',
+            'refresh_token': 'valid-refresh',
+          },
+          repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+        );
+        container.read(sessionControllerProvider.notifier);
+        await _settle();
 
-      // Transient failure → signed out, but the tokens survive so a later
-      // relaunch can restore (not a forced sign-out that discards a valid
-      // session).
-      expect(
-        container.read(sessionControllerProvider).status,
-        SessionStatus.signedOut,
-      );
-      final store = container.read(secureTokenStoreProvider);
-      expect(await store.readAccessToken(), 'valid');
-      expect(await store.readRefreshToken(), 'valid-refresh');
-    });
+        // Transient failure → signed out, but the tokens survive so a later
+        // relaunch can restore (not a forced sign-out that discards a valid
+        // session).
+        expect(
+          container.read(sessionControllerProvider).status,
+          SessionStatus.signedOut,
+        );
+        final store = container.read(secureTokenStoreProvider);
+        expect(await store.readAccessToken(), 'valid');
+        expect(await store.readRefreshToken(), 'valid-refresh');
+      },
+    );
 
-    test('refresh keeps the existing refresh token when the response omits one',
-        () async {
-      final fake = _FakeAuthRepository()
-        ..profileFailuresBeforeSuccess = 1 // first fetch 401 → triggers refresh
-        ..refreshReturnsEmptyRefresh = true;
-      final container = _makeContainer(
-        tokens: <String, String>{
-          'access_token': 'stale',
-          'refresh_token': 'keep-me',
-        },
-        repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
-      );
-      container.read(sessionControllerProvider.notifier);
-      await _settle();
+    test(
+      'refresh keeps the existing refresh token when the response omits one',
+      () async {
+        final fake = _FakeAuthRepository()
+          ..profileFailuresBeforeSuccess =
+              1 // first fetch 401 → triggers refresh
+          ..refreshReturnsEmptyRefresh = true;
+        final container = _makeContainer(
+          tokens: <String, String>{
+            'access_token': 'stale',
+            'refresh_token': 'keep-me',
+          },
+          repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+        );
+        container.read(sessionControllerProvider.notifier);
+        await _settle();
 
-      expect(
-        container.read(sessionControllerProvider).status,
-        SessionStatus.authenticated,
-      );
-      final store = container.read(secureTokenStoreProvider);
-      expect(await store.readAccessToken(), 'rotated-access');
-      // Backend rotated only the access token → the old refresh is preserved.
-      expect(await store.readRefreshToken(), 'keep-me');
-    });
+        expect(
+          container.read(sessionControllerProvider).status,
+          SessionStatus.authenticated,
+        );
+        final store = container.read(secureTokenStoreProvider);
+        expect(await store.readAccessToken(), 'rotated-access');
+        // Backend rotated only the access token → the old refresh is preserved.
+        expect(await store.readRefreshToken(), 'keep-me');
+      },
+    );
 
     test('a user action during a slow refresh is not clobbered', () async {
       // stale access → 401 → refresh (slow); the user picks demo mid-refresh.
@@ -211,11 +219,17 @@ void main() {
       // guess), then act — this guarantees the race the guard must win.
       await fake.onRefreshEntered.future;
       controller.enterDemo();
-      expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.demo,
+      );
 
       // The late refresh resolves — it must NOT overwrite the demo session.
       await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(container.read(sessionControllerProvider).status, SessionStatus.demo);
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.demo,
+      );
       expect(fake.refreshCalls, 1);
     });
 
@@ -357,6 +371,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   bool refreshReturnsEmptyRefresh = false;
   Duration profileDelay = Duration.zero;
   Duration refreshDelay = Duration.zero;
+
   /// Completes the moment `refresh()` is entered (before its delay), so a
   /// test can deterministically act while a refresh is genuinely in flight.
   final Completer<void> onRefreshEntered = Completer<void>();

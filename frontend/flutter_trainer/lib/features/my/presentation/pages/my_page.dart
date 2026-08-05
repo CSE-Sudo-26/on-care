@@ -409,9 +409,9 @@ class _MyPageState extends ConsumerState<MyPage> {
       builder: (context) => const _PasswordSheet(),
     );
     if (changed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('비밀번호를 변경했어요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('비밀번호를 변경했어요')));
     }
   }
 }
