@@ -72,11 +72,19 @@ class ScheduleRepository {
   /// tab (what programs this person has been given).
   ///
   /// Schedules reference a client by NAME — see `addClient`'s uniqueness
-  /// guard, which exists precisely so this lookup can't collide.
+  /// guard, which exists precisely so this lookup can't collide. Matched
+  /// on `lower(trim(name))`, the SAME normalisation that guard uses: an
+  /// exact compare would silently return nothing for a name stored with
+  /// stray whitespace or different case, and the weekly report would
+  /// then show 0 sessions for a client who clearly has some.
   Stream<List<ScheduleSession>> watchClientSessions(String clientName) {
     final query = _db.select(_db.trainerScheduleEntries)
       ..where(
-        (t) => t.clientName.equals(clientName) & t.status.equals('공백').not(),
+        (t) =>
+            t.clientName.lower().trim().equals(
+              clientName.trim().toLowerCase(),
+            ) &
+            t.status.equals('공백').not(),
       )
       ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
         (t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc),

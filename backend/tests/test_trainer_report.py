@@ -134,45 +134,59 @@ def test_put_me_updates_only_the_sent_fields(client):
     token = _trainer_token(client)
     before = client.get("/v1/trainer/me", headers=_auth(token)).json()
 
-    r = client.put(
-        "/v1/trainer/me",
-        json={"phone": "010-9999-0000", "career_years": 9},
-        headers=_auth(token),
-    )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["phone"] == "010-9999-0000"
-    assert body["career"] == "9년"
-    # 보내지 않은 값은 그대로 — 부분 수정이 나머지를 지우면 안 된다.
-    assert body["specialty"] == before["specialty"]
-    assert body["gym"]["name"] == before["gym"]["name"]
+    try:
+        r = client.put(
+            "/v1/trainer/me",
+            json={"phone": "010-9999-0000", "career_years": 9},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["phone"] == "010-9999-0000"
+        assert body["career"] == "9년"
+        # 보내지 않은 값은 그대로 — 부분 수정이 나머지를 지우면 안 된다.
+        assert body["specialty"] == before["specialty"]
+        assert body["gym"]["name"] == before["gym"]["name"]
+    finally:
+        # 실패해도 되돌린다 — 오염된 시드는 같은 파일의 뒤 테스트를 연달아
+        # 무너뜨린다.
+        client.put(
+            "/v1/trainer/me",
+            json={
+                "phone": before["phone"],
+                "career_years": int(before["career"].rstrip("년")),
+            },
+            headers=_auth(token),
+        )
 
-    # 원상 복구(다른 테스트가 프로필 값을 기대한다).
-    client.put(
-        "/v1/trainer/me",
-        json={"phone": before["phone"], "career_years": int(before["career"].rstrip("년"))},
-        headers=_auth(token),
-    )
+
+def test_put_me_rejects_an_explicit_null(client):
+    """NOT NULL 컬럼에 null 을 반영하면 IntegrityError 500 이 된다.
+    누락(변경 없음)과 null(잘못된 값)을 구분한다."""
+    token = _trainer_token(client)
+    r = client.put("/v1/trainer/me", json={"phone": None}, headers=_auth(token))
+    assert r.status_code == 422
 
 
 def test_put_me_replaces_certifications_wholesale(client):
     token = _trainer_token(client)
     before = client.get("/v1/trainer/me", headers=_auth(token)).json()
 
-    r = client.put(
-        "/v1/trainer/me",
-        json={"certifications": ["  스포츠 영양사  ", "", "  "]},
-        headers=_auth(token),
-    )
-    assert r.status_code == 200, r.text
-    # 공백만 있는 항목은 버리고 나머지는 trim.
-    assert r.json()["certifications"] == ["스포츠 영양사"]
-
-    client.put(
-        "/v1/trainer/me",
-        json={"certifications": before["certifications"]},
-        headers=_auth(token),
-    )
+    try:
+        r = client.put(
+            "/v1/trainer/me",
+            json={"certifications": ["  스포츠 영양사  ", "", "  "]},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        # 공백만 있는 항목은 버리고 나머지는 trim.
+        assert r.json()["certifications"] == ["스포츠 영양사"]
+    finally:
+        client.put(
+            "/v1/trainer/me",
+            json={"certifications": before["certifications"]},
+            headers=_auth(token),
+        )
 
 
 def test_put_me_with_no_fields_is_rejected(client):
@@ -263,25 +277,36 @@ def test_password_change_takes_effect_and_can_be_reverted(client):
     )
     assert r.status_code == 200, r.text
 
-    # 옛 비밀번호로는 더 이상 로그인되지 않고, 새 비밀번호로는 된다.
-    old = client.post(
-        "/v1/auth/login",
-        data={"username": "trainer@oncare.com", "password": "oncare123"},
-    )
-    assert old.status_code == 401
-    new = client.post(
-        "/v1/auth/login",
-        data={"username": "trainer@oncare.com", "password": "oncare45678"},
-    )
-    assert new.status_code == 200, new.text
-
-    # 다른 테스트가 시드 비밀번호를 기대하므로 되돌린다.
-    revert = client.post(
-        "/v1/trainer/me/password",
-        json={"current_password": "oncare45678", "new_password": "oncare123"},
-        headers={"Authorization": f"Bearer {new.json()['access_token']}"},
-    )
-    assert revert.status_code == 200, revert.text
+    try:
+        # 옛 비밀번호로는 더 이상 로그인되지 않고, 새 비밀번호로는 된다.
+        old = client.post(
+            "/v1/auth/login",
+            data={"username": "trainer@oncare.com", "password": "oncare123"},
+        )
+        assert old.status_code == 401
+        new = client.post(
+            "/v1/auth/login",
+            data={"username": "trainer@oncare.com", "password": "oncare45678"},
+        )
+        assert new.status_code == 200, new.text
+    finally:
+        # 반드시 되돌린다 — 시드 비밀번호가 남으면 이 파일의 다른 테스트가
+        # _trainer_token() 에서 KeyError 로 줄줄이 죽는다. 토큰도 여기서
+        # 새로 얻는다(위 로그인이 실패했을 수 있다).
+        recovered = client.post(
+            "/v1/auth/login",
+            data={"username": "trainer@oncare.com", "password": "oncare45678"},
+        )
+        if recovered.status_code == 200:
+            revert = client.post(
+                "/v1/trainer/me/password",
+                json={
+                    "current_password": "oncare45678",
+                    "new_password": "oncare123",
+                },
+                headers=_auth(recovered.json()["access_token"]),
+            )
+            assert revert.status_code == 200, revert.text
 
 
 def test_password_change_needs_a_trainer_account(client):

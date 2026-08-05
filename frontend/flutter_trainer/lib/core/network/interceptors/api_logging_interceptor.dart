@@ -18,9 +18,7 @@ class ApiLoggingInterceptor extends Interceptor {
     Response<dynamic> response,
     ResponseInterceptorHandler handler,
   ) {
-    debugPrint(
-      '[api<] ${response.statusCode} ${response.requestOptions.uri}',
-    );
+    debugPrint('[api<] ${response.statusCode} ${response.requestOptions.uri}');
     handler.next(response);
   }
 

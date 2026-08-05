@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show weekdayLabels;
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
@@ -40,7 +41,12 @@ class OverviewView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(clientHistoryProvider(client.id));
-    final alerts = alertsFor(client);
+    // The unread count has to come along: without it `alertsFor` always
+    // sees 0 and 답장 대기 could never appear here — so a client the
+    // dashboard flagged in red lost its reason on arrival.
+    final unread =
+        ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
+    final alerts = alertsFor(client, unread: unread[client.id] ?? 0);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(

@@ -9,8 +9,9 @@ const Color _authText = Color(0xFF262626); // 사용자 앱 foreground
 const Color _authMutedText = Color(0xFF64748B); // 연한 남색 로딩 배경Foreground / hint
 const Color _authInputBg = Color(0xFFF3F3F5); // 사용자 앱 inputBackground
 const Color _authLoadingBg = Color(0xFFE6EFF7); // 연한 남색 로딩 배경
-const BorderRadius _authRadius =
-    BorderRadius.all(Radius.circular(14)); // 사용자 앱 AppRadius.lg
+const BorderRadius _authRadius = BorderRadius.all(
+  Radius.circular(14),
+); // 사용자 앱 AppRadius.lg
 
 /// Brand gradient for the auth screens — for the trainer auth screens
 /// (primary #2E7DAB → 진한 남색 #17435F).

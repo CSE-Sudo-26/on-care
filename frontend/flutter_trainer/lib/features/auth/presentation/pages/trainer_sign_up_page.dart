@@ -65,9 +65,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('비밀번호가 일치하지 않아요')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('비밀번호가 일치하지 않아요')));
       return;
     }
     setState(() => _loading = true);

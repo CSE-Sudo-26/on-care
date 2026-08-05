@@ -93,5 +93,6 @@ List<int> _intList(Object? v) => v is List
     ? v.whereType<num>().map((n) => n.toInt()).toList(growable: false)
     : const <int>[];
 
-List<String> _strList(Object? v) =>
-    v is List ? v.whereType<String>().toList(growable: false) : const <String>[];
+List<String> _strList(Object? v) => v is List
+    ? v.whereType<String>().toList(growable: false)
+    : const <String>[];

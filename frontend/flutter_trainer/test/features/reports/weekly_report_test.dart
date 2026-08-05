@@ -83,6 +83,7 @@ void main() {
         client: makeClient(weekCompletion: const <int>[80, 60, 0, 0, 0, 0, 0]),
         sessions: const <ScheduleSession>[],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       expect(report.completionAvg, 70);
@@ -93,9 +94,60 @@ void main() {
         client: makeClient(weekCompletion: const <int>[0, 0, 0, 0, 0, 0, 0]),
         sessions: const <ScheduleSession>[],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       expect(report.completionAvg, isNull);
+    });
+
+    test('a PAST week does not borrow this week\'s roster aggregates', () {
+      // weekCompletion/sodiumWeek carry no week of their own — they are
+      // whatever the roster last computed. Attaching them to an earlier
+      // week would report this week's numbers under last week's dates,
+      // and the trainer can SEND that to the member.
+      final lastWeek = monday.subtract(const Duration(days: 7));
+      final report = buildWeeklyReport(
+        client: makeClient(
+          weekCompletion: const <int>[80, 80, 80, 80, 80, 80, 80],
+          sodiumWeek: const <int>[2500, 2500, 1000, 1000, 1000, 1000, 1000],
+        ),
+        sessions: const <ScheduleSession>[],
+        weekStart: lastWeek,
+        today: wednesday,
+      );
+
+      expect(report.completionAvg, isNull);
+      expect(report.sodiumOverDays, isNull);
+      expect(report.sodiumAvg, isNull);
+      // Unknown is not good — praise has to be earned by data we have.
+      expect(report.isGoodWeek, isFalse);
+    });
+
+    test('the CURRENT week still uses them', () {
+      final report = buildWeeklyReport(
+        client: makeClient(
+          weekCompletion: const <int>[80, 80, 80, 80, 80, 80, 80],
+        ),
+        sessions: const <ScheduleSession>[],
+        weekStart: wednesday,
+        today: wednesday,
+      );
+
+      expect(report.completionAvg, 80);
+      expect(report.sodiumOverDays, isNotNull);
+    });
+
+    test('a past week\'s message omits the figures it cannot know', () {
+      final report = buildWeeklyReport(
+        client: makeClient(),
+        sessions: const <ScheduleSession>[],
+        weekStart: monday.subtract(const Duration(days: 7)),
+        today: wednesday,
+      );
+
+      final message = reportMessage(report);
+      expect(message, isNot(contains('이행률')));
+      expect(message, isNot(contains('나트륨')));
     });
 
     test('carries the sodium figures from the client', () {
@@ -105,6 +157,7 @@ void main() {
         ),
         sessions: const <ScheduleSession>[],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       expect(report.sodiumOverDays, 2);
@@ -122,6 +175,7 @@ void main() {
           ),
           sessions: const <ScheduleSession>[],
           weekStart: wednesday,
+          today: wednesday,
         );
       }
 
@@ -153,6 +207,7 @@ void main() {
         ),
         sessions: const <ScheduleSession>[],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       final message = reportMessage(report);

@@ -106,90 +106,84 @@ void main() {
     );
   });
 
-  test(
-    'watching clientsProvider + prioritizedClientsProvider together issues '
-    'exactly one GET /trainer/clients in real-API mode (review: the two '
-    'providers used to each fetch independently)',
-    () async {
-      final dio = _MockDio();
-      when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
-        (_) async => Response<List<dynamic>>(
-          requestOptions: RequestOptions(path: '/trainer/clients'),
-          statusCode: 200,
-          data: <dynamic>[
-            <String, Object?>{'id': 'a', 'name': 'A', 'sodium_mg': 2500},
-            <String, Object?>{'id': 'b', 'name': 'B', 'sodium_mg': 500},
-          ],
-        ),
-      );
-      final container = _containerFor(
-        useMockApi: false,
-        extraOverrides: <Override>[dioProvider.overrideWithValue(dio)],
-      );
-
-      final clients = await container.read(clientsProvider.future);
-      // Derived synchronously from the roster — no second fetch, and no
-      // future to await.
-      final prioritized = container.read(prioritizedClientsProvider).valueOrNull;
-
-      verify(() => dio.get<List<dynamic>>('/trainer/clients')).called(1);
-      expect(clients.map((c) => c.id), <String>['a', 'b']);
-      expect(prioritized!.map((c) => c.id), <String>['a', 'b']); // a is over
-    },
-  );
-
-  test(
-    'prioritizedClientsProvider re-derives on every clientsProvider '
-    'emission, not just the first (review: watching `.future` would freeze '
-    'on the first value since it only ever resolves once)',
-    () async {
-      final controller = StreamController<List<TrainerClient>>();
-      addTearDown(controller.close);
-      final container = _containerFor(
-        useMockApi: false,
-        extraOverrides: <Override>[
-          clientRepositoryProvider.overrideWithValue(
-            _StreamingClientRepository(controller),
-          ),
+  test('watching clientsProvider + prioritizedClientsProvider together issues '
+      'exactly one GET /trainer/clients in real-API mode (review: the two '
+      'providers used to each fetch independently)', () async {
+    final dio = _MockDio();
+    when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        requestOptions: RequestOptions(path: '/trainer/clients'),
+        statusCode: 200,
+        data: <dynamic>[
+          <String, Object?>{'id': 'a', 'name': 'A', 'sodium_mg': 2500},
+          <String, Object?>{'id': 'b', 'name': 'B', 'sodium_mg': 500},
         ],
-      );
+      ),
+    );
+    final container = _containerFor(
+      useMockApi: false,
+      extraOverrides: <Override>[dioProvider.overrideWithValue(dio)],
+    );
 
-      // Each addition needs a couple of real event-loop ticks to travel
-      // clientsProvider's stream -> its AsyncValue -> the rebuilt
-      // Stream.value(...) -> prioritizedClientsProvider's own AsyncValue ->
-      // this listener. Rather than guess how long that takes (a fixed
-      // delay is flaky on a slow CI runner), wait on a Completer that the
-      // listener itself completes the moment each emission actually
-      // arrives (review).
-      final emissions = <List<String>>[];
-      final gotFirst = Completer<void>();
-      final gotSecond = Completer<void>();
-      final sub = container.listen(prioritizedClientsProvider, (_, next) {
-        next.whenData((clients) {
-          emissions.add(clients.map((c) => c.id).toList());
-          if (emissions.length == 1) {
-            gotFirst.complete();
-          } else if (emissions.length == 2) {
-            gotSecond.complete();
-          }
-        });
+    final clients = await container.read(clientsProvider.future);
+    // Derived synchronously from the roster — no second fetch, and no
+    // future to await.
+    final prioritized = container.read(prioritizedClientsProvider).valueOrNull;
+
+    verify(() => dio.get<List<dynamic>>('/trainer/clients')).called(1);
+    expect(clients.map((c) => c.id), <String>['a', 'b']);
+    expect(prioritized!.map((c) => c.id), <String>['a', 'b']); // a is over
+  });
+
+  test('prioritizedClientsProvider re-derives on every clientsProvider '
+      'emission, not just the first (review: watching `.future` would freeze '
+      'on the first value since it only ever resolves once)', () async {
+    final controller = StreamController<List<TrainerClient>>();
+    addTearDown(controller.close);
+    final container = _containerFor(
+      useMockApi: false,
+      extraOverrides: <Override>[
+        clientRepositoryProvider.overrideWithValue(
+          _StreamingClientRepository(controller),
+        ),
+      ],
+    );
+
+    // Each addition needs a couple of real event-loop ticks to travel
+    // clientsProvider's stream -> its AsyncValue -> the rebuilt
+    // Stream.value(...) -> prioritizedClientsProvider's own AsyncValue ->
+    // this listener. Rather than guess how long that takes (a fixed
+    // delay is flaky on a slow CI runner), wait on a Completer that the
+    // listener itself completes the moment each emission actually
+    // arrives (review).
+    final emissions = <List<String>>[];
+    final gotFirst = Completer<void>();
+    final gotSecond = Completer<void>();
+    final sub = container.listen(prioritizedClientsProvider, (_, next) {
+      next.whenData((clients) {
+        emissions.add(clients.map((c) => c.id).toList());
+        if (emissions.length == 1) {
+          gotFirst.complete();
+        } else if (emissions.length == 2) {
+          gotSecond.complete();
+        }
       });
-      addTearDown(sub.close);
+    });
+    addTearDown(sub.close);
 
-      controller.add(<TrainerClient>[_client('a', sodiumMg: 100)]);
-      await gotFirst.future.timeout(const Duration(seconds: 5));
-      // A second emission on the SAME provider instance (no invalidation) —
-      // an over-target client now leads the roster.
-      controller.add(<TrainerClient>[
-        _client('over', sodiumMg: 2500),
-        _client('a', sodiumMg: 100),
-      ]);
-      await gotSecond.future.timeout(const Duration(seconds: 5));
+    controller.add(<TrainerClient>[_client('a', sodiumMg: 100)]);
+    await gotFirst.future.timeout(const Duration(seconds: 5));
+    // A second emission on the SAME provider instance (no invalidation) —
+    // an over-target client now leads the roster.
+    controller.add(<TrainerClient>[
+      _client('over', sodiumMg: 2500),
+      _client('a', sodiumMg: 100),
+    ]);
+    await gotSecond.future.timeout(const Duration(seconds: 5));
 
-      expect(emissions, <List<String>>[
-        <String>['a'],
-        <String>['over', 'a'], // proves the second emission was reflected
-      ]);
-    },
-  );
+    expect(emissions, <List<String>>[
+      <String>['a'],
+      <String>['over', 'a'], // proves the second emission was reflected
+    ]);
+  });
 }

@@ -53,7 +53,8 @@ class _RealApiFakeChatRepository implements ChatRepository {
   }) async {}
 
   @override
-  Stream<Map<String, int>> watchUnreadCounts() => Stream.value(const <String, int>{});
+  Stream<Map<String, int>> watchUnreadCounts() =>
+      Stream.value(const <String, int>{});
 
   @override
   Future<void> markThreadRead(String clientId) async {}
