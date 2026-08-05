@@ -1418,6 +1418,30 @@ abstract class AppLocalizations {
   /// **'This month'**
   String get exThisMonth;
 
+  /// No description provided for @exWeekNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {n}'**
+  String exWeekNumber(int n);
+
+  /// No description provided for @exTodayTotalTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s total time'**
+  String get exTodayTotalTime;
+
+  /// No description provided for @exRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest'**
+  String get exRest;
+
+  /// No description provided for @exAiRecommendedExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'AI recommended exercise'**
+  String get exAiRecommendedExercise;
+
   /// No description provided for @exAiRoutineToday.
   ///
   /// In en, this message translates to:

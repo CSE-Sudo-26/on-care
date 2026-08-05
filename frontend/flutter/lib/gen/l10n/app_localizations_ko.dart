@@ -708,6 +708,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exThisMonth => '이번 달';
 
   @override
+  String exWeekNumber(int n) {
+    return '$n주';
+  }
+
+  @override
+  String get exTodayTotalTime => '오늘 총 운동 시간';
+
+  @override
+  String get exRest => '휴식';
+
+  @override
+  String get exAiRecommendedExercise => 'AI 추천 운동';
+
+  @override
   String get exAiRoutineToday => 'AI 맞춤 루틴 · 오늘';
 
   @override
