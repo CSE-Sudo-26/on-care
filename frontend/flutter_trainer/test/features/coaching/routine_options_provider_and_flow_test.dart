@@ -200,11 +200,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    // A/B + the existing recommendation share one horizontal option rail.
-    expect(
-      find.byKey(const ValueKey<String>('routine-options-horizontal-scroll')),
-      findsOneWidget,
-    );
+    // A/B + the existing recommendation are shown together. The layout
+    // adapts — side by side when the column is wide enough, a scrolling
+    // rail when it isn't — so this asserts the three options themselves
+    // rather than which of the two containers rendered them.
     expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
     expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
