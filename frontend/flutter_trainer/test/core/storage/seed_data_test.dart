@@ -46,7 +46,7 @@ void main() {
       final minsu = clients.firstWhere((c) => c.name == '김민수');
       expect((jsonDecode(minsu.weekCompletionJson) as List<Object?>).length, 7);
 
-      expect(await db.readValue('trainer_seeded_v2'), _todayString());
+      expect(await db.readValue('trainer_seeded_v3'), _todayString());
     });
 
     test('schedule seeds onto today (never empty on a later day)', () async {
@@ -76,13 +76,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v2', '2020-01-01');
+      await db.putValue('trainer_seeded_v3', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v2'), _todayString());
+      expect(await db.readValue('trainer_seeded_v3'), _todayString());
     });
 
     test(
@@ -155,8 +155,8 @@ void main() {
       () async {
         final today = _todayString();
 
-        // Simulate the pre-v2 world: already seeded TODAY under the old
-        // `_v1` flag, plus a runtime (non-seed) client that must survive.
+        // Simulate an older build: already seeded TODAY under a previous
+        // flag, plus a runtime (non-seed) client that must survive.
         await db.putValue('trainer_seeded_v1', today);
         await db
             .into(db.trainerClients)
@@ -191,7 +191,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v2'), today);
+        expect(await db.readValue('trainer_seeded_v3'), today);
       },
     );
 
@@ -213,7 +213,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v2', '2020-01-01');
+      await db.putValue('trainer_seeded_v3', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

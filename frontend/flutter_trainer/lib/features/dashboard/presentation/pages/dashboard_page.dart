@@ -78,21 +78,18 @@ class DashboardPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (wide)
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 15,
-                          child: _LeftColumn(summary: summary),
-                        ),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(
-                          flex: 10,
-                          child: _RightColumn(summary: summary),
-                        ),
-                      ],
-                    ),
+                  // Deliberately NOT IntrinsicHeight: the two columns are
+                  // independent card stacks, `start` already stops them
+                  // stretching, and the weekday chart uses a LayoutBuilder
+                  // — which reports a 0 intrinsic height, so IntrinsicHeight
+                  // sized the row short and the chart overflowed it.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(flex: 15, child: _LeftColumn(summary: summary)),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(flex: 10, child: _RightColumn(summary: summary)),
+                    ],
                   )
                 else ...<Widget>[
                   _LeftColumn(summary: summary),
