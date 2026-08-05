@@ -77,4 +77,31 @@ void main() {
 
     expect(container.read(exerciseBurnGoalProvider), 650);
   });
+
+  test('구독이 끊기면 대시보드 요약도 함께 해제된다 (autoDispose 전파)', () async {
+    // dashboardSummaryProvider 는 FutureProvider.autoDispose 다. 항상 살아있는
+    // Provider 가 이것을 watch 하면 영구히 붙잡아 요약이 갱신되지 않는다.
+    int loads = 0;
+    final container = ProviderContainer(
+      overrides: <Override>[
+        dashboardSummaryProvider.overrideWith((ref) async {
+          loads++;
+          return summaryWithGoal(800);
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final sub = container.listen(exerciseBurnGoalProvider, (_, _) {});
+    await container.read(dashboardSummaryProvider.future);
+    expect(loads, 1);
+
+    sub.close();
+    await Future<void>.delayed(Duration.zero);
+
+    // 해제됐다면 다시 읽을 때 로더가 한 번 더 돈다.
+    container.listen(exerciseBurnGoalProvider, (_, _) {});
+    await container.read(dashboardSummaryProvider.future);
+    expect(loads, 2, reason: '요약이 해제되지 않고 계속 캐시돼 있다');
+  });
 }

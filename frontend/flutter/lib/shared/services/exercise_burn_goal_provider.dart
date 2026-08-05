@@ -12,7 +12,13 @@ import 'package:oncare/features/dashboard/presentation/controllers/dashboard_con
 ///
 /// 요약이 로딩 중이거나 실패하면 엔티티 기본값을 돌려준다 — 목표치 하나 때문에
 /// 운동 화면 전체가 로딩·에러 상태로 빠지지 않게 한다.
-final exerciseBurnGoalProvider = Provider<int>(
+///
+/// autoDispose 인 이유: [dashboardSummaryProvider] 가 `FutureProvider.autoDispose`
+/// 다. 항상 살아있는 Provider 로 두면 그 구독이 끊기지 않아 요약이 영구히
+/// 캐시되고, 화면을 다시 열어도 갱신되지 않는다(운동 화면이 직접 구독하던
+/// 시절에는 화면이 사라지면 함께 해제됐다). autoDispose 를 전파해 그 수명을
+/// 그대로 유지한다.
+final exerciseBurnGoalProvider = Provider.autoDispose<int>(
   (ref) =>
       ref.watch(dashboardSummaryProvider).valueOrNull?.exerciseBurnGoal ??
       DashboardSummary.defaultExerciseBurnGoal,
