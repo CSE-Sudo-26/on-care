@@ -297,6 +297,19 @@ class TrainerMeUpdate(BaseModel):
     gym_hours: str | None = Field(default=None, max_length=50)
     gym_phone: str | None = Field(default=None, max_length=20)
 
+    @model_validator(mode="after")
+    def _reject_explicit_null(self) -> TrainerMeUpdate:
+        """명시적 null 을 422 로 거른다.
+
+        여기 필드는 전부 DB NOT NULL 컬럼이라 null 을 그대로 반영하면
+        IntegrityError 500 이 난다. 누락은 '변경 없음', null 은 '잘못된 값'
+        으로 구분한다(ScheduleUpdateRequest 와 같은 규약).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
+
 
 # ---- 트레이너용 AI 코칭 (회원 데이터 기반) ----
 

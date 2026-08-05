@@ -56,6 +56,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('개요 shows the 답장 대기 reason the dashboard flagged', (
+    tester,
+  ) async {
+    // The overview used to call alertsFor() without the unread count, so
+    // this badge could never appear — a client the dashboard flagged in
+    // red lost its reason the moment you opened them (CodeRabbit #377).
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientDetail('seed-client-1'),
+    );
+
+    expect(find.text('답장 대기'), findsOneWidget);
+  });
+
   // Both activation keys a focusable button must honour (review PR 216).
   for (final activation in <(String, LogicalKeyboardKey)>[
     ('Enter', LogicalKeyboardKey.enter),

@@ -458,9 +458,12 @@ class _ClientReport extends StatelessWidget {
               ),
               _Figure(
                 label: '나트륨 초과',
-                value: '${report.sodiumOverDays}',
+                // "-" for a past week: the roster only aggregates the
+                // current one, so anything else would be this week's
+                // number under last week's dates.
+                value: report.sodiumOverDays?.toString() ?? '-',
                 unit: '일',
-                tone: report.sodiumOverDays > 2
+                tone: (report.sodiumOverDays ?? 0) > 2
                     ? AppColors.warning
                     : AppColors.success,
               ),
