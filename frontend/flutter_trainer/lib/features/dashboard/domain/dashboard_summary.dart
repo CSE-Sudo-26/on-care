@@ -46,8 +46,17 @@ class DashboardSummary {
   /// How many clients are waiting on a reply.
   final int unreadClients;
 
-  /// Clients needing attention, most urgent first.
+  /// Clients with something to act on today, most urgent first — health
+  /// signals then unanswered messages.
   final List<AttentionClient> attention;
+
+  /// How many of [attention] are there for a health reason.
+  ///
+  /// This is the 주의 고객 KPI. 답장 대기 stays in the list (the trainer
+  /// still has to answer) but is not 주의 — counting it made all three
+  /// seeded clients look like health concerns.
+  int get healthAttentionCount =>
+      attention.where((a) => a.alerts.any((x) => x.isHealth)).length;
 
   /// Mean routine completion (%) per weekday, 월→일. Empty when no
   /// client has weekly data yet.
@@ -83,9 +92,7 @@ DashboardSummary buildDashboardSummary({
       unreadTotal += pending;
       unreadClients++;
     }
-    // 주의 = 회원의 건강 수치 문제. 답장 대기는 '답장 필요' 카드가 따로
-    // 세므로 여기서 다시 세면 같은 사람을 두 번 재촉하게 된다.
-    final alerts = healthAlertsFor(client);
+    final alerts = alertsFor(client, unread: pending);
     if (alerts.isNotEmpty) {
       attention.add(AttentionClient(client: client, alerts: alerts));
     }
