@@ -1086,7 +1086,7 @@ class _EmptyDay extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Center(
         child: Text(
-          l.dietOtherDateEmpty,
+          l.otherDateEmpty(l.pageDietTitle),
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 12.5,

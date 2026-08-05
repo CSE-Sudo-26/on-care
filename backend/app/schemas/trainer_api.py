@@ -62,7 +62,7 @@ class TrainerClientOut(BaseModel):
     active: bool
     calories: int                # 오늘 총 칼로리(회원 실데이터)
     sodium_mg: int               # 오늘 총 나트륨
-    sugar_g: int                 # 오늘 총 당류
+    sugar_g: float               # 오늘 총 당류(소수)
     last_routine: str            # 마지막 루틴 전송 라벨(오늘/어제/N일 전)
     week_completion: list[int]   # 이번 주 일별 완료율 7개(월→일)
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
@@ -110,7 +110,7 @@ class ChatSendRequest(BaseModel):
     text: str = Field(max_length=2000)
 
 
-RoutineType = Literal["유산소", "근력", "스트레칭"]
+RoutineType = Literal["걷기", "유산소", "근력", "요가", "스트레칭", "기타"]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
 
@@ -134,6 +134,63 @@ class RoutineAssignRequest(BaseModel):
     type: RoutineType
     reason: str = Field(default="", max_length=200)
     source: RoutineSource = "trainer"
+
+
+RoutineIntensityPreference = Literal["low", "moderate", "high"]
+RoutineOptionGenerator = Literal["ai", "rule"]
+
+
+class RoutineOptionsRequest(BaseModel):
+    """회원 데이터 기반 맞춤 루틴 후보 생성 조건."""
+
+    available_minutes: int = Field(ge=10, le=180)
+    intensity_preference: RoutineIntensityPreference = "moderate"
+    trainer_note: str = Field(default="", max_length=500)
+
+
+class RoutineOptionAnalysisOut(BaseModel):
+    goal: str
+    sodium_today_mg: int = Field(ge=0)
+    sodium_over_target: bool
+    avg_completion_rate: int = Field(ge=0, le=100)
+    latest_routine: str
+    note: str
+
+
+class RoutineOptionExerciseOut(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=1, le=180)
+    type: RoutineType
+
+
+class RoutineOptionPlanOut(BaseModel):
+    key: Literal["A", "B"]
+    label: str = Field(min_length=1, max_length=50)
+    total_minutes: int = Field(ge=1, le=180)
+    intensity: str = Field(min_length=1, max_length=20)
+    exercises: list[RoutineOptionExerciseOut] = Field(min_length=1, max_length=12)
+    reason: str = Field(min_length=1, max_length=200)
+    rationale: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def _total_matches_exercises(self) -> RoutineOptionPlanOut:
+        total = sum(exercise.minutes for exercise in self.exercises)
+        if total != self.total_minutes:
+            raise ValueError("total_minutes 는 exercises 시간 합계와 같아야 합니다.")
+        return self
+
+
+class RoutineOptionsOut(BaseModel):
+    analysis: RoutineOptionAnalysisOut
+    plan_a: RoutineOptionPlanOut
+    plan_b: RoutineOptionPlanOut
+    generated_by: RoutineOptionGenerator
+
+    @model_validator(mode="after")
+    def _requires_distinct_a_and_b(self) -> RoutineOptionsOut:
+        if self.plan_a.key != "A" or self.plan_b.key != "B":
+            raise ValueError("plan_a/plan_b key 는 각각 A/B여야 합니다.")
+        return self
 
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 루프) ----

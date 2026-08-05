@@ -249,7 +249,7 @@
   "dietEmptyLog": "No meals logged yet.\nAdd your first meal with a photo!",
   "dietPhotoAnalysis": "Photo Analysis",
   "dietLoadError": "Couldn't load your diet.",
-  "dietOtherDateEmpty": "Records for the selected date aren't available yet.\nPlease check your diet on today's date.",
+  "otherDateEmpty": "Records for the selected date aren't available yet.\nPlease check your {section} records on today's date.",
   "dietTagSodium": "Sodium {mg}mg",
   "@dietTagSodium": {
     "placeholders": {
@@ -343,6 +343,7 @@
   "exWeekSummary": "This Week's Summary",
   "exActivityTitle": "Activity",
   "exThisWeek": "This week",
+  "exThisMonth": "This month",
   "exAiRoutineToday": "AI Routine · Today",
   "exStatDays": "Days",
   "exStatTime": "Time",

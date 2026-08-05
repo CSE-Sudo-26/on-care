@@ -1,7 +1,14 @@
 import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 
 /// Valid routine types accepted by the backend (`RoutineType` literal).
-const List<String> kRoutineTypes = <String>['유산소', '근력', '스트레칭'];
+const List<String> kRoutineTypes = <String>[
+  '걷기',
+  '유산소',
+  '근력',
+  '요가',
+  '스트레칭',
+  '기타',
+];
 
 /// `RoutineOut` JSON → [AssignedRoutine].
 AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
