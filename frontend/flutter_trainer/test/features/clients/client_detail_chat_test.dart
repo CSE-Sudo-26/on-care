@@ -132,22 +132,23 @@ void main() {
       () async {
         final repo = DriftChatRepository(db);
 
-        // Seeded client replies: 김민수 2 · 이지수 1 · 박성호 1.
+        // 이지수 · 박성호 are waiting on a reply; 김민수's thread is
+        // seeded already answered and read, so he has no badge.
         var counts = await repo.watchUnreadCounts().first;
-        expect(counts['seed-client-1'], 2);
+        expect(counts.containsKey('seed-client-1'), isFalse);
         expect(counts['seed-client-2'], 1);
         expect(counts['seed-client-3'], 1);
 
-        // Opening 김민수's thread clears his badge only.
-        await repo.markThreadRead('seed-client-1');
+        // Opening 이지수's thread clears her badge only.
+        await repo.markThreadRead('seed-client-2');
         counts = await repo.watchUnreadCounts().first;
-        expect(counts.containsKey('seed-client-1'), isFalse);
-        expect(counts['seed-client-2'], 1);
+        expect(counts.containsKey('seed-client-2'), isFalse);
+        expect(counts['seed-client-3'], 1);
 
         // A trainer message never counts as unread.
-        await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
+        await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '확인!');
         counts = await repo.watchUnreadCounts().first;
-        expect(counts.containsKey('seed-client-1'), isFalse);
+        expect(counts.containsKey('seed-client-2'), isFalse);
 
         // A NEW client reply after the marker counts again.
         await db
@@ -155,7 +156,7 @@ void main() {
             .insert(
               ClientChatMessagesCompanion.insert(
                 id: 'chat-reply-1',
-                clientId: 'seed-client-1',
+                clientId: 'seed-client-2',
                 sender: 'client',
                 body: '네 감사합니다!',
                 timeLabel: '09:00',
@@ -163,33 +164,33 @@ void main() {
               ),
             );
         counts = await repo.watchUnreadCounts().first;
-        expect(counts['seed-client-1'], 1);
+        expect(counts['seed-client-2'], 1);
       },
     );
 
     test('markThreadRead is idempotent and skips redundant writes', () async {
       final repo = DriftChatRepository(db);
 
-      Future<String?> marker() => db.readValue('chat_read_seed-client-1');
+      Future<String?> marker() => db.readValue('chat_read_seed-client-2');
 
       // First call stores the newest client message's rowid.
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       final first = await marker();
       expect(first, isNotNull);
-      expect((await repo.watchUnreadCounts().first)['seed-client-1'], isNull);
+      expect((await repo.watchUnreadCounts().first)['seed-client-2'], isNull);
 
       // Repeat calls must produce the SAME value — an unconditional
       // write would emit on app_key_values and rebuild the list, which
       // is what the write→watch→build concern was about (review PR 241).
       for (var i = 0; i < 3; i++) {
-        await repo.markThreadRead('seed-client-1');
+        await repo.markThreadRead('seed-client-2');
       }
       expect(await marker(), first);
 
       // A trainer message doesn't move the marker (only client messages
       // can be unread).
-      await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '확인!');
-      await repo.markThreadRead('seed-client-1');
+      await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '확인!');
+      await repo.markThreadRead('seed-client-2');
       expect(await marker(), first);
 
       // A NEW client reply advances it exactly once.
@@ -198,17 +199,17 @@ void main() {
           .insert(
             ClientChatMessagesCompanion.insert(
               id: 'chat-reply-x',
-              clientId: 'seed-client-1',
+              clientId: 'seed-client-2',
               sender: 'client',
               body: '넵!',
               timeLabel: '09:00',
               createdAt: DateTime.now().add(const Duration(seconds: 5)),
             ),
           );
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       final second = await marker();
       expect(second, isNot(first));
-      await repo.markThreadRead('seed-client-1');
+      await repo.markThreadRead('seed-client-2');
       expect(await marker(), second);
     });
 

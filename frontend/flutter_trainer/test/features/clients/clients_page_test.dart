@@ -182,20 +182,21 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      // 김민수 has 2 unseen client replies in the seed.
-      expect(find.text('2'), findsOneWidget);
+      // 이지수와 박성호가 각각 1건씩 답장을 기다린다. 김민수의 스레드는
+      // 이미 답장·읽음 처리된 상태로 시드된다.
+      expect(find.text('1'), findsNWidgets(2));
 
-      // Open his chat, then come back — badge cleared. Opening the
-      // client lands on 개요, which does NOT mark the thread read; the
-      // badge clears only once the messages are actually on screen.
+      // Open 박성호's chat, then come back — his badge cleared, 이지수's
+      // stays. Opening the client lands on 개요, which does NOT mark the
+      // thread read; the badge clears only once the messages are on screen.
       await goTo(
         tester,
-        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+        AppRoutes.clientDetail('seed-client-3', section: 'chat'),
       );
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await settle(tester);
 
-      expect(find.text('2'), findsNothing);
+      expect(find.text('1'), findsOneWidget);
     });
 
     testWidgets('tapping a client card opens the detail screen', (
