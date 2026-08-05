@@ -76,7 +76,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
           .read(sessionControllerProvider.notifier)
           .register(email: email, password: password, name: name);
       if (!mounted) return;
-      context.go(AppRoutes.clients);
+      context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(SnackBar(content: Text(e.message)));

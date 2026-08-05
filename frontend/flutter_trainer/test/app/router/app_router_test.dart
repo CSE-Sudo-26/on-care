@@ -1,7 +1,9 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
 
 import '../../helpers/pump_app.dart';
@@ -26,14 +28,14 @@ void main() {
       );
     });
 
-    test('in-app users are bounced off sign-in to the 고객 tab', () {
+    test('in-app users are bounced off sign-in to the 대시보드', () {
       expect(
         sessionRedirect(SessionStatus.demo, AppRoutes.signIn),
-        AppRoutes.clients,
+        AppRoutes.dashboard,
       );
       expect(
         sessionRedirect(SessionStatus.authenticated, AppRoutes.signIn),
-        AppRoutes.clients,
+        AppRoutes.dashboard,
       );
     });
 
@@ -41,6 +43,30 @@ void main() {
       expect(
         sessionRedirect(SessionStatus.authenticated, AppRoutes.my),
         isNull,
+      );
+    });
+  });
+
+  group('client detail locations', () {
+    test('a bare client path is normalised onto the default section', () {
+      expect(
+        clientSectionRedirect('seed-client-1'),
+        '/clients/seed-client-1/${AppRoutes.defaultClientSection}',
+      );
+    });
+
+    test('a non-client match is left alone', () {
+      expect(clientSectionRedirect(null), isNull);
+    });
+
+    test('ids are percent-encoded so a "/" in an id cannot forge a path', () {
+      expect(AppRoutes.clientDetail('a/b'), '/clients/a%2Fb/overview');
+    });
+
+    test('an unknown section falls back instead of dead-ending', () {
+      expect(
+        AppRoutes.clientDetail('x', section: 'nope'),
+        '/clients/x/${AppRoutes.defaultClientSection}',
       );
     });
   });
@@ -53,30 +79,41 @@ void main() {
       expect(find.text('로그인 없이 데모 둘러보기'), findsOneWidget);
     });
 
-    testWidgets('restored session boots into the shell (고객 tab)', (
-      tester,
-    ) async {
+    testWidgets('restored session boots into the 대시보드', (tester) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
 
       // Auth gate redirected past sign-in into the shell.
       expect(find.text('로그인 없이 데모 둘러보기'), findsNothing);
-      expect(find.text('고객 관리'), findsOneWidget);
-      // Bottom nav shows all four tabs.
-      expect(find.text('고객'), findsOneWidget);
-      expect(find.text('스케줄'), findsOneWidget);
-      expect(find.text('AI루틴'), findsOneWidget);
-      expect(find.text('MY'), findsOneWidget);
+      expect(find.text('대시보드'), findsWidgets);
     });
 
-    testWidgets('tapping a tab switches the branch', (tester) async {
+    testWidgets('the sidebar lists every destination on a wide viewport', (
+      tester,
+    ) async {
+      await withWideSurface(tester, () async {
+        await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+        for (final destination in navDestinations) {
+          expect(
+            find.text(destination.label),
+            findsWidgets,
+            reason: '${destination.label} 항목이 사이드바에 없어요',
+          );
+        }
+        // 내 정보 is reachable from the footer, not the nav list.
+        expect(
+          find.byKey(const ValueKey<String>('sidebar-profile')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    testWidgets('navigating switches the branch', (tester) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
 
-      await tester.tap(find.text('스케줄'));
-      await settle(tester);
-      expect(find.textContaining('온케어짐 신촌점'), findsOneWidget);
+      await goTo(tester, AppRoutes.schedule);
+      expect(find.text('스케줄'), findsWidgets);
 
-      await tester.tap(find.text('MY'));
-      await settle(tester);
+      await goTo(tester, AppRoutes.my);
       expect(find.text('자격증 · 인증'), findsOneWidget);
     });
   });
