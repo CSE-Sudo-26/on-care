@@ -338,6 +338,30 @@ abstract class AppLocalizations {
   /// **'Let\'s ease into the day 👋'**
   String get homeGreetingGeneric;
 
+  /// No description provided for @homeDashboardLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the dashboard.'**
+  String get homeDashboardLoadError;
+
+  /// No description provided for @homeDashboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No records yet today. Add a meal or workout to get started.'**
+  String get homeDashboardEmpty;
+
+  /// No description provided for @homeDietRecordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} diet records today'**
+  String homeDietRecordCount(int count);
+
+  /// No description provided for @homeScheduleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events scheduled for today.'**
+  String get homeScheduleEmpty;
+
   /// No description provided for @homeCoachingPill.
   ///
   /// In en, this message translates to:
@@ -554,28 +578,58 @@ abstract class AppLocalizations {
   /// **'Weekly trend'**
   String get homeWeeklyTrend;
 
+  /// No description provided for @homeWeeklyMetricTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly {metric} trend'**
+  String homeWeeklyMetricTrend(String metric);
+
+  /// No description provided for @homeWeeklyExerciseTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly exercise trend'**
+  String get homeWeeklyExerciseTrend;
+
+  /// No description provided for @homeMetricOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Over'**
+  String get homeMetricOver;
+
+  /// No description provided for @homeMetricNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get homeMetricNormal;
+
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
-  /// **'Active time'**
+  /// **'Weekly active time'**
   String get homeExerciseActiveTime;
 
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
-  /// **'Calories'**
+  /// **'Weekly calories'**
   String get homeExerciseBurned;
 
   /// No description provided for @homeExerciseCount.
   ///
   /// In en, this message translates to:
-  /// **'Workouts'**
+  /// **'Weekly workouts'**
   String get homeExerciseCount;
+
+  /// No description provided for @homeExerciseDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly workout days'**
+  String get homeExerciseDays;
 
   /// No description provided for @homeExerciseBurnProgress.
   ///
   /// In en, this message translates to:
-  /// **'Burn goal'**
+  /// **'Weekly burn goal'**
   String get homeExerciseBurnProgress;
 
   /// No description provided for @unitTimes.
@@ -763,6 +817,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'min'**
   String get unitMinutes;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get unitDays;
 
   /// No description provided for @unitKcalValue.
   ///
@@ -1325,8 +1385,14 @@ abstract class AppLocalizations {
   /// No description provided for @exTrainerRecommendationReason.
   ///
   /// In en, this message translates to:
-  /// **'A good fit for your health goals'**
+  /// **'A great fit for reaching my health goals'**
   String get exTrainerRecommendationReason;
+
+  /// No description provided for @exNearbyGymsMapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gyms near me'**
+  String get exNearbyGymsMapLabel;
 
   /// No description provided for @exWeekSummary.
   ///
@@ -1351,6 +1417,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI Routine · Today'**
   String get exAiRoutineToday;
+
+  /// No description provided for @exStatDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get exStatDays;
 
   /// No description provided for @exStatTime.
   ///
@@ -1964,12 +2036,6 @@ abstract class AppLocalizations {
   /// **'My Profile'**
   String get myProfileTitle;
 
-  /// No description provided for @myGoalsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Health Goals'**
-  String get myGoalsTitle;
-
   /// No description provided for @myNotifTitle.
   ///
   /// In en, this message translates to:
@@ -2012,12 +2078,6 @@ abstract class AppLocalizations {
   /// **'Profile saved'**
   String get myProfileSaved;
 
-  /// No description provided for @myGoalsSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Health goals saved'**
-  String get myGoalsSaved;
-
   /// No description provided for @mySaveFailed.
   ///
   /// In en, this message translates to:
@@ -2047,48 +2107,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date of birth'**
   String get myFieldBirth;
-
-  /// No description provided for @myGoalsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Summaries and feedback across the app are based on these goals.'**
-  String get myGoalsDesc;
-
-  /// No description provided for @myGoalWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Target weight'**
-  String get myGoalWeight;
-
-  /// No description provided for @myGoalBp.
-  ///
-  /// In en, this message translates to:
-  /// **'Target blood pressure (systolic)'**
-  String get myGoalBp;
-
-  /// No description provided for @myGoalBloodSugar.
-  ///
-  /// In en, this message translates to:
-  /// **'Target blood sugar'**
-  String get myGoalBloodSugar;
-
-  /// No description provided for @myGoalCalories.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily calories'**
-  String get myGoalCalories;
-
-  /// No description provided for @myGoalSodium.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium limit'**
-  String get myGoalSodium;
-
-  /// No description provided for @myGoalSugar.
-  ///
-  /// In en, this message translates to:
-  /// **'Sugar limit'**
-  String get myGoalSugar;
 
   /// No description provided for @myNotifDietLog.
   ///
@@ -2347,6 +2365,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation Request Pending'**
   String get exConsultPendingCta;
+
+  /// No description provided for @exViewConsultationRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'View consultation request'**
+  String get exViewConsultationRequest;
 
   /// No description provided for @exConsultTarget.
   ///

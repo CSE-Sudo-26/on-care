@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 
-/// The On-Care mascot ("Oni") — a teal gradient disc with two eyes and a
+/// The On-Care mascot ("Oni") — a navy gradient disc with two eyes and a
 /// smile. Adopted from the user app's Figma redesign kit
 /// (frontend/flutter design_system/figma) so both apps present the same
 /// AI identity; reimplemented here because the trainer app doesn't
@@ -14,7 +14,7 @@ class OniAvatar extends StatelessWidget {
   /// Diameter.
   final double size;
 
-  /// Whether to render the soft blue drop shadow.
+  /// Whether to render the soft navy drop shadow.
   final bool shadow;
 
   @override
@@ -60,17 +60,17 @@ class _OniFacePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
-    canvas.drawCircle(Offset(8.5 * s, 10 * s), 1.5 * s, fill);
-    canvas.drawCircle(Offset(15.5 * s, 10 * s), 1.5 * s, fill);
+    canvas.drawCircle(Offset(7.6 * s, 8.7 * s), 1.5 * s, fill);
+    canvas.drawCircle(Offset(16.4 * s, 8.7 * s), 1.5 * s, fill);
     final Paint stroke = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6 * s
+      ..strokeWidth = 1.7 * s
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
     final Path smile = Path()
-      ..moveTo(8.5 * s, 14.5 * s)
-      ..quadraticBezierTo(12 * s, 17 * s, 15.5 * s, 14.5 * s);
+      ..moveTo(7.2 * s, 15 * s)
+      ..quadraticBezierTo(12 * s, 19.2 * s, 16.8 * s, 15 * s);
     canvas.drawPath(smile, stroke);
   }
 

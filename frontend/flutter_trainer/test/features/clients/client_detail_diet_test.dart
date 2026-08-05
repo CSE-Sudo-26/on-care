@@ -18,7 +18,7 @@ void main() {
     tearDown(() => db.close());
 
     test('returns the 3 meals in seeded order for a client', () async {
-      final meals = await ClientRepository(db).watchDiet('seed-client-1').first;
+      final meals = await DriftClientRepository(db).watchDiet('seed-client-1').first;
       expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '저녁']);
       expect(meals.first.items, '오트밀, 바나나');
       expect(meals.first.calories, 315);
@@ -26,7 +26,7 @@ void main() {
     });
 
     test('returns per-client data (clients differ)', () async {
-      final repo = ClientRepository(db);
+      final repo = DriftClientRepository(db);
       final jisu = await repo.watchDiet('seed-client-2').first;
       final seongho = await repo.watchDiet('seed-client-3').first;
       expect(jisu.first.items, '그릭요거트, 과일');
@@ -34,7 +34,7 @@ void main() {
     });
 
     test('client rows carry a 7-day sodium history ending at today', () async {
-      final clients = await ClientRepository(db).watchClients().first;
+      final clients = await DriftClientRepository(db).watchClients().first;
       for (final c in clients) {
         expect(c.sodiumWeek.length, 7);
         // The last entry mirrors today's total shown elsewhere.

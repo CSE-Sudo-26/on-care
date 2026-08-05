@@ -3,14 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/ai_routine/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/ai_routine/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/ai_routine/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/ai_routine/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/ai_routine/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -124,21 +129,52 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
     // the starting client, not whoever is on screen when it resolves
     // (review PR 239).
     final sentFor = client.id;
+    final noteText =
+        '📋 AI 루틴 숙제를 보냈어요 · ${program.length}개 운동 · 총 ${total + custom}분';
     setState(() => _sending = true);
     try {
-      await ref
-          .read(chatRepositoryProvider)
-          .sendTrainerMessage(
-            clientId: client.id,
-            text:
-                '📋 AI 루틴 숙제를 보냈어요 · ${program.length}개 운동 · '
-                '총 ${total + custom}분',
-          );
-    } catch (_) {
+      if (!ref.read(appConfigProvider).useMockApi) {
+        // Real API: assigning the routine IS the delivery — the member
+        // receives it via /me/coach/routines. This is fatal (its failure
+        // blocks the "전송 완료" claim). The chat summary note is cosmetic,
+        // so a failed note must NOT report a failed send — otherwise the
+        // trainer re-sends and assigns a duplicate routine.
+        await ref
+            .read(trainerRoutineRepositoryProvider)
+            .assignRoutine(client.id, _summaryRoutine(items, total + custom));
+        try {
+          await ref
+              .read(chatRepositoryProvider)
+              .sendTrainerMessage(clientId: client.id, text: noteText);
+        } catch (_) {
+          // Routine already delivered — swallow the note failure.
+        }
+      } else {
+        // Demo/mock: no member backend, so the chat note is the visible
+        // "sent" feedback and stays fatal.
+        await ref
+            .read(chatRepositoryProvider)
+            .sendTrainerMessage(clientId: client.id, text: noteText);
+      }
+    } catch (e) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
+      // A network/timeout failure is AMBIGUOUS: the backend may already
+      // have committed the assign before the client gave up waiting for a
+      // response (POST /routines is not idempotent — every attempt inserts
+      // a new row). Blindly telling the trainer to "다시 시도" risks a
+      // duplicate routine landing on the member's app, so this case gets a
+      // different message asking them to verify first (review; a real
+      // fix needs a backend idempotency/dedup key — tracked separately).
+      final ambiguousOutcome = e is NetworkError;
       messenger.showSnackBar(
-        const SnackBar(content: Text('전송에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(
+          content: Text(
+            ambiguousOutcome
+                ? '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'
+                : '전송에 실패했어요. 다시 시도해 주세요',
+          ),
+        ),
       );
       return;
     }
@@ -185,6 +221,31 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
           'weight': '-',
         },
     ];
+  }
+
+  /// A single summary [AssignedRoutine] for the real routine-assign API
+  /// (`RoutineOut` is one routine, not a per-exercise program): [type] and
+  /// [source] come from [summaryTypeAndSource] (extracted so the
+  /// all-custom-exercises path is directly unit-testable — review) and the
+  /// reason lists the exercise names.
+  AssignedRoutine _summaryRoutine(List<AiRoutineItem> items, int totalMinutes) {
+    final active = items.where((i) => !_removed.contains(i.id)).toList();
+    final result = summaryTypeAndSource(
+      aiItemTypes: <String>[for (final i in active) i.type],
+      customItemTypes: <String>[for (final c in _custom) c.type],
+    );
+    final names = <String>[
+      for (final i in active) _nameEdits[i.id] ?? i.name,
+      for (final c in _custom) c.name,
+    ];
+    return AssignedRoutine(
+      id: '',
+      name: 'AI 맞춤 루틴',
+      minutes: totalMinutes,
+      type: result.type,
+      reason: names.join(', '),
+      source: result.source,
+    );
   }
 
   /// Writes the routine onto today's schedule (attach to the client's
@@ -398,7 +459,9 @@ class _AiRoutinePageState extends ConsumerState<AiRoutinePage> {
 
   /// The routine editor column (right column on wide).
   List<Widget> _editorChildren(TrainerClient client) {
-    final routineAsync = ref.watch(aiRoutineProvider(client.id));
+    final routineAsync = ref.watch(
+      aiRoutineProvider((id: client.id, name: client.name)),
+    );
 
     return <Widget>[
       Row(

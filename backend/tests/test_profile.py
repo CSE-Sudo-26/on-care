@@ -26,11 +26,9 @@ def test_onboarding_saves_profile_and_marks_done(client):
         "birth_date": "1990-01-15",
         "gender": "male",
         "height_cm": 175.0,
-        "weight_kg": 82.0,
         "conditions": "고혈압, 당뇨 전단계",
         "goals": "혈압 정상화",
-        "goal_weight_kg": 70.0,
-        "goal_bp_systolic": 120,
+        "daily_calories": 2000,
         "daily_sodium_mg": 2000,
     }
     r = client.post("/v1/users/me/onboarding", json=body, headers=_auth(token))
@@ -40,13 +38,13 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert p["name"] == "온보딩유저"
     assert p["conditions"] == "고혈압, 당뇨 전단계"
     assert p["height_cm"] == 175.0
-    assert p["goal_bp_systolic"] == 120
+    assert p["daily_calories"] == 2000
 
     # GET 으로도 동일하게 조회돼야 한다
     got = client.get("/v1/users/me/profile", headers=_auth(token))
     assert got.status_code == 200
     assert got.json()["onboarded"] is True
-    assert got.json()["goal_weight_kg"] == 70.0
+    assert got.json()["daily_sodium_mg"] == 2000
 
 
 def test_update_me_changes_name_and_phone(client):
@@ -71,31 +69,6 @@ def test_update_me_duplicate_email_conflicts_409(client):
     assert r.status_code == 409
 
 
-def test_update_health_goals(client):
-    token, _ = _register_and_login(client)
-    r = client.put(
-        "/v1/users/me/health-goals",
-        json={
-            "goal_weight_kg": 68.0,
-            "goal_bp_systolic": 118,
-            "goal_blood_sugar": 100,
-            "daily_calories": 2000,
-            "daily_sodium_mg": 1800,
-            "daily_sugar_g": 30,
-        },
-        headers=_auth(token),
-    )
-    assert r.status_code == 200, r.text
-    p = r.json()
-    assert p["goal_weight_kg"] == 68.0
-    assert p["daily_sodium_mg"] == 1800
-    assert p["daily_sugar_g"] == 30
-
-    # 저장 후 재조회에서도 값이 유지되어야 한다(실서버 영속 계약).
-    me = client.get("/v1/users/me/profile", headers=_auth(token))
-    assert me.json()["daily_sugar_g"] == 30
-
-
 def test_delete_me_removes_account(client):
     token, email = _register_and_login(client)
     r = client.delete("/v1/users/me", headers=_auth(token))
@@ -111,5 +84,4 @@ def test_profile_writes_require_auth(client):
     # require_auth 는 데모 폴백을 쓰지 않으므로 토큰 없으면 401
     assert client.post("/v1/users/me/onboarding", json={}).status_code == 401
     assert client.put("/v1/users/me", json={"name": "x"}).status_code == 401
-    assert client.put("/v1/users/me/health-goals", json={}).status_code == 401
     assert client.delete("/v1/users/me").status_code == 401

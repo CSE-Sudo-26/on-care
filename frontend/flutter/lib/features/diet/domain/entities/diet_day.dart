@@ -9,6 +9,9 @@ class FoodItem {
     required this.calories,
     this.sodiumMg = 0,
     this.sugarG = 0,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
   });
   final String name;
   final int calories;
@@ -17,12 +20,18 @@ class FoodItem {
   /// food-by-food. Optional so backend payloads that omit them still parse.
   final int sodiumMg;
   final double sugarG;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 
   factory FoodItem.fromJson(Map<String, Object?> json) => FoodItem(
     name: json['name']! as String,
     calories: (json['calories']! as num).toInt(),
     sodiumMg: (json['sodium_mg'] as num?)?.toInt() ?? 0,
     sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0,
+    carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0,
+    proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0,
+    fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
   );
 }
 
@@ -35,6 +44,9 @@ class DietEntry {
     required this.totalCalories,
     this.sodiumMg = 0,
     this.sugarG = 0,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
     this.aiComment = '',
     this.photoAsset,
   });
@@ -46,6 +58,9 @@ class DietEntry {
   final int totalCalories;
   final int sodiumMg;
   final double sugarG;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 
   /// Short per-meal AI feedback shown on the diet-tab meal card. Empty when the
   /// backend hasn't produced a per-entry comment.
@@ -66,6 +81,9 @@ class DietEntry {
     totalCalories: (json['total_calories']! as num).toInt(),
     sodiumMg: (json['sodium_mg'] as num?)?.toInt() ?? 0,
     sugarG: (json['sugar_g'] as num?)?.toDouble() ?? 0,
+    carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0,
+    proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0,
+    fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
     aiComment: (json['ai_comment'] as String?) ?? '',
   );
 }
@@ -75,16 +93,33 @@ class DietMacros {
     required this.carbsPct,
     required this.proteinPct,
     required this.fatPct,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
   });
+
+  const DietMacros.zero()
+    : carbsPct = 0,
+      proteinPct = 0,
+      fatPct = 0,
+      carbsG = 0,
+      proteinG = 0,
+      fatG = 0;
 
   final int carbsPct;
   final int proteinPct;
   final int fatPct;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 
   factory DietMacros.fromJson(Map<String, Object?> json) => DietMacros(
-    carbsPct: (json['carbs_pct']! as num).toInt(),
-    proteinPct: (json['protein_pct']! as num).toInt(),
-    fatPct: (json['fat_pct']! as num).toInt(),
+    carbsPct: (json['carbs_pct'] as num?)?.toInt() ?? 0,
+    proteinPct: (json['protein_pct'] as num?)?.toInt() ?? 0,
+    fatPct: (json['fat_pct'] as num?)?.toInt() ?? 0,
+    carbsG: (json['carbs_g'] as num?)?.toDouble() ?? 0,
+    proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0,
+    fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
   );
 }
 
@@ -113,7 +148,10 @@ class DietDay {
     totalCalories: (json['total_calories']! as num).toInt(),
     totalSodiumMg: (json['total_sodium_mg']! as num).toInt(),
     totalSugarG: (json['total_sugar_g']! as num).toDouble(),
-    macros: DietMacros.fromJson(json['macros']! as Map<String, Object?>),
+    macros: switch (json['macros']) {
+      final Map<String, Object?> macros => DietMacros.fromJson(macros),
+      _ => const DietMacros.zero(),
+    },
     aiCoachMessage: json['ai_coach_message']! as String,
   );
 }

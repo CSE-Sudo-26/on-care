@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
 
 /// Delays every insert so tests can act while a send is in flight.
-class _SlowChatRepository extends ChatRepository {
+class _SlowChatRepository extends DriftChatRepository {
   const _SlowChatRepository(super.db);
 
   @override
@@ -28,7 +30,7 @@ class _SlowChatRepository extends ChatRepository {
 /// Blocks on a caller-controlled future so the test can decide exactly
 /// when (and whether) the send fails — used to fail AFTER the widget is
 /// disposed, deterministically exercising the catch path.
-class _ControllableChatRepository extends ChatRepository {
+class _ControllableChatRepository extends DriftChatRepository {
   const _ControllableChatRepository(super.db, this.gate);
 
   final Future<void> gate;
@@ -40,8 +42,35 @@ class _ControllableChatRepository extends ChatRepository {
   }) => gate;
 }
 
+class _StaticLiveChatRepository implements ChatRepository {
+  @override
+  Stream<List<ClientChatMessage>> watchThread(String clientId) =>
+      Stream<List<ClientChatMessage>>.value(<ClientChatMessage>[
+        ClientChatMessage(
+          id: 'live-1',
+          sender: ChatSender.client,
+          body: '실제 회원 답장',
+          timeLabel: '09:00',
+          createdAt: DateTime.utc(2026, 7, 31, 9),
+        ),
+      ]);
+
+  @override
+  Future<void> markThreadRead(String clientId) async {}
+
+  @override
+  Future<void> sendTrainerMessage({
+    required String clientId,
+    required String text,
+  }) async {}
+
+  @override
+  Stream<Map<String, int>> watchUnreadCounts() =>
+      Stream<Map<String, int>>.value(const <String, int>{});
+}
+
 void main() {
-  group('ChatRepository', () {
+  group('DriftChatRepository', () {
     late AppDatabase db;
 
     setUp(() async {
@@ -53,7 +82,7 @@ void main() {
     test(
       'watchThread returns a client thread in chronological order',
       () async {
-        final thread = await ChatRepository(
+        final thread = await DriftChatRepository(
           db,
         ).watchThread('seed-client-1').first;
         expect(thread, isNotEmpty);
@@ -73,7 +102,7 @@ void main() {
     test(
       'sendTrainerMessage appends a trainer message that sorts last',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
         await repo.sendTrainerMessage(
           clientId: 'seed-client-1',
           text: '  안녕하세요  ',
@@ -88,7 +117,7 @@ void main() {
     );
 
     test('sendTrainerMessage refreshes the client list preview', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
       await repo.sendTrainerMessage(clientId: 'seed-client-2', text: '내일 봬요!');
       final row = await (db.select(
         db.trainerClients,
@@ -100,7 +129,7 @@ void main() {
     test(
       'watchUnreadCounts counts client messages until marked read',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
 
         // Seeded client replies: 김민수 2 · 이지수 1 · 박성호 1.
         var counts = await repo.watchUnreadCounts().first;
@@ -138,7 +167,7 @@ void main() {
     );
 
     test('markThreadRead is idempotent and skips redundant writes', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
 
       Future<String?> marker() => db.readValue('chat_read_seed-client-1');
 
@@ -185,7 +214,7 @@ void main() {
     test(
       'a same-second reply after markThreadRead still counts as unread',
       () async {
-        final repo = ChatRepository(db);
+        final repo = DriftChatRepository(db);
         // A fresh client with no seeded messages, so the count is only
         // what this test inserts.
         const cid = 'rowid-test-client';
@@ -229,13 +258,13 @@ void main() {
     test(
       'markThreadRead on a thread with no client message writes nothing',
       () async {
-        await ChatRepository(db).markThreadRead('no-such-client');
+        await DriftChatRepository(db).markThreadRead('no-such-client');
         expect(await db.readValue('chat_read_no-such-client'), isNull);
       },
     );
 
     test('sendTrainerMessage ignores empty/whitespace input', () async {
-      final repo = ChatRepository(db);
+      final repo = DriftChatRepository(db);
       final before = (await repo.watchThread('seed-client-1').first).length;
       await repo.sendTrainerMessage(clientId: 'seed-client-1', text: '   ');
       final after = (await repo.watchThread('seed-client-1').first).length;
@@ -244,6 +273,42 @@ void main() {
   });
 
   group('ClientDetailPage chat', () {
+    testWidgets('real chat omits demo-only analysis and sent banners', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appConfigProvider.overrideWithValue(
+              const AppConfig(
+                environment: Environment.dev,
+                apiBaseUrl: 'http://localhost/v1',
+                useMockApi: false,
+              ),
+            ),
+            chatRepositoryProvider.overrideWithValue(
+              _StaticLiveChatRepository(),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ChatView(
+                clientId: 'user-demo',
+                clientAvatar: '김',
+                clientName: '김민수',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('실제 회원 답장'), findsOneWidget);
+      expect(find.textContaining('AI가 김민수님의 식단'), findsNothing);
+      expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
+    });
+
     Future<void> openDetail(WidgetTester tester) async {
       await pumpTrainerApp(tester, token: 'demo-trainer-token');
       await tester.tap(find.text('김민수'));

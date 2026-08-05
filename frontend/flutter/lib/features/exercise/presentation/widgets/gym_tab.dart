@@ -8,7 +8,6 @@ import 'package:oncare/features/exercise/domain/entities/consultation_request.da
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
-import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
@@ -34,6 +33,22 @@ class GymTab extends ConsumerWidget {
     final ConsultationRequest? recentRequest = requests.isEmpty
         ? null
         : requests.first;
+    final ConsultationRequest? pendingRequest =
+        recentRequest?.status == ConsultationStatus.pending
+        ? recentRequest
+        : null;
+    final GlobalKey recentConsultationKey = GlobalKey();
+
+    void showRecentConsultation() {
+      final BuildContext? targetContext = recentConsultationKey.currentContext;
+      if (targetContext == null) return;
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignment: 0.1,
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -48,10 +63,16 @@ class GymTab extends ConsumerWidget {
             onSlot: onSlot,
             onFind: onFind,
             onRetry: () => ref.invalidate(myGymProvider),
+            onPendingConsultationTap: pendingRequest == null
+                ? null
+                : showRecentConsultation,
           ),
           if (recentRequest != null) ...<Widget>[
             const SizedBox(height: 28),
-            _RecentConsultationSection(request: recentRequest),
+            _RecentConsultationSection(
+              key: recentConsultationKey,
+              request: recentRequest,
+            ),
           ],
           const SizedBox(height: 28),
           _RecommendedGymSection(
@@ -72,7 +93,7 @@ class GymTab extends ConsumerWidget {
 }
 
 class _RecentConsultationSection extends StatelessWidget {
-  const _RecentConsultationSection({required this.request});
+  const _RecentConsultationSection({required this.request, super.key});
 
   final ConsultationRequest request;
 
@@ -203,6 +224,7 @@ class _MyGymTrainerSection extends StatelessWidget {
     required this.onSlot,
     required this.onFind,
     required this.onRetry,
+    required this.onPendingConsultationTap,
   });
 
   final AsyncValue<Gym?> gymAsync;
@@ -210,6 +232,7 @@ class _MyGymTrainerSection extends StatelessWidget {
   final ValueChanged<String> onSlot;
   final VoidCallback onFind;
   final VoidCallback onRetry;
+  final VoidCallback? onPendingConsultationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +249,7 @@ class _MyGymTrainerSection extends StatelessWidget {
               onTrainerTap: gym.trainerName?.isNotEmpty ?? false
                   ? () => context.push(AppRoutes.trainerDetailPath(gym.id))
                   : null,
+              onPendingConsultationTap: onPendingConsultationTap,
             ),
     );
   }
@@ -238,6 +262,7 @@ class _MyGymTrainerCard extends StatelessWidget {
     required this.onSlot,
     required this.onGymTap,
     required this.onTrainerTap,
+    required this.onPendingConsultationTap,
   });
 
   final Gym gym;
@@ -245,6 +270,7 @@ class _MyGymTrainerCard extends StatelessWidget {
   final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
   final VoidCallback? onTrainerTap;
+  final VoidCallback? onPendingConsultationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -412,54 +438,29 @@ class _MyGymTrainerCard extends StatelessWidget {
             selectedSlot: selectedSlot,
             onSlot: onSlot,
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => showGymInfoSheet(context, gym),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: FigmaColors.primary,
-                    backgroundColor: FigmaColors.softBlue,
-                    side: BorderSide(color: FigmaColors.primaryA(0.18)),
-                    minimumSize: const Size(0, 44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+          if (onPendingConsultationTap != null) ...<Widget>[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onPendingConsultationTap,
+                style: FilledButton.styleFrom(
+                  backgroundColor: FigmaColors.primary,
+                  minimumSize: const Size(0, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    l.exGymInfo,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                ),
+                child: Text(
+                  l.exViewConsultationRequest,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => showGymChatSheet(context, gym: gym),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FigmaColors.primary,
-                    minimumSize: const Size(0, 44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l.exConsultButton,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -597,12 +598,12 @@ class _RecommendedGymSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         gymsAsync.when(
-          loading: () => const _SectionLoading(height: 184),
+          loading: () => const _SectionLoading(height: 140),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
           data: (List<Gym> gyms) => gyms.isEmpty
               ? _EmptyRecommendation(message: l.exNoRecommendedGyms)
               : SizedBox(
-                  height: 184,
+                  height: 140,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: gyms.length,
@@ -689,7 +690,7 @@ class _GymRecommendationCard extends StatelessWidget {
               for (final String tag in gym.tags.take(2)) _TagChip(label: tag),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           if (gym.weekdayHours != null)
             Row(
               children: <Widget>[
@@ -742,7 +743,7 @@ class _RecommendedTrainerSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         gymsAsync.when(
-          loading: () => const _SectionLoading(height: 156),
+          loading: () => const _SectionLoading(height: 120),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
           data: (List<Gym> gyms) {
             final List<Gym> trainerGyms = gyms
@@ -752,7 +753,7 @@ class _RecommendedTrainerSection extends StatelessWidget {
               return _EmptyRecommendation(message: l.exNoRecommendedTrainers);
             }
             return SizedBox(
-              height: 156,
+              height: 120,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: trainerGyms.length,
@@ -819,8 +820,9 @@ class _TrainerRecommendationCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
+                // '전담 트레이너'가 있던 자리·스타일에 소속 헬스장을 표기.
                 Text(
-                  gym.trainerRole ?? l.exTrainerDedicated,
+                  gym.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -828,26 +830,16 @@ class _TrainerRecommendationCard extends StatelessWidget {
                     color: FigmaColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 10),
                 Text(
-                  '${l.exTrainerAffiliation} · ${gym.name}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.textBody,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  l.exTrainerRecommendationReason,
-                  maxLines: 1,
+                  gym.trainerReason ?? l.exTrainerRecommendationReason,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.primary,
+                    height: 1.3,
                   ),
                 ),
               ],

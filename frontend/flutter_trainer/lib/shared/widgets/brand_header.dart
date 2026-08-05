@@ -5,8 +5,8 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
 /// Slim global app bar shown on every signed-in screen (mock: the
 /// "On-Care 트레이너" strip at the top of each trainer screen). The
-/// "트레이너" word keeps the orange identity accent; everything else
-/// follows the blue-primary service palette.
+/// "트레이너" word and the leading badge follow the navy-primary
+/// service palette.
 class BrandHeader extends StatelessWidget implements PreferredSizeWidget {
   /// Creates the brand header.
   const BrandHeader({super.key});

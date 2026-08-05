@@ -313,7 +313,7 @@ class _CompletionDonut extends StatelessWidget {
   }
 }
 
-/// Left-bordered note box ("고객 피드백" blue / "트레이너 메모" orange).
+/// Left-bordered note box ("고객 피드백" navy / "트레이너 메모" orange).
 class _NoteBox extends StatelessWidget {
   const _NoteBox({
     required this.title,

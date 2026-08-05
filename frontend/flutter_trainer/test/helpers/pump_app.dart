@@ -1,12 +1,22 @@
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:oncare_trainer/app/app.dart';
+import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+
+/// Mock-mode config so widget tests resolve the in-memory repositories
+/// (no real backend). Individual tests can override with [extraOverrides].
+const AppConfig kTestAppConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: 'http://localhost/v1',
+  useMockApi: true,
+);
 
 /// Pumps the full trainer app for a widget test, backed by a fresh
 /// in-memory (seeded) drift DB and an optional persisted session token.
@@ -24,9 +34,14 @@ Future<ProviderContainer> pumpTrainerApp(
   bool seed = true,
   List<Override> extraOverrides = const <Override>[],
 }) async {
-  final values = <String, Object>{};
-  if (token != null) values['trainer_access_token'] = token;
-  SharedPreferences.setMockInitialValues(values);
+  // A persisted session lives in secure storage now (access + refresh).
+  // Reset the in-memory mock per test so state never leaks between them.
+  FlutterSecureStorage.setMockInitialValues(
+    token == null
+        ? <String, String>{}
+        : <String, String>{'access_token': token, 'refresh_token': '$token-r'},
+  );
+  SharedPreferences.setMockInitialValues(<String, Object>{});
   final prefs = await SharedPreferences.getInstance();
 
   final db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -35,6 +50,7 @@ Future<ProviderContainer> pumpTrainerApp(
 
   final container = ProviderContainer(
     overrides: <Override>[
+      appConfigProvider.overrideWithValue(kTestAppConfig),
       sharedPreferencesProvider.overrideWithValue(prefs),
       appDatabaseProvider.overrideWithValue(db),
       ...extraOverrides,

@@ -135,6 +135,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGreetingGeneric => '오늘도 가볍게 시작해요 👋';
 
   @override
+  String get homeDashboardLoadError => '대시보드 정보를 불러오지 못했어요.';
+
+  @override
+  String get homeDashboardEmpty => '아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.';
+
+  @override
+  String homeDietRecordCount(int count) {
+    return '오늘 식단 기록 $count개';
+  }
+
+  @override
+  String get homeScheduleEmpty => '오늘 예정된 일정이 없어요.';
+
+  @override
   String get homeCoachingPill => '✦ AI 코칭';
 
   @override
@@ -246,16 +260,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeWeeklyTrend => '주간 추이';
 
   @override
-  String get homeExerciseActiveTime => '운동 시간';
+  String homeWeeklyMetricTrend(String metric) {
+    return '주간 $metric 추이';
+  }
 
   @override
-  String get homeExerciseBurned => '소모 칼로리';
+  String get homeWeeklyExerciseTrend => '주간 운동 추이';
 
   @override
-  String get homeExerciseCount => '운동 횟수';
+  String get homeMetricOver => '초과';
 
   @override
-  String get homeExerciseBurnProgress => '칼로리 소모 목표';
+  String get homeMetricNormal => '정상';
+
+  @override
+  String get homeExerciseActiveTime => '주간 운동 시간';
+
+  @override
+  String get homeExerciseBurned => '주간 소모 칼로리';
+
+  @override
+  String get homeExerciseCount => '주간 운동 횟수';
+
+  @override
+  String get homeExerciseDays => '주간 운동 일수';
+
+  @override
+  String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
 
   @override
   String get unitTimes => '회';
@@ -353,6 +384,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unitMinutes => '분';
+
+  @override
+  String get unitDays => '일';
 
   @override
   String unitKcalValue(int count) {
@@ -655,7 +689,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerAffiliation => '소속 헬스장';
 
   @override
-  String get exTrainerRecommendationReason => '건강관리 목표에 잘 맞아요';
+  String get exTrainerRecommendationReason => '내 건강 목표 달성에 잘 맞는 트레이너예요';
+
+  @override
+  String get exNearbyGymsMapLabel => '내 주변 헬스장';
 
   @override
   String get exWeekSummary => '이번 주 운동 요약';
@@ -668,6 +705,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exAiRoutineToday => 'AI 맞춤 루틴 · 오늘';
+
+  @override
+  String get exStatDays => '일수';
 
   @override
   String get exStatTime => '시간';
@@ -1008,9 +1048,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myProfileTitle => '내 프로필';
 
   @override
-  String get myGoalsTitle => '건강 목표';
-
-  @override
   String get myNotifTitle => '알림 설정';
 
   @override
@@ -1032,9 +1069,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myProfileSaved => '프로필이 저장되었어요';
 
   @override
-  String get myGoalsSaved => '건강 목표가 저장되었어요';
-
-  @override
   String get mySaveFailed => '저장에 실패했어요. 잠시 후 다시 시도해 주세요';
 
   @override
@@ -1048,27 +1082,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myFieldBirth => '생년월일';
-
-  @override
-  String get myGoalsDesc => '앱 곳곳의 요약·피드백이 이 목표를 기준으로 계산돼요.';
-
-  @override
-  String get myGoalWeight => '목표 체중';
-
-  @override
-  String get myGoalBp => '목표 혈압 (수축기)';
-
-  @override
-  String get myGoalBloodSugar => '목표 혈당';
-
-  @override
-  String get myGoalCalories => '일일 칼로리';
-
-  @override
-  String get myGoalSodium => '나트륨 제한';
-
-  @override
-  String get myGoalSugar => '당류 제한';
 
   @override
   String get myNotifDietLog => '식단 기록 알림';
@@ -1206,6 +1219,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultPendingCta => '상담 요청 대기 중';
+
+  @override
+  String get exViewConsultationRequest => '상담 요청 확인';
 
   @override
   String get exConsultTarget => '상담 대상';

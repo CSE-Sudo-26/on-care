@@ -1,0 +1,38 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/network/interceptors/api_logging_interceptor.dart';
+import 'package:oncare_trainer/core/network/interceptors/auth_interceptor.dart';
+
+/// App-wide `Dio` instance, wired with auth + logging interceptors from
+/// the current [AppConfig]. Feature data sources read this provider
+/// rather than constructing their own `Dio`.
+///
+/// Unlike the user app there is no local/mock interceptor here — mock
+/// mode is selected at the repository layer (mock vs Dio implementation),
+/// so `dioProvider` always talks to the real backend when used.
+final dioProvider = Provider<Dio>((ref) {
+  final config = ref.watch(appConfigProvider);
+
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: config.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 10),
+      contentType: Headers.jsonContentType,
+      // Surface 4xx/5xx as DioException so callers react via try/catch
+      // instead of dereferencing a null body in a fromJson factory.
+      validateStatus: (int? status) => status != null && status < 400,
+    ),
+  );
+
+  dio.interceptors.add(AuthInterceptor(ref));
+  if (!config.isProd) {
+    dio.interceptors.add(const ApiLoggingInterceptor());
+  }
+
+  ref.onDispose(dio.close);
+  return dio;
+}, name: 'dio');

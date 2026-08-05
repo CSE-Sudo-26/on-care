@@ -7,12 +7,15 @@ class UserProfile {
     required this.email,
     this.phone = '',
     this.birthDate = '',
-    this.goalWeightKg,
-    this.goalBpSystolic,
-    this.goalBloodSugar,
     this.dailyCalories,
     this.dailySodiumMg,
     this.dailySugarG,
+    this.dailyCarbsG,
+    this.dailyProteinG,
+    this.dailyFatG,
+    this.weeklyWorkoutGoal,
+    this.weeklyExerciseMinutesGoal,
+    this.weeklyBurnGoal,
   });
 
   final String id;
@@ -20,14 +23,19 @@ class UserProfile {
   final String email;
   final String phone;
   final String birthDate;
-  final num? goalWeightKg;
-  final int? goalBpSystolic;
-  final int? goalBloodSugar;
+
+  // 식단 일일 목표 — 홈 영양 현황의 목표치와 같은 값을 공유한다.
   final int? dailyCalories;
   final int? dailySodiumMg;
-
-  /// 일일 당류 제한(g). 홈 영양 현황의 목표 당류와 같은 값을 공유한다.
   final int? dailySugarG;
+  final int? dailyCarbsG;
+  final int? dailyProteinG;
+  final int? dailyFatG;
+
+  // 주간 운동 목표.
+  final int? weeklyWorkoutGoal; // 횟수
+  final int? weeklyExerciseMinutesGoal; // 분
+  final int? weeklyBurnGoal; // kcal
 
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
     id: (json['id'] as String?) ?? '',
@@ -35,11 +43,15 @@ class UserProfile {
     email: (json['email'] as String?) ?? '',
     phone: (json['phone'] as String?) ?? '',
     birthDate: (json['birth_date'] as String?) ?? '',
-    goalWeightKg: json['goal_weight_kg'] as num?,
-    goalBpSystolic: (json['goal_bp_systolic'] as num?)?.toInt(),
-    goalBloodSugar: (json['goal_blood_sugar'] as num?)?.toInt(),
     dailyCalories: (json['daily_calories'] as num?)?.toInt(),
     dailySodiumMg: (json['daily_sodium_mg'] as num?)?.toInt(),
     dailySugarG: (json['daily_sugar_g'] as num?)?.toInt(),
+    dailyCarbsG: (json['daily_carbs_g'] as num?)?.toInt(),
+    dailyProteinG: (json['daily_protein_g'] as num?)?.toInt(),
+    dailyFatG: (json['daily_fat_g'] as num?)?.toInt(),
+    weeklyWorkoutGoal: (json['weekly_workout_goal'] as num?)?.toInt(),
+    weeklyExerciseMinutesGoal:
+        (json['weekly_exercise_minutes_goal'] as num?)?.toInt(),
+    weeklyBurnGoal: (json['weekly_burn_goal'] as num?)?.toInt(),
   );
 }

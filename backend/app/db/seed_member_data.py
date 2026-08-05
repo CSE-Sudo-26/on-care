@@ -1,6 +1,11 @@
 """
 담당 회원의 건강 데이터 데모 시드 — 트레이너 로스터/식단/기록을 실데이터로 채운다.
 
+**데모/개발 전용 (실서비스 아님).** 이 시드는 `SEED_DEMO_DATA=true` 일 때만 실행된다
+(init_db 게이팅). 실서비스(prod)는 `SEED_DEMO_DATA=false` 로 두어 여기서 만드는 고정
+데모 계정(김민수 등)을 넣지 않고, **진짜 사용자가 앱에서 직접 만든 데이터만** 쌓이게
+한다. 즉 이 파일은 데모/발표·개발·CI 재현용 고정 데이터이지, 운영 사용자 데이터가 아니다.
+
 여기서 넣는 식단(DietEntry)·운동기록(RoutineHistory)은 "회원이 회원 앱에서 남긴
 실제 데이터"다. 트레이너 API 는 이 데이터를 그대로 읽어 로스터를 집계하므로,
 트레이너↔회원 데이터 공유가 시드 단계에서부터 실제로 성립한다.
@@ -167,6 +172,55 @@ _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
     ],
 }
 
+# 사용자 앱 데모 회원(김민수)의 이번 주 운동 세션 — 프론트 MockExerciseRepository 와 동일.
+# (요일, 종류, 분, 칼로리). 수요일은 휴식 → 목~일 4일 연속. 주간 칼로리 헤드라인은
+# 백엔드가 세션 합(=2450)으로 계산한다(프론트 목업의 튜닝 헤드라인 1980 은 세션 합과
+# 무관한 표시값이라 재현 대상이 아니다 — 실서비스는 합계가 정답).
+_EXERCISE_WEEK: dict[str, list[tuple[str, str, int, int]]] = {
+    "user-demo": [
+        ("월", "cardio", 40, 300),
+        ("화", "strength", 60, 420),
+        ("목", "cardio", 65, 480),
+        ("금", "cardio", 55, 400),
+        ("토", "cardio", 45, 330),
+        ("일", "strength", 50, 520),
+    ],
+}
+
+# day_label → 요일 인덱스(월=0 … 일=6, date.weekday() 와 동일). 운동 시드는 이 인덱스로
+# "오늘까지의 요일"만 넣어, 주중 실행 시 미래 요일이 이번 주 합계·streak 에 잡히는 것을 막는다.
+_WEEKDAY_INDEX: dict[str, int] = {
+    "월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6,
+}
+
+# 사용자 앱 데모 회원(김민수)의 건강 프로필 — 프론트 MockMyHealthRepository/프로필 목업과
+# 동일. 위험도·활동점수·기본정보 + 목표치는 구조화 컬럼(goal_*/daily_*)에 넣는다.
+# conditions 는 위험도 서술에서 추론(목업엔 명시 없음). 키(height_cm)·성별은 목업에 없어 비운다.
+_HEALTH_PROFILE: dict[str, dict] = {
+    "user-demo": {
+        "risk_title": "고혈압·당뇨 위험 주의",
+        "risk_body": "최근 혈압과 혈당 추세가 다소 높습니다. 식단·운동 관리에 신경 써주세요.",
+        "risk_level": "medium",
+        "conditions": "고혈압, 당뇨 전단계",
+        "phone": "010-1234-5678",
+        "birth_date": "1990-01-15",
+        "activity_points": 1240,
+        "activity_rank": 14,
+        # 일일 영양 목표(프론트 프로필 목업과 동일)
+        "daily_calories": 2000,
+        "daily_sodium_mg": 2000,
+        "daily_sugar_g": 50,
+        "daily_carbs_g": 275,
+        "daily_protein_g": 100,
+        "daily_fat_g": 55,
+        # 주간 운동 목표
+        "weekly_workout_goal": 7,
+        "weekly_exercise_minutes_goal": 150,
+        "weekly_burn_goal": 1500,
+        "onboarded": True,
+    },
+}
+
 
 # 트레이너 오늘 타임라인 (time, client, member_id, type, duration, status, note, program).
 # member_id 는 유효 회원일 때만 연결(아니면 표시용 이름만). 프론트 TRAINER_SCHEDULE 정렬.
@@ -206,6 +260,8 @@ def seed_member_health_data() -> None:
             _seed_history(db, user_id)
             _seed_chat(db, user_id)
             _seed_routines(db, user_id)
+            _seed_exercise(db, user_id)
+            _seed_health_profile(db, user_id)
         _seed_schedule(db, valid)
     finally:
         db.close()
@@ -387,4 +443,59 @@ def _seed_history(db: Session, member_id: str) -> None:
             client_feedback=feedback,
             trainer_note=note,
         ))
+    _safe_commit(db)
+
+
+def _seed_exercise(db: Session, member_id: str) -> None:
+    """회원 이번 주 운동 세션 시드(멱등, 날짜 인식) — 사용자 앱 운동 화면용.
+
+    이번 주 세션 중 **오늘까지의 요일만** 넣는다. 주중에 실행돼도 미래 요일이 이번 주
+    합계·streak 에 잡히지 않도록(예: 수요일에 시드해도 목~일은 넣지 않음). 멱등은
+    세션 id 단위로 판정하므로, 주가 진행되며 재실행되면 새로 지난 요일이 채워지고
+    이미 있는 요일은 건너뛴다(중복·왜곡 없음). 주가 바뀌면 새 week_start 로 누적된다."""
+    week = _EXERCISE_WEEK.get(member_id)
+    if not week:
+        return
+    today = date.today()
+    week_start = (today - timedelta(days=today.weekday())).isoformat()  # 이번 주 월요일
+    added = False
+    for day_label, ex_type, minutes, calories in week:
+        idx = _WEEKDAY_INDEX.get(day_label)
+        if idx is None or idx > today.weekday():
+            continue  # 미래(또는 알 수 없는) 요일은 아직 시드하지 않는다.
+        session_id = f"seed-ex-{member_id}-{week_start}-{day_label}"
+        if db.scalar(
+            select(models.ExerciseSession.id)
+            .where(models.ExerciseSession.id == session_id)
+            .limit(1)
+        ) is not None:
+            continue  # 멱등: 이미 있는 요일은 스킵.
+        db.add(models.ExerciseSession(
+            id=session_id,
+            user_id=member_id,
+            week_start=week_start,
+            day_label=day_label,
+            type=ex_type,
+            minutes=minutes,
+            calories=calories,
+            intensity="moderate",
+        ))
+        added = True
+    if added:
+        _safe_commit(db)
+
+
+def _seed_health_profile(db: Session, member_id: str) -> None:
+    """회원 건강 프로필(위험도·활동점수·기본정보) 시드(멱등). 이미 있으면 스킵.
+    사용자 앱 홈/My Health 의 위험 카드·활동점수가 실데이터로 뜨게 한다."""
+    fields = _HEALTH_PROFILE.get(member_id)
+    if not fields:
+        return
+    if db.scalar(
+        select(models.HealthProfile.id)
+        .where(models.HealthProfile.user_id == member_id)
+        .limit(1)
+    ) is not None:
+        return
+    db.add(models.HealthProfile(user_id=member_id, **fields))
     _safe_commit(db)

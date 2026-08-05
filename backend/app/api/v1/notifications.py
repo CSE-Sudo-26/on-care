@@ -22,7 +22,7 @@ router = APIRouter(tags=["notifications"])
 
 # 알림 카테고리 → 바로가기 액션(프론트 라우트 힌트). system 은 액션 없음.
 _ACTION_BY_CATEGORY: dict[str, NotificationAction] = {
-    "reminder": NotificationAction(label="기록하러 가기", target="vitals"),
+    "reminder": NotificationAction(label="기록하러 가기", target="dashboard"),
     "health_check": NotificationAction(label="일정 보기", target="schedule"),
     "achievement": NotificationAction(label="대시보드 보기", target="dashboard"),
 }

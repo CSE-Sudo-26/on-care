@@ -4,7 +4,6 @@ ORM 모델 — 프론트 계약(LocalApiInterceptor + drift 스키마)에 맞춤
 핵심 정렬 사항:
 - 사용자 id 는 문자열(예: 'user-demo')
 - 식단은 나트륨(sodium_mg)·당류(sugar_g)를 1급 지표로 (고혈압·당뇨 특화)
-- vitals 는 kind(weight|blood-pressure|blood-sugar) + value(JSON)
 - drift 테이블(diet_entries, exercise_sessions, schedule_events, notifications)과 1:1 대응
 
 이번 STEP 1 에서는 테이블 생성만 검증하고, 살은 이후 STEP 에서 채웁니다.
@@ -68,15 +67,19 @@ class HealthProfile(Base):
     birth_date: Mapped[str] = mapped_column(String(10), default="")   # YYYY-MM-DD
     gender: Mapped[str] = mapped_column(String(10), default="")       # male|female|other
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
-    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    # 건강 목표(건강 목표 모달)
-    goal_weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
-    goal_bp_systolic: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    goal_blood_sugar: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 일일 영양 목표(식단 관리용)
     daily_calories: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_sodium_mg: Mapped[int | None] = mapped_column(Integer, nullable=True)
     daily_sugar_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_carbs_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_protein_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    daily_fat_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # 주간 운동 목표(운동 관리용)
+    weekly_workout_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_exercise_minutes_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_burn_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
     onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -153,17 +156,6 @@ class ExerciseSession(Base):
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
     intensity: Mapped[str] = mapped_column(String(20), default="moderate", server_default="moderate")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class Vital(Base):
-    """체중/혈압/혈당 — drift Vitals 대응."""
-    __tablename__ = "vitals"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    kind: Mapped[str] = mapped_column(String(20), index=True)  # weight|blood-pressure|blood-sugar
-    value_json: Mapped[str] = mapped_column(Text, default="{}")
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ScheduleEvent(Base):
@@ -252,14 +244,68 @@ class Place(Base):
     kakao_place_id: Mapped[str] = mapped_column(String(50), default="")
 
 
+class ConsultationRequest(Base):
+    """회원의 헬스장·트레이너 상담 요청."""
+    __tablename__ = "consultation_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    target_type: Mapped[str] = mapped_column(String(20))
+    gym_id: Mapped[str | None] = mapped_column(
+        ForeignKey("places.id", ondelete="SET NULL"), nullable=True
+    )
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    exercise_goal: Mapped[str] = mapped_column(String(30))
+    health_purpose_type: Mapped[str] = mapped_column(String(30))
+    health_purpose_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preferred_date: Mapped[str] = mapped_column(String(10))
+    preferred_time_slot: Mapped[str] = mapped_column(String(20))
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_consultation_requests_pending_gym",
+            "member_id",
+            "gym_id",
+            unique=True,
+            postgresql_where=text("target_type = 'gym' AND status = 'pending'"),
+        ),
+        Index(
+            "uq_consultation_requests_pending_trainer",
+            "member_id",
+            "trainer_id",
+            unique=True,
+            postgresql_where=text("target_type = 'trainer' AND status = 'pending'"),
+        ),
+        Index(
+            "ix_consultation_requests_member_created_at",
+            "member_id",
+            "created_at",
+        ),
+    )
+
+
 #
 # ---------------------------------------------------------------------------
 # 트레이너 도메인 — 트레이너↔회원 데이터 공유의 뼈대.
 #
 # 핵심 설계(진짜 공유): "고객"은 별도 복제 테이블이 아니라 실제 회원 User 다.
-# TrainerClient 링크로 트레이너와 회원을 잇고, 트레이너가 보는 고객 식단/운동/
-# 바이탈은 회원이 회원 앱에서 직접 남긴 그 레코드(DietEntry/ExerciseSession/Vital)
-# 를 읽는다. 아래 테이블은 "공유되는 상호작용"(루틴 배정·완료기록·채팅·스케줄)만
+# TrainerClient 링크로 트레이너와 회원을 잇고, 트레이너가 보는 고객 식단/운동은
+# 회원이 회원 앱에서 직접 남긴 그 레코드(DietEntry/ExerciseSession)를 읽는다.
+# 아래 테이블은 "공유되는 상호작용"(루틴 배정·완료기록·채팅·스케줄)만
 # 담는다. 응답 형태는 트레이너 프론트 drift 계약(TrainerClients/ClientAiRoutines/
 # ClientRoutineHistory/ClientChatMessages/TrainerScheduleEntries)에 정렬한다.
 # ---------------------------------------------------------------------------

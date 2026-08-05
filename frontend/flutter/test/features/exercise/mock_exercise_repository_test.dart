@@ -4,123 +4,119 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 
 void main() {
-  group('MockExerciseRepository keeps CRUD in memory (#294)', () {
-    test('addSession persists and updates derived totals/chart/count', () async {
-      final repo = MockExerciseRepository();
-      final ExerciseWeek before = await repo.fetchThisWeek();
-      expect(before.sessions.length, 6);
-      expect(before.workoutCount, 6);
-      expect(before.totalMinutes, 315);
-      // 수요일(index 2)은 시드에서 휴식일.
-      expect(before.dailyMinutes[2], 0);
-      expect(before.streakDays, 4); // 목·금·토·일
+  // 시드는 '오늘 + 직전 3일(4일 연속)'을 실제 요일에 맞춰 채운다. 결정적 검증을
+  // 위해 고정 금요일(2024-01-05, weekday=금 → index 4)을 주입한다.
+  // 활성일: 화(index1)·수(2)·목(3)·금/오늘(4).
+  final DateTime friday = DateTime(2024, 1, 5);
+  MockExerciseRepository repo() => MockExerciseRepository(today: friday);
 
-      final ExerciseSession added = await repo.addSession(
+  group('MockExerciseRepository seeds a real-date 4-day streak (#294)', () {
+    test('seed totals reflect 오늘 + 직전 3일', () async {
+      final ExerciseWeek w = await repo().fetchThisWeek();
+      // 화3 + 수3 + 목3 + 금1(오늘 PT) = 10 세션.
+      expect(w.sessions.length, 10);
+      expect(w.workoutCount, 4); // 활성 일수 화·수·목·금
+      expect(w.streakDays, 4);
+      expect(w.totalMinutes, 210); // 45 + 55 + 60 + 50
+      expect(w.totalCalories, 1675); // 330 + 387 + 438 + 520
+      // 요일별(월..일) 분: 월0 화45 수55 목60 금50 토0 일0.
+      expect(w.dailyMinutes, <double>[0, 45, 55, 60, 50, 0, 0]);
+      // 요일별 칼로리.
+      expect(w.dailyCalories, <double>[0, 330, 387, 438, 520, 0, 0]);
+    });
+
+    test('월요일이면 직전 3일이 이전 주로 빠져 오늘 1건만 남는다', () async {
+      // 월요일(2024-01-01, weekday=월 → index 0)을 주입하면 offset 1..3의
+      // wi(= -1..-3)가 모두 음수라 _seed 가 건너뛰고, 오늘 PT 1건만 시드된다.
+      final ExerciseWeek w =
+          await MockExerciseRepository(today: DateTime(2024)) // 2024-01-01(월)
+              .fetchThisWeek();
+      expect(w.sessions.length, 1);
+      expect(w.workoutCount, 1);
+      expect(w.streakDays, 1);
+      expect(w.dailyMinutes, <double>[50, 0, 0, 0, 0, 0, 0]);
+    });
+
+    test('daily == cardio + strength + stretching for every day', () async {
+      final ExerciseWeek w = await repo().fetchThisWeek();
+      for (int i = 0; i < w.dailyMinutes.length; i++) {
+        expect(
+          w.cardioMinutes[i] + w.strengthMinutes[i] + w.stretchingMinutes[i],
+          w.dailyMinutes[i],
+          reason: '요일 index $i 유형 합이 일별 총합과 어긋납니다.',
+        );
+      }
+    });
+  });
+
+  group('CRUD keeps derived totals/chart in memory (#294)', () {
+    test('addSession persists and updates totals/chart/count', () async {
+      final MockExerciseRepository r = repo();
+      expect((await r.fetchThisWeek()).sessions.length, 10);
+
+      final ExerciseSession added = await r.addSession(
         type: ExerciseType.cardio,
         minutes: 30,
         calories: 200,
-        dayLabel: '수',
+        dayLabel: '월', // 휴식일 → 새 활성일
       );
 
-      final ExerciseWeek after = await repo.fetchThisWeek();
-      expect(after.sessions.length, 7);
-      expect(after.sessions.map((ExerciseSession s) => s.id), contains(added.id));
-      expect(after.totalMinutes, 345);
-      expect(after.totalCalories, 2180);
-      expect(after.dailyMinutes[2], 30);
-      expect(after.cardioMinutes[2], 30);
-      // 수요일이 채워져 월~일 전 요일 활성 → 연속 7일.
-      expect(after.workoutCount, 7);
-      expect(after.streakDays, 7);
+      final ExerciseWeek after = await r.fetchThisWeek();
+      expect(after.sessions.length, 11);
+      expect(
+        after.sessions.map((ExerciseSession s) => s.id),
+        contains(added.id),
+      );
+      expect(after.totalMinutes, 240);
+      expect(after.totalCalories, 1875);
+      expect(after.dailyMinutes[0], 30);
+      expect(after.dailyCalories[0], 200);
+      expect(after.cardioMinutes[0], 30);
+      expect(after.workoutCount, 5);
     });
 
     test('deleteSession removes it and restores the totals', () async {
-      final repo = MockExerciseRepository();
-      final ExerciseSession added = await repo.addSession(
-        type: ExerciseType.strength,
-        minutes: 20,
-        calories: 150,
-        dayLabel: '수',
+      final MockExerciseRepository r = repo();
+      // s-d1-0 = 목요일 유산소 45분/328kcal.
+      await r.deleteSession('s-d1-0');
+
+      final ExerciseWeek after = await r.fetchThisWeek();
+      expect(after.sessions.length, 9);
+      expect(
+        after.sessions.map((ExerciseSession s) => s.id),
+        isNot(contains('s-d1-0')),
       );
-      expect((await repo.fetchThisWeek()).sessions.length, 7);
-
-      await repo.deleteSession(added.id!);
-
-      final ExerciseWeek after = await repo.fetchThisWeek();
-      expect(after.sessions.length, 6);
-      expect(after.sessions.map((ExerciseSession s) => s.id), isNot(contains(added.id)));
-      expect(after.totalMinutes, 315);
-      expect(after.totalCalories, 1980);
-      expect(after.dailyMinutes[2], 0);
-      expect(after.streakDays, 4);
-    });
-
-    test('updateSession edits an existing session and re-derives totals', () async {
-      final repo = MockExerciseRepository();
-      await repo.updateSession(
-        id: 's-mon',
-        type: ExerciseType.cardio,
-        minutes: 100, // 40 → 100
-        calories: 700, // 300 → 700
-        dayLabel: '월',
-      );
-
-      final ExerciseWeek after = await repo.fetchThisWeek();
-      expect(after.sessions.length, 6); // 개수 불변
-      expect(after.totalMinutes, 375); // 315 - 40 + 100
-      expect(after.totalCalories, 2380); // 1980 - 300 + 700
-      expect(after.dailyMinutes[0], 100);
+      expect(after.totalMinutes, 210 - 45);
+      expect(after.totalCalories, 1675 - 328);
+      expect(after.dailyMinutes[3], 15); // 목: 근력10 + 스트레칭5
+      expect(after.cardioMinutes[3], 0);
     });
 
     test('deleting an unknown id is a no-op', () async {
-      final repo = MockExerciseRepository();
-      await repo.deleteSession('does-not-exist');
-      final ExerciseWeek after = await repo.fetchThisWeek();
-      expect(after.sessions.length, 6);
-      expect(after.totalMinutes, 315);
+      final MockExerciseRepository r = repo();
+      await r.deleteSession('does-not-exist');
+      final ExerciseWeek after = await r.fetchThisWeek();
+      expect(after.sessions.length, 10);
+      expect(after.totalMinutes, 210);
     });
 
-    test(
-      'daily == cardio + strength + stretching holds after seed edit/delete (리뷰 #294)',
-      () async {
-        void expectInvariant(ExerciseWeek w) {
-          for (int i = 0; i < w.dailyMinutes.length; i++) {
-            expect(
-              w.cardioMinutes[i] +
-                  w.strengthMinutes[i] +
-                  w.stretchingMinutes[i],
-              w.dailyMinutes[i],
-              reason: '요일 index $i 의 유형별 합이 일별 총합과 어긋납니다.',
-            );
-          }
-        }
+    test('updateSession edits a session and re-derives totals', () async {
+      final MockExerciseRepository r = repo();
+      // 오늘 PT(s-today) 근력 50분/520kcal → 80분/700kcal.
+      await r.updateSession(
+        id: 's-today',
+        type: ExerciseType.strength,
+        minutes: 80,
+        calories: 700,
+        dayLabel: '금',
+      );
 
-        final repo = MockExerciseRepository();
-        expectInvariant(await repo.fetchThisWeek());
-
-        // 시드 세션 삭제 후에도 유지. (예전 이중 시드에서는 월요일 세션이 유산소
-        // 40분이지만 차트 배열은 유산소30+스트레칭10이라, 삭제하면 일별 0인데
-        // 스트레칭 10분이 유령으로 남아 불변식이 깨졌다.)
-        await repo.deleteSession('s-mon');
-        final ExerciseWeek afterDelete = await repo.fetchThisWeek();
-        expectInvariant(afterDelete);
-        expect(afterDelete.dailyMinutes[0], 0); // 월요일 세션이 하나뿐 → 완전 0
-        expect(afterDelete.cardioMinutes[0], 0);
-        expect(afterDelete.stretchingMinutes[0], 0);
-
-        // 시드 세션 유형 변경(근력→스트레칭) 후에도 유지.
-        await repo.updateSession(
-          id: 's-tue',
-          type: ExerciseType.stretching,
-          minutes: 60,
-          calories: 420,
-          dayLabel: '화',
-        );
-        final ExerciseWeek afterUpdate = await repo.fetchThisWeek();
-        expectInvariant(afterUpdate);
-        expect(afterUpdate.stretchingMinutes[1], 60);
-        expect(afterUpdate.strengthMinutes[1], 0);
-      },
-    );
+      final ExerciseWeek after = await r.fetchThisWeek();
+      expect(after.sessions.length, 10); // 개수 불변
+      expect(after.totalMinutes, 210 - 50 + 80);
+      expect(after.totalCalories, 1675 - 520 + 700);
+      expect(after.strengthMinutes[4], 80);
+      expect(after.dailyMinutes[4], 80);
+    });
   });
 }

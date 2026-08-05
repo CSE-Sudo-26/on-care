@@ -18,6 +18,9 @@ class ExerciseSessionOut(BaseModel):
 class ExerciseWeekResponse(BaseModel):
     sessions: list[ExerciseSessionOut]
     daily_minutes: list[int]
+    # 홈 '주간 추이' 차트가 읽는 일별 소모 칼로리. 없으면 클라이언트가 데모 상수로
+    # 폴백하므로 daily_minutes 와 같이 내려준다.
+    daily_calories: list[int]
     cardio_minutes: list[int]
     strength_minutes: list[int]
     stretching_minutes: list[int]

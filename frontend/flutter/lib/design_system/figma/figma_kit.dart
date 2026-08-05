@@ -54,16 +54,28 @@ class FigmaColors {
   static Color orangeA(double a) => orange.withValues(alpha: a);
 }
 
-/// Shared soft-blue card shadow used by every card across all tabs so the
-/// elevation reads identically everywhere. (primary #3EAFDF @ ~0.125 (0x20),
-/// blur 10, y+3). Apply as `boxShadow: kCardShadow` on any white content card.
+/// Shared neutral grey card shadow used by every card across all tabs so the
+/// elevation reads identically everywhere. (검정 @ 10% (0x1A), blur 14, y+4).
+/// Apply as `boxShadow: kCardShadow` on any white content card.
+///
+/// 예전에는 브랜드 블루(#3EAFDF) 그림자였는데, 홈 개편에서 회색으로 바꾸면서
+/// 나머지 탭도 같은 값으로 맞췄다.
 const List<BoxShadow> kCardShadow = <BoxShadow>[
   BoxShadow(
-    color: Color(0x203EAFDF),
-    blurRadius: 10,
-    offset: Offset(0, 3),
+    color: Color(0x1A000000),
+    blurRadius: 14,
+    offset: Offset(0, 4),
   ),
 ];
+
+/// Shared "/(목표|제한치)(단위)" suffix style, e.g. the "/275g" after a macro
+/// value. Standardized to the home 식단 영양 카드 탄단지 look — small, faint —
+/// so every "(현재)/(목표)(단위)" reads consistently across the app.
+const TextStyle kGoalSuffixStyle = TextStyle(
+  fontSize: 9,
+  fontWeight: FontWeight.w600,
+  color: FigmaColors.textFaint,
+);
 
 /// The On-Care mascot ("Oni") — a teal gradient disc with two eyes and a
 /// smile. Used in the coaching banner, coaching sheet, chat and the FAB.

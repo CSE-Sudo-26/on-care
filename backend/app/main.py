@@ -13,7 +13,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
-    ai_coach, coach_docs, dashboard, diet, exercise, member_coach, notifications, places, schedule, social, system, trainer, users, vitals,
+    ai_coach, coach_docs, consultations, dashboard, diet, exercise, member_coach,
+    notifications, places, schedule, social, system, trainer, users,
 )
 from app.core import observability
 from app.core.config import get_settings
@@ -80,7 +81,6 @@ app.include_router(social.router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(diet.router, prefix=settings.api_v1_prefix)
 app.include_router(exercise.router, prefix=settings.api_v1_prefix)
-app.include_router(vitals.router, prefix=settings.api_v1_prefix)
 app.include_router(schedule.router, prefix=settings.api_v1_prefix)
 app.include_router(notifications.router, prefix=settings.api_v1_prefix)
 app.include_router(places.router, prefix=settings.api_v1_prefix)
@@ -88,3 +88,4 @@ app.include_router(ai_coach.router, prefix=settings.api_v1_prefix)
 app.include_router(coach_docs.router, prefix=settings.api_v1_prefix)
 app.include_router(trainer.router, prefix=settings.api_v1_prefix)
 app.include_router(member_coach.router, prefix=settings.api_v1_prefix)
+app.include_router(consultations.router, prefix=settings.api_v1_prefix)

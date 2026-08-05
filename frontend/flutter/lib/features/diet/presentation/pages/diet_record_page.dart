@@ -46,6 +46,12 @@ const Map<MealType, ({String emoji, Color bg})> _mealMeta =
       MealType.snack: (emoji: '🍎', bg: Color(0xFFFCE4EC)),
     };
 
+String _grams(double value) {
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+}
+
 /// Maps a backend [DietEntry] onto the Figma meal-card view model. [l] localizes
 /// the nutrient tag labels; the meal type is carried as a [MealType] so the badge
 /// text is resolved at render time.
@@ -152,7 +158,10 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   days: days,
                   today: today,
                   selected: _selected,
-                  weekLabel: l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                  weekLabel: l.dietWeekLabel(
+                    center.month,
+                    _weekOfMonth(center),
+                  ),
                   showTodayButton: !atToday,
                   onSelect: (DateTime d) => setState(() => _selected = d),
                   onPrev: () => setState(() => _weekShift -= 1),
@@ -363,15 +372,8 @@ class _DayCell extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected ? FigmaColors.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: isSelected
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: FigmaColors.primaryA(0.40),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
+              // 선택된 날짜 칩도 카드와 같은 회색 그림자를 쓴다(예전 파란 글로우).
+              boxShadow: isSelected ? kCardShadow : null,
             ),
             child: Text(
               '${day.day}',
@@ -443,6 +445,8 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: l.dietCalories,
                   value: _formatInt(kcal),
+                  // 일일 목표치(칼로리 2,000kcal · 나트륨 2,000mg · 당류 50g).
+                  goal: _formatInt(2000),
                   unit: l.unitKcal,
                   color: FigmaColors.primary,
                 ),
@@ -452,6 +456,7 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: l.dietSodium,
                   value: _formatInt(sodium),
+                  goal: _formatInt(2000),
                   unit: l.dietUnitMg,
                   // 오늘 나트륨 과다(짬뽕) → 빨간계열로 강조.
                   color: FigmaColors.dangerRed,
@@ -462,6 +467,41 @@ class _NutritionSummary extends StatelessWidget {
                 child: _SummaryTile(
                   label: l.dietSugar,
                   value: _formatG(sugar),
+                  goal: '50',
+                  unit: l.dietUnitG,
+                  color: FigmaColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroCarbs} ${day.macros.carbsPct}%',
+                  value: _grams(day.macros.carbsG),
+                  goal: '275',
+                  unit: l.dietUnitG,
+                  color: FigmaColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroProtein} ${day.macros.proteinPct}%',
+                  value: _grams(day.macros.proteinG),
+                  goal: '100',
+                  unit: l.dietUnitG,
+                  color: FigmaColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SummaryTile(
+                  label: '${l.homeMacroFat} ${day.macros.fatPct}%',
+                  value: _grams(day.macros.fatG),
+                  goal: '55',
                   unit: l.dietUnitG,
                   color: FigmaColors.primary,
                 ),
@@ -480,12 +520,17 @@ class _SummaryTile extends StatelessWidget {
     required this.value,
     required this.unit,
     required this.color,
+    this.goal,
   });
 
   final String label;
   final String value;
   final String unit;
   final Color color;
+
+  /// Optional target value shown as a small gray "/목표치" after [value]
+  /// (예: "1,067 / 2,000 kcal"). Null = no target suffix(매크로 타일 등).
+  final String? goal;
 
   @override
   Widget build(BuildContext context) {
@@ -522,14 +567,17 @@ class _SummaryTile extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                TextSpan(
-                  text: ' $unit',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: color.withValues(alpha: 0.8),
+                if (goal != null)
+                  TextSpan(text: ' /$goal$unit', style: kGoalSuffixStyle)
+                else
+                  TextSpan(
+                    text: ' $unit',
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textMuted,
+                    ),
                   ),
-                ),
               ],
             ),
             maxLines: 1,
@@ -786,8 +834,7 @@ class _MealCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 2),
                               child: Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.baseline,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
                                 textBaseline: TextBaseline.alphabetic,
                                 children: <Widget>[
                                   Flexible(

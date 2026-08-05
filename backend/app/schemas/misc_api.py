@@ -84,7 +84,7 @@ class ScheduleEventUpdate(BaseModel):
 class NotificationAction(BaseModel):
     """알림에서 바로 갈 수 있는 액션(카테고리에서 파생). 프론트가 target 으로 이동."""
     label: str         # "기록하러 가기"
-    target: str        # 프론트 라우트 힌트: vitals|schedule|dashboard
+    target: str        # 프론트 라우트 힌트: schedule|dashboard
 
 
 class NotificationOut(BaseModel):
