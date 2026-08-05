@@ -41,7 +41,7 @@ void main() {
       expect(summary.unreadClients, 2);
     });
 
-    test('an unanswered client outranks a sodium-over one', () {
+    test('an unanswered client is not 주의 — only their health data is', () {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[
           makeClient(id: 'sodium', sodiumMg: 2500),
@@ -50,11 +50,25 @@ void main() {
         unread: const <String, int>{'waiting': 1},
       );
 
-      expect(summary.attention.map((a) => a.client.id), <String>[
-        'waiting',
-        'sodium',
-      ]);
-      expect(summary.attention.first.primary, ClientAlert.unanswered);
+      // 'waiting' is counted by 답장 필요; listing them under 주의 too
+      // would chase the same person twice and bury the health signal.
+      expect(summary.attention.map((a) => a.client.id), <String>['sodium']);
+      expect(summary.attention.single.primary, ClientAlert.sodiumOver);
+      expect(summary.unreadClients, 1);
+    });
+
+    test('unread never changes the 주의 list', () {
+      final clients = <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)];
+      final without = buildDashboardSummary(
+        clients: clients,
+        unread: const <String, int>{},
+      );
+      final with_ = buildDashboardSummary(
+        clients: clients,
+        unread: const <String, int>{'a': 9},
+      );
+
+      expect(with_.attention.single.alerts, without.attention.single.alerts);
     });
 
     test('within one alert type the incoming (priority) order is kept', () {

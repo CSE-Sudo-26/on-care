@@ -23,6 +23,7 @@ class BarSeriesChart extends StatelessWidget {
     this.overThreshold,
     this.valueSuffix = '',
     this.showValues = false,
+    this.pendingFromIndex,
   }) : assert(values.length == labels.length, 'values/labels 길이가 달라요');
 
   /// Bar values (non-negative).
@@ -49,8 +50,14 @@ class BarSeriesChart extends StatelessWidget {
   /// Whether to print the value above each bar.
   final bool showValues;
 
+  /// First index that hasn't happened yet (e.g. tomorrow, in a Mon–Sun
+  /// chart shown on Thursday). Those bars render as an empty track with
+  /// no value, so a day with no data yet can't be misread as a zero.
+  final int? pendingFromIndex;
+
   @override
   Widget build(BuildContext context) {
+    final pendingFrom = pendingFromIndex ?? values.length;
     final ceiling = <int>[
       maxValue ?? 0,
       if (values.isNotEmpty) values.reduce((a, b) => a > b ? a : b),
@@ -70,10 +77,12 @@ class BarSeriesChart extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2.5),
                     child: _Bar(
-                      value: values[i],
+                      value: i >= pendingFrom ? 0 : values[i],
                       ceiling: ceiling,
                       color: _colorFor(i),
-                      label: showValues ? '${values[i]}$valueSuffix' : null,
+                      label: showValues && i < pendingFrom
+                          ? '${values[i]}$valueSuffix'
+                          : null,
                     ),
                   ),
                 ),
@@ -97,6 +106,8 @@ class BarSeriesChart extends StatelessWidget {
                         : FontWeight.w500,
                     color: highlightIndex == i
                         ? AppColors.primary
+                        : i >= pendingFrom
+                        ? AppColors.disabledForeground
                         : AppColors.subtleForeground,
                   ),
                 ),

@@ -8,6 +8,15 @@ export 'package:oncare_trainer/shared/models/client_alerts.dart'
 /// is indexed 월→일, matching `DateTime.weekday` (월=1 … 일=7) minus one.
 const List<String> weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
 
+/// How many weekday slots of the current (월-start) week have actually
+/// happened, counting today: 월요일이면 1, 목요일이면 4.
+///
+/// Everything that renders or averages a Mon–Sun series for *this* week
+/// clips at this index. Without it a chart drawn on Thursday still shows
+/// Fri/Sat/Sun, and whatever the source happens to hold for those days —
+/// a seeded value, or a zero — reads as a real result.
+int elapsedWeekdays(DateTime today) => today.weekday;
+
 /// Everything the 대시보드 renders, derived from the same streams the
 /// other tabs already use — no dedicated summary endpoint.
 ///
@@ -74,7 +83,9 @@ DashboardSummary buildDashboardSummary({
       unreadTotal += pending;
       unreadClients++;
     }
-    final alerts = alertsFor(client, unread: pending);
+    // 주의 = 회원의 건강 수치 문제. 답장 대기는 '답장 필요' 카드가 따로
+    // 세므로 여기서 다시 세면 같은 사람을 두 번 재촉하게 된다.
+    final alerts = healthAlertsFor(client);
     if (alerts.isNotEmpty) {
       attention.add(AttentionClient(client: client, alerts: alerts));
     }

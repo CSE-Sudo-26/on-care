@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
+import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 
 import '../../helpers/pump_app.dart';
@@ -51,6 +52,21 @@ void main() {
     expect(find.text('고객 3명 대기 중'), findsOneWidget);
   });
 
+  testWidgets('주의 고객 counts health signals, not the reply backlog', (
+    tester,
+  ) async {
+    await openDashboard(tester);
+
+    // All three seeded clients are waiting on a reply, but only 김민수
+    // (2100mg) and 박성호 (2400mg) are over the sodium target. If the two
+    // ever merge again the card reads 3 and stops meaning anything.
+    final attention = tester.widget<StatCard>(
+      find.ancestor(of: find.text('주의 고객'), matching: find.byType(StatCard)),
+    );
+    expect(attention.value, '2');
+    expect(find.text('나트륨·이행률 확인'), findsOneWidget);
+  });
+
   testWidgets('a KPI deep-links into the pre-filtered roster', (tester) async {
     await openDashboard(tester);
 
@@ -75,13 +91,16 @@ void main() {
     await openDashboard(tester);
 
     expect(find.text('주의가 필요한 고객'), findsOneWidget);
-    // Every seeded client has unread replies, and an unanswered message
-    // outranks a sodium overshoot — so that is the badge each one shows.
-    expect(find.text('답장 대기'), findsNWidgets(3));
+    // 주의 = the member's own numbers. All three seeded clients have
+    // unread replies, but only 김민수(2100mg)/박성호(2400mg) are over the
+    // sodium target, so only those two are listed — 답장 대기 belongs to
+    // the 답장 필요 card instead.
+    expect(find.text('나트륨 초과'), findsNWidgets(2));
+    expect(find.text('답장 대기'), findsNothing);
 
-    await tester.tap(find.text('답장 대기').first);
+    await tester.tap(find.text('나트륨 초과').first);
     await settle(tester);
-    expect(currentLocation(tester), contains('/chat'));
+    expect(currentLocation(tester), contains('/diet'));
   });
 
   testWidgets('the AI summary leads with the reply backlog', (tester) async {

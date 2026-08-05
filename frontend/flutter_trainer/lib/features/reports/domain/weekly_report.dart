@@ -22,6 +22,7 @@ class WeeklyReport {
     required this.completionAvg,
     required this.sodiumOverDays,
     required this.sodiumAvg,
+    required this.isCurrentWeek,
   });
 
   /// Who the report is about.
@@ -45,6 +46,11 @@ class WeeklyReport {
 
   /// Mean daily sodium (mg); null when there's no history.
   final int? sodiumAvg;
+
+  /// Whether [weekStart] is the week we're currently in. The roster's
+  /// weekday aggregates only describe this week, so a past week must not
+  /// render them.
+  final bool isCurrentWeek;
 
   /// Sunday of the reported week.
   DateTime get weekEnd => weekStart.add(const Duration(days: 6));
@@ -96,6 +102,7 @@ WeeklyReport buildWeeklyReport({
       : const <int>[];
 
   return WeeklyReport(
+    isCurrentWeek: isThisWeek,
     client: client,
     weekStart: start,
     sessionsBooked: inWeek.length,

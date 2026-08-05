@@ -73,12 +73,12 @@ void main() {
       await tester.tap(find.text('저장'));
       await tester.pump();
 
-      expect(find.text('✓ 변경사항이 저장됐어요'), findsOneWidget);
+      expect(find.text('변경사항이 저장됐어요'), findsOneWidget);
       expect(find.text('박트레이너'), findsWidgets);
 
       // Flash expires (no pending timers at test end).
       await tester.pump(const Duration(seconds: 3));
-      expect(find.text('✓ 변경사항이 저장됐어요'), findsNothing);
+      expect(find.text('변경사항이 저장됐어요'), findsNothing);
     });
   });
 }

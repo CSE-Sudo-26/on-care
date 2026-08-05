@@ -14,7 +14,8 @@ enum ClientFilter {
   /// Clients with unanswered messages.
   unread('unread', '답장 필요'),
 
-  /// Clients with any [ClientAlert] raised.
+  /// Clients with a health [ClientAlert] raised (나트륨 초과 · 이행률
+  /// 저조). Unanswered messages are [unread], not 주의.
   attention('attention', '주의 고객');
 
   const ClientFilter(this.query, this.label);
@@ -48,8 +49,6 @@ List<TrainerClient> applyClientFilter(
     case ClientFilter.unread:
       return clients.where((c) => (unread[c.id] ?? 0) > 0).toList();
     case ClientFilter.attention:
-      return clients
-          .where((c) => alertsFor(c, unread: unread[c.id] ?? 0).isNotEmpty)
-          .toList();
+      return clients.where((c) => healthAlertsFor(c).isNotEmpty).toList();
   }
 }

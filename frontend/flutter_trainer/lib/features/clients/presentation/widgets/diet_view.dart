@@ -5,6 +5,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -372,13 +373,11 @@ class _AiComment extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '✦ AI 분석',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: AppColors.accent,
-            ),
+          const IconLabel(
+            icon: Icons.auto_awesome,
+            label: 'AI 분석',
+            color: AppColors.accent,
+            fontSize: 10,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
