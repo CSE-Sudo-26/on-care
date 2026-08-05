@@ -40,7 +40,8 @@
 |---|---|---|
 | GET | `/dashboard/summary` | `{ indicators[], diet_entries(int), exercise_minutes, today_schedule[], week_score, week_score_delta, sodium_warning(nullable), exercise_feedback }` |
 
-`indicators[]`: `{ label, current(int), max(int), unit, over_budget?(bool) }` — 칼로리/나트륨/당류 3종.
+`indicators[]`: `{ label, current(float), max(int), unit, over_budget?(bool) }` — 칼로리/나트륨/당류 3종.
+`current` 는 당류가 소수(17.8g)라 float. 칼로리·나트륨은 정수 값이 그대로 실린다. 목표치(`max`)는 셋 다 정수.
 
 ### 식단 (핵심: 나트륨·당류·고혈압 관점)
 | Method | Path | 응답 핵심 필드 |
