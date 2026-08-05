@@ -311,6 +311,28 @@ void main() {
       expect(history.where((h) => h.id.startsWith('hist-')), isEmpty);
     });
 
+    test('client sessions match on the same normalisation as the uniqueness '
+        'guard (trim + lowercase)', () async {
+      // addClient blocks duplicates on lower(trim(name)) but addSession
+      // stores the trainer's raw input. An exact compare here returned
+      // nothing for a name saved with stray whitespace, and the weekly
+      // report then showed 0 sessions with no error (CodeRabbit #377).
+      final repo = DriftScheduleRepository(db);
+      await repo.addSession(
+        date: ymd(DateTime.now()),
+        clientName: '  김민수  ',
+        time: '21:00',
+        type: '1:1 PT',
+        durationMinutes: 60,
+      );
+
+      final found = await repo.watchClientSessions((
+        id: 'seed-client-1',
+        name: '김민수',
+      )).first;
+      expect(found.any((s) => s.time == '21:00'), isTrue);
+    });
+
     test('deleteSession removes the slot', () async {
       final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;

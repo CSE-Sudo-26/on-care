@@ -296,6 +296,6 @@ class _SparklinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SparklinePainter old) =>
+  bool shouldRepaint(covariant _SparklinePainter old) =>
       old.values != values || old.threshold != threshold || old.color != color;
 }

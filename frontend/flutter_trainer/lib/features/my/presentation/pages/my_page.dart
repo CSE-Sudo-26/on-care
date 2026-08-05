@@ -1110,6 +1110,18 @@ class _SwitchRow extends StatelessWidget {
   }
 }
 
+/// Which box a password-sheet validation message belongs under.
+enum _PasswordField {
+  /// 현재 비밀번호.
+  current,
+
+  /// 새 비밀번호.
+  next,
+
+  /// 새 비밀번호 확인.
+  confirm,
+}
+
 /// Bottom sheet for changing the password.
 ///
 /// Asks for the current password as well: a stolen token should not be
@@ -1128,6 +1140,10 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   bool _saving = false;
   String? _error;
 
+  /// Which field [_error] belongs to. Showing every message under 현재
+  /// 비밀번호 sent people to fix the wrong box.
+  _PasswordField? _errorField;
+
   /// Matches the server's `TrainerPasswordChange.new_password` minimum —
   /// checking here too saves a round trip and a confusing 400.
   static const int _minLength = 8;
@@ -1145,20 +1161,21 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     final current = _current.text;
     final next = _next.text;
     if (current.isEmpty) {
-      setState(() => _error = '현재 비밀번호를 입력해 주세요');
+      _fail(_PasswordField.current, '현재 비밀번호를 입력해 주세요');
       return;
     }
     if (next.length < _minLength) {
-      setState(() => _error = '새 비밀번호는 $_minLength자 이상이어야 해요');
+      _fail(_PasswordField.next, '새 비밀번호는 $_minLength자 이상이어야 해요');
       return;
     }
     if (next != _confirm.text) {
-      setState(() => _error = '새 비밀번호가 서로 달라요');
+      _fail(_PasswordField.confirm, '새 비밀번호가 서로 달라요');
       return;
     }
     setState(() {
       _saving = true;
       _error = null;
+      _errorField = null;
     });
     final navigator = Navigator.of(context);
     try {
@@ -1167,13 +1184,17 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
           .changePassword(currentPassword: current, newPassword: next);
     } on ValidationError catch (e) {
       // The server's own wording (현재 비밀번호가 일치하지 않습니다 …) is
-      // more useful than anything generic we could substitute.
+      // more useful than anything generic we could substitute, and it is
+      // always about the current password — that is the only value it
+      // verifies.
       if (mounted) {
-        setState(() => _error = e.message ?? '비밀번호를 변경할 수 없어요');
+        _fail(_PasswordField.current, e.message ?? '비밀번호를 변경할 수 없어요');
       }
       return;
     } catch (_) {
-      if (mounted) setState(() => _error = '변경에 실패했어요. 잠시 후 다시 시도해 주세요');
+      if (mounted) {
+        _fail(_PasswordField.current, '변경에 실패했어요. 잠시 후 다시 시도해 주세요');
+      }
       return;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1181,6 +1202,24 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     if (!mounted) return;
     navigator.pop(true);
   }
+
+  void _clearError() {
+    if (_error == null) return;
+    setState(() {
+      _error = null;
+      _errorField = null;
+    });
+  }
+
+  void _fail(_PasswordField field, String message) {
+    setState(() {
+      _error = message;
+      _errorField = field;
+    });
+  }
+
+  String? _errorFor(_PasswordField field) =>
+      _errorField == field ? _error : null;
 
   @override
   Widget build(BuildContext context) {
@@ -1204,29 +1243,25 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _PasswordField(
+          _PasswordInput(
             controller: _current,
             hint: '현재 비밀번호',
-            errorText: _error,
-            onChanged: () {
-              if (_error != null) setState(() => _error = null);
-            },
+            errorText: _errorFor(_PasswordField.current),
+            onChanged: _clearError,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PasswordField(
+          _PasswordInput(
             controller: _next,
             hint: '새 비밀번호 ($_minLength자 이상)',
-            onChanged: () {
-              if (_error != null) setState(() => _error = null);
-            },
+            errorText: _errorFor(_PasswordField.next),
+            onChanged: _clearError,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PasswordField(
+          _PasswordInput(
             controller: _confirm,
             hint: '새 비밀번호 확인',
-            onChanged: () {
-              if (_error != null) setState(() => _error = null);
-            },
+            errorText: _errorFor(_PasswordField.confirm),
+            onChanged: _clearError,
           ),
           const SizedBox(height: AppSpacing.lg),
           Material(
@@ -1255,8 +1290,8 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   }
 }
 
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
+class _PasswordInput extends StatelessWidget {
+  const _PasswordInput({
     required this.controller,
     required this.hint,
     required this.onChanged,

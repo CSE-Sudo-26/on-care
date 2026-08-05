@@ -1591,6 +1591,11 @@ class _SendHistoryCard extends ConsumerWidget {
     final sessions = ref.watch(
       clientSessionsProvider((id: client.id, name: client.name)),
     );
+    // Homework goes out via `assignRoutine`, which writes no schedule row.
+    // Watching only the schedule left this card empty right after a send,
+    // so the trainer could send the same routine again believing nothing
+    // had gone out.
+    final assigned = ref.watch(assignedRoutinesProvider(client.id));
     final today = ymd(DateTime.now());
 
     return SectionCard(
@@ -1608,7 +1613,8 @@ class _SendHistoryCard extends ConsumerWidget {
               .where((s) => s.program.isNotEmpty)
               .take(4)
               .toList();
-          if (withProgram.isEmpty) {
+          final routines = assigned.valueOrNull ?? const <AssignedRoutine>[];
+          if (withProgram.isEmpty && routines.isEmpty) {
             return const EmptyHint(
               message: '아직 보낸 프로그램이 없어요',
               icon: Icons.outbox_outlined,
@@ -1616,6 +1622,45 @@ class _SendHistoryCard extends ConsumerWidget {
           }
           return Column(
             children: <Widget>[
+              for (final routine in routines.take(3))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: <Widget>[
+                      const SizedBox(
+                        width: 46,
+                        child: Text(
+                          '숙제',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.brandOrange,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${routine.name} · ${routine.minutes}분',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        routine.source == 'ai' ? '✦ AI' : '트레이너',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               for (final s in withProgram)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),

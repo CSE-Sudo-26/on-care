@@ -40,8 +40,8 @@ class WeeklyReport {
   /// client logged nothing.
   final int? completionAvg;
 
-  /// Days over the sodium target.
-  final int sodiumOverDays;
+  /// Days over the sodium target; null when unknown for this week.
+  final int? sodiumOverDays;
 
   /// Mean daily sodium (mg); null when there's no history.
   final int? sodiumAvg;
@@ -59,7 +59,10 @@ class WeeklyReport {
       : ((sessionsDone / sessionsBooked) * 100).round();
 
   /// Whether the week is worth celebrating — drives the headline's tone.
-  bool get isGoodWeek => (completionAvg ?? 0) >= 70 && sodiumOverDays <= 2;
+  /// An unknown figure is not a good one: praise has to be earned by
+  /// data we actually have.
+  bool get isGoodWeek =>
+      (completionAvg ?? 0) >= 70 && (sodiumOverDays ?? 99) <= 2;
 }
 
 /// Builds [client]'s report for the week starting [weekStart].
@@ -71,6 +74,7 @@ WeeklyReport buildWeeklyReport({
   required TrainerClient client,
   required List<ScheduleSession> sessions,
   required DateTime weekStart,
+  DateTime? today,
 }) {
   final start = weekStartOf(weekStart);
   final end = start.add(const Duration(days: 6));
@@ -80,7 +84,16 @@ WeeklyReport buildWeeklyReport({
     return !day.isBefore(start) && !day.isAfter(end);
   }).toList();
 
-  final recorded = client.weekCompletion.where((d) => d > 0).toList();
+  // `weekCompletion` / `sodiumWeek` are THIS week's aggregates, computed
+  // by the roster — they carry no week of their own. Attaching them to a
+  // past week would report this week's numbers under last week's dates,
+  // and the trainer can SEND that to the member. Leave them unknown
+  // instead: the screen shows "-", which reads as missing rather than
+  // wrong.
+  final isThisWeek = start == weekStartOf(today ?? DateTime.now());
+  final recorded = isThisWeek
+      ? client.weekCompletion.where((d) => d > 0).toList()
+      : const <int>[];
 
   return WeeklyReport(
     client: client,
@@ -90,8 +103,8 @@ WeeklyReport buildWeeklyReport({
     completionAvg: recorded.isEmpty
         ? null
         : (recorded.reduce((a, b) => a + b) / recorded.length).round(),
-    sodiumOverDays: client.sodiumOverDays,
-    sodiumAvg: client.sodiumWeekAvg,
+    sodiumOverDays: isThisWeek ? client.sodiumOverDays : null,
+    sodiumAvg: isThisWeek ? client.sodiumWeekAvg : null,
   );
 }
 
