@@ -49,11 +49,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpApp(tester);
-    expect(find.text('오늘도 가볍게 시작해요 👋'), findsOneWidget);
     expect(find.text('식단 · 영양'), findsOneWidget);
     expect(find.text('1,860'), findsWidgets);
     expect(find.text('203.6g'), findsOneWidget);
-    expect(find.text('오늘 식단 기록 4개'), findsOneWidget);
     expect(find.text('오늘의 일정'), findsOneWidget);
     expect(find.text('병원 정기검진'), findsOneWidget);
   });

@@ -578,6 +578,30 @@ abstract class AppLocalizations {
   /// **'Weekly trend'**
   String get homeWeeklyTrend;
 
+  /// No description provided for @homeWeeklyMetricTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly {metric} trend'**
+  String homeWeeklyMetricTrend(String metric);
+
+  /// No description provided for @homeWeeklyExerciseTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly exercise trend'**
+  String get homeWeeklyExerciseTrend;
+
+  /// No description provided for @homeMetricOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Over'**
+  String get homeMetricOver;
+
+  /// No description provided for @homeMetricNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get homeMetricNormal;
+
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:

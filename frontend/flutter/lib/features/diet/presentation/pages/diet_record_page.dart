@@ -372,15 +372,8 @@ class _DayCell extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected ? FigmaColors.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: isSelected
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: FigmaColors.primaryA(0.40),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
+              // 선택된 날짜 칩도 카드와 같은 회색 그림자를 쓴다(예전 파란 글로우).
+              boxShadow: isSelected ? kCardShadow : null,
             ),
             child: Text(
               '${day.day}',

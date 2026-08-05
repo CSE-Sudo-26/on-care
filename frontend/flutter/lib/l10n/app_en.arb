@@ -127,6 +127,17 @@
   "homeCalorieIntake": "Today's calories",
   "homeAchieveRate": "Progress",
   "homeWeeklyTrend": "Weekly trend",
+  "homeWeeklyMetricTrend": "Weekly {metric} trend",
+  "@homeWeeklyMetricTrend": {
+    "placeholders": {
+      "metric": {
+        "type": "String"
+      }
+    }
+  },
+  "homeWeeklyExerciseTrend": "Weekly exercise trend",
+  "homeMetricOver": "Over",
+  "homeMetricNormal": "On track",
   "homeExerciseActiveTime": "Weekly active time",
   "homeExerciseBurned": "Weekly calories",
   "homeExerciseCount": "Weekly workouts",
