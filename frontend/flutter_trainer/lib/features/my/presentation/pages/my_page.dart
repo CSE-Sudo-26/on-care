@@ -17,6 +17,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -950,13 +951,9 @@ class _GymCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Text(
-                      '● 영업 중',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
+                    const StatusDotLabel(
+                      label: '영업 중',
+                      color: AppColors.success,
                     ),
                   ],
                 ),

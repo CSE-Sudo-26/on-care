@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.d
 import 'package:oncare_trainer/features/clients/presentation/widgets/overview_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/routines_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -264,15 +265,12 @@ class _Header extends StatelessWidget {
                   horizontal: AppSpacing.sm,
                   vertical: 3,
                 ),
-                child: Text(
-                  client.active ? '● 활성' : '○ 휴면',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: client.active
-                        ? AppColors.success
-                        : AppColors.disabledForeground,
-                  ),
+                child: StatusDotLabel(
+                  label: client.active ? '활성' : '휴면',
+                  filled: client.active,
+                  color: client.active
+                      ? AppColors.success
+                      : AppColors.disabledForeground,
                 ),
               ),
             ),

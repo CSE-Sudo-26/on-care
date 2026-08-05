@@ -960,7 +960,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: warn ? AppColors.warning : AppColors.foreground,
+                color: warn ? AppColors.overTarget : AppColors.foreground,
               ),
             ),
           ),

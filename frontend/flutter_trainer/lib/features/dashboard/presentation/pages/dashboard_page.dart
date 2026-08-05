@@ -185,7 +185,7 @@ class _KpiRow extends StatelessWidget {
         value: '${summary.unreadTotal}',
         unit: '건',
         icon: Icons.mark_chat_unread_outlined,
-        tone: summary.unreadTotal > 0 ? StatTone.alert : StatTone.positive,
+        tone: summary.unreadTotal > 0 ? StatTone.info : StatTone.positive,
         hint: summary.unreadTotal > 0
             ? '고객 ${summary.unreadClients}명 대기 중'
             : '모두 답장했어요',

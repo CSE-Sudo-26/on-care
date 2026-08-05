@@ -4,17 +4,16 @@ import 'package:oncare_trainer/app/router/routes.dart';
 
 /// Sidebar grouping. Two groups only — the daily operating surfaces and
 /// the coaching surfaces that carry the product's differentiator.
+///
+/// Not labelled on screen: with five destinations the headings cost a
+/// row each and named the obvious. The grouping survives as the spacing
+/// between the two blocks, which is enough to read them as related.
 enum NavGroup {
   /// 매일 여는 것 — 대시보드 / 고객 / 스케줄.
-  operations('운영'),
+  operations,
 
   /// 이 서비스의 차별점 — AI 코칭 / 리포트.
-  coaching('코칭');
-
-  const NavGroup(this.label);
-
-  /// Section heading shown above the group in the expanded sidebar.
-  final String label;
+  coaching,
 }
 
 /// Which live counter, if any, a destination shows as a badge.

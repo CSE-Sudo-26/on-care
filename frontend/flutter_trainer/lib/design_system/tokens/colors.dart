@@ -72,9 +72,17 @@ class AppColors {
   static const Color success = Color(0xFF34C759);
   static const Color successForeground = Color(0xFFFFFFFF);
 
-  /// Warning / "나트륨 초과" orange (`#FF953C`).
+  /// Warning orange (`#FF953C`) — a caution that is NOT a target being
+  /// exceeded: partial routine completion, a manual entry to double-check.
   static const Color warning = Color(0xFFFF953C);
   static const Color warningForeground = Color(0xFFFFFFFF);
+
+  /// "목표 초과" red (`#F04438`). Matches the member app's
+  /// `FigmaColors.dangerRed` — a member who sees 나트륨 초과 in red on
+  /// their phone must not see it in orange on their trainer's screen.
+  /// Reserved for a target actually being exceeded; use [warning] for
+  /// softer cautions.
+  static const Color overTarget = Color(0xFFF04438);
 
   /// Destructive / delete red (`#FF3B30`).
   static const Color destructive = Color(0xFFFF3B30);
