@@ -41,7 +41,7 @@ void main() {
       expect(find.text('완료 세션'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('온케어짐 신촌점'), 150);
-      expect(find.text('● 영업 중'), findsOneWidget);
+      expect(find.text('영업 중'), findsOneWidget);
 
       // 역할 전환은 계정 분리 정책상 존재하지 않는다.
       expect(find.textContaining('역할 전환'), findsNothing);

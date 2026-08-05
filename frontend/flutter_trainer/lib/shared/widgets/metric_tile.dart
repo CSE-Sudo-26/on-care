@@ -6,7 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
 /// A nutrition metric tile (칼로리/나트륨/당류) shared by the 식단
 /// sub-tab and the AI 루틴 tab's diet summary. Neutral [color] base;
-/// flips to the warning orange (+ "⚠ 초과" suffix) when [warn].
+/// flips to the over-target red (+ "초과" suffix) when [warn].
 class MetricTile extends StatelessWidget {
   /// Creates a metric tile.
   const MetricTile({
@@ -40,7 +40,7 @@ class MetricTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         decoration: BoxDecoration(
           color: warn
-              ? AppColors.warning.withValues(alpha: 0.08)
+              ? AppColors.overTarget.withValues(alpha: 0.08)
               : AppColors.accentSurface,
           borderRadius: const BorderRadius.all(AppRadius.md),
         ),
@@ -60,15 +60,15 @@ class MetricTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: warn ? AppColors.warning : color,
+                color: warn ? AppColors.overTarget : color,
               ),
             ),
             Text(
-              warn ? '$unit ⚠ 초과' : unit,
+              warn ? '$unit 초과' : unit,
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: warn ? FontWeight.w700 : FontWeight.w400,
-                color: warn ? AppColors.warning : AppColors.subtleForeground,
+                color: warn ? AppColors.overTarget : AppColors.subtleForeground,
               ),
             ),
           ],

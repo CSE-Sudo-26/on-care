@@ -267,15 +267,15 @@ void main() {
 
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.text('● 활성'), findsOneWidget);
+      expect(find.text('활성'), findsOneWidget);
 
-      await tester.tap(find.text('● 활성'));
+      await tester.tap(find.text('활성'));
       await settle(tester);
-      expect(find.text('○ 휴면'), findsOneWidget);
+      expect(find.text('휴면'), findsOneWidget);
 
-      await tester.tap(find.text('○ 휴면'));
+      await tester.tap(find.text('휴면'));
       await settle(tester);
-      expect(find.text('● 활성'), findsOneWidget);
+      expect(find.text('활성'), findsOneWidget);
     });
 
     testWidgets('read-only repositories disable every roster mutation entry', (

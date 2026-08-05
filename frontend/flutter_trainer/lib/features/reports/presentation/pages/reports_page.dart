@@ -464,7 +464,7 @@ class _ClientReport extends StatelessWidget {
                 value: report.sodiumOverDays?.toString() ?? '-',
                 unit: '일',
                 tone: (report.sodiumOverDays ?? 0) > 2
-                    ? AppColors.warning
+                    ? AppColors.overTarget
                     : AppColors.success,
               ),
             ],

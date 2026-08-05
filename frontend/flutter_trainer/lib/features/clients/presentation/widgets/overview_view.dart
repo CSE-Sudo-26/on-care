@@ -129,7 +129,7 @@ class OverviewView extends ConsumerWidget {
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: (client.sodiumWeekAvg ?? 0) > sodiumTargetMg
-                        ? AppColors.warning
+                        ? AppColors.overTarget
                         : AppColors.primary,
                   ),
                 ),
@@ -151,7 +151,7 @@ class OverviewView extends ConsumerWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: client.sodiumOverDays > 0
-                        ? AppColors.warning
+                        ? AppColors.overTarget
                         : AppColors.mutedForeground,
                   ),
                 ),
@@ -255,8 +255,11 @@ class _AlertStrip extends StatelessWidget {
   final List<ClientAlert> alerts;
 
   static Color _colorFor(ClientAlert alert) => switch (alert) {
-    ClientAlert.unanswered => AppColors.destructive,
-    ClientAlert.sodiumOver => AppColors.warning,
+    // 하나의 색은 하나의 뜻만: 남색 = 처리 필요, 빨강 = 목표 초과
+    // (사용자 앱과 동일), 주황 = 완만한 주의. 답장 대기의 시급함은 색이
+    // 아니라 목록 맨 위에 오는 순서가 말한다.
+    ClientAlert.unanswered => AppColors.primary,
+    ClientAlert.sodiumOver => AppColors.overTarget,
     ClientAlert.lowCompletion => AppColors.warning,
   };
 

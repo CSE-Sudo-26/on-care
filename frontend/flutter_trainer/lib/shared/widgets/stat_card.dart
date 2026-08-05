@@ -10,7 +10,11 @@ enum StatTone {
   /// Ordinary information.
   neutral,
 
-  /// Something is owed / overdue — red.
+  /// Something is owed and the trainer has to act — navy. NOT red: red
+  /// means a target was exceeded, and an unanswered message isn't that.
+  info,
+
+  /// A target was exceeded — red, same as the member app.
   alert,
 
   /// Worth a look but not urgent — orange.
@@ -61,7 +65,8 @@ class StatCard extends StatelessWidget {
 
   Color get _toneColor => switch (tone) {
     StatTone.neutral => AppColors.foreground,
-    StatTone.alert => AppColors.destructive,
+    StatTone.info => AppColors.primary,
+    StatTone.alert => AppColors.overTarget,
     StatTone.warn => AppColors.warning,
     StatTone.positive => AppColors.success,
   };

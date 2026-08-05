@@ -214,7 +214,7 @@ class _SodiumTrendCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: overDays > 0 ? AppColors.warning : AppColors.success,
+              color: overDays > 0 ? AppColors.overTarget : AppColors.success,
             ),
           ),
         ],
@@ -258,7 +258,7 @@ class _TrendBar extends StatelessWidget {
           width: 12,
           height: h,
           decoration: BoxDecoration(
-            color: over ? AppColors.warning : AppColors.accent,
+            color: over ? AppColors.overTarget : AppColors.accent,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
           ),
         ),
