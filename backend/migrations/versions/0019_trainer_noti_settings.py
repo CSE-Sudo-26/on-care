@@ -7,8 +7,8 @@
 둔다. 기본값은 서버가 정한다(모두 켬 / 30분 전) — 클라이언트마다 기본값을 들고 있으면
 기기마다 갈라진다.
 
-Revision ID: 0018_trainer_noti_settings
-Revises: 0017_add_diet_exercise_goals
+Revision ID: 0019_trainer_noti_settings
+Revises: 0018_diet_entry_sugar_g_float
 Create Date: 2026-08-06
 """
 from __future__ import annotations
@@ -18,8 +18,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0018_trainer_noti_settings"
-down_revision: str | Sequence[str] | None = "0017_add_diet_exercise_goals"
+revision: str = "0019_trainer_noti_settings"
+down_revision: str | Sequence[str] | None = "0018_diet_entry_sugar_g_float"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
