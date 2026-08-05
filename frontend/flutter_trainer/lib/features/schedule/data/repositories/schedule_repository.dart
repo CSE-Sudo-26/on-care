@@ -3,14 +3,84 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 
+/// Identifies a client for [ScheduleRepository.watchClientSessions].
+///
+/// The two sources key sessions differently: drift stores the client's
+/// display NAME on the row, the API filters by member id. Carrying both
+/// keeps each implementation honest instead of forcing one to guess.
+typedef ScheduleClientKey = ({String id, String name});
+
+/// The trainer's timeline: reads, booking CRUD, and session completion.
+///
+/// Two implementations sit behind this, selected by
+/// [scheduleRepositoryProvider] via [AppConfig.useMockApi]:
+///  * [DriftScheduleRepository] — local drift, demo / `USE_MOCK_API=true`;
+///  * [DioScheduleRepository] — the real FastAPI backend.
+///
+/// Reads are streams so the drift source can stay reactive; the Dio
+/// source emits a single fetched value and re-reads after each mutation.
+abstract interface class ScheduleRepository {
+  /// Today's slots in timeline order (including 공백 gaps).
+  Stream<List<ScheduleSession>> watchToday();
+
+  /// The timeline for one calendar [date] (`YYYY-MM-DD`).
+  Stream<List<ScheduleSession>> watchDate(String date);
+
+  /// Dates that have at least one booked session (week-strip dots).
+  Stream<Set<String>> watchBookedDates();
+
+  /// Every slot between [fromDate] and [toDate] inclusive.
+  Stream<List<ScheduleSession>> watchRange(String fromDate, String toDate);
+
+  /// One client's booked sessions, newest first.
+  Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client);
+
+  /// Books a new session (status 예정).
+  Future<void> addSession({
+    required String date,
+    required String clientName,
+    required String time,
+    required String type,
+    required int durationMinutes,
+    String note,
+  });
+
+  /// Edits a booked session's time/client/type/duration/note.
+  Future<void> updateSession(
+    String id, {
+    required String clientName,
+    required String time,
+    required String type,
+    required int durationMinutes,
+    required String note,
+  });
+
+  /// Replaces the exercise program and trainer memo without changing the
+  /// booking itself.
+  Future<void> updateProgram(
+    String id, {
+    required List<ProgramItem> program,
+    required String note,
+  });
+
+  /// Removes a session from the timeline.
+  Future<void> deleteSession(String id);
+
+  /// Marks an 예정 session 완료 with the trainer's [note].
+  Future<void> completeSession(String id, {String note});
+}
+
 /// Reads the trainer's daily timeline from the local drift DB.
-class ScheduleRepository {
+class DriftScheduleRepository implements ScheduleRepository {
   /// Creates the repository over [_db].
-  const ScheduleRepository(this._db);
+  const DriftScheduleRepository(this._db);
 
   final AppDatabase _db;
 
@@ -19,9 +89,11 @@ class ScheduleRepository {
   /// NOTE: `ymd(DateTime.now())`는 스트림 구독 시점에 고정된다 — 앱을
   /// 자정 넘겨 켜두면 '오늘'이 갱신되지 않음(예약 카운트와 동일 패턴,
   /// 로컬 mock 데모 범위에선 허용). 실 백엔드 전환 시 서버가 판단한다.
+  @override
   Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(DateTime.now()));
 
   /// The timeline for one calendar [date] (`YYYY-MM-DD`).
+  @override
   Stream<List<ScheduleSession>> watchDate(String date) {
     final query = _db.select(_db.trainerScheduleEntries)
       ..where((t) => t.date.equals(date))
@@ -37,6 +109,7 @@ class ScheduleRepository {
 
   /// Dates (`YYYY-MM-DD`) that have at least one booked (non-공백)
   /// session — drives the week strip's dot markers.
+  @override
   Stream<Set<String>> watchBookedDates() {
     final t = _db.trainerScheduleEntries;
     final query = _db.selectOnly(t, distinct: true)
@@ -51,6 +124,7 @@ class ScheduleRepository {
   /// Every slot between [fromDate] and [toDate] inclusive (`YYYY-MM-DD`),
   /// ordered by day then time. Backs the week calendar — one query for
   /// the whole week rather than seven day subscriptions.
+  @override
   Stream<List<ScheduleSession>> watchRange(String fromDate, String toDate) {
     final query = _db.select(_db.trainerScheduleEntries)
       // `YYYY-MM-DD` is lexicographically ordered, so a string BETWEEN
@@ -77,12 +151,13 @@ class ScheduleRepository {
   /// exact compare would silently return nothing for a name stored with
   /// stray whitespace or different case, and the weekly report would
   /// then show 0 sessions for a client who clearly has some.
-  Stream<List<ScheduleSession>> watchClientSessions(String clientName) {
+  @override
+  Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
     final query = _db.select(_db.trainerScheduleEntries)
       ..where(
         (t) =>
             t.clientName.lower().trim().equals(
-              clientName.trim().toLowerCase(),
+              client.name.trim().toLowerCase(),
             ) &
             t.status.equals('공백').not(),
       )
@@ -95,6 +170,7 @@ class ScheduleRepository {
 
   /// Books a new session on [date]'s timeline (status 예정). The
   /// non-`seed-` id survives the daily re-seed.
+  @override
   Future<void> addSession({
     required String date,
     required String clientName,
@@ -121,6 +197,7 @@ class ScheduleRepository {
   }
 
   /// Edits a booked session's time/client/type/duration.
+  @override
   Future<void> updateSession(
     String id, {
     required String clientName,
@@ -144,6 +221,7 @@ class ScheduleRepository {
 
   /// Replaces the exercise program and trainer memo without changing the
   /// booking itself (client, type, time, or duration).
+  @override
   Future<void> updateProgram(
     String id, {
     required List<ProgramItem> program,
@@ -170,6 +248,7 @@ class ScheduleRepository {
   }
 
   /// Removes a session from the timeline.
+  @override
   Future<void> deleteSession(String id) async {
     await (_db.delete(
       _db.trainerScheduleEntries,
@@ -189,6 +268,7 @@ class ScheduleRepository {
   /// A session dated in the FUTURE can't be completed — it hasn't
   /// happened yet. The UI hides the 완료 action for future days, and this
   /// guard rejects it even if reached another way (review PR 245).
+  @override
   Future<void> completeSession(String id, {String note = ''}) async {
     final table = _db.trainerScheduleEntries;
     final today = ymd(DateTime.now());
@@ -284,10 +364,17 @@ class ScheduleRepository {
   }
 }
 
-/// Provides the [ScheduleRepository].
+/// Provides the [ScheduleRepository]: the real Dio-backed source against
+/// the FastAPI backend, or the local drift source for demo /
+/// `USE_MOCK_API=true`.
 final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
-  return ScheduleRepository(ref.watch(appDatabaseProvider));
-});
+  if (ref.watch(appConfigProvider).useMockApi) {
+    return DriftScheduleRepository(ref.watch(appDatabaseProvider));
+  }
+  final repo = DioScheduleRepository(ref.watch(dioProvider));
+  ref.onDispose(repo.dispose);
+  return repo;
+}, name: 'scheduleRepository');
 
 /// Streams today's timeline for the 스케줄 tab.
 final todayScheduleProvider = StreamProvider<List<ScheduleSession>>((ref) {
@@ -318,8 +405,9 @@ final scheduleRangeProvider =
 
 /// Streams one client's booked sessions, newest first.
 final clientSessionsProvider =
-    StreamProvider.family<List<ScheduleSession>, String>((ref, clientName) {
-      return ref
-          .watch(scheduleRepositoryProvider)
-          .watchClientSessions(clientName);
+    StreamProvider.family<List<ScheduleSession>, ScheduleClientKey>((
+      ref,
+      client,
+    ) {
+      return ref.watch(scheduleRepositoryProvider).watchClientSessions(client);
     });

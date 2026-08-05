@@ -495,10 +495,60 @@ def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
 
 def build_schedule(db: Session, trainer_id: str, day: str) -> list[ScheduleSessionOut]:
     """하루 타임라인(시간순, 공백 포함)."""
+    return build_schedule_range(db, trainer_id, day, day)
+
+
+def build_client_schedule(
+    db: Session, trainer_id: str, member_id: str
+) -> list[ScheduleSessionOut]:
+    """한 고객의 전체 세션(날짜→시간 순), 기간 제한 없이.
+
+    고객 상세의 루틴 이력이 쓴다. 넓은 날짜 구간으로 흉내내면 그 구간보다
+    오래된 기록이 조용히 빠지고, 화면은 그걸 '기록 없음'으로 읽는다.
+    행 수는 트레이너-고객 한 쌍의 세션 수라 자연히 작다.
+    """
     rows = db.scalars(
         select(TrainerSchedule)
-        .where(TrainerSchedule.trainer_id == trainer_id, TrainerSchedule.date == day)
-        .order_by(TrainerSchedule.time, TrainerSchedule.sort_order)
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+        )
+        .order_by(
+            TrainerSchedule.date, TrainerSchedule.time, TrainerSchedule.sort_order
+        )
+    ).all()
+    return [_schedule_out(s) for s in rows]
+
+
+def build_schedule_range(
+    db: Session,
+    trainer_id: str,
+    from_day: str,
+    to_day: str,
+    member_id: str | None = None,
+) -> list[ScheduleSessionOut]:
+    """[from_day, to_day] 구간의 슬롯을 날짜→시간 순으로.
+
+    주 캘린더가 7일치를 한 번에 읽기 위한 것 — 하루짜리 조회를 요일마다
+    반복하면 요청이 7배가 된다. `YYYY-MM-DD` 는 사전식 정렬이 곧 날짜순이라
+    문자열 범위 비교로 충분하다.
+
+    [member_id] 를 주면 그 고객의 세션만 (공백 슬롯은 자연히 빠진다 —
+    배정된 회원이 없으므로).
+    """
+    conditions = [
+        TrainerSchedule.trainer_id == trainer_id,
+        TrainerSchedule.date >= from_day,
+        TrainerSchedule.date <= to_day,
+    ]
+    if member_id is not None:
+        conditions.append(TrainerSchedule.member_id == member_id)
+    rows = db.scalars(
+        select(TrainerSchedule)
+        .where(*conditions)
+        .order_by(
+            TrainerSchedule.date, TrainerSchedule.time, TrainerSchedule.sort_order
+        )
     ).all()
     return [_schedule_out(s) for s in rows]
 

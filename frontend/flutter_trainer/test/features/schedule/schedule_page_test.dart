@@ -26,7 +26,7 @@ class _FailingChatRepository extends DriftChatRepository {
 }
 
 /// A repository whose writes always fail — to exercise error handling.
-class _ThrowingScheduleRepository extends ScheduleRepository {
+class _ThrowingScheduleRepository extends DriftScheduleRepository {
   const _ThrowingScheduleRepository(super.db);
 
   @override
@@ -58,7 +58,7 @@ void main() {
     tearDown(() => db.close());
 
     test('returns the 6 seeded slots in timeline order', () async {
-      final slots = await ScheduleRepository(db).watchToday().first;
+      final slots = await DriftScheduleRepository(db).watchToday().first;
       expect(slots.length, 6);
       expect(slots.map((s) => s.time).toList(), <String>[
         '10:00',
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('decodes the PT program and expandability rules', () async {
-      final slots = await ScheduleRepository(db).watchToday().first;
+      final slots = await DriftScheduleRepository(db).watchToday().first;
       final minsu = slots.firstWhere((s) => s.clientName == '김민수');
       expect(minsu.expandable, isTrue); // 완료 + program
       expect(minsu.program.length, 4);
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('addSession inserts an 예정 slot sorted into the timeline', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       await repo.addSession(
         date: ymd(DateTime.now()),
         clientName: '이지수',
@@ -107,7 +107,7 @@ void main() {
     });
 
     test('updateSession moves a slot to a 15-minute step', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
       final target = before.firstWhere((s) => s.clientName == '박성호');
       await repo.updateSession(
@@ -127,7 +127,7 @@ void main() {
     test(
       'updateProgram changes exercises without changing the booking',
       () async {
-        final repo = ScheduleRepository(db);
+        final repo = DriftScheduleRepository(db);
         final before = await repo.watchToday().first;
         final target = before.firstWhere((s) => s.clientName == '박성호');
 
@@ -150,7 +150,7 @@ void main() {
     );
 
     test('completeSession flips 예정 to 완료 and logs the 운동기록', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
       final target = before.firstWhere((s) => s.clientName == '박성호');
       expect(target.isUpcoming, isTrue);
@@ -174,7 +174,7 @@ void main() {
     });
 
     test('concurrent completeSession calls log the 운동기록 once', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
       final target = before.firstWhere((s) => s.clientName == '박성호');
 
@@ -198,7 +198,7 @@ void main() {
     test(
       'completeSession with an empty memo keeps the existing note',
       () async {
-        final repo = ScheduleRepository(db);
+        final repo = DriftScheduleRepository(db);
         // A booked 예정 session that already carries a note.
         await db
             .into(db.trainerScheduleEntries)
@@ -228,7 +228,7 @@ void main() {
     test(
       'completeSession without a known client only flips the status',
       () async {
-        final repo = ScheduleRepository(db);
+        final repo = DriftScheduleRepository(db);
         final before = await repo.watchToday().first;
         final consult = before.firstWhere((s) => s.clientName == '신규 고객');
         final histBefore =
@@ -245,7 +245,7 @@ void main() {
     );
 
     test('watchDate separates timelines per calendar day', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final tomorrow = ymd(DateTime.now().add(const Duration(days: 1)));
 
       expect(await repo.watchDate(tomorrow).first, isEmpty);
@@ -268,7 +268,7 @@ void main() {
     });
 
     test('completing a non-today session labels its own date', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       // A PAST session — completing it retro-logs the class. Future
       // sessions can't be completed (see the next test).
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
@@ -290,7 +290,7 @@ void main() {
     });
 
     test('completeSession refuses a future-dated session', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       await repo.addSession(
         date: ymd(tomorrow),
@@ -317,7 +317,7 @@ void main() {
       // stores the trainer's raw input. An exact compare here returned
       // nothing for a name saved with stray whitespace, and the weekly
       // report then showed 0 sessions with no error (CodeRabbit #377).
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       await repo.addSession(
         date: ymd(DateTime.now()),
         clientName: '  김민수  ',
@@ -326,12 +326,15 @@ void main() {
         durationMinutes: 60,
       );
 
-      final found = await repo.watchClientSessions('김민수').first;
+      final found = await repo.watchClientSessions((
+        id: 'seed-client-1',
+        name: '김민수',
+      )).first;
       expect(found.any((s) => s.time == '21:00'), isTrue);
     });
 
     test('deleteSession removes the slot', () async {
-      final repo = ScheduleRepository(db);
+      final repo = DriftScheduleRepository(db);
       final before = await repo.watchToday().first;
       final target = before.firstWhere((s) => s.clientName == '신규 고객');
       await repo.deleteSession(target.id);

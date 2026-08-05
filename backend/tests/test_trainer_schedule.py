@@ -296,3 +296,164 @@ def test_schedule_invalid_date_time_422(client):
     assert client.put(
         f"{url}/{sid}", json={"time": "99:99"}, headers=_h(token)
     ).status_code == 422
+
+
+# ---- 기간·고객 조회 (#378) ----
+
+def _sched_token(client) -> str:
+    return client.post(
+        "/v1/auth/login",
+        data={"username": "trainer@oncare.com", "password": "oncare123"},
+    ).json()["access_token"]
+
+
+def _sched_auth(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_schedule_range_returns_every_day_in_one_request(client):
+    """주 캘린더가 7일치를 한 번에 읽는다 — 하루짜리 요청 7번이 아니라."""
+    token = _sched_token(client)
+    made = []
+    for day in ("2026-09-07", "2026-09-09", "2026-09-13"):
+        r = client.post(
+            "/v1/trainer/schedule",
+            json={"date": day, "time": "10:00", "client_name": "범위테스트",
+                  "type": "1:1 PT", "duration_minutes": 60},
+            headers=_sched_auth(token),
+        )
+        assert r.status_code == 201, r.text
+        made.append(r.json()["id"])
+    try:
+        r = client.get(
+            "/v1/trainer/schedule",
+            params={"from": "2026-09-07", "to": "2026-09-13"},
+            headers=_sched_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        dates = [s["date"] for s in r.json() if s["client_name"] == "범위테스트"]
+        # 경계 포함(from/to 양끝), 날짜순.
+        assert dates == ["2026-09-07", "2026-09-09", "2026-09-13"]
+    finally:
+        for sid in made:
+            client.delete(f"/v1/trainer/schedule/{sid}", headers=_sched_auth(token))
+
+
+def test_schedule_range_excludes_days_outside_the_window(client):
+    token = _sched_token(client)
+    r = client.post(
+        "/v1/trainer/schedule",
+        json={"date": "2026-09-20", "time": "10:00", "client_name": "창밖",
+              "type": "1:1 PT", "duration_minutes": 60},
+        headers=_sched_auth(token),
+    )
+    sid = r.json()["id"]
+    try:
+        r = client.get(
+            "/v1/trainer/schedule",
+            params={"from": "2026-09-07", "to": "2026-09-13"},
+            headers=_sched_auth(token),
+        )
+        assert all(s["client_name"] != "창밖" for s in r.json())
+    finally:
+        client.delete(f"/v1/trainer/schedule/{sid}", headers=_sched_auth(token))
+
+
+def test_schedule_range_needs_both_ends(client):
+    """한쪽만 오면 조용히 하루로 떨어뜨리지 않는다 — 클라이언트는 구간을
+    받았다고 믿는다."""
+    token = _sched_token(client)
+    r = client.get(
+        "/v1/trainer/schedule", params={"from": "2026-09-07"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 422
+    r = client.get(
+        "/v1/trainer/schedule", params={"to": "2026-09-13"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 422
+
+
+def test_schedule_range_rejects_reversed_and_malformed_bounds(client):
+    token = _sched_token(client)
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"from": "2026-09-13", "to": "2026-09-07"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 422
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"from": "2026-09", "to": "2026-09-13"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 422
+
+
+def test_schedule_member_filter_returns_only_that_clients_sessions(client):
+    token = _sched_token(client)
+    roster = client.get("/v1/trainer/clients", headers=_sched_auth(token)).json()
+    member_id = roster[0]["id"]
+
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"from": "2026-01-01", "to": "2027-01-01", "member_id": member_id},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    # 공백 슬롯은 배정된 회원이 없으므로 자연히 빠진다.
+    assert all(s["status"] != "공백" for s in r.json())
+
+
+def test_schedule_member_only_returns_every_session_no_date_bound(client):
+    """`member_id` 만 주면 날짜 제한 없이 그 고객의 전체 세션.
+
+    구간으로 흉내내면 구간 밖의 오래된 세션이 조용히 빠지고, 고객 상세의
+    루틴 이력은 그걸 '기록 없음' 으로 읽는다.
+    """
+    token = _sched_token(client)
+    roster = client.get("/v1/trainer/clients", headers=_sched_auth(token)).json()
+    member_id = roster[0]["id"]
+
+    # 아주 오래된 세션 하나 — 어떤 '최근 N일' 구간에도 걸리지 않는다.
+    created = client.post(
+        "/v1/trainer/schedule",
+        json={
+            "date": "2020-01-02", "time": "07:00", "client_name": roster[0]["name"],
+            "member_id": member_id, "type": "1:1 PT", "duration_minutes": 30,
+        },
+        headers=_sched_auth(token),
+    )
+    assert created.status_code == 201, created.text
+    old_id = created.json()["id"]
+
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"member_id": member_id},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    ids = [s["id"] for s in r.json()]
+    assert old_id in ids
+    # 여전히 그 고객 것만.
+    assert all(s["status"] != "공백" for s in r.json())
+
+
+def test_schedule_member_filter_rejects_someone_elses_client(client):
+    token = _sched_token(client)
+    r = client.get(
+        "/v1/trainer/schedule",
+        params={"member_id": "user-nobody"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 404
+
+
+def test_schedule_rejects_a_malformed_date(client):
+    token = _sched_token(client)
+    r = client.get(
+        "/v1/trainer/schedule", params={"date": "2026-09"},
+        headers=_sched_auth(token),
+    )
+    assert r.status_code == 422

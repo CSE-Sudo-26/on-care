@@ -1586,7 +1586,9 @@ class _SendHistoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(clientSessionsProvider(client.name));
+    final sessions = ref.watch(
+      clientSessionsProvider((id: client.id, name: client.name)),
+    );
     // Homework goes out via `assignRoutine`, which writes no schedule row.
     // Watching only the schedule left this card empty right after a send,
     // so the trainer could send the same routine again believing nothing
