@@ -100,75 +100,78 @@ class _AddEventDialogState extends ConsumerState<_AddEventDialog> {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xl,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    '일정 추가',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      '일정 추가',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                Material(
-                  color: AppColors.accent,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Icon(Icons.close, size: 18),
+                  Material(
+                    color: AppColors.accent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(Icons.close, size: 18),
+                      ),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppInput(controller: _title, label: '일정 제목', hint: '예: 병원 정기검진'),
+              const SizedBox(height: AppSpacing.sm),
+              AppInput(controller: _date, label: '날짜', hint: '2026-05-14'),
+              const SizedBox(height: AppSpacing.sm),
+              AppInput(controller: _time, label: '시간', hint: '10:00'),
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 4,
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AppInput(controller: _title, label: '일정 제목', hint: '예: 병원 정기검진'),
-            const SizedBox(height: AppSpacing.sm),
-            AppInput(controller: _date, label: '날짜', hint: '2026-05-14'),
-            const SizedBox(height: AppSpacing.sm),
-            AppInput(controller: _time, label: '시간', hint: '10:00'),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.inputBackground,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _category,
-                  isExpanded: true,
-                  onChanged: (String? value) {
-                    if (value != null) setState(() => _category = value);
-                  },
-                  items: <DropdownMenuItem<String>>[
-                    for (final String c in _categoryMap.keys)
-                      DropdownMenuItem<String>(value: c, child: Text(c)),
-                  ],
+                decoration: BoxDecoration(
+                  color: AppColors.inputBackground,
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _category,
+                    isExpanded: true,
+                    onChanged: (String? value) {
+                      if (value != null) setState(() => _category = value);
+                    },
+                    items: <DropdownMenuItem<String>>[
+                      for (final String c in _categoryMap.keys)
+                        DropdownMenuItem<String>(value: c, child: Text(c)),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton(
-              label: _saving ? '추가 중...' : '추가하기',
-              fullWidth: true,
-              onPressed: _saving ? null : _submit,
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
+                label: _saving ? '추가 중...' : '추가하기',
+                fullWidth: true,
+                onPressed: _saving ? null : _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );
