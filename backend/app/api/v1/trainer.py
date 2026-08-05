@@ -20,14 +20,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
+from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import TrainerClient, TrainerProfile
 from app.schemas.trainer_api import (
-    ChatMessageOut, ChatSendRequest, ClientDietEntryOut, RoutineAssignRequest, RoutineOut,
-    RoutineHistoryOut, ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut,
-    ScheduleUpdateRequest, TrainerClientOut, TrainerGymOut, TrainerMe,
+    ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
+    ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
+    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
+    TrainerClientOut, TrainerMe, TrainerMeUpdate, TrainerPasswordChange,
+    WeeklyReportOut,
 )
 from app.services import trainer_service
+from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
 
@@ -44,6 +48,15 @@ def _is_ymd(v: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _require_profile(db: Session, trainer_id: str) -> TrainerProfile:
+    profile = db.scalar(
+        select(TrainerProfile).where(TrainerProfile.trainer_id == trainer_id)
+    )
+    if profile is None:
+        raise HTTPException(status_code=404, detail="트레이너 프로필이 없습니다.")
+    return profile
 
 
 def _require_client(db: Session, trainer_id: str, member_id: str) -> TrainerClient:
@@ -64,37 +77,41 @@ def trainer_me(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> TrainerMe:
-    profile = db.scalar(
-        select(TrainerProfile).where(TrainerProfile.trainer_id == trainer.id)
-    )
-    if profile is None:
-        raise HTTPException(status_code=404, detail="트레이너 프로필이 없습니다.")
+    profile = _require_profile(db, trainer.id)
+    return trainer_service.build_trainer_me(trainer, profile)
 
-    try:
-        certs = json.loads(profile.certifications_json) if profile.certifications_json else []
-    except json.JSONDecodeError:
-        certs = []
-    if not isinstance(certs, list) or not all(
-        isinstance(cert, str) for cert in certs
-    ):
-        certs = []
 
-    return TrainerMe(
-        id=trainer.id,
-        name=trainer.name,
-        email=trainer.email,
-        phone=profile.phone,
-        specialty=profile.specialty,
-        career=f"{profile.career_years}년",
-        intro=profile.intro,
-        certifications=certs,
-        gym=TrainerGymOut(
-            name=profile.gym_name,
-            address=profile.gym_address,
-            hours=profile.gym_hours,
-            phone=profile.gym_phone,
-        ),
-    )
+@router.put("/trainer/me", response_model=TrainerMe)
+def trainer_update_me(
+    payload: TrainerMeUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerMe:
+    """프로필 부분 수정. 보낸 필드만 반영하고, 이름/이메일은 계정 소관이라 건드리지 않는다."""
+    profile = _require_profile(db, trainer.id)
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        # 빈 PATCH 를 성공으로 처리하면 클라이언트가 저장됐다고 오해한다.
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    return trainer_service.update_trainer_profile(db, trainer, profile, fields)
+
+
+@router.post("/trainer/me/password", status_code=200)
+def trainer_change_password(
+    payload: TrainerPasswordChange,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """비밀번호 변경. 현재 비밀번호가 맞아야 하고, 같은 값으로는 바꿀 수 없다."""
+    if not verify_password(payload.current_password, trainer.hashed_password):
+        # 현재 비밀번호 불일치는 401 이 아니라 400 — 토큰은 유효하므로
+        # 클라이언트가 로그아웃 처리로 오인하면 안 된다.
+        raise HTTPException(status_code=400, detail="현재 비밀번호가 일치하지 않습니다.")
+    if verify_password(payload.new_password, trainer.hashed_password):
+        raise HTTPException(status_code=400, detail="현재와 다른 비밀번호를 입력해 주세요.")
+    trainer.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    return {"status": "changed"}
 
 
 @router.get("/trainer/clients", response_model=list[TrainerClientOut])
@@ -321,3 +338,76 @@ def trainer_complete_session(
     if out is None:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return out
+
+
+# ---- AI 코칭 (담당 고객 데이터 기반) ----
+
+@router.post("/trainer/clients/{member_id}/ai-coach", response_model=ClientCoachOut)
+def trainer_client_ai_coach(
+    member_id: str,
+    payload: ClientCoachRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ClientCoachOut:
+    """담당 고객의 데이터를 근거로 AI에게 코칭을 묻는다.
+
+    회원 앱의 `/ai-coach/chat` 과 같은 RAG 파이프라인이지만, 검색 스코프가
+    호출자(트레이너)가 아니라 **담당 회원**이다 — 트레이너가 자기 자신의 (비어
+    있는) 기록으로 코칭받는 일이 없도록. 담당 링크 확인이 접근 경계이며,
+    남의 고객이면 404 로 존재조차 드러내지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    message = payload.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="메시지가 비어 있습니다.")
+    reply, sources = coach_answer(db, member_id, message, [])
+    return ClientCoachOut(member_id=member_id, reply=reply, sources=sources)
+
+
+# ---- 주간 리포트 (트레이너 → 회원) ----
+
+@router.get("/trainer/clients/{member_id}/report", response_model=WeeklyReportOut)
+def trainer_client_report(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    week_start: str | None = Query(None, description="YYYY-MM-DD (기본: 이번 주)"),
+) -> WeeklyReportOut:
+    """담당 고객의 주간 리포트. 아무 요일을 줘도 그 주의 월요일로 정규화한다."""
+    _require_client(db, trainer.id, member_id)
+    day = week_start or trainer_service.today_iso()
+    if not _is_ymd(day):
+        raise HTTPException(status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다.")
+    return trainer_service.build_weekly_report(
+        db, trainer.id, member_id, _date.fromisoformat(day)
+    )
+
+
+@router.post(
+    "/trainer/clients/{member_id}/report/send",
+    response_model=ChatMessageOut,
+    status_code=201,
+)
+def trainer_send_report(
+    member_id: str,
+    payload: ReportSendRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ChatMessageOut:
+    """리포트를 회원의 채팅 스레드로 보낸다.
+
+    별도 리포트 함을 만들지 않는 이유: 회원이 이미 읽고 있는 대화에 도착해야
+    실제로 읽힌다. 본문을 직접 주면 트레이너가 손본 버전이 나가고, 없으면
+    서버가 생성한 것이 나간다.
+    """
+    _require_client(db, trainer.id, member_id)
+    day = payload.week_start or trainer_service.today_iso()
+    if not _is_ymd(day):
+        raise HTTPException(status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다.")
+    text = (payload.message or "").strip()
+    if not text:
+        report = trainer_service.build_weekly_report(
+            db, trainer.id, member_id, _date.fromisoformat(day)
+        )
+        text = report.message
+    return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)

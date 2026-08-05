@@ -21,8 +21,13 @@ from app.models.models import (
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
-    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut,
+    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
+    WeeklyReportOut,
 )
+
+# 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
+# '초과 N일'이 앱 화면의 경고와 어긋나면 안 된다.
+SODIUM_TARGET_MG = 2000
 
 
 def _today() -> date:
@@ -753,3 +758,159 @@ def member_unread_count(db: Session, trainer_id: str, member_id: str) -> int:
             ChatMessage.read_at.is_(None),
         )
     ) or 0
+
+
+# ---- 트레이너 프로필 ----
+
+def _certifications(profile: TrainerProfile) -> list[str]:
+    """자격증 JSON 을 방어적으로 디코드. 깨진 값은 빈 목록으로 (프로필 화면이
+    500 으로 죽는 것보다 낫다)."""
+    try:
+        certs = json.loads(profile.certifications_json) if profile.certifications_json else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(certs, list) or not all(isinstance(c, str) for c in certs):
+        return []
+    return certs
+
+
+def build_trainer_me(trainer: User, profile: TrainerProfile) -> TrainerMe:
+    """`GET /trainer/me` 응답. 조회와 수정이 같은 표현을 쓰도록 분리."""
+    return TrainerMe(
+        id=trainer.id,
+        name=trainer.name,
+        email=trainer.email,
+        phone=profile.phone,
+        specialty=profile.specialty,
+        career=f"{profile.career_years}년",
+        intro=profile.intro,
+        certifications=_certifications(profile),
+        gym=TrainerGymOut(
+            name=profile.gym_name,
+            address=profile.gym_address,
+            hours=profile.gym_hours,
+            phone=profile.gym_phone,
+        ),
+    )
+
+
+def update_trainer_profile(
+    db: Session, trainer: User, profile: TrainerProfile, fields: dict
+) -> TrainerMe:
+    """보낸 필드만 반영한다. 자격증은 통째로 교체(부분 병합은 순서가 모호하다)."""
+    if "certifications" in fields:
+        certs = [c.strip() for c in (fields["certifications"] or []) if c.strip()]
+        profile.certifications_json = json.dumps(certs, ensure_ascii=False)
+    for column in (
+        "phone", "specialty", "career_years", "intro",
+        "gym_name", "gym_address", "gym_hours", "gym_phone",
+    ):
+        if column in fields:
+            setattr(profile, column, fields[column])
+    db.commit()
+    db.refresh(profile)
+    return build_trainer_me(trainer, profile)
+
+
+# ---- 주간 리포트 ----
+
+def week_start_of(day: date) -> date:
+    """그 주의 월요일."""
+    return day - timedelta(days=day.weekday())
+
+
+def build_weekly_report(
+    db: Session, trainer_id: str, member_id: str, week_start: date
+) -> WeeklyReportOut:
+    """담당 고객 한 명의 한 주.
+
+    O2O 코칭에서 회원이 재등록하는 이유는 "좋아졌다"를 볼 수 있을 때다. 여기서
+    쓰는 값은 전부 두 앱이 이미 공유하는 데이터(식단·운동기록·스케줄)이며 새로
+    수집하는 것이 없다.
+    """
+    monday = week_start_of(week_start)
+    sunday = monday + timedelta(days=6)
+    monday_str, sunday_str = monday.isoformat(), sunday.isoformat()
+
+    member = db.get(User, member_id)
+    member_name = member.name if member else "고객"
+
+    sessions = db.scalars(
+        select(TrainerSchedule).where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.date >= monday_str,
+            TrainerSchedule.date <= sunday_str,
+            TrainerSchedule.status != "공백",
+        )
+    ).all()
+    booked = len(sessions)
+    done = sum(1 for s in sessions if s.status == "완료")
+
+    hist = db.scalars(
+        select(RoutineHistory).where(
+            RoutineHistory.member_id == member_id,
+            RoutineHistory.date >= monday_str,
+            RoutineHistory.date <= sunday_str,
+            or_(RoutineHistory.trainer_id.is_(None), RoutineHistory.trainer_id == trainer_id),
+        )
+    ).all()
+    week = _week_completion(hist, monday)
+    recorded = [d for d in week if d > 0]
+    # 기록이 하나도 없으면 null — 0% 로 보고하면 "아무것도 안 했다"는 거짓말이 된다.
+    completion_avg = round(sum(recorded) / len(recorded)) if recorded else None
+
+    diet = db.scalars(
+        select(DietEntry).where(
+            DietEntry.user_id == member_id,
+            DietEntry.date >= monday_str,
+            DietEntry.date <= sunday_str,
+        )
+    ).all()
+    sodium_by_day: dict[str, int] = defaultdict(int)
+    for e in diet:
+        sodium_by_day[e.date] += int(e.sodium_mg or 0)
+    daily = list(sodium_by_day.values())
+    sodium_over_days = sum(1 for mg in daily if mg > SODIUM_TARGET_MG)
+    sodium_avg = round(sum(daily) / len(daily)) if daily else None
+
+    report = WeeklyReportOut(
+        member_id=member_id,
+        member_name=member_name,
+        week_start=monday_str,
+        week_end=sunday_str,
+        sessions_booked=booked,
+        sessions_done=done,
+        completion_avg=completion_avg,
+        sodium_over_days=sodium_over_days,
+        sodium_avg=sodium_avg,
+        message="",
+    )
+    return report.model_copy(update={"message": report_message(report)})
+
+
+def report_message(report: WeeklyReportOut) -> str:
+    """회원 채팅 스레드에 그대로 들어갈 본문.
+
+    별도 리포트 함이 아니라 이미 읽고 있는 대화에 도착하도록 평문으로 쓴다 —
+    시스템 덤프가 아니라 담당 트레이너가 쓴 말처럼 보여야 한다.
+    """
+    start = date.fromisoformat(report.week_start)
+    end = date.fromisoformat(report.week_end)
+    good = (report.completion_avg or 0) >= 70 and report.sodium_over_days <= 2
+    lines = [
+        f"📊 {start.month}월 {start.day}일 – {end.month}월 {end.day}일 주간 리포트",
+        f"PT 세션 {report.sessions_done}/{report.sessions_booked}회 완료",
+    ]
+    if report.completion_avg is not None:
+        lines.append(f"운동 이행률 평균 {report.completion_avg}%")
+    if report.sodium_avg is not None:
+        lines.append(
+            f"나트륨 평균 {report.sodium_avg}mg · 목표 초과 {report.sodium_over_days}일"
+        )
+    lines.append(
+        "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 유지해요!"
+        if good
+        else "다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요."
+    )
+    return "\n".join(lines)
