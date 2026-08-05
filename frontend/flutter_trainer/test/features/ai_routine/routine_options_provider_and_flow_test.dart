@@ -123,6 +123,28 @@ void main() {
       expect(o.planA.rationale, contains('2100mg'));
       expect(o.planA.rationale, contains('무릎')); // trainer note reflected
     });
+
+    test('mock generator respects the requested time at both limits', () async {
+      final repo = const MockTrainerRoutineOptionsRepository();
+
+      for (final minutes in <int>[10, 180]) {
+        final options = await repo.generate(
+          'm1',
+          availableMinutes: minutes,
+          intensityPreference: 'low',
+          trainerNote: '',
+        );
+        expect(options.planA.totalMinutes, lessThanOrEqualTo(minutes));
+        expect(options.planB.totalMinutes, minutes);
+        expect(
+          options.planB.exercises.fold<int>(
+            0,
+            (sum, exercise) => sum + exercise.minutes,
+          ),
+          minutes,
+        );
+      }
+    });
   });
 
   testWidgets('inline flow: analyse → horizontal options → edit/send', (

@@ -44,8 +44,11 @@ class MockTrainerRoutineOptionsRepository
     final noteSuffix = note.isEmpty ? '' : ' 트레이너 메모 반영: $note.';
 
     final totalA = (availableMinutes * 0.7).round().clamp(10, availableMinutes);
-    final scaleB = intensityPreference == 'low' ? 0.85 : 1.0;
-    final totalB = (availableMinutes * scaleB).round().clamp(totalA + 5, 180);
+    // Keep the demo contract aligned with the backend: neither option may
+    // exceed the time the trainer entered. The old lower bound
+    // (`totalA + 5`) produced a 15-minute plan for a 10-minute request and
+    // even threw when availableMinutes was 180 (lower clamp bound > 180).
+    final totalB = availableMinutes;
 
     return RoutineOptions(
       analysis: MemberAnalysis(
@@ -62,8 +65,16 @@ class MockTrainerRoutineOptionsRepository
         totalMinutes: totalA,
         intensity: '낮음',
         exercises: <RoutineExercise>[
-          RoutineExercise(name: '저강도 걷기', minutes: (totalA * 0.6).round().clamp(1, totalA), type: '유산소'),
-          RoutineExercise(name: '코어 스트레칭', minutes: (totalA - (totalA * 0.6).round()).clamp(1, totalA), type: '스트레칭'),
+          RoutineExercise(
+            name: '저강도 걷기',
+            minutes: (totalA * 0.6).round().clamp(1, totalA),
+            type: '유산소',
+          ),
+          RoutineExercise(
+            name: '코어 스트레칭',
+            minutes: (totalA - (totalA * 0.6).round()).clamp(1, totalA),
+            type: '스트레칭',
+          ),
         ],
         reason: '짧고 지속하기 쉬운 회복 중심 루틴',
         rationale:
@@ -76,9 +87,22 @@ class MockTrainerRoutineOptionsRepository
         totalMinutes: totalB,
         intensity: intensityPreference == 'low' ? '보통' : '높음',
         exercises: <RoutineExercise>[
-          RoutineExercise(name: '인터벌 러닝', minutes: (totalB * 0.5).round().clamp(1, totalB), type: '유산소'),
-          RoutineExercise(name: '스쿼트', minutes: (totalB * 0.3).round().clamp(1, totalB), type: '근력'),
-          RoutineExercise(name: '플랭크', minutes: (totalB - (totalB * 0.5).round() - (totalB * 0.3).round()).clamp(1, totalB), type: '근력'),
+          RoutineExercise(
+            name: '인터벌 러닝',
+            minutes: (totalB * 0.5).round().clamp(1, totalB),
+            type: '유산소',
+          ),
+          RoutineExercise(
+            name: '스쿼트',
+            minutes: (totalB * 0.3).round().clamp(1, totalB),
+            type: '근력',
+          ),
+          RoutineExercise(
+            name: '플랭크',
+            minutes: (totalB - (totalB * 0.5).round() - (totalB * 0.3).round())
+                .clamp(1, totalB),
+            type: '근력',
+          ),
         ],
         reason: '운동량과 강도를 높인 루틴',
         rationale:
@@ -94,8 +118,8 @@ class MockTrainerRoutineOptionsRepository
 /// `USE_MOCK_API=true`.
 final trainerRoutineOptionsRepositoryProvider =
     Provider<TrainerRoutineOptionsRepository>((ref) {
-  if (ref.watch(appConfigProvider).useMockApi) {
-    return const MockTrainerRoutineOptionsRepository();
-  }
-  return DioTrainerRoutineOptionsRepository(ref.watch(dioProvider));
-}, name: 'trainerRoutineOptionsRepository');
+      if (ref.watch(appConfigProvider).useMockApi) {
+        return const MockTrainerRoutineOptionsRepository();
+      }
+      return DioTrainerRoutineOptionsRepository(ref.watch(dioProvider));
+    }, name: 'trainerRoutineOptionsRepository');
