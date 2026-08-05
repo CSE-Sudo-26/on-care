@@ -22,7 +22,9 @@ class RecognizedFood(BaseModel):
     )
     fat_g: Optional[float] = Field(None, ge=0, allow_inf_nan=False, description="지방 g")
     sodium_mg: Optional[int] = Field(None, description="나트륨 mg")
-    sugar_g: Optional[int] = Field(None, description="당류 g")
+    sugar_g: Optional[float] = Field(
+        None, ge=0, allow_inf_nan=False, description="당류 g"
+    )
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
     # 영양 수치 출처: 공공 DB | 인식기 추정 | 두 값의 혼합
     source: str = Field("estimate", description="db|estimate|mixed")
@@ -37,7 +39,7 @@ class DietAnalysis(BaseModel):
     total_protein_g: float = 0.0
     total_fat_g: float = 0.0
     total_sodium_mg: int = 0
-    total_sugar_g: int = 0
+    total_sugar_g: float = 0.0
     # 고혈압·DASH 관점 식단평 (기존 PoC 의 핵심 가치)
     coach_comment: str = ""
     latency_ms: Optional[int] = None
@@ -49,5 +51,5 @@ class DietAnalysis(BaseModel):
         self.total_protein_g = sum(f.protein_g or 0.0 for f in self.foods)
         self.total_fat_g = sum(f.fat_g or 0.0 for f in self.foods)
         self.total_sodium_mg = sum(f.sodium_mg or 0 for f in self.foods)
-        self.total_sugar_g = sum(f.sugar_g or 0 for f in self.foods)
+        self.total_sugar_g = sum(f.sugar_g or 0.0 for f in self.foods)
         return self

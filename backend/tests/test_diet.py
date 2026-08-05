@@ -556,3 +556,78 @@ def test_update_entry_hides_other_users_record(client, db_session):
 def test_update_entry_404_when_missing(client):
     r = client.put("/v1/diet/entries/diet-nope", json={"meal_type": "dinner"})
     assert r.status_code == 404
+
+
+def test_update_entry_keeps_fractional_sugar(client, db_session):
+    """#296 회귀: 항목 당류가 Integer 라 소수가 절삭·거부되던 문제.
+
+    프론트는 항목 당류를 double 로 다루고 음식 단위(food_nutrients.sugar_g)도
+    이미 Float 이었는데, 항목 단위만 Integer 로 남아 `sugar_g=8.5` 가 실서버
+    경로에서 깨졌다.
+    """
+    from app.services.diet_service import today_str as _today_str
+    from app.db.init_db import DEMO_USER_ID
+    from app.models.models import DietEntry
+
+    db_session.execute(
+        delete(DietEntry).where(
+            DietEntry.user_id == DEMO_USER_ID,
+            DietEntry.date == _today_str(),
+        )
+    )
+    db_session.commit()
+    entry_id = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    ).json()["entry_id"]
+
+    r = client.put(f"/v1/diet/entries/{entry_id}", json={"sugar_g": 8.5})
+    assert r.status_code == 200, r.text
+    # 예전엔 Pydantic int 검증에서 422 로 거부되거나 8 로 절삭됐다.
+    assert r.json()["sugar_g"] == 8.5
+
+    # DB 컬럼도 소수를 보존해야 한다(왕복 후 재조회).
+    db_session.expire_all()
+    assert db_session.get(DietEntry, entry_id).sugar_g == 8.5
+    assert client.get("/v1/diet/days/today").json()["total_sugar_g"] == 8.5
+
+
+def test_fractional_sugar_sums_without_truncation(client, db_session):
+    """#296 회귀: 6.3 + 8.5 가 14 나 15 가 아니라 14.8 이어야 한다."""
+    from app.services.diet_service import today_str as _today_str
+    from app.db.init_db import DEMO_USER_ID
+    from app.models.models import DietEntry
+
+    db_session.execute(
+        delete(DietEntry).where(
+            DietEntry.user_id == DEMO_USER_ID,
+            DietEntry.date == _today_str(),
+        )
+    )
+    db_session.commit()
+    for meal, sugar in (("lunch", 6.3), ("dinner", 8.5)):
+        entry_id = client.post(
+            "/v1/diet/analyze",
+            files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+            data={"meal_type": meal},
+        ).json()["entry_id"]
+        assert client.put(
+            f"/v1/diet/entries/{entry_id}", json={"sugar_g": sugar}
+        ).status_code == 200
+
+    assert client.get("/v1/diet/days/today").json()["total_sugar_g"] == pytest.approx(14.8)
+
+    # 홈 지표 카드도 같은 소수를 봐야 한다(반올림 18 로 굳으면 회귀).
+    summary = client.get("/v1/dashboard/summary").json()
+    sugar = next(i for i in summary["indicators"] if i["label"] == "당류")
+    assert sugar["current"] == pytest.approx(14.8)
+
+
+def test_entry_update_rejects_non_finite_sugar():
+    """float 로 넓힌 뒤 NaN/inf 가 새어 들어오지 않는지."""
+    from app.schemas.diet_api import DietEntryUpdate
+
+    for value in (math.nan, math.inf, -math.inf):
+        with pytest.raises(ValidationError):
+            DietEntryUpdate(sugar_g=value)

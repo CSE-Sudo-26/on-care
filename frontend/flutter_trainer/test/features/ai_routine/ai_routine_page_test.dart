@@ -66,7 +66,8 @@ class _SlowCountingRoutineRepository extends AiRoutineRepository {
     required List<Map<String, Object?>> program,
   }) async {
     registerCalls++;
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Keep the write in flight across client-switching/scroll animations.
+    await Future<void>.delayed(const Duration(seconds: 5));
     return super.registerToSchedule(
       date: date,
       clientName: clientName,
@@ -136,9 +137,10 @@ class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
       Stream.value(const <AssignedRoutine>[]);
 }
 
-/// A real-API-mode chat repository whose note send can be made to fail,
-/// to prove a failed note doesn't block the "전송 완료" claim once the
-/// routine itself was assigned (subin21cc review Major#2a).
+/// A real-API-mode chat repository whose send can be made to fail, to
+/// prove routine delivery (assignRoutine) doesn't touch chat at all — a
+/// failing chat repo must have zero effect on the "전송 완료" claim
+/// (subin21cc review Major#2a).
 class _FakeRealChatRepository implements ChatRepository {
   _FakeRealChatRepository({this.failSend = false});
 
@@ -310,6 +312,54 @@ void main() {
       expect(find.text('혈압 안정에 효과적'), findsOneWidget);
     });
 
+    testWidgets('opens the A/B assistant inline in the AI routine tab', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      expect(find.text('AI에게 맞춤 루틴 요청하기'), findsOneWidget);
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('회원 데이터를 분석했어요'), findsOneWidget);
+      expect(find.text('추천 목록으로'), findsOneWidget);
+      // The persistent shell proves this was not opened as a dialog/page.
+      expect(find.text('AI루틴'), findsOneWidget);
+    });
+
+    testWidgets('reviewed AI option remains in the recommendation list', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await tester.tap(find.text('AI에게 맞춤 루틴 요청하기'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generate-routine-options')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('complete-routine-review')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('추천 목록으로'));
+      await tester.pump();
+      await tester.tap(find.text('추천 목록으로'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('저강도 걷기'), findsOneWidget);
+      expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
+    });
+
     testWidgets('switching client updates the verdict and suggestions', (
       tester,
     ) async {
@@ -337,7 +387,10 @@ void main() {
       await tester.tap(find.text('＋ 운동 직접 추가'));
       await tester.pump();
 
-      await tester.enterText(find.byType(TextField), '레그프레스 5세트');
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+        '레그프레스 5세트',
+      );
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -404,11 +457,15 @@ void main() {
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       // Every card carries an X now — the first belongs to the first
       // AI suggestion.
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pump();
       await tester.tap(find.byIcon(Icons.close).first);
       await tester.pump();
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
 
       // Switching clients and back restores the full suggestion list.
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 1000));
+      await tester.pump();
       await tester.tap(find.text('이지수'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
@@ -450,7 +507,7 @@ void main() {
       expect(find.text('벤치프레스 4세트'), findsOneWidget); // AI routine item
     });
 
-    testWidgets('homework send leaves a trace in the client chat', (
+    testWidgets('homework send does not create a trainer chat bubble', (
       tester,
     ) async {
       await openTab(tester);
@@ -464,13 +521,15 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
 
-      // The 고객 tab's chat thread now shows the homework message.
+      // Routine delivery is shown in the member's routine feed, not as a
+      // trainer-authored blue chat bubble.
       await tester.tap(find.text('고객'));
       await settle(tester);
       await tester.tap(find.text('김민수'));
       await settle(tester);
-      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsOneWidget);
+      expect(find.textContaining('📋 AI 루틴 숙제를 보냈어요'), findsNothing);
     });
 
     testWidgets('내일 chip registers the routine on the next day', (
@@ -570,6 +629,8 @@ void main() {
           container.read(aiRoutineRepositoryProvider)
               as _SlowCountingRoutineRepository;
       expect(repo.registerCalls, 1);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
     testWidgets('switching clients mid-registration does not flash success '
@@ -613,9 +674,11 @@ void main() {
       // must not be left disabled by the previous client's guard.
       expect(find.text('오늘 스케줄에 등록됨'), findsNothing);
       expect(find.text('오늘 PT 스케줄에 등록'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
-    testWidgets('a failed chat write does not show the send confirmation', (
+    testWidgets('homework delivery does not depend on the chat repository', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -640,11 +703,8 @@ void main() {
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
 
-      // The homework write failed — no success flash, and the button is
-      // still actionable (review PR 239).
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsNothing);
-      expect(find.textContaining('검토 완료'), findsOneWidget);
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
     });
 
     testWidgets('A → B → A cannot double-register while A is still saving', (
@@ -703,6 +763,8 @@ void main() {
           container.read(aiRoutineRepositoryProvider)
               as _SlowCountingRoutineRepository;
       expect(repo.registerCalls, 1);
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
     });
 
     testWidgets('switching clients mid-send does not flash send success '
@@ -750,7 +812,10 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('＋ 운동 직접 추가'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), '레그프레스 5세트');
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('custom-exercise-name')),
+        '레그프레스 5세트',
+      );
       await tester.ensureVisible(find.text('추가하기'));
       await tester.pump();
       await tester.tap(find.text('추가하기'));
@@ -776,6 +841,8 @@ void main() {
       await openTab(tester);
 
       // Remove all three seeded AI suggestions for 김민수.
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pump();
       for (var i = 0; i < 3; i++) {
         await tester.tap(find.byIcon(Icons.close).first);
         await tester.pump();
@@ -864,8 +931,9 @@ void main() {
     }
 
     testWidgets(
-      'assign succeeds even when the chat note fails: still shows the '
-      'send confirmation (assigning IS the delivery; the note is cosmetic)',
+      'real-API assign delivery does not depend on the chat repository '
+      '(routine delivery shows in the member routine feed, not as a chat '
+      'bubble)',
       (tester) async {
         final routineRepo = await openRealApiTab(tester, chatFails: true);
 
@@ -893,21 +961,18 @@ void main() {
       },
     );
 
-    testWidgets(
-      'a non-network assign failure shows the generic retry message '
-      '(a clear failure, safe to retry)',
-      (tester) async {
-        await openRealApiTab(tester, assignError: const ServerError());
+    testWidgets('a non-network assign failure shows the generic retry message '
+        '(a clear failure, safe to retry)', (tester) async {
+      await openRealApiTab(tester, assignError: const ServerError());
 
-        await tapSend(tester);
+      await tapSend(tester);
 
-        expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
-        expect(
-          find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-          findsNothing,
-        );
-      },
-    );
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+      expect(
+        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
+        findsNothing,
+      );
+    });
 
     testWidgets(
       'an all-custom send (every AI suggestion removed) assigns type/source '
@@ -915,9 +980,19 @@ void main() {
       (tester) async {
         final routineRepo = await openRealApiTab(tester);
 
-        // Remove all 3 seeded AI suggestions for 김민수.
+        // Remove all 3 seeded AI suggestions for 김민수. Scroll each delete
+        // icon into view first — the new AI-assistant prompt banner above
+        // the routine cards can push the first card below the fold.
         for (var i = 0; i < 3; i++) {
-          await tester.tap(find.byIcon(Icons.close).first);
+          final closeIcon = find.byIcon(Icons.close).first;
+          await tester.scrollUntilVisible(
+            closeIcon,
+            150,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.ensureVisible(closeIcon);
+          await tester.pump();
+          await tester.tap(closeIcon);
           await tester.pump();
         }
 
@@ -931,11 +1006,16 @@ void main() {
         await tester.tap(find.text('＋ 운동 직접 추가'));
         await tester.pump();
 
-        await tester.enterText(find.byType(TextField), '스트레칭 A');
-        // Default type chip is 근력 — switch to 스트레칭 so the assigned
+        await tester.enterText(
+          find.byKey(const ValueKey<String>('custom-exercise-name')),
+          '스트레칭 A',
+        );
+        // Default category is 근력 — switch to 스트레칭 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
-        await tester.tap(find.text('스트레칭'));
+        await tester.tap(
+          find.byKey(const ValueKey<String>('custom-exercise-category-스트레칭')),
+        );
         await tester.pump();
         await tester.ensureVisible(find.text('추가하기'));
         await tester.pump();
