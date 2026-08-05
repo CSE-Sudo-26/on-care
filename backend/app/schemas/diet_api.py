@@ -60,7 +60,7 @@ class DietEntryOut(BaseModel):
     protein_g: float
     fat_g: float
     sodium_mg: int
-    sugar_g: int
+    sugar_g: float
 
 
 class DietEntryUpdate(BaseModel):
@@ -72,14 +72,14 @@ class DietEntryUpdate(BaseModel):
     protein_g: float | None = Field(None, ge=0, allow_inf_nan=False)
     fat_g: float | None = Field(None, ge=0, allow_inf_nan=False)
     sodium_mg: int | None = Field(None, ge=0)
-    sugar_g: int | None = Field(None, ge=0)
+    sugar_g: float | None = Field(None, ge=0, allow_inf_nan=False)
 
 
 class DietTodayResponse(BaseModel):
     entries: list[DietEntryOut]
     total_calories: int
     total_sodium_mg: int
-    total_sugar_g: int
+    total_sugar_g: float
     macros: Macros
     ai_coach_message: str
 

@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
-import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -15,6 +13,7 @@ import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -191,10 +190,9 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     );
     final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
     // 주간 소모 목표는 서버(exercise_burn_goal)에서 온다. 홈 운동 카드도 같은
-    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 로딩 전에는 엔티티 기본값.
-    final int burnGoal =
-        ref.watch(dashboardSummaryProvider).valueOrNull?.exerciseBurnGoal ??
-        DashboardSummary.defaultExerciseBurnGoal;
+    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 출처(대시보드 요약)와
+    // 로딩 전 기본값 처리는 공용 provider 안에 있다.
+    final int burnGoal = ref.watch(exerciseBurnGoalProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
@@ -503,13 +501,15 @@ class _ExerciseOtherDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Center(
         child: Text(
-          '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 운동을 확인해 주세요.',
+          // 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 끼운다.
+          l.otherDateEmpty(l.pageExerciseTitle),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12.5,
             height: 1.5,
             fontWeight: FontWeight.w500,
@@ -752,18 +752,18 @@ class _ActivityStatusState extends State<_ActivityStatus> {
     ];
   }
 
-  _ChartPeriod _dataFor(int period) {
+  _ChartPeriod _dataFor(AppLocalizations l, int period) {
     switch (period) {
       case 2: // 이번 달 — weekly buckets
-        return const _ChartPeriod(
-          <_Bar>[
+        return _ChartPeriod(
+          const <_Bar>[
             _Bar(120, 40, 30),
             _Bar(95, 60, 20),
             _Bar(140, 45, 35),
             _Bar(90, 55, 25),
             _Bar(60, 40, 20),
           ],
-          <String>['1주', '2주', '3주', '4주', '5주'],
+          <String>[for (int w = 1; w <= 5; w++) l.exWeekNumber(w)],
           -1,
         );
       default: // 이번 주
@@ -794,7 +794,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
             const Spacer(),
             _PeriodToggle(
               active: _period,
-              labels: <String>[l.exToday, l.exThisWeek, '이번 달'],
+              labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
               onChanged: (int i) => setState(() => _period = i),
             ),
           ],
@@ -805,7 +805,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
           _TodayDonut(
             segs: <_DonutSeg>[
               _DonutSeg(
-                '유산소',
+                l.exTypeCardio,
                 _today(
                   _hasBreakdown
                       ? widget.week.cardioMinutes
@@ -814,12 +814,12 @@ class _ActivityStatusState extends State<_ActivityStatus> {
                 FigmaColors.primary,
               ),
               _DonutSeg(
-                '근력',
+                l.exTypeStrength,
                 _today(widget.week.strengthMinutes).round(),
                 const Color(0xFF1B6FA8),
               ),
               _DonutSeg(
-                '스트레칭',
+                l.exTypeStretching,
                 _today(widget.week.stretchingMinutes).round(),
                 const Color(0xFFD4EEF8),
               ),
@@ -828,7 +828,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         else
           Builder(
             builder: (BuildContext context) {
-              final _ChartPeriod data = _dataFor(_period);
+              final _ChartPeriod data = _dataFor(l, _period);
               return _ActivityChart(
                 bars: data.bars,
                 dayLabels: data.labels,
@@ -850,6 +850,7 @@ class _TodayDonut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final int total = segs.fold<int>(0, (int a, _DonutSeg s) => a + s.minutes);
     return Container(
       // 이번 주/이번 달 막대 차트 카드와 동일하게 가로 전체를 채운다(오늘 카드만
@@ -894,9 +895,9 @@ class _TodayDonut extends StatelessWidget {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const Text(
-                          '분',
-                          style: TextStyle(
+                        Text(
+                          l.unitMinutes,
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: FigmaColors.textMuted,
@@ -914,9 +915,9 @@ class _TodayDonut extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      '오늘 총 운동 시간',
-                      style: TextStyle(
+                    Text(
+                      l.exTodayTotalTime,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: FigmaColors.textMuted,
@@ -951,6 +952,7 @@ class _DonutLegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Row(
       children: <Widget>[
         Container(
@@ -973,7 +975,7 @@ class _DonutLegendRow extends StatelessWidget {
           ),
         ),
         Text(
-          '${seg.minutes}분',
+          l.unitMinutesValue(seg.minutes),
           style: const TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
@@ -1113,7 +1115,7 @@ class _ActivityChart extends StatelessWidget {
               min: b.stretch.round(),
             ),
         ];
-    if (rows.isEmpty) return const <InlineSpan>[TextSpan(text: '휴식')];
+    if (rows.isEmpty) return <InlineSpan>[TextSpan(text: l.exRest)];
     final List<InlineSpan> spans = <InlineSpan>[];
     for (int k = 0; k < rows.length; k++) {
       final ({Color color, String label, int min}) r = rows[k];
@@ -1131,7 +1133,7 @@ class _ActivityChart extends StatelessWidget {
           ),
         ),
       );
-      spans.add(TextSpan(text: '${r.label}   ${r.min}분'));
+      spans.add(TextSpan(text: '${r.label}   ${l.unitMinutesValue(r.min)}'));
       if (k < rows.length - 1) spans.add(const TextSpan(text: '\n'));
     }
     return spans;
@@ -1700,6 +1702,7 @@ class _PtAiRoutineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1712,20 +1715,25 @@ class _PtAiRoutineCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // Title (with AI glyph) on the left, the "반영" badge on the right.
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(Icons.auto_awesome, size: 16, color: FigmaColors.primary),
-              SizedBox(width: 6),
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+              const SizedBox(width: 6),
               Text(
-                'AI 추천 운동',
-                style: TextStyle(
+                l.exAiRecommendedExercise,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: FigmaColors.ink,
                 ),
               ),
-              Spacer(),
-              AiPill(
+              const Spacer(),
+              // 데모/시드 성격 문구라 이번 l10n 범위 밖(#367 Out of scope).
+              const AiPill(
                 '트레이너 피드백 + 식단 반영',
                 fontSize: 10,
                 fontWeight: FontWeight.w500,

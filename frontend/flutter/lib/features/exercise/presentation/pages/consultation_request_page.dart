@@ -506,7 +506,7 @@ class _DateField extends StatelessWidget {
         ? l.exSelectDate
         : MaterialLocalizations.of(context).formatMediumDate(date!);
     return Material(
-      color: FigmaColors.softBlue,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
