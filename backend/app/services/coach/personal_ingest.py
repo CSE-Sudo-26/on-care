@@ -1,4 +1,4 @@
-"""식단/바이탈 기록을 개인 RAG 문서로 적재(best-effort).
+"""식단 기록을 개인 RAG 문서로 적재(best-effort).
 
 원칙: 적재 실패(임베딩 오류 등)가 절대 원 기록 저장이나 응답을 깨뜨리지 않는다.
 실패 시 조용히 넘어가고 세션을 롤백해 정리한다. RAG_AUTO_INGEST=false 로 끌 수 있다.
@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -39,17 +38,3 @@ def record_diet(
         f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g}g."
     )
     _safe(db, user_id, text, domain="diet", source="diet")
-
-
-def record_vital(db: Session, user_id: str, *, kind: str, value: dict) -> None:
-    day = datetime.now().strftime("%Y-%m-%d")
-    if kind == "blood-pressure":
-        text = f"{day} 혈압 {value.get('systolic')}/{value.get('diastolic')} mmHg."
-    elif kind == "blood-sugar":
-        text = f"{day} 혈당 {value.get('mg_per_dl')} mg/dL."
-    elif kind == "weight":
-        text = f"{day} 체중 {value.get('kg')} kg."
-    else:
-        return
-    # 혈압·혈당·체중은 식단/운동 코치 모두에 유용 → general
-    _safe(db, user_id, text, domain="general", source="vital")

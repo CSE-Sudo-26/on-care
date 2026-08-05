@@ -10,7 +10,6 @@ import 'package:oncare/features/my_health/presentation/controllers/my_health_con
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:oncare/shared/widgets/modals/quick_input_dialog.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -34,19 +33,6 @@ class MyHealthPage extends ConsumerWidget {
         showNotifSheet(context);
       case _MySetting.support:
         showSupportSheet(context);
-    }
-  }
-
-  /// 체중/혈압/혈당 빠른 기록 다이얼로그를 열고, 저장되면 백엔드 건강 지표를
-  /// 다시 불러온다(활동점수·위험도·지표 갱신). 데모/목 모드는 로컬 저장만 된다.
-  Future<void> _record(
-    BuildContext context,
-    WidgetRef ref,
-    QuickInputKind kind,
-  ) async {
-    final bool saved = await showQuickInputDialog(context, kind: kind);
-    if (saved) {
-      ref.invalidate(myHealthStateProvider);
     }
   }
 
@@ -84,14 +70,6 @@ class MyHealthPage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _PointsBanner(
                     points: health.valueOrNull?.activityPoints,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _QuickRecordCard(
-                    onRecord: (QuickInputKind kind) =>
-                        _record(context, ref, kind),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -708,113 +686,6 @@ class _PointRule extends StatelessWidget {
   }
 }
 
-/// "빠른 기록" 카드 — 체중/혈압/혈당을 바로 기록하는 진입점.
-/// 각 타일은 [showQuickInputDialog] 를 열고, 저장되면 상위에서 건강 지표를
-/// 새로고침한다. (바이탈 입력 다이얼로그는 기존에 진입점이 없어 고아 상태였다.)
-class _QuickRecordCard extends StatelessWidget {
-  const _QuickRecordCard({required this.onRecord});
-  final ValueChanged<QuickInputKind> onRecord;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const Text(
-          '빠른 기록',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.ink,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: FigmaColors.hairline),
-            boxShadow: kCardShadow,
-          ),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: _QuickRecordTile(
-                  icon: Icons.monitor_weight_outlined,
-                  label: '체중',
-                  onTap: () => onRecord(QuickInputKind.weight),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _QuickRecordTile(
-                  icon: Icons.favorite_outline,
-                  label: '혈압',
-                  onTap: () => onRecord(QuickInputKind.bloodPressure),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _QuickRecordTile(
-                  icon: Icons.water_drop_outlined,
-                  label: '혈당',
-                  onTap: () => onRecord(QuickInputKind.bloodSugar),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickRecordTile extends StatelessWidget {
-  const _QuickRecordTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Column(
-          children: <Widget>[
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: FigmaColors.softBlue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 20, color: FigmaColors.primary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SettingItem {
   const _SettingItem(this.icon, this.id);
   final IconData icon;
@@ -827,7 +698,7 @@ class _Settings extends StatelessWidget {
 
   static const List<_SettingItem> _items = <_SettingItem>[
     _SettingItem(Icons.person_outline, _MySetting.profile),
-    _SettingItem(Icons.bar_chart_rounded, _MySetting.goals),
+    _SettingItem(Icons.flag_outlined, _MySetting.goals),
     _SettingItem(Icons.notifications_none_rounded, _MySetting.notif),
     _SettingItem(Icons.chat_bubble_outline_rounded, _MySetting.support),
   ];
@@ -837,7 +708,7 @@ class _Settings extends StatelessWidget {
       case _MySetting.profile:
         return l.myProfileTitle;
       case _MySetting.goals:
-        return l.myGoalsTitle;
+        return '건강 목표';
       case _MySetting.notif:
         return l.myNotifTitle;
       case _MySetting.support:

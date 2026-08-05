@@ -31,6 +31,7 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
             name: gym.trainerName!,
             role: gym.trainerRole,
             gymName: gym.name,
+            reason: gym.trainerReason,
           ),
         )
         .where((_TrainerListItem trainer) {
@@ -147,12 +148,14 @@ class _TrainerListItem {
     required this.name,
     required this.role,
     required this.gymName,
+    required this.reason,
   });
 
   final String gymId;
   final String name;
   final String? role;
   final String gymName;
+  final String? reason;
 }
 
 class _SearchField extends StatelessWidget {
@@ -309,8 +312,9 @@ class _TrainerListCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
+                    // '전담 트레이너'가 있던 자리·스타일에 소속 헬스장을 표기.
                     Text(
-                      trainer.role ?? l.exTrainerDedicated,
+                      trainer.gymName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -318,26 +322,16 @@ class _TrainerListCard extends StatelessWidget {
                         color: FigmaColors.textMuted,
                       ),
                     ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '${l.exTrainerAffiliation} · ${trainer.gymName}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: FigmaColors.textBody,
-                      ),
-                    ),
                     const SizedBox(height: 8),
                     Text(
-                      l.exTrainerRecommendationReason,
-                      maxLines: 1,
+                      trainer.reason ?? l.exTrainerRecommendationReason,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: FigmaColors.primary,
+                        height: 1.3,
                       ),
                     ),
                   ],

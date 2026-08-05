@@ -131,23 +131,25 @@ class _TrainerDetails extends StatelessWidget {
                 color: FigmaColors.ink,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              gym.trainerRole ?? l.exTrainerDedicated,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: FigmaColors.textMuted,
+            if (gym.trainerRole?.isNotEmpty ?? false) ...<Widget>[
+              const SizedBox(height: 5),
+              Text(
+                gym.trainerRole!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: FigmaColors.textMuted,
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 22),
             _DetailSection(
               icon: Icons.auto_awesome_outlined,
               title: l.exRecommendationReason,
               child: Text(
-                l.exTrainerRecommendationReason,
+                gym.trainerReason ?? l.exTrainerRecommendationReason,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.5,

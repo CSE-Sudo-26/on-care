@@ -23,11 +23,7 @@ class DioAccountRepository implements AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
-    num? weightKg,
     String? conditions,
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
     int? dailySodiumMg,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
@@ -36,11 +32,7 @@ class DioAccountRepository implements AccountRepository {
         'birth_date': ?birthDate,
         'gender': ?gender,
         'height_cm': ?heightCm,
-        'weight_kg': ?weightKg,
         'conditions': ?conditions,
-        'goal_weight_kg': ?goalWeightKg,
-        'goal_bp_systolic': ?goalBpSystolic,
-        'goal_blood_sugar': ?goalBloodSugar,
         'daily_sodium_mg': ?dailySodiumMg,
       },
     );
@@ -68,22 +60,28 @@ class DioAccountRepository implements AccountRepository {
 
   @override
   Future<UserProfile> updateHealthGoals({
-    num? goalWeightKg,
-    int? goalBpSystolic,
-    int? goalBloodSugar,
     int? dailyCalories,
     int? dailySodiumMg,
     int? dailySugarG,
+    int? dailyCarbsG,
+    int? dailyProteinG,
+    int? dailyFatG,
+    int? weeklyWorkoutGoal,
+    int? weeklyExerciseMinutesGoal,
+    int? weeklyBurnGoal,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/users/me/health-goals',
       data: <String, Object?>{
-        'goal_weight_kg': ?goalWeightKg,
-        'goal_bp_systolic': ?goalBpSystolic,
-        'goal_blood_sugar': ?goalBloodSugar,
         'daily_calories': ?dailyCalories,
         'daily_sodium_mg': ?dailySodiumMg,
         'daily_sugar_g': ?dailySugarG,
+        'daily_carbs_g': ?dailyCarbsG,
+        'daily_protein_g': ?dailyProteinG,
+        'daily_fat_g': ?dailyFatG,
+        'weekly_workout_goal': ?weeklyWorkoutGoal,
+        'weekly_exercise_minutes_goal': ?weeklyExerciseMinutesGoal,
+        'weekly_burn_goal': ?weeklyBurnGoal,
       },
     );
     return UserProfile.fromJson(res.data!);

@@ -2,7 +2,7 @@
 사용자 라우터 — 프론트 계약 정렬.
 
   GET  /users/me           -> { id, name, email }
-  GET  /users/me/health    -> { profile, risk, indicators[], activity_points, activity_rank, settings[] }
+  GET  /users/me/health    -> { profile, risk, activity_points, activity_rank, settings[] }
   POST /auth/login         -> { access_token, token_type }   (Stage 4 대비)
   POST /auth/register      -> { id, name, email }             (Stage 4 대비)
 
@@ -30,10 +30,11 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.models import HealthProfile, User
 from app.schemas.user import (
-    HealthGoalsUpdate, HealthProfileBrief, OnboardingRequest, ProfileUpdate, ProfileView,
-    RefreshRequest, RiskInfo, SettingItem, Token, UserHealth, UserMe, UserRegister,
+    HealthGoalsUpdate, HealthProfileBrief, OnboardingRequest, ProfileUpdate,
+    ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, UserHealth,
+    UserMe, UserRegister,
 )
-from app.services.health_service import DEMO_SETTINGS, build_indicators_for_user
+from app.services.health_service import DEMO_SETTINGS
 
 router = APIRouter(tags=["users"])
 
@@ -64,19 +65,16 @@ def get_my_health(
         points = 1240
         rank = 14
 
-    indicators = build_indicators_for_user(db, current_user.id)
-
     return UserHealth(
         profile=HealthProfileBrief(name=current_user.name, email=current_user.email),
         risk=risk,
-        indicators=indicators,
         activity_points=points,
         activity_rank=rank,
         settings=[SettingItem(**s) for s in DEMO_SETTINGS],
     )
 
 
-# ---- 프로필 / 온보딩 / 건강 목표 / 탈퇴 ----
+# ---- 프로필 / 온보딩 / 탈퇴 ----
 
 def _get_or_create_profile(db: Session, user: User) -> HealthProfile:
     """사용자의 HealthProfile 을 가져오거나(없으면) 생성한다."""
@@ -98,15 +96,19 @@ def _profile_view(user: User) -> ProfileView:
         birth_date=p.birth_date if p else "",
         gender=p.gender if p else "",
         height_cm=p.height_cm if p else None,
-        weight_kg=p.weight_kg if p else None,
         conditions=p.conditions if p else "",
         goals=p.goals if p else "",
-        goal_weight_kg=p.goal_weight_kg if p else None,
-        goal_bp_systolic=p.goal_bp_systolic if p else None,
-        goal_blood_sugar=p.goal_blood_sugar if p else None,
         daily_calories=p.daily_calories if p else None,
         daily_sodium_mg=p.daily_sodium_mg if p else None,
         daily_sugar_g=p.daily_sugar_g if p else None,
+        daily_carbs_g=p.daily_carbs_g if p else None,
+        daily_protein_g=p.daily_protein_g if p else None,
+        daily_fat_g=p.daily_fat_g if p else None,
+        weekly_workout_goal=p.weekly_workout_goal if p else None,
+        weekly_exercise_minutes_goal=(
+            p.weekly_exercise_minutes_goal if p else None
+        ),
+        weekly_burn_goal=p.weekly_burn_goal if p else None,
         onboarded=p.onboarded if p else False,
     )
 
@@ -135,6 +137,21 @@ def submit_onboarding(
         setattr(profile, field, value)
     profile.onboarded = True
 
+    db.commit()
+    db.refresh(user)
+    return _profile_view(user)
+
+
+@router.put("/users/me/health-goals", response_model=ProfileView)
+def update_health_goals(
+    payload: HealthGoalsUpdate,
+    user: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> ProfileView:
+    """건강 목표(식단 일일 6종 + 주간 운동 3종) 저장. 제공된 필드만 반영."""
+    profile = _get_or_create_profile(db, user)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(profile, field, value)
     db.commit()
     db.refresh(user)
     return _profile_view(user)
@@ -169,27 +186,12 @@ def update_me(
     return _profile_view(user)
 
 
-@router.put("/users/me/health-goals", response_model=ProfileView)
-def update_health_goals(
-    payload: HealthGoalsUpdate,
-    user: RequireMember,
-    db: Annotated[Session, Depends(get_db)],
-) -> ProfileView:
-    """건강 목표 모달 저장: 목표 체중/혈압/혈당/일일 칼로리·나트륨·당류."""
-    profile = _get_or_create_profile(db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(profile, field, value)
-    db.commit()
-    db.refresh(user)
-    return _profile_view(user)
-
-
 @router.delete("/users/me")
 def delete_me(
     user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
-    """회원 탈퇴. FK(ondelete=CASCADE)로 프로필·식단·운동·바이탈·일정·알림·
+    """회원 탈퇴. FK(ondelete=CASCADE)로 프로필·식단·운동·일정·알림·
     소셜계정·개인 코치문서가 함께 삭제된다."""
     db.delete(user)
     db.commit()

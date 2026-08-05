@@ -132,6 +132,139 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('지표 카드는 소수 수치를 반올림하지 않는다 (당류 17.8)', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1067, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 3428, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 17.8, max: 50, unit: 'g'),
+        ],
+        macros: DietMacros(
+          carbsG: 120,
+          proteinG: 45,
+          fatG: 45,
+          carbsPct: 45,
+          proteinPct: 17,
+          fatPct: 38,
+        ),
+        dietEntries: 3,
+        exerciseMinutes: 0,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 60,
+        weekScoreDelta: 0,
+        sodiumWarning: null,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 식단 탭·그래프 라벨과 같은 표기(17.8)여야 한다 — 18 로 반올림되면 회귀.
+    expect(find.text('17.8'), findsOneWidget);
+    expect(find.text('18'), findsNothing);
+    // 정수 수치는 천단위 콤마 표기를 유지한다.
+    expect(find.text('1,067'), findsOneWidget);
+    expect(find.text('3,428'), findsOneWidget);
+  });
+
+  testWidgets('지표 카드 단위는 라벨이 아니라 목표치 오른쪽에 붙는다', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      load: () async => liveSummary,
+      size: const Size(390, 2200),
+    );
+    await tester.pumpAndSettle();
+
+    // "칼로리" - "1,860" - "/2,000kcal" - "정상" 순으로 읽혀야 한다.
+    expect(find.text('/2,000kcal'), findsOneWidget);
+    expect(find.text('/2,000mg'), findsOneWidget);
+    expect(find.text('/50g'), findsOneWidget);
+
+    // 라벨에는 단위를 달지 않는다 — 좁은 카드에서 라벨이 먼저 축소되던 문제.
+    expect(find.text('칼로리'), findsOneWidget);
+    expect(find.text('칼로리 (kcal)'), findsNothing);
+    expect(find.text('나트륨 (mg)'), findsNothing);
+    expect(find.text('당류 (g)'), findsNothing);
+
+    // 단위 없는 예전 목표치 표기가 남아 있으면 회귀.
+    expect(find.text('/2,000'), findsNothing);
+    expect(find.text('/50'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('목표가 없는 지표(max=0)는 목표치 대신 단위만 남긴다', (
+    WidgetTester tester,
+  ) async {
+    // 단위가 목표치 줄로 옮겨간 뒤로는, 목표치 줄이 통째로 빠지면 큰 숫자가
+    // 단위를 잃는다. 그래서 max=0 이면 같은 자리에 단위만 적는다.
+    await pumpDashboard(
+      tester,
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1860, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 900, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 43, max: 0, unit: 'g'),
+        ],
+        macros: DietMacros(
+          carbsG: 203.6,
+          proteinG: 109.3,
+          fatG: 66.5,
+          carbsPct: 44,
+          proteinPct: 24,
+          fatPct: 32,
+        ),
+        dietEntries: 4,
+        exerciseMinutes: 45,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 85,
+        weekScoreDelta: 12,
+        sodiumWarning: null,
+      ),
+      size: const Size(390, 2200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('g'), findsOneWidget);
+    expect(find.text('/0g'), findsNothing);
+    // 목표가 있는 지표는 그대로 "/목표+단위".
+    expect(find.text('/2,000kcal'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('운동 카드 소모 목표는 서버 값(exerciseBurnGoal)을 쓴다', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(
+      tester,
+      // 화면에 하드코딩됐던 1,500 이 아니라 요약이 내려준 값이 보여야 한다.
+      load: () async => const DashboardSummary(
+        indicators: <HealthIndicator>[
+          HealthIndicator(label: '칼로리', current: 1067, max: 2000, unit: 'kcal'),
+          HealthIndicator(label: '나트륨', current: 900, max: 2000, unit: 'mg'),
+          HealthIndicator(label: '당류', current: 20, max: 50, unit: 'g'),
+        ],
+        macros: DietMacros.zero(),
+        dietEntries: 1,
+        exerciseMinutes: 30,
+        exerciseCalories: 300,
+        exerciseCount: 1,
+        exerciseBurnGoal: 800,
+        todaySchedule: <ScheduleItem>[],
+        weekScore: 60,
+        weekScoreDelta: 0,
+        sodiumWarning: null,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(' /800kcal'), findsOneWidget);
+    expect(find.text(' /1,500kcal'), findsNothing);
+  });
+
   for (final width in <double>[360, 480, 800]) {
     testWidgets('renders live PR #293 layout without overflow at ${width}px', (
       WidgetTester tester,
@@ -148,13 +281,12 @@ void main() {
       expect(find.text('203.6g'), findsOneWidget);
       expect(find.text('109.3g'), findsOneWidget);
       expect(find.text('66.5g'), findsOneWidget);
-      expect(find.text('오늘 식단 기록 4개'), findsOneWidget);
       expect(find.text('45'), findsOneWidget);
       expect(find.text('520'), findsWidgets);
       expect(find.text('4'), findsWidgets);
       expect(find.text('주간 운동 시간'), findsOneWidget);
       expect(find.text('주간 소모 칼로리'), findsOneWidget);
-      expect(find.text('주간 운동 횟수'), findsOneWidget);
+      expect(find.text('주간 운동 일수'), findsOneWidget);
       expect(find.text('병원 정기검진'), findsOneWidget);
       expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
       expect(

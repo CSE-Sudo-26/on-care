@@ -204,16 +204,19 @@ _HEALTH_PROFILE: dict[str, dict] = {
         "conditions": "고혈압, 당뇨 전단계",
         "phone": "010-1234-5678",
         "birth_date": "1990-01-15",
-        "weight_kg": 72.7,
         "activity_points": 1240,
         "activity_rank": 14,
-        # 목표치(프론트 프로필 목업과 동일)
-        "goal_weight_kg": 70,
-        "goal_bp_systolic": 120,
-        "goal_blood_sugar": 100,
+        # 일일 영양 목표(프론트 프로필 목업과 동일)
         "daily_calories": 2000,
         "daily_sodium_mg": 2000,
         "daily_sugar_g": 50,
+        "daily_carbs_g": 275,
+        "daily_protein_g": 100,
+        "daily_fat_g": 55,
+        # 주간 운동 목표
+        "weekly_workout_goal": 7,
+        "weekly_exercise_minutes_goal": 150,
+        "weekly_burn_goal": 1500,
         "onboarded": True,
     },
 }

@@ -84,7 +84,7 @@ class DashboardSummary {
     required this.exerciseMinutes,
     this.exerciseCalories = 0,
     this.exerciseCount = 0,
-    this.exerciseBurnGoal = 500,
+    this.exerciseBurnGoal = defaultExerciseBurnGoal,
     this.nutritionWeek = const <NutritionDay>[],
     this.nutritionWeekPrev = const <NutritionDay>[],
     required this.todaySchedule,
@@ -113,7 +113,11 @@ class DashboardSummary {
   final int exerciseCount;
 
   /// 운동 카드 소모 목표(kcal). 개인화 전까지 서버 기본값(500).
+  /// 홈 운동 카드와 운동 탭 '이번 주 운동 요약'이 모두 이 값을 읽는다.
   final int exerciseBurnGoal;
+
+  /// 서버가 `exercise_burn_goal` 을 내려주지 않을 때 쓰는 기본값(kcal).
+  static const int defaultExerciseBurnGoal = 500;
 
   /// 식단 카드 주간 추이(최근 7일 일별 영양) + 지난 주 같은 요일(비교선).
   /// 비어 있으면(데모/목·데이터 없음) 화면은 기존 데모 상수로 폴백한다.
@@ -182,7 +186,9 @@ class DashboardSummary {
     exerciseMinutes: (json['exercise_minutes']! as num).toInt(),
     exerciseCalories: (json['exercise_calories'] as num?)?.toInt() ?? 0,
     exerciseCount: (json['exercise_count'] as num?)?.toInt() ?? 0,
-    exerciseBurnGoal: (json['exercise_burn_goal'] as num?)?.toInt() ?? 500,
+    exerciseBurnGoal:
+        (json['exercise_burn_goal'] as num?)?.toInt() ??
+        defaultExerciseBurnGoal,
     nutritionWeek:
         ((json['nutrition_week'] as List<Object?>?) ?? const <Object?>[])
             .cast<Map<String, Object?>>()

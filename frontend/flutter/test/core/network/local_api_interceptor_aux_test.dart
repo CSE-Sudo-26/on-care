@@ -47,15 +47,14 @@ void main() {
     final body = res.data!;
     expect((body['profile']! as Map)['name'], '김민수');
     expect((body['risk']! as Map)['level'], 'medium');
-    final indicators = (body['indicators']! as List<Object?>)
-        .cast<Map<String, Object?>>();
-    expect(indicators.length, 3);
-    expect(indicators.map((i) => i['kind']).toList(), <String>[
-      'weight',
-      'blood-pressure',
-      'blood-sugar',
-    ]);
+    expect(body.containsKey('indicators'), isFalse);
     expect(body['activity_points'], 1240);
+    final settings = (body['settings']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    expect(
+      settings.map((s) => s['kind']).toList(),
+      <String>['my-profile', 'notification', 'support'],
+    );
   });
 
   test('GET /places/nearby returns four places with all categories', () async {
@@ -112,17 +111,6 @@ void main() {
 
     final me = await dio.get<Map<String, Object?>>('/users/me');
     expect(me.data!['name'], '이순신');
-  });
-
-  test('PUT /users/me/health-goals persists goals', () async {
-    await dio.put<Map<String, Object?>>(
-      '/users/me/health-goals',
-      data: <String, Object?>{'goal_weight_kg': 65, 'daily_sodium_mg': 1800},
-    );
-    final prof = await dio.get<Map<String, Object?>>('/users/me/profile');
-    expect(prof.data!['goal_weight_kg'], 65);
-    expect(prof.data!['daily_sodium_mg'], 1800);
-    expect(prof.data!['goal_bp_systolic'], 120); // 미변경 목표는 기본 유지
   });
 
   test('POST /auth/login issues a token for non-empty credentials', () async {
@@ -191,7 +179,7 @@ void main() {
         'birth_date': '1988-03-03',
         'gender': 'female',
         'conditions': '고혈압, 당뇨',
-        'goal_weight_kg': 62,
+        'height_cm': 162,
         'daily_sodium_mg': 1500,
       },
     );
@@ -203,7 +191,7 @@ void main() {
     final prof = await dio.get<Map<String, Object?>>('/users/me/profile');
     expect(prof.data!['birth_date'], '1988-03-03');
     expect(prof.data!['conditions'], '고혈압, 당뇨');
-    expect(prof.data!['goal_weight_kg'], 62);
+    expect(prof.data!['height_cm'], 162);
     expect(prof.data!['daily_sodium_mg'], 1500);
     expect(prof.data!['onboarded'], true);
   });

@@ -49,18 +49,6 @@ class ExerciseSessions extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
-@DataClassName('VitalRow')
-class Vitals extends Table {
-  TextColumn get id => text()();
-  TextColumn get kind => text()(); // weight|blood-pressure|blood-sugar
-  TextColumn get valueJson =>
-      text()(); // {"kg":68.2} / {"systolic":..} / {"mg_per_dl":..}
-  DateTimeColumn get recordedAt => dateTime()();
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
-}
-
 @DataClassName('ScheduleEventRow')
 class ScheduleEvents extends Table {
   TextColumn get id => text()();
@@ -95,7 +83,6 @@ class NotificationItems extends Table {
     AppKeyValues,
     DietEntries,
     ExerciseSessions,
-    Vitals,
     ScheduleEvents,
     NotificationItems,
   ],
@@ -120,7 +107,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -131,7 +118,6 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(dietEntries);
         await m.createTable(exerciseSessions);
-        await m.createTable(vitals);
         await m.createTable(scheduleEvents);
         await m.createTable(notificationItems);
       }
@@ -142,6 +128,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         // 식단 멱등키(idempotency_key) 컬럼 추가 — 기존 행은 null.
         await m.addColumn(dietEntries, dietEntries.idempotencyKey);
+      }
+      if (from < 5) {
+        // 바이탈(체중/혈압/혈당) 기능 제거 — 기존 vitals 테이블 폐기.
+        // v2~v4 에서만 vitals 가 생성됐고 v1 DB 에는 없으므로, 없는 테이블을
+        // 지우다 실패하지 않도록 IF EXISTS 로 안전하게 드롭한다.
+        await customStatement('DROP TABLE IF EXISTS vitals');
       }
     },
   );

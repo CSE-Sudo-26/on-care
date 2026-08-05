@@ -8,20 +8,30 @@ import 'package:intl/intl.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
-import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
+/// Home's own "/목표(단위)" suffix style. Same look as the shared
+/// [kGoalSuffixStyle], one step larger so it scales with the rest of the Home
+/// type; the other tabs keep the shared 9px size.
+const TextStyle _kGoalSuffix = TextStyle(
+  fontSize: 10.5,
+  fontWeight: FontWeight.w600,
+  color: FigmaColors.textFaint,
+);
+
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
 ///
-/// Sections (top → bottom): header, greeting, AI coaching banner, a merged
-/// 식단·영양 card (calorie ring + weekly nutrition trend) and a full-width
-/// 운동 card (activity metrics + burn goal + weekly trend),
-/// 이번 주 AI 추천 식단 carousel, 오늘의 일정. Per the product decision the
-/// 건강 지표 (심박수·수면) cards and the sleep AI-coaching banner are omitted.
+/// Sections (top → bottom): header, AI coaching banner, a 식단·영양 card
+/// (칼로리·나트륨·당류 지표 카드 + 탄단지 + 선택한 지표의 주간 추이) and a
+/// 운동 card (좌측 지표 3종 + 우측 주간 추이), 이번 주 AI 추천 식단 carousel,
+/// 오늘의 일정. Per the product decision the 건강 지표 (심박수·수면) cards and
+/// the sleep AI-coaching banner are omitted.
 class DashboardContent extends StatelessWidget {
   const DashboardContent({
     super.key,
@@ -34,7 +44,6 @@ class DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
@@ -46,25 +55,7 @@ class DashboardContent extends StatelessWidget {
               onCalendarTap: onCalendarTap,
               onProfileTap: () => context.go(AppRoutes.myHealth),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              child: Consumer(
-                builder: (BuildContext context, WidgetRef ref, _) {
-                  // Greet by the signed-in user's name; fall back to a
-                  // name-less greeting while the profile loads or is empty.
-                  final String name =
-                      ref.watch(profileProvider).valueOrNull?.name.trim() ?? '';
-                  return Text(
-                    name.isEmpty ? l.homeGreetingGeneric : l.homeGreeting(name),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.textMuted,
-                    ),
-                  );
-                },
-              ),
-            ),
+            const SizedBox(height: 8),
             Consumer(
               builder: (BuildContext context, WidgetRef ref, _) {
                 return ref
@@ -204,16 +195,23 @@ class _HomeHeader extends StatelessWidget {
           const HeartLogo(),
           const SizedBox(width: 6),
           // 헤더 브랜드명은 "On - Care" (탭 제목 appTitle="On-Care"와 별개).
-          const Text(
-            'On - Care',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.ink,
-              letterSpacing: -0.5,
+          // Expanded 하나가 남는 가로 공간을 전부 흡수해야 오른쪽 버튼들이 카드
+          // 오른쪽 끝에 맞는다. (Flexible + Spacer 로 두면 둘이 남는 공간을
+          // 반씩 나눠 가져 버튼이 중간에서 멈춘다.) 좁은 화면에서는 이 칸이
+          // 줄면서 워드마크가 말줄임 처리된다.
+          const Expanded(
+            child: Text(
+              'On - Care',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
-          const Spacer(),
           _RoundIconButton(
             onTap: onNotificationTap,
             showDot: true,
@@ -357,6 +355,8 @@ class _CoachingBanner extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
+          // AI 조언 배너만 원래의 연한 파랑 그라데이션을 유지한다(식단·운동
+          // 카드는 흰색 + 회색 그림자).
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -364,8 +364,6 @@ class _CoachingBanner extends StatelessWidget {
               colors: <Color>[FigmaColors.bannerStart, FigmaColors.bannerEnd],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: FigmaColors.primaryA(0.18)),
-            boxShadow: kCardShadow,
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -384,7 +382,7 @@ class _CoachingBanner extends StatelessWidget {
                           Text(
                             l.homeAiAdviceTitle,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: FigmaColors.ink,
                             ),
@@ -395,7 +393,7 @@ class _CoachingBanner extends StatelessWidget {
                                 summary.exerciseFeedback ??
                                 l.homeAiAdviceBody,
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
                               height: 1.5,
                               fontWeight: FontWeight.w500,
                               color: FigmaColors.textBody,
@@ -431,10 +429,10 @@ class _CoachingBanner extends StatelessWidget {
 
 // ────────────────────────────────────────────────────── summary cards ──
 
-/// Shared white card chrome for the two Home summary cards, including the
-/// gradient top stripe.
-class _StripeCard extends StatelessWidget {
-  const _StripeCard({required this.child});
+/// Shared card chrome for the two Home summary cards: white fill, rounded
+/// corners and the shared grey [kCardShadow]. No border, no top stripe.
+class _HomeCard extends StatelessWidget {
+  const _HomeCard({required this.child});
   final Widget child;
 
   @override
@@ -443,24 +441,9 @@ class _StripeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.primaryA(0.08)),
         boxShadow: kCardShadow,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Container(
-            height: 2,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: <Color>[FigmaColors.primary, FigmaColors.primaryStripe],
-              ),
-            ),
-          ),
-          Padding(padding: const EdgeInsets.all(16), child: child),
-        ],
-      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 }
@@ -487,7 +470,7 @@ class _CardTitle extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 11,
+            fontSize: 12.5,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
           ),
@@ -515,23 +498,22 @@ class _DietNutritionCard extends StatefulWidget {
 }
 
 class _DietNutritionCardState extends State<_DietNutritionCard> {
+  /// 상단 지표 카드에서 고른 항목. 아래 그래프가 이 항목의 주간 추이를 그린다.
   _NutTabKind _tab = _NutTabKind.calories;
 
   @override
   Widget build(BuildContext context) {
+    final DashboardSummary summary = widget.summary;
+    final bool showCharts = widget.showCharts;
     final AppLocalizations l = AppLocalizations.of(context);
-    final calories = widget.summary.calorieIndicator;
-    final double calCur = calories.current.toDouble();
-    final double calGoal = calories.max.toDouble();
-    final double calPct = calGoal == 0 ? 0 : (calCur / calGoal).clamp(0.0, 1.0);
-    final nutrition = _nutritionFor(widget.summary);
+    final Map<_NutTabKind, _NutData> nutrition = _nutritionFor(summary);
     final _NutData cfg = nutrition[_tab]!;
     final List<String> days = _weekDayLabels(l);
-    final int todayIdx = _weekTodayIndex();
+    final int todayIdx = _todayIndex();
     final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
 
-    return _StripeCard(
+    return _HomeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -551,156 +533,66 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
             ],
           ),
           const SizedBox(height: 14),
-          // Calorie hero: ring + concrete kcal + achievement chip.
+          // 상단: 칼로리·나트륨·당류를 큰 숫자 카드로 나란히. 탭하면 아래
+          // 그래프가 그 지표의 주간 추이로 바뀐다.
           Row(
             children: <Widget>[
-              _CalorieRing(pct: calPct),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            l.homeCalorieIntake,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: FigmaColors.textMuted,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        if (widget.summary.sodiumIndicator.overBudget) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: FigmaColors.dangerRed.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              l.homeSodiumExceededBadge,
-                              style: const TextStyle(
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w700,
-                                color: FigmaColors.dangerRed,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.end,
-                      spacing: 4,
-                      children: <Widget>[
-                        Text(
-                          nf.format(calCur),
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: FigmaColors.ink,
-                            letterSpacing: -0.5,
-                            height: 1,
-                          ),
-                        ),
-                        Text(
-                          '/ ${nf.format(calGoal)} ${l.unitKcal}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: FigmaColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              for (final _NutTabKind kind in nutrition.keys) ...<Widget>[
+                if (kind != nutrition.keys.first) const SizedBox(width: 8),
+                Expanded(
+                  child: _MetricStatCard(
+                    label: _nutLabel(l, kind),
+                    indicator: _indicatorFor(summary, kind),
+                    selected: _tab == kind,
+                    onTap: () => setState(() => _tab = kind),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _MacroMetric(
+          // 탄단지는 타일 없이 검은 텍스트로 가로 나열. 세 항목을 하나의
+          // FittedBox 로 함께 축소해야 글자 크기가 서로 어긋나지 않는다
+          // (항목별로 축소하면 가장 긴 '탄수화물'만 작아진다).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _MacroText(
                   label: l.homeMacroCarbs,
-                  grams: widget.summary.macros.carbsG,
-                  color: FigmaColors.primary,
+                  grams: summary.macros.carbsG,
+                  goalG: 275,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MacroMetric(
+                const SizedBox(width: 14),
+                _MacroText(
                   label: l.homeMacroProtein,
-                  grams: widget.summary.macros.proteinG,
-                  color: FigmaColors.green,
+                  grams: summary.macros.proteinG,
+                  goalG: 100,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MacroMetric(
+                const SizedBox(width: 14),
+                _MacroText(
                   label: l.homeMacroFat,
-                  grams: widget.summary.macros.fatG,
-                  color: FigmaColors.orange,
+                  grams: summary.macros.fatG,
+                  goalG: 55,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l.homeDietRecordCount(widget.summary.dietEntries),
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
+              ],
             ),
           ),
-          if (widget.showCharts) const SizedBox(height: 10),
-          if (widget.showCharts) const _SoftDivider(),
-          if (widget.showCharts) const SizedBox(height: 10),
-          if (widget.showCharts)
-            // 지표 버튼(칼로리/나트륨/당류)을 그래프 왼쪽에 세로로 배치해 카드 높이를 줄인다.
+          if (showCharts) const SizedBox(height: 10),
+          if (showCharts) const _SoftDivider(),
+          if (showCharts) const SizedBox(height: 10),
+          if (showCharts)
             Row(
               key: const ValueKey<String>('dashboard-nutrition-chart'),
               children: <Widget>[
-                // 동일 크기 버튼(가장 넓은 라벨 기준 + stretch). 나트륨 주의 표시 없음.
-                IntrinsicWidth(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      for (final _NutTabKind t in nutrition.keys) ...<Widget>[
-                        _NutTab(
-                          label: _nutLabel(l, t),
-                          active: _tab == t,
-                          warn: false,
-                          // 세 버튼 모두 선택 시 브랜드 블루(#3EAFDF)로 통일.
-                          activeColor: FigmaColors.primary,
-                          onTap: () => setState(() => _tab = t),
-                        ),
-                        const SizedBox(height: 6),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       _ChartLegend(
+                        title: l.homeWeeklyMetricTrend(_nutLabel(l, _tab)),
                         goalText:
                             '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
                       ),
@@ -761,7 +653,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                           child: Text(
                                             days[i],
                                             style: const TextStyle(
-                                              fontSize: 8,
+                                              fontSize: 9.5,
                                               fontWeight: FontWeight.w700,
                                               color: Colors.white,
                                             ),
@@ -771,7 +663,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                         Text(
                                           days[i],
                                           style: const TextStyle(
-                                            fontSize: 8,
+                                            fontSize: 9.5,
                                             fontWeight: FontWeight.w600,
                                             color: FigmaColors.textFaint,
                                           ),
@@ -794,90 +686,177 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
   }
 }
 
-/// The calorie achievement ring (reuses [_RingPainter]) with a centred %.
-class _CalorieRing extends StatelessWidget {
-  const _CalorieRing({required this.pct});
-  final double pct;
+/// 식단 카드 상단의 지표 카드 하나 — "칼로리" 라벨 + 큰 숫자 + "/2,000kcal"
+/// 목표치 + 정상/초과 배지. 탭하면 아래 주간 추이 그래프가 이 지표로 바뀌고,
+/// 선택된 카드만 브랜드 블루 테두리로 표시한다.
+class _MetricStatCard extends StatelessWidget {
+  const _MetricStatCard({
+    required this.label,
+    required this.indicator,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final HealthIndicator indicator;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    const double size = 54;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          CustomPaint(
-            size: const Size(size, size),
-            painter: _RingPainter(
-              pct: pct,
-              track: const Color(0xFFE8F5FB),
-              arc: FigmaColors.primary,
-              stroke: 5,
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool over =
+        indicator.overBudget ||
+        (indicator.max > 0 && indicator.current > indicator.max);
+    final Color statusColor = over
+        ? FigmaColors.dangerRed
+        : FigmaColors.greenText;
+    // 선택 상태를 흰 배경·파란 테두리로만 알리면 스크린리더 사용자는 어떤
+    // 지표가 켜져 있는지도, 이 카드가 누를 수 있는 요소인지도 알 수 없다.
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label (${indicator.unit})',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : FigmaColors.statBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? FigmaColors.primary : Colors.transparent,
+              width: 1.4,
             ),
           ),
-          Text(
-            '${(pct * 100).round()}%',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.ink,
-            ),
+          child: Column(
+            children: <Widget>[
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _metricNumber(indicator.current),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                    letterSpacing: -0.5,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              // 목표치는 회색 작은 글씨로 현재 수치 바로 아래. 단위는 라벨이
+              // 아니라 목표치 오른쪽에 붙인다("/2,000kcal") — 라벨에 두면
+              // "칼로리 (kcal)" 처럼 길어져 좁은 카드에서 먼저 줄어들었다.
+              // 목표가 없는 지표(max=0)면 단위만 남겨 큰 숫자가 단위를 잃지
+              // 않게 한다.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  indicator.max > 0
+                      ? '/${_metricNumber(indicator.max)}${indicator.unit}'
+                      : indicator.unit,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  over ? l.homeMetricOver : l.homeMetricNormal,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _MacroMetric extends StatelessWidget {
-  const _MacroMetric({
-    required this.label,
-    required this.grams,
-    required this.color,
-  });
+/// 탄단지 한 항목. 타일 없이 "탄수화물 120g /275g" 형태의 검은 텍스트로만
+/// 표기하고, 세 항목을 가로로 나란히 놓는다.
+class _MacroText extends StatelessWidget {
+  const _MacroText({required this.label, required this.grams, this.goalG});
 
   final String label;
   final double grams;
-  final Color color;
+
+  /// Optional daily target in grams, shown as a small "/275g" suffix.
+  final int? goalG;
 
   @override
   Widget build(BuildContext context) {
     final value = grams == grams.roundToDouble()
         ? grams.toStringAsFixed(0)
         : grams.toStringAsFixed(1);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
+    // 축소는 세 항목을 감싼 바깥 FittedBox 가 한꺼번에 처리한다.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          label,
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: FigmaColors.ink,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          '${value}g',
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.ink,
+          ),
+        ),
+        if (goalG != null)
           Text(
-            label,
+            ' /${goalG}g',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            // 목표치는 회색으로 낮춰 실제 섭취량(검정)과 구분.
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 9.5,
               fontWeight: FontWeight.w600,
               color: FigmaColors.textMuted,
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            '${value}g',
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -901,7 +880,7 @@ class _DetailLink extends StatelessWidget {
           Text(
             l.homeDetails,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: FigmaColors.primary,
             ),
@@ -909,31 +888,6 @@ class _DetailLink extends StatelessWidget {
           const Icon(Icons.chevron_right, size: 14, color: FigmaColors.primary),
         ],
       ),
-    );
-  }
-}
-
-/// A small sub-section heading ("주간 추이") with a leading tinted icon.
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Icon(icon, size: 14, color: FigmaColors.primary),
-        const SizedBox(width: 5),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.ink,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -961,7 +915,7 @@ class _AxisLabel extends StatelessWidget {
       overflow: TextOverflow.clip,
       softWrap: false,
       style: const TextStyle(
-        fontSize: 7.5,
+        fontSize: 9,
         fontWeight: FontWeight.w600,
         color: FigmaColors.textFaint,
       ),
@@ -973,7 +927,7 @@ class _AxisLabel extends StatelessWidget {
 
 /// The full-width 운동 card: activity metrics (time / kcal / count), the burn
 /// goal progress, and a weekly burned-calories trend chart with value labels.
-class _ExerciseCard extends StatelessWidget {
+class _ExerciseCard extends ConsumerWidget {
   const _ExerciseCard({
     required this.summary,
     required this.showCharts,
@@ -984,26 +938,34 @@ class _ExerciseCard extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final double burned = summary.exerciseCalories.toDouble();
-    // 소모 목표는 백엔드 summary 필드(개인화 전까지 서버 기본값)에서 온다.
-    final double burnGoal = summary.exerciseBurnGoal.toDouble();
-    final double pct = burnGoal <= 0 ? 0 : (burned / burnGoal).clamp(0.0, 1.0);
-    // 진행바는 100%로 채우되, 라벨의 달성률은 실제 비율(목표 초과 시 100% 초과)을 보여준다.
-    final double rawPct = burnGoal <= 0 ? 0 : burned / burnGoal;
+    // 운동 탭과 같은 단일 소스(exerciseWeekViewProvider)에서 주간 수치·일별
+    // 칼로리를 읽어 홈 카드와 운동 탭이 항상 일치한다. 이 provider 는 오늘 체크한
+    // AI 추천 운동까지 이미 더한 값이라, 아래 3지표와 주간 추이 차트가 같이 움직인다.
+    // 로딩 전에는 summary 값으로 폴백.
+    final ExerciseWeek? wk = ref.watch(exerciseWeekViewProvider).valueOrNull;
+    final int minutes = wk?.totalMinutes ?? summary.exerciseMinutes;
+    final int count = wk?.workoutCount ?? summary.exerciseCount;
+    final double burned = (wk?.totalCalories ?? summary.exerciseCalories)
+        .toDouble();
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
-    // 두고, '오늘' 강조도 마지막(일) 고정이 아니라 실제 오늘 요일에 붙인다.
+    // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = DateTime.now().weekday - 1;
+    // 데모 상수는 주간 데이터가 아직 로드되지 않았을 때만 쓴다. 실제 데이터가
+    // 있으면 그 일별 칼로리를 그대로 그린다(값이 없는 주는 빈 차트가 정답).
+    final List<double> baseCal = (wk != null && wk.dailyCalories.isNotEmpty)
+        ? wk.dailyCalories
+        : _demoExerciseWeekCalories;
     final List<double> week = <double>[
-      for (int i = 0; i < _demoExerciseWeekCalories.length; i++)
-        i <= todayIdx ? _demoExerciseWeekCalories[i] : 0,
+      for (int i = 0; i < baseCal.length; i++)
+        if (i > todayIdx) 0 else baseCal[i],
     ];
     final List<String> days = _weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
 
-    return _StripeCard(
+    return _HomeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1023,255 +985,215 @@ class _ExerciseCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          // 지표 3개는 왼쪽에 세로로, 주간 추이 그래프는 오른쪽에 나란히 둔다.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: _MetricTile(
-                  icon: Icons.timer_outlined,
-                  value: '${summary.exerciseMinutes}',
-                  unit: l.unitMinutes,
-                  label: l.homeExerciseActiveTime,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MetricTile(
-                  icon: Icons.local_fire_department_rounded,
-                  value: nf.format(burned),
-                  unit: l.unitKcal,
-                  label: l.homeExerciseBurned,
-                  color: FigmaColors.orange,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MetricTile(
-                  icon: Icons.check_circle_outline_rounded,
-                  value: '${summary.exerciseCount}',
-                  unit: l.unitTimes,
-                  label: l.homeExerciseCount,
-                  color: FigmaColors.green,
-                ),
-              ),
-            ],
-          ),
-          if (summary.exerciseFeedback case final feedback?) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              feedback,
-              style: const TextStyle(
-                fontSize: 10,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-                color: FigmaColors.textMuted,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 4,
-            children: <Widget>[
-              Text(
-                l.homeExerciseBurnProgress,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textSub,
-                ),
-              ),
-              Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text: nf.format(burned),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.primary,
-                      ),
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _ExerciseStat(
+                      icon: Icons.timer_outlined,
+                      label: l.homeExerciseActiveTime,
+                      value: '$minutes',
+                      goal: '150',
+                      unit: l.unitMinutes,
                     ),
-                    TextSpan(
-                      text:
-                          ' / ${nf.format(burnGoal)} ${l.unitKcal}'
-                          '  ·  ${(rawPct * 100).round()}%',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
-                      ),
+                    const SizedBox(height: 14),
+                    _ExerciseStat(
+                      icon: Icons.local_fire_department_rounded,
+                      label: l.homeExerciseBurned,
+                      value: nf.format(burned),
+                      // 주간 소모 목표는 서버(exercise_burn_goal) 값을 쓴다.
+                      // 운동 탭 '이번 주 운동 요약'도 같은 값을 읽어 두 화면이
+                      // 항상 일치한다.
+                      goal: nf.format(summary.exerciseBurnGoal),
+                      unit: l.unitKcal,
+                    ),
+                    const SizedBox(height: 14),
+                    _ExerciseStat(
+                      icon: Icons.check_circle_outline_rounded,
+                      label: l.homeExerciseDays,
+                      // 값 = 주간 운동한 날짜 수(workoutCount), 목표 = 주 3일 이상.
+                      value: '$count',
+                      goal: '3',
+                      unit: l.unitDays,
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _Fill(
-            pct: pct,
-            height: 8,
-            gradient: const LinearGradient(
-              colors: <Color>[FigmaColors.primary, FigmaColors.primaryStripe],
-            ),
-          ),
-          if (showCharts) const SizedBox(height: 6),
-          if (showCharts) const _SoftDivider(),
-          if (showCharts) const SizedBox(height: 10),
-          if (showCharts)
-            Row(
-              children: <Widget>[
-                _SectionLabel(
-                  icon: Icons.bar_chart_rounded,
-                  text: l.homeWeeklyTrend,
-                ),
-                const Spacer(),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: FigmaColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${l.homeLegendToday} · ${l.unitKcal}',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          if (showCharts) const SizedBox(height: 10),
-          if (showCharts)
-            SizedBox(
-              key: const ValueKey<String>('dashboard-exercise-chart'),
-              height: 50,
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _ExerciseBarPainter(
-                  data: week,
-                  lo: lo,
-                  hi: hi,
-                  todayIndex: todayIdx,
-                  color: FigmaColors.primary,
-                ),
-              ),
-            ),
-          if (showCharts) const SizedBox(height: 6),
-          if (showCharts)
-            Row(
-              children: <Widget>[
-                for (int i = 0; i < days.length; i++)
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        days[i],
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w600,
-                          color: i == todayIdx
-                              ? FigmaColors.primary
-                              : FigmaColors.textFaint,
+              if (showCharts) const SizedBox(width: 14),
+              if (showCharts)
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${l.homeWeeklyExerciseTrend} (${l.unitKcal})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.ink,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        key: const ValueKey<String>('dashboard-exercise-chart'),
+                        height: 96,
+                        child: CustomPaint(
+                          size: Size.infinite,
+                          painter: _ExerciseBarPainter(
+                            data: week,
+                            lo: lo,
+                            hi: hi,
+                            todayIndex: todayIdx,
+                            color: FigmaColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: <Widget>[
+                          for (int i = 0; i < days.length; i++)
+                            Expanded(
+                              child: Center(
+                                // 식단 영양 카드와 동일하게, 오늘은 #3EAFDF
+                                // 원형 안에 흰색 요일 글씨로 표기한다.
+                                child: i == todayIdx
+                                    ? Container(
+                                        width: 16,
+                                        height: 16,
+                                        alignment: Alignment.center,
+                                        decoration: const BoxDecoration(
+                                          color: FigmaColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          days[i],
+                                          style: const TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        days[i],
+                                        style: const TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: FigmaColors.textFaint,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-/// A single activity metric tile (icon chip + big value + unit + label).
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({
+/// One activity metric in the 운동 card's left column: a blue icon chip with
+/// its label on the first line and the value underneath, per the Home layout
+/// reference. No tile chrome — the card itself is the surface.
+class _ExerciseStat extends StatelessWidget {
+  const _ExerciseStat({
     required this.icon,
+    required this.label,
     required this.value,
     required this.unit,
-    required this.label,
-    required this.color,
+    this.goal,
   });
   final IconData icon;
+  final String label;
   final String value;
   final String unit;
-  final String label;
-  final Color color;
+
+  /// Optional small "/목표" suffix shown after the value (e.g. "/150분").
+  final String? goal;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.14)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(9),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: FigmaColors.iconTint,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              // 아이콘은 3지표 모두 브랜드 블루로 통일.
+              child: Icon(icon, size: 16, color: FigmaColors.primary),
             ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                // 라벨 색은 기존 지표 타일과 동일하게 유지(아이콘만 블루로 통일).
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.textMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // scaleDown so "2,239 /1,500kcal" never clips in the narrow column.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.ink,
+                  letterSpacing: -0.5,
+                  height: 1,
+                ),
+              ),
+              if (goal != null)
+                Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
+              else
                 Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  ' $unit',
                   style: const TextStyle(
-                    fontSize: 9,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  spacing: 2,
-                  children: <Widget>[
-                    Text(
-                      value,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                        letterSpacing: -0.5,
-                        height: 1,
-                      ),
-                    ),
-                    Text(
-                      unit,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1292,12 +1214,14 @@ class _MetricTile extends StatelessWidget {
   return (lo, hi);
 }
 
-/// 목표 대비 상태색: 초과(빨강) / 근접 90%↑(주황) / 안전(초록).
-Color _nutStatusColor(double v, double goal) {
-  if (v > goal) return FigmaColors.dangerRed;
-  if (v >= goal * 0.9) return FigmaColors.orange;
-  return const Color(0xFF34C759);
-}
+/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+///
+/// 지표 카드의 초과·정상 뱃지와 같은 두 색(dangerRed/greenText)만 쓴다 —
+/// 같은 카드 안에서 뱃지는 2단계인데 그래프만 근접(주황) 3단계라, 뱃지가
+/// "정상"인 날의 점이 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
+/// 목표를 넘겼는지만 말한다.
+Color _nutStatusColor(double v, double goal) =>
+    v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
 
 /// Padded scale for the exercise bar chart. The baseline sits well below the
 /// smallest bar so the difference between days is visually pronounced.
@@ -1306,82 +1230,6 @@ Color _nutStatusColor(double v, double goal) {
   // 0을 기준선으로 삼아 값이 0인 날은 막대가 0에 가깝게, 위쪽에 여유를 둬
   // 막대가 카드 높이를 꽉 채우지 않도록 한다.
   return (0, hi <= 0 ? 1 : hi * 1.3);
-}
-
-/// An intrinsic-safe horizontal progress fill. Uses a flex split rather than
-/// [FractionallySizedBox] so it survives [IntrinsicHeight]'s intrinsic-sizing
-/// pass (FractionallySizedBox throws during that pass).
-class _Fill extends StatelessWidget {
-  const _Fill({required this.pct, this.gradient, this.height = 4});
-
-  final double pct;
-  final Gradient? gradient;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final int filled = (pct.clamp(0.0, 1.0) * 1000).round();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              flex: filled,
-              child: DecoratedBox(
-                decoration: BoxDecoration(gradient: gradient),
-              ),
-            ),
-            Expanded(
-              flex: 1000 - filled,
-              child: const ColoredBox(color: FigmaColors.track),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  _RingPainter({
-    required this.pct,
-    required this.track,
-    required this.arc,
-    required this.stroke,
-  });
-  final double pct;
-  final Color track;
-  final Color arc;
-  final double stroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Offset center = size.center(Offset.zero);
-    final double radius = (math.min(size.width, size.height) - stroke) / 2;
-    final Paint trackPaint = Paint()
-      ..color = track
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke;
-    canvas.drawCircle(center, radius, trackPaint);
-    final Paint arcPaint = Paint()
-      ..color = arc
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * pct.clamp(0.0, 1.0),
-      false,
-      arcPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter old) =>
-      old.pct != pct || old.arc != arc || old.track != track;
 }
 
 // ───────────────────────────────────────────────────── nutrition data ──
@@ -1441,11 +1289,6 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
   ),
 };
 
-/// 오늘 요일 인덱스(월=0 … 일=6). 주간 추이 차트에서 "오늘"을 고정 일요일이
-/// 아니라 실제 오늘로 강조하고, 오늘 이후(미래) 요일의 0값이 실제 급락처럼
-/// 보이지 않도록 렌더 범위를 오늘까지로 제한하는 데 쓴다.
-int _weekTodayIndex() => DateTime.now().weekday - 1;
-
 Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
   final liveValues = <_NutTabKind, HealthIndicator>{
     _NutTabKind.calories: summary.calorieIndicator,
@@ -1497,102 +1340,76 @@ List<String> _weekDayLabels(AppLocalizations l) => <String>[
 ];
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
-/// 주간 영양 차트에서 '오늘' 배지·라이브 값을 실제 요일 칸에 배치한다.
+/// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
+/// 요일의 0값이 급락처럼 보이지 않도록 렌더 범위를 오늘까지로 제한한다.
+/// 홈 카드 전체가 이 하나만 쓴다(지표 카드·차트 기준이 어긋나지 않도록).
 int _todayIndex() => DateTime.now().weekday - 1;
 
-/// Maps an internal nutrition key (used for tab identity) to its localized
-/// display label.
+/// 지표 키 → 화면 라벨(칼로리/나트륨/당류).
 String _nutLabel(AppLocalizations l, _NutTabKind key) => switch (key) {
   _NutTabKind.calories => l.dashboardMetricCalories,
   _NutTabKind.sodium => l.dietSodium,
   _NutTabKind.sugar => l.dietSugar,
 };
 
-class _NutTab extends StatelessWidget {
-  const _NutTab({
-    required this.label,
-    required this.active,
-    required this.warn,
-    required this.activeColor,
-    required this.onTap,
-  });
-  final String label;
-  final bool active;
-  final bool warn;
-  final Color activeColor;
-  final VoidCallback onTap;
+/// 지표 수치 표기. 정수는 천단위 콤마만 붙이고, 소수가 있으면 한 자리까지
+/// 남긴다(당류 17.8 이 18 로 반올림돼 지표 카드와 그래프 라벨·식단 탭 수치가
+/// 서로 어긋나던 문제).
+String _metricNumber(num v) => v == v.roundToDouble()
+    ? NumberFormat('#,###').format(v)
+    : NumberFormat('#,##0.#').format(v);
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? activeColor : FigmaColors.track,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: active ? Colors.white : FigmaColors.textMuted,
-              ),
-            ),
-            if (warn && !active) ...<Widget>[
-              const SizedBox(width: 4),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: FigmaColors.orange,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-            if (warn && active) ...<Widget>[
-              const SizedBox(width: 4),
-              const Text('⚠️', style: TextStyle(fontSize: 9)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+/// 지표 키 → 오늘 수치(현재값·목표·초과 여부).
+HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
+    switch (key) {
+      _NutTabKind.calories => s.calorieIndicator,
+      _NutTabKind.sodium => s.sodiumIndicator,
+      _NutTabKind.sugar => s.sugarIndicator,
+    };
 
-const Color _nutLineGray = Color(0xFF98A2B3); // 이번 주 꺾은선(회색)
-const Color _nutLabelBg = Color(0xFFEFF1F4); // 데이터 값 라벨 배경(연한 회색)
+// 이번 주 꺾은선(연회색). 선은 배경처럼 물러나고 데이터 포인트(상태색)와 값
+// 라벨이 읽히도록 눈금선보다 아주 조금만 진하게 잡는다.
+const Color _nutLineGray = Color(0xFFDDE2E8);
 
 class _ChartLegend extends StatelessWidget {
-  const _ChartLegend({required this.goalText});
+  const _ChartLegend({required this.title, required this.goalText});
+
+  /// "주간 {지표} 추이" — 선택된 지표에 따라 바뀌는 그래프 왼쪽 상단 제목.
+  final String title;
 
   /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
   final String goalText;
 
   @override
   Widget build(BuildContext context) {
-    // 범례(이번 주/지난 주)는 제거. 목표 수치만 카드 우측 끝('자세히 >')과 같은
-    // 열에 오도록 오른쪽 정렬한다.
+    // 범례(이번 주/지난 주)는 제거. 왼쪽에 그래프 제목, 오른쪽에 목표 수치를
+    // 카드 우측 끝('자세히 >')과 같은 열로 맞춘다.
+    //
+    // 남는 가로 공간은 제목 쪽 Expanded 가 전부 흡수해야 목표 수치가 그래프
+    // 오른쪽 끝에 붙는다. 목표 수치를 Expanded 로 두면 제목(Flexible)과 공간을
+    // 반씩 나눠 가져 오른쪽 끝에서 한참 못 미친 자리에 멈춘다.
     return Row(
       children: <Widget>[
         Expanded(
           child: Text(
-            goalText,
+            title,
             maxLines: 1,
-            textAlign: TextAlign.right,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.primary,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
             ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          goalText,
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.primary,
           ),
         ),
       ],
@@ -1670,15 +1487,9 @@ class _TrendChartPainter extends CustomPainter {
     for (int i = 0; i <= lastIdx; i++) {
       final Color sc = _nutStatusColor(cur[i], goal);
       _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
-      _text(canvas, _fmt(cur[i]), pts[i], w, sc);
+      _text(canvas, _metricNumber(cur[i]), pts[i], w, sc);
     }
   }
-
-  // Keep one decimal for fractional values (당류 14.8g stays 14.8, not 15) so
-  // the home bubble matches the 식단 탭 요약 수치.
-  String _fmt(double v) => v == v.roundToDouble()
-      ? NumberFormat('#,###').format(v)
-      : NumberFormat('#,##0.#').format(v);
 
   void _dot(Canvas c, Offset o, Color color, {double r = 3.0}) {
     c.drawCircle(o, r + 1.3, Paint()..color = Colors.white); // 흰 테두리(halo)
@@ -1690,28 +1501,18 @@ class _TrendChartPainter extends CustomPainter {
       text: TextSpan(
         text: s,
         style: TextStyle(
-          fontSize: 7.5,
+          fontSize: 9,
           fontWeight: FontWeight.w700,
           color: color,
         ),
       ),
       textDirection: ui.TextDirection.ltr,
     )..layout();
-    // 값마다 연한 회색 둥근 네모 배경.
-    const double padX = 3.5, padY = 1.5;
-    final double bw = tp.width + padX * 2;
-    final double bh = tp.height + padY * 2;
-    final double bx = (at.dx - bw / 2).clamp(0.0, w - bw);
-    double by = at.dy - bh - 6;
-    if (by < 0) by = at.dy + 6;
-    c.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(bx, by, bw, bh),
-        const Radius.circular(4),
-      ),
-      Paint()..color = _nutLabelBg,
-    );
-    tp.paint(c, Offset(bx + padX, by + padY));
+    // 배경 상자 없이 값만 표기한다(포인트 위, 화면 밖으로 나가지 않게 clamp).
+    final double bx = (at.dx - tp.width / 2).clamp(0.0, w - tp.width);
+    double by = at.dy - tp.height - 7;
+    if (by < 0) by = at.dy + 7;
+    tp.paint(c, Offset(bx, by));
   }
 
   @override
@@ -1781,7 +1582,7 @@ class _ExerciseBarPainter extends CustomPainter {
         text: TextSpan(
           text: NumberFormat('#,###').format(v),
           style: TextStyle(
-            fontSize: 8.5,
+            fontSize: 10,
             fontWeight: FontWeight.w800,
             color: today ? color : const Color(0xFF9AA6B2),
           ),
@@ -1806,6 +1607,7 @@ class _ExerciseBarPainter extends CustomPainter {
 
 class _RecMeal {
   const _RecMeal(
+    this.photo,
     this.emoji,
     this.name,
     this.reason,
@@ -1813,6 +1615,10 @@ class _RecMeal {
     this.tag,
     this.tagColor,
   );
+
+  /// Bundled dish photo shown on the card. [emoji] over [bg] is the fallback
+  /// when the asset is missing, so the section still renders end-to-end.
+  final String photo;
   final String emoji;
   final String name;
   final String reason;
@@ -1823,6 +1629,7 @@ class _RecMeal {
 
 List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
   _RecMeal(
+    'assets/images/rec-chicken-salad.jpg',
     '🥗',
     l.homeMealChickenSalad,
     l.homeMealReasonSodium,
@@ -1831,6 +1638,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     FigmaColors.greenText,
   ),
   _RecMeal(
+    'assets/images/rec-brown-rice-box.jpg',
     '🍱',
     l.homeMealBrownRiceBox,
     l.homeMealReasonGlucose,
@@ -1839,6 +1647,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     FigmaColors.orangeText,
   ),
   _RecMeal(
+    'assets/images/rec-salmon-steak.jpg',
     '🐟',
     l.homeMealSalmon,
     l.homeMealReasonOmega,
@@ -1847,6 +1656,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     FigmaColors.primary,
   ),
   _RecMeal(
+    'assets/images/rec-tofu-broccoli.png',
     '🥦',
     l.homeMealTofu,
     l.homeMealReasonLowCal,
@@ -1855,6 +1665,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     FigmaColors.sugarPurple,
   ),
   _RecMeal(
+    'assets/images/rec-namul-bibimbap.png',
     '🥬',
     l.homeMealNamulBibimbap,
     l.homeMealReasonFiber,
@@ -1887,7 +1698,7 @@ class _RecommendedMeals extends StatelessWidget {
                     Text(
                       l.homeRecMealsTitle,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
@@ -1899,27 +1710,16 @@ class _RecommendedMeals extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.go(AppRoutes.diet),
-                child: Text(
-                  l.homeViewAll,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.primary,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
         SizedBox(
-          height: 158,
+          // 세로 여백은 카드 그림자가 리스트 뷰포트에 잘리지 않게 하는 용도
+          // (카드 자체 높이는 158 그대로).
+          height: 178,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             itemCount: meals.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (_, int i) => _RecMealCard(meal: meals[i]),
@@ -1941,19 +1741,20 @@ class _RecMealCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0D000000)),
         boxShadow: kCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
+          Image.asset(
+            meal.photo,
             height: 72,
             width: double.infinity,
-            color: meal.bg,
-            alignment: Alignment.center,
-            child: Text(meal.emoji, style: const TextStyle(fontSize: 32)),
+            fit: BoxFit.cover,
+            // Fall back to the emoji tile if the bundled photo is missing.
+            errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+                _emojiHeader(),
           ),
           Expanded(
             child: Padding(
@@ -1966,7 +1767,7 @@ class _RecMealCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.ink,
                       height: 1.3,
@@ -1979,7 +1780,7 @@ class _RecMealCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 9.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: FigmaColors.textMuted,
                         height: 1.4,
@@ -1999,7 +1800,7 @@ class _RecMealCard extends StatelessWidget {
                     child: Text(
                       meal.tag,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         color: meal.tagColor,
                       ),
@@ -2013,6 +1814,14 @@ class _RecMealCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _emojiHeader() => Container(
+    height: 72,
+    width: double.infinity,
+    color: meal.bg,
+    alignment: Alignment.center,
+    child: Text(meal.emoji, style: const TextStyle(fontSize: 36)),
+  );
 }
 
 // ───────────────────────────────────────────────────────── schedule ──
@@ -2041,7 +1850,7 @@ class _ScheduleCard extends StatelessWidget {
                   Text(
                     l.homeScheduleTitle,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.ink,
                     ),
@@ -2050,7 +1859,7 @@ class _ScheduleCard extends StatelessWidget {
                   Text(
                     todayLabel,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13.5,
                       color: FigmaColors.textSub,
                     ),
                   ),
@@ -2063,7 +1872,7 @@ class _ScheduleCard extends StatelessWidget {
               child: Text(
                 l.homeViewAll,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.primary,
                 ),
@@ -2079,11 +1888,13 @@ class _ScheduleCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: FigmaColors.softBlue,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: FigmaColors.primaryA(0.12)),
             ),
             child: Text(
               l.homeScheduleEmpty,
-              style: const TextStyle(fontSize: 12, color: FigmaColors.textSub),
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: FigmaColors.textSub,
+              ),
             ),
           )
         else
@@ -2111,14 +1922,13 @@ class _ScheduleItemCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: FigmaColors.softBlue,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: FigmaColors.primaryA(0.12)),
         ),
         child: Row(
           children: <Widget>[
             Text(
               item.time,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
                 color: FigmaColors.primary,
                 letterSpacing: -0.3,
@@ -2138,7 +1948,7 @@ class _ScheduleItemCard extends StatelessWidget {
                     child: Text(
                       item.title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),

@@ -263,6 +263,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeWeeklyTrend => 'Weekly trend';
 
   @override
+  String homeWeeklyMetricTrend(String metric) {
+    return 'Weekly $metric trend';
+  }
+
+  @override
+  String get homeWeeklyExerciseTrend => 'Weekly exercise trend';
+
+  @override
+  String get homeMetricOver => 'Over';
+
+  @override
+  String get homeMetricNormal => 'On track';
+
+  @override
   String get homeExerciseActiveTime => 'Weekly active time';
 
   @override
@@ -270,6 +284,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeExerciseCount => 'Weekly workouts';
+
+  @override
+  String get homeExerciseDays => 'Weekly workout days';
 
   @override
   String get homeExerciseBurnProgress => 'Weekly burn goal';
@@ -370,6 +387,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unitMinutes => 'min';
+
+  @override
+  String get unitDays => 'days';
 
   @override
   String unitKcalValue(int count) {
@@ -679,7 +699,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exTrainerRecommendationReason =>
-      'A good fit for your health goals';
+      'A great fit for reaching my health goals';
+
+  @override
+  String get exNearbyGymsMapLabel => 'Gyms near me';
 
   @override
   String get exWeekSummary => 'This Week\'s Summary';
@@ -692,6 +715,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exAiRoutineToday => 'AI Routine · Today';
+
+  @override
+  String get exStatDays => 'Days';
 
   @override
   String get exStatTime => 'Time';
@@ -1041,9 +1067,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myProfileTitle => 'My Profile';
 
   @override
-  String get myGoalsTitle => 'Health Goals';
-
-  @override
   String get myNotifTitle => 'Notification Settings';
 
   @override
@@ -1065,9 +1088,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myProfileSaved => 'Profile saved';
 
   @override
-  String get myGoalsSaved => 'Health goals saved';
-
-  @override
   String get mySaveFailed => 'Couldn\'t save. Please try again in a moment';
 
   @override
@@ -1081,28 +1101,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myFieldBirth => 'Date of birth';
-
-  @override
-  String get myGoalsDesc =>
-      'Summaries and feedback across the app are based on these goals.';
-
-  @override
-  String get myGoalWeight => 'Target weight';
-
-  @override
-  String get myGoalBp => 'Target blood pressure (systolic)';
-
-  @override
-  String get myGoalBloodSugar => 'Target blood sugar';
-
-  @override
-  String get myGoalCalories => 'Daily calories';
-
-  @override
-  String get myGoalSodium => 'Sodium limit';
-
-  @override
-  String get myGoalSugar => 'Sugar limit';
 
   @override
   String get myNotifDietLog => 'Diet log reminder';
