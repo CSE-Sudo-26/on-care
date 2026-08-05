@@ -686,9 +686,9 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
   }
 }
 
-/// 식단 카드 상단의 지표 카드 하나 — "칼로리 (kcal)" 라벨 + 큰 숫자 +
-/// 정상/초과 배지. 탭하면 아래 주간 추이 그래프가 이 지표로 바뀌고, 선택된
-/// 카드만 브랜드 블루 테두리로 표시한다.
+/// 식단 카드 상단의 지표 카드 하나 — "칼로리" 라벨 + 큰 숫자 + "/2,000kcal"
+/// 목표치 + 정상/초과 배지. 탭하면 아래 주간 추이 그래프가 이 지표로 바뀌고,
+/// 선택된 카드만 브랜드 블루 테두리로 표시한다.
 class _MetricStatCard extends StatelessWidget {
   const _MetricStatCard({
     required this.label,
@@ -735,7 +735,7 @@ class _MetricStatCard extends StatelessWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  '$label (${indicator.unit})',
+                  label,
                   maxLines: 1,
                   style: const TextStyle(
                     fontSize: 10.5,
@@ -759,23 +759,26 @@ class _MetricStatCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (indicator.max > 0) ...<Widget>[
-                const SizedBox(height: 3),
-                // 목표치는 회색 작은 글씨로 현재 수치 바로 아래. 단위는 위쪽
-                // 라벨("칼로리 (kcal)")이 이미 달고 있어 숫자만 적는다.
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '/${_metricNumber(indicator.max)}',
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      color: FigmaColors.textMuted,
-                    ),
+              const SizedBox(height: 3),
+              // 목표치는 회색 작은 글씨로 현재 수치 바로 아래. 단위는 라벨이
+              // 아니라 목표치 오른쪽에 붙인다("/2,000kcal") — 라벨에 두면
+              // "칼로리 (kcal)" 처럼 길어져 좁은 카드에서 먼저 줄어들었다.
+              // 목표가 없는 지표(max=0)면 단위만 남겨 큰 숫자가 단위를 잃지
+              // 않게 한다.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  indicator.max > 0
+                      ? '/${_metricNumber(indicator.max)}${indicator.unit}'
+                      : indicator.unit,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: FigmaColors.textMuted,
                   ),
                 ),
-              ],
+              ),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
