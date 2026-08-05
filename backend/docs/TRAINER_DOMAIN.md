@@ -58,6 +58,7 @@
 | Method | Path | 설명 |
 |---|---|---|
 | GET | `/trainer/me` | 내 트레이너 프로필 |
+| PUT | `/trainer/me` | 프로필 부분 수정(보낸 필드만; 이름/이메일은 계정 소관) |
 | GET | `/trainer/clients` | 고객 로스터(회원 실데이터 집계) |
 | GET | `/trainer/clients/{member_id}/diet?date=` | 해당 회원의 실제 식단 기록 |
 | GET | `/trainer/clients/{member_id}/history` | 해당 회원 운동 기록(최신순) |
@@ -73,6 +74,24 @@
 | PUT | `/trainer/schedule/{id}` | 예약 수정 |
 | DELETE | `/trainer/schedule/{id}` | 예약 삭제 |
 | POST | `/trainer/schedule/{id}/complete` | 세션 완료(예정→완료) |
+| POST | `/trainer/clients/{member_id}/ai-coach` | 담당 고객 데이터 기반 AI 코칭 질의 |
+| GET | `/trainer/clients/{member_id}/report?week_start=` | 주간 리포트(어느 요일을 줘도 그 주 월요일로 정규화) |
+| POST | `/trainer/clients/{member_id}/report/send` | 리포트를 회원 채팅 스레드로 전송 |
+
+### 트레이너용 AI 코칭 (`/trainer/clients/{id}/ai-coach`)
+
+회원 앱의 `/ai-coach/chat` 과 **같은 RAG 파이프라인**(`services/coach/chat.answer`)을
+쓰되, 검색 스코프가 호출자(트레이너)가 아니라 **담당 회원**이다. 트레이너가 자기
+자신의(비어 있는) 기록으로 코칭받는 일을 막기 위한 구분이며, 접근 경계는 담당 링크
+확인(`_require_client`) — 남의 고객이면 404 로 존재조차 드러내지 않는다.
+
+### 주간 리포트 (`/trainer/clients/{id}/report`)
+
+O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, 이행률은
+`routine_history`, 나트륨은 `diet_entries`에서 그 주만 집계한다 — 새로 수집하는
+데이터는 없다. **기록이 없는 항목은 0 이 아니라 `null`** 로 내려간다("이행률 0%"는
+"안 했다"는 거짓말이 되므로). 전송은 별도 리포트 함이 아니라 **회원이 이미 읽고 있는
+채팅 스레드**로 들어간다.
 
 ### 로스터 집계 (`build_roster`)
 

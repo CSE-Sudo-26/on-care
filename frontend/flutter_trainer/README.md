@@ -4,9 +4,11 @@ On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업
 사용자 앱([frontend/flutter](../flutter))과 **완전히 분리된 코드베이스**로 구현했습니다
 (아키텍처 패턴만 미러링, `package:oncare` import 0건 — 계정도 별도).
 
-> 현재 상태: **트레이너 MVP + 웹 와이드 레이아웃/스케줄·프로그램 관리** —
-> 인증 + 4탭(고객/스케줄/AI루틴/MY) 전부 실제 화면, 와이드 뷰포트 마스터-디테일,
-> 스케줄 CRUD·AI 루틴의 스케줄 등록까지. 백엔드 미연결(drift 로컬 DB mock), 웹 1차 타깃
+> 현재 상태: **웹 콘솔 리디자인 완료** — 좌측 세로 사이드바 셸 +
+> 5개 목적지(대시보드/고객/스케줄/AI 코칭/리포트) + 사이드바 하단 내 정보·설정.
+> 경로 기반 URL(`/clients/<id>/<section>`), 대시보드 딥링크, 주 캘린더,
+> 프로그램 템플릿, 주간 리포트 전송까지. 데모는 drift 로컬 DB, 실 API 모드는
+> `/v1/trainer/*` 연동(스케줄만 아직 로컬)
 
 ## 아키텍처 방향 (하이브리드)
 
@@ -18,14 +20,48 @@ On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업
 이에 따라 콘텐츠 폭 제한(`AppLayout.contentMaxWidth`), drift 웹 런타임
 (`tool/fetch_drift_wasm.sh`)이 포함되어 있습니다.
 
-### 와이드 뷰포트 (≥ `AppLayout.splitBreakpoint` = 1024px)
+### 정보 구조 (사이드바 5 + 프로필)
 
-- **고객 탭**: 마스터-디테일 스플릿 — 고객을 누르면 우측 패널에서
-  채팅/식단/운동기록이 열리고(닫기 버튼으로 리스트만 보기 복귀), 선택은
-  URL(`/clients?c=<id>`)에 동기화되어 새로고침에도 복원됩니다.
-- **스케줄 탭**: 날짜/주간 개요가 좌측에 도킹, 타임라인이 우측 컬럼.
-- **AI 루틴 탭**: 고객 선택·식단 요약(좌) + 루틴 편집기(우) 분할.
-- 좁은 화면은 기존 단일 컬럼 + 전체 화면 push 그대로입니다.
+탭은 **명사(장소)**여야 하고, 하루에 한 번 이상 여는 것만 남긴다는 기준으로 재구성했다.
+
+| 그룹 | 목적지 | 경로 | 내용 |
+| --- | --- | --- | --- |
+| 운영 | 대시보드 | `/dashboard` | 오늘 할 일 한 화면 — KPI 4장(전부 딥링크) · 오늘 일정 · 주간 이행률 · 주의 고객 · AI 요약 |
+| 운영 | 고객 | `/clients/:id/:section` | 명단 │ 상세(개요·채팅·식단·운동·루틴). 안읽음 뱃지 |
+| 운영 | 스케줄 | `/schedule?v=day\|week&d=` | 일 타임라인 / 주 캘린더, CRUD·완료 처리 |
+| 코칭 | AI 코칭 | `/coaching?client=` | 루틴 생성 + 프로그램 템플릿 + 전송 이력 |
+| 코칭 | 리포트 | `/reports?client=` | 운영 지표 + 고객 주간 리포트 → 회원에게 전송 |
+| — | 내 정보 · 설정 | `/my?t=profile\|settings` | 사이드바 **footer**(nav 항목 아님) |
+
+설계 판단:
+
+- **`AI루틴` → `AI 코칭`으로 승격.** 옛 탭은 들어가면 먼저 고객을 골라야 시작됐다 —
+  "장소"가 아니라 "고객에게 하는 행동"이라는 신호. 그렇다고 고객 상세에 숨기면 이
+  제품의 차별점이 보이지 않으므로, 템플릿·근거·전송 이력을 갖춘 워크스페이스로 만들었다.
+- **`메시지` 탭은 만들지 않는다.** 채팅은 식단·운동 데이터 옆에서 봐야 코칭이 된다.
+  분리하면 컨텍스트가 끊기고 같은 대화로 가는 길이 둘이 된다. 대신 대시보드의 답장
+  큐 + 사이드바 뱃지로 접근성만 얻는다.
+- **`MY`는 nav에서 제거.** 한 달에 몇 번 여는 화면이 매일 여는 다섯 개 옆에 있을 이유가 없다.
+- **`설정`은 독립 탭이 아니라 `/my` 안의 섹션.** 알림·계정 API가 아직 없어 독립 탭으로
+  만들면 빈 껍데기가 된다. 자리는 만들어 두고(준비 중 표시) 엔드포인트가 생기면 채운다.
+
+### 반응형
+
+| 뷰포트 | 사이드바 | 본문 |
+| --- | --- | --- |
+| ≥ 1280 | 펼침(248px, 아이콘+라벨+프로필) | 2컬럼 대시보드, 마스터-디테일 |
+| ≥ 1024 | 아이콘 레일(76px, 라벨은 툴팁) | 동일 |
+| < 1024 | 드로어 + 상단 메뉴 버튼 | 단일 컬럼 |
+
+콘텐츠 영역 기준(뷰포트 − 사이드바)이 `AppLayout.splitBreakpoint`(900) 이상이면
+고객 탭이 마스터-디테일로 갈라지고, `twoColumnBreakpoint`(1080) 이상이면 대시보드가
+2컬럼이 된다.
+
+### URL 규약
+
+선택 상태는 전부 주소에 있다 — 대시보드 KPI가 필터된 목록으로, 주의 고객 행이 그
+고객의 **해당 섹션**으로 바로 들어가야 하기 때문이다(답장 대기 → `/chat`,
+나트륨 초과 → `/diet`). 새로고침·뒤로가기·링크 공유가 모두 같은 화면을 복원한다.
 
 ## 빌드 / 실행
 
@@ -54,12 +90,15 @@ dart run build_runner build --delete-conflicting-outputs
 
 ```
 lib/
-├─ app/            # 부트스트랩, GoRouter(+세션 인증 게이트), 4탭 셸
-├─ core/           # drift DB·시드, 토큰 저장, 날짜 유틸(ymd)
-├─ shared/         # 여러 feature 공유: TrainerClient/TrainerProfile 모델,
-│                  # ClientRepository 서비스, ClientAvatar·OniAvatar·MetricTile·BrandHeader
-├─ design_system/  # 토큰(블루 primary + 오렌지 액센트), 테마
-└─ features/       # auth / clients(채팅·식단·운동기록) / schedule / ai_routine / my
+├─ app/            # 부트스트랩, GoRouter(+세션 인증 게이트)
+│  ├─ router/      # routes(경로 상수·빌더) · app_router(6 브랜치 셸)
+│  └─ shell/       # app_shell(반응형 셸) · app_sidebar · nav_destinations
+├─ core/           # drift DB·시드, 토큰 저장, 날짜 유틸(ymd·koreanDateLabel)
+├─ shared/         # 여러 feature 공유: TrainerClient·ClientAlert 모델,
+│                  # ClientRepository/ChatRepository, PageScaffold·SectionCard·
+│                  # StatCard·ActionButton·mini_charts(BarSeriesChart·Sparkline)
+├─ design_system/  # 토큰(남색 primary + 오렌지 액센트), 테마
+└─ features/       # auth / dashboard / clients / schedule / coaching / reports / my
 ```
 
 ## 이슈 여정 (1 → 12)
@@ -97,8 +136,12 @@ lib/
 
 ## 주요 결정
 
-- **색상**: 서비스 메인 = 파랑(#3EAFDF). 오렌지는 "트레이너" 브랜드 워드·경고·수동 추가
-  구분·MY 아이덴티티 블록에만 (`brandOrange`/`warning`)
+- **색상**: 서비스 메인 = 남색(#2E7DAB). 오렌지는 "트레이너" 브랜드 워드·경고·수동 추가
+  구분에만 (`brandOrange`/`warning`). 사이드바 활성 표시는 연한 남색 면 + 좌측
+  인디케이터 — 본문이 이미 남색을 강조에 쓰므로 진한 pill 은 서로 부딪힌다
+- **차트는 직접 그린다**: 필요한 형태가 막대 시리즈와 스파크라인 둘뿐이라
+  (`shared/widgets/mini_charts.dart`) 차트 라이브러리를 넣지 않았다. 축·툴팁·줌이
+  필요한 분석 화면이 생기면 그때 도입한다
 - **역할 전환 없음**: Figma의 "역할 전환" UI는 구현하지 않음 — 트레이너/회원은 계정으로 분리
 - **mock-first**: 전송 등 상호작용은 Figma와 동일한 in-memory mock.
   채팅과 스케줄(추가/수정/삭제·AI 루틴 등록)은 drift에 영속
@@ -108,10 +151,29 @@ lib/
   세션에서 계획 미리보기로 이어짐. 등록일은 오늘…+6일 선택 가능
 - **디자인 일관성**: 사용자 앱 리디자인(figma kit)의 Oni 마스코트·AI 필 패턴 채택
 
+## 리디자인 (웹 콘솔)
+
+| 영역 | 내용 |
+| --- | --- |
+| 셸 | 하단 탭바 → 좌측 세로 사이드바(펼침/레일/드로어 3단계), `PageScaffold` 공통 헤더 |
+| 라우팅 | `?c=` 쿼리 → 경로 기반 `/clients/:id/:section`, 6 브랜치(5 nav + 내 정보) |
+| 대시보드 | 신규. KPI 4장 전부 딥링크, 오늘 일정, 주간 이행률, 주의 고객(사유 뱃지 → 해당 섹션), AI 요약 |
+| 고객 | `개요` 서브탭 신설(경고 스트립·오늘 요약·주간 이행률·나트륨 추이·최근 활동), `루틴` 서브탭 신설 |
+| 스케줄 | 주 캘린더(7열, 한 번의 범위 쿼리) + 일/주 전환, 날짜가 URL에 |
+| AI 코칭 | `AI루틴`에서 승격 — 프로그램 템플릿, 전송 이력 추가 |
+| 리포트 | 신규. 운영 지표 + 고객 주간 리포트 → 회원 채팅으로 전송 |
+| 내 정보 | nav에서 사이드바 footer로, `내 정보`/`설정` 2섹션 |
+| 백엔드 | `PUT /trainer/me`, `POST /trainer/clients/{id}/ai-coach`, `GET·POST .../report[/send]` |
+
 ## 로드맵
 
 - 트레이너 CI/배포 파이프라인 (analyze·test·web build + wasm fetch,
   `dart format --set-exit-if-changed` 포함)
+- **스케줄 실 API 연동**: `ScheduleRepository`가 아직 drift 전용이라 실 API 모드에서
+  스케줄·주 캘린더·리포트의 세션 수가 로컬 값이다. 백엔드 `/trainer/schedule*` 는
+  이미 있으므로 Dio 구현만 추가하면 된다
+- **설정 실동작**: 알림 수신 설정·비밀번호 변경 엔드포인트가 생기면 `/my?t=settings`의
+  "준비 중" 행을 채운다 (프로필 편집은 `PUT /trainer/me` 로 이미 가능)
 - 실 백엔드(FastAPI) 연동 — `TrainerAuthRepository`(Dio 구현)/`SecureTokenStore` 참조
 - 자정 넘김 시 '오늘' 스케줄/예약 수 자동 갱신, DB JSON 역직렬화 방어
   (백엔드 연동과 함께 처리)
