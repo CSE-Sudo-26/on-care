@@ -113,8 +113,8 @@ def test_rule_based_rationale_cites_member_numbers_and_over_target():
     assert "2400mg" in a["rationale"] and "목표 초과" in a["rationale"]
     assert "40%" in a["rationale"]
     assert "무릎 부담 낮게" in a["rationale"]  # trainer note reflected
-    # low preference softens B intensity label.
-    assert b["intensity"] == "보통"
+    # low preference is preserved in the generated plan.
+    assert b["intensity"] == "낮음"
 
 
 def test_maybe_llm_plans_returns_none_so_service_falls_back_to_rules():

@@ -22,8 +22,7 @@ _STRETCH = ("코어 스트레칭", "스트레칭")
 _STRETCH2 = ("목·어깨 스트레칭", "스트레칭")
 
 _INTENSITY_KR = {"low": "낮음", "moderate": "보통", "high": "높음"}
-_B_SCALE = {"low": 0.85, "moderate": 1.0, "high": 1.0}
-_B_LABEL = {"low": "보통", "moderate": "높음", "high": "높음"}
+_B_LABEL = {"low": "낮음", "moderate": "보통", "high": "높음"}
 
 
 def _compose(total: int, parts: list[tuple[str, str, int]]) -> list[dict]:
@@ -86,14 +85,9 @@ def rule_based_plans(
         ),
     }
 
-    # B안 — 강도·운동량: 가능 시간 전부(강도 선호로 스케일), 근력+유산소 중심.
-    total_b = min(
-        available_minutes,
-        max(
-            total_a + 1,
-            round(available_minutes * _B_SCALE.get(intensity_preference, 1.0)),
-        ),
-    )
+    # B안 — 입력한 가능 시간 전부, 근력+유산소 중심. 강도 선호는 운동
+    # 강도를 조절하는 값이지 트레이너가 입력한 시간 계약을 바꾸지 않는다.
+    total_b = available_minutes
     parts_b = [
         (_CARDIO_HARD[0], _CARDIO_HARD[1], 3),
         (_STRENGTH[0], _STRENGTH[1], 2),
