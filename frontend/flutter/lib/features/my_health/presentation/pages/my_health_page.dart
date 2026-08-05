@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
@@ -70,6 +72,13 @@ class MyHealthPage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _PointsBanner(
                     points: health.valueOrNull?.activityPoints,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _TrainerGymSection(
+                    onManage: () => context.go(AppRoutes.exerciseGym),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -856,6 +865,219 @@ class _LogoutButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 내 트레이너 · 헬스장 섹션
+// ──────────────────────────────────────────────
+
+class _TrainerGymSection extends ConsumerWidget {
+  const _TrainerGymSection({required this.onManage});
+
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<Gym?> gymAsync = ref.watch(myGymProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          '내 트레이너 · 헬스장',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: FigmaColors.ink,
+          ),
+        ),
+        const SizedBox(height: 12),
+        gymAsync.when(
+          loading: () => const _GymSectionLoading(),
+          error: (_, _) => _GymSectionEmpty(onFind: onManage),
+          data: (Gym? gym) => gym == null
+              ? _GymSectionEmpty(onFind: onManage)
+              : _GymSummaryCard(gym: gym, onTap: onManage),
+        ),
+      ],
+    );
+  }
+}
+
+class _GymSummaryCard extends StatelessWidget {
+  const _GymSummaryCard({required this.gym, required this.onTap});
+
+  final Gym gym;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: FigmaColors.primaryA(0.10),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.fitness_center,
+                      size: 18,
+                      color: FigmaColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          gym.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.ink,
+                          ),
+                        ),
+                        Text(
+                          '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: FigmaColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
+                ],
+              ),
+              if (hasTrainer) ...<Widget>[
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: FigmaColors.hairline),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    const Icon(
+                      Icons.person_outline,
+                      size: 15,
+                      color: FigmaColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${gym.trainerName!} · ${gym.trainerRole ?? '퍼스널 트레이너'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: FigmaColors.textBody,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GymSectionEmpty extends StatelessWidget {
+  const _GymSectionEmpty({required this.onFind});
+
+  final VoidCallback onFind;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        children: <Widget>[
+          const Text(
+            '아직 등록된 헬스장이 없어요',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onFind,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              side: BorderSide(color: FigmaColors.primaryA(0.35)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.search, size: 16),
+            label: const Text(
+              '헬스장 찾기',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GymSectionLoading extends StatelessWidget {
+  const _GymSectionLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
         ),
       ),
     );
