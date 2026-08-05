@@ -84,27 +84,21 @@ class AppSidebar extends ConsumerWidget {
                   vertical: AppSpacing.sm,
                 ),
                 children: <Widget>[
-                  for (final group in NavGroup.values) ...<Widget>[
-                    for (var i = 0; i < navDestinations.length; i++)
-                      if (navDestinations[i].group == group)
-                        _NavTile(
-                          destination: navDestinations[i],
-                          selected: currentIndex == i,
-                          expanded: expanded,
-                          badgeCount: switch (navDestinations[i].badge) {
-                            NavBadge.unreadMessages => unread,
-                            NavBadge.todayReservations => reservations,
-                            NavBadge.none => null,
-                          },
-                          onTap: () {
-                            onSelect(i);
-                            onNavigate?.call();
-                          },
-                        ),
-                    // The gap is what's left of the grouping now that the
-                    // headings are gone.
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
+                  for (var i = 0; i < navDestinations.length; i++)
+                    _NavTile(
+                      destination: navDestinations[i],
+                      selected: currentIndex == i,
+                      expanded: expanded,
+                      badgeCount: switch (navDestinations[i].badge) {
+                        NavBadge.unreadMessages => unread,
+                        NavBadge.todayReservations => reservations,
+                        NavBadge.none => null,
+                      },
+                      onTap: () {
+                        onSelect(i);
+                        onNavigate?.call();
+                      },
+                    ),
                 ],
               ),
             ),

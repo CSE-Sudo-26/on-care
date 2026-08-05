@@ -316,7 +316,7 @@ void main() {
 
       expect(find.text('AI 코칭'), findsWidgets);
       // 김민수 (2100mg, over) → cardio-boost verdict.
-      expect(find.text('✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
+      expect(find.text('AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       expect(find.text('혈압 안정에 효과적'), findsOneWidget);
     });
@@ -383,7 +383,7 @@ void main() {
       await settle(tester);
 
       // 이지수 (1800mg, under) → balanced verdict + her routine.
-      expect(find.text('✦ AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지'), findsOneWidget);
+      expect(find.text('AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지'), findsOneWidget);
       expect(find.text('인터벌 런닝'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
     });
@@ -533,7 +533,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
+      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
 
       // Routine delivery is shown in the member's routine feed, not as a
       // trainer-authored blue chat bubble.
@@ -597,7 +597,7 @@ void main() {
       await tester.tap(find.textContaining('님에게 전송'));
       await tester.pump();
 
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
+      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
       expect(find.text('고객 앱에 알림이 전송됐어요'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4)); // reset window
@@ -718,7 +718,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
+      expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
     });
 
     testWidgets('A → B → A cannot double-register while A is still saving', (
@@ -837,8 +837,8 @@ void main() {
       // 김민수's send resolved while 이지수 is on screen: no success flash
       // lands on 이지수, and her edit survives — 김민수's reset timer must
       // not fire against her (review PR 239).
-      expect(find.text('✓ 김민수님에게 전송 완료!'), findsNothing);
-      expect(find.text('✓ 이지수님에게 전송 완료!'), findsNothing);
+      expect(find.text('김민수님에게 전송 완료!'), findsNothing);
+      expect(find.text('이지수님에게 전송 완료!'), findsNothing);
       await tester.scrollUntilVisible(
         find.text('레그프레스 5세트'),
         150,
@@ -950,7 +950,7 @@ void main() {
 
         await tapSend(tester);
 
-        expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
+        expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
         expect(routineRepo.lastAssigned, isNotNull);
       },
     );
@@ -1035,7 +1035,7 @@ void main() {
 
         await tapSend(tester);
 
-        expect(find.text('✓ 김민수님에게 전송 완료!'), findsOneWidget);
+        expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
         expect(routineRepo.lastAssigned?.type, '스트레칭');
         expect(routineRepo.lastAssigned?.source, 'trainer');
       },

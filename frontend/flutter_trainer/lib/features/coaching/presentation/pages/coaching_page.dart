@@ -20,6 +20,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -327,7 +328,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
     return PageScaffold(
       title: 'AI 코칭',
-      subtitle: '고객 식단 · 건강 데이터를 근거로 루틴을 만듭니다',
+      subtitle: '식단 · 건강 데이터 기반 루틴 생성',
       scrollable: false,
       contentPadding: EdgeInsets.zero,
       child: clientsAsync.when(
@@ -858,15 +859,14 @@ class _DietSummaryCard extends StatelessWidget {
               color: AppColors.accentSurface,
               borderRadius: BorderRadius.all(AppRadius.md),
             ),
-            child: Text(
-              over
-                  ? '✦ AI 판단: 나트륨 초과 → 유산소 강화 권장'
-                  : '✦ AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.accent,
-              ),
+            child: IconLabel(
+              icon: Icons.auto_awesome,
+              label: over
+                  ? 'AI 판단: 나트륨 초과 → 유산소 강화 권장'
+                  : 'AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지',
+              color: AppColors.accent,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1054,7 +1054,7 @@ class _RoutineCard extends StatelessWidget {
                     child: Icon(
                       Icons.close,
                       size: 14,
-                      color: AppColors.destructive,
+                      color: AppColors.subtleForeground,
                     ),
                   ),
                 ),
@@ -1481,13 +1481,11 @@ class _SendButton extends StatelessWidget {
         child: Container(
           height: 50,
           alignment: Alignment.center,
-          child: Text(
-            sent ? '✓ $clientName님에게 전송 완료!' : '검토 완료 · $clientName님에게 전송',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryForeground,
-            ),
+          child: IconLabel(
+            icon: sent ? Icons.check_circle : Icons.send_outlined,
+            label: sent ? '$clientName님에게 전송 완료!' : '검토 완료 · $clientName님에게 전송',
+            color: AppColors.primaryForeground,
+            fontSize: 14,
           ),
         ),
       ),
@@ -1648,14 +1646,22 @@ class _SendHistoryCard extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      Text(
-                        routine.source == 'ai' ? '✦ AI' : '트레이너',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
+                      routine.source == 'ai'
+                          ? const IconLabel(
+                              icon: Icons.auto_awesome,
+                              label: 'AI',
+                              color: AppColors.primary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            )
+                          : const Text(
+                              '트레이너',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
                     ],
                   ),
                 ),

@@ -248,9 +248,13 @@ class _WeeklyCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final average = values.isEmpty
+    // 평균도 지난 요일만으로 낸다. 아직 오지 않은 날을 0으로 함께 나누면
+    // 주 초반에는 실제보다 낮은 이행률이 나온다.
+    final elapsed = elapsedWeekdays(DateTime.now());
+    final counted = values.take(elapsed).toList();
+    final average = counted.isEmpty
         ? null
-        : (values.reduce((a, b) => a + b) / values.length).round();
+        : (counted.reduce((a, b) => a + b) / counted.length).round();
     return SectionCard(
       title: '주간 세션 이행률',
       icon: Icons.bar_chart,
@@ -275,7 +279,8 @@ class _WeeklyCompletionCard extends StatelessWidget {
               maxValue: 100,
               showValues: true,
               valueSuffix: '%',
-              highlightIndex: DateTime.now().weekday - 1,
+              highlightIndex: elapsed - 1,
+              pendingFromIndex: elapsed,
             ),
     );
   }

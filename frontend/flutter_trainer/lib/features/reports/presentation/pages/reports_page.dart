@@ -9,7 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show weekdayLabels;
+    show elapsedWeekdays, weekdayLabels;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -479,7 +479,11 @@ class _ClientReport extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          if (client.weekCompletion.length == weekdayLabels.length)
+          if (!report.isCurrentWeek)
+            // 요일별 시리즈는 이번 주 것뿐이다. 지난 주 제목 아래 이번 주
+            // 막대를 그리면 트레이너가 그대로 회원에게 보낸다.
+            const EmptyHint(message: '지난 주 요일별 기록은 아직 없어요')
+          else if (client.weekCompletion.length == weekdayLabels.length)
             BarSeriesChart(
               values: client.weekCompletion,
               labels: weekdayLabels,
@@ -487,6 +491,7 @@ class _ClientReport extends StatelessWidget {
               height: 80,
               showValues: true,
               valueSuffix: '%',
+              pendingFromIndex: elapsedWeekdays(DateTime.now()),
             )
           else
             const EmptyHint(message: '이번 주 운동 기록이 없어요'),

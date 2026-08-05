@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routi
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
+import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Conversation-style AI routine builder.
@@ -246,7 +247,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _sent = true;
     });
     messenger.showSnackBar(
-      SnackBar(content: Text('✓ ${widget.client.name}님에게 루틴을 전송했어요')),
+      SnackBar(content: Text('${widget.client.name}님에게 루틴을 전송했어요')),
     );
   }
 
@@ -369,15 +370,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           ),
           _analysisRow('최근 루틴', client.lastRoutine),
           const SizedBox(height: AppSpacing.md),
-          TextField(
-            key: const ValueKey<String>('analysis-trainer-memo'),
-            controller: _trainerMemo,
-            minLines: 2,
-            maxLines: 4,
-            style: const TextStyle(color: AppColors.foreground),
-            decoration: _inputDecoration(
-              hintText: _analysisSuggestion,
-              labelText: '트레이너 메모 · 수정 가능',
+          LabeledField(
+            label: '트레이너 메모 · 수정 가능',
+            child: TextField(
+              key: const ValueKey<String>('analysis-trainer-memo'),
+              controller: _trainerMemo,
+              minLines: 2,
+              maxLines: 4,
+              style: const TextStyle(color: AppColors.foreground),
+              decoration: _inputDecoration(hintText: _analysisSuggestion),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -636,7 +637,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 icon: const Icon(
                   Icons.close,
                   size: 18,
-                  color: AppColors.destructive,
+                  color: AppColors.subtleForeground,
                 ),
               ),
             ],
@@ -676,13 +677,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         children: <Widget>[
           const Text('운동 직접 등록', style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.md),
-          TextField(
-            key: const ValueKey<String>('new-exercise-name'),
-            controller: _newExerciseName,
-            style: const TextStyle(color: AppColors.foreground),
-            decoration: _inputDecoration(
-              hintText: '예: 레그프레스 3세트',
-              labelText: '운동 이름',
+          LabeledField(
+            label: '운동 이름',
+            child: TextField(
+              key: const ValueKey<String>('new-exercise-name'),
+              controller: _newExerciseName,
+              style: const TextStyle(color: AppColors.foreground),
+              decoration: _inputDecoration(hintText: '예: 레그프레스 3세트'),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -729,15 +730,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         children: <Widget>[
           const Text('트레이너 메모', style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const ValueKey<String>('final-trainer-memo'),
-            controller: _trainerMemo,
-            minLines: 2,
-            maxLines: 4,
-            style: const TextStyle(color: AppColors.foreground),
-            decoration: _inputDecoration(
-              hintText: _analysisSuggestion,
-              labelText: '회원에게 함께 전달할 내용',
+          LabeledField(
+            label: '회원에게 함께 전달할 내용',
+            child: TextField(
+              key: const ValueKey<String>('final-trainer-memo'),
+              controller: _trainerMemo,
+              minLines: 2,
+              maxLines: 4,
+              style: const TextStyle(color: AppColors.foreground),
+              decoration: _inputDecoration(hintText: _analysisSuggestion),
             ),
           ),
         ],
@@ -969,18 +970,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     );
   }
 
-  InputDecoration _inputDecoration({
-    required String hintText,
-    String? labelText,
-  }) {
+  /// Filled, borderless input styling. Deliberately no `labelText` —
+  /// see [LabeledField] for why the caption goes above the box.
+  InputDecoration _inputDecoration({required String hintText}) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
         color: AppColors.mutedForeground,
         fontWeight: FontWeight.w400,
       ),
-      labelText: labelText,
-      labelStyle: const TextStyle(color: AppColors.mutedForeground),
       isDense: true,
       filled: true,
       fillColor: AppColors.inputBackground,

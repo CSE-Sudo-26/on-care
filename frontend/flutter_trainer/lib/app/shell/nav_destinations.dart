@@ -2,20 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 
-/// Sidebar grouping. Two groups only — the daily operating surfaces and
-/// the coaching surfaces that carry the product's differentiator.
-///
-/// Not labelled on screen: with five destinations the headings cost a
-/// row each and named the obvious. The grouping survives as the spacing
-/// between the two blocks, which is enough to read them as related.
-enum NavGroup {
-  /// 매일 여는 것 — 대시보드 / 고객 / 스케줄.
-  operations,
-
-  /// 이 서비스의 차별점 — AI 코칭 / 리포트.
-  coaching,
-}
-
 /// Which live counter, if any, a destination shows as a badge.
 enum NavBadge {
   /// No badge.
@@ -38,7 +24,6 @@ class NavDestination {
     required this.icon,
     required this.activeIcon,
     required this.route,
-    required this.group,
     this.badge = NavBadge.none,
   });
 
@@ -54,28 +39,27 @@ class NavDestination {
   /// Branch root location.
   final String route;
 
-  /// Which sidebar group this belongs to.
-  final NavGroup group;
-
   /// Live counter rendered next to the label.
   final NavBadge badge;
 }
 
 /// The console's five destinations, in branch order.
+///
+/// One flat list, evenly spaced. An earlier revision split these into
+/// 운영 / 코칭 groups with headings; the headings named the obvious and
+/// the extra gap made the five rows read as two lists instead of one.
 const List<NavDestination> navDestinations = <NavDestination>[
   NavDestination(
     label: '대시보드',
     icon: Icons.space_dashboard_outlined,
     activeIcon: Icons.space_dashboard,
     route: AppRoutes.dashboard,
-    group: NavGroup.operations,
   ),
   NavDestination(
     label: '고객',
     icon: Icons.people_outline,
     activeIcon: Icons.people,
     route: AppRoutes.clients,
-    group: NavGroup.operations,
     badge: NavBadge.unreadMessages,
   ),
   NavDestination(
@@ -83,7 +67,6 @@ const List<NavDestination> navDestinations = <NavDestination>[
     icon: Icons.calendar_today_outlined,
     activeIcon: Icons.calendar_today,
     route: AppRoutes.schedule,
-    group: NavGroup.operations,
     badge: NavBadge.todayReservations,
   ),
   NavDestination(
@@ -91,13 +74,11 @@ const List<NavDestination> navDestinations = <NavDestination>[
     icon: Icons.auto_awesome_outlined,
     activeIcon: Icons.auto_awesome,
     route: AppRoutes.coaching,
-    group: NavGroup.coaching,
   ),
   NavDestination(
     label: '리포트',
     icon: Icons.insights_outlined,
     activeIcon: Icons.insights,
     route: AppRoutes.reports,
-    group: NavGroup.coaching,
   ),
 ];

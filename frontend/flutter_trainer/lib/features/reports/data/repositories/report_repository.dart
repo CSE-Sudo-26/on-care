@@ -139,11 +139,15 @@ WeeklyReport weeklyReportFromJson(
   TrainerClient client,
 ) {
   int? optInt(String key) => (json[key] as num?)?.toInt();
+  final weekStart =
+      DateTime.tryParse(json['week_start'] as String? ?? '') ??
+      weekStartOf(DateTime.now());
   return WeeklyReport(
     client: client,
-    weekStart:
-        DateTime.tryParse(json['week_start'] as String? ?? '') ??
-        weekStartOf(DateTime.now()),
+    weekStart: weekStart,
+    // [client]'s weekday series describes the current week only, so the
+    // report has to say which week it is before anything renders them.
+    isCurrentWeek: weekStartOf(weekStart) == weekStartOf(DateTime.now()),
     sessionsBooked: optInt('sessions_booked') ?? 0,
     sessionsDone: optInt('sessions_done') ?? 0,
     completionAvg: optInt('completion_avg'),

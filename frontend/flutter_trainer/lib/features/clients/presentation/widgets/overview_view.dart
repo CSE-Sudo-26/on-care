@@ -7,7 +7,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show weekdayLabels;
+    show elapsedWeekdays, weekdayLabels;
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -112,7 +112,8 @@ class OverviewView extends ConsumerWidget {
                   height: 76,
                   showValues: true,
                   valueSuffix: '%',
-                  highlightIndex: DateTime.now().weekday - 1,
+                  highlightIndex: elapsedWeekdays(DateTime.now()) - 1,
+                  pendingFromIndex: elapsedWeekdays(DateTime.now()),
                 )
               : const EmptyHint(message: '이번 주 기록이 아직 없어요'),
         ),

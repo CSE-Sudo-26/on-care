@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show elapsedWeekdays;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -72,9 +74,13 @@ class _WeekCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avg = week.isEmpty
+    // 아직 오지 않은 요일은 평균에서도 막대에서도 뺀다 — 0으로 세면
+    // 주 초반일수록 실제보다 낮은 완료율이 나온다.
+    final elapsed = elapsedWeekdays(DateTime.now());
+    final counted = week.take(elapsed).toList();
+    final avg = counted.isEmpty
         ? 0
-        : (week.reduce((a, b) => a + b) / week.length).round();
+        : (counted.reduce((a, b) => a + b) / counted.length).round();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -122,19 +128,25 @@ class _WeekCompletionCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
                         Container(
-                          height: (4 + week[i] * 0.36).clamp(4, 40).toDouble(),
+                          height: i >= elapsed
+                              ? 4
+                              : (4 + week[i] * 0.36).clamp(4, 40).toDouble(),
                           decoration: BoxDecoration(
-                            color: _rateColor(week[i]),
+                            color: i >= elapsed
+                                ? AppColors.border
+                                : _rateColor(week[i]),
                             borderRadius: const BorderRadius.all(AppRadius.xs),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _days[i],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.subtleForeground,
+                            color: i >= elapsed
+                                ? AppColors.disabledForeground
+                                : AppColors.subtleForeground,
                           ),
                         ),
                       ],
@@ -239,23 +251,7 @@ class _HistoryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          for (final line in entry.exercises)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                line,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: line.contains('✗')
-                      ? AppColors.disabledForeground
-                      : AppColors.mutedForeground,
-                  decoration: line.contains('✗')
-                      ? TextDecoration.lineThrough
-                      : null,
-                ),
-              ),
-            ),
+          for (final line in entry.exercises) _ExerciseLine(line: line),
           if (entry.clientFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _NoteBox(
@@ -279,6 +275,58 @@ class _HistoryCard extends StatelessWidget {
 }
 
 /// Completion ring with the % inside (green 100 / orange partial / grey 0).
+/// One line of a logged routine.
+///
+/// The stored string marks its own outcome with a trailing '✓' / '✗'
+/// (see [RoutineHistoryEntry.exercises]). Those characters are a storage
+/// convention, not something to print: Flutter web has no glyph for them
+/// in the app's font stack and draws 두부 boxes. Read the marker, then
+/// render it as an icon and strike-through.
+class _ExerciseLine extends StatelessWidget {
+  const _ExerciseLine({required this.line});
+
+  final String line;
+
+  @override
+  Widget build(BuildContext context) {
+    final skipped = line.contains('✗');
+    final text = line.replaceAll(RegExp(r'\s*[✓✗]\s*'), ' ').trim();
+    final color = skipped
+        ? AppColors.disabledForeground
+        : AppColors.mutedForeground;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              skipped ? Icons.close : Icons.check,
+              size: 12,
+              color: skipped ? AppColors.disabledForeground : AppColors.success,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: color,
+                decoration: skipped ? TextDecoration.lineThrough : null,
+                decorationColor: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CompletionDonut extends StatelessWidget {
   const _CompletionDonut({required this.rate});
 
