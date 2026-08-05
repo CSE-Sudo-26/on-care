@@ -23,7 +23,7 @@ class RecognizedFood(BaseModel):
     fat_g: Optional[float] = Field(None, ge=0, allow_inf_nan=False, description="지방 g")
     sodium_mg: Optional[int] = Field(None, description="나트륨 mg")
     sugar_g: Optional[float] = Field(
-        None, allow_inf_nan=False, description="당류 g"
+        None, ge=0, allow_inf_nan=False, description="당류 g"
     )
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
     # 영양 수치 출처: 공공 DB | 인식기 추정 | 두 값의 혼합

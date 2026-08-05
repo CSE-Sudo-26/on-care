@@ -4,8 +4,10 @@
 실서버 경로에서 `sugar_g=8.5` 가 절삭되거나 요청이 거부됐다. 음식 단위
 (`food_nutrients.sugar_g`)는 이미 Float 이라 항목 단위만 어긋나 있었다.
 
-정수 → 실수 확대라 기존 값은 그대로 보존된다(8 → 8.0). 되돌릴 때는 소수부가
-버려지므로(8.5 → 8) downgrade 는 손실이 있다 — 주석으로 명시한다.
+정수 → 실수 확대라 기존 값은 그대로 보존된다(8 → 8.0). 되돌릴 때는
+`round(sugar_g)::integer` 로 변환하므로 소수 정밀도가 손실된다 — 절삭이 아니라
+반올림이라 8.6 은 9 가 되고, 중간값은 은행가 반올림이라 8.5·7.5 모두 8 이 된다
+(PostgreSQL 의 double precision round 는 C 라이브러리 rint 에 위임된다).
 
 Revision ID: 0018_diet_entry_sugar_g_float
 Revises: 0017_add_diet_exercise_goals
@@ -37,7 +39,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 주의: 소수부가 버려진다(8.5 → 8). 되돌릴 일이 생기면 데이터 손실을 감수한 것.
+    # 주의: 반올림이라 소수 정밀도가 사라진다(8.6 → 9, 8.5 → 8). 되돌릴 일이
+    # 생기면 데이터 손실을 감수한 것.
     op.alter_column(
         "diet_entries",
         "sugar_g",

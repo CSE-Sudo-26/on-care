@@ -18,6 +18,7 @@
 ## 프론트에 실제 구현된 엔드포인트 (이번에 완성할 대상)
 
 ### 시스템
+
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/ping` | `{ message }` |
@@ -25,6 +26,7 @@
 | GET | `/version` | `{ api_version, app_version }` |
 
 ### 사용자
+
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/users/me` | `{ id(str), name, email }` |
@@ -36,6 +38,7 @@
 `risk`: `{ title, body, level(low|medium|high) }`
 
 ### 대시보드
+
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/dashboard/summary` | `{ indicators[], diet_entries(int), exercise_minutes, today_schedule[], week_score, week_score_delta, sodium_warning(nullable), exercise_feedback }` |
@@ -44,6 +47,7 @@
 `current` 는 당류가 소수(17.8g)라 float. 칼로리·나트륨은 정수 값이 그대로 실린다. 목표치(`max`)는 셋 다 정수.
 
 ### 식단 (핵심: 나트륨·당류·고혈압 관점)
+
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/diet/days/today` | `{ entries[], total_calories, total_sodium_mg, total_sugar_g, macros, ai_coach_message }` |
@@ -56,6 +60,7 @@
 `idempotency_key`(선택): 재시도 중복 저장 방지. 클라 요청당 1회 생성해 재시도 시 재사용하면, 서버는 (user_id, key) 유니크 제약으로 같은 키의 재요청에 대해 **인식·저장을 건너뛰고 기존 entry 를 반환**한다(중복 기록·RAG 재적재 없음).
 
 ### 운동
+
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/exercise/weeks/current` | `{ sessions[], daily_minutes[7], daily_calories[7], cardio_minutes[7], strength_minutes[7], stretching_minutes[7], day_labels[7], total_minutes, total_calories, streak_days, ai_coach_message }` |
@@ -68,6 +73,7 @@
 `daily_calories`: 요일별 소모 칼로리(합 = `total_calories`). 홈 '주간 추이' 차트가 이 시리즈를 읽으며, 비어 있으면 클라이언트가 데모 상수로 폴백한다.
 
 ### 일정 (캘린더 상세 CRUD)
+
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/schedule/events?date=YYYY-MM-DD` | `[{ id, date, time, title, category, emoji, color_hex }]` (배열) |
@@ -82,6 +88,7 @@ category: hospital|exercise|meal|medication|other
   형식 위반 시 **422**. 특히 `month`는 미검증 시 `month=%` 같은 값이 LIKE 와일드카드로 새므로 필수.
 
 ### 알림 (액션)
+
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/notifications` | `[{ id, title, body, category, read(bool), created_at(ISO), time_ago }]` (배열, 최신순) |
@@ -93,6 +100,7 @@ category: hospital|exercise|meal|medication|other
 category: reminder|health_check|achievement|system
 
 ### AI 코치
+
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/ai-coach/feedback` | `{ greeting, suggestions[{ tag, title, body }] }` |
@@ -100,6 +108,7 @@ category: reminder|health_check|achievement|system
 tag: diet|exercise|hydration|...
 
 ### 바이탈 (체중/혈압/혈당)
+
 | Method | Path | 본문/응답 |
 |---|---|---|
 | POST | `/vitals/weight` | body: `{ ...value, recorded_at? }` → `{ id, kind, value, recorded_at }` |
@@ -110,6 +119,7 @@ tag: diet|exercise|hydration|...
 value 예시(drift 주석): weight `{kg}`, blood-pressure `{systolic, diastolic}`, blood-sugar `{mg_per_dl}`
 
 ### 장소 (온오프라인 연결, O2O)
+
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/places/nearby?lat=&lng=&category=&radius_m=` | `[{ id, name, category, address, distance_meters, lat, lng }]` (거리순 배열) |
