@@ -181,10 +181,24 @@ void main() {
     await _scrollTo(tester, find.text(l.exPurposeNone), 180);
     await tester.tap(find.text(l.exPurposeNone));
     await _scrollTo(tester, find.text(l.exSelectDate), 180);
+    Finder dateMaterial = find
+        .ancestor(
+          of: find.byIcon(Icons.calendar_today_outlined),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(tester.widget<Material>(dateMaterial).color, Colors.white);
     await tester.tap(find.text(l.exSelectDate));
     await tester.pumpAndSettle();
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
+    dateMaterial = find
+        .ancestor(
+          of: find.byIcon(Icons.calendar_today_outlined),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(tester.widget<Material>(dateMaterial).color, Colors.white);
     await _scrollTo(tester, find.text(l.exTimeAfternoon), 180);
     await tester.tap(find.text(l.exTimeAfternoon));
     await _scrollTo(tester, find.text(l.exSendConsultRequest), 220);
