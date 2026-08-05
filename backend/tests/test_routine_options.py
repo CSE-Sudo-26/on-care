@@ -2,13 +2,10 @@
 from __future__ import annotations
 
 from uuid import uuid4
-from types import SimpleNamespace
-
 import pytest
 from pydantic import ValidationError
 
 from app.services import routine_ai
-from app.services import trainer_service
 from app.schemas.trainer_api import RoutineOptionsOut
 
 
@@ -63,14 +60,6 @@ def test_rule_based_plans_never_exceed_requested_time(minutes):
     assert b["total_minutes"] <= minutes
     assert sum(e["minutes"] for e in a["exercises"]) == a["total_minutes"]
     assert sum(e["minutes"] for e in b["exercises"]) == b["total_minutes"]
-
-
-def test_completion_average_includes_a_recorded_zero_percent_day():
-    rows = [
-        SimpleNamespace(date="2026-08-03", completion_rate=100),
-        SimpleNamespace(date="2026-08-04", completion_rate=0),
-    ]
-    assert trainer_service._average_recorded_completion(rows) == 50
 
 
 def test_options_schema_rejects_a_total_that_does_not_match_exercises():

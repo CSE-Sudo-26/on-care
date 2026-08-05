@@ -24,11 +24,11 @@ from app.db.session import get_db
 from app.models.models import TrainerClient, TrainerProfile
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientDietEntryOut, RoutineAssignRequest, RoutineOut,
-    RoutineHistoryOut, RoutineOptionsOut, RoutineOptionsRequest, ScheduleCompleteRequest,
-    ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest, TrainerClientOut,
-    TrainerGymOut, TrainerMe,
+    RoutineHistoryOut, RoutineOptionsOut, RoutineOptionsRequest,
+    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut,
+    ScheduleUpdateRequest, TrainerClientOut, TrainerGymOut, TrainerMe,
 )
-from app.services import trainer_service
+from app.services import trainer_routine_options_service, trainer_service
 
 router = APIRouter(tags=["trainer"])
 
@@ -244,15 +244,17 @@ def trainer_routine_options(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> RoutineOptionsOut:
-    """회원 실데이터로 A/B 루틴을 생성(저장 안 함). 트레이너가 선택·수정한 뒤 기존
-    배정 API(POST .../routines)로 저장한다. 담당 회원만(소유권 경계), 값 검증은
-    RoutineOptionsRequest(Field/Literal)가 422 로 거른다."""
+    """회원 실데이터를 LLM에 전달해 두 개의 맞춤 루틴 후보를 생성한다.
+
+    설정된 AI 공급자를 사용할 수 없거나 응답 계약이 잘못되면 동일 응답 형태의
+    규칙 기반 후보로 폴백한다.
+    """
     _require_client(db, trainer.id, member_id)
-    return trainer_service.build_routine_options(
-        db, member_id, trainer.id,
-        available_minutes=payload.available_minutes,
-        intensity_preference=payload.intensity_preference,
-        trainer_note=payload.trainer_note,
+    return trainer_routine_options_service.generate_routine_options(
+        db,
+        trainer.id,
+        member_id,
+        payload,
     )
 
 
