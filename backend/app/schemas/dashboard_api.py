@@ -9,7 +9,9 @@ from app.schemas.diet_api import Macros
 
 class DashboardIndicator(BaseModel):
     label: str            # 칼로리 | 나트륨 | 당류
-    current: int
+    # 당류가 소수(17.8g)라 current 는 float. 칼로리·나트륨은 정수 값이 그대로
+    # 실려 나가고, 목표치(max)는 세 지표 모두 정수라 int 를 유지한다.
+    current: float
     max: int
     unit: str
     over_budget: bool = False
@@ -29,7 +31,7 @@ class DashboardNutritionDay(BaseModel):
     label: str       # 요일 라벨(월/화/…) — 프론트 x축용
     calories: int
     sodium_mg: int
-    sugar_g: int
+    sugar_g: float
 
 
 class DashboardSummary(BaseModel):
