@@ -211,7 +211,7 @@ class LocalApiInterceptor extends Interceptor {
             ? Value(sodiumMgValue.toInt())
             : const Value.absent(),
         sugarG: body.containsKey('sugar_g') && sugarGValue is num
-            ? Value(sugarGValue.toInt())
+            ? Value(sugarGValue.toDouble())
             : const Value.absent(),
       ),
     );
@@ -265,7 +265,7 @@ class LocalApiInterceptor extends Interceptor {
     )..where((t) => t.date.equals(today))).get();
     int totalCalories = 0;
     int totalSodium = 0;
-    int totalSugar = 0;
+    double totalSugar = 0;
     var totalCarbs = 0.0;
     var totalProtein = 0.0;
     var totalFat = 0.0;
@@ -393,7 +393,7 @@ class LocalApiInterceptor extends Interceptor {
 
     int totalCalories = 0;
     int totalSodium = 0;
-    int totalSugar = 0;
+    double totalSugar = 0;
     double totalCarbs = 0;
     double totalProtein = 0;
     double totalFat = 0;
@@ -502,7 +502,7 @@ class LocalApiInterceptor extends Interceptor {
     ];
     const int totalCal = 615;
     const int totalNa = 1200;
-    const int totalSugar = 9;
+    const double totalSugar = 9;
     const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 고추장·간장을 조금 줄여보세요.';
 
     final now = DateTime.now();
