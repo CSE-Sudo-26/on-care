@@ -4,8 +4,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 /// trainer to step in.
 const int lowCompletionThreshold = 60;
 
-/// Why a client needs attention. Ordered by urgency — [unanswered] first,
-/// since a waiting member is the one thing only the trainer can fix.
+/// A reason a client's row is flagged, ordered by urgency.
 ///
 /// Lives in `shared` because two features ask the same question: the
 /// 대시보드 (who do I chase today?) and the 고객 list filter (show me
@@ -25,6 +24,14 @@ enum ClientAlert {
 
   /// Badge text shown next to the client's name.
   final String label;
+
+  /// Whether this is a signal from the member's own health data.
+  ///
+  /// '주의가 필요한 고객' means the member's numbers need looking at —
+  /// an unanswered message is the trainer's own inbox, tracked by the
+  /// 답장 필요 counter instead. Mixing the two made every client with a
+  /// message look like a health concern.
+  bool get isHealth => this != ClientAlert.unanswered;
 }
 
 /// A client that needs attention, with the reasons.
@@ -44,6 +51,9 @@ class AttentionClient {
 
 /// Every alert raised for [client], most urgent first. Empty means the
 /// client is fine today.
+///
+/// This is the full picture, used by the client detail header. For the
+/// 주의가 필요한 고객 list use [healthAlertsFor].
 List<ClientAlert> alertsFor(TrainerClient client, {int unread = 0}) {
   return <ClientAlert>[
     if (unread > 0) ClientAlert.unanswered,
@@ -51,6 +61,10 @@ List<ClientAlert> alertsFor(TrainerClient client, {int unread = 0}) {
     if (isLowCompletion(client)) ClientAlert.lowCompletion,
   ];
 }
+
+/// The subset of [alertsFor] that comes from the member's health data.
+List<ClientAlert> healthAlertsFor(TrainerClient client) =>
+    alertsFor(client).where((a) => a.isHealth).toList();
 
 /// Whether [client]'s recorded week averages under
 /// [lowCompletionThreshold].

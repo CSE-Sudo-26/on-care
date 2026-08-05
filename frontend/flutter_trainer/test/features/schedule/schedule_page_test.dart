@@ -360,6 +360,8 @@ void main() {
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('이지수'), findsOneWidget);
       expect(find.text('1:1 PT · 60분'), findsWidgets);
+      // Two of the day's sessions are already 완료 — the status word on
+      // the row, not the action chip.
       expect(find.text('완료'), findsNWidgets(2));
       await tester.scrollUntilVisible(find.text('신규 회원'), 120);
       expect(find.text('박성호'), findsOneWidget);
@@ -394,16 +396,16 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
       await tester.pump();
-      expect(find.text('✓ 고객 앱으로 전송 완료!'), findsOneWidget);
+      expect(find.text('고객 앱으로 전송 완료!'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 3)); // flash expires
-      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
+      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
       expect(find.textContaining('오늘 PT 프로그램 전송'), findsNothing);
 
       // Tapping the sent button again is a no-op (stays sent).
-      await tester.tap(find.text('✓ 김민수님에게 전송됨'));
+      await tester.tap(find.text('김민수님에게 전송됨'));
       await tester.pump();
-      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
+      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
     });
 
     testWidgets('예정 session expands to the plan preview with manage '
@@ -421,7 +423,10 @@ void main() {
       expect(find.text('일정 수정'), findsOneWidget);
       expect(find.text('프로그램 수정'), findsOneWidget);
       expect(find.text('삭제'), findsOneWidget);
-      expect(find.text('💬 채팅'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('session-chat-chip')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('예정 session without a plan shows the no-plan hint', (
@@ -600,7 +605,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
       await settle(tester);
-      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
+      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
 
       // Program status stays in the schedule UI rather than appearing as a
       // trainer-authored blue chat bubble.
@@ -611,7 +616,7 @@ void main() {
       expect(find.textContaining('📤 오늘 PT 프로그램을 보냈어요'), findsNothing);
     });
 
-    testWidgets('✓ 완료 marks the session done and shows in 운동기록', (
+    testWidgets('완료 chip marks the session done and shows in 운동기록', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -622,18 +627,28 @@ void main() {
       await tester.tap(find.text('박성호'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('✓ 완료'), 120);
-      await tester.ensureVisible(find.text('✓ 완료'));
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        120,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
       await tester.pump();
-      await tester.tap(find.text('✓ 완료'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
       await settle(tester);
 
       await tester.enterText(find.byType(TextField).last, '벤치 폼 안정적');
       await tester.tap(find.text('완료 처리'));
       await settle(tester);
 
-      // The card flipped to 완료 (the ✓ 완료 action is gone).
-      expect(find.text('✓ 완료'), findsNothing);
+      // The card flipped to 완료 (the 완료 action chip is gone).
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        findsNothing,
+      );
 
       // …and the 운동 sub-tab shows the fresh PT entry on top.
       await goTo(
@@ -644,7 +659,7 @@ void main() {
       expect(find.text('벤치 폼 안정적'), findsOneWidget);
     });
 
-    testWidgets('a future session offers no ✓ 완료 action', (tester) async {
+    testWidgets('a future session offers no 완료 action', (tester) async {
       await openSchedule(tester);
 
       // Browse to tomorrow and book a session there.
@@ -664,8 +679,14 @@ void main() {
       // future (review PR 245).
       expect(find.text('일정 수정'), findsOneWidget);
       expect(find.text('프로그램 수정'), findsOneWidget);
-      expect(find.text('💬 채팅'), findsOneWidget);
-      expect(find.text('✓ 완료'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('session-chat-chip')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        findsNothing,
+      );
     });
 
     testWidgets('picking another day browses it; 오늘로 returns to today', (
@@ -733,7 +754,7 @@ void main() {
       expect(find.text('오늘'), findsOneWidget);
     });
 
-    testWidgets('💬 채팅 jumps to the client detail chat', (tester) async {
+    testWidgets('채팅 chip jumps to the client detail chat', (tester) async {
       await openSchedule(tester);
 
       await tester.scrollUntilVisible(find.text('박성호'), 120);
@@ -742,10 +763,15 @@ void main() {
       await tester.tap(find.text('박성호'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('💬 채팅'), 120);
-      await tester.ensureVisible(find.text('💬 채팅'));
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('session-chat-chip')),
+        120,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('session-chat-chip')),
+      );
       await tester.pump();
-      await tester.tap(find.text('💬 채팅'));
+      await tester.tap(find.byKey(const ValueKey<String>('session-chat-chip')));
       await settle(tester);
 
       // Client detail opened on the chat sub-tab.
@@ -829,7 +855,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
-      expect(find.text('✓ 김민수님에게 전송됨'), findsOneWidget);
+      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
     });
 
     testWidgets('a failed save shows a snackbar and keeps the sheet open', (
@@ -878,10 +904,17 @@ void main() {
       await tester.tap(find.text('박성호'));
       await tester.pump();
 
-      await tester.scrollUntilVisible(find.text('✓ 완료'), 120);
-      await tester.ensureVisible(find.text('✓ 완료'));
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+        120,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
       await tester.pump();
-      await tester.tap(find.text('✓ 완료'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('session-complete-chip')),
+      );
       await settle(tester);
       await tester.tap(find.text('완료 처리'));
       await settle(tester);

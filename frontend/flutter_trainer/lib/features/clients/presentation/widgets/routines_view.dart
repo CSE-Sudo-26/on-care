@@ -10,6 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -161,14 +162,22 @@ class _TypeChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: const BorderRadius.all(AppRadius.pill),
       ),
-      child: Text(
-        ai ? '✦ $label' : label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: color,
-        ),
-      ),
+      child: ai
+          ? IconLabel(
+              icon: Icons.auto_awesome,
+              label: label,
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            )
+          : Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
     );
   }
 }

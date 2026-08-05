@@ -222,7 +222,7 @@ class _MyPageState extends ConsumerState<MyPage> {
               ),
             ),
             child: const Text(
-              '✓ 변경사항이 저장됐어요',
+              '변경사항이 저장됐어요',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -744,7 +744,7 @@ class _CertsCard extends StatelessWidget {
                       child: const Icon(
                         Icons.close,
                         size: 14,
-                        color: AppColors.destructive,
+                        color: AppColors.subtleForeground,
                       ),
                     ),
                 ],

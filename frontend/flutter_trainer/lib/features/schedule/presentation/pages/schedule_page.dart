@@ -780,6 +780,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             if (widget.existing == null)
               _sheetField(
                 label: '트레이너 메모',
+                stacked: true,
                 child: TextField(
                   key: const ValueKey<String>('schedule-trainer-note'),
                   controller: _note,
@@ -834,25 +835,34 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     );
   }
 
-  Widget _sheetField({required String label, required Widget child}) {
+  Widget _sheetField({
+    required String label,
+    required Widget child,
+    bool stacked = false,
+  }) {
+    const labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppColors.subtleForeground,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: <Widget>[
-          SizedBox(
-            width: 72,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.subtleForeground,
-              ),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(label, style: labelStyle),
+                const SizedBox(height: AppSpacing.xs),
+                child,
+              ],
+            )
+          : Row(
+              children: <Widget>[
+                SizedBox(width: 88, child: Text(label, style: labelStyle)),
+                Expanded(child: child),
+              ],
             ),
-          ),
-          Expanded(child: child),
-        ],
-      ),
     );
   }
 }
@@ -1099,7 +1109,7 @@ class _ProgramDraftFields extends StatelessWidget {
                 icon: const Icon(
                   Icons.close,
                   size: 18,
-                  color: AppColors.destructive,
+                  color: AppColors.subtleForeground,
                 ),
               ),
             ],
@@ -1763,14 +1773,7 @@ class _SessionCard extends StatelessWidget {
                   if (sent)
                     const Padding(
                       padding: EdgeInsets.only(right: AppSpacing.sm),
-                      child: Text(
-                        '✓ 전송됨',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success,
-                        ),
-                      ),
+                      child: _SentBadge(),
                     ),
                   _StatusChip(status: s.status, sent: sent),
                   if (s.expandable) ...<Widget>[
@@ -2013,7 +2016,11 @@ class _ManageRow extends StatelessWidget {
       children: <Widget>[
         if (onComplete != null)
           _ActionChip(
-            label: '✓ 완료',
+            // Keyed: '완료' is also a status word elsewhere on this row,
+            // so text alone no longer identifies the action.
+            key: const ValueKey<String>('session-complete-chip'),
+            icon: Icons.check,
+            label: '완료',
             color: AppColors.success,
             onTap: onComplete!,
           ),
@@ -2028,7 +2035,37 @@ class _ManageRow extends StatelessWidget {
           onTap: onEditProgram,
         ),
         _ActionChip(label: '삭제', color: AppColors.destructive, onTap: onDelete),
-        _ActionChip(label: '💬 채팅', color: AppColors.accent, onTap: onChat),
+        _ActionChip(
+          key: const ValueKey<String>('session-chat-chip'),
+          icon: Icons.chat_bubble_outline,
+          label: '채팅',
+          color: AppColors.accent,
+          onTap: onChat,
+        ),
+      ],
+    );
+  }
+}
+
+/// "전송됨" marker on a session row.
+class _SentBadge extends StatelessWidget {
+  const _SentBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(Icons.check, size: 11, color: AppColors.success),
+        SizedBox(width: 2),
+        Text(
+          '전송됨',
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.success,
+          ),
+        ),
       ],
     );
   }
@@ -2036,17 +2073,32 @@ class _ManageRow extends StatelessWidget {
 
 class _ActionChip extends StatelessWidget {
   const _ActionChip({
+    super.key,
     required this.label,
     required this.color,
     required this.onTap,
+    this.icon,
   });
 
   final String label;
   final Color color;
   final VoidCallback onTap;
 
+  /// Drawn ahead of [label]. A real icon rather than a '✓'/'💬' typed into
+  /// the label: those depend on whatever fallback font the platform loads
+  /// and render as 두부 boxes on Flutter web.
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: TextStyle(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    );
     return Material(
       color: color.withValues(alpha: 0.08),
       borderRadius: const BorderRadius.all(AppRadius.pill),
@@ -2058,14 +2110,16 @@ class _ActionChip extends StatelessWidget {
             horizontal: AppSpacing.md,
             vertical: AppSpacing.xs,
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
+          child: icon == null
+              ? text
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(icon, size: 12, color: color),
+                    const SizedBox(width: 3),
+                    text,
+                  ],
+                ),
         ),
       ),
     );
@@ -2138,10 +2192,11 @@ class _SendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String label = flashing
-        ? '✓ 고객 앱으로 전송 완료!'
+        ? '고객 앱으로 전송 완료!'
         : sent
-        ? '✓ $clientName님에게 전송됨'
-        : '📤 $clientName님에게 $dateLabel PT 프로그램 전송';
+        ? '$clientName님에게 전송됨'
+        : '$clientName님에게 $dateLabel PT 프로그램 전송';
+    final fg = sent ? AppColors.success : AppColors.primaryForeground;
     return Material(
       color: sent
           ? AppColors.success.withValues(alpha: 0.1)
@@ -2153,13 +2208,27 @@ class _SendButton extends StatelessWidget {
         child: Container(
           height: 42,
           alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: sent ? AppColors.success : AppColors.primaryForeground,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                sent || flashing ? Icons.check_circle : Icons.send_outlined,
+                size: 15,
+                color: fg,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
