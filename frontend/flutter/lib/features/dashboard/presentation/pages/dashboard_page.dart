@@ -16,12 +16,15 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: DashboardContent(
-        onNotificationTap: () => showRightSlidePanel<void>(
-          context,
-          content: const NotificationPanelBody(),
+      body: SafeArea(
+        bottom: false,
+        child: DashboardContent(
+          onNotificationTap: () => showRightSlidePanel<void>(
+            context,
+            content: const NotificationPanelBody(),
+          ),
+          onCalendarTap: () => showScheduleCalendarSheet(context),
         ),
-        onCalendarTap: () => showScheduleCalendarSheet(context),
       ),
     );
   }

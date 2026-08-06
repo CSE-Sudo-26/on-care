@@ -22,13 +22,20 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final double bottomInset = MediaQuery.of(context).padding.bottom;
-    const double barHeight = 64;
+    const double maxNavBottomPadding = 22;
+    final double navBottomPadding = bottomInset > maxNavBottomPadding
+        ? maxNavBottomPadding
+        : bottomInset;
+    const double barHeight = 56;
     const double lift = 24; // headroom so the + button floats above the bar
     return Scaffold(
+      // Let the page continue behind the transparent FAB headroom instead of
+      // showing a separate white strip above the navigation bar.
+      extendBody: true,
       body: navigationShell,
       floatingActionButton: OniFab(onTap: () => showCoachingSheet(context)),
       bottomNavigationBar: SizedBox(
-        height: barHeight + lift + bottomInset,
+        height: barHeight + lift + navBottomPadding,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 672),
@@ -42,8 +49,8 @@ class MainShell extends StatelessWidget {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    height: barHeight + bottomInset,
-                    padding: EdgeInsets.only(bottom: bottomInset),
+                    height: barHeight + navBottomPadding,
+                    padding: EdgeInsets.only(bottom: navBottomPadding),
                     decoration: const BoxDecoration(
                       color: AppColors.background,
                       border: Border(top: BorderSide(color: AppColors.border)),
@@ -131,20 +138,28 @@ class _Destination extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(selected ? activeIcon : icon, size: 24, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
+        child: Padding(
+          // Keep the original space above the icon while using less space
+          // below the label, so the whole destination sits slightly lower.
+          padding: const EdgeInsets.only(top: 8),
+          child: Transform.translate(
+            offset: const Offset(0, 4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(selected ? activeIcon : icon, size: 24, color: color),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
