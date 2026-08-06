@@ -35,6 +35,19 @@ class _FailingGymRepository implements GymRepository {
 /// 는 위젯 테스트의 가상 시계에서 만료되지 않아 테스트가 멈춘다. 연결 상태는
 /// 이미 해소된 [myGymProvider] 를 통해 확인한다.
 void main() {
+  test('트레이너 해제 상태가 주변 헬스장 조회에도 반영된다', () async {
+    final MockGymRepository repository = MockGymRepository();
+
+    await repository.disconnectMyTrainer();
+    final List<Gym> nearby = await repository.fetchNearby();
+    final Gym connectedGym = nearby.firstWhere(
+      (Gym gym) => gym.id == 'gym-oncare-sinchon',
+    );
+
+    expect(connectedGym.trainerName, isNull);
+    expect(connectedGym.trainerRole, isNull);
+  });
+
   Future<void> pumpMyTab(
     WidgetTester tester, {
     Locale locale = const Locale('ko'),

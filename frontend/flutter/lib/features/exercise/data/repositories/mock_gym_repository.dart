@@ -81,7 +81,12 @@ class MockGymRepository implements GymRepository {
   @override
   Future<List<Gym>> fetchNearby() async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
-    return const <Gym>[_sinchon, _healthmate, _bodyAndSoul];
+    final Gym? myGym = _myGym;
+    return <Gym>[
+      if (myGym?.id == _sinchon.id) myGym! else _sinchon,
+      _healthmate,
+      _bodyAndSoul,
+    ];
   }
 
   @override
