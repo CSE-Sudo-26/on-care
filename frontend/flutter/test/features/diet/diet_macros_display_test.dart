@@ -26,7 +26,7 @@ void main() {
   testWidgets(
     'nutrition summary highlights progress and status on a small screen',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(375, 600));
+      await tester.binding.setSurfaceSize(const Size(340, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final DietDay day =
           await tester.runAsync(() => MockDietRepository().fetchToday())
@@ -88,6 +88,32 @@ void main() {
           .toList();
       expect(sodiumProgressColors.last.color, FigmaColors.dangerRed);
       expect(sugarProgressColors.last.color, FigmaColors.greenText);
+
+      final Finder carbs = find.byKey(const Key('nutrition-macro-탄수화물'));
+      final Finder protein = find.byKey(const Key('nutrition-macro-단백질'));
+      final Finder fat = find.byKey(const Key('nutrition-macro-지방'));
+      final Finder sodiumCard = find.byKey(
+        const Key('nutrition-sodium-status'),
+      );
+      final Finder sugarCard = find.byKey(const Key('nutrition-sugar-status'));
+
+      // 좁은 화면에서 각 항목이 겹치지 않고 세로로 쌓이는지 확인한다.
+      expect(
+        tester.getBottomLeft(carbs).dy,
+        lessThan(tester.getTopLeft(protein).dy),
+      );
+      expect(
+        tester.getBottomLeft(protein).dy,
+        lessThan(tester.getTopLeft(fat).dy),
+      );
+      expect(
+        tester.getBottomLeft(summaryCard).dy,
+        lessThan(tester.getTopLeft(sodiumCard).dy),
+      );
+      expect(
+        tester.getBottomLeft(sodiumCard).dy,
+        lessThan(tester.getTopLeft(sugarCard).dy),
+      );
       expect(tester.takeException(), isNull);
     },
   );
