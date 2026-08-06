@@ -344,6 +344,18 @@
   "exActivityTitle": "Activity",
   "exThisWeek": "This week",
   "exThisMonth": "This month",
+  "exExerciseContent": "What you did",
+  "exViewDetail": "View details",
+  "exRegister": "Register",
+  "exGymRegistered": "Registered {gym}",
+  "@exGymRegistered": {
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
+  },
+  "actionClose": "Close",
   "exWeekNumber": "Week {n}",
   "@exWeekNumber": {
     "placeholders": {

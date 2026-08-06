@@ -1418,6 +1418,36 @@ abstract class AppLocalizations {
   /// **'This month'**
   String get exThisMonth;
 
+  /// No description provided for @exExerciseContent.
+  ///
+  /// In en, this message translates to:
+  /// **'What you did'**
+  String get exExerciseContent;
+
+  /// No description provided for @exViewDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get exViewDetail;
+
+  /// No description provided for @exRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get exRegister;
+
+  /// No description provided for @exGymRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered {gym}'**
+  String exGymRegistered(String gym);
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
   /// No description provided for @exWeekNumber.
   ///
   /// In en, this message translates to:
