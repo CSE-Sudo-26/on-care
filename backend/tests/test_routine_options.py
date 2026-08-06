@@ -1,6 +1,7 @@
 """AI 루틴 A/B 생성 — 순수 규칙형 로직 + 엔드포인트(소유권/역할/검증/폴백)."""
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 import pytest
 from pydantic import ValidationError
@@ -106,11 +107,39 @@ def test_rule_based_rationale_cites_member_numbers_and_over_target():
     assert b["intensity"] == "낮음"
 
 
-def test_maybe_llm_plans_returns_none_so_service_falls_back_to_rules():
+def test_maybe_llm_plans_is_an_unused_seam_returning_none():
+    # 주의: 서비스는 이 함수를 쓰지 않는다(get_coach_llm 을 직접 호출).
+    # 남아 있는 이음새의 계약만 고정한다 — 폴백 경로는 아래 엔드포인트
+    # 테스트가 실제 호출 경로(get_coach_llm)를 막아서 검증한다.
     assert routine_ai.maybe_llm_plans(
         goal="", sodium_today_mg=0, avg_completion_rate=0,
         available_minutes=30, intensity_preference="moderate", trainer_note="",
     ) is None
+
+
+# ---- LLM 스텁 ----
+
+def _stub_llm(monkeypatch, behaviour):
+    """서비스가 실제로 부르는 경로(`get_coach_llm`)를 막는다.
+
+    서비스는 `from ... import get_coach_llm` 으로 이름을 바인딩하므로 원본
+    모듈이 아니라 **서비스 모듈의 이름**을 갈아끼워야 한다. 예전 테스트는
+    `routine_ai.maybe_llm_plans` 를 patch 했는데 서비스가 그 함수를 쓰지
+    않아 무효였고, 키가 없는 CI 에서만 우연히 통과했다.
+
+    [behaviour] 가 Exception 이면 호출 시 그것을 던지고, 문자열이면 그
+    문자열을 LLM 응답 본문으로 돌려준다.
+    """
+    from app.services import trainer_routine_options_service as svc
+    from app.services.coach.llm_base import LLMResult
+
+    class _StubLLM:
+        def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+            if isinstance(behaviour, Exception):
+                raise behaviour
+            return LLMResult(text=behaviour, model="stub")
+
+    monkeypatch.setattr(svc, "get_coach_llm", lambda *a, **k: _StubLLM())
 
 
 # ---- endpoint (DB) ----
@@ -122,7 +151,10 @@ def _first_client_id(client, token: str) -> str | None:
     return roster[0]["id"] if roster else None
 
 
-def test_routine_options_generates_ab_for_owned_member(client):
+def test_routine_options_generates_ab_for_owned_member(client, monkeypatch):
+    # LLM 을 막아 규칙 경로를 결정적으로 만든다. 막지 않으면 키가 설정된
+    # 환경에서 실제 Gemini 를 호출해 generated_by 가 "ai" 로 바뀐다.
+    _stub_llm(monkeypatch, RuntimeError("provider unavailable"))
     token = _trainer_token(client)
     member_id = _first_client_id(client, token)
     assert member_id, "demo trainer should own at least one seeded client"
@@ -144,22 +176,21 @@ def test_routine_options_generates_ab_for_owned_member(client):
 
 
 @pytest.mark.parametrize(
-    "llm_result",
-    [RuntimeError("provider unavailable"), ({"key": "A"}, {"key": "B"})],
+    "llm_behaviour",
+    [
+        RuntimeError("provider unavailable"),  # 공급자/네트워크 실패
+        "not json at all",                     # 응답이 JSON 이 아님
+        '{"plan_a": {"key": "A"}}',            # JSON 이지만 스키마 불충족
+    ],
 )
 def test_routine_options_falls_back_when_llm_fails_or_is_malformed(
-    client, monkeypatch, llm_result
+    client, monkeypatch, llm_behaviour
 ):
     token = _trainer_token(client)
     member_id = _first_client_id(client, token)
     assert member_id
 
-    def fake_llm(**_kwargs):
-        if isinstance(llm_result, Exception):
-            raise llm_result
-        return llm_result
-
-    monkeypatch.setattr(routine_ai, "maybe_llm_plans", fake_llm)
+    _stub_llm(monkeypatch, llm_behaviour)
     response = client.post(
         f"/v1/trainer/clients/{member_id}/routine-options",
         headers={"Authorization": f"Bearer {token}"},
@@ -168,6 +199,76 @@ def test_routine_options_falls_back_when_llm_fails_or_is_malformed(
 
     assert response.status_code == 200, response.text
     assert response.json()["generated_by"] == "rule"
+
+
+def test_routine_options_uses_llm_result_when_it_satisfies_the_contract(
+    client, monkeypatch
+):
+    """LLM 성공 경로. 스텁으로 막기 전에는 결정적으로 검증할 방법이 없었다."""
+    token = _trainer_token(client)
+    member_id = _first_client_id(client, token)
+    assert member_id
+
+    plans = {
+        "plan_a": {
+            "key": "A", "label": "짧은 회복 루틴", "intensity": "낮음",
+            "total_minutes": 20, "reason": "회복 위주",
+            "rationale": "부담을 줄인 회복 루틴입니다.",
+            "exercises": [{"name": "가벼운 걷기", "minutes": 20, "type": "걷기"}],
+        },
+        "plan_b": {
+            "key": "B", "label": "표준 루틴", "intensity": "보통",
+            "total_minutes": 30, "reason": "표준 강도",
+            "rationale": "평소 강도를 유지하는 루틴입니다.",
+            "exercises": [{"name": "인터벌 러닝", "minutes": 30, "type": "유산소"}],
+        },
+    }
+    _stub_llm(monkeypatch, json.dumps(plans, ensure_ascii=False))
+
+    r = client.post(
+        f"/v1/trainer/clients/{member_id}/routine-options",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"available_minutes": 40},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["generated_by"] == "ai"
+    assert body["plan_a"]["label"] == "짧은 회복 루틴"
+    # analysis 는 LLM 이 준 값이 아니라 서버 집계로 덮어써야 한다.
+    assert "sodium_over_target" in body["analysis"]
+
+
+def test_routine_options_falls_back_when_llm_exceeds_available_minutes(
+    client, monkeypatch
+):
+    """계약은 만족하지만 요청 시간을 넘긴 계획은 폴백해야 한다."""
+    token = _trainer_token(client)
+    member_id = _first_client_id(client, token)
+    assert member_id
+
+    plans = {
+        "plan_a": {
+            "key": "A", "label": "과한 루틴", "intensity": "보통",
+            "total_minutes": 90, "reason": "너무 길다",
+            "rationale": "요청 시간을 넘긴 계획입니다.",
+            "exercises": [{"name": "러닝", "minutes": 90, "type": "유산소"}],
+        },
+        "plan_b": {
+            "key": "B", "label": "더 과한 루틴", "intensity": "높음",
+            "total_minutes": 120, "reason": "더 길다",
+            "rationale": "요청 시간을 크게 넘긴 계획입니다.",
+            "exercises": [{"name": "러닝", "minutes": 120, "type": "유산소"}],
+        },
+    }
+    _stub_llm(monkeypatch, json.dumps(plans, ensure_ascii=False))
+
+    r = client.post(
+        f"/v1/trainer/clients/{member_id}/routine-options",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"available_minutes": 30},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["generated_by"] == "rule"
 
 
 def test_routine_options_rejects_a_member_not_owned_by_this_trainer(client):
