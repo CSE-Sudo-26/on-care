@@ -718,6 +718,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exThisMonth => 'This month';
 
   @override
+  String get exExerciseContent => 'What you did';
+
+  @override
+  String get exViewDetail => 'View details';
+
+  @override
+  String get exRegister => 'Register';
+
+  @override
+  String exGymRegistered(String gym) {
+    return 'Registered $gym';
+  }
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
   String exWeekNumber(int n) {
     return 'Week $n';
   }

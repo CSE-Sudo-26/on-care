@@ -10,6 +10,7 @@ import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/add_session_sheet.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/ai_coach_card.dart';
 import 'package:oncare/shared/widgets/error_view.dart';
 import 'package:oncare/shared/widgets/swipe_to_delete.dart';
@@ -42,18 +43,20 @@ class _Body extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, String id) async {
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref.read(exerciseRepositoryProvider).deleteSession(id);
       ref.invalidate(exerciseWeekProvider); // 삭제가 이번 주 집계에 반영
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('삭제에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.dietDeleteFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final hasStackedSeries =
         week.cardioMinutes.isNotEmpty ||
@@ -74,7 +77,7 @@ class _Body extends ConsumerWidget {
           children: <Widget>[
             Expanded(
               child: _StatTile(
-                label: '이번 주',
+                label: l.exThisWeek,
                 value: week.workoutCount.toString(),
                 unit: '회',
               ),
@@ -82,7 +85,7 @@ class _Body extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _StatTile(
-                label: '시간',
+                label: l.exStatTime,
                 value: week.totalMinutes.toString(),
                 unit: '분',
               ),
@@ -90,7 +93,7 @@ class _Body extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _StatTile(
-                label: '칼로리',
+                label: l.dashboardMetricCalories,
                 value: week.totalCalories.toString(),
                 unit: 'kcal',
               ),
@@ -147,11 +150,11 @@ class _Body extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               if (hasStackedSeries)
-                const _LegendRow(
+                _LegendRow(
                   entries: <_LegendEntry>[
-                    _LegendEntry(label: '유산소', color: Color(0xFF60A5FA)),
-                    _LegendEntry(label: '근력', color: Color(0xFF1E40AF)),
-                    _LegendEntry(label: '스트레칭', color: Color(0xFFBAE6FD)),
+                    _LegendEntry(label: l.exTypeCardio, color: const Color(0xFF60A5FA)),
+                    _LegendEntry(label: l.exTypeStrength, color: const Color(0xFF1E40AF)),
+                    _LegendEntry(label: l.exTypeStretching, color: const Color(0xFFBAE6FD)),
                   ],
                 ),
             ],

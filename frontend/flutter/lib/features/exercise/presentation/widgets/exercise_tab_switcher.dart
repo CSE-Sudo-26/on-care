@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// Pill-style segmented control used at the top of the 운동 page.
 /// Mirrors the prototype's `TabsList` styling: muted-blue track,
@@ -19,6 +20,7 @@ class ExerciseTabSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: const BoxDecoration(
@@ -29,7 +31,7 @@ class ExerciseTabSwitcher extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: _Pill(
-              label: '운동 기록',
+              label: l.exExerciseLog,
               icon: Icons.event_outlined,
               selected: activeIndex == 0,
               onTap: () => onChange(0),
@@ -37,7 +39,7 @@ class ExerciseTabSwitcher extends StatelessWidget {
           ),
           Expanded(
             child: _Pill(
-              label: '헬스장',
+              label: l.exGymTab,
               icon: Icons.place_outlined,
               selected: activeIndex == 1,
               onTap: () => onChange(1),

@@ -8,6 +8,7 @@ import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/error_view.dart';
 
 /// Full-height sheet matching the prototype's "헬스장 찾기" flow:
@@ -35,6 +36,7 @@ class _GymFinderBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final async = ref.watch(nearbyGymsProvider);
     return SafeArea(
@@ -60,7 +62,7 @@ class _GymFinderBody extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: '닫기',
+                  tooltip: l.actionClose,
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
                 ),
@@ -144,6 +146,7 @@ class _GymCandidateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return AppCard(
       outlined: true,
@@ -185,7 +188,7 @@ class _GymCandidateCard extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _PillButton(
-                  label: '상세보기',
+                  label: l.exViewDetail,
                   tone: _PillTone.secondary,
                   onTap: () => _showGymDetail(context, gym),
                 ),
@@ -193,11 +196,11 @@ class _GymCandidateCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _PillButton(
-                  label: '등록하기',
+                  label: l.exRegister,
                   tone: _PillTone.primary,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${gym.name}을(를) 등록했어요')),
+                      SnackBar(content: Text(l.exGymRegistered(gym.name))),
                     );
                     Navigator.of(context).pop();
                   },
@@ -284,6 +287,7 @@ class _GymDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Dialog(
       backgroundColor: AppColors.background,
@@ -312,7 +316,7 @@ class _GymDetailDialog extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: '닫기',
+                  tooltip: l.actionClose,
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
                 ),
@@ -411,7 +415,7 @@ class _GymDetailDialog extends StatelessWidget {
                     borderRadius: BorderRadius.all(AppRadius.lg),
                   ),
                 ),
-                child: const Text('닫기'),
+                child: Text(l.actionClose),
               ),
             ),
           ],

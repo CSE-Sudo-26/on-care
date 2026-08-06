@@ -708,6 +708,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exThisMonth => '이번 달';
 
   @override
+  String get exExerciseContent => '운동 내용';
+
+  @override
+  String get exViewDetail => '상세보기';
+
+  @override
+  String get exRegister => '등록하기';
+
+  @override
+  String exGymRegistered(String gym) {
+    return '$gym을(를) 등록했어요';
+  }
+
+  @override
+  String get actionClose => '닫기';
+
+  @override
   String exWeekNumber(int n) {
     return '$n주';
   }

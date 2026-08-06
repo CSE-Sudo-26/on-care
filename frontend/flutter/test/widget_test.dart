@@ -217,4 +217,43 @@ void main() {
     expect(ko.unitMinutesValue(8), '8분');
     expect(en.unitMinutesValue(8), '8 min');
   });
+
+  test('운동 탭 하위 위젯 문구가 로케일을 따른다 (#381)', () {
+    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+    final RegExp hangul = RegExp('[가-힣]');
+
+    // 신규 키 5개 — 나머지 17곳은 기존 키를 재사용했다.
+    // '운동 유형' 은 신규 키를 만들지 않고 기존 exExerciseType('운동 종류')으로
+    // 합쳤다. exercise_flows 가 같은 개념에 이미 그 키를 쓰고 있어, 두 시트가
+    // 서로 다른 말을 하던 것이 정리된다.
+    expect(en.exExerciseType, 'Exercise Type');
+    expect(ko.exExerciseType, '운동 종류');
+    expect(en.exExerciseContent, 'What you did');
+    expect(en.exViewDetail, 'View details');
+    expect(en.exRegister, 'Register');
+    expect(en.actionClose, 'Close');
+    expect(en.exGymRegistered('Gangnam Gym'), 'Registered Gangnam Gym');
+    expect(ko.exGymRegistered('강남 짐'), '강남 짐을(를) 등록했어요');
+
+    for (final String s in <String>[
+      en.exExerciseType,
+      en.exExerciseContent,
+      en.exViewDetail,
+      en.exRegister,
+      en.actionClose,
+      en.exGymRegistered('Gym'),
+      // 재사용한 기존 키도 영문 값이 멀쩡한지 함께 본다.
+      en.exStatTime,
+      en.exExerciseDuration,
+      en.exEnterDuration,
+      en.dietDeleteFailed,
+      en.dietSaveFailed,
+      en.exExerciseLog,
+      en.exGymTab,
+      en.exTypeOtherChip,
+    ]) {
+      expect(hangul.hasMatch(s), isFalse, reason: s);
+    }
+  });
 }

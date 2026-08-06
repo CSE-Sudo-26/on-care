@@ -7,6 +7,7 @@ import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 const List<String> _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
 
@@ -63,10 +64,11 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
   Future<void> _save() async {
     if (_saving) return;
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final minutes = int.tryParse(_minutesController.text.trim()) ?? 0;
     if (minutes <= 0) {
-      messenger.showSnackBar(const SnackBar(content: Text('운동 시간을 입력해주세요')));
+      messenger.showSnackBar(SnackBar(content: Text(l.exEnterDuration)));
       return;
     }
     setState(() => _saving = true);
@@ -107,13 +109,14 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.dietSaveFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final viewInsets = MediaQuery.of(context).viewInsets;
     return Padding(
@@ -145,7 +148,7 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('운동 유형', style: theme.textTheme.bodySmall),
+          Text(l.exExerciseType, style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.sm),
           GridView.count(
             shrinkWrap: true,
@@ -156,29 +159,29 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
             childAspectRatio: 4.2,
             children: <Widget>[
               _TypeChip(
-                label: '유산소',
+                label: l.exTypeCardio,
                 selected: _type == ExerciseType.cardio,
                 onTap: () => setState(() => _type = ExerciseType.cardio),
               ),
               _TypeChip(
-                label: '근력',
+                label: l.exTypeStrength,
                 selected: _type == ExerciseType.strength,
                 onTap: () => setState(() => _type = ExerciseType.strength),
               ),
               _TypeChip(
-                label: '스트레칭',
+                label: l.exTypeStretching,
                 selected: _type == ExerciseType.stretching,
                 onTap: () => setState(() => _type = ExerciseType.stretching),
               ),
               _TypeChip(
-                label: '기타',
+                label: l.exTypeOtherChip,
                 selected: _type == ExerciseType.other,
                 onTap: () => setState(() => _type = ExerciseType.other),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('운동 시간', style: theme.textTheme.bodySmall),
+          Text(l.exExerciseDuration, style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _minutesController,
@@ -197,7 +200,7 @@ class _AddSessionFormState extends ConsumerState<_AddSessionForm> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('운동 내용', style: theme.textTheme.bodySmall),
+          Text(l.exExerciseContent, style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _itemsController,
