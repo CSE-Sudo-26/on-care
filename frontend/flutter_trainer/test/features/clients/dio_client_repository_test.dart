@@ -123,13 +123,6 @@ void main() {
     },
   );
 
-  test(
-    'watchTodayReservationCount emits nothing (schedule wired later)',
-    () async {
-      expect(await repo.watchTodayReservationCount().isEmpty, isTrue);
-    },
-  );
-
   group('roster mutations are demo-only against the real API', () {
     test('advertises the roster as read-only', () {
       expect(repo.supportsRosterMutations, isFalse);

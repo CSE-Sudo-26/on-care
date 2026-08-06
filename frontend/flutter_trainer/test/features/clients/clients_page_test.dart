@@ -1,11 +1,13 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -122,31 +124,41 @@ void main() {
       expect(clients.firstWhere((c) => c.name == '김민수').active, isTrue);
     });
 
-    test('reservation count excludes 공백 slots', () async {
-      final count = await DriftClientRepository(
-        db,
-      ).watchTodayReservationCount().first;
-      expect(count, 4); // 6 slots − 2 공백
+    // 예약 수는 이제 로스터가 아니라 오늘 스케줄에서 파생된다(#387).
+    // 배지 계산은 todayReservationCountProvider 테스트가 덮고, 날짜 필터링은
+    // ScheduleRepository.watchToday 테스트(schedule_page_test)가 덮는다.
+    test('오늘 스케줄에서 공백을 뺀 수가 예약 수가 된다', () async {
+      final container = ProviderContainer(
+        overrides: <Override>[
+          scheduleRepositoryProvider.overrideWithValue(
+            DriftScheduleRepository(db),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(todayScheduleProvider.future);
+      expect(container.read(todayReservationCountProvider).value, 4);
     });
 
-    test('reservation count excludes non-today schedule rows', () async {
-      // A booked session on a different date must NOT inflate today's badge.
-      await db
-          .into(db.trainerScheduleEntries)
-          .insert(
-            TrainerScheduleEntriesCompanion.insert(
-              id: 'schedule-other-day',
-              date: '2020-01-01',
-              time: '10:00',
-              status: '예정',
-              clientName: const Value('과거 고객'),
+    test('스케줄을 못 읽으면 0 이 아니라 값 없음으로 남는다', () async {
+      // 0 을 내보내면 "오늘 예약 0건" 이라는 틀린 사실이 된다 — 배지를 숨겨야 한다.
+      final container = ProviderContainer(
+        overrides: <Override>[
+          todayScheduleProvider.overrideWith(
+            (ref) => Stream<List<ScheduleSession>>.error(
+              StateError('schedule unavailable'),
             ),
-          );
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-      final count = await DriftClientRepository(
-        db,
-      ).watchTodayReservationCount().first;
-      expect(count, 4); // still 4 — the 2020 row is excluded
+      await expectLater(
+        container.read(todayScheduleProvider.future),
+        throwsStateError,
+      );
+      expect(container.read(todayReservationCountProvider).valueOrNull, isNull);
     });
   });
 

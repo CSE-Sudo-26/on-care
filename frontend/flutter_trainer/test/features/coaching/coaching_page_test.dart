@@ -96,9 +96,6 @@ class _FixedClientRepository implements ClientRepository {
       Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
 
   @override
-  Stream<int> watchTodayReservationCount() => const Stream<int>.empty();
-
-  @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
       Stream.value(const <ClientDietEntry>[]);
 

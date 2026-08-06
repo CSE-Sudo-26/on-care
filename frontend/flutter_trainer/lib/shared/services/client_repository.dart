@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
-import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
     show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
@@ -37,14 +37,6 @@ abstract interface class ClientRepository {
   /// [prioritizeClients]. Sources without a chat signal emit `{}`.
   Stream<Map<String, DateTime>> watchLastChatAt();
 
-  /// Today's booked-session count for the header badge.
-  ///
-  /// Contract: an implementation with no reservation data source (the real
-  /// API doesn't wire `/trainer/schedule` yet) should emit nothing rather
-  /// than `0` — the consuming `StreamProvider` then stays in its initial
-  /// loading state, whose `valueOrNull` is `null`, and the UI hides the
-  /// badge instead of showing a misleading "0명 예약".
-  Stream<int> watchTodayReservationCount();
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
 
@@ -185,19 +177,6 @@ class DriftClientRepository implements ClientRepository {
     );
   }
 
-  /// Count of today's booked sessions — every schedule slot dated today
-  /// that isn't a gap (`공백`). Drives the "오늘 N명 예약" header badge.
-  /// Uses a SQL `COUNT(*)` aggregate rather than loading every row.
-  @override
-  Stream<int> watchTodayReservationCount() {
-    final today = ymd(DateTime.now());
-    final table = _db.trainerScheduleEntries;
-    final count = countAll();
-    final query = _db.selectOnly(table)
-      ..addColumns(<Expression<Object>>[count])
-      ..where(table.date.equals(today) & table.status.equals('공백').not());
-    return query.map((row) => row.read(count) ?? 0).watchSingle();
-  }
 
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
@@ -321,9 +300,20 @@ final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
   return ref.watch(clientRepositoryProvider).watchLastChatAt();
 });
 
-/// Streams today's booked-session count for the sidebar badge.
-final todayReservationCountProvider = StreamProvider<int>((ref) {
-  return ref.watch(clientRepositoryProvider).watchTodayReservationCount();
+/// Today's booked-session count for the sidebar badge and dashboard KPI.
+///
+/// Derived from [todayScheduleProvider] rather than the roster: the count is
+/// a property of the schedule, and the dashboard already subscribes to that
+/// stream, so composing here avoids a second request for the same data.
+/// 공백 slots are placeholders, not bookings, so they don't count.
+///
+/// Stays an [AsyncValue] on purpose. When the schedule is loading or failed
+/// there is no honest number to show, and `valueOrNull` is null — the UI
+/// hides the badge instead of claiming "0명 예약", which would be wrong.
+final todayReservationCountProvider = Provider<AsyncValue<int>>((ref) {
+  return ref
+      .watch(todayScheduleProvider)
+      .whenData((sessions) => sessions.where((s) => !s.isGap).length);
 });
 
 /// Streams a client's meals for the 식단 sub-tab.

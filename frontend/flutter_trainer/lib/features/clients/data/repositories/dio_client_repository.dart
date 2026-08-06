@@ -34,13 +34,6 @@ class DioClientRepository implements ClientRepository {
   Stream<Map<String, DateTime>> watchLastChatAt() =>
       Stream<Map<String, DateTime>>.value(const <String, DateTime>{});
 
-  /// Today's booked-session count is schedule-derived (a later issue wires
-  /// `/trainer/schedule`). Emitting nothing keeps the header badge hidden
-  /// (its provider stays loading → `valueOrNull` is null) rather than
-  /// showing a stale/zero count over real clients.
-  @override
-  Stream<int> watchTodayReservationCount() => const Stream<int>.empty();
-
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
       Stream<List<ClientDietEntry>>.fromFuture(_fetchDiet(clientId));
