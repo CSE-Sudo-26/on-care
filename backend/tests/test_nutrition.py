@@ -68,3 +68,40 @@ def test_enrich_overrides_matched_keeps_unmatched(db_session):
     # 합계 재계산
     assert analysis.total_sodium_mg == matched.sodium_mg + unmatched.sodium_mg
     assert analysis.total_calories == matched.calories + unmatched.calories
+
+
+def test_enrich_keeps_fractional_sugar_from_the_public_db(db_session):
+    """#296 회귀: 보정 단계가 당류를 int 로 깎으면 안 된다.
+
+    컬럼·스키마·클라이언트를 전부 소수로 통일했는데(#362, #368) 보정이
+    `int(round(...))` 로 되돌리고 있었다. 시드가 마침 정수뿐이라 드러나지
+    않았을 뿐, 식약처 실데이터는 8.5g 같은 소수가 정상이다.
+    """
+    from app.models.models import FoodNutrient
+    from app.schemas.diet import DietAnalysis, RecognizedFood
+    from app.services.nutrition.enrich import enrich_analysis
+    from app.services.nutrition.matcher import normalize
+
+    db_session.add(
+        FoodNutrient(
+            name="소수당류식품",
+            name_norm=normalize("소수당류식품"),
+            calories=100,
+            sodium_mg=10,
+            sugar_g=8.5,
+        )
+    )
+    db_session.commit()
+
+    analysis = DietAnalysis(
+        engine="gemini",
+        foods=[RecognizedFood(name="소수당류식품", calories=1, sodium_mg=1, sugar_g=1)],
+    )
+    enrich_analysis(db_session, analysis)
+
+    food = analysis.foods[0]
+    assert food.source == "db"
+    # 예전에는 round(8.5) → 8 (은행가 반올림) 이었다.
+    assert food.sugar_g == 8.5
+    assert analysis.total_sugar_g == 8.5
+
