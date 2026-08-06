@@ -29,9 +29,13 @@ def enrich_analysis(db: Session, analysis: DietAnalysis, enabled: bool = True) -
     for food in analysis.foods:
         match = match_in_rows(rows, food.name)
         if match is not None:
+            # 칼로리·나트륨은 계약상 정수라 반올림이 맞다. 당류만 소수다
+            # (#296) — 여기서 int 로 깎으면 공공 DB 가 실데이터(8.5g 등)로
+            # 채워지는 순간 컬럼·스키마·클라이언트까지 소수로 통일해 둔 것이
+            # 이 한 줄에서 되돌려진다.
             food.calories = int(round(match.calories or 0))
             food.sodium_mg = int(round(match.sodium_mg or 0))
-            food.sugar_g = int(round(match.sugar_g or 0))
+            food.sugar_g = float(match.sugar_g or 0)
             kept_recognizer_value = False
             for field in ("carbs_g", "protein_g", "fat_g"):
                 db_value = getattr(match, field)
