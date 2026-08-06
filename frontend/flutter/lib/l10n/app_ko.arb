@@ -327,7 +327,7 @@
   "exSpecialty": "전문 분야",
   "exKakaoMapArea": "카카오맵 영역",
   "exDefaultTrainerName": "김트레이너",
-  "exDefaultGymName": "강남 피트니스 센터",
+  "exDefaultGymName": "온케어짐 신촌점",
   "exChatGreeting": "안녕하세요, {trainer}입니다. 😊\n무엇을 도와드릴까요?",
   "exChatChipPt": "PT 상담",
   "exChatChipPass": "이용권 문의",
@@ -345,6 +345,32 @@
   "myLogout": "로그아웃",
   "myLogoutConfirm": "로그아웃 하시겠어요?",
   "myCancel": "취소",
+  "myTrainerGymTitle": "내 트레이너 · 헬스장",
+  "myConnectionDeleteTitle": "연결 삭제",
+  "myDelete": "삭제",
+  "myGymDisconnectWithTrainerConfirm": "{gym} 연결을 삭제하시겠습니까?\n담당 트레이너 {trainer} 연결도 함께 해제됩니다.",
+  "@myGymDisconnectWithTrainerConfirm": {
+    "placeholders": {
+      "gym": {"type": "String"},
+      "trainer": {"type": "String"}
+    }
+  },
+  "myGymDisconnectConfirm": "{gym} 연결을 삭제하시겠습니까?",
+  "@myGymDisconnectConfirm": {
+    "placeholders": {"gym": {"type": "String"}}
+  },
+  "myTrainerDisconnectConfirm": "담당 트레이너 {trainer} 연결을 삭제하시겠습니까?\n{gym} 헬스장 연결은 유지됩니다.",
+  "@myTrainerDisconnectConfirm": {
+    "placeholders": {
+      "trainer": {"type": "String"},
+      "gym": {"type": "String"}
+    }
+  },
+  "myGymDisconnectTooltip": "헬스장 연결 삭제",
+  "myTrainerDisconnectTooltip": "트레이너 연결 삭제",
+  "myNoTrainer": "담당 트레이너 없음",
+  "myNoGymConnected": "아직 등록된 헬스장이 없어요",
+  "myGymLoadFailed": "헬스장 연결 정보를 불러오지 못했어요.",
   "mySave": "저장",
   "myProfileSaved": "프로필이 저장되었어요",
   "mySaveFailed": "저장에 실패했어요. 잠시 후 다시 시도해 주세요",

@@ -1038,7 +1038,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exDefaultTrainerName => '김트레이너';
 
   @override
-  String get exDefaultGymName => '강남 피트니스 센터';
+  String get exDefaultGymName => '온케어짐 신촌점';
 
   @override
   String exChatGreeting(String trainer) {
@@ -1096,6 +1096,45 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myCancel => '취소';
+
+  @override
+  String get myTrainerGymTitle => '내 트레이너 · 헬스장';
+
+  @override
+  String get myConnectionDeleteTitle => '연결 삭제';
+
+  @override
+  String get myDelete => '삭제';
+
+  @override
+  String myGymDisconnectWithTrainerConfirm(String gym, String trainer) {
+    return '$gym 연결을 삭제하시겠습니까?\n담당 트레이너 $trainer 연결도 함께 해제됩니다.';
+  }
+
+  @override
+  String myGymDisconnectConfirm(String gym) {
+    return '$gym 연결을 삭제하시겠습니까?';
+  }
+
+  @override
+  String myTrainerDisconnectConfirm(String trainer, String gym) {
+    return '담당 트레이너 $trainer 연결을 삭제하시겠습니까?\n$gym 헬스장 연결은 유지됩니다.';
+  }
+
+  @override
+  String get myGymDisconnectTooltip => '헬스장 연결 삭제';
+
+  @override
+  String get myTrainerDisconnectTooltip => '트레이너 연결 삭제';
+
+  @override
+  String get myNoTrainer => '담당 트레이너 없음';
+
+  @override
+  String get myNoGymConnected => '아직 등록된 헬스장이 없어요';
+
+  @override
+  String get myGymLoadFailed => '헬스장 연결 정보를 불러오지 못했어요.';
 
   @override
   String get mySave => '저장';

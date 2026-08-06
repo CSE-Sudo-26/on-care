@@ -1056,7 +1056,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exDefaultTrainerName => 'Trainer Kim';
 
   @override
-  String get exDefaultGymName => 'Gangnam Fitness Center';
+  String get exDefaultGymName => 'On-Care Gym Sinchon';
 
   @override
   String exChatGreeting(String trainer) {
@@ -1115,6 +1115,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myCancel => 'Cancel';
+
+  @override
+  String get myTrainerGymTitle => 'My Trainer & Gym';
+
+  @override
+  String get myConnectionDeleteTitle => 'Remove Connection';
+
+  @override
+  String get myDelete => 'Remove';
+
+  @override
+  String myGymDisconnectWithTrainerConfirm(String gym, String trainer) {
+    return 'Disconnect $gym?\nYour trainer link with $trainer will also be removed.';
+  }
+
+  @override
+  String myGymDisconnectConfirm(String gym) {
+    return 'Disconnect $gym?';
+  }
+
+  @override
+  String myTrainerDisconnectConfirm(String trainer, String gym) {
+    return 'Disconnect trainer $trainer?\nYour connection to $gym will remain.';
+  }
+
+  @override
+  String get myGymDisconnectTooltip => 'Disconnect gym';
+
+  @override
+  String get myTrainerDisconnectTooltip => 'Disconnect trainer';
+
+  @override
+  String get myNoTrainer => 'No assigned trainer';
+
+  @override
+  String get myNoGymConnected => 'No gym connected yet';
+
+  @override
+  String get myGymLoadFailed => 'Couldn\'t load your gym connection.';
 
   @override
   String get mySave => 'Save';

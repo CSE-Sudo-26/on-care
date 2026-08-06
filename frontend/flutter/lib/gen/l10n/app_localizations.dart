@@ -2021,7 +2021,7 @@ abstract class AppLocalizations {
   /// No description provided for @exDefaultGymName.
   ///
   /// In en, this message translates to:
-  /// **'Gangnam Fitness Center'**
+  /// **'On-Care Gym Sinchon'**
   String get exDefaultGymName;
 
   /// No description provided for @exChatGreeting.
@@ -2125,6 +2125,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get myCancel;
+
+  /// No description provided for @myTrainerGymTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Trainer & Gym'**
+  String get myTrainerGymTitle;
+
+  /// No description provided for @myConnectionDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Connection'**
+  String get myConnectionDeleteTitle;
+
+  /// No description provided for @myDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get myDelete;
+
+  /// No description provided for @myGymDisconnectWithTrainerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect {gym}?\nYour trainer link with {trainer} will also be removed.'**
+  String myGymDisconnectWithTrainerConfirm(String gym, String trainer);
+
+  /// No description provided for @myGymDisconnectConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect {gym}?'**
+  String myGymDisconnectConfirm(String gym);
+
+  /// No description provided for @myTrainerDisconnectConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect trainer {trainer}?\nYour connection to {gym} will remain.'**
+  String myTrainerDisconnectConfirm(String trainer, String gym);
+
+  /// No description provided for @myGymDisconnectTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect gym'**
+  String get myGymDisconnectTooltip;
+
+  /// No description provided for @myTrainerDisconnectTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect trainer'**
+  String get myTrainerDisconnectTooltip;
+
+  /// No description provided for @myNoTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'No assigned trainer'**
+  String get myNoTrainer;
+
+  /// No description provided for @myNoGymConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'No gym connected yet'**
+  String get myNoGymConnected;
+
+  /// No description provided for @myGymLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your gym connection.'**
+  String get myGymLoadFailed;
 
   /// No description provided for @mySave.
   ///

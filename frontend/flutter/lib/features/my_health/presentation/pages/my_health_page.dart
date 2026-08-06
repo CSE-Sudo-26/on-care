@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
@@ -61,15 +64,20 @@ class MyHealthPage extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _ProfileCard(
-                    profile: health.valueOrNull?.profile,
-                  ),
+                  child: _ProfileCard(profile: health.valueOrNull?.profile),
                 ),
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _PointsBanner(
                     points: health.valueOrNull?.activityPoints,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _TrainerGymSection(
+                    onFindGym: () => context.go(AppRoutes.exerciseGym),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -857,6 +865,436 @@ class _LogoutButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// 내 트레이너 · 헬스장 섹션
+// ──────────────────────────────────────────────
+
+class _TrainerGymSection extends ConsumerWidget {
+  const _TrainerGymSection({required this.onFindGym});
+
+  /// 연결된 헬스장이 없을 때 "헬스장 찾기"로 보낼 콜백.
+  final VoidCallback onFindGym;
+
+  /// 확인 창을 띄우고, 승인되면 [disconnect] 를 실행한 뒤 연결 상태를 새로
+  /// 읽는다. 헬스장·트레이너 두 삭제가 같은 흐름을 쓴다.
+  Future<void> _confirmDisconnect(
+    BuildContext context,
+    WidgetRef ref, {
+    required String message,
+    required Future<void> Function(GymRepository repo) disconnect,
+  }) async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              l.myConnectionDeleteTitle,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+              ),
+            ),
+            content: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: FigmaColors.textBody,
+                height: 1.4,
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                style: TextButton.styleFrom(
+                  foregroundColor: FigmaColors.textMuted,
+                ),
+                child: Text(l.myCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFFF3B30),
+                ),
+                child: Text(l.myDelete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) return;
+    await disconnect(ref.read(gymRepositoryProvider));
+    // 해제를 기다리는 동안 탭을 벗어났다면 ref 가 이미 폐기됐을 수 있다.
+    if (!context.mounted) return;
+    ref.invalidate(myGymProvider);
+  }
+
+  /// 헬스장 연결 삭제. 담당 트레이너가 있으면 함께 사라진다는 것을 알린다.
+  Future<void> _removeGym(BuildContext context, WidgetRef ref, Gym gym) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
+    return _confirmDisconnect(
+      context,
+      ref,
+      message: hasTrainer
+          ? l.myGymDisconnectWithTrainerConfirm(gym.name, gym.trainerName!)
+          : l.myGymDisconnectConfirm(gym.name),
+      disconnect: (GymRepository repo) => repo.disconnectMyGym(),
+    );
+  }
+
+  /// 헬스장은 그대로 두고 담당 트레이너 연결만 삭제.
+  Future<void> _removeTrainer(BuildContext context, WidgetRef ref, Gym gym) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _confirmDisconnect(
+      context,
+      ref,
+      message: l.myTrainerDisconnectConfirm(gym.trainerName!, gym.name),
+      disconnect: (GymRepository repo) => repo.disconnectMyTrainer(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<Gym?> gymAsync = ref.watch(myGymProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          l.myTrainerGymTitle,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: FigmaColors.ink,
+          ),
+        ),
+        const SizedBox(height: 12),
+        gymAsync.when(
+          loading: () => const _GymSectionLoading(),
+          error: (_, _) =>
+              _GymSectionError(onRetry: () => ref.invalidate(myGymProvider)),
+          data: (Gym? gym) => gym == null
+              ? _GymSectionEmpty(onFind: onFindGym)
+              : _GymSummaryCard(
+                  gym: gym,
+                  onRemoveGym: () => _removeGym(context, ref, gym),
+                  onRemoveTrainer: () => _removeTrainer(context, ref, gym),
+                  onFindTrainer: onFindGym,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 연결된 헬스장과 담당 트레이너를 각각 한 줄로 보여준다. 두 연결은 따로
+/// 관리된다 — 트레이너만 떼거나, 헬스장을 떼면서 함께 정리하거나.
+class _GymSummaryCard extends StatelessWidget {
+  const _GymSummaryCard({
+    required this.gym,
+    required this.onRemoveGym,
+    required this.onRemoveTrainer,
+    required this.onFindTrainer,
+  });
+
+  final Gym gym;
+  final VoidCallback onRemoveGym;
+  final VoidCallback onRemoveTrainer;
+
+  /// 헬스장은 있는데 담당 트레이너가 없을 때 트레이너를 찾으러 보낸다.
+  final VoidCallback onFindTrainer;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: FigmaColors.primaryA(0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.fitness_center,
+                    size: 18,
+                    color: FigmaColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        gym.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.ink,
+                        ),
+                      ),
+                      Text(
+                        '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _RemoveLinkButton(
+                  tooltip: l.myGymDisconnectTooltip,
+                  onTap: onRemoveGym,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: FigmaColors.hairline),
+            const SizedBox(height: 12),
+            if (hasTrainer)
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.person_outline,
+                    size: 15,
+                    color: FigmaColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${gym.trainerName!} · ${gym.trainerRole ?? l.exTrainerDedicated}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textBody,
+                      ),
+                    ),
+                  ),
+                  _RemoveLinkButton(
+                    tooltip: l.myTrainerDisconnectTooltip,
+                    onTap: onRemoveTrainer,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.person_off_outlined,
+                    size: 15,
+                    color: FigmaColors.textFaint,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l.myNoTrainer,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onFindTrainer,
+                    style: TextButton.styleFrom(
+                      foregroundColor: FigmaColors.primary,
+                      minimumSize: const Size(48, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text(
+                      l.exFindTrainer,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 한 줄짜리 연결(헬스장 또는 트레이너)을 끊는 버튼. 시각적 아이콘은 20이지만
+/// 탭 영역은 접근성 최소 44×44 를 지킨다.
+class _RemoveLinkButton extends StatelessWidget {
+  const _RemoveLinkButton({required this.tooltip, required this.onTap});
+
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.delete_outline_rounded,
+                size: 20,
+                color: FigmaColors.textFaint,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GymSectionEmpty extends StatelessWidget {
+  const _GymSectionEmpty({required this.onFind});
+
+  final VoidCallback onFind;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            l.myNoGymConnected,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onFind,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              side: BorderSide(color: FigmaColors.primaryA(0.35)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.search, size: 16),
+            label: Text(
+              l.exFindGym,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GymSectionLoading extends StatelessWidget {
+  const _GymSectionLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      ),
+    );
+  }
+}
+
+class _GymSectionError extends StatelessWidget {
+  const _GymSectionError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            l.myGymLoadFailed,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: Text(l.actionRetry)),
+        ],
       ),
     );
   }
