@@ -602,6 +602,18 @@ abstract class AppLocalizations {
   /// **'On track'**
   String get homeMetricNormal;
 
+  /// No description provided for @dietAmountOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over the goal'**
+  String dietAmountOver(String amount);
+
+  /// No description provided for @dietAmountRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} remaining to the goal'**
+  String dietAmountRemaining(String amount);
+
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:

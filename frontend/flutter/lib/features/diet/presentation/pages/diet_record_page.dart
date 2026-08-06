@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -498,21 +496,19 @@ class NutritionSummary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: kCardShadow,
-            ),
-            child: _CircularNutritionCard(
-              calories: items[0],
-              sodium: items[1],
-              sugar: items[2],
-              protein: items[3],
-              fat: items[4],
-              carbs: items[5],
-            ),
+          _NutritionSummaryCard(
+            calories: items[0],
+            calorieDifference: _formatInt((kcal - _calorieGoal).abs().round()),
+            carbs: items[5],
+            protein: items[3],
+            fat: items[4],
+          ),
+          const SizedBox(height: 12),
+          _NutritionStatusCards(
+            sodium: items[1],
+            sodiumDifference: _formatInt((sodium - _sodiumGoal).abs().round()),
+            sugar: items[2],
+            sugarDifference: _formatG((sugar - _sugarGoal).abs()),
           ),
         ],
       ),
@@ -543,153 +539,190 @@ class _NutritionSummaryItem {
   final bool isOverGoal;
 }
 
-class _CircularNutritionCard extends StatelessWidget {
-  const _CircularNutritionCard({
+class _NutritionSummaryCard extends StatelessWidget {
+  const _NutritionSummaryCard({
     required this.calories,
-    required this.sodium,
-    required this.sugar,
+    required this.calorieDifference,
     required this.carbs,
     required this.protein,
     required this.fat,
   });
 
   final _NutritionSummaryItem calories;
-  final _NutritionSummaryItem sodium;
-  final _NutritionSummaryItem sugar;
+  final String calorieDifference;
   final _NutritionSummaryItem carbs;
   final _NutritionSummaryItem protein;
   final _NutritionSummaryItem fat;
 
   @override
   Widget build(BuildContext context) {
-    final List<_MacroProgress> macros = <_MacroProgress>[
-      _MacroProgress(item: carbs, color: FigmaColors.primary),
-      _MacroProgress(item: protein, color: FigmaColors.sleepPurple),
-      _MacroProgress(item: fat, color: FigmaColors.green),
+    final Color macroProgressColor = FigmaColors.primaryA(0.65);
+    final List<_MacroProgressData> macros = <_MacroProgressData>[
+      _MacroProgressData(item: carbs, color: macroProgressColor),
+      _MacroProgressData(item: protein, color: macroProgressColor),
+      _MacroProgressData(item: fat, color: macroProgressColor),
     ];
-
-    return Column(
-      key: const Key('nutrition-circular-summary'),
-      children: <Widget>[
-        LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double graphSize = (constraints.maxWidth * 0.58).clamp(
-              172.0,
-              190.0,
-            );
-            final double gap = (constraints.maxWidth * 0.02).clamp(6.0, 10.0);
-            final double legendWidth = math.min(
-              140,
-              constraints.maxWidth - graphSize - gap,
-            );
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  width: legendWidth,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      for (final _MacroProgress macro in macros) ...<Widget>[
-                        _MacroLegendItem(macro: macro),
-                        if (macro != macros.last) const SizedBox(height: 16),
-                      ],
+    final AppLocalizations l = AppLocalizations.of(context);
+    final Color calorieColor = calories.isOverGoal
+        ? FigmaColors.dangerRed
+        : FigmaColors.primary;
+    final String calorieStatus = calories.isOverGoal
+        ? l.dietAmountOver('$calorieDifference ${calories.unit}')
+        : l.dietAmountRemaining('$calorieDifference ${calories.unit}');
+    return Container(
+      key: const Key('nutrition-summary-card'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l.homeCalorieIntake,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textSub,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          children: <InlineSpan>[
+                            TextSpan(
+                              text: calories.value,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: calorieColor,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' / ${calories.goal} ${calories.unit}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: FigmaColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      calorieStatus,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: calories.isOverGoal
+                            ? FigmaColors.dangerRed
+                            : FigmaColors.textSub,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              _CalorieCircularProgress(calories: calories, color: calorieColor),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              if (constraints.maxWidth < 280) {
+                return Column(
+                  children: <Widget>[
+                    for (final _MacroProgressData macro in macros) ...<Widget>[
+                      _MacroProgressItem(macro: macro),
+                      if (macro != macros.last) const SizedBox(height: 12),
                     ],
-                  ),
-                ),
-                SizedBox(width: gap),
-                _CircularNutritionGraph(
-                  calories: calories,
-                  macros: macros,
-                  size: graphSize,
-                ),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 14),
-        const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
-        const SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            Expanded(child: _NutritionStatusItem(item: sodium)),
-            const SizedBox(width: 8),
-            Expanded(child: _NutritionStatusItem(item: sugar)),
-          ],
-        ),
-      ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (
+                    int index = 0;
+                    index < macros.length;
+                    index++
+                  ) ...<Widget>[
+                    Expanded(child: _MacroProgressItem(macro: macros[index])),
+                    if (index < macros.length - 1) const SizedBox(width: 10),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _CircularNutritionGraph extends StatelessWidget {
-  const _CircularNutritionGraph({
-    required this.calories,
-    required this.macros,
-    required this.size,
-  });
+class _CalorieCircularProgress extends StatelessWidget {
+  const _CalorieCircularProgress({required this.calories, required this.color});
 
   final _NutritionSummaryItem calories;
-  final List<_MacroProgress> macros;
-  final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final Color calorieColor = calories.isOverGoal
-        ? FigmaColors.dangerRed
-        : FigmaColors.ink;
     return SizedBox.square(
-      dimension: size,
+      dimension: 92,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          CustomPaint(
-            size: Size.square(size),
-            painter: _ConcentricNutritionRingPainter(macros),
+          SizedBox.square(
+            dimension: 92,
+            child: CircularProgressIndicator(
+              key: const Key('nutrition-calorie-progress'),
+              value: calories.ratio,
+              strokeWidth: 9,
+              strokeCap: StrokeCap.round,
+              backgroundColor: FigmaColors.track,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text(
-                calories.label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textSub,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                '${calories.value} ${calories.unit}',
+                '${(calories.ratio * 100).round()}%',
                 style: TextStyle(
-                  fontSize: 21,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: calorieColor,
+                  color: color,
                   height: 1,
-                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 4),
               Text(
-                '${l.homeGoal} ${calories.goal} ${calories.unit}',
+                l.homeAchieveRate,
                 style: const TextStyle(
-                  fontSize: 9.5,
+                  fontSize: 9,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.textMuted,
                 ),
               ),
-              if (calories.isOverGoal) ...<Widget>[
-                const SizedBox(height: 3),
-                Text(
-                  '${l.homeGoal} ${l.homeMetricOver}',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.dangerRed,
-                  ),
-                ),
-              ],
             ],
           ),
         ],
@@ -698,92 +731,176 @@ class _CircularNutritionGraph extends StatelessWidget {
   }
 }
 
-class _MacroProgress {
-  const _MacroProgress({required this.item, required this.color});
+class _MacroProgressData {
+  const _MacroProgressData({required this.item, required this.color});
 
   final _NutritionSummaryItem item;
   final Color color;
 }
 
-class _MacroLegendItem extends StatelessWidget {
-  const _MacroLegendItem({required this.macro});
+class _MacroProgressItem extends StatelessWidget {
+  const _MacroProgressItem({required this.macro});
 
-  final _MacroProgress macro;
+  final _MacroProgressData macro;
 
   @override
   Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Row(
+    return Column(
+      key: Key('nutrition-macro-${macro.item.label}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.only(top: 3),
-          decoration: BoxDecoration(color: macro.color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                macro.item.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textSub,
-                ),
-              ),
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text.rich(
-                  TextSpan(
-                    children: <InlineSpan>[
-                      TextSpan(
-                        text: macro.item.value,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: macro.item.isOverGoal
-                              ? FigmaColors.dangerRed
-                              : macro.color,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' /${macro.item.goal}${macro.item.unit}',
-                        style: kGoalSuffixStyle,
-                      ),
-                    ],
-                  ),
-                  maxLines: 1,
-                ),
-              ),
-              if (macro.item.isOverGoal)
-                Text(
-                  '${l.homeGoal} ${l.homeMetricOver}',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.dangerRed,
-                  ),
-                ),
-            ],
+        Text(
+          macro.item.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: FigmaColors.textSub,
           ),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text.rich(
+            TextSpan(
+              children: <InlineSpan>[
+                TextSpan(
+                  text: macro.item.value,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                  ),
+                ),
+                TextSpan(
+                  text: ' / ${macro.item.goal}${macro.item.unit}',
+                  style: kGoalSuffixStyle,
+                ),
+              ],
+            ),
+            maxLines: 1,
+          ),
+        ),
+        const SizedBox(height: 7),
+        _NutritionProgressBar(
+          key: Key('nutrition-macro-progress-${macro.item.label}'),
+          progress: macro.item.ratio,
+          color: macro.color,
         ),
       ],
     );
   }
 }
 
-class _NutritionStatusItem extends StatelessWidget {
-  const _NutritionStatusItem({required this.item});
+class _NutritionProgressBar extends StatelessWidget {
+  const _NutritionProgressBar({
+    required this.progress,
+    required this.color,
+    super.key,
+  });
+
+  final double progress;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    const double barHeight = 6;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: SizedBox(
+            height: barHeight,
+            child: Stack(
+              children: <Widget>[
+                const Positioned.fill(
+                  child: ColoredBox(color: FigmaColors.track),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+                    height: barHeight,
+                    child: ColoredBox(color: color),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _NutritionStatusCards extends StatelessWidget {
+  const _NutritionStatusCards({
+    required this.sodium,
+    required this.sodiumDifference,
+    required this.sugar,
+    required this.sugarDifference,
+  });
+
+  final _NutritionSummaryItem sodium;
+  final String sodiumDifference;
+  final _NutritionSummaryItem sugar;
+  final String sugarDifference;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget sodiumCard = _NutritionStatusCard(
+      key: const Key('nutrition-sodium-status'),
+      item: sodium,
+      difference: sodiumDifference,
+      progressColor: sodium.isOverGoal
+          ? FigmaColors.dangerRed
+          : FigmaColors.primaryDeep,
+    );
+    final Widget sugarCard = _NutritionStatusCard(
+      key: const Key('nutrition-sugar-status'),
+      item: sugar,
+      difference: sugarDifference,
+      progressColor: sugar.isOverGoal
+          ? FigmaColors.dangerRed
+          : FigmaColors.greenText,
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth < 310) {
+          return Column(
+            children: <Widget>[
+              sodiumCard,
+              const SizedBox(height: 10),
+              sugarCard,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(child: sodiumCard),
+            const SizedBox(width: 10),
+            Expanded(child: sugarCard),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NutritionStatusCard extends StatelessWidget {
+  const _NutritionStatusCard({
+    required this.item,
+    required this.difference,
+    required this.progressColor,
+    super.key,
+  });
 
   final _NutritionSummaryItem item;
+  final String difference;
+  final Color progressColor;
 
   @override
   Widget build(BuildContext context) {
@@ -791,65 +908,120 @@ class _NutritionStatusItem extends StatelessWidget {
     final Color statusColor = item.isOverGoal
         ? FigmaColors.dangerRed
         : FigmaColors.greenText;
+    final String differenceText = item.isOverGoal
+        ? l.dietAmountOver('$difference${item.unit}')
+        : l.dietAmountRemaining('$difference${item.unit}');
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: FigmaColors.statBg,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: item.isOverGoal
+              ? FigmaColors.dangerRed.withValues(alpha: 0.32)
+              : FigmaColors.primaryA(0.18),
+        ),
+        boxShadow: kCardShadow,
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            item.label,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: FigmaColors.textSub,
-            ),
+          _VerticalNutritionProgressBar(
+            key: Key('nutrition-status-vertical-progress-${item.label}'),
+            progress: item.ratio,
+            color: progressColor,
           ),
-          const SizedBox(height: 3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text.rich(
-              TextSpan(
-                children: <InlineSpan>[
-                  TextSpan(
-                    text: item.value,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      item.isOverGoal
+                          ? Icons.warning_amber_rounded
+                          : Icons.check_circle_outline_rounded,
+                      size: 16,
+                      color: statusColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        item.label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.textSub,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: item.value,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: item.isOverGoal
+                                ? FigmaColors.dangerRed
+                                : FigmaColors.ink,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' / ${item.goal}${item.unit}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: FigmaColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    item.isOverGoal
+                        ? '${l.homeGoal} ${l.homeMetricOver}'
+                        : l.homeMetricNormal,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: item.isOverGoal
-                          ? FigmaColors.dangerRed
-                          : FigmaColors.ink,
+                      color: statusColor,
                     ),
                   ),
-                  TextSpan(
-                    text: ' /${item.goal}${item.unit}',
-                    style: kGoalSuffixStyle,
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  differenceText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: item.isOverGoal
+                        ? FigmaColors.dangerRed
+                        : FigmaColors.textBody,
+                    height: 1.3,
                   ),
-                ],
-              ),
-              maxLines: 1,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              item.isOverGoal
-                  ? '${l.homeGoal} ${l.homeMetricOver}'
-                  : l.homeMetricNormal,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: statusColor,
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -858,95 +1030,40 @@ class _NutritionStatusItem extends StatelessWidget {
   }
 }
 
-class _ConcentricNutritionRingPainter extends CustomPainter {
-  const _ConcentricNutritionRingPainter(this.macros);
+class _VerticalNutritionProgressBar extends StatelessWidget {
+  const _VerticalNutritionProgressBar({
+    required this.progress,
+    required this.color,
+    super.key,
+  });
 
-  final List<_MacroProgress> macros;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double strokeWidth = (size.shortestSide * 0.055).clamp(8.0, 10.5);
-    final double radiusStep = strokeWidth + 5;
-    final Offset center = Offset(size.width / 2, size.height / 2);
-    final double outerRadius = (size.shortestSide - strokeWidth) / 2;
-    final double middleRadius = outerRadius - radiusStep;
-    final double innerRadius = middleRadius - radiusStep;
-    final _MacroProgress carbsRing = macros[0];
-    final _MacroProgress proteinRing = macros[1];
-    final _MacroProgress fatRing = macros[2];
-
-    // 목표량 규모를 기준으로 탄수화물은 바깥, 단백질은 가운데, 지방은 안쪽에 고정한다.
-    _drawProgressRing(
-      canvas: canvas,
-      center: center,
-      radius: outerRadius,
-      progress: carbsRing.item.ratio,
-      progressColor: carbsRing.color,
-      strokeWidth: strokeWidth,
-    );
-    _drawProgressRing(
-      canvas: canvas,
-      center: center,
-      radius: middleRadius,
-      progress: proteinRing.item.ratio,
-      progressColor: proteinRing.color,
-      strokeWidth: strokeWidth,
-    );
-    _drawProgressRing(
-      canvas: canvas,
-      center: center,
-      radius: innerRadius,
-      progress: fatRing.item.ratio,
-      progressColor: fatRing.color,
-      strokeWidth: strokeWidth,
-    );
-  }
-
-  void _drawProgressRing({
-    required Canvas canvas,
-    required Offset center,
-    required double radius,
-    required double progress,
-    required Color progressColor,
-    required double strokeWidth,
-  }) {
-    final Rect ringRect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = FigmaColors.track.withValues(alpha: 0.55)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round,
-    );
-
-    if (progress <= 0) return;
-    const double startAngle = -math.pi / 2;
-    final double sweepAngle = 2 * math.pi * progress.clamp(0.0, 1.0);
-    canvas.drawArc(
-      ringRect,
-      startAngle,
-      sweepAngle,
-      false,
-      Paint()
-        ..color = progressColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round,
-    );
-  }
+  final double progress;
+  final Color color;
 
   @override
-  bool shouldRepaint(covariant _ConcentricNutritionRingPainter oldDelegate) {
-    if (macros.length != oldDelegate.macros.length) return true;
-    for (int index = 0; index < macros.length; index++) {
-      if (macros[index].item.ratio != oldDelegate.macros[index].item.ratio ||
-          macros[index].color != oldDelegate.macros[index].color) {
-        return true;
-      }
-    }
-    return false;
+  Widget build(BuildContext context) {
+    const double barWidth = 8;
+    const double barHeight = 104;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        width: barWidth,
+        height: barHeight,
+        child: Stack(
+          children: <Widget>[
+            const Positioned.fill(child: ColoredBox(color: FigmaColors.track)),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                width: barWidth,
+                height: barHeight * progress.clamp(0.0, 1.0),
+                child: ColoredBox(color: color),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

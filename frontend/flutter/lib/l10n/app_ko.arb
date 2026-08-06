@@ -91,6 +91,22 @@
   "homeWeeklyExerciseTrend": "주간 운동 추이",
   "homeMetricOver": "초과",
   "homeMetricNormal": "정상",
+  "dietAmountOver": "목표보다 {amount} 많아요",
+  "@dietAmountOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dietAmountRemaining": "목표까지 {amount} 남았어요",
+  "@dietAmountRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "homeExerciseActiveTime": "주간 운동 시간",
   "homeExerciseBurned": "주간 소모 칼로리",
   "homeExerciseCount": "주간 운동 횟수",
