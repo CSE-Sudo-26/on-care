@@ -325,9 +325,11 @@ void main() {
       expect(find.text('45'), findsOneWidget);
       expect(find.text('520'), findsWidgets);
       expect(find.text('4'), findsWidgets);
-      expect(find.text('주간 운동 시간'), findsOneWidget);
-      expect(find.text('주간 소모 칼로리'), findsOneWidget);
-      expect(find.text('주간 운동 일수'), findsOneWidget);
+      expect(find.text('주간 운동'), findsOneWidget);
+      expect(find.text('운동 시간'), findsOneWidget);
+      expect(find.text('소모 칼로리'), findsOneWidget);
+      expect(find.text('운동 일수'), findsOneWidget);
+      expect(find.text('운동 추이 (kcal)'), findsOneWidget);
       expect(find.text('병원 정기검진'), findsOneWidget);
       expect(find.textContaining('김치찌개·배추김치'), findsOneWidget);
       expect(

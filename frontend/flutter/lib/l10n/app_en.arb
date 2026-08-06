@@ -36,7 +36,7 @@
   "errorUnknown": "Something went wrong",
   "dashboardSectionToday": "Today",
   "dashboardMetricCalories": "Calories",
-  "dashboardMetricExercise": "Exercise",
+  "dashboardMetricExercise": "Weekly exercise",
   "dashboardMetricWeight": "Weight",
   "dashboardChartWeightWeek": "Weekly weight",
   "dashboardCaloriesProgress": "{pct}% of {goal}",
@@ -135,7 +135,7 @@
       }
     }
   },
-  "homeWeeklyExerciseTrend": "Weekly exercise trend",
+  "homeWeeklyExerciseTrend": "Exercise trend",
   "homeMetricOver": "Over",
   "homeMetricNormal": "On track",
   "dietAmountOver": "{amount} over the goal",
@@ -154,10 +154,10 @@
       }
     }
   },
-  "homeExerciseActiveTime": "Weekly active time",
-  "homeExerciseBurned": "Weekly calories",
+  "homeExerciseActiveTime": "Active time",
+  "homeExerciseBurned": "Calories",
   "homeExerciseCount": "Weekly workouts",
-  "homeExerciseDays": "Weekly workout days",
+  "homeExerciseDays": "Workout days",
   "homeExerciseBurnProgress": "Weekly burn goal",
   "unitTimes": "×",
   "homeVsLastWeek": "vs last week",

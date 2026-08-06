@@ -109,7 +109,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardMetricCalories => 'Calories';
 
   @override
-  String get dashboardMetricExercise => 'Exercise';
+  String get dashboardMetricExercise => 'Weekly exercise';
 
   @override
   String get dashboardMetricWeight => 'Weight';
@@ -268,7 +268,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeWeeklyExerciseTrend => 'Weekly exercise trend';
+  String get homeWeeklyExerciseTrend => 'Exercise trend';
 
   @override
   String get homeMetricOver => 'Over';
@@ -287,16 +287,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeExerciseActiveTime => 'Weekly active time';
+  String get homeExerciseActiveTime => 'Active time';
 
   @override
-  String get homeExerciseBurned => 'Weekly calories';
+  String get homeExerciseBurned => 'Calories';
 
   @override
   String get homeExerciseCount => 'Weekly workouts';
 
   @override
-  String get homeExerciseDays => 'Weekly workout days';
+  String get homeExerciseDays => 'Workout days';
 
   @override
   String get homeExerciseBurnProgress => 'Weekly burn goal';

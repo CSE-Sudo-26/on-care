@@ -965,6 +965,7 @@ class _ExerciseStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Container(
           width: 28,
@@ -977,50 +978,56 @@ class _ExerciseStat extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  value,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
-                    letterSpacing: -0.5,
-                    height: 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        value,
+                        maxLines: 1,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.ink,
+                          letterSpacing: -0.3,
+                          height: 1,
+                        ),
+                      ),
+                      if (goal != null)
+                        Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
+                      else
+                        Text(
+                          ' $unit',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: FigmaColors.textMuted,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (goal != null)
-                  Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
-                else
-                  Text(
-                    ' $unit',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: FigmaColors.textMuted,
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

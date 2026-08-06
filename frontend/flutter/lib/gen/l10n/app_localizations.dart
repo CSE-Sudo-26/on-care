@@ -299,7 +299,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashboardMetricExercise.
   ///
   /// In en, this message translates to:
-  /// **'Exercise'**
+  /// **'Weekly exercise'**
   String get dashboardMetricExercise;
 
   /// No description provided for @dashboardMetricWeight.
@@ -587,7 +587,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeeklyExerciseTrend.
   ///
   /// In en, this message translates to:
-  /// **'Weekly exercise trend'**
+  /// **'Exercise trend'**
   String get homeWeeklyExerciseTrend;
 
   /// No description provided for @homeMetricOver.
@@ -617,13 +617,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
-  /// **'Weekly active time'**
+  /// **'Active time'**
   String get homeExerciseActiveTime;
 
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
-  /// **'Weekly calories'**
+  /// **'Calories'**
   String get homeExerciseBurned;
 
   /// No description provided for @homeExerciseCount.
@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseDays.
   ///
   /// In en, this message translates to:
-  /// **'Weekly workout days'**
+  /// **'Workout days'**
   String get homeExerciseDays;
 
   /// No description provided for @homeExerciseBurnProgress.

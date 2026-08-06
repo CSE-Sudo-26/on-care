@@ -108,7 +108,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashboardMetricCalories => '칼로리';
 
   @override
-  String get dashboardMetricExercise => '운동';
+  String get dashboardMetricExercise => '주간 운동';
 
   @override
   String get dashboardMetricWeight => '체중';
@@ -265,7 +265,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeWeeklyExerciseTrend => '주간 운동 추이';
+  String get homeWeeklyExerciseTrend => '운동 추이';
 
   @override
   String get homeMetricOver => '초과';
@@ -284,16 +284,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeExerciseActiveTime => '주간 운동 시간';
+  String get homeExerciseActiveTime => '운동 시간';
 
   @override
-  String get homeExerciseBurned => '주간 소모 칼로리';
+  String get homeExerciseBurned => '소모 칼로리';
 
   @override
   String get homeExerciseCount => '주간 운동 횟수';
 
   @override
-  String get homeExerciseDays => '주간 운동 일수';
+  String get homeExerciseDays => '운동 일수';
 
   @override
   String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
