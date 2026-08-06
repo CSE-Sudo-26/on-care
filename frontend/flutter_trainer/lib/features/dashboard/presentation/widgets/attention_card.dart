@@ -6,6 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
+import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -30,15 +31,6 @@ class AttentionCard extends StatelessWidget {
     ClientAlert.unanswered => 'chat',
     ClientAlert.sodiumOver => 'diet',
     ClientAlert.lowCompletion => 'workout',
-  };
-
-  static Color _colorFor(ClientAlert alert) => switch (alert) {
-    // 하나의 색은 하나의 뜻만: 남색 = 처리 필요, 빨강 = 목표 초과
-    // (사용자 앱과 동일), 주황 = 완만한 주의. 답장 대기의 시급함은 색이
-    // 아니라 목록 맨 위에 오는 순서가 말한다.
-    ClientAlert.unanswered => AppColors.primary,
-    ClientAlert.sodiumOver => AppColors.overTarget,
-    ClientAlert.lowCompletion => AppColors.warning,
   };
 
   @override
@@ -84,7 +76,6 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AttentionCard._colorFor(entry.primary);
     return InkWell(
       onTap: onTap,
       borderRadius: const BorderRadius.all(AppRadius.sm),
@@ -122,21 +113,7 @@ class _Row extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: const BorderRadius.all(AppRadius.pill),
-              ),
-              child: Text(
-                entry.primary.label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
-              ),
-            ),
+            AlertBadge(alert: entry.primary, showIcon: false),
           ],
         ),
       ),

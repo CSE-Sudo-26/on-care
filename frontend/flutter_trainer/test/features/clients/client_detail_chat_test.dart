@@ -311,8 +311,9 @@ void main() {
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
     });
 
-    /// Opens 김민수's 채팅 section directly. The client detail defaults
-    /// to 개요 now, so the chat has to be addressed explicitly.
+    /// Opens 김민수's 채팅 section. Addressed explicitly rather than
+    /// relying on it being the default, so these stay honest if the
+    /// landing section changes again.
     Future<void> openDetail(WidgetTester tester) async {
       await pumpTrainerApp(
         tester,
@@ -324,7 +325,6 @@ void main() {
     testWidgets('shows the header, sub-tabs, and seeded chat', (tester) async {
       await openDetail(tester);
 
-      expect(find.text('개요'), findsOneWidget);
       expect(find.text('채팅'), findsOneWidget);
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
@@ -457,6 +457,14 @@ void main() {
 
       await tester.tap(find.text('운동'));
       await settle(tester);
+      // 운동 now leads with the routines that used to be their own tab,
+      // so the completion card sits below them.
+      expect(find.text('배정된 루틴'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('이번 주 완료율'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('이번 주 완료율'), findsOneWidget);
     });
   });

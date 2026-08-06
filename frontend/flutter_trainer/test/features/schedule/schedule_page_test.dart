@@ -699,13 +699,15 @@ void main() {
         findsNothing,
       );
 
-      // …and the 운동 sub-tab shows the fresh PT entry on top.
+      // …and the 운동 sub-tab shows the fresh PT entry. The routines the
+      // tab absorbed sit above the history, so scroll down to it.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
-      expect(find.textContaining('(오늘)'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('벤치 폼 안정적'), 150);
       expect(find.text('벤치 폼 안정적'), findsOneWidget);
+      expect(find.textContaining('(오늘)'), findsWidgets);
     });
 
     testWidgets('a future session offers no 완료 action', (tester) async {
@@ -826,6 +828,10 @@ void main() {
       // Client detail opened on the chat sub-tab.
       expect(find.text('채팅'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
+      // The thread auto-scrolls to the newest message; drag back up so
+      // the lazily-built banner at the top of the thread exists.
+      await tester.drag(find.byType(ListView), const Offset(0, 600));
+      await tester.pump();
       expect(find.textContaining('AI가 박성호님의'), findsOneWidget);
     });
 

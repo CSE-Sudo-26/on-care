@@ -38,7 +38,7 @@ void main() {
     await settle(tester);
 
     // Panel opened in place — sub-tabs visible, no push (no back button).
-    expect(find.text('개요'), findsOneWidget);
+    expect(find.text('운동'), findsOneWidget);
     expect(find.text('채팅'), findsOneWidget);
     expect(find.text('식단'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
@@ -51,12 +51,12 @@ void main() {
 
     await tester.tap(card('김민수'));
     await settle(tester);
-    expect(find.text('개요'), findsOneWidget);
+    expect(find.text('운동'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close));
     await settle(tester);
 
-    expect(find.text('개요'), findsNothing);
+    expect(find.text('운동'), findsNothing);
     expect(find.textContaining('왼쪽에서 고객을 선택하면'), findsOneWidget);
   });
 
@@ -138,11 +138,11 @@ void main() {
     await tester.tap(card('김민수'));
     await settle(tester);
 
-    final ctx = tester.element(find.text('개요'));
+    final ctx = tester.element(find.text('운동'));
     final uri = GoRouterState.of(ctx).uri;
     // Path-based, not `?c=`: refresh, back/forward and shared links all
     // restore the same client AND the same sub-tab.
-    expect(uri.path, '/clients/seed-client-1/overview');
+    expect(uri.path, '/clients/seed-client-1/chat');
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (
@@ -151,6 +151,6 @@ void main() {
     await openWide(tester);
     // A backend member id is not guaranteed URL-safe; the location must
     // survive one that isn't.
-    expect(AppRoutes.clientDetail('a b/c'), '/clients/a%20b%2Fc/overview');
+    expect(AppRoutes.clientDetail('a b/c'), '/clients/a%20b%2Fc/chat');
   });
 }

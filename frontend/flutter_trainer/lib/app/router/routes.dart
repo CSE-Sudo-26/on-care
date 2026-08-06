@@ -38,16 +38,25 @@ class AppRoutes {
   // --- Client detail ---
 
   /// Sub-sections of a client's detail panel, in tab order.
+  ///
+  /// Three, not five: 개요 became the always-visible detail header (alerts
+  /// + today's numbers are needed on every tab, not just one), and 루틴
+  /// folded into 운동 — a prescription and its execution are one story,
+  /// and splitting them meant the trainer could never see "I assigned
+  /// this, did they do it?" on a single screen.
   static const List<String> clientSections = <String>[
-    'overview',
     'chat',
     'diet',
     'workout',
-    'routines',
   ];
 
   /// The section shown when a client is opened without one.
-  static const String defaultClientSection = 'overview';
+  ///
+  /// Chat is safe as the landing tab now that the header carries the
+  /// alerts and today's metrics — the reason 개요 existed was that
+  /// arriving on the chat forced the trainer to reconstruct state from
+  /// the last few messages.
+  static const String defaultClientSection = 'chat';
 
   /// Route pattern for the client detail panel.
   static const String clientDetailPattern = ':id/:section';

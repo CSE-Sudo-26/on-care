@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart'
+    show clientSectionLabels;
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
@@ -13,6 +15,19 @@ import '../../helpers/pump_app.dart';
 
 /// Loading / error / not-found handling for the client detail body.
 void main() {
+  test('every sub-tab label has a section behind it', () {
+    // _SubTabs iterates the labels and indexes clientSections with the
+    // same i, so a length mismatch is a RangeError on tap (extra label)
+    // or a section with no way to reach it (extra section). They are
+    // edited in different files, so the pairing needs a guard.
+    expect(clientSectionLabels.length, AppRoutes.clientSections.length);
+    expect(
+      AppRoutes.clientSections,
+      contains(AppRoutes.defaultClientSection),
+      reason: '기본 섹션이 목록에 없으면 _index 가 -1 로 떨어진다',
+    );
+  });
+
   testWidgets('an unknown client id shows the not-found message instead '
       'of a nameless chat', (tester) async {
     await pumpTrainerApp(
@@ -56,20 +71,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('개요 shows the 답장 대기 reason the dashboard flagged', (
+  testWidgets('the header shows the 답장 대기 reason the dashboard flagged', (
     tester,
   ) async {
-    // The overview used to call alertsFor() without the unread count, so
-    // this badge could never appear — a client the dashboard flagged in
-    // red lost its reason the moment you opened them (CodeRabbit #377).
+    // The alert strip used to call alertsFor() without the unread count,
+    // so this badge could never appear — a client the dashboard flagged
+    // in red lost its reason the moment you opened them (CodeRabbit
+    // #377). It now lives in the header, so it holds on every sub-tab.
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       // 박성호 is the one still waiting — 김민수's thread is seeded
-      // already answered.
-      at: AppRoutes.clientDetail('seed-client-3'),
+      // already answered. Opened on 식단, not the default 채팅: reading
+      // the thread marks it read, which legitimately clears the badge.
+      at: AppRoutes.clientDetail('seed-client-3', section: 'diet'),
     );
 
+    expect(find.text('답장 대기'), findsOneWidget);
+
+    // Still there after switching tabs — the point of moving it out of
+    // the 개요 tab it used to live in is that it holds everywhere.
+    await tester.tap(find.text('운동'));
+    await settle(tester);
     expect(find.text('답장 대기'), findsOneWidget);
   });
 
@@ -87,8 +110,8 @@ void main() {
         token: 'demo-trainer-token',
         at: AppRoutes.clientDetail('seed-client-1'),
       );
-      expect(find.text('개요'), findsOneWidget);
-      // Start on the 개요 sub-tab (default), not the 식단 view.
+      expect(find.text('채팅'), findsOneWidget);
+      // Start on the 채팅 sub-tab (default), not the 식단 view.
       expect(find.text('오늘 영양 요약'), findsNothing);
 
       // Whether the 식단 sub-tab currently holds keyboard focus.
@@ -133,11 +156,11 @@ void main() {
 
     // MergeSemantics folds the selected/button flags into the node the
     // reader actually hits, so one node carries label + state.
-    final flags = tester.getSemantics(find.text('개요')).flagsCollection;
+    final flags = tester.getSemantics(find.text('채팅')).flagsCollection;
     expect(
       flags.isSelected,
       Tristate.isTrue,
-      reason: '기본 선택된 개요 탭이 selected 로 안내돼야 함',
+      reason: '기본 선택된 채팅 탭이 selected 로 안내돼야 함',
     );
     expect(flags.isButton, isTrue);
   });

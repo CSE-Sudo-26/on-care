@@ -8,19 +8,30 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/overview_view.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/routines_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
+import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 /// Labels for [AppRoutes.clientSections], in the same order.
-const List<String> clientSectionLabels = <String>['개요', '채팅', '식단', '운동', '루틴'];
+const List<String> clientSectionLabels = <String>['채팅', '식단', '운동'];
 
-/// The client detail body — header (avatar/name/goal/active toggle) plus
-/// the 개요/채팅/식단/운동/루틴 sub-tabs.
+/// The client detail body — a header that answers "how is this person
+/// doing right now?" plus the 채팅/식단/운동 sub-tabs.
+///
+/// The header carries what used to be the 개요 tab: the alert badges and
+/// today's calorie/sodium/sugar numbers. Those are the questions the
+/// trainer has on *every* tab, so paying a tab for them meant the answer
+/// was missing exactly when they were reading the chat or the diet. The
+/// two trends 개요 also drew (주간 이행률, 나트륨 추이) now live only where
+/// they belong — 운동, 식단, and the 리포트 tab that renders the same
+/// charts for the week.
 ///
 /// The active sub-tab is **owned by the URL**, not by this widget: the
 /// dashboard links straight to a client's 식단 when sodium is over, and
@@ -69,6 +80,11 @@ class ClientDetailView extends ConsumerWidget {
     final canManageRoster = ref
         .watch(clientRepositoryProvider)
         .supportsRosterMutations;
+    // The unread count has to come along: without it `alertsFor` always
+    // sees 0 and 답장 대기 could never appear here — so a client the
+    // dashboard flagged in red would lose its reason on arrival.
+    final unread =
+        ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
 
     return clientsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -94,6 +110,7 @@ class ClientDetailView extends ConsumerWidget {
           children: <Widget>[
             _Header(
               client: client,
+              alerts: alertsFor(client, unread: unread[client.id] ?? 0),
               showBack: showBack,
               onClose: onClose,
               onToggleActive: canManageRoster
@@ -120,24 +137,16 @@ class ClientDetailView extends ConsumerWidget {
     // another client's composer.
     final key = ValueKey<String>(clientId);
     switch (AppRoutes.clientSections[_index]) {
-      case 'chat':
+      case 'diet':
+        return DietView(key: key, client: client);
+      case 'workout':
+        return WorkoutView(key: key, client: client);
+      default:
         return ChatView(
           key: key,
           clientId: clientId,
           clientAvatar: client.avatar,
           clientName: client.name,
-        );
-      case 'diet':
-        return DietView(key: key, client: client);
-      case 'workout':
-        return WorkoutView(key: key, client: client);
-      case 'routines':
-        return RoutinesView(key: key, client: client);
-      default:
-        return OverviewView(
-          key: key,
-          client: client,
-          onOpenSection: onSectionChange,
         );
     }
   }
@@ -184,15 +193,23 @@ class _StatusView extends StatelessWidget {
   }
 }
 
+/// Identity, why this client is flagged, today's numbers, and the two
+/// things the trainer most often does next — above the tabs, so all of it
+/// stays on screen no matter which tab is open.
 class _Header extends StatelessWidget {
   const _Header({
     required this.client,
+    required this.alerts,
     required this.showBack,
     required this.onClose,
     required this.onToggleActive,
   });
 
   final TrainerClient client;
+
+  /// Why this client is flagged; empty when they're fine today.
+  final List<ClientAlert> alerts;
+
   final bool showBack;
   final VoidCallback? onClose;
 
@@ -210,80 +227,145 @@ class _Header extends StatelessWidget {
         color: AppColors.card,
         border: Border(bottom: BorderSide(color: AppColors.borderStrong)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (showBack)
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              color: AppColors.accent,
-              tooltip: '고객 목록',
-              onPressed: () => context.go(AppRoutes.clients),
-            ),
-          ClientAvatar(label: client.avatar, size: 36),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _identityRow(context),
+          if (alerts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
               children: <Widget>[
-                Text(
-                  client.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
-                  ),
-                ),
-                Text(
-                  client.goal,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: AppColors.subtleForeground,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                for (final alert in alerts) AlertBadge(alert: alert),
               ],
             ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              MetricTile(
+                label: '칼로리',
+                value: client.calories,
+                unit: 'kcal',
+                color: AppColors.foreground,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              MetricTile(
+                label: '나트륨',
+                value: client.sodiumMg,
+                unit: 'mg',
+                color: AppColors.foreground,
+                warn: client.sodiumOverBudget,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              MetricTile(
+                label: '당류',
+                value: client.sugarG,
+                unit: 'g',
+                color: AppColors.foreground,
+                warn: client.sugarG > sugarTargetG,
+              ),
+            ],
           ),
-          // The backend roster has no status mutation endpoint yet. Keep the
-          // status visible in real mode, but only make it interactive when
-          // the selected repository supports roster mutations.
-          Material(
-            color:
-                (client.active
-                        ? AppColors.success
-                        : AppColors.disabledForeground)
-                    .withValues(alpha: 0.12),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: ActionButton(
+                  label: 'AI 루틴 만들기',
+                  icon: Icons.auto_awesome,
+                  primary: true,
+                  onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: ActionButton(
+                  label: '주간 리포트',
+                  icon: Icons.insights_outlined,
+                  onPressed: () => context.go(AppRoutes.reportFor(client.id)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _identityRow(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        if (showBack)
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            color: AppColors.accent,
+            tooltip: '고객 목록',
+            onPressed: () => context.go(AppRoutes.clients),
+          ),
+        ClientAvatar(label: client.avatar, size: 36),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                client.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.foreground,
+                ),
+              ),
+              Text(
+                client.goal,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: AppColors.subtleForeground,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // The backend roster has no status mutation endpoint yet. Keep the
+        // status visible in real mode, but only make it interactive when
+        // the selected repository supports roster mutations.
+        Material(
+          color:
+              (client.active ? AppColors.success : AppColors.disabledForeground)
+                  .withValues(alpha: 0.12),
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          child: InkWell(
+            key: const ValueKey<String>('client-status-toggle'),
+            onTap: onToggleActive,
             borderRadius: const BorderRadius.all(AppRadius.pill),
-            child: InkWell(
-              key: const ValueKey<String>('client-status-toggle'),
-              onTap: onToggleActive,
-              borderRadius: const BorderRadius.all(AppRadius.pill),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 3,
-                ),
-                child: StatusDotLabel(
-                  label: client.active ? '활성' : '휴면',
-                  filled: client.active,
-                  color: client.active
-                      ? AppColors.success
-                      : AppColors.disabledForeground,
-                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 3,
+              ),
+              child: StatusDotLabel(
+                label: client.active ? '활성' : '휴면',
+                filled: client.active,
+                color: client.active
+                    ? AppColors.success
+                    : AppColors.disabledForeground,
               ),
             ),
           ),
-          if (onClose != null)
-            IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              color: AppColors.subtleForeground,
-              tooltip: '패널 닫기',
-              onPressed: onClose,
-            ),
-        ],
-      ),
+        ),
+        if (onClose != null)
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            color: AppColors.subtleForeground,
+            tooltip: '패널 닫기',
+            onPressed: onClose,
+          ),
+      ],
     );
   }
 }
