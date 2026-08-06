@@ -344,13 +344,12 @@
   "exLevelHigh": "High",
   "exExerciseLog": "Exercise Log",
   "exGymTab": "Gym",
-  "exMyGymTrainerSection": "My Gym & Trainer",
+  "exMyGymSection": "My Gym",
   "exConnected": "Connected",
-  "exMyTrainer": "My Trainer",
   "exRecommendedGyms": "Recommended Gyms",
   "exRecommendedTrainers": "Recommended Trainers",
   "exSeeMore": "See more",
-  "exNoGymTrainer": "You don't have a connected gym or trainer yet.",
+  "exNoConnectedGym": "You don't have a connected gym yet.",
   "exNoRecommendedGyms": "No gym recommendations yet.",
   "exNoRecommendedTrainers": "No trainer recommendations yet.",
   "exTrainerAffiliation": "Gym",
@@ -468,7 +467,6 @@
   },
   "exGymsLoadError": "Couldn't load gyms.",
   "exAiTopPick": "✦ AI top pick",
-  "exTrainerChat": "Trainer Chat",
   "exSendHealthSummary": "Share Health Summary",
   "exSendHealthSummaryBody": "Share your recent workouts and health profile summary\nwith the {gym} trainer?",
   "@exSendHealthSummaryBody": {
@@ -573,29 +571,6 @@
   "exPhone": "Phone",
   "exSpecialty": "Specialties",
   "exKakaoMapArea": "Kakao Map area",
-  "exDefaultTrainerName": "Trainer Kim",
-  "exDefaultGymName": "On-Care Gym Sinchon",
-  "exChatGreeting": "Hello, I'm {trainer}. 😊\nHow can I help you?",
-  "@exChatGreeting": {
-    "placeholders": {
-      "trainer": {
-        "type": "String"
-      }
-    }
-  },
-  "exChatChipPt": "PT consult",
-  "exChatChipPass": "Membership inquiry",
-  "exChatChipVisit": "Book a visit",
-  "exChatReply": "Got it! Your trainer will reply soon. Please share a convenient time to visit. 🙌",
-  "exGymConsultSubtitle": "{gym} · 1:1 Consult",
-  "@exGymConsultSubtitle": {
-    "placeholders": {
-      "gym": {
-        "type": "String"
-      }
-    }
-  },
-  "exMessageHint": "Type a message",
   "myTabTitle": "MY",
   "myDefaultUserName": "User",
   "myRank": "Rank {rank}",

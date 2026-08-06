@@ -54,6 +54,7 @@ void main() {
   Future<void> pumpGymTab(
     WidgetTester tester, {
     ConsultationRequest? consultation,
+    bool hasMyGym = true,
   }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -69,7 +70,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          myGymProvider.overrideWith((ref) async => _gym),
+          myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
           consultationRequestControllerProvider.overrideWith(
             (ref) => consultationController,
@@ -87,7 +88,7 @@ void main() {
   }
 
   Finder myGymCard() => find.byWidgetPredicate(
-    (Widget widget) => widget.runtimeType.toString() == '_MyGymTrainerCard',
+    (Widget widget) => widget.runtimeType.toString() == '_MyGymCard',
   );
 
   Finder reservationPanel() => find.byWidgetPredicate(
@@ -114,6 +115,14 @@ void main() {
     expect(find.text(l.exGymInfo), findsNothing);
     expect(find.text(l.exConsultButton), findsNothing);
     expect(find.text(l.exViewConsultationRequest), findsNothing);
+    expect(find.text(l.exMyGymSection), findsOneWidget);
+    expect(
+      find.descendant(
+        of: myGymCard(),
+        matching: find.text(_gym.trainerName!),
+      ),
+      findsNothing,
+    );
 
     expect(find.text(l.exAiSlotTitle), findsOneWidget);
     const double expectedBottomInset = 17; // 16px padding + 1px border.
@@ -122,6 +131,21 @@ void main() {
           tester.getBottomRight(reservationPanel()).dy,
       expectedBottomInset,
     );
+  });
+
+  testWidgets('gym finder removes only the unused trainer chat action', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester, hasMyGym: false);
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+
+    await tester.tap(find.text(l.exFindGym));
+    await tester.pumpAndSettle();
+
+    expect(find.text('트레이너 채팅'), findsNothing);
+    expect(find.text(l.exSendHealthSummary), findsWidgets);
   });
 
   testWidgets('pending consultation shows one action and reuses status UI', (
@@ -169,7 +193,7 @@ void main() {
     });
   }
 
-  testWidgets('gym and trainer information areas keep their detail routes', (
+  testWidgets('my gym information keeps its detail route', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester);
@@ -184,13 +208,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l.exGymDetailTitle), findsOneWidget);
 
-    router.go(AppRoutes.exerciseGym);
-    await tester.pumpAndSettle();
-    await scrollToCard(tester);
-    await tester.tap(
-      find.descendant(of: myGymCard(), matching: find.text(_gym.trainerName!)),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text(l.exTrainerDetailTitle), findsOneWidget);
   });
 }

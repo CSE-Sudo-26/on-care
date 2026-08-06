@@ -51,7 +51,11 @@ class TrainerDetailPage extends ConsumerWidget {
             request.gymId == targetGym.id &&
             request.status == ConsultationStatus.pending,
       );
-      body = _TrainerDetails(gym: targetGym, hasPending: hasPending);
+      body = _TrainerDetails(
+        gym: targetGym,
+        hasPending: hasPending,
+        isMyTrainer: myGym != null,
+      );
     } else if (gym != null) {
       body = _StateMessage(message: l.exTrainerNotFound);
     } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
@@ -89,10 +93,15 @@ class TrainerDetailPage extends ConsumerWidget {
 }
 
 class _TrainerDetails extends StatelessWidget {
-  const _TrainerDetails({required this.gym, required this.hasPending});
+  const _TrainerDetails({
+    required this.gym,
+    required this.hasPending,
+    required this.isMyTrainer,
+  });
 
   final Gym gym;
   final bool hasPending;
+  final bool isMyTrainer;
 
   @override
   Widget build(BuildContext context) {
@@ -238,28 +247,32 @@ class _TrainerDetails extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: hasPending
-                  ? null
-                  : () => context.push(
-                      AppRoutes.consultationRequestPath(
-                        targetType: ConsultationTargetType.trainer.name,
-                        gymId: gym.id,
+            if (!isMyTrainer) ...<Widget>[
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: hasPending
+                    ? null
+                    : () => context.push(
+                        AppRoutes.consultationRequestPath(
+                          targetType: ConsultationTargetType.trainer.name,
+                          gymId: gym.id,
+                        ),
                       ),
-                    ),
-              style: FilledButton.styleFrom(
-                backgroundColor: FigmaColors.primary,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                style: FilledButton.styleFrom(
+                  backgroundColor: FigmaColors.primary,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  hasPending
+                      ? l.exConsultPendingCta
+                      : l.exTrainerConsultRequest,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              child: Text(
-                hasPending ? l.exConsultPendingCta : l.exTrainerConsultRequest,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
+            ],
           ],
         ),
       ),

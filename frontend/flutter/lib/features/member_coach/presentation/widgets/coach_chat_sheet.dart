@@ -165,10 +165,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                   data: (messages) => ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
                     itemCount: messages.length,
-                    itemBuilder: (_, i) => _Bubble(
-                      message: messages[i],
-                      trainerName: widget.trainerName,
-                    ),
+                    itemBuilder: (_, i) => _Bubble(message: messages[i]),
                   ),
                 ),
               ),
@@ -189,10 +186,9 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.trainerName});
+  const _Bubble({required this.message});
 
   final CoachMessage message;
-  final String trainerName;
 
   @override
   Widget build(BuildContext context) {
@@ -203,10 +199,11 @@ class _Bubble extends StatelessWidget {
         mainAxisAlignment: fromMe
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
           if (!fromMe) ...<Widget>[
             Container(
+              key: ValueKey<String>('coach-message-avatar-${message.id}'),
               width: 32,
               height: 32,
               decoration: const BoxDecoration(
@@ -227,16 +224,8 @@ class _Bubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  '${fromMe ? '나' : trainerName} · ${message.timeLabel}',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: fromMe ? FigmaColors.primary : FigmaColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Container(
+                  key: ValueKey<String>('coach-message-bubble-${message.id}'),
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.sizeOf(context).width * 0.70,
                   ),
@@ -250,10 +239,10 @@ class _Bubble extends StatelessWidget {
                         ? null
                         : Border.all(color: FigmaColors.hairline),
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(fromMe ? 14 : 4),
-                      topRight: Radius.circular(fromMe ? 4 : 14),
-                      bottomLeft: const Radius.circular(14),
-                      bottomRight: const Radius.circular(14),
+                      topLeft: const Radius.circular(14),
+                      topRight: const Radius.circular(14),
+                      bottomLeft: Radius.circular(fromMe ? 14 : 4),
+                      bottomRight: Radius.circular(fromMe ? 4 : 14),
                     ),
                   ),
                   child: Text(
@@ -264,6 +253,16 @@ class _Bubble extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       color: fromMe ? Colors.white : FigmaColors.ink,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message.timeLabel,
+                  key: ValueKey<String>('coach-message-time-${message.id}'),
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: fromMe ? FigmaColors.primary : FigmaColors.textMuted,
                   ),
                 ),
               ],

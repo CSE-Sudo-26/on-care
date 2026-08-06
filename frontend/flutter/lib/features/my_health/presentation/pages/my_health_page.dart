@@ -8,6 +8,7 @@ import 'package:oncare/features/auth/presentation/controllers/session_controller
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
@@ -55,6 +56,7 @@ class MyHealthPage extends ConsumerWidget {
               children: <Widget>[
                 FigmaTabHeader(
                   title: l.myTabTitle,
+                  trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => showRightSlidePanel<void>(
                     context,
                     content: const NotificationPanelBody(),

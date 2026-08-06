@@ -70,13 +70,17 @@ void main() {
   late ProviderContainer container;
   late GoRouter router;
 
-  Future<void> pumpRoute(WidgetTester tester, String location) async {
+  Future<void> pumpRoute(
+    WidgetTester tester,
+    String location, {
+    bool hasMyGym = true,
+  }) async {
     await tester.binding.setSurfaceSize(const Size(360, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     container = ProviderContainer(
       overrides: <Override>[
         nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
-        myGymProvider.overrideWith((ref) async => _gym),
+        myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
       ],
     );
     addTearDown(container.dispose);
@@ -111,7 +115,11 @@ void main() {
   testWidgets('gym and trainer detail CTAs show different target cards', (
     WidgetTester tester,
   ) async {
-    await pumpRoute(tester, AppRoutes.gymDetailPath(_gym.id));
+    await pumpRoute(
+      tester,
+      AppRoutes.gymDetailPath(_gym.id),
+      hasMyGym: false,
+    );
     final AppLocalizations l = _localizations(tester);
     await _scrollTo(tester, find.text(l.exGymConsultRequest), 250);
     await tester.tap(find.text(l.exGymConsultRequest));
@@ -227,11 +235,8 @@ void main() {
 
     router.go(AppRoutes.gymDetailPath(_gym.id));
     await tester.pumpAndSettle();
-    await _scrollTo(tester, find.text(l.exConsultPendingCta), 250);
-    final FilledButton pendingButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, l.exConsultPendingCta),
-    );
-    expect(pendingButton.onPressed, isNull);
+    expect(find.text(l.exConsultPendingCta), findsNothing);
+    expect(find.text(l.exGymConsultRequest), findsNothing);
   });
 
   testWidgets('invalid target type and gym id show a safe state', (

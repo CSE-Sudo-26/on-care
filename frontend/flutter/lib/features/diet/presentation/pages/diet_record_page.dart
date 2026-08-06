@@ -5,6 +5,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
@@ -148,6 +149,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
               children: <Widget>[
                 FigmaTabHeader(
                   title: l.dietTitle,
+                  trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => showRightSlidePanel<void>(
                     context,
                     content: const NotificationPanelBody(),

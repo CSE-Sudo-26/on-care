@@ -12,6 +12,7 @@ import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
@@ -50,10 +51,12 @@ class DashboardContent extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 108),
           children: <Widget>[
-            _HomeHeader(
-              onNotificationTap: onNotificationTap,
-              onCalendarTap: onCalendarTap,
-              onProfileTap: () => context.go(AppRoutes.myHealth),
+            FigmaTabHeader(
+              title: 'On - Care',
+              leading: const HeartLogo(),
+              trailingAction: const TrainerChatHeaderButton(),
+              onBell: onNotificationTap,
+              onCalendar: onCalendarTap,
             ),
             const SizedBox(height: 8),
             Consumer(
@@ -169,171 +172,6 @@ class _DashboardData extends StatelessWidget {
           child: _ScheduleCard(items: summary.todaySchedule),
         ),
       ],
-    );
-  }
-}
-
-// ───────────────────────────────────────────────────────────── header ──
-
-class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({
-    this.onNotificationTap,
-    this.onCalendarTap,
-    this.onProfileTap,
-  });
-
-  final VoidCallback? onNotificationTap;
-  final VoidCallback? onCalendarTap;
-  final VoidCallback? onProfileTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Row(
-        children: <Widget>[
-          const HeartLogo(),
-          const SizedBox(width: 6),
-          // 헤더 브랜드명은 "On - Care" (탭 제목 appTitle="On-Care"와 별개).
-          // Expanded 하나가 남는 가로 공간을 전부 흡수해야 오른쪽 버튼들이 카드
-          // 오른쪽 끝에 맞는다. (Flexible + Spacer 로 두면 둘이 남는 공간을
-          // 반씩 나눠 가져 버튼이 중간에서 멈춘다.) 좁은 화면에서는 이 칸이
-          // 줄면서 워드마크가 말줄임 처리된다.
-          const Expanded(
-            child: Text(
-              'On - Care',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: FigmaColors.ink,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-          _RoundIconButton(
-            onTap: onNotificationTap,
-            showDot: true,
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              size: 18,
-              color: FigmaColors.primary,
-            ),
-          ),
-          const SizedBox(width: 6),
-          _RoundIconButton(
-            onTap: onCalendarTap,
-            child: const Icon(
-              Icons.calendar_today_outlined,
-              size: 16,
-              color: FigmaColors.primary,
-            ),
-          ),
-          const SizedBox(width: 6),
-          _ProfileAvatar(onTap: onProfileTap),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.child,
-    this.onTap,
-    this.showDot = false,
-  });
-
-  final Widget child;
-  final VoidCallback? onTap;
-  final bool showDot;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 36,
-      height: 36,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Material(
-            color: FigmaColors.softBlue,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              child: Center(child: child),
-            ),
-          ),
-          if (showDot)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: FigmaColors.redDot,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({this.onTap});
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 40,
-        height: 40,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[Color(0xFFE8F6FC), Color(0xFFB8E4F5)],
-                ),
-                border: Border.all(color: FigmaColors.primary, width: 2.2),
-              ),
-              child: const Icon(
-                Icons.person,
-                size: 22,
-                color: FigmaColors.primary,
-              ),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: FigmaColors.onlineGreen,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

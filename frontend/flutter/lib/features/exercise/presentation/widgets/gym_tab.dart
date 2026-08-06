@@ -55,9 +55,9 @@ class GymTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _SectionHeader(title: l.exMyGymTrainerSection),
+          _SectionHeader(title: l.exMyGymSection),
           const SizedBox(height: 10),
-          _MyGymTrainerSection(
+          _MyGymSection(
             gymAsync: myGymAsync,
             selectedSlot: selectedSlot,
             onSlot: onSlot,
@@ -217,8 +217,8 @@ class _RecentConsultationSection extends StatelessWidget {
   }
 }
 
-class _MyGymTrainerSection extends StatelessWidget {
-  const _MyGymTrainerSection({
+class _MyGymSection extends StatelessWidget {
+  const _MyGymSection({
     required this.gymAsync,
     required this.selectedSlot,
     required this.onSlot,
@@ -241,27 +241,23 @@ class _MyGymTrainerSection extends StatelessWidget {
       error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
       data: (Gym? gym) => gym == null
           ? _EmptyMyGym(onFind: onFind)
-          : _MyGymTrainerCard(
+          : _MyGymCard(
               gym: gym,
               selectedSlot: selectedSlot,
               onSlot: onSlot,
               onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
-              onTrainerTap: gym.trainerName?.isNotEmpty ?? false
-                  ? () => context.push(AppRoutes.trainerDetailPath(gym.id))
-                  : null,
               onPendingConsultationTap: onPendingConsultationTap,
             ),
     );
   }
 }
 
-class _MyGymTrainerCard extends StatelessWidget {
-  const _MyGymTrainerCard({
+class _MyGymCard extends StatelessWidget {
+  const _MyGymCard({
     required this.gym,
     required this.selectedSlot,
     required this.onSlot,
     required this.onGymTap,
-    required this.onTrainerTap,
     required this.onPendingConsultationTap,
   });
 
@@ -269,7 +265,6 @@ class _MyGymTrainerCard extends StatelessWidget {
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
-  final VoidCallback? onTrainerTap;
   final VoidCallback? onPendingConsultationTap;
 
   @override
@@ -314,9 +309,7 @@ class _MyGymTrainerCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          _InfoLabel(icon: Icons.place_outlined, label: l.exMyGym),
-          const SizedBox(height: 7),
+          const SizedBox(height: 10),
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -364,73 +357,6 @@ class _MyGymTrainerCard extends StatelessWidget {
               ),
             ),
           ),
-          if (gym.trainerName?.isNotEmpty ?? false) ...<Widget>[
-            const SizedBox(height: 16),
-            const Divider(height: 1, color: FigmaColors.hairline),
-            const SizedBox(height: 14),
-            _InfoLabel(icon: Icons.person_outline, label: l.exMyTrainer),
-            const SizedBox(height: 9),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTrainerTap,
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: FigmaColors.iconTint,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.person_outline,
-                          size: 20,
-                          color: FigmaColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              gym.trainerName!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: FigmaColors.ink,
-                              ),
-                            ),
-                            Text(
-                              gym.trainerRole ?? l.exTrainerDedicated,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: FigmaColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: FigmaColors.textFaint,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
           const SizedBox(height: 16),
           _ReservationPanel(
             gym: gym,
@@ -928,31 +854,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _InfoLabel extends StatelessWidget {
-  const _InfoLabel({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Icon(icon, size: 15, color: FigmaColors.primary),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.textMuted,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _TagChip extends StatelessWidget {
   const _TagChip({required this.label});
 
@@ -1069,7 +970,7 @@ class _EmptyMyGym extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            l.exNoGymTrainer,
+            l.exNoConnectedGym,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 13,

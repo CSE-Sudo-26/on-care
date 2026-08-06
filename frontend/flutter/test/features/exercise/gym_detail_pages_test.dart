@@ -127,4 +127,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('트레이너 정보를 찾을 수 없어요.'), findsOneWidget);
   });
+
+  testWidgets('assigned trainer detail hides the consultation request action', (
+    WidgetTester tester,
+  ) async {
+    await pumpRoute(
+      tester,
+      location: AppRoutes.trainerDetailPath(_gymWithTrainer.id),
+      myGym: _gymWithTrainer,
+    );
+
+    expect(find.text('트레이너 상세'), findsOneWidget);
+    expect(find.text('트레이너 상담 요청하기'), findsNothing);
+  });
+
+  testWidgets('connected gym detail hides the consultation request action', (
+    WidgetTester tester,
+  ) async {
+    await pumpRoute(
+      tester,
+      location: AppRoutes.gymDetailPath(_gymWithTrainer.id),
+      myGym: _gymWithTrainer,
+    );
+
+    expect(find.text('헬스장 상세'), findsOneWidget);
+    expect(find.text('헬스장 상담 요청하기'), findsNothing);
+  });
 }

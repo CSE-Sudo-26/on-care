@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 void main() {
@@ -64,6 +68,9 @@ void main() {
             ),
           ),
           dashboardSummaryProvider.overrideWith((ref) => load()),
+          memberCoachRepositoryProvider.overrideWithValue(
+            MockMemberCoachRepository(),
+          ),
         ],
         child: const MaterialApp(
           locale: Locale('ko'),
@@ -81,6 +88,40 @@ void main() {
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('home header opens the assigned trainer chat', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(tester, load: () async => liveSummary);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('trainerChatHeaderButton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('trainerChatHeaderButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TrainerChatPage), findsOneWidget);
+  });
+
+  testWidgets('home uses the shared tab header and notification style', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(tester, load: () async => liveSummary);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FigmaTabHeader), findsOneWidget);
+    expect(find.byType(HeartLogo), findsOneWidget);
+
+    final FigmaCircleButton notificationButton = tester.widget(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is FigmaCircleButton &&
+            widget.icon == Icons.notifications_none_rounded,
+      ),
+    );
+    expect(notificationButton.showDot, isTrue);
+    expect(notificationButton.dotColor, FigmaColors.orange);
   });
 
   testWidgets('shows error state', (WidgetTester tester) async {

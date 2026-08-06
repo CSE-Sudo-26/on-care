@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -34,6 +39,17 @@ const CoachRoutine _aiRoutine = CoachRoutine(
   type: '스트레칭',
   reason: 'PT 피드백 반영 · 오른쪽 어깨 보호',
   source: 'ai',
+);
+
+const Gym _trainerGym = Gym(
+  id: 'trainer-gym',
+  name: '온케어짐',
+  address: '서울시 테스트구',
+  distanceKm: 0.5,
+  rating: 4.9,
+  tags: <String>['PT'],
+  trainerName: '김트레이너',
+  trainerRole: '퍼스널 트레이너',
 );
 
 void main() {
@@ -113,7 +129,47 @@ void main() {
     expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsOneWidget);
   });
 
-  testWidgets('트레이너 채팅은 발신자 정보와 입력창을 표시하고 메시지를 전송한다', (
+  testWidgets('담당 트레이너 프로필은 트레이너 상세 경로로 이동한다', (
+    WidgetTester tester,
+  ) async {
+    final GoRouter router = GoRouter(
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: CoachCard()),
+        ),
+        GoRoute(
+          path: AppRoutes.trainerDetail,
+          builder: (_, GoRouterState state) => Scaffold(
+            body: Text('trainer:${state.pathParameters['gymId']}'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachProvider.overrideWith((ref) async => _trainer),
+          coachRoutinesProvider.overrideWith(
+            (ref) async => const <CoachRoutine>[],
+          ),
+          coachUnreadProvider.overrideWith((ref) async => 0),
+          myGymProvider.overrideWith((ref) async => _trainerGym),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('assignedTrainerProfile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('trainer:${_trainerGym.id}'), findsOneWidget);
+  });
+
+  testWidgets('트레이너 채팅은 말풍선 아래 시간과 입력창을 표시하고 메시지를 전송한다', (
     WidgetTester tester,
   ) async {
     final repository = MockMemberCoachRepository();
@@ -150,7 +206,37 @@ void main() {
     expect(find.byKey(const Key('underlyingFloatingButton')), findsNothing);
     expect(find.text('김트레이너'), findsOneWidget);
     expect(find.text('담당 트레이너 · 상담 가능'), findsOneWidget);
-    expect(find.text('김트레이너 · 13:20'), findsOneWidget);
+    expect(find.text('김트레이너 · 13:20'), findsNothing);
+    expect(find.text('13:20'), findsOneWidget);
+    final Finder trainerBubble = find.byKey(
+      const Key('coach-message-bubble-seed-m1'),
+    );
+    final Finder trainerAvatar = find.byKey(
+      const Key('coach-message-avatar-seed-m1'),
+    );
+    final Finder trainerTime = find.byKey(
+      const Key('coach-message-time-seed-m1'),
+    );
+    expect(
+      tester.getTopLeft(trainerTime).dy,
+      greaterThan(tester.getBottomLeft(find.textContaining('오늘 점심')).dy),
+    );
+    expect(
+      tester.getBottomLeft(trainerAvatar).dy,
+      closeTo(tester.getBottomLeft(trainerTime).dy, 0.1),
+    );
+    final BoxDecoration trainerBubbleDecoration =
+        tester.widget<Container>(trainerBubble).decoration! as BoxDecoration;
+    expect(trainerBubbleDecoration.color, Colors.white);
+    expect(
+      trainerBubbleDecoration.borderRadius,
+      const BorderRadius.only(
+        topLeft: Radius.circular(14),
+        topRight: Radius.circular(14),
+        bottomLeft: Radius.circular(4),
+        bottomRight: Radius.circular(14),
+      ),
+    );
     expect(find.text('트레이너에게 메시지 보내기...'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '운동 후 확인할게요');
@@ -158,6 +244,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('운동 후 확인할게요'), findsOneWidget);
+    expect(find.textContaining('나 ·'), findsNothing);
+    final Finder sentBubble = find.ancestor(
+      of: find.text('운동 후 확인할게요'),
+      matching: find.byType(Container),
+    ).first;
+    final BoxDecoration sentBubbleDecoration =
+        tester.widget<Container>(sentBubble).decoration! as BoxDecoration;
+    expect(sentBubbleDecoration.color, FigmaColors.primary);
+    expect(
+      sentBubbleDecoration.borderRadius,
+      const BorderRadius.only(
+        topLeft: Radius.circular(14),
+        topRight: Radius.circular(14),
+        bottomLeft: Radius.circular(14),
+        bottomRight: Radius.circular(4),
+      ),
+    );
 
     await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
     await tester.pumpAndSettle();
