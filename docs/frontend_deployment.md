@@ -56,6 +56,8 @@ Vercel 프로젝트가 이 Git 저장소와 연결되어 있으면 저장소 안
 
 AWS 이전은 Vercel 정리와 별도 이슈 및 PR로 진행합니다.
 
+구체적인 인프라 생성, 비활성 배포 설정, 병행 검증 절차는 [`aws-frontend-deployment.md`](aws-frontend-deployment.md)를 따릅니다.
+
 1. GitHub Pages 배포를 유지한 상태에서 S3, CloudFront, OIDC 인프라를 준비합니다.
 2. CloudFront 기본 도메인으로 랜딩페이지와 두 Flutter 앱을 검증합니다.
 3. 검증이 끝난 뒤 커스텀 도메인의 DNS를 CloudFront로 전환합니다.

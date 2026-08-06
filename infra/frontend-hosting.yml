@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Private S3 and CloudFront hosting for the OnCare Flutter web apps
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Default: CSE-Sudo-26
+  GitHubRepository:
+    Type: String
+    Default: sudo-capstone-project
+  GitHubBranch:
+    Type: String
+    Default: main
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ''
+    Description: Optional ARN of an existing token.actions.githubusercontent.com OIDC provider
+
+Conditions:
+  CreateGitHubOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, '']
+
+Resources:
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FrontendOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-oac'
+        Description: Access the private frontend bucket from CloudFront only
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  FrontendRouterFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-spa-router'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Route Flutter paths to the matching single-page app
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+
+          if (uri === '/frontend' || uri === '/frontend/') {
+            request.uri = '/frontend/index.html';
+          } else if (uri.indexOf('/frontend/') === 0 && !uri.split('/').pop().includes('.')) {
+            request.uri = '/frontend/index.html';
+          } else if (uri === '/trainer' || uri === '/trainer/') {
+            request.uri = '/trainer/index.html';
+          } else if (uri.indexOf('/trainer/') === 0 && !uri.split('/').pop().includes('.')) {
+            request.uri = '/trainer/index.html';
+          } else if (uri === '/' || !uri.split('/').pop().includes('.')) {
+            request.uri = '/index.html';
+          }
+
+          return request;
+        }
+
+  FrontendCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-cache'
+        Comment: Short cache for frontend assets during early deployment
+        DefaultTTL: 300
+        MaxTTL: 86400
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: OnCare frontend
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: !Ref FrontendCachePolicy
+          Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt FrontendRouterFunction.FunctionARN
+          TargetOriginId: frontend-s3-origin
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            Id: frontend-s3-origin
+            OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        PriceClass: PriceClass_200
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Project
+          Value: OnCare
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}'
+
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateGitHubOidcProvider
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  GitHubFrontendDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Deploy the main branch frontend to S3 and CloudFront from GitHub Actions
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateGitHubOidcProvider
+                - !Ref GitHubOidcProvider
+                - !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}'
+      Policies:
+        - PolicyName: deploy-frontend
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ListFrontendBucket
+                Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                Resource: !GetAtt FrontendBucket.Arn
+              - Sid: ManageFrontendObjects
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${FrontendBucket.Arn}/*'
+              - Sid: ManageFrontendInvalidations
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetInvalidation
+                Resource: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}'
+
+Outputs:
+  BucketName:
+    Description: GitHub repository variable AWS_FRONTEND_BUCKET
+    Value: !Ref FrontendBucket
+  DistributionId:
+    Description: GitHub repository variable AWS_FRONTEND_DISTRIBUTION_ID
+    Value: !Ref FrontendDistribution
+  DistributionDomainName:
+    Description: Initial frontend URL before a custom domain is connected
+    Value: !GetAtt FrontendDistribution.DomainName
+  GitHubDeployRoleArn:
+    Description: GitHub repository variable AWS_FRONTEND_DEPLOY_ROLE_ARN
+    Value: !GetAtt GitHubFrontendDeployRole.Arn
+  GitHubOidcProviderArn:
+    Description: GitHub Actions OIDC provider created or reused by this stack
+    Value: !If
+      - CreateGitHubOidcProvider
+      - !Ref GitHubOidcProvider
+      - !Ref ExistingGitHubOidcProviderArn
