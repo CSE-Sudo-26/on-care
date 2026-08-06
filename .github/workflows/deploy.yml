@@ -106,19 +106,28 @@ jobs:
           SITE_URL: ${{ steps.deployment.outputs.page_url || 'https://ewhasudo.zapto.org/' }}
         run: |
           base="${SITE_URL%/}"
+          # Absolute deadline, not an iteration count: an unresponsive host makes
+          # every curl burn its full --max-time, so counting iterations would let
+          # the poll run ~46 minutes and get killed by timeout-minutes instead.
+          deadline=$(( $(date +%s) + 1200 ))
           echo "deploy-pages did not confirm within its 10 minute cap."
           echo "Polling $base/version.txt for $GITHUB_SHA (up to 20 minutes)."
-          for _ in $(seq 1 80); do
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            left=$(( deadline - $(date +%s) ))
+            budget=$(( left < 20 ? left : 20 ))
+            if [ "$budget" -lt 1 ]; then budget=1; fi
             # -L matters: page_url comes back as http:// on some runs and Pages
             # 301s to https, so without it curl returns the redirect body.
-            live=$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache' \
+            live=$(curl -fsSL --max-time "$budget" -H 'Cache-Control: no-cache' \
               "$base/version.txt?cachebust=$(date +%s)" 2>/dev/null | tr -d '[:space:]') || live=''
             if [ "$live" = "$GITHUB_SHA" ]; then
               echo "Site is serving $GITHUB_SHA — deployment landed after the action gave up."
               exit 0
             fi
-            echo "  still serving '${live:-<unreachable>}'"
-            sleep 15
+            left=$(( deadline - $(date +%s) ))
+            echo "  still serving '${live:-<unreachable>}' (${left}s left)"
+            if [ "$left" -le 0 ]; then break; fi
+            sleep $(( left < 15 ? left : 15 ))
           done
-          echo "::error::Pages never served $GITHUB_SHA. Check https://www.githubstatus.com before retrying."
+          echo "::error::Pages never served $GITHUB_SHA within 20 minutes. Check https://www.githubstatus.com before retrying."
           exit 1
