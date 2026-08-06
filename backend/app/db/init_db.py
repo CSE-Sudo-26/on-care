@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import logging
 
+from pathlib import Path
+
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -94,8 +96,76 @@ def _promote_admins() -> None:
         db.close()
 
 
+def _public_food_rows() -> list[dict]:
+    """공공 표준데이터 집계본(scripts/import_food_nutrients.py 산출물)을 읽는다.
+
+    파일이 없으면 빈 목록 — 큐레이션 40종만으로도 서비스는 돈다.
+    """
+    import csv
+
+    path = Path(__file__).resolve().parent.parent / "data" / "food_nutrients_public.csv"
+    if not path.exists():
+        return []
+
+    def num(value: str):
+        value = (value or "").strip()
+        if not value:
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    with path.open(encoding="utf-8", newline="") as fh:
+        return [
+            {
+                "name": row["name"],
+                "category": row.get("category", ""),
+                "serving_size_g": num(row.get("serving_size_g", "")),
+                "calories": num(row.get("calories", "")) or 0,
+                "sodium_mg": num(row.get("sodium_mg", "")) or 0,
+                "sugar_g": num(row.get("sugar_g", "")) or 0,
+                "carbs_g": num(row.get("carbs_g", "")),
+                "protein_g": num(row.get("protein_g", "")),
+                "fat_g": num(row.get("fat_g", "")),
+            }
+            for row in csv.DictReader(fh)
+        ]
+
+
+def _curated_per_100g(items: list[dict]) -> list[dict]:
+    """큐레이션 시드(1인분 기준)를 100g 기준으로 환산.
+
+    `food_nutrients` 는 100g 기준이다(공공 원본이 전부 그 형태고, 포장 단위로
+    1인분 환산하면 대표값이 3~5배까지 튄다). 큐레이션 40종은 사람이 1인분으로
+    정리한 값이라 여기서 맞춰 넣는다 — `serving_size_g` 가 모두 있어 기계적으로
+    변환된다. 1회 섭취량 자체는 컬럼에 남겨 인식기가 양을 못 줬을 때 폴백으로
+    쓴다.
+    """
+    scaled: list[dict] = []
+    for item in items:
+        serving = item.get("serving_size_g")
+        if not serving or serving <= 0:
+            # 환산 기준이 없으면 값의 의미가 불분명해진다 — 넣지 않는다.
+            continue
+        factor = 100.0 / float(serving)
+        out = dict(item)
+        for field in ("calories", "sodium_mg", "sugar_g", "carbs_g", "protein_g", "fat_g"):
+            value = item.get(field)
+            if value is not None:
+                out[field] = round(float(value) * factor, 2)
+        scaled.append(out)
+    return scaled
+
+
 def _seed_food_nutrients() -> None:
-    """공공 식품영양성분 DB 큐레이션 시드(멱등). name_norm 은 매칭기와 동일 규칙으로 생성."""
+    """공공 식품영양성분 DB 시드(멱등). name_norm 은 매칭기와 동일 규칙으로 생성.
+
+    큐레이션 40종을 **먼저** 넣고, 공공 표준데이터 집계본에서 이름이 겹치는
+    것은 건너뛴다. 큐레이션 값은 고혈압·당뇨 관점으로 따로 검증한 것이라
+    공식 중앙값보다 우선한다 — 라면 나트륨이 큐레이션 1,800mg vs 공식 452mg
+    처럼 크게 갈리는 항목이 있고, 후자는 급식 라면이 섞인 결과로 보인다.
+    """
     from app.data.food_nutrients_seed import FOOD_NUTRIENTS
     from app.services.nutrition.matcher import normalize
 
@@ -103,10 +173,16 @@ def _seed_food_nutrients() -> None:
     try:
         if db.scalar(select(models.FoodNutrient).limit(1)):
             return
-        for item in FOOD_NUTRIENTS:
+        seen: set[str] = set()
+        for item in [*_curated_per_100g(FOOD_NUTRIENTS), *_public_food_rows()]:
+            norm = normalize(item["name"])
+            # 매칭은 name_norm 으로 하므로 중복 norm 은 조회를 모호하게 만든다.
+            if not norm or norm in seen:
+                continue
+            seen.add(norm)
             db.add(models.FoodNutrient(
                 name=item["name"],
-                name_norm=normalize(item["name"]),
+                name_norm=norm,
                 category=item.get("category", ""),
                 serving_size_g=item.get("serving_size_g"),
                 calories=item.get("calories", 0),

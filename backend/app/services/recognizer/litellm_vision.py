@@ -24,11 +24,15 @@ _PROMPT = """당신은 전문 영양사입니다. 이 음식 사진을 분석해
 
 {
   "foods": [
-    {"name":"음식명(한국어)","calories":정수kcal,"carbs_g":탄수화물g,"protein_g":단백질g,"fat_g":지방g,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
+    {"name":"음식명(한국어)","amount_g":추정섭취량g,"calories":정수kcal,"carbs_g":탄수화물g,"protein_g":단백질g,"fat_g":지방g,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
   ],
   "coach_comment": "고혈압(DASH) 관점 식단평. 나트륨 높은 음식을 짚고 개선 제안을 2~3문장 한국어로."
 }
-음식이 여러 개면 foods 에 모두. 모르는 값은 null. 나트륨·당류를 신중히 추정하세요."""
+음식이 여러 개면 foods 에 모두. 모르는 값은 null.
+
+amount_g 는 **사진에 실제로 담긴 양**을 그램으로 추정하세요(그릇 크기·조각 수를
+근거로). 공공 영양 DB 가 100g 당 값을 갖고 있어 이 값으로 환산합니다 — 영양
+수치보다 이쪽이 더 중요합니다. 나트륨·당류도 함께 신중히 추정하세요."""
 
 
 class LiteLLMVisionRecognizer(FoodRecognizer):
@@ -85,6 +89,9 @@ class LiteLLMVisionRecognizer(FoodRecognizer):
                     carbs_g=_macro_f(f.get("carbs_g")),
                     protein_g=_macro_f(f.get("protein_g")),
                     fat_g=_macro_f(f.get("fat_g")), sugar_g=_i(f.get("sugar_g")),
+                    # 보정이 100g 기준 값을 이 양으로 환산한다 — 안 넘기면
+                    # 프롬프트가 요구해도 항상 None 이라 폴백만 탄다.
+                    amount_g=_amount_g(f.get("amount_g")),
                     confidence=_f(f.get("confidence")),
                 ))
         except (json.JSONDecodeError, AttributeError):
@@ -111,6 +118,22 @@ def _f(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _amount_g(v):
+    """추정 섭취량(g). 0·음수·비유한값은 "모름"으로 눕힌다.
+
+    `RecognizedFood.amount_g` 는 `gt=0` 이라 0 을 그대로 넘기면 검증 오류로
+    응답 파싱 전체가 깨진다. 모델이 0 을 줬다는 건 양을 모른다는 뜻이므로
+    None 이 맞다(보정이 폴백을 타거나 추정치를 유지한다).
+    """
+    if v is None:
+        return None
+    try:
+        value = float(v)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value > 0 else None
 
 
 def _macro_f(v):
