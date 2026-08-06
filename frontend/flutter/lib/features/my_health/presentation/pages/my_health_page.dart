@@ -78,7 +78,7 @@ class MyHealthPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _TrainerGymSection(
-                    onManage: () => context.go(AppRoutes.exerciseGym),
+                    onFindGym: () => context.go(AppRoutes.exerciseGym),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -876,9 +876,66 @@ class _LogoutButton extends StatelessWidget {
 // ──────────────────────────────────────────────
 
 class _TrainerGymSection extends ConsumerWidget {
-  const _TrainerGymSection({required this.onManage});
+  const _TrainerGymSection({required this.onFindGym});
 
-  final VoidCallback onManage;
+  /// 연결된 헬스장이 없을 때 "헬스장 찾기"로 보낼 콜백.
+  final VoidCallback onFindGym;
+
+  /// 카드를 누르면 확인 후 헬스장·트레이너 연결을 해제한다.
+  Future<void> _confirmDisconnect(
+    BuildContext context,
+    WidgetRef ref,
+    Gym gym,
+  ) async {
+    final bool ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              '연결 삭제',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+              ),
+            ),
+            content: Text(
+              '${gym.name} 연결을 삭제하시겠습니까?',
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: FigmaColors.textBody,
+                height: 1.4,
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                style: TextButton.styleFrom(
+                  foregroundColor: FigmaColors.textMuted,
+                ),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFFF3B30),
+                ),
+                child: const Text('삭제'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) return;
+    await ref.read(gymRepositoryProvider).disconnectMyGym();
+    // 해제를 기다리는 동안 탭을 벗어났다면 ref 가 이미 폐기됐을 수 있다.
+    if (!context.mounted) return;
+    ref.invalidate(myGymProvider);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -897,10 +954,13 @@ class _TrainerGymSection extends ConsumerWidget {
         const SizedBox(height: 12),
         gymAsync.when(
           loading: () => const _GymSectionLoading(),
-          error: (_, _) => _GymSectionEmpty(onFind: onManage),
+          error: (_, _) => _GymSectionEmpty(onFind: onFindGym),
           data: (Gym? gym) => gym == null
-              ? _GymSectionEmpty(onFind: onManage)
-              : _GymSummaryCard(gym: gym, onTap: onManage),
+              ? _GymSectionEmpty(onFind: onFindGym)
+              : _GymSummaryCard(
+                  gym: gym,
+                  onTap: () => _confirmDisconnect(context, ref, gym),
+                ),
         ),
       ],
     );
@@ -974,7 +1034,13 @@ class _GymSummaryCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
+                  // 카드 전체가 "연결 삭제" 동작이므로, 이동을 뜻하는 chevron
+                  // 대신 삭제 아이콘을 둔다.
+                  const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 20,
+                    color: FigmaColors.textFaint,
+                  ),
                 ],
               ),
               if (hasTrainer) ...<Widget>[

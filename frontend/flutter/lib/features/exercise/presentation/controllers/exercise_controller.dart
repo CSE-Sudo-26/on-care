@@ -145,7 +145,9 @@ final exerciseWeekViewProvider = Provider<AsyncValue<ExerciseWeek>>((ref) {
 /// mock data, so wire the page to a static repository for now. A real
 /// `DioGymRepository` can be swapped in once `/gyms/*` lands.
 final gymRepositoryProvider = Provider<GymRepository>(
-  (ref) => const MockGymRepository(),
+  // 한 인스턴스를 provider 수명 동안 유지해, 연결 해제 상태가 MY 탭과
+  // 운동 탭에 함께 반영된다.
+  (ref) => MockGymRepository(),
   name: 'gymRepository',
 );
 

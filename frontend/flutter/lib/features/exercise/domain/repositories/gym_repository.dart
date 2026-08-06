@@ -6,4 +6,7 @@ abstract class GymRepository {
 
   /// Nearby gyms shown in the "헬스장 찾기" finder sheet.
   Future<List<Gym>> fetchNearby();
+
+  /// Drops the user's gym/trainer link. [fetchMyGym] returns `null` after this.
+  Future<void> disconnectMyGym();
 }

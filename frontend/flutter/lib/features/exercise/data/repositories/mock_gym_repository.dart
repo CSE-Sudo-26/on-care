@@ -4,8 +4,14 @@ import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart
 /// In-memory gym data matching the prototype's `GymCard` / `GymFinder`
 /// mocks. The user's "my gym" starts as 강남 피트니스 센터; the finder
 /// sheet returns three candidates with ratings, tags, and distances.
+///
+/// Stateful (not const) so [disconnectMyGym] can clear the link for the
+/// session — the provider holds one instance, so MY 탭과 운동 탭이 같은
+/// 연결 상태를 본다.
 class MockGymRepository implements GymRepository {
-  const MockGymRepository();
+  MockGymRepository();
+
+  Gym? _myGym = _gangnam;
 
   static const Gym _gangnam = Gym(
     id: 'gym-gangnam',
@@ -52,12 +58,18 @@ class MockGymRepository implements GymRepository {
   @override
   Future<Gym?> fetchMyGym() async {
     await Future<void>.delayed(const Duration(milliseconds: 60));
-    return _gangnam;
+    return _myGym;
   }
 
   @override
   Future<List<Gym>> fetchNearby() async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     return const <Gym>[_gangnam, _healthmate, _bodyAndSoul];
+  }
+
+  @override
+  Future<void> disconnectMyGym() async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    _myGym = null;
   }
 }
