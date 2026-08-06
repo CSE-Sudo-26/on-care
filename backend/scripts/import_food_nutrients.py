@@ -61,8 +61,14 @@ import sys
 # 1인분 대표값으로 부적절해 힌트 계산에서만 제외한다.
 _FRANCHISE_PREFIX = "외식(프랜차이즈"
 
-# "300g", "350ml", "201.7" 모두 앞쪽 숫자를 쓴다.
-_LEADING_NUMBER = re.compile(r"([\d.]+)")
+# "300g", "350ml", "1000m"(ml 절단), "201.7"(무단위) 를 모두 받는다.
+_WEIGHT = re.compile(r"^\s*([\d.]+)\s*([a-zA-Z]*)")
+
+# 단위 → 그램 환산 계수. ml·L 은 밀도 1.0 을 가정한다 — 이 데이터의 액체는
+# 국·찌개 국물과 음료라 대부분 물이고(오차 수 %), 제외하면 김치찌개처럼
+# 100ml 기준으로 등록된 한식이 1회 섭취량 힌트를 통째로 잃는다.
+# "1000m" 은 원본에 실재하는 ml 절단 표기다(65건).
+_UNIT_TO_G = {"": 1.0, "g": 1.0, "kg": 1000.0, "ml": 1.0, "m": 1.0, "l": 1000.0}
 
 _SOURCES = ("음식", "가공식품", "원재료성식품")
 
@@ -102,16 +108,24 @@ def _number(raw: str) -> float | None:
 
 
 def _weight_g(raw: str) -> float | None:
-    """`식품중량` → 그램 수. 1인분 힌트로만 쓴다."""
-    match = _LEADING_NUMBER.search(raw or "")
+    """`식품중량` → 그램 수. 1인분 힌트로만 쓴다.
+
+    단위를 **명시적으로** 읽는다. 예전에는 앞 숫자만 취해 단위를 무시했는데,
+    그러면 알 수 없는 단위가 조용히 그램으로 쓰인다. 모르는 단위는 None 이다.
+    """
+    match = _WEIGHT.match(raw or "")
     if not match:
         return None
     try:
         value = float(match.group(1))
     except ValueError:
         return None
+    factor = _UNIT_TO_G.get(match.group(2).lower())
+    if factor is None:
+        return None
+    grams = value * factor
     # 5kg 넘는 값은 대형 포장(선물세트 등)이라 1인분 힌트가 못 된다.
-    return value if 0 < value <= 5000 else None
+    return grams if 0 < grams <= 5000 else None
 
 
 def _median(values: list[float]) -> float | None:

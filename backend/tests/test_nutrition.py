@@ -220,3 +220,42 @@ def test_curated_seed_wins_over_public_data(db_session):
     # 큐레이션 1,800mg/550g → 100g 당 327.3
     assert round(ramen.sodium_mg, 1) == 327.3
     assert match_food(db_session, "가공우유") is not None   # 가공식품 데이터셋
+
+
+def test_import_reads_weight_units_explicitly():
+    """단위를 무시하고 앞 숫자만 취하면 모르는 단위가 조용히 그램이 된다."""
+    from scripts.import_food_nutrients import _weight_g
+
+    assert _weight_g("300g") == 300.0
+    assert _weight_g("201.7") == 201.7        # 무단위는 그램(원본 표기)
+    assert _weight_g("2kg") == 2000.0
+    # ml·L 은 밀도 1.0 가정 — 국물·음료라 대부분 물이다. 제외하면 김치찌개처럼
+    # 100ml 기준으로 등록된 한식이 1회 섭취량 힌트를 통째로 잃는다.
+    assert _weight_g("350ml") == 350.0
+    assert _weight_g("1L") == 1000.0
+    assert _weight_g("1000m") == 1000.0       # 원본에 실재하는 ml 절단 표기
+    # 모르는 단위는 그램으로 쓰지 않는다.
+    assert _weight_g("12oz") is None
+    assert _weight_g("abc") is None
+    assert _weight_g("6000g") is None         # 대형 포장은 1인분 힌트가 못 된다
+
+
+def test_vision_parser_keeps_amount_g():
+    """프롬프트가 amount_g 를 요구하는데 파서가 안 넘기면 보정이 폴백만 탄다."""
+    import json
+
+    from app.services.recognizer.litellm_vision import LiteLLMVisionRecognizer
+
+    payload = json.dumps({
+        "foods": [
+            {"name": "김치찌개", "amount_g": 320.5, "calories": 100},
+            {"name": "공기밥", "amount_g": 0, "calories": 300},      # 0 = 모름
+            {"name": "국", "calories": 50},                          # 필드 없음
+        ],
+        "coach_comment": "",
+    })
+    analysis = LiteLLMVisionRecognizer._parse(
+        LiteLLMVisionRecognizer.__new__(LiteLLMVisionRecognizer), payload, 0
+    )
+    assert [f.amount_g for f in analysis.foods] == [320.5, None, None]
+
