@@ -19,11 +19,11 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
-/// Labels for [AppRoutes.clientSections], in the same order.
-const List<String> clientSectionLabels = <String>['채팅', '식단', '운동'];
+/// Labels for [AppRoutes.clientTabSections], in the same order.
+const List<String> clientSectionLabels = <String>['식단', '운동'];
 
 /// The client detail body — a header that answers "how is this person
-/// doing right now?" plus the 채팅/식단/운동 sub-tabs.
+/// doing right now?" plus the 식단/운동 sub-tabs.
 ///
 /// The header carries what used to be the 개요 tab: the alert badges and
 /// today's calorie/sodium/sugar numbers. Those are the questions the
@@ -32,6 +32,12 @@ const List<String> clientSectionLabels = <String>['채팅', '식단', '운동'];
 /// two trends 개요 also drew (주간 이행률, 나트륨 추이) now live only where
 /// they belong — 운동, 식단, and the 리포트 tab that renders the same
 /// charts for the week.
+///
+/// Chat is a header button, not a tab, the way a social profile puts
+/// "message" next to the name rather than beside the content tabs: 식단
+/// and 운동 are things you *read* about this person, chatting is
+/// something you *do* with them. It stays addressable either way (see
+/// [AppRoutes.clientChatSection]).
 ///
 /// The active sub-tab is **owned by the URL**, not by this widget: the
 /// dashboard links straight to a client's 식단 when sodium is over, and
@@ -63,13 +69,21 @@ class ClientDetailView extends ConsumerWidget {
   /// Closes the panel and returns to the plain list.
   final VoidCallback? onClose;
 
-  /// Index into [AppRoutes.clientSections] for the current [section].
-  int get _index {
-    final i = AppRoutes.clientSections.indexOf(section ?? '');
-    return i < 0
-        ? AppRoutes.clientSections.indexOf(AppRoutes.defaultClientSection)
-        : i;
+  /// The section actually being shown; unknown values fall back to the
+  /// default so a stale link renders something rather than nothing.
+  String get _section {
+    final s = section ?? '';
+    return AppRoutes.clientSections.contains(s)
+        ? s
+        : AppRoutes.defaultClientSection;
   }
+
+  /// Index into [AppRoutes.clientTabSections], or `-1` while the chat is
+  /// open — chat has no tab, so no tab is selected then.
+  int get _tabIndex => AppRoutes.clientTabSections.indexOf(_section);
+
+  /// Whether the chat thread is the open section.
+  bool get _chatOpen => _section == AppRoutes.clientChatSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,8 +125,11 @@ class ClientDetailView extends ConsumerWidget {
             _Header(
               client: client,
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
+              unread: unread[client.id] ?? 0,
+              chatOpen: _chatOpen,
               showBack: showBack,
               onClose: onClose,
+              onOpenChat: () => onSectionChange(AppRoutes.clientChatSection),
               onToggleActive: canManageRoster
                   ? () => ref
                         .read(clientRepositoryProvider)
@@ -120,8 +137,8 @@ class ClientDetailView extends ConsumerWidget {
                   : null,
             ),
             _SubTabs(
-              current: _index,
-              onChanged: (i) => onSectionChange(AppRoutes.clientSections[i]),
+              current: _tabIndex,
+              onChanged: (i) => onSectionChange(AppRoutes.clientTabSections[i]),
             ),
             Expanded(child: _body(client)),
           ],
@@ -136,18 +153,18 @@ class ClientDetailView extends ConsumerWidget {
     // otherwise a message drafted for one client would linger in
     // another client's composer.
     final key = ValueKey<String>(clientId);
-    switch (AppRoutes.clientSections[_index]) {
-      case 'diet':
-        return DietView(key: key, client: client);
-      case 'workout':
-        return WorkoutView(key: key, client: client);
-      default:
+    switch (_section) {
+      case AppRoutes.clientChatSection:
         return ChatView(
           key: key,
           clientId: clientId,
           clientAvatar: client.avatar,
           clientName: client.name,
         );
+      case 'workout':
+        return WorkoutView(key: key, client: client);
+      default:
+        return DietView(key: key, client: client);
     }
   }
 }
@@ -200,8 +217,11 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.client,
     required this.alerts,
+    required this.unread,
+    required this.chatOpen,
     required this.showBack,
     required this.onClose,
+    required this.onOpenChat,
     required this.onToggleActive,
   });
 
@@ -210,8 +230,18 @@ class _Header extends StatelessWidget {
   /// Why this client is flagged; empty when they're fine today.
   final List<ClientAlert> alerts;
 
+  /// Messages waiting for a reply, shown on the message button.
+  final int unread;
+
+  /// Whether the chat thread is the open section (the button reads as
+  /// selected then, standing in for the tab chat no longer has).
+  final bool chatOpen;
+
   final bool showBack;
   final VoidCallback? onClose;
+
+  /// Opens the chat thread.
+  final VoidCallback onOpenChat;
 
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
@@ -310,14 +340,54 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                client.name,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.foreground,
-                ),
+              // Status sits with the name — it describes the person, so
+              // it belongs to their identity line rather than to the
+              // corner the actions live in.
+              Row(
+                children: <Widget>[
+                  Flexible(
+                    child: Text(
+                      client.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  // The backend roster has no status mutation endpoint
+                  // yet. Keep the status visible in real mode, but only
+                  // make it interactive when the selected repository
+                  // supports roster mutations.
+                  Material(
+                    color:
+                        (client.active
+                                ? AppColors.success
+                                : AppColors.disabledForeground)
+                            .withValues(alpha: 0.12),
+                    borderRadius: const BorderRadius.all(AppRadius.pill),
+                    child: InkWell(
+                      key: const ValueKey<String>('client-status-toggle'),
+                      onTap: onToggleActive,
+                      borderRadius: const BorderRadius.all(AppRadius.pill),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 3,
+                        ),
+                        child: StatusDotLabel(
+                          label: client.active ? '활성' : '휴면',
+                          filled: client.active,
+                          color: client.active
+                              ? AppColors.success
+                              : AppColors.disabledForeground,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               Text(
                 client.goal,
@@ -331,32 +401,12 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        // The backend roster has no status mutation endpoint yet. Keep the
-        // status visible in real mode, but only make it interactive when
-        // the selected repository supports roster mutations.
-        Material(
-          color:
-              (client.active ? AppColors.success : AppColors.disabledForeground)
-                  .withValues(alpha: 0.12),
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-          child: InkWell(
-            key: const ValueKey<String>('client-status-toggle'),
-            onTap: onToggleActive,
-            borderRadius: const BorderRadius.all(AppRadius.pill),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 3,
-              ),
-              child: StatusDotLabel(
-                label: client.active ? '활성' : '휴면',
-                filled: client.active,
-                color: client.active
-                    ? AppColors.success
-                    : AppColors.disabledForeground,
-              ),
-            ),
-          ),
+        const SizedBox(width: AppSpacing.sm),
+        _MessageButton(
+          clientName: client.name,
+          unread: unread,
+          selected: chatOpen,
+          onTap: onOpenChat,
         ),
         if (onClose != null)
           IconButton(
@@ -366,6 +416,104 @@ class _Header extends StatelessWidget {
             onPressed: onClose,
           ),
       ],
+    );
+  }
+}
+
+/// The 채팅 entry point — a message button beside the client's name,
+/// the way a social profile offers to DM someone.
+///
+/// Carries the unread count so the trainer can see there's something
+/// waiting without opening the thread (opening it marks it read).
+class _MessageButton extends StatelessWidget {
+  const _MessageButton({
+    required this.clientName,
+    required this.unread,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String clientName;
+  final int unread;
+
+  /// Whether the chat is the open section — this is the only affordance
+  /// standing in for the tab chat gave up, so it has to show its state.
+  final bool selected;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? AppColors.primaryForeground : AppColors.primary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      // The visible parts ('채팅' + the bare count) would otherwise be
+      // announced after this label, reading as "…채팅, 안 읽은 메시지
+      // 1개, 채팅, 1". One node, one sentence — so the tap action has to
+      // ride along here too, since the InkWell's own node is excluded.
+      excludeSemantics: true,
+      onTap: onTap,
+      label: unread > 0
+          ? '$clientName님과 채팅, 안 읽은 메시지 $unread개'
+          : '$clientName님과 채팅',
+      child: Material(
+        color: selected
+            ? AppColors.primary
+            : AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+        child: InkWell(
+          key: const ValueKey<String>('client-chat-button'),
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 7,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.send_rounded, size: 15, color: fg),
+                const SizedBox(width: 5),
+                Text(
+                  '채팅',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+                if (unread > 0) ...<Widget>[
+                  const SizedBox(width: 5),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 16),
+                    height: 16,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.primaryForeground
+                          : AppColors.primary,
+                      borderRadius: const BorderRadius.all(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '$unread',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.primaryForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

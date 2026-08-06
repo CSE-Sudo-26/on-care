@@ -222,10 +222,14 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — its 채팅/식단/운동 sub-tabs are unique to it.
-      expect(find.text('채팅'), findsOneWidget);
+      // Detail opened — its 식단/운동 sub-tabs and the 채팅 button are
+      // unique to it.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-chat-button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {

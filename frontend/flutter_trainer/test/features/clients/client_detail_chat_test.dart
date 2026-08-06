@@ -325,9 +325,13 @@ void main() {
     testWidgets('shows the header, sub-tabs, and seeded chat', (tester) async {
       await openDetail(tester);
 
-      expect(find.text('채팅'), findsOneWidget);
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
+      // 채팅 is the header button now, not a tab.
+      expect(
+        find.byKey(const ValueKey<String>('client-chat-button')),
+        findsOneWidget,
+      );
 
       // The thread auto-scrolls to the newest message; drag back up so
       // the lazily-built top of the thread (banner + early replies) exists.

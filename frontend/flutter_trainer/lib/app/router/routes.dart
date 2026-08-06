@@ -37,26 +37,41 @@ class AppRoutes {
 
   // --- Client detail ---
 
-  /// Sub-sections of a client's detail panel, in tab order.
+  /// Every addressable sub-section of a client's detail panel.
   ///
-  /// Three, not five: 개요 became the always-visible detail header (alerts
-  /// + today's numbers are needed on every tab, not just one), and 루틴
-  /// folded into 운동 — a prescription and its execution are one story,
-  /// and splitting them meant the trainer could never see "I assigned
-  /// this, did they do it?" on a single screen.
+  /// 개요 became the always-visible detail header (alerts + today's
+  /// numbers are needed on every tab, not just one), and 루틴 folded into
+  /// 운동 — a prescription and its execution are one story, and splitting
+  /// them meant the trainer could never see "I assigned this, did they do
+  /// it?" on a single screen.
+  ///
+  /// [clientChatSection] is in this list but NOT in [clientTabSections]:
+  /// it's opened from the header's message button rather than a tab, and
+  /// it stays a real URL so the 대시보드 답장 대기 card and the 스케줄
+  /// 채팅 chip can still deep-link straight into a thread.
   static const List<String> clientSections = <String>[
     'chat',
     'diet',
     'workout',
   ];
 
+  /// The sections rendered as tabs, in tab order. Chat is deliberately
+  /// absent — see [clientChatSection].
+  static const List<String> clientTabSections = <String>['diet', 'workout'];
+
+  /// The chat thread's section key — the header message button's target.
+  ///
+  /// Chat is an action ("say something to this person"), not a view of
+  /// their data like 식단/운동, so it reads as a button the way it does on
+  /// a social profile rather than a peer of the content tabs.
+  static const String clientChatSection = 'chat';
+
   /// The section shown when a client is opened without one.
   ///
-  /// Chat is safe as the landing tab now that the header carries the
-  /// alerts and today's metrics — the reason 개요 existed was that
-  /// arriving on the chat forced the trainer to reconstruct state from
-  /// the last few messages.
-  static const String defaultClientSection = 'chat';
+  /// A content tab, not the chat: opening the thread marks it read, so
+  /// landing there by default cleared the 답장 대기 badge before the
+  /// trainer had chosen to deal with it.
+  static const String defaultClientSection = 'diet';
 
   /// Route pattern for the client detail panel.
   static const String clientDetailPattern = ':id/:section';
