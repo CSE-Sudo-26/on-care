@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -184,7 +186,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                     ),
                     data: (DietDay day) => Column(
                       children: <Widget>[
-                        _NutritionSummary(day: day),
+                        NutritionSummary(day: day),
                         const SizedBox(height: 20),
                         _AiFeedback(message: day.aiCoachMessage),
                         const SizedBox(height: 20),
@@ -396,10 +398,17 @@ class _DayCell extends StatelessWidget {
 
 // ──────────────────────────────────────────────────── nutrition summary ──
 
-class _NutritionSummary extends StatelessWidget {
-  const _NutritionSummary({required this.day});
+class NutritionSummary extends StatelessWidget {
+  const NutritionSummary({required this.day, super.key});
 
   final DietDay day;
+
+  static const double _calorieGoal = 2000;
+  static const double _sodiumGoal = 2000;
+  static const double _sugarGoal = 50;
+  static const double _carbsGoal = 275;
+  static const double _proteinGoal = 100;
+  static const double _fatGoal = 55;
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +434,56 @@ class _NutritionSummary extends StatelessWidget {
     final int kcal = foodKcal > 0 ? foodKcal : day.totalCalories;
     final int sodium = foodSodium > 0 ? foodSodium : day.totalSodiumMg;
     final double sugar = foodSugar > 0 ? foodSugar : day.totalSugarG;
+    final List<_NutritionSummaryItem> items = <_NutritionSummaryItem>[
+      _NutritionSummaryItem(
+        label: l.dietCalories,
+        value: _formatInt(kcal),
+        goal: _formatInt(_calorieGoal.toInt()),
+        unit: l.unitKcal,
+        ratio: _nutritionRatio(kcal, _calorieGoal),
+        isOverGoal: kcal > _calorieGoal,
+      ),
+      _NutritionSummaryItem(
+        label: l.dietSodium,
+        value: _formatInt(sodium),
+        goal: _formatInt(_sodiumGoal.toInt()),
+        unit: l.dietUnitMg,
+        ratio: _nutritionRatio(sodium, _sodiumGoal),
+        isOverGoal: sodium > _sodiumGoal,
+      ),
+      _NutritionSummaryItem(
+        label: l.dietSugar,
+        value: _formatG(sugar),
+        goal: _formatG(_sugarGoal),
+        unit: l.dietUnitG,
+        ratio: _nutritionRatio(sugar, _sugarGoal),
+        isOverGoal: sugar > _sugarGoal,
+      ),
+      _NutritionSummaryItem(
+        label: l.homeMacroProtein,
+        value: _grams(day.macros.proteinG),
+        goal: _formatG(_proteinGoal),
+        unit: l.dietUnitG,
+        ratio: _nutritionRatio(day.macros.proteinG, _proteinGoal),
+        isOverGoal: day.macros.proteinG > _proteinGoal,
+      ),
+      _NutritionSummaryItem(
+        label: l.homeMacroFat,
+        value: _grams(day.macros.fatG),
+        goal: _formatG(_fatGoal),
+        unit: l.dietUnitG,
+        ratio: _nutritionRatio(day.macros.fatG, _fatGoal),
+        isOverGoal: day.macros.fatG > _fatGoal,
+      ),
+      _NutritionSummaryItem(
+        label: l.homeMacroCarbs,
+        value: _grams(day.macros.carbsG),
+        goal: _formatG(_carbsGoal),
+        unit: l.dietUnitG,
+        ratio: _nutritionRatio(day.macros.carbsG, _carbsGoal),
+        isOverGoal: day.macros.carbsG > _carbsGoal,
+      ),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -439,73 +498,198 @@ class _NutritionSummary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _SummaryTile(
-                  label: l.dietCalories,
-                  value: _formatInt(kcal),
-                  // 일일 목표치(칼로리 2,000kcal · 나트륨 2,000mg · 당류 50g).
-                  goal: _formatInt(2000),
-                  unit: l.unitKcal,
-                  color: FigmaColors.primary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _SummaryTile(
-                  label: l.dietSodium,
-                  value: _formatInt(sodium),
-                  goal: _formatInt(2000),
-                  unit: l.dietUnitMg,
-                  // 오늘 나트륨 과다(짬뽕) → 빨간계열로 강조.
-                  color: FigmaColors.dangerRed,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _SummaryTile(
-                  label: l.dietSugar,
-                  value: _formatG(sugar),
-                  goal: '50',
-                  unit: l.dietUnitG,
-                  color: FigmaColors.primary,
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: kCardShadow,
+            ),
+            child: _CircularNutritionCard(
+              calories: items[0],
+              sodium: items[1],
+              sugar: items[2],
+              protein: items[3],
+              fat: items[4],
+              carbs: items[5],
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
+        ],
+      ),
+    );
+  }
+}
+
+double _nutritionRatio(num current, num goal) {
+  if (goal <= 0) return 0;
+  return (current / goal).clamp(0.0, 1.0).toDouble();
+}
+
+class _NutritionSummaryItem {
+  const _NutritionSummaryItem({
+    required this.label,
+    required this.value,
+    required this.goal,
+    required this.unit,
+    required this.ratio,
+    required this.isOverGoal,
+  });
+
+  final String label;
+  final String value;
+  final String goal;
+  final String unit;
+  final double ratio;
+  final bool isOverGoal;
+}
+
+class _CircularNutritionCard extends StatelessWidget {
+  const _CircularNutritionCard({
+    required this.calories,
+    required this.sodium,
+    required this.sugar,
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  final _NutritionSummaryItem calories;
+  final _NutritionSummaryItem sodium;
+  final _NutritionSummaryItem sugar;
+  final _NutritionSummaryItem carbs;
+  final _NutritionSummaryItem protein;
+  final _NutritionSummaryItem fat;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_MacroProgress> macros = <_MacroProgress>[
+      _MacroProgress(item: carbs, color: FigmaColors.primary),
+      _MacroProgress(item: protein, color: FigmaColors.sleepPurple),
+      _MacroProgress(item: fat, color: FigmaColors.green),
+    ];
+
+    return Column(
+      key: const Key('nutrition-circular-summary'),
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double graphSize = (constraints.maxWidth * 0.58).clamp(
+              172.0,
+              190.0,
+            );
+            final double gap = (constraints.maxWidth * 0.02).clamp(6.0, 10.0);
+            final double legendWidth = math.min(
+              140,
+              constraints.maxWidth - graphSize - gap,
+            );
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                SizedBox(
+                  width: legendWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      for (final _MacroProgress macro in macros) ...<Widget>[
+                        _MacroLegendItem(macro: macro),
+                        if (macro != macros.last) const SizedBox(height: 16),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(width: gap),
+                _CircularNutritionGraph(
+                  calories: calories,
+                  macros: macros,
+                  size: graphSize,
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
+        const SizedBox(height: 12),
+        Row(
+          children: <Widget>[
+            Expanded(child: _NutritionStatusItem(item: sodium)),
+            const SizedBox(width: 8),
+            Expanded(child: _NutritionStatusItem(item: sugar)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CircularNutritionGraph extends StatelessWidget {
+  const _CircularNutritionGraph({
+    required this.calories,
+    required this.macros,
+    required this.size,
+  });
+
+  final _NutritionSummaryItem calories;
+  final List<_MacroProgress> macros;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final Color calorieColor = calories.isOverGoal
+        ? FigmaColors.dangerRed
+        : FigmaColors.ink;
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          CustomPaint(
+            size: Size.square(size),
+            painter: _ConcentricNutritionRingPainter(macros),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Expanded(
-                child: _SummaryTile(
-                  label: '${l.homeMacroCarbs} ${day.macros.carbsPct}%',
-                  value: _grams(day.macros.carbsG),
-                  goal: '275',
-                  unit: l.dietUnitG,
-                  color: FigmaColors.primary,
+              Text(
+                calories.label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.textSub,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _SummaryTile(
-                  label: '${l.homeMacroProtein} ${day.macros.proteinPct}%',
-                  value: _grams(day.macros.proteinG),
-                  goal: '100',
-                  unit: l.dietUnitG,
-                  color: FigmaColors.primary,
+              const SizedBox(height: 3),
+              Text(
+                '${calories.value} ${calories.unit}',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  color: calorieColor,
+                  height: 1,
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _SummaryTile(
-                  label: '${l.homeMacroFat} ${day.macros.fatPct}%',
-                  value: _grams(day.macros.fatG),
-                  goal: '55',
-                  unit: l.dietUnitG,
-                  color: FigmaColors.primary,
+              const SizedBox(height: 5),
+              Text(
+                '${l.homeGoal} ${calories.goal} ${calories.unit}',
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.textMuted,
                 ),
               ),
+              if (calories.isOverGoal) ...<Widget>[
+                const SizedBox(height: 3),
+                Text(
+                  '${l.homeGoal} ${l.homeMetricOver}',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.dangerRed,
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -514,78 +698,255 @@ class _NutritionSummary extends StatelessWidget {
   }
 }
 
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.value,
-    required this.unit,
-    required this.color,
-    this.goal,
-  });
+class _MacroProgress {
+  const _MacroProgress({required this.item, required this.color});
 
-  final String label;
-  final String value;
-  final String unit;
+  final _NutritionSummaryItem item;
   final Color color;
+}
 
-  /// Optional target value shown as a small gray "/목표치" after [value]
-  /// (예: "1,067 / 2,000 kcal"). Null = no target suffix(매크로 타일 등).
-  final String? goal;
+class _MacroLegendItem extends StatelessWidget {
+  const _MacroLegendItem({required this.macro});
+
+  final _MacroProgress macro;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(top: 3),
+          decoration: BoxDecoration(color: macro.color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                macro.item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: FigmaColors.textSub,
+                ),
+              ),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text.rich(
+                  TextSpan(
+                    children: <InlineSpan>[
+                      TextSpan(
+                        text: macro.item.value,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: macro.item.isOverGoal
+                              ? FigmaColors.dangerRed
+                              : macro.color,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' /${macro.item.goal}${macro.item.unit}',
+                        style: kGoalSuffixStyle,
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                ),
+              ),
+              if (macro.item.isOverGoal)
+                Text(
+                  '${l.homeGoal} ${l.homeMetricOver}',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.dangerRed,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NutritionStatusItem extends StatelessWidget {
+  const _NutritionStatusItem({required this.item});
+
+  final _NutritionSummaryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final Color statusColor = item.isOverGoal
+        ? FigmaColors.dangerRed
+        : FigmaColors.greenText;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.13)),
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            label,
+            item.label,
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: FigmaColors.textSub,
             ),
           ),
-          const SizedBox(height: 6),
-          // Value with the unit inline to its right → one line shorter.
-          Text.rich(
-            TextSpan(
-              children: <InlineSpan>[
-                TextSpan(
-                  text: value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: color,
-                    height: 1,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                if (goal != null)
-                  TextSpan(text: ' /$goal$unit', style: kGoalSuffixStyle)
-                else
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
                   TextSpan(
-                    text: ' $unit',
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      color: FigmaColors.textMuted,
+                    text: item.value,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: item.isOverGoal
+                          ? FigmaColors.dangerRed
+                          : FigmaColors.ink,
                     ),
                   ),
-              ],
+                  TextSpan(
+                    text: ' /${item.goal}${item.unit}',
+                    style: kGoalSuffixStyle,
+                  ),
+                ],
+              ),
+              maxLines: 1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              item.isOverGoal
+                  ? '${l.homeGoal} ${l.homeMetricOver}'
+                  : l.homeMetricNormal,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: statusColor,
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _ConcentricNutritionRingPainter extends CustomPainter {
+  const _ConcentricNutritionRingPainter(this.macros);
+
+  final List<_MacroProgress> macros;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double strokeWidth = (size.shortestSide * 0.055).clamp(8.0, 10.5);
+    final double radiusStep = strokeWidth + 5;
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double outerRadius = (size.shortestSide - strokeWidth) / 2;
+    final double middleRadius = outerRadius - radiusStep;
+    final double innerRadius = middleRadius - radiusStep;
+    final _MacroProgress carbsRing = macros[0];
+    final _MacroProgress proteinRing = macros[1];
+    final _MacroProgress fatRing = macros[2];
+
+    // 목표량 규모를 기준으로 탄수화물은 바깥, 단백질은 가운데, 지방은 안쪽에 고정한다.
+    _drawProgressRing(
+      canvas: canvas,
+      center: center,
+      radius: outerRadius,
+      progress: carbsRing.item.ratio,
+      progressColor: carbsRing.color,
+      strokeWidth: strokeWidth,
+    );
+    _drawProgressRing(
+      canvas: canvas,
+      center: center,
+      radius: middleRadius,
+      progress: proteinRing.item.ratio,
+      progressColor: proteinRing.color,
+      strokeWidth: strokeWidth,
+    );
+    _drawProgressRing(
+      canvas: canvas,
+      center: center,
+      radius: innerRadius,
+      progress: fatRing.item.ratio,
+      progressColor: fatRing.color,
+      strokeWidth: strokeWidth,
+    );
+  }
+
+  void _drawProgressRing({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required double progress,
+    required Color progressColor,
+    required double strokeWidth,
+  }) {
+    final Rect ringRect = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = FigmaColors.track.withValues(alpha: 0.55)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+
+    if (progress <= 0) return;
+    const double startAngle = -math.pi / 2;
+    final double sweepAngle = 2 * math.pi * progress.clamp(0.0, 1.0);
+    canvas.drawArc(
+      ringRect,
+      startAngle,
+      sweepAngle,
+      false,
+      Paint()
+        ..color = progressColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConcentricNutritionRingPainter oldDelegate) {
+    if (macros.length != oldDelegate.macros.length) return true;
+    for (int index = 0; index < macros.length; index++) {
+      if (macros[index].item.ratio != oldDelegate.macros[index].item.ratio ||
+          macros[index].color != oldDelegate.macros[index].color) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
