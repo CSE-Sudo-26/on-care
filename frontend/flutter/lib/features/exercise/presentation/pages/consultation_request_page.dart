@@ -65,6 +65,18 @@ class _ConsultationRequestPageState
       initialDate: _preferredDate ?? today,
       firstDate: today,
       lastDate: DateTime(today.year + 100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            datePickerTheme: const DatePickerThemeData(
+              backgroundColor: Colors.white,
+              headerBackgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (selected != null && mounted) {
       setState(() => _preferredDate = selected);
@@ -506,7 +518,7 @@ class _DateField extends StatelessWidget {
         ? l.exSelectDate
         : MaterialLocalizations.of(context).formatMediumDate(date!);
     return Material(
-      color: Colors.white,
+      color: FigmaColors.softBlue,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,

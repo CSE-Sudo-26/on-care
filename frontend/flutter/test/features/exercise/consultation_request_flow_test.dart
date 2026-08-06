@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/app_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
@@ -187,9 +188,16 @@ void main() {
           matching: find.byType(Material),
         )
         .first;
-    expect(tester.widget<Material>(dateMaterial).color, Colors.white);
+    expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
     await tester.tap(find.text(l.exSelectDate));
     await tester.pumpAndSettle();
+    final BuildContext pickerContext = tester.element(
+      find.byType(DatePickerDialog),
+    );
+    final DatePickerThemeData pickerTheme = DatePickerTheme.of(pickerContext);
+    expect(pickerTheme.backgroundColor, Colors.white);
+    expect(pickerTheme.headerBackgroundColor, Colors.white);
+    expect(pickerTheme.surfaceTintColor, Colors.transparent);
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     dateMaterial = find
@@ -198,7 +206,7 @@ void main() {
           matching: find.byType(Material),
         )
         .first;
-    expect(tester.widget<Material>(dateMaterial).color, Colors.white);
+    expect(tester.widget<Material>(dateMaterial).color, FigmaColors.softBlue);
     await _scrollTo(tester, find.text(l.exTimeAfternoon), 180);
     await tester.tap(find.text(l.exTimeAfternoon));
     await _scrollTo(tester, find.text(l.exSendConsultRequest), 220);
