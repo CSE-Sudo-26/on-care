@@ -44,11 +44,13 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
       _failed = false;
     });
     try {
-      final result = await ref.read(dietRepositoryProvider).analyze(
-        imageBytes: widget.imageBytes,
-        filename: 'meal.jpg',
-        mealType: widget.mealType,
-      );
+      final result = await ref
+          .read(dietRepositoryProvider)
+          .analyze(
+            imageBytes: widget.imageBytes,
+            filename: 'meal.jpg',
+            mealType: widget.mealType,
+          );
       if (!mounted) return;
       setState(() {
         _result = result;
@@ -76,21 +78,24 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
         ),
         title: Text(
           _result != null ? '분석 결과' : '식단 분석',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
         child: _loading
             ? _Analyzing(imageBytes: widget.imageBytes)
             : _failed
-                ? _Failed(onRetry: _run, onClose: () => Navigator.of(context).pop(false))
-                : _Result(
-                    imageBytes: widget.imageBytes,
-                    result: _result!,
-                    onDone: () => Navigator.of(context).pop(true),
-                  ),
+            ? _Failed(
+                onRetry: _run,
+                onClose: () => Navigator.of(context).pop(false),
+              )
+            : _Result(
+                imageBytes: widget.imageBytes,
+                result: _result!,
+                onDone: () => Navigator.of(context).pop(true),
+              ),
       ),
     );
   }
@@ -132,17 +137,24 @@ class _Analyzing extends StatelessWidget {
           const SizedBox(
             width: 44,
             height: 44,
-            child: CircularProgressIndicator(strokeWidth: 4, color: AppColors.primary),
+            child: CircularProgressIndicator(
+              strokeWidth: 4,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'AI가 식단을 분석하고 있어요',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             '음식 인식 · 영양 정보 계산 중 · 보통 2~3초',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.mutedForeground,
+            ),
           ),
         ],
       ),
@@ -168,12 +180,16 @@ class _Failed extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               '분석에 실패했어요',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               '잠시 후 다시 시도해 주세요.',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.foreground,
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             Row(
@@ -183,7 +199,9 @@ class _Failed extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 FilledButton(
                   onPressed: onRetry,
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
                   child: const Text('다시 시도'),
                 ),
               ],
@@ -219,7 +237,9 @@ class _Result extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               Text(
                 '인식된 음식',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               for (final f in result.foods)
@@ -231,20 +251,28 @@ class _Result extends StatelessWidget {
                         child: Row(
                           children: <Widget>[
                             Flexible(
-                              child: Text(f.name, style: theme.textTheme.bodyLarge),
+                              child: Text(
+                                f.name,
+                                style: theme.textTheme.bodyLarge,
+                              ),
                             ),
                             if (f.isFromDb) ...<Widget>[
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: const BoxDecoration(
                                   color: AppColors.accent,
-                                  borderRadius: BorderRadius.all(AppRadius.pill),
+                                  borderRadius: BorderRadius.all(
+                                    AppRadius.pill,
+                                  ),
                                 ),
                                 child: const Text(
                                   'DB',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 12,
                                     color: AppColors.secondary,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -273,9 +301,21 @@ class _Result extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: <Widget>[
-                    _Metric(label: '칼로리', value: '${result.totalCalories}', unit: 'kcal'),
-                    _Metric(label: '나트륨', value: '${result.totalSodiumMg}', unit: 'mg'),
-                    _Metric(label: '당류', value: '${result.totalSugarG}', unit: 'g'),
+                    _Metric(
+                      label: '칼로리',
+                      value: '${result.totalCalories}',
+                      unit: 'kcal',
+                    ),
+                    _Metric(
+                      label: '나트륨',
+                      value: '${result.totalSodiumMg}',
+                      unit: 'mg',
+                    ),
+                    _Metric(
+                      label: '당류',
+                      value: '${result.totalSugarG}',
+                      unit: 'g',
+                    ),
                   ],
                 ),
               ),
@@ -290,12 +330,18 @@ class _Result extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 20),
+                      const Icon(
+                        Icons.smart_toy_outlined,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
                           result.coachComment,
-                          style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.45,
+                          ),
                         ),
                       ),
                     ],
@@ -345,7 +391,9 @@ class _Metric extends StatelessWidget {
       children: <Widget>[
         Text(
           label,
-          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.mutedForeground,
+          ),
         ),
         const SizedBox(height: 2),
         Text.rich(
@@ -353,11 +401,15 @@ class _Metric extends StatelessWidget {
             children: <InlineSpan>[
               TextSpan(
                 text: value,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               TextSpan(
                 text: ' $unit',
-                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
               ),
             ],
           ),

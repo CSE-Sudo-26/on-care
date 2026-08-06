@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -21,9 +22,9 @@ import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 /// [kGoalSuffixStyle], one step larger so it scales with the rest of the Home
 /// type; the other tabs keep the shared 9px size.
 const TextStyle _kGoalSuffix = TextStyle(
-  fontSize: 10.5,
+  fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: FigmaColors.textFaint,
+  color: AppColors.mutedForeground,
 );
 
 /// The Home tab, rebuilt to match the On-Care Figma redesign.
@@ -140,7 +141,7 @@ class _DashboardData extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
             child: Text(
               l.homeDashboardEmpty,
-              style: const TextStyle(color: FigmaColors.textMuted),
+              style: const TextStyle(color: AppColors.foreground),
             ),
           ),
         Padding(
@@ -231,10 +232,10 @@ class _CoachingBanner extends StatelessWidget {
                                 summary.exerciseFeedback ??
                                 l.homeAiAdviceBody,
                             style: const TextStyle(
-                              fontSize: 13.5,
+                              fontSize: 14.5,
                               height: 1.5,
                               fontWeight: FontWeight.w500,
-                              color: FigmaColors.textBody,
+                              color: AppColors.foreground,
                             ),
                           ),
                         ],
@@ -308,7 +309,7 @@ class _CardTitle extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
           ),
@@ -440,16 +441,21 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                         children: <Widget>[
                           // 가로축 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
                           SizedBox(
-                            width: 34,
-                            height: 60,
+                            width: 38,
+                            height: 68,
                             child: Stack(
                               children: <Widget>[
                                 for (final double t in cfg.ticks)
                                   Positioned(
                                     right: 0,
-                                    top: (60 - ((t - lo) / (hi - lo)) * 60 - 5)
-                                        .clamp(0.0, 50.0),
-                                    child: _AxisLabel(nf.format(t)),
+                                    top: (68 - ((t - lo) / (hi - lo)) * 68 - 8)
+                                        .clamp(0.0, 52.0),
+                                    child: SizedBox(
+                                      height: 16,
+                                      child: Center(
+                                        child: _AxisLabel(nf.format(t)),
+                                      ),
+                                    ),
                                   ),
                               ],
                             ),
@@ -459,7 +465,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                             child: Column(
                               children: <Widget>[
                                 SizedBox(
-                                  height: 60,
+                                  height: 68,
                                   child: CustomPaint(
                                     size: Size.infinite,
                                     painter: _TrendChartPainter(
@@ -481,8 +487,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                       if (i == _todayIndex())
                                         // 오늘: #3EAFDF 원형 안에 흰색 요일 글씨.
                                         Container(
-                                          width: 16,
-                                          height: 16,
+                                          width: 18,
+                                          height: 18,
                                           alignment: Alignment.center,
                                           decoration: const BoxDecoration(
                                             color: FigmaColors.primary,
@@ -491,7 +497,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                           child: Text(
                                             days[i],
                                             style: const TextStyle(
-                                              fontSize: 9.5,
+                                              fontSize: 11.5,
                                               fontWeight: FontWeight.w700,
                                               color: Colors.white,
                                             ),
@@ -501,9 +507,9 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                         Text(
                                           days[i],
                                           style: const TextStyle(
-                                            fontSize: 9.5,
+                                            fontSize: 11.5,
                                             fontWeight: FontWeight.w600,
-                                            color: FigmaColors.textFaint,
+                                            color: AppColors.mutedForeground,
                                           ),
                                         ),
                                   ],
@@ -576,9 +582,9 @@ class _MetricStatCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textMuted,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -611,9 +617,9 @@ class _MetricStatCard extends StatelessWidget {
                       : indicator.unit,
                   maxLines: 1,
                   style: const TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textMuted,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -628,7 +634,7 @@ class _MetricStatCard extends StatelessWidget {
                   over ? l.homeMetricOver : l.homeMetricNormal,
                   maxLines: 1,
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: statusColor,
                   ),
@@ -668,7 +674,7 @@ class _MacroText extends StatelessWidget {
           label,
           maxLines: 1,
           style: const TextStyle(
-            fontSize: 11.5,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: FigmaColors.ink,
           ),
@@ -678,7 +684,7 @@ class _MacroText extends StatelessWidget {
           '${value}g',
           maxLines: 1,
           style: const TextStyle(
-            fontSize: 14.5,
+            fontSize: 15.5,
             fontWeight: FontWeight.w800,
             color: FigmaColors.ink,
           ),
@@ -689,9 +695,9 @@ class _MacroText extends StatelessWidget {
             maxLines: 1,
             // 목표치는 회색으로 낮춰 실제 섭취량(검정)과 구분.
             style: const TextStyle(
-              fontSize: 9.5,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
+              color: AppColors.mutedForeground,
             ),
           ),
       ],
@@ -718,7 +724,7 @@ class _DetailLink extends StatelessWidget {
           Text(
             l.homeDetails,
             style: const TextStyle(
-              fontSize: 13.5,
+              fontSize: 14.5,
               fontWeight: FontWeight.w600,
               color: FigmaColors.primary,
             ),
@@ -753,9 +759,9 @@ class _AxisLabel extends StatelessWidget {
       overflow: TextOverflow.clip,
       softWrap: false,
       style: const TextStyle(
-        fontSize: 9,
+        fontSize: 11.5,
         fontWeight: FontWeight.w600,
-        color: FigmaColors.textFaint,
+        color: AppColors.mutedForeground,
       ),
     );
   }
@@ -874,7 +880,7 @@ class _ExerciseCard extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.ink,
                         ),
@@ -904,8 +910,8 @@ class _ExerciseCard extends ConsumerWidget {
                                 // 원형 안에 흰색 요일 글씨로 표기한다.
                                 child: i == todayIdx
                                     ? Container(
-                                        width: 16,
-                                        height: 16,
+                                        width: 18,
+                                        height: 18,
                                         alignment: Alignment.center,
                                         decoration: const BoxDecoration(
                                           color: FigmaColors.primary,
@@ -914,7 +920,7 @@ class _ExerciseCard extends ConsumerWidget {
                                         child: Text(
                                           days[i],
                                           style: const TextStyle(
-                                            fontSize: 9.5,
+                                            fontSize: 11.5,
                                             fontWeight: FontWeight.w700,
                                             color: Colors.white,
                                           ),
@@ -923,9 +929,9 @@ class _ExerciseCard extends ConsumerWidget {
                                     : Text(
                                         days[i],
                                         style: const TextStyle(
-                                          fontSize: 9.5,
+                                          fontSize: 11.5,
                                           fontWeight: FontWeight.w600,
-                                          color: FigmaColors.textFaint,
+                                          color: AppColors.mutedForeground,
                                         ),
                                       ),
                               ),
@@ -986,9 +992,9 @@ class _ExerciseStat extends StatelessWidget {
                 maxLines: 1,
                 softWrap: false,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: FigmaColors.textMuted,
+                  color: AppColors.mutedForeground,
                 ),
               ),
               const SizedBox(height: 3),
@@ -1018,9 +1024,9 @@ class _ExerciseStat extends StatelessWidget {
                         Text(
                           ' $unit',
                           style: const TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: FigmaColors.textMuted,
+                            color: AppColors.mutedForeground,
                           ),
                         ),
                     ],
@@ -1233,7 +1239,7 @@ class _ChartLegend extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 13.5,
+              fontSize: 14.5,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -1244,7 +1250,7 @@ class _ChartLegend extends StatelessWidget {
           goalText,
           maxLines: 1,
           style: const TextStyle(
-            fontSize: 13.5,
+            fontSize: 14.5,
             fontWeight: FontWeight.w800,
             color: FigmaColors.primary,
           ),
@@ -1338,7 +1344,7 @@ class _TrendChartPainter extends CustomPainter {
       text: TextSpan(
         text: s,
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -1419,7 +1425,7 @@ class _ExerciseBarPainter extends CustomPainter {
         text: TextSpan(
           text: NumberFormat('#,###').format(v),
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
             color: today ? color : const Color(0xFF9AA6B2),
           ),
@@ -1604,7 +1610,7 @@ class _RecMealCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.ink,
                       height: 1.3,
@@ -1617,9 +1623,9 @@ class _RecMealCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: FigmaColors.textMuted,
+                        color: AppColors.foreground,
                         height: 1.4,
                       ),
                     ),
@@ -1637,7 +1643,7 @@ class _RecMealCard extends StatelessWidget {
                     child: Text(
                       meal.tag,
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: meal.tagColor,
                       ),
@@ -1696,8 +1702,8 @@ class _ScheduleCard extends StatelessWidget {
                   Text(
                     todayLabel,
                     style: const TextStyle(
-                      fontSize: 13.5,
-                      color: FigmaColors.textSub,
+                      fontSize: 14.5,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                 ],
@@ -1709,7 +1715,7 @@ class _ScheduleCard extends StatelessWidget {
               child: Text(
                 l.homeViewAll,
                 style: const TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.primary,
                 ),
@@ -1729,8 +1735,8 @@ class _ScheduleCard extends StatelessWidget {
             child: Text(
               l.homeScheduleEmpty,
               style: const TextStyle(
-                fontSize: 13.5,
-                color: FigmaColors.textSub,
+                fontSize: 14.5,
+                color: AppColors.foreground,
               ),
             ),
           )

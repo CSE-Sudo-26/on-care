@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -135,7 +136,9 @@ Future<void> _pickAndAnalyze(
     // Permission denied / platform error / unreadable file — don't crash.
     if (sheetContext.mounted) {
       ScaffoldMessenger.of(sheetContext).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError)),
+        SnackBar(
+          content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError),
+        ),
       );
     }
     return;
@@ -184,8 +187,8 @@ Future<void> showDietAddSheet(BuildContext context) {
                   Text(
                     l.dietAddSheetSubtitle,
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: FigmaColors.textMuted,
+                      fontSize: 13.5,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                 ],
@@ -274,7 +277,7 @@ class _SourceOption extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
@@ -283,8 +286,8 @@ class _SourceOption extends StatelessWidget {
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: FigmaColors.textMuted,
+                        fontSize: 13.5,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                   ],
@@ -405,7 +408,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                             ? l.dietAnalysisFailed
                             : l.dietAnalysisDone,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.ink,
                         ),
@@ -413,7 +416,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                       Text(
                         l.dietAiNutritionResult,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13.5,
                           color: FigmaColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -449,7 +452,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             const SizedBox(height: 14),
             Text(
               l.dietAnalyzingBody,
-              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
           ],
         ),
@@ -462,7 +465,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           children: <Widget>[
             Text(
               l.dietAnalysisFailedBody,
-              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -479,7 +482,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                 child: Text(
                   l.actionRetry,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -491,7 +494,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     }
 
     final DietAnalysisResult r = _result!;
-    final String recognized = r.foods.map((RecognizedFood f) => f.name).join(' · ');
+    final String recognized = r.foods
+        .map((RecognizedFood f) => f.name)
+        .join(' · ');
     return Column(
       children: <Widget>[
         Container(
@@ -507,7 +512,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               Text(
                 l.dietRecognizedFood,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.primary,
                 ),
@@ -516,7 +521,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
               Text(
                 recognized.isEmpty ? l.dietNoRecognizedFood : recognized,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
                 ),
@@ -530,9 +535,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: Text(
             l.dietNutritionResult,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
+              color: AppColors.foreground,
             ),
           ),
         ),
@@ -566,10 +571,10 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             child: Text(
               r.coachComment,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 height: 1.5,
                 fontWeight: FontWeight.w500,
-                color: FigmaColors.textBody,
+                color: AppColors.foreground,
               ),
             ),
           ),
@@ -580,9 +585,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: FilledButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l.dietSaved)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(l.dietSaved)));
             },
             style: FilledButton.styleFrom(
               backgroundColor: FigmaColors.primary,
@@ -594,7 +599,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             icon: const Icon(Icons.check, size: 16),
             label: Text(
               l.dietDone,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -604,7 +609,11 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
 }
 
 class _ResultRow extends StatelessWidget {
-  const _ResultRow({required this.label, required this.value, required this.unit});
+  const _ResultRow({
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
   final String label;
   final String value;
   final String unit;
@@ -622,7 +631,7 @@ class _ResultRow extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -639,7 +648,10 @@ class _ResultRow extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             unit,
-            style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ],
       ),
@@ -709,14 +721,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietSaved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietSaveFailed)));
     }
   }
 
@@ -760,14 +768,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietDeleted)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietDeleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleteFailed)));
     }
   }
 
@@ -805,7 +809,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   child: Text(
                     l.dietSave,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
                     ),
@@ -845,11 +849,11 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                               child: Text(
                                 mealBadge(l, t),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w700,
                                   color: _type == t
                                       ? FigmaColors.primary
-                                      : FigmaColors.textSub,
+                                      : AppColors.mutedForeground,
                                 ),
                               ),
                             ),
@@ -885,7 +889,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                             Text(
                               widget.meal.time,
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: FigmaColors.ink,
                               ),
@@ -913,7 +917,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                         child: Text(
                           l.dietAddFood,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w700,
                             color: FigmaColors.primary,
                           ),
@@ -925,8 +929,8 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   Text(
                     l.dietEditFoodHint,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: FigmaColors.textMuted,
+                      fontSize: 12.5,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -934,8 +938,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                     _FoodRow(
                       index: i + 1,
                       food: _foods[i],
-                      onDelete: () =>
-                          setState(() => _foods = <DietFood>[..._foods]..removeAt(i)),
+                      onDelete: () => setState(
+                        () => _foods = <DietFood>[..._foods]..removeAt(i),
+                      ),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -945,16 +950,16 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                       Text(
                         l.dietTotalCalories,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: FigmaColors.textSub,
+                          color: AppColors.foreground,
                         ),
                       ),
                       const Spacer(),
                       Text(
                         l.unitKcalValue(_total),
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.primary,
                         ),
@@ -969,8 +974,8 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                   Text(
                     l.dietEditNutritionHint,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: FigmaColors.textMuted,
+                      fontSize: 12.5,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -1009,7 +1014,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                 label: Text(
                   l.dietDeleteMeal,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1028,7 +1033,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       color: FigmaColors.statBg,
       borderRadius: BorderRadius.circular(16),
     ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    ),
   );
 }
 
@@ -1039,7 +1047,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     style: const TextStyle(
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: FontWeight.w700,
       color: FigmaColors.ink,
     ),
@@ -1079,7 +1087,7 @@ class _FoodRow extends StatelessWidget {
             child: Text(
               '$index',
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
@@ -1090,7 +1098,7 @@ class _FoodRow extends StatelessWidget {
             child: Text(
               food.name.trim().isEmpty ? l.dietNewFood : food.name,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.ink,
               ),
@@ -1099,7 +1107,7 @@ class _FoodRow extends StatelessWidget {
           Text(
             '${food.kcal}',
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -1107,16 +1115,15 @@ class _FoodRow extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             l.unitKcal,
-            style: const TextStyle(fontSize: 11, color: FigmaColors.textMuted),
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onDelete,
-            child: const Icon(
-              Icons.cancel,
-              size: 18,
-              color: Color(0xFFFFB4A8),
-            ),
+            child: const Icon(Icons.cancel, size: 18, color: Color(0xFFFFB4A8)),
           ),
         ],
       ),
@@ -1156,7 +1163,7 @@ class _NutrientRow extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.ink,
                   ),
@@ -1164,8 +1171,8 @@ class _NutrientRow extends StatelessWidget {
                 Text(
                   hint,
                   style: const TextStyle(
-                    fontSize: 10,
-                    color: FigmaColors.textMuted,
+                    fontSize: 12,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ],
@@ -1174,7 +1181,7 @@ class _NutrientRow extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: FigmaColors.ink,
             ),
@@ -1182,7 +1189,10 @@ class _NutrientRow extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             unit,
-            style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ],
       ),

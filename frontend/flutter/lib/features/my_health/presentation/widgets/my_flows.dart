@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -145,9 +146,9 @@ class _SheetField extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
-            color: FigmaColors.textMuted,
+            color: AppColors.foreground,
           ),
         ),
         const SizedBox(height: 6),
@@ -156,7 +157,7 @@ class _SheetField extends StatelessWidget {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
           ),
@@ -166,9 +167,9 @@ class _SheetField extends StatelessWidget {
             fillColor: Colors.white,
             hintText: hintText,
             hintStyle: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: FigmaColors.textFaint,
+              color: AppColors.mutedForeground,
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -252,7 +253,7 @@ Widget _saveRow({
         child: OutlinedButton(
           onPressed: saving ? null : () => Navigator.of(context).pop(),
           style: OutlinedButton.styleFrom(
-            foregroundColor: FigmaColors.textSub,
+            foregroundColor: AppColors.mutedForeground,
             side: const BorderSide(color: FigmaColors.hairline),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -261,7 +262,7 @@ Widget _saveRow({
           ),
           child: Text(
             l.myCancel,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -288,7 +289,7 @@ Widget _saveRow({
               : Text(
                   l.mySave,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -639,7 +640,7 @@ class _GoalsSectionLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: FontWeight.w800,
         color: FigmaColors.ink,
       ),
@@ -733,7 +734,7 @@ class _NotifSheetState extends ConsumerState<_NotifSheet> {
                 child: Text(
                   _notifLabel(l, _notifItems[i].prefKey),
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.ink,
                   ),
@@ -784,7 +785,10 @@ Future<void> showSupportSheet(BuildContext context) {
     Center(
       child: Text(
         l.myAppVersion,
-        style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+        style: const TextStyle(
+          fontSize: 13.5,
+          color: AppColors.mutedForeground,
+        ),
       ),
     ),
   ]);
@@ -826,7 +830,7 @@ Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
                 child: Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.ink,
                   ),
@@ -867,10 +871,10 @@ class _LegalDocSheet extends StatelessWidget {
         Text(
           body,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             height: 1.7,
             fontWeight: FontWeight.w500,
-            color: FigmaColors.textBody,
+            color: AppColors.foreground,
           ),
         ),
       ]),
@@ -878,7 +882,10 @@ class _LegalDocSheet extends StatelessWidget {
       Center(
         child: Text(
           l.myLegalEffectiveDate,
-          style: const TextStyle(fontSize: 11, color: FigmaColors.textFaint),
+          style: const TextStyle(
+            fontSize: 12.5,
+            color: AppColors.mutedForeground,
+          ),
         ),
       ),
     ]);

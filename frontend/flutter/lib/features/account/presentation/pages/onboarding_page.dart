@@ -217,7 +217,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           Text(
             subtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

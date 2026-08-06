@@ -32,7 +32,9 @@ Future<void> showScheduleCalendarSheet(
       // Match the main content width so the sheet scales with the viewport
       // like the tab pages. The theme lifts the modal route cap to this
       // width too (see AppTheme._bottomSheetTheme); this centres the child.
-      constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+      constraints: const BoxConstraints(
+        maxWidth: AppBreakpoints.contentMaxWidth,
+      ),
       child: _CalendarBody(initialDate: initialDate ?? DateTime.now()),
     ),
   );
@@ -235,13 +237,12 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                     },
                   );
                 },
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object e, _) => Center(
                   child: Text(
                     '일정을 불러오지 못했어요',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: AppColors.foreground,
                     ),
                   ),
                 ),

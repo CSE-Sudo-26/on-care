@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -190,9 +191,9 @@ class _ProfileCard extends StatelessWidget {
                 Text(
                   email,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w500,
-                    color: FigmaColors.textMuted,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ],
@@ -385,7 +386,7 @@ class _PointsBenefitsSheet extends StatelessWidget {
                                 ? '보유 ${points}P'
                                 : '포인트로 받을 수 있는 혜택',
                             style: const TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: FigmaColors.primary,
                             ),
@@ -421,8 +422,8 @@ class _PointsBenefitsSheet extends StatelessWidget {
                       child: Text(
                         '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.',
                         style: TextStyle(
-                          fontSize: 11.5,
-                          color: FigmaColors.textMuted,
+                          fontSize: 13,
+                          color: AppColors.foreground,
                           height: 1.35,
                         ),
                       ),
@@ -478,7 +479,7 @@ class _PointBenefitCard extends StatelessWidget {
                       child: Text(
                         benefit.title,
                         style: const TextStyle(
-                          fontSize: 14.5,
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.ink,
                           height: 1.3,
@@ -498,7 +499,7 @@ class _PointBenefitCard extends StatelessWidget {
                       child: Text(
                         benefit.cost,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.primary,
                         ),
@@ -510,8 +511,8 @@ class _PointBenefitCard extends StatelessWidget {
                 Text(
                   benefit.desc,
                   style: const TextStyle(
-                    fontSize: 12.5,
-                    color: FigmaColors.textBody,
+                    fontSize: 14,
+                    color: AppColors.foreground,
                     height: 1.4,
                   ),
                 ),
@@ -676,7 +677,7 @@ class _PointRule extends StatelessWidget {
           child: Text(
             text,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: FigmaColors.ink,
             ),
@@ -686,7 +687,7 @@ class _PointRule extends StatelessWidget {
         Text(
           points,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w800,
             color: FigmaColors.primary,
           ),
@@ -735,7 +736,7 @@ class _Settings extends StatelessWidget {
         Text(
           l.mySettingsTitle,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
           ),
@@ -803,7 +804,7 @@ class _SettingRow extends StatelessWidget {
               child: Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
                 ),
@@ -859,7 +860,7 @@ class _LogoutButton extends StatelessWidget {
               Text(
                 l.myLogout,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFFFF3B30),
                 ),
@@ -910,8 +911,8 @@ class _TrainerGymSection extends ConsumerWidget {
             content: Text(
               message,
               style: const TextStyle(
-                fontSize: 13.5,
-                color: FigmaColors.textBody,
+                fontSize: 14.5,
+                color: AppColors.foreground,
                 height: 1.4,
               ),
             ),
@@ -919,7 +920,7 @@ class _TrainerGymSection extends ConsumerWidget {
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
                 style: TextButton.styleFrom(
-                  foregroundColor: FigmaColors.textMuted,
+                  foregroundColor: AppColors.mutedForeground,
                 ),
                 child: Text(l.myCancel),
               ),
@@ -976,7 +977,7 @@ class _TrainerGymSection extends ConsumerWidget {
         Text(
           l.myTrainerGymTitle,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
           ),
@@ -1060,7 +1061,7 @@ class _GymSummaryCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.ink,
                         ),
@@ -1070,8 +1071,8 @@ class _GymSummaryCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 11,
-                          color: FigmaColors.textMuted,
+                          fontSize: 12.5,
+                          color: AppColors.mutedForeground,
                         ),
                       ),
                     ],
@@ -1101,9 +1102,9 @@ class _GymSummaryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textBody,
+                        color: AppColors.foreground,
                       ),
                     ),
                   ),
@@ -1126,9 +1127,9 @@ class _GymSummaryCard extends StatelessWidget {
                     child: Text(
                       l.myNoTrainer,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                   ),
@@ -1142,7 +1143,7 @@ class _GymSummaryCard extends StatelessWidget {
                     child: Text(
                       l.exFindTrainer,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1216,9 +1217,9 @@ class _GymSectionEmpty extends StatelessWidget {
           Text(
             l.myNoGymConnected,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: FigmaColors.textMuted,
+              color: AppColors.foreground,
             ),
           ),
           const SizedBox(height: 12),
@@ -1234,7 +1235,10 @@ class _GymSectionEmpty extends StatelessWidget {
             icon: const Icon(Icons.search, size: 16),
             label: Text(
               l.exFindGym,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -1289,10 +1293,7 @@ class _GymSectionError extends StatelessWidget {
           Text(
             l.myGymLoadFailed,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: FigmaColors.textMuted,
-            ),
+            style: const TextStyle(fontSize: 14, color: AppColors.foreground),
           ),
           const SizedBox(height: 12),
           TextButton(onPressed: onRetry, child: Text(l.actionRetry)),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
@@ -156,7 +157,7 @@ class _RecentConsultationSection extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: FigmaColors.ink,
                             ),
@@ -175,7 +176,7 @@ class _RecentConsultationSection extends StatelessWidget {
                           child: Text(
                             status,
                             style: const TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: FigmaColors.primary,
                             ),
@@ -191,8 +192,8 @@ class _RecentConsultationSection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: FigmaColors.textMuted,
+                        fontSize: 12.5,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -201,9 +202,9 @@ class _RecentConsultationSection extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textBody,
+                        color: AppColors.foreground,
                       ),
                     ),
                   ],
@@ -300,7 +301,7 @@ class _MyGymCard extends StatelessWidget {
                   Text(
                     l.exConnected,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
                     ),
@@ -339,9 +340,9 @@ class _MyGymCard extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w500,
-                              color: FigmaColors.textMuted,
+                              color: AppColors.mutedForeground,
                             ),
                           ),
                         ],
@@ -380,7 +381,7 @@ class _MyGymCard extends StatelessWidget {
                 child: Text(
                   l.exViewConsultationRequest,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -427,7 +428,7 @@ class _ReservationPanel extends StatelessWidget {
           Text(
             l.exAiSlotTitle,
             style: const TextStyle(
-              fontSize: 10.5,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: FigmaColors.primary,
             ),
@@ -438,9 +439,9 @@ class _ReservationPanel extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: FigmaColors.textMuted,
+              color: AppColors.mutedForeground,
             ),
           ),
           const SizedBox(height: 10),
@@ -487,7 +488,7 @@ class _ReservationPanel extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -524,12 +525,12 @@ class _RecommendedGymSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         gymsAsync.when(
-          loading: () => const _SectionLoading(height: 140),
+          loading: () => const _SectionLoading(height: 156),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
           data: (List<Gym> gyms) => gyms.isEmpty
               ? _EmptyRecommendation(message: l.exNoRecommendedGyms)
               : SizedBox(
-                  height: 140,
+                  height: 156,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: gyms.length,
@@ -570,7 +571,7 @@ class _GymRecommendationCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w800,
               color: FigmaColors.ink,
             ),
@@ -587,8 +588,8 @@ class _GymRecommendationCard extends StatelessWidget {
               Text(
                 '${gym.distanceKm.toStringAsFixed(1)}km',
                 style: const TextStyle(
-                  fontSize: 11,
-                  color: FigmaColors.textMuted,
+                  fontSize: 12.5,
+                  color: AppColors.mutedForeground,
                 ),
               ),
               const SizedBox(width: 10),
@@ -601,7 +602,7 @@ class _GymRecommendationCard extends StatelessWidget {
               Text(
                 gym.rating.toStringAsFixed(1),
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
                 ),
@@ -632,8 +633,8 @@ class _GymRecommendationCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10.5,
-                      color: FigmaColors.textMuted,
+                      fontSize: 12,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                 ),
@@ -740,7 +741,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
                   ),
@@ -752,8 +753,8 @@ class _TrainerRecommendationCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11,
-                    color: FigmaColors.textMuted,
+                    fontSize: 12.5,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -762,7 +763,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.primary,
                     height: 1.3,
@@ -830,7 +831,7 @@ class _SectionHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: FigmaColors.ink,
             ),
@@ -846,7 +847,10 @@ class _SectionHeader extends StatelessWidget {
             ),
             child: Text(
               actionLabel!,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
       ],
@@ -872,7 +876,7 @@ class _TagChip extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
           color: FigmaColors.primary,
         ),
@@ -917,7 +921,7 @@ class _SlotChip extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: selected ? Colors.white : FigmaColors.ink,
                 ),
@@ -925,11 +929,11 @@ class _SlotChip extends StatelessWidget {
               Text(
                 sub,
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: selected
                       ? Colors.white.withValues(alpha: 0.8)
-                      : FigmaColors.textMuted,
+                      : AppColors.mutedForeground,
                 ),
               ),
             ],
@@ -973,7 +977,7 @@ class _EmptyMyGym extends StatelessWidget {
             l.exNoConnectedGym,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -992,7 +996,7 @@ class _EmptyMyGym extends StatelessWidget {
             icon: const Icon(Icons.search, size: 17),
             label: Text(
               l.exFindGym,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1039,9 +1043,9 @@ class _SectionError extends StatelessWidget {
             l.exGymsLoadError,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: FigmaColors.textMuted,
+              color: AppColors.mutedForeground,
             ),
           ),
           const SizedBox(height: 10),
@@ -1075,9 +1079,9 @@ class _EmptyRecommendation extends StatelessWidget {
         message,
         textAlign: TextAlign.center,
         style: const TextStyle(
-          fontSize: 12.5,
+          fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: FigmaColors.textMuted,
+          color: AppColors.mutedForeground,
         ),
       ),
     );

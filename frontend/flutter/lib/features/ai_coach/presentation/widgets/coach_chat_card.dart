@@ -33,10 +33,7 @@ class CoachChatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final List<String> notes = <String>[
-      ?dietLine,
-      ?exerciseLine,
-    ];
+    final List<String> notes = <String>[?dietLine, ?exerciseLine];
 
     return AppCard(
       outlined: true,
@@ -95,7 +92,10 @@ class CoachChatCard extends StatelessWidget {
             )
           else
             for (int i = 0; i < notes.length; i++) ...<Widget>[
-              Text(notes[i], style: theme.textTheme.bodyMedium?.copyWith(height: 1.45)),
+              Text(
+                notes[i],
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+              ),
               if (i < notes.length - 1) const SizedBox(height: AppSpacing.xs),
             ],
           const SizedBox(height: AppSpacing.md),
@@ -155,7 +155,7 @@ class CoachChatCard extends StatelessWidget {
                         p,
                         style: const TextStyle(
                           color: AppColors.secondary,
-                          fontSize: 12,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

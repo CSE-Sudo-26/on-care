@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
@@ -162,9 +163,9 @@ class _GymDetails extends StatelessWidget {
               child: Text(
                 gym.address,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   height: 1.5,
-                  color: FigmaColors.textBody,
+                  color: AppColors.foreground,
                 ),
               ),
             ),
@@ -206,9 +207,9 @@ class _GymDetails extends StatelessWidget {
                 child: Text(
                   gym.phone!,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textBody,
+                    color: AppColors.foreground,
                   ),
                 ),
               ),
@@ -253,7 +254,7 @@ class _GymDetails extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w800,
                                     color: FigmaColors.ink,
                                   ),
@@ -265,8 +266,8 @@ class _GymDetails extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 11,
-                                      color: FigmaColors.textMuted,
+                                      fontSize: 12.5,
+                                      color: AppColors.mutedForeground,
                                     ),
                                   ),
                                 ],
@@ -348,8 +349,8 @@ class _MetricCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 10.5,
-                    color: FigmaColors.textMuted,
+                    fontSize: 12,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
                 Text(
@@ -357,7 +358,7 @@ class _MetricCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
                   ),
@@ -407,7 +408,7 @@ class _DetailSection extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: FigmaColors.ink,
                     ),
@@ -438,9 +439,9 @@ class _InfoLine extends StatelessWidget {
         child: Text(
           text,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             height: 1.4,
-            color: FigmaColors.textBody,
+            color: AppColors.foreground,
           ),
         ),
       ),
@@ -464,7 +465,7 @@ class _TagChip extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
           color: FigmaColors.primary,
         ),
@@ -497,10 +498,7 @@ class _StateMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: FigmaColors.textMuted,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
             if (onRetry != null) ...<Widget>[
               const SizedBox(height: 12),

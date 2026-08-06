@@ -74,7 +74,7 @@ class MealCard extends StatelessWidget {
                   Text(
                     '${f.calories} kcal',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: AppColors.foreground,
                     ),
                   ),
                 ],
@@ -129,7 +129,7 @@ class _Pill extends StatelessWidget {
         style: theme.textTheme.bodySmall?.copyWith(
           color: fg,
           fontWeight: FontWeight.w500,
-          fontSize: 11,
+          fontSize: 12.5,
         ),
       ),
     );

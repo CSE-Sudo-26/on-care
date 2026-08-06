@@ -188,7 +188,11 @@ class _CoachAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: size * 0.56),
+      child: Icon(
+        Icons.smart_toy_rounded,
+        color: Colors.white,
+        size: size * 0.56,
+      ),
     );
   }
 }
@@ -231,8 +235,9 @@ class _MessageBubble extends StatelessWidget {
     );
 
     final Widget column = Column(
-      crossAxisAlignment:
-          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isUser
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: <Widget>[
         bubble,
         if (!isUser && message.sources.isNotEmpty)
@@ -244,8 +249,9 @@ class _MessageBubble extends StatelessWidget {
     );
 
     final Widget row = Row(
-      mainAxisAlignment:
-          isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: isUser
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (!isUser) ...<Widget>[
@@ -295,7 +301,7 @@ class _SourceChips extends StatelessWidget {
                 Text(
                   s,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12.5,
                     color: AppColors.secondary,
                     fontWeight: FontWeight.w500,
                   ),
@@ -328,7 +334,10 @@ class _TypingDots extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                     )
-                    .animate(onPlay: (AnimationController c) => c.repeat(reverse: true))
+                    .animate(
+                      onPlay: (AnimationController c) =>
+                          c.repeat(reverse: true),
+                    )
                     .fade(
                       begin: 0.35,
                       end: 1,
@@ -374,7 +383,7 @@ class _PromptSuggestions extends StatelessWidget {
                     p,
                     style: const TextStyle(
                       color: AppColors.primary,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -475,10 +484,16 @@ class _SendButton extends StatelessWidget {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
                   ),
                 )
-              : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+              : const Icon(
+                  Icons.arrow_upward_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
         ),
       ),
     );
