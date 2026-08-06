@@ -1,6 +1,17 @@
 <div align="center">
 
-<img src="docs/assets/oncare-banner.svg" alt="On-Care" width="100%" />
+<img src="docs/assets/oncare-banner.png" alt="On-Care Banner" width="900"/>
+
+<br/><br/>
+
+
+# On-care <img src="docs/assets/oncare-logo-name.png" alt="On-Care Logo" width="150" align="left"/>
+
+***HealthMate AI: 불규칙한 생활 속 2030<br> 고혈압·당뇨 위험군 대상 트레이너 연계 식단 인식·코칭 플랫폼***
+
+<br/><br/>
+
+<!-- <img src="docs/assets/oncare-banner.svg" alt="On-Care" width="100%" />
 
 <h1>On-Care</h1>
 
@@ -8,7 +19,7 @@
 
 *HealthMate AI: 불규칙한 생활 속 2030 고혈압·당뇨 위험군을 위한 트레이너 연계 식단·운동 코칭 플랫폼*
 
-<br/>
+<br/> -->
 
 [![소개 페이지](https://img.shields.io/badge/INTRO_PAGE-소개_페이지-6B7280?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ewhasudo.zapto.org/)
 [![사용자 앱](https://img.shields.io/badge/APP-사용자-3eafdf?style=for-the-badge&logo=flutter&logoColor=white)](https://ewhasudo.zapto.org/frontend/#/dashboard)
