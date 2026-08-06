@@ -40,6 +40,9 @@ class CoachRoutine {
 
   /// `ai` (AI-suggested) or `trainer` (hand-assigned).
   final String source;
+
+  bool get isTrainerRecommended => source == 'trainer';
+  bool get isAiRecommended => source == 'ai';
 }
 
 /// Chat message viewpoint for the member: their own message vs the coach's.
