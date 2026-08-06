@@ -47,5 +47,12 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # `flutter analyze` 는 analysis_options.yaml 의 custom_lint 플러그인을
+      # 실행하지 않는다(분석 서버 경로에서만 동작). riverpod_lint 규칙이
+      # 여기서만 걸리므로 별도 단계로 돌린다 — 이 저장소의 analysis_options
+      # 주석도 `dart run custom_lint` 를 안내한다.
+      - name: Custom lint (riverpod_lint)
+        run: dart run custom_lint
+
       - name: Test
         run: flutter test
