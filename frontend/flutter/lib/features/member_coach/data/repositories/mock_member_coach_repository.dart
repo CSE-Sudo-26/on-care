@@ -34,6 +34,14 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       reason: '허리 부담 완화',
       source: 'trainer',
     ),
+    const CoachRoutine(
+      id: 'seed-r3',
+      name: '어깨 관절 보호 스트레칭',
+      minutes: 8,
+      type: '스트레칭',
+      reason: 'PT 피드백 반영 · 오른쪽 어깨 보호',
+      source: 'ai',
+    ),
   ];
 
   final List<CoachMessage> _chat = <CoachMessage>[

@@ -82,13 +82,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Diet'), findsAtLeastNWidgets(1));
 
-    await tester.tap(find.text('Exercise').first);
+    final exerciseDestination = find.ancestor(
+      of: find.byIcon(Icons.fitness_center_outlined),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(exerciseDestination);
     await tester.pumpAndSettle();
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
 
     await tester.tap(find.text('MY').first);
     await tester.pumpAndSettle();
     expect(find.text('MY'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('Monthly exercise status uses the daily bar chart', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('en'));
+
+    final exerciseDestination = find.ancestor(
+      of: find.byIcon(Icons.fitness_center_outlined),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(exerciseDestination);
+    await tester.pumpAndSettle();
+    final monthlyToggle = find.text('This month');
+    await tester.ensureVisible(monthlyToggle);
+    await tester.tap(monthlyToggle);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Korean locale localises the bottom-nav labels', (tester) async {

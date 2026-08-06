@@ -67,10 +67,9 @@ class _ExercisePageState extends State<ExercisePage> {
                   onChanged: (int i) => setState(() => _subTab = i),
                 ),
                 const SizedBox(height: 16),
-                if (_subTab == 0) ...<Widget>[
-                  const CoachCard(),
-                  const _RecordTab(),
-                ] else
+                if (_subTab == 0)
+                  const _RecordTab()
+                else
                   GymTab(
                     selectedSlot: _slot,
                     onSlot: (String s) =>
@@ -172,23 +171,13 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     return DateTime(n.year, n.month, n.day);
   }
 
-  void _toggleRoutine(int i) {
-    final List<bool> cur = ref.read(exerciseRoutineDoneProvider);
-    final List<bool> next = List<bool>.of(cur);
-    if (i >= 0 && i < next.length) next[i] = !next[i];
-    ref.read(exerciseRoutineDoneProvider.notifier).state = next;
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    // 저장소 주간 데이터에 오늘 체크한 AI 추천 운동을 더한 단일 소스. 주간 요약
-    // 카드·오늘 도넛·이번 주 차트가 모두 여기서 나오고, 홈 운동 카드도 같은
-    // provider 를 읽는다([0]=어깨 스트레칭 8분, [1]=인터벌 러닝 30분).
+    // 주간 요약 카드·오늘 도넛·이번 주 차트가 같은 provider를 읽는다.
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
       exerciseWeekViewProvider,
     );
-    final List<bool> routineDone = ref.watch(exerciseRoutineDoneProvider);
     // 주간 소모 목표는 서버(exercise_burn_goal)에서 온다. 홈 운동 카드도 같은
     // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 출처(대시보드 요약)와
     // 로딩 전 기본값 처리는 공용 provider 안에 있다.
@@ -326,19 +315,18 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               child: _ActivityStatus(week: week),
             ),
             const SizedBox(height: 20),
-            // 4) 오늘 완료한 PT 일지 (트레이너 연동)
+            // 4) 운동 현황에 이어 담당 트레이너와 직접 추천 운동을 확인한다.
+            const CoachCard(),
+            // 5) 오늘 완료한 PT 일지 (트레이너 연동)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: _PtLogCard(),
             ),
             const SizedBox(height: 20),
-            // 5) PT 맞춤 연계 AI 루틴
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _PtAiRoutineCard(
-                done: routineDone,
-                onToggle: _toggleRoutine,
-              ),
+            // 6) 건강 기록과 PT 피드백 기반 AI 맞춤 개인운동
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: AiRecommendedExerciseCard(),
             ),
           ],
         ],
@@ -752,18 +740,63 @@ class _ActivityStatusState extends State<_ActivityStatus> {
     ];
   }
 
-  _ChartPeriod _dataFor(AppLocalizations l, int period) {
+  _Bar _monthBar(double total, int day) {
+    final double strengthRatio = day % 3 == 0 ? 0.30 : 0.20;
+    return _Bar(
+      total * 0.55,
+      total * strengthRatio,
+      total * (0.45 - strengthRatio),
+    );
+  }
+
+  _ChartPeriod _dataFor(int period) {
     switch (period) {
-      case 2: // 이번 달 — weekly buckets
+      case 2: // 이번 달 — 레퍼런스처럼 일별 막대를 촘촘하게 표시한다.
+        const List<double> dailyTotals = <double>[
+          28,
+          46,
+          72,
+          78,
+          50,
+          82,
+          38,
+          96,
+          84,
+          64,
+          52,
+          56,
+          68,
+          48,
+          36,
+          30,
+          74,
+          86,
+          80,
+          92,
+          84,
+          58,
+          12,
+          24,
+          0,
+          16,
+          38,
+          66,
+          54,
+          76,
+          34,
+        ];
         return _ChartPeriod(
-          const <_Bar>[
-            _Bar(120, 40, 30),
-            _Bar(95, 60, 20),
-            _Bar(140, 45, 35),
-            _Bar(90, 55, 25),
-            _Bar(60, 40, 20),
+          <_Bar>[
+            for (int day = 1; day <= dailyTotals.length; day++)
+              _monthBar(dailyTotals[day - 1], day),
           ],
-          <String>[for (int w = 1; w <= 5; w++) l.exWeekNumber(w)],
+          <String>[
+            for (int day = 1; day <= dailyTotals.length; day++)
+              if (day == 1 || day % 3 == 1 || day == dailyTotals.length)
+                '$day'
+              else
+                '',
+          ],
           -1,
         );
       default: // 이번 주
@@ -828,7 +861,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         else
           Builder(
             builder: (BuildContext context) {
-              final _ChartPeriod data = _dataFor(l, _period);
+              final _ChartPeriod data = _dataFor(_period);
               return _ActivityChart(
                 bars: data.bars,
                 dayLabels: data.labels,
@@ -860,7 +893,6 @@ class _TodayDonut extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.primaryA(0.10)),
         boxShadow: kCardShadow,
       ),
       child: SizedBox(
@@ -1143,11 +1175,11 @@ class _ActivityChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: bars.length > 10 ? const Key('exerciseMonthlyDailyChart') : null,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.primaryA(0.10)),
         boxShadow: kCardShadow,
       ),
       child: Column(
@@ -1327,7 +1359,8 @@ class _StackedBarPainter extends CustomPainter {
     final double slot = chartW / bars.length;
     // Cap the bar to a fraction of the slot so bars never overlap on narrow
     // layouts or with many buckets.
-    final double barW = math.min(slot * 0.6, 40);
+    final bool isMonthly = bars.length > 10;
+    final double barW = math.min(slot * (isMonthly ? 0.55 : 0.6), 40);
     for (int i = 0; i < bars.length; i++) {
       final _Bar b = bars[i];
       final double cx = left + slot * i + slot / 2;
@@ -1350,7 +1383,7 @@ class _StackedBarPainter extends CustomPainter {
           barW,
           h,
           const Color(0xFFD4EEF8),
-          stretchTop ? 4 : 0,
+          topRadius: stretchTop ? 4 : 0,
         );
         yBottom -= h;
       }
@@ -1364,7 +1397,7 @@ class _StackedBarPainter extends CustomPainter {
           barW,
           h,
           const Color(0xFF1B6FA8),
-          strengthTop ? 4 : 0,
+          topRadius: strengthTop ? 4 : 0,
         );
         yBottom -= h;
       }
@@ -1379,12 +1412,20 @@ class _StackedBarPainter extends CustomPainter {
           h,
           // 유산소는 항상 동일한 브랜드 색(오늘 막대도 예외 없이).
           FigmaColors.primary,
-          cardioTop ? 4 : 0,
+          topRadius: cardioTop ? 4 : 0,
         );
         yBottom -= h;
       }
       if (b.cardio + b.strength + b.stretch == 0) {
-        _rrect(canvas, x, chartH - 3, barW, 3, const Color(0xFFEEF2F6), 1.5);
+        _rrect(
+          canvas,
+          x,
+          chartH - 3,
+          barW,
+          3,
+          const Color(0xFFEEF2F6),
+          topRadius: 1.5,
+        );
       }
       // day label
       final TextPainter tp = TextPainter(
@@ -1422,13 +1463,13 @@ class _StackedBarPainter extends CustomPainter {
     double y,
     double w,
     double h,
-    Color color,
-    double r,
-  ) {
+    Color color, {
+    required double topRadius,
+  }) {
     final RRect rr = RRect.fromRectAndCorners(
       Rect.fromLTWH(x, y, w, h),
-      topLeft: Radius.circular(r),
-      topRight: Radius.circular(r),
+      topLeft: Radius.circular(topRadius),
+      topRight: Radius.circular(topRadius),
     );
     c.drawRRect(rr, Paint()..color = color);
   }
@@ -1514,7 +1555,6 @@ class _PtLogCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.hairline),
         boxShadow: kCardShadow,
       ),
       child: Column(
@@ -1680,213 +1720,6 @@ class _MetaChip extends StatelessWidget {
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
               color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────── PT 맞춤 연계 AI 루틴 ──
-
-/// AI routine card whose two recommendations tie back to the coach's feedback
-/// (오른쪽 어깨 회전근개) and today's lunch (해물 짬뽕 나트륨).
-class _PtAiRoutineCard extends StatelessWidget {
-  const _PtAiRoutineCard({required this.done, required this.onToggle});
-
-  /// Completion state per recommendation ([0]=어깨 스트레칭, [1]=인터벌 러닝),
-  /// owned by [_RecordTab] so checking a routine updates the 운동 현황 graph.
-  final List<bool> done;
-  final ValueChanged<int> onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FigmaColors.primaryA(0.15)),
-        boxShadow: kCardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          // Title (with AI glyph) on the left, the "반영" badge on the right.
-          Row(
-            children: <Widget>[
-              const Icon(
-                Icons.auto_awesome,
-                size: 16,
-                color: FigmaColors.primary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                l.exAiRecommendedExercise,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
-                ),
-              ),
-              const Spacer(),
-              // 데모/시드 성격 문구라 이번 l10n 범위 밖(#367 Out of scope).
-              const AiPill(
-                '트레이너 피드백 + 식단 반영',
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _PtRoutineItem(
-            icon: Icons.self_improvement,
-            title: '어깨 관절 보호 스트레칭',
-            minutes: '8분',
-            reason: "⮕ 트레이너가 언급한 '오른쪽 어깨 회전근개' 케어",
-            done: done[0],
-            onToggle: () => onToggle(0),
-          ),
-          const SizedBox(height: 10),
-          _PtRoutineItem(
-            icon: Icons.directions_run,
-            title: '가벼운 인터벌 러닝',
-            minutes: '30분',
-            reason: "⮕ 점심 '해물 짬뽕' 나트륨 배출 & 250kcal 소모",
-            done: done[1],
-            onToggle: () => onToggle(1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PtRoutineItem extends StatelessWidget {
-  const _PtRoutineItem({
-    required this.icon,
-    required this.title,
-    required this.minutes,
-    required this.reason,
-    required this.done,
-    required this.onToggle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String minutes;
-  final String reason;
-  final bool done;
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: FigmaColors.statBg,
-        borderRadius: BorderRadius.circular(14),
-        border: done ? Border.all(color: FigmaColors.primaryA(0.35)) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              // Done / not-done check toggle.
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onToggle,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: done ? FigmaColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(
-                      color: done
-                          ? FigmaColors.primary
-                          : FigmaColors.primaryA(0.35),
-                      width: 2,
-                    ),
-                  ),
-                  child: done
-                      ? const Icon(Icons.check, size: 13, color: Colors.white)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 18, color: FigmaColors.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: done ? FigmaColors.textFaint : FigmaColors.ink,
-                    decoration: done ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: FigmaColors.primaryA(0.10),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.schedule,
-                      size: 11,
-                      color: FigmaColors.primary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      minutes,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: FigmaColors.primaryA(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: FigmaColors.primaryA(0.14)),
-            ),
-            child: Text(
-              reason,
-              style: const TextStyle(
-                fontSize: 11,
-                height: 1.4,
-                fontWeight: FontWeight.w400,
-                color: FigmaColors.primary,
-              ),
             ),
           ),
         ],
