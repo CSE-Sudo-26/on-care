@@ -697,6 +697,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTrainerAffiliation => '소속 헬스장';
 
   @override
+  String get exTrainerIntroSection => '트레이너 소개';
+
+  @override
+  String exTrainerCareer(String career) {
+    return '경력 $career';
+  }
+
+  @override
+  String get exTrainerCertifications => '자격증 · 인증';
+
+  @override
   String get exTrainerRecommendationReason => '내 건강 목표 달성에 잘 맞는 트레이너예요';
 
   @override

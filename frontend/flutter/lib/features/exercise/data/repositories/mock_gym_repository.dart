@@ -26,6 +26,15 @@ class MockGymRepository implements GymRepository {
     tags: <String>['다이어트', '재활운동'],
     trainerName: '김트레이너',
     trainerRole: '퍼스널 트레이너',
+    trainerCareer: '7년',
+    trainerIntro:
+        '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 '
+        '안전하고 효과적인 운동을 도와드려요.',
+    trainerCertifications: <String>[
+      '생활스포츠지도사 2급',
+      '퍼스널트레이닝 CPT',
+      '스포츠 영양사',
+    ],
     weekdayHours: '06:00 - 23:00',
     weekendHours: '08:00 - 20:00',
     phone: '02-1234-5678',
@@ -52,7 +61,12 @@ class MockGymRepository implements GymRepository {
     rating: 4.5,
     tags: <String>['근력운동', '만성질환 관리'],
     trainerName: '강트레이너',
+    trainerRole: '퍼스널 트레이너',
     trainerReason: '교대근무 스케줄 케어 경험이 풍부해요',
+    trainerCareer: '5년',
+    trainerIntro: '불규칙한 근무 일정에 맞춘 운동 설계를 주로 합니다. 짧은 시간에 '
+        '집중도를 높이는 근력 프로그램을 준비해 드려요.',
+    trainerCertifications: <String>['건강운동관리사', '퍼스널트레이닝 CPT'],
     weekdayHours: '05:30 - 24:00',
     weekendHours: '07:00 - 22:00',
     phone: '02-2345-6789',
@@ -66,7 +80,12 @@ class MockGymRepository implements GymRepository {
     rating: 4.8,
     tags: <String>['PT', '식단 상담'],
     trainerName: '이트레이너',
+    trainerRole: '퍼스널 트레이너',
     trainerReason: '간단한 운동 루틴에 특화되어 있어요',
+    trainerCareer: '9년',
+    trainerIntro: '운동을 처음 시작하는 분을 오래 지도했습니다. 식단 상담을 함께 '
+        '진행해 생활 습관부터 차근차근 바꿔 드려요.',
+    trainerCertifications: <String>['생활스포츠지도사 2급', '스포츠 영양사', '재활 트레이닝 NASM-CES'],
     weekdayHours: '06:00 - 22:00',
     weekendHours: '09:00 - 18:00',
     phone: '02-3456-7890',

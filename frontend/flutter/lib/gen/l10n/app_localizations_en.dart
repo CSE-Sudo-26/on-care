@@ -705,6 +705,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTrainerAffiliation => 'Gym';
 
   @override
+  String get exTrainerIntroSection => 'About the trainer';
+
+  @override
+  String exTrainerCareer(String career) {
+    return '$career of experience';
+  }
+
+  @override
+  String get exTrainerCertifications => 'Certifications';
+
+  @override
   String get exTrainerRecommendationReason =>
       'A great fit for reaching my health goals';
 

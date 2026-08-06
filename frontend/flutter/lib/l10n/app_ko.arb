@@ -236,6 +236,17 @@
   "exNoRecommendedGyms": "추천할 헬스장이 아직 없어요.",
   "exNoRecommendedTrainers": "추천할 트레이너가 아직 없어요.",
   "exTrainerAffiliation": "소속 헬스장",
+  "exTrainerIntroSection": "트레이너 소개",
+  "exTrainerCareer": "경력 {career}",
+  "@exTrainerCareer": {
+    "placeholders": {
+      "career": {
+        "type": "String",
+        "example": "7년"
+      }
+    }
+  },
+  "exTrainerCertifications": "자격증 · 인증",
   "exTrainerRecommendationReason": "내 건강 목표 달성에 잘 맞는 트레이너예요",
   "exNearbyGymsMapLabel": "내 주변 헬스장",
   "exWeekSummary": "이번 주 운동 요약",

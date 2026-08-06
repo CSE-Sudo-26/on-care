@@ -1388,6 +1388,24 @@ abstract class AppLocalizations {
   /// **'Gym'**
   String get exTrainerAffiliation;
 
+  /// No description provided for @exTrainerIntroSection.
+  ///
+  /// In en, this message translates to:
+  /// **'About the trainer'**
+  String get exTrainerIntroSection;
+
+  /// No description provided for @exTrainerCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'{career} of experience'**
+  String exTrainerCareer(String career);
+
+  /// No description provided for @exTrainerCertifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Certifications'**
+  String get exTrainerCertifications;
+
   /// No description provided for @exTrainerRecommendationReason.
   ///
   /// In en, this message translates to:

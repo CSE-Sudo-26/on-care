@@ -103,6 +103,12 @@ class _TrainerDetails extends StatelessWidget {
   final bool hasPending;
   final bool isMyTrainer;
 
+  /// 소개·경력·자격증 중 하나라도 있으면 프로필 섹션을 그린다.
+  bool get _hasProfile =>
+      (gym.trainerIntro?.isNotEmpty ?? false) ||
+      (gym.trainerCareer?.isNotEmpty ?? false) ||
+      gym.trainerCertifications.isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -154,6 +160,73 @@ class _TrainerDetails extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 22),
+            // 트레이너 앱 프로필(소개·경력·자격증)과 같은 값을 보여준다.
+            // 세 항목이 모두 비면 섹션 자체를 숨긴다.
+            if (_hasProfile) ...<Widget>[
+              _DetailSection(
+                icon: Icons.badge_outlined,
+                title: l.exTrainerIntroSection,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (gym.trainerIntro?.isNotEmpty ?? false)
+                      Text(
+                        gym.trainerIntro!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.5,
+                          color: FigmaColors.textBody,
+                        ),
+                      ),
+                    if (gym.trainerCareer?.isNotEmpty ?? false) ...<Widget>[
+                      if (gym.trainerIntro?.isNotEmpty ?? false)
+                        const SizedBox(height: 12),
+                      Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.workspace_premium_outlined,
+                            size: 15,
+                            color: FigmaColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l.exTrainerCareer(gym.trainerCareer!),
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (gym.trainerCertifications.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 14),
+                      Text(
+                        l.exTrainerCertifications,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: <Widget>[
+                          for (final String cert in gym.trainerCertifications)
+                            _CertChip(label: cert),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             _DetailSection(
               icon: Icons.auto_awesome_outlined,
               title: l.exRecommendationReason,
@@ -274,6 +347,32 @@ class _TrainerDetails extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 자격증 한 건을 나타내는 칩. 헬스장 태그 칩과 같은 톤을 쓴다.
+class _CertChip extends StatelessWidget {
+  const _CertChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: FigmaColors.primaryA(0.09),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: FigmaColors.primary,
         ),
       ),
     );

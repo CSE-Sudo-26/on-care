@@ -353,6 +353,17 @@
   "exNoRecommendedGyms": "No gym recommendations yet.",
   "exNoRecommendedTrainers": "No trainer recommendations yet.",
   "exTrainerAffiliation": "Gym",
+  "exTrainerIntroSection": "About the trainer",
+  "exTrainerCareer": "{career} of experience",
+  "@exTrainerCareer": {
+    "placeholders": {
+      "career": {
+        "type": "String",
+        "example": "7 years"
+      }
+    }
+  },
+  "exTrainerCertifications": "Certifications",
   "exTrainerRecommendationReason": "A great fit for reaching my health goals",
   "exNearbyGymsMapLabel": "Gyms near me",
   "exWeekSummary": "This Week's Summary",

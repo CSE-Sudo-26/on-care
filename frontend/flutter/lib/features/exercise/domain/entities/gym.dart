@@ -12,6 +12,9 @@ class Gym {
     this.trainerName,
     this.trainerRole,
     this.trainerReason,
+    this.trainerCareer,
+    this.trainerIntro,
+    this.trainerCertifications = const <String>[],
     this.weekdayHours,
     this.weekendHours,
     this.phone,
@@ -29,6 +32,18 @@ class Gym {
   /// Per-trainer recommendation reason shown on the 추천 트레이너 card/detail.
   /// Null falls back to the generic localized reason.
   final String? trainerReason;
+
+  /// Years of experience as free text (e.g. "7년"), mirroring the trainer
+  /// app's `TrainerProfile.career`. Null hides the row.
+  final String? trainerCareer;
+
+  /// Self-introduction shown on the trainer detail page, mirroring the
+  /// trainer app's `TrainerProfile.intro`. Null hides the section.
+  final String? trainerIntro;
+
+  /// Licences and certifications, mirroring the trainer app's
+  /// `TrainerProfile.certifications`. Empty hides the section.
+  final List<String> trainerCertifications;
   final String? weekdayHours;
   final String? weekendHours;
   final String? phone;
