@@ -1024,7 +1024,7 @@ class _ExerciseCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (showCharts) const SizedBox(width: 14),
+              if (showCharts) const SizedBox(width: 20),
               if (showCharts)
                 Expanded(
                   flex: 6,
@@ -1126,71 +1126,63 @@ class _ExerciseStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: FigmaColors.iconTint,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              // 아이콘은 3지표 모두 브랜드 블루로 통일.
-              child: Icon(icon, size: 16, color: FigmaColors.primary),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                // 라벨 색은 기존 지표 타일과 동일하게 유지(아이콘만 블루로 통일).
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: FigmaColors.textMuted,
-                ),
-              ),
-            ),
-          ],
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: FigmaColors.iconTint,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(icon, size: 16, color: FigmaColors.primary),
         ),
-        const SizedBox(height: 6),
-        // scaleDown so "2,239 /1,500kcal" never clips in the narrow column.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                value,
-                maxLines: 1,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
-                  letterSpacing: -0.5,
-                  height: 1,
-                ),
-              ),
-              if (goal != null)
-                Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
-              else
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
                 Text(
-                  ' $unit',
+                  value,
+                  maxLines: 1,
                   style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.textMuted,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                    letterSpacing: -0.5,
+                    height: 1,
                   ),
                 ),
-            ],
+                if (goal != null)
+                  Text(' /$goal$unit', maxLines: 1, style: _kGoalSuffix)
+                else
+                  Text(
+                    ' $unit',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: FigmaColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
