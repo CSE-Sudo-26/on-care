@@ -24,11 +24,15 @@ _PROMPT = """당신은 전문 영양사입니다. 이 음식 사진을 분석해
 
 {
   "foods": [
-    {"name":"음식명(한국어)","calories":정수kcal,"carbs_g":탄수화물g,"protein_g":단백질g,"fat_g":지방g,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
+    {"name":"음식명(한국어)","amount_g":추정섭취량g,"calories":정수kcal,"carbs_g":탄수화물g,"protein_g":단백질g,"fat_g":지방g,"sodium_mg":정수mg,"sugar_g":정수g,"confidence":0.0~1.0}
   ],
   "coach_comment": "고혈압(DASH) 관점 식단평. 나트륨 높은 음식을 짚고 개선 제안을 2~3문장 한국어로."
 }
-음식이 여러 개면 foods 에 모두. 모르는 값은 null. 나트륨·당류를 신중히 추정하세요."""
+음식이 여러 개면 foods 에 모두. 모르는 값은 null.
+
+amount_g 는 **사진에 실제로 담긴 양**을 그램으로 추정하세요(그릇 크기·조각 수를
+근거로). 공공 영양 DB 가 100g 당 값을 갖고 있어 이 값으로 환산합니다 — 영양
+수치보다 이쪽이 더 중요합니다. 나트륨·당류도 함께 신중히 추정하세요."""
 
 
 class LiteLLMVisionRecognizer(FoodRecognizer):

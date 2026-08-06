@@ -1,45 +1,51 @@
-"""공공 식품영양성분(음식) 표준데이터 → `app/data/food_nutrients_public.csv` 생성.
+"""공공 식품영양성분 표준데이터 → `app/data/food_nutrients_public.csv` 생성.
 
-원본: 공공데이터포털 "전국통합식품영양성분정보(음식)표준데이터" CSV (cp949, 52컬럼).
+원본(공공데이터포털 / 식약처):
+  data/raw/음식.csv           전국통합식품영양성분정보(음식)          19,495행
+  data/raw/가공식품.csv        식품의약품안전처 통합식품영양성분(가공식품) 306,293행
+  data/raw/원재료성식품.csv     전국통합식품영양성분정보(원재료성식품)      3,704행
 
 사용법:
-    python -m scripts.import_food_nutrients \\
-        data/raw/전국통합식품영양성분정보_음식_표준데이터.csv
+    python -m scripts.import_food_nutrients            # data/raw 전체
+    python -m scripts.import_food_nutrients --only 음식
 
-원본 CSV(5.9MB)는 저장소에 넣지 않는다(`backend/data/raw/` 는 gitignore).
-이 스크립트가 만든 집계본만 커밋해, CI·팀원·배포가 같은 데이터를 쓴다.
+원본(총 130MB)은 저장소에 넣지 않는다(`backend/data/raw/` 는 gitignore).
+이 스크립트가 만든 집계본만 커밋해 CI·팀원·배포가 같은 데이터를 쓴다.
 
-## 왜 그냥 넣지 않는가
+## 값은 100g 기준으로 넣는다
 
-**1) 대표식품 단위로 집계한다.**
-원본의 `식품명` 은 프랜차이즈 개별 상품이다(`피자_점보스테이크불갈비피자 (L)`).
-인식기는 사진을 보고 그냥 "피자" 라고 하므로, 상품명 19,495건을 그대로 넣으면
-질의 "피자" 가 수천 개 이름의 부분이 되어 매칭기 3단계에서 모호 판정 → 폴백한다.
-데이터를 잔뜩 넣고도 흔한 음식이 하나도 안 잡힌다. `대표식품명`(1,178종)이
-인식기가 말하는 층이다.
+원본은 **전 데이터셋이 100% `100g`/`100ml` 기준**이다. 예전에는 이를
+`식품중량` 으로 1인분 환산해서 넣었는데, 그게 문제의 근원이었다.
 
-**2) 프랜차이즈 행을 제외한다.**
-`식품중량` 이 프랜차이즈에서는 "판매 단위" 다 — 라지 피자 1,640g. 그대로
-1인분으로 환산하면 피자 한 조각을 찍은 사용자에게 2,092kcal·나트륨 3,458mg 을
-붙인다. 제외하면 200g·506kcal 로 실제 1인분이 된다. 제외해도 대표식품 종 수는
-1,249 → 1,178 로 거의 줄지 않는다.
+`식품중량` 은 "판매 포장 단위" 다 — 라지 피자 1,640g, 우유 1L 팩. 환산하면
+피자 한 조각을 찍은 사용자에게 2,092kcal 이 붙는다. 실제로 1인분 환산 후
+분산을 재보면 대표식품 안에서 3사분위가 중앙값의 3~5배까지 벌어졌다.
 
-**3) 100g 기준을 1인분으로 환산한다.**
-원본은 전부 `영양성분함량기준량` 이 100g/100ml 다. 이 테이블은 1인분 기준이라
-`식품중량` 으로 환산해야 한다. 환산을 빠뜨리면 값이 통째로 어긋나는데 아무
-오류도 나지 않는다.
+같은 항목을 **100g 기준 그대로** 재보면:
 
-**4) 중앙값으로 모은다.**
-같은 대표식품에 여러 행이 있고(김치찌개 34건) 편차가 크다. 평균은 이상치에
-끌려가므로 중앙값을 쓴다.
+    피자    n=4692   232 / 252 / 274 kcal/100g   3Q÷중앙 1.09
+    케이크  n= 657   271 / 307 / 352             3Q÷중앙 1.15
+    김치찌개 n=  34    37 /  42 /  48             3Q÷중앙 1.16
 
-## 기존 큐레이션 40종과의 관계
+분산은 음식이 아니라 포장 단위에 있었다. 100g 기준이면 프랜차이즈 4,692건도
+서로 ±10% 안에서 일치한다. 그래서:
 
-이 파일은 `food_nutrients_seed.py`(손으로 정리한 40종)를 **대체하지 않는다**.
-적재 시 큐레이션이 먼저 들어가고, 여기서 겹치는 이름은 건너뛴다. 큐레이션 값은
-고혈압·당뇨 관점에서 따로 검증한 것이라 공식 중앙값보다 우선한다 — 예를 들어
-라면 나트륨이 큐레이션 1,800mg vs 공식 중앙값 452mg 로 크게 다르다(공식 쪽은
-급식 라면이 섞인 결과로 보인다).
+  - **환산하지 않는다** — 원본 형태 그대로라 손실도 추측도 없다
+  - **프랜차이즈를 제외할 이유가 없다** — 포장 크기가 값에 영향을 주지 않는다
+  - **`식품중량` 이 없는 데이터셋(원재료성식품)도 쓸 수 있다**
+
+양(g)은 사진에서 인식기가 추정한다(`RecognizedFood.amount_g`). 밀도는 공공
+DB 가, 양은 비전 모델이 대는 역할 분담이다.
+
+## 대표식품 단위로 모으는 이유
+
+원본 `식품명` 은 개별 상품이다(`피자_점보스테이크불갈비피자 (L)`). 인식기는
+"피자" 라고만 하므로 상품명을 그대로 넣으면 질의가 수천 개 이름의 부분이 되어
+매칭기 3단계에서 모호 판정 → 폴백한다. 데이터를 잔뜩 넣고도 흔한 음식이
+안 잡힌다. `대표식품명` 이 인식기가 말하는 층이다.
+
+같은 대표식품에 여러 행이 있고 편차가 있으므로 **중앙값**으로 모은다(평균은
+이상치에 끌려간다).
 """
 from __future__ import annotations
 
@@ -51,11 +57,14 @@ import re
 import statistics
 import sys
 
-# 판매 단위(라지 피자 한 판 등)라 1인분 환산이 성립하지 않는다.
+# 1인분 힌트로만 쓴다(값 환산에는 쓰지 않는다). 프랜차이즈 포장은 판매 단위라
+# 1인분 대표값으로 부적절해 힌트 계산에서만 제외한다.
 _FRANCHISE_PREFIX = "외식(프랜차이즈"
 
-# "300g", "350ml", "201.7" 모두 앞쪽 숫자를 쓴다(단위는 기준량과 같이 움직인다).
+# "300g", "350ml", "201.7" 모두 앞쪽 숫자를 쓴다.
 _LEADING_NUMBER = re.compile(r"([\d.]+)")
+
+_SOURCES = ("음식", "가공식품", "원재료성식품")
 
 _OUT_COLUMNS = [
     "name",
@@ -68,11 +77,32 @@ _OUT_COLUMNS = [
     "protein_g",
     "fat_g",
     "sample_count",
+    "source_dataset",
 ]
 
 
+def _read(path: pathlib.Path) -> list[dict[str, str]]:
+    raw = path.read_bytes()
+    for encoding in ("utf-8-sig", "cp949", "utf-8"):
+        try:
+            return list(csv.DictReader(io.StringIO(raw.decode(encoding))))
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f"인코딩을 판별하지 못했습니다: {path}")
+
+
+def _number(raw: str) -> float | None:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
 def _weight_g(raw: str) -> float | None:
-    """`식품중량` → 그램 수. 파싱 불가·0 이하는 None."""
+    """`식품중량` → 그램 수. 1인분 힌트로만 쓴다."""
     match = _LEADING_NUMBER.search(raw or "")
     if not match:
         return None
@@ -80,74 +110,69 @@ def _weight_g(raw: str) -> float | None:
         value = float(match.group(1))
     except ValueError:
         return None
-    return value if value > 0 else None
-
-
-def _per_serving(row: dict[str, str], column: str, weight: float) -> float | None:
-    """100g 기준 값을 1인분(=식품중량)으로 환산. 빈 칸은 None."""
-    raw = (row.get(column) or "").strip()
-    if not raw:
-        return None
-    try:
-        return float(raw) * weight / 100.0
-    except ValueError:
-        return None
+    # 5kg 넘는 값은 대형 포장(선물세트 등)이라 1인분 힌트가 못 된다.
+    return value if 0 < value <= 5000 else None
 
 
 def _median(values: list[float]) -> float | None:
     return statistics.median(values) if values else None
 
 
-def aggregate(rows: list[dict[str, str]]) -> list[dict[str, object]]:
-    """원본 행 → 대표식품 단위 1인분 집계."""
+def aggregate(rows: list[dict[str, str]], dataset: str) -> list[dict[str, object]]:
+    """원본 행 → 대표식품 단위 **100g 기준** 집계."""
     groups: dict[str, list[dict[str, str]]] = {}
     for row in rows:
-        if row.get("식품기원명", "").startswith(_FRANCHISE_PREFIX):
-            continue
         name = (row.get("대표식품명") or "").strip()
-        if not name:
-            continue
-        groups.setdefault(name, []).append(row)
+        if name:
+            groups.setdefault(name, []).append(row)
 
     out: list[dict[str, object]] = []
     for name, group in sorted(groups.items()):
-        weights = [(r, _weight_g(r.get("식품중량", ""))) for r in group]
-        usable = [(r, w) for r, w in weights if w is not None]
-        if not usable:
-            continue
 
         def med(column: str) -> float | None:
             return _median(
-                [
-                    v
-                    for v in (_per_serving(r, column, w) for r, w in usable)
-                    if v is not None
-                ]
+                [v for v in (_number(r.get(column, "")) for r in group) if v is not None]
             )
 
         calories = med("에너지(kcal)")
         if calories is None:
-            # 에너지조차 없으면 보정 값으로 쓸 수 없다.
+            # 열량조차 없으면 보정 값으로 쓸 수 없다.
             continue
+
+        # 1인분 힌트: 인식기가 양을 못 줬을 때만 쓰는 폴백. 프랜차이즈 포장은
+        # 판매 단위라 제외하고, 없으면 비워 둔다(추측하지 않는다).
+        serving_candidates = [
+            w
+            for w in (
+                _weight_g(r.get("식품중량", ""))
+                for r in group
+                if not (r.get("식품기원명") or "").startswith(_FRANCHISE_PREFIX)
+            )
+            if w is not None
+        ]
+        serving = _median(serving_candidates)
 
         out.append(
             {
                 "name": name,
-                # 대분류는 그룹 안에서 갈릴 수 있어 최빈값을 쓴다.
-                "category": statistics.mode(
-                    [(r.get("식품대분류명") or "").strip() for r, _ in usable]
-                ),
-                "serving_size_g": round(_median([w for _, w in usable]) or 0, 1),
+                "category": _mode([(r.get("식품대분류명") or "").strip() for r in group]),
+                "serving_size_g": None if serving is None else round(serving, 1),
                 "calories": round(calories, 1),
                 "sodium_mg": _round_or_none(med("나트륨(mg)"), 1),
                 "sugar_g": _round_or_none(med("당류(g)"), 2),
                 "carbs_g": _round_or_none(med("탄수화물(g)"), 2),
                 "protein_g": _round_or_none(med("단백질(g)"), 2),
                 "fat_g": _round_or_none(med("지방(g)"), 2),
-                "sample_count": len(usable),
+                "sample_count": len(group),
+                "source_dataset": dataset,
             }
         )
     return out
+
+
+def _mode(values: list[str]) -> str:
+    values = [v for v in values if v]
+    return statistics.mode(values) if values else ""
 
 
 def _round_or_none(value: float | None, digits: int) -> float | None:
@@ -156,32 +181,42 @@ def _round_or_none(value: float | None, digits: int) -> float | None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=pathlib.Path, help="원본 CSV 경로")
+    parser.add_argument(
+        "--raw-dir", type=pathlib.Path, default=pathlib.Path("data/raw")
+    )
     parser.add_argument(
         "--out",
         type=pathlib.Path,
         default=pathlib.Path("app/data/food_nutrients_public.csv"),
-        help="생성할 집계 CSV 경로",
     )
-    parser.add_argument("--encoding", default="cp949", help="원본 인코딩")
+    parser.add_argument("--only", choices=_SOURCES, help="한 데이터셋만 처리")
     args = parser.parse_args(argv)
 
-    if not args.source.exists():
-        print(f"원본을 찾을 수 없습니다: {args.source}", file=sys.stderr)
-        return 1
-
-    text = args.source.read_bytes().decode(args.encoding)
-    rows = list(csv.DictReader(io.StringIO(text)))
-    aggregated = aggregate(rows)
+    wanted = (args.only,) if args.only else _SOURCES
+    merged: dict[str, dict[str, object]] = {}
+    for dataset in wanted:
+        path = args.raw_dir / f"{dataset}.csv"
+        if not path.exists():
+            print(f"건너뜀(파일 없음): {path}", file=sys.stderr)
+            continue
+        rows = _read(path)
+        aggregated = aggregate(rows, dataset)
+        # 앞선 데이터셋이 우선한다(음식 > 가공식품 > 원재료성식품). 사용자가
+        # 사진으로 찍는 것에 가까운 순서다.
+        added = 0
+        for item in aggregated:
+            if item["name"] not in merged:
+                merged[item["name"]] = item
+                added += 1
+        print(f"{dataset}: {len(rows)}행 → 대표식품 {len(aggregated)}종 (신규 {added})")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=_OUT_COLUMNS)
         writer.writeheader()
-        writer.writerows(aggregated)
+        writer.writerows(merged[name] for name in sorted(merged))
 
-    print(f"원본 {len(rows)}행 → 대표식품 {len(aggregated)}종")
-    print(f"기록: {args.out}")
+    print(f"합계 {len(merged)}종 → {args.out}")
     return 0
 
 

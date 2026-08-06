@@ -1,9 +1,25 @@
 """인식 결과(DietAnalysis)를 공공 식품영양성분 DB 값으로 보강.
 
 각 음식을 food_nutrients 에 매칭해:
-  - 매칭 O → DB 값으로 교체. 인식기 탄단지가 남으면 source="mixed"
-  - 매칭 X → LLM 추정치 유지, source="estimate"
+  - 매칭 O + 양(g) 확보 → DB 밀도 × 양 으로 교체. 인식기 탄단지가 남으면 "mixed"
+  - 매칭 O + 양 없음    → 교체하지 않고 추정치 유지("estimate")
+  - 매칭 X              → LLM 추정치 유지("estimate")
 그 뒤 합계를 재계산한다. 엔진(gemini/yolo)과 무관하게 동작.
+
+## 왜 양(g)이 필요한가
+
+`food_nutrients` 값은 **100g 기준**이다. 원본 공공데이터가 전부 그 형태이고,
+포장 단위(라지 피자 1,640g, 우유 1L 팩)로 1인분 환산하면 대표값이 3~5배까지
+튀기 때문이다. 100g 기준이면 프랜차이즈 피자 4,692건도 서로 ±10% 안에 든다.
+
+그래서 역할을 나눈다 — **밀도는 DB, 양은 사진.** 비전 모델은 "얼마나 있나" 는
+잘 보지만 100g 당 나트륨은 모른다.
+
+양을 못 얻었을 때 임의로 1인분을 가정하지는 않는다. 틀린 양으로 환산한 값은
+`source="db"` 로 표시돼 사용자에게 "공공 DB 근거" 라는 더 높은 신뢰 신호를
+주므로, 추정치를 그대로 두는 편이 낫다(matcher 의 폴백 원칙과 같다).
+다만 `serving_size_g` 가 **알려진** 항목에 한해 그 값을 폴백으로 쓴다 —
+큐레이션 40종과 음식 데이터셋처럼 1회 섭취량이 실제로 확인된 경우다.
 """
 from __future__ import annotations
 
@@ -11,8 +27,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.models import FoodNutrient
-from app.schemas.diet import DietAnalysis
+from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.services.nutrition.matcher import match_in_rows
+
+
+def _grams(food: RecognizedFood, match: FoodNutrient) -> float | None:
+    """환산에 쓸 양(g). 인식기 추정이 우선, 없으면 알려진 1회 섭취량."""
+    if food.amount_g and food.amount_g > 0:
+        return float(food.amount_g)
+    serving = match.serving_size_g
+    return float(serving) if serving and serving > 0 else None
 
 
 def enrich_analysis(db: Session, analysis: DietAnalysis, enabled: bool = True) -> DietAnalysis:
@@ -28,23 +52,25 @@ def enrich_analysis(db: Session, analysis: DietAnalysis, enabled: bool = True) -
     rows = db.scalars(select(FoodNutrient)).all()
     for food in analysis.foods:
         match = match_in_rows(rows, food.name)
-        if match is not None:
-            # 칼로리·나트륨은 계약상 정수라 반올림이 맞다. 당류만 소수다
-            # (#296) — 여기서 int 로 깎으면 공공 DB 가 실데이터(8.5g 등)로
-            # 채워지는 순간 컬럼·스키마·클라이언트까지 소수로 통일해 둔 것이
-            # 이 한 줄에서 되돌려진다.
-            food.calories = int(round(match.calories or 0))
-            food.sodium_mg = int(round(match.sodium_mg or 0))
-            food.sugar_g = float(match.sugar_g or 0)
-            kept_recognizer_value = False
-            for field in ("carbs_g", "protein_g", "fat_g"):
-                db_value = getattr(match, field)
-                if db_value is not None:
-                    setattr(food, field, float(db_value))
-                elif getattr(food, field) is not None:
-                    kept_recognizer_value = True
-            food.source = "mixed" if kept_recognizer_value else "db"
-        else:
+        grams = _grams(food, match) if match is not None else None
+        if match is None or grams is None:
             food.source = "estimate"
+            continue
+
+        scale = grams / 100.0
+        # 칼로리·나트륨은 계약상 정수라 반올림이 맞다. 당류만 소수다(#296) —
+        # 여기서 int 로 깎으면 컬럼·스키마·클라이언트까지 소수로 통일해 둔
+        # 것이 이 한 줄에서 되돌려진다.
+        food.calories = int(round((match.calories or 0) * scale))
+        food.sodium_mg = int(round((match.sodium_mg or 0) * scale))
+        food.sugar_g = float((match.sugar_g or 0) * scale)
+        kept_recognizer_value = False
+        for field in ("carbs_g", "protein_g", "fat_g"):
+            db_value = getattr(match, field)
+            if db_value is not None:
+                setattr(food, field, float(db_value) * scale)
+            elif getattr(food, field) is not None:
+                kept_recognizer_value = True
+        food.source = "mixed" if kept_recognizer_value else "db"
 
     return analysis.compute_totals()

@@ -46,7 +46,8 @@ def test_food_nutrients_seeded_and_lookup(db_session):
 
     m = match_food(db_session, "김치찌개")
     assert m is not None
-    assert m.sodium_mg > 500  # 시드의 신뢰 나트륨 값
+    # 값은 100g 기준이다(큐레이션 1,200mg/400g → 300). 1인분 절대값이 아니다.
+    assert 100 < m.sodium_mg < 500
     # 서술형 이름도 매칭
     assert match_food(db_session, "오늘 저녁 김치찌개").name_norm == "김치찌개"
 
@@ -70,44 +71,6 @@ def test_enrich_overrides_matched_keeps_unmatched(db_session):
     assert analysis.total_calories == matched.calories + unmatched.calories
 
 
-def test_enrich_keeps_fractional_sugar_from_the_public_db(db_session):
-    """#296 회귀: 보정 단계가 당류를 int 로 깎으면 안 된다.
-
-    컬럼·스키마·클라이언트를 전부 소수로 통일했는데(#362, #368) 보정이
-    `int(round(...))` 로 되돌리고 있었다. 시드가 마침 정수뿐이라 드러나지
-    않았을 뿐, 식약처 실데이터는 8.5g 같은 소수가 정상이다.
-    """
-    from app.models.models import FoodNutrient
-    from app.schemas.diet import DietAnalysis, RecognizedFood
-    from app.services.nutrition.enrich import enrich_analysis
-    from app.services.nutrition.matcher import normalize
-
-    db_session.add(
-        FoodNutrient(
-            name="소수당류식품",
-            name_norm=normalize("소수당류식품"),
-            calories=100,
-            sodium_mg=10,
-            sugar_g=8.5,
-        )
-    )
-    db_session.commit()
-
-    analysis = DietAnalysis(
-        engine="gemini",
-        foods=[RecognizedFood(name="소수당류식품", calories=1, sodium_mg=1, sugar_g=1)],
-    )
-    enrich_analysis(db_session, analysis)
-
-    food = analysis.foods[0]
-    assert food.source == "db"
-    # 예전에는 round(8.5) → 8 (은행가 반올림) 이었다.
-    assert food.sugar_g == 8.5
-    assert analysis.total_sugar_g == 8.5
-
-
-# ---------- 공공 표준데이터 임포터 (순수) ----------
-
 def _raw(name, rep, origin, weight, kcal, na, sugar, cat="찌개류"):
     return {
         "식품명": name, "대표식품명": rep, "식품기원명": origin,
@@ -117,28 +80,47 @@ def _raw(name, rep, origin, weight, kcal, na, sugar, cat="찌개류"):
     }
 
 
-def test_import_excludes_franchise_rows():
-    """판매 단위(라지 피자 한 판)를 1인분으로 환산하면 안 된다."""
+def test_import_keeps_the_100g_basis_untouched():
+    """원본이 100g 기준이므로 환산하지 않는다 — 손실도 추측도 없다."""
+    from scripts.import_food_nutrients import aggregate
+
+    out = aggregate([_raw("김치찌개_돼지", "김치찌개", "가정식(분석 함량)", "300g", "31", "445", "0.04")], "음식")
+    assert out[0]["calories"] == 31.0        # 300g 로 환산하지 않는다
+    assert out[0]["sodium_mg"] == 445.0
+    assert out[0]["sugar_g"] == 0.04         # 소수 보존
+
+
+def test_import_keeps_franchise_rows_for_density():
+    """포장 크기는 100g 당 값에 영향을 주지 않으므로 제외할 이유가 없다."""
     from scripts.import_food_nutrients import aggregate
 
     rows = [
         _raw("피자_라지", "피자", "외식(프랜차이즈 등 업체 제공 영양정", "1640g", "252", "416", "3.7"),
-        _raw("피자_급식", "피자", "초등학교급식(재료량 기반 산출 함량)", "200g", "253", "441", "3.4"),
+        _raw("피자_급식", "피자", "초등학교급식(재료량 기반 산출 함량)", "200g", "254", "420", "3.5"),
     ]
-    out = aggregate(rows)
-    assert len(out) == 1
-    # 프랜차이즈 1,640g 행이 섞였다면 1인분이 900g 대로 튄다.
-    assert out[0]["serving_size_g"] == 200.0
+    out = aggregate(rows, "음식")
+    assert out[0]["sample_count"] == 2       # 프랜차이즈도 표본에 든다
+    assert out[0]["calories"] == 253.0       # 두 값의 중앙
 
 
-def test_import_converts_100g_basis_to_one_serving():
-    """원본은 전부 100g 기준 — 식품중량으로 환산해야 한다."""
+def test_import_serving_hint_ignores_franchise_packaging():
+    """1회 섭취량 힌트에는 판매 포장(라지 피자 한 판)을 쓰지 않는다."""
     from scripts.import_food_nutrients import aggregate
 
-    out = aggregate([_raw("김치찌개_돼지", "김치찌개", "가정식(분석 함량)", "300g", "31", "445", "0.04")])
-    assert out[0]["calories"] == 93.0        # 31 * 300/100
-    assert out[0]["sodium_mg"] == 1335.0     # 445 * 300/100
-    assert out[0]["sugar_g"] == 0.12         # 0.04 * 3 — 소수 보존
+    rows = [
+        _raw("피자_라지", "피자", "외식(프랜차이즈 등 업체 제공 영양정", "1640g", "252", "416", "3.7"),
+        _raw("피자_급식", "피자", "초등학교급식(재료량 기반 산출 함량)", "200g", "254", "420", "3.5"),
+    ]
+    assert aggregate(rows, "음식")[0]["serving_size_g"] == 200.0
+
+
+def test_import_leaves_serving_blank_when_unknown():
+    """식품중량이 없는 데이터셋(원재료성식품)은 힌트를 비워 둔다 — 추측하지 않는다."""
+    from scripts.import_food_nutrients import aggregate
+
+    out = aggregate([_raw("사과", "사과", "원재료", "", "52", "1", "10.4")], "원재료성식품")
+    assert out[0]["serving_size_g"] is None
+    assert out[0]["calories"] == 52.0        # 100g 기준 값은 그대로 쓸 수 있다
 
 
 def test_import_uses_median_not_mean():
@@ -149,40 +131,92 @@ def test_import_uses_median_not_mean():
         _raw(f"국_{i}", "된장국", "가정식(분석 함량)", "100g", kcal, "100", "1")
         for i, kcal in enumerate(["10", "20", "900"])
     ]
-    out = aggregate(rows)
-    assert out[0]["calories"] == 20.0        # 평균이면 310
+    assert aggregate(rows, "음식")[0]["calories"] == 20.0     # 평균이면 310
 
 
-def test_import_parses_weight_without_unit():
-    """식품중량은 '300g' 도 있고 단위 없는 '201.7' 도 있다."""
-    from scripts.import_food_nutrients import aggregate
-
-    out = aggregate([_raw("찌개", "찌개", "가정식(분석 함량)", "201.7", "50", "100", "1")])
-    assert out[0]["serving_size_g"] == 201.7
-
-
-def test_import_skips_rows_without_energy_or_weight():
+def test_import_skips_rows_without_energy():
     """보정 값으로 쓸 수 없는 행은 버린다."""
     from scripts.import_food_nutrients import aggregate
 
-    rows = [
-        _raw("무게없음", "무게없음", "가정식(분석 함량)", "", "50", "100", "1"),
-        _raw("열량없음", "열량없음", "가정식(분석 함량)", "300g", "", "100", "1"),
-    ]
-    assert aggregate(rows) == []
+    assert aggregate([_raw("열량없음", "열량없음", "가정식(분석 함량)", "300g", "", "100", "1")], "음식") == []
 
 
-# ---------- 시드 우선순위 (DB) ----------
+# ---------- 양(g) 기반 보정 (DB) ----------
+
+def test_enrich_scales_by_estimated_amount(db_session):
+    """같은 음식이라도 사진에 담긴 양에 비례해야 한다."""
+    from app.schemas.diet import DietAnalysis, RecognizedFood
+    from app.services.nutrition.enrich import enrich_analysis
+
+    def kcal_for(grams):
+        a = DietAnalysis(engine="g", foods=[RecognizedFood(name="김치찌개", amount_g=grams)])
+        enrich_analysis(db_session, a)
+        return a.foods[0]
+
+    small, large = kcal_for(200), kcal_for(800)
+    assert small.source == "db" and large.source == "db"
+    assert large.calories == small.calories * 4
+    assert large.sodium_mg == small.sodium_mg * 4
+
+
+def test_enrich_falls_back_to_known_serving_when_amount_missing(db_session):
+    """양을 못 얻으면 알려진 1회 섭취량으로만 환산한다."""
+    from app.schemas.diet import DietAnalysis, RecognizedFood
+    from app.services.nutrition.enrich import enrich_analysis
+
+    a = DietAnalysis(engine="g", foods=[RecognizedFood(name="김치찌개", calories=999)])
+    enrich_analysis(db_session, a)
+    assert a.foods[0].source == "db"
+    assert a.foods[0].calories != 999
+
+
+def test_enrich_keeps_estimate_when_amount_and_serving_unknown(db_session):
+    """양도 1회 섭취량도 없으면 임의로 가정하지 않는다.
+
+    틀린 양으로 환산한 값은 source="db" 로 표시돼 사용자에게 더 높은 신뢰
+    신호를 준다 — 추정치를 그대로 두는 편이 낫다.
+    """
+    from app.models.models import FoodNutrient
+    from app.schemas.diet import DietAnalysis, RecognizedFood
+    from app.services.nutrition.enrich import enrich_analysis
+    from app.services.nutrition.matcher import normalize
+
+    db_session.add(FoodNutrient(
+        name="양모르는음식", name_norm=normalize("양모르는음식"),
+        calories=100, sodium_mg=10, sugar_g=1, serving_size_g=None,
+    ))
+    db_session.commit()
+
+    a = DietAnalysis(engine="g", foods=[RecognizedFood(name="양모르는음식", calories=777)])
+    enrich_analysis(db_session, a)
+    assert a.foods[0].source == "estimate"
+    assert a.foods[0].calories == 777
+
+
+def test_enrich_keeps_fractional_sugar(db_session):
+    """#296 회귀: 보정이 당류를 int 로 깎으면 안 된다."""
+    from app.models.models import FoodNutrient
+    from app.schemas.diet import DietAnalysis, RecognizedFood
+    from app.services.nutrition.enrich import enrich_analysis
+    from app.services.nutrition.matcher import normalize
+
+    db_session.add(FoodNutrient(
+        name="소수당류식품", name_norm=normalize("소수당류식품"),
+        calories=100, sodium_mg=10, sugar_g=8.5, serving_size_g=100,
+    ))
+    db_session.commit()
+
+    a = DietAnalysis(engine="g", foods=[RecognizedFood(name="소수당류식품", amount_g=100)])
+    enrich_analysis(db_session, a)
+    assert a.foods[0].sugar_g == 8.5      # 예전에는 round(8.5) → 8
+
 
 def test_curated_seed_wins_over_public_data(db_session):
     """큐레이션 40종은 고혈압·당뇨 관점으로 따로 검증한 값이라 우선한다."""
     from app.services.nutrition.matcher import match_food
 
-    # 라면: 큐레이션 1,800mg vs 공공 중앙값 452mg(급식 라면이 섞인 결과)
     ramen = match_food(db_session, "라면")
     assert ramen is not None
-    assert ramen.sodium_mg == 1800
-
-    # 공공 데이터에만 있는 항목도 조회된다.
-    assert match_food(db_session, "가오리찜") is not None
-
+    # 큐레이션 1,800mg/550g → 100g 당 327.3
+    assert round(ramen.sodium_mg, 1) == 327.3
+    assert match_food(db_session, "가공우유") is not None   # 가공식품 데이터셋

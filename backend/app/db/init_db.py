@@ -133,6 +133,31 @@ def _public_food_rows() -> list[dict]:
         ]
 
 
+def _curated_per_100g(items: list[dict]) -> list[dict]:
+    """큐레이션 시드(1인분 기준)를 100g 기준으로 환산.
+
+    `food_nutrients` 는 100g 기준이다(공공 원본이 전부 그 형태고, 포장 단위로
+    1인분 환산하면 대표값이 3~5배까지 튄다). 큐레이션 40종은 사람이 1인분으로
+    정리한 값이라 여기서 맞춰 넣는다 — `serving_size_g` 가 모두 있어 기계적으로
+    변환된다. 1회 섭취량 자체는 컬럼에 남겨 인식기가 양을 못 줬을 때 폴백으로
+    쓴다.
+    """
+    scaled: list[dict] = []
+    for item in items:
+        serving = item.get("serving_size_g")
+        if not serving or serving <= 0:
+            # 환산 기준이 없으면 값의 의미가 불분명해진다 — 넣지 않는다.
+            continue
+        factor = 100.0 / float(serving)
+        out = dict(item)
+        for field in ("calories", "sodium_mg", "sugar_g", "carbs_g", "protein_g", "fat_g"):
+            value = item.get(field)
+            if value is not None:
+                out[field] = round(float(value) * factor, 2)
+        scaled.append(out)
+    return scaled
+
+
 def _seed_food_nutrients() -> None:
     """공공 식품영양성분 DB 시드(멱등). name_norm 은 매칭기와 동일 규칙으로 생성.
 
@@ -149,7 +174,7 @@ def _seed_food_nutrients() -> None:
         if db.scalar(select(models.FoodNutrient).limit(1)):
             return
         seen: set[str] = set()
-        for item in [*FOOD_NUTRIENTS, *_public_food_rows()]:
+        for item in [*_curated_per_100g(FOOD_NUTRIENTS), *_public_food_rows()]:
             norm = normalize(item["name"])
             # 매칭은 name_norm 으로 하므로 중복 norm 은 조회를 모호하게 만든다.
             if not norm or norm in seen:

@@ -25,6 +25,11 @@ class RecognizedFood(BaseModel):
     sugar_g: Optional[float] = Field(
         None, ge=0, allow_inf_nan=False, description="당류 g"
     )
+    # 사진에서 추정한 섭취량(g). 공공 DB 값은 100g 기준이라 이 값으로 환산한다.
+    # 비전 모델은 "얼마나 있나" 는 잘 보지만 밀도는 모른다 — 밀도는 DB 가 댄다.
+    amount_g: Optional[float] = Field(
+        None, gt=0, allow_inf_nan=False, description="추정 섭취량 g"
+    )
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
     # 영양 수치 출처: 공공 DB | 인식기 추정 | 두 값의 혼합
     source: str = Field("estimate", description="db|estimate|mixed")

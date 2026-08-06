@@ -175,14 +175,19 @@ def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
     # 공공 영양 DB 매핑으로 신뢰 수치가 채워짐(비빔밥/김치는 시드에 존재)
     assert body["analysis"]["total_calories"] > 0
     assert any(f["source"] == "db" for f in foods)
-    assert body["analysis"]["total_carbs_g"] == 45.0
-    assert body["analysis"]["total_protein_g"] == 22.5
-    assert body["analysis"]["total_fat_g"] == 10.0
+    # 값은 100g 기준이고 인식기가 양을 안 주면 알려진 1회 섭취량으로 환산된다.
+    # 예전 45.0 은 1인분 절대값을 그대로 쓰던 시절의 기대치다.
+    assert body["analysis"]["total_carbs_g"] == 202.5
+    assert body["analysis"]["total_protein_g"] == 101.25
+    # 지방만 배율이 다르다 — DB 에 지방이 없는 항목은 인식기 값이 환산 없이
+    # 남는다(source="mixed"). 그 혼합이 그대로 드러나는 값이다.
+    assert body["analysis"]["total_fat_g"] == 41.0
     assert all({"carbs_g", "protein_g", "fat_g"} <= f.keys() for f in foods)
 
     stored = db_session.get(DietEntry, body["entry_id"])
     assert stored is not None
-    assert (stored.carbs_g, stored.protein_g, stored.fat_g) == (45.0, 22.5, 10.0)
+    # 저장값도 환산 후 값이어야 한다(응답과 어긋나면 화면·DB 가 갈린다).
+    assert (stored.carbs_g, stored.protein_g, stored.fat_g) == (202.5, 101.25, 41.0)
     stored_foods = json.loads(stored.foods_json)
     assert all(not {"carbs_g", "protein_g", "fat_g"} & food.keys() for food in stored_foods)
 
@@ -198,21 +203,21 @@ def test_analyze_offline_saves_and_reflects_macros_in_today(client, db_session):
     today_body = today.json()
     assert today_body["total_calories"] > 0
     assert len(today_body["entries"]) == 2
-    assert all(entry["carbs_g"] == 45.0 for entry in today_body["entries"])
-    assert all(entry["protein_g"] == 22.5 for entry in today_body["entries"])
-    assert all(entry["fat_g"] == 10.0 for entry in today_body["entries"])
+    assert all(entry["carbs_g"] == 202.5 for entry in today_body["entries"])
+    assert all(entry["protein_g"] == 101.25 for entry in today_body["entries"])
+    assert all(entry["fat_g"] == 41.0 for entry in today_body["entries"])
     assert all(
         not {"carbs_g", "protein_g", "fat_g"} & food.keys()
         for entry in today_body["entries"]
         for food in entry["foods"]
     )
     assert today_body["macros"] == {
-        "carbs_g": 90.0,
-        "protein_g": 45.0,
-        "fat_g": 20.0,
-        "carbs_pct": 50,
-        "protein_pct": 25,
-        "fat_pct": 25,
+        "carbs_g": 405.0,
+        "protein_g": 202.5,
+        "fat_g": 82.0,
+        "carbs_pct": 51,
+        "protein_pct": 26,
+        "fat_pct": 23,
     }
 
 
@@ -353,8 +358,9 @@ def test_enrich_marks_db_mixed_and_estimate_sources(db_session):
     bibimbap.carbs_g, bibimbap.protein_g, bibimbap.fat_g = 40.0, 20.0, 8.0
     db_session.commit()
 
+    # amount_g=100 이면 배율 1 — DB 값이 그대로 실린다(환산 로직과 분리해 검증).
     db_only = DietAnalysis(engine="test", foods=[
-        RecognizedFood(name="비빔밥", carbs_g=1.0, protein_g=2.0, fat_g=3.0),
+        RecognizedFood(name="비빔밥", amount_g=100, carbs_g=1.0, protein_g=2.0, fat_g=3.0),
     ])
     enrich_analysis(db_session, db_only)
     assert db_only.foods[0].source == "db"
@@ -365,8 +371,8 @@ def test_enrich_marks_db_mixed_and_estimate_sources(db_session):
     bibimbap.protein_g = None
     db_session.commit()
     mixed = DietAnalysis(engine="test", foods=[
-        RecognizedFood(name="비빔밥", carbs_g=1.0, protein_g=2.0, fat_g=3.0),
-        RecognizedFood(name="없는음식", carbs_g=4.0, protein_g=5.0, fat_g=6.0),
+        RecognizedFood(name="비빔밥", amount_g=100, carbs_g=1.0, protein_g=2.0, fat_g=3.0),
+        RecognizedFood(name="없는음식", amount_g=100, carbs_g=4.0, protein_g=5.0, fat_g=6.0),
     ])
     enrich_analysis(db_session, mixed)
     assert mixed.foods[0].source == "mixed"
