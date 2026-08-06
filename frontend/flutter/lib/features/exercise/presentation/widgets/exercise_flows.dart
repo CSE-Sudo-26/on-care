@@ -5,6 +5,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -649,17 +650,18 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
 /// A nearby-gym result card driven by a real [Gym]. The two actions wire to
 /// local flows (there is no O2O endpoint): 트레이너 채팅 opens the 1:1 상담
 /// sheet, 건강 요약 전달 confirms then shows a success SnackBar.
-class _GymResult extends StatelessWidget {
+class _GymResult extends ConsumerWidget {
   const _GymResult({required this.gym, this.top = false});
 
   final Gym gym;
   final bool top;
 
-  /// A short, real-data reason line for the AI-styled highlight box.
-  String _reason(AppLocalizations l) {
-    if (gym.trainerName != null) {
-      final String role = gym.trainerRole != null ? ' · ${gym.trainerRole}' : '';
-      return l.exReasonTrainer(gym.trainerName!, role);
+  /// A short, real-data reason line for the AI-styled highlight box. Uses the
+  /// gym's first trainer when it has one.
+  String _reason(AppLocalizations l, Trainer? trainer) {
+    if (trainer != null) {
+      final String role = trainer.role != null ? ' · ${trainer.role}' : '';
+      return l.exReasonTrainer(trainer.name, role);
     }
     if (gym.weekdayHours != null) {
       final String weekend = gym.weekendHours != null
@@ -671,9 +673,14 @@ class _GymResult extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String reason = _reason(l);
+    // 이 헬스장의 대표 트레이너(첫 번째)로 추천 문구와 채팅 상대를 정한다.
+    final Trainer? trainer = ref
+        .watch(gymTrainersProvider(gym.id))
+        .valueOrNull
+        ?.firstOrNull;
+    final String reason = _reason(l, trainer);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1075,7 +1082,11 @@ class _MapPainter extends CustomPainter {
 // ─────────────────────────────────────────────────────── 헬스장 정보 ──
 
 /// Gym detail sheet opened from the "헬스장 정보" button, driven by [gym].
-Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
+Future<void> showGymInfoSheet(
+  BuildContext context,
+  Gym gym, {
+  Trainer? trainer,
+}) {
   final AppLocalizations l = AppLocalizations.of(context);
   final String hours = gym.weekdayHours != null
       ? l.exGymWeekdayHours(gym.weekdayHours!) +
@@ -1083,9 +1094,9 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                 ? '\n${l.exGymWeekendHours(gym.weekendHours!)}'
                 : '')
       : '';
-  final String trainer = gym.trainerName != null
-      ? '${gym.trainerName}${gym.trainerRole != null ? ' · ${gym.trainerRole}' : ''}'
-      : '';
+  final String trainerLabel = trainer == null
+      ? ''
+      : '${trainer.name}${trainer.role != null ? ' · ${trainer.role}' : ''}';
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -1161,8 +1172,12 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                     l.exSpecialty,
                     gym.tags.join(' · '),
                   ),
-                if (trainer.isNotEmpty)
-                  _infoRow(Icons.person_outline, l.exTrainerDedicated, trainer),
+                if (trainerLabel.isNotEmpty)
+                  _infoRow(
+                    Icons.person_outline,
+                    l.exTrainerDedicated,
+                    trainerLabel,
+                  ),
               ],
             ),
           ),

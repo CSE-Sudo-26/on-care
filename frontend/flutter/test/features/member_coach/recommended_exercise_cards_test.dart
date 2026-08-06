@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
-import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
@@ -41,15 +41,11 @@ const CoachRoutine _aiRoutine = CoachRoutine(
   source: 'ai',
 );
 
-const Gym _trainerGym = Gym(
-  id: 'trainer-gym',
-  name: '온케어짐',
-  address: '서울시 테스트구',
-  distanceKm: 0.5,
-  rating: 4.9,
-  tags: <String>['PT'],
-  trainerName: '김트레이너',
-  trainerRole: '퍼스널 트레이너',
+const Trainer _assignedTrainer = Trainer(
+  id: 'trainer-assigned',
+  gymId: 'trainer-gym',
+  name: '김트레이너',
+  role: '퍼스널 트레이너',
 );
 
 void main() {
@@ -141,7 +137,7 @@ void main() {
         GoRoute(
           path: AppRoutes.trainerDetail,
           builder: (_, GoRouterState state) => Scaffold(
-            body: Text('trainer:${state.pathParameters['gymId']}'),
+            body: Text('trainer:${state.pathParameters['trainerId']}'),
           ),
         ),
       ],
@@ -156,7 +152,7 @@ void main() {
             (ref) async => const <CoachRoutine>[],
           ),
           coachUnreadProvider.overrideWith((ref) async => 0),
-          myGymProvider.overrideWith((ref) async => _trainerGym),
+          myTrainerProvider.overrideWith((ref) async => _assignedTrainer),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -166,7 +162,7 @@ void main() {
     await tester.tap(find.byKey(const Key('assignedTrainerProfile')));
     await tester.pumpAndSettle();
 
-    expect(find.text('trainer:${_trainerGym.id}'), findsOneWidget);
+    expect(find.text('trainer:${_assignedTrainer.id}'), findsOneWidget);
   });
 
   testWidgets('트레이너 채팅은 말풍선 아래 시간과 입력창을 표시하고 메시지를 전송한다', (

@@ -18,7 +18,9 @@ class CoachCard extends ConsumerWidget {
     final coachAsync = ref.watch(memberCoachProvider);
     final coach = coachAsync.valueOrNull;
     if (coach == null) return const SizedBox.shrink();
-    final assignedGym = ref.watch(myGymProvider).valueOrNull;
+    // 트레이너 상세는 이제 트레이너 id 로 라우팅한다 — 한 헬스장에
+    // 여러 명이 있으므로 헬스장 id 로는 한 명을 특정할 수 없다.
+    final assignedTrainer = ref.watch(myTrainerProvider).valueOrNull;
 
     final List<CoachRoutine> trainerRoutines =
         (ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[])
@@ -42,10 +44,10 @@ class CoachCard extends ConsumerWidget {
               color: Colors.transparent,
               child: InkWell(
                 key: const Key('assignedTrainerProfile'),
-                onTap: assignedGym == null
+                onTap: assignedTrainer == null
                     ? null
                     : () => context.push(
-                        AppRoutes.trainerDetailPath(assignedGym.id),
+                        AppRoutes.trainerDetailPath(assignedTrainer.id),
                       ),
                 borderRadius: BorderRadius.circular(12),
                 child: Row(

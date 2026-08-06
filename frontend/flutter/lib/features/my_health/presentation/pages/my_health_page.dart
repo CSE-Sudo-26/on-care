@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
@@ -938,30 +939,41 @@ class _TrainerGymSection extends ConsumerWidget {
     await disconnect(ref.read(gymRepositoryProvider));
     // 해제를 기다리는 동안 탭을 벗어났다면 ref 가 이미 폐기됐을 수 있다.
     if (!context.mounted) return;
+    // 헬스장 해제는 트레이너까지 끊으므로 두 provider 를 함께 새로 읽는다.
     ref.invalidate(myGymProvider);
+    ref.invalidate(myTrainerProvider);
   }
 
   /// 헬스장 연결 삭제. 담당 트레이너가 있으면 함께 사라진다는 것을 알린다.
-  Future<void> _removeGym(BuildContext context, WidgetRef ref, Gym gym) {
+  Future<void> _removeGym(
+    BuildContext context,
+    WidgetRef ref,
+    Gym gym,
+    Trainer? trainer,
+  ) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
     return _confirmDisconnect(
       context,
       ref,
-      message: hasTrainer
-          ? l.myGymDisconnectWithTrainerConfirm(gym.name, gym.trainerName!)
-          : l.myGymDisconnectConfirm(gym.name),
+      message: trainer == null
+          ? l.myGymDisconnectConfirm(gym.name)
+          : l.myGymDisconnectWithTrainerConfirm(gym.name, trainer.name),
       disconnect: (GymRepository repo) => repo.disconnectMyGym(),
     );
   }
 
   /// 헬스장은 그대로 두고 담당 트레이너 연결만 삭제.
-  Future<void> _removeTrainer(BuildContext context, WidgetRef ref, Gym gym) {
+  Future<void> _removeTrainer(
+    BuildContext context,
+    WidgetRef ref,
+    Gym gym,
+    Trainer trainer,
+  ) {
     final AppLocalizations l = AppLocalizations.of(context);
     return _confirmDisconnect(
       context,
       ref,
-      message: l.myTrainerDisconnectConfirm(gym.trainerName!, gym.name),
+      message: l.myTrainerDisconnectConfirm(trainer.name, gym.name),
       disconnect: (GymRepository repo) => repo.disconnectMyTrainer(),
     );
   }
@@ -970,6 +982,7 @@ class _TrainerGymSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> gymAsync = ref.watch(myGymProvider);
+    final Trainer? trainer = ref.watch(myTrainerProvider).valueOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -990,8 +1003,11 @@ class _TrainerGymSection extends ConsumerWidget {
               ? _GymSectionEmpty(onFind: onFindGym)
               : _GymSummaryCard(
                   gym: gym,
-                  onRemoveGym: () => _removeGym(context, ref, gym),
-                  onRemoveTrainer: () => _removeTrainer(context, ref, gym),
+                  trainer: trainer,
+                  onRemoveGym: () => _removeGym(context, ref, gym, trainer),
+                  onRemoveTrainer: trainer == null
+                      ? null
+                      : () => _removeTrainer(context, ref, gym, trainer),
                   onFindTrainer: onFindGym,
                 ),
         ),
@@ -1005,14 +1021,18 @@ class _TrainerGymSection extends ConsumerWidget {
 class _GymSummaryCard extends StatelessWidget {
   const _GymSummaryCard({
     required this.gym,
+    required this.trainer,
     required this.onRemoveGym,
     required this.onRemoveTrainer,
     required this.onFindTrainer,
   });
 
   final Gym gym;
+
+  /// 담당 트레이너. null 이면 "담당 트레이너 없음" 행으로 대체된다.
+  final Trainer? trainer;
   final VoidCallback onRemoveGym;
-  final VoidCallback onRemoveTrainer;
+  final VoidCallback? onRemoveTrainer;
 
   /// 헬스장은 있는데 담당 트레이너가 없을 때 트레이너를 찾으러 보낸다.
   final VoidCallback onFindTrainer;
@@ -1020,7 +1040,7 @@ class _GymSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
+    final Trainer? trainer = this.trainer;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1086,7 +1106,7 @@ class _GymSummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             const Divider(height: 1, color: FigmaColors.hairline),
             const SizedBox(height: 12),
-            if (hasTrainer)
+            if (trainer != null)
               Row(
                 children: <Widget>[
                   const Icon(
@@ -1097,7 +1117,7 @@ class _GymSummaryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${gym.trainerName!} · ${gym.trainerRole ?? l.exTrainerDedicated}',
+                      '${trainer.name} · ${trainer.role ?? l.exTrainerDedicated}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1107,10 +1127,11 @@ class _GymSummaryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _RemoveLinkButton(
-                    tooltip: l.myTrainerDisconnectTooltip,
-                    onTap: onRemoveTrainer,
-                  ),
+                  if (onRemoveTrainer != null)
+                    _RemoveLinkButton(
+                      tooltip: l.myTrainerDisconnectTooltip,
+                      onTap: onRemoveTrainer!,
+                    ),
                 ],
               )
             else

@@ -6,71 +6,57 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class TrainerDetailPage extends ConsumerWidget {
-  const TrainerDetailPage({required this.gymId, super.key});
+  const TrainerDetailPage({required this.trainerId, super.key});
 
-  /// Trainers do not have their own ID yet, so this is the owning gym's ID.
-  final String gymId;
-
-  Gym? _findGym(List<Gym> gyms) {
-    for (final Gym gym in gyms) {
-      if (gym.id == gymId) return gym;
-    }
-    return null;
-  }
+  final String trainerId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
-    final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
+    final AsyncValue<Trainer?> trainerAsync = ref.watch(
+      trainerProvider(trainerId),
+    );
+    final AsyncValue<List<Gym>> gymsAsync = ref.watch(nearbyGymsProvider);
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
 
-    final Gym? nearbyGym = switch (nearbyAsync) {
-      AsyncData<List<Gym>>(:final value) => _findGym(value),
-      _ => null,
-    };
-    final Gym? myGym = switch (myGymAsync) {
-      AsyncData<Gym?>(:final value) when value?.id == gymId => value,
-      _ => null,
-    };
-    final Gym? gym = nearbyGym ?? myGym;
-    final bool hasTrainer = gym?.trainerName?.isNotEmpty ?? false;
-    final Widget body;
-    if (hasTrainer) {
-      final Gym targetGym = gym!;
-      final bool hasPending = requests.any(
-        (ConsultationRequest request) =>
-            request.targetType == ConsultationTargetType.trainer &&
-            request.gymId == targetGym.id &&
-            request.status == ConsultationStatus.pending,
-      );
-      body = _TrainerDetails(
-        gym: targetGym,
-        hasPending: hasPending,
-        isMyTrainer: myGym != null,
-      );
-    } else if (gym != null) {
-      body = _StateMessage(message: l.exTrainerNotFound);
-    } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
-      body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
-    } else if (nearbyAsync.hasError || myGymAsync.hasError) {
-      body = _StateMessage(
+    final Widget body = switch (trainerAsync) {
+      AsyncData<Trainer?>(value: final Trainer? trainer) when trainer != null =>
+        _TrainerDetails(
+          trainer: trainer,
+          // 소속 헬스장은 목록에서 찾는다. 아직 로딩 중이면 카드만 비고
+          // 나머지 정보는 그대로 보인다.
+          gym: switch (gymsAsync) {
+            AsyncData<List<Gym>>(:final List<Gym> value) =>
+              value.where((Gym gym) => gym.id == trainer.gymId).firstOrNull,
+            _ => null,
+          },
+          // 헬스장이 아니라 이 트레이너 앞으로 낸 요청만 대기중으로 본다.
+          // 헬스장이 아니라 트레이너 단위로 비교한다 — 같은 헬스장에 다른
+          // 트레이너가 있어도 내 담당이 아니면 상담을 걸 수 있어야 한다.
+          isMyTrainer:
+              ref.watch(myTrainerProvider).valueOrNull?.id == trainer.id,
+          hasPending: requests.any(
+            (ConsultationRequest request) =>
+                request.targetType == ConsultationTargetType.trainer &&
+                request.trainerId == trainer.id &&
+                request.status == ConsultationStatus.pending,
+          ),
+        ),
+      AsyncData<Trainer?>() => _StateMessage(message: l.exTrainerNotFound),
+      AsyncError<Trainer?>() => _StateMessage(
         message: l.exTrainersLoadError,
-        onRetry: () {
-          ref.invalidate(nearbyGymsProvider);
-          ref.invalidate(myGymProvider);
-        },
-      );
-    } else {
-      body = _StateMessage(message: l.exTrainerNotFound);
-    }
+        onRetry: () => ref.invalidate(trainerProvider(trainerId)),
+      ),
+      _ => const Center(child: CircularProgressIndicator(strokeWidth: 3)),
+    };
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -94,21 +80,27 @@ class TrainerDetailPage extends ConsumerWidget {
 
 class _TrainerDetails extends StatelessWidget {
   const _TrainerDetails({
+    required this.trainer,
     required this.gym,
-    required this.hasPending,
     required this.isMyTrainer,
+    required this.hasPending,
   });
 
-  final Gym gym;
-  final bool hasPending;
+  final Trainer trainer;
+
+  /// 소속 헬스장. 아직 못 읽었으면 null 이고 해당 섹션만 빠진다.
+  final Gym? gym;
+
+  /// 이미 내 담당 트레이너면 상담 요청 CTA 를 숨긴다.
   final bool isMyTrainer;
+  final bool hasPending;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String intro = gym.trainerIntro?.trim() ?? '';
-    final String career = gym.trainerCareer?.trim() ?? '';
-    final List<String> certifications = gym.trainerCertifications
+    final String intro = trainer.intro?.trim() ?? '';
+    final String career = trainer.career?.trim() ?? '';
+    final List<String> certifications = trainer.certifications
         .map((String certification) => certification.trim())
         .where((String certification) => certification.isNotEmpty)
         .toList(growable: false);
@@ -138,7 +130,7 @@ class _TrainerDetails extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              gym.trainerName!,
+              trainer.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -148,10 +140,10 @@ class _TrainerDetails extends StatelessWidget {
                 color: FigmaColors.ink,
               ),
             ),
-            if (gym.trainerRole?.isNotEmpty ?? false) ...<Widget>[
+            if (trainer.role?.isNotEmpty ?? false) ...<Widget>[
               const SizedBox(height: 5),
               Text(
-                gym.trainerRole!,
+                trainer.role!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -163,7 +155,6 @@ class _TrainerDetails extends StatelessWidget {
             ],
             const SizedBox(height: 22),
             // 트레이너 앱 프로필(소개·경력·자격증)과 같은 값을 보여준다.
-            // 세 항목이 모두 비면 섹션 자체를 숨긴다.
             if (hasProfile) ...<Widget>[
               _DetailSection(
                 icon: Icons.badge_outlined,
@@ -232,7 +223,7 @@ class _TrainerDetails extends StatelessWidget {
               icon: Icons.auto_awesome_outlined,
               title: l.exRecommendationReason,
               child: Text(
-                gym.trainerReason ?? l.exTrainerRecommendationReason,
+                trainer.reason ?? l.exTrainerRecommendationReason,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.5,
@@ -241,86 +232,89 @@ class _TrainerDetails extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            _DetailSection(
-              icon: Icons.fitness_center,
-              title: l.exTrainerAffiliation,
-              padding: EdgeInsets.zero,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: FigmaColors.primaryA(0.10),
-                            borderRadius: BorderRadius.circular(12),
+            if (gym != null) ...<Widget>[
+              const SizedBox(height: 12),
+              _DetailSection(
+                icon: Icons.fitness_center,
+                title: l.exTrainerAffiliation,
+                padding: EdgeInsets.zero,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () =>
+                        context.push(AppRoutes.gymDetailPath(gym!.id)),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: FigmaColors.primaryA(0.10),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.fitness_center,
+                              size: 21,
+                              color: FigmaColors.primary,
+                            ),
                           ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.fitness_center,
-                            size: 21,
-                            color: FigmaColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                gym.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: FigmaColors.ink,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  gym!.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: FigmaColors.ink,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                gym.address,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  height: 1.4,
-                                  color: FigmaColors.textMuted,
+                                const SizedBox(height: 4),
+                                Text(
+                                  gym!.address,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    height: 1.4,
+                                    color: FigmaColors.textMuted,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${gym.distanceKm.toStringAsFixed(1)}km',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: FigmaColors.textBody,
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${gym!.distanceKm.toStringAsFixed(1)}km',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: FigmaColors.textBody,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.only(top: 10),
-                          child: Icon(
-                            Icons.chevron_right,
-                            color: FigmaColors.textFaint,
+                          const Padding(
+                            padding: EdgeInsets.only(top: 10),
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: FigmaColors.textFaint,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
             if (!isMyTrainer) ...<Widget>[
               const SizedBox(height: 24),
               FilledButton(
@@ -329,7 +323,8 @@ class _TrainerDetails extends StatelessWidget {
                     : () => context.push(
                         AppRoutes.consultationRequestPath(
                           targetType: ConsultationTargetType.trainer.name,
-                          gymId: gym.id,
+                          gymId: trainer.gymId,
+                          trainerId: trainer.id,
                         ),
                       ),
                 style: FilledButton.styleFrom(

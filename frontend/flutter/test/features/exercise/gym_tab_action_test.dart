@@ -8,6 +8,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -19,8 +20,13 @@ const Gym _gym = Gym(
   distanceKm: 0.5,
   rating: 4.9,
   tags: <String>['PT'],
-  trainerName: '김액션',
-  trainerRole: '전담 트레이너',
+);
+
+const Trainer _trainer = Trainer(
+  id: 'trainer-action-test',
+  gymId: 'gym-action-test',
+  name: '김액션',
+  role: '전담 트레이너',
 );
 
 const AppConfig _config = AppConfig(
@@ -35,8 +41,9 @@ ConsultationRequest _consultation(ConsultationStatus status) {
     targetType: ConsultationTargetType.trainer,
     gymId: _gym.id,
     gymName: _gym.name,
-    trainerName: _gym.trainerName,
-    trainerRole: _gym.trainerRole,
+    trainerId: _trainer.id,
+    trainerName: _trainer.name,
+    trainerRole: _trainer.role,
     exerciseGoal: '체중 감량',
     healthPurpose: '해당 없음',
     preferredDate: DateTime(2026, 8),
@@ -55,6 +62,7 @@ void main() {
     WidgetTester tester, {
     ConsultationRequest? consultation,
     bool hasMyGym = true,
+    Trainer? trainer = _trainer,
   }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -72,6 +80,14 @@ void main() {
         overrides: <Override>[
           myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+          myTrainerProvider.overrideWith((ref) async => trainer),
+          trainerProvider(_trainer.id).overrideWith((ref) async => _trainer),
+          gymTrainersProvider(
+            _gym.id,
+          ).overrideWith((ref) async => const <Trainer>[_trainer]),
+          recommendedTrainersProvider.overrideWith(
+            (ref) async => const <Trainer>[_trainer],
+          ),
           consultationRequestControllerProvider.overrideWith(
             (ref) => consultationController,
           ),
@@ -119,7 +135,7 @@ void main() {
     expect(
       find.descendant(
         of: myGymCard(),
-        matching: find.text(_gym.trainerName!),
+        matching: find.text(_trainer.name),
       ),
       findsNothing,
     );
@@ -208,5 +224,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l.exGymDetailTitle), findsOneWidget);
 
+  });
+
+  testWidgets('담당 트레이너가 없으면 예약 패널을 감춘다', (WidgetTester tester) async {
+    await pumpGymTab(tester, trainer: null);
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    // 헬스장 카드는 남지만, 없는 트레이너의 빈 시간·예약 버튼은 사라진다.
+    expect(myGymCard(), findsOneWidget);
+    expect(reservationPanel(), findsNothing);
+    expect(find.text(l.exAiSlotTitle), findsNothing);
+    // 내 카드에서만 빠질 뿐, 추천 트레이너 레일에는 그대로 남아 있어야 한다.
+    expect(
+      find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),
+      findsNothing,
+    );
+    expect(find.text(_trainer.name), findsWidgets);
   });
 }

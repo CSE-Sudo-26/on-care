@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -20,11 +21,15 @@ class ConsultationRequestPage extends ConsumerStatefulWidget {
   const ConsultationRequestPage({
     required this.targetType,
     required this.gymId,
+    this.trainerId,
     super.key,
   });
 
   final ConsultationTargetType? targetType;
   final String gymId;
+
+  /// Set for trainer-target requests; a gym has several trainers.
+  final String? trainerId;
 
   @override
   ConsumerState<ConsultationRequestPage> createState() =>
@@ -96,6 +101,7 @@ class _ConsultationRequestPageState
 
   void _submit({
     required Gym gym,
+    required Trainer? trainer,
     required Map<_ExerciseGoal, String> goalLabels,
     required Map<_HealthPurpose, String> purposeLabels,
     required Map<_PreferredTime, String> timeLabels,
@@ -106,7 +112,11 @@ class _ConsultationRequestPageState
 
     final ConsultationTargetType targetType = widget.targetType!;
     final controller = ref.read(consultationRequestControllerProvider.notifier);
-    if (controller.hasPending(targetType: targetType, gymId: gym.id)) {
+    if (controller.hasPending(
+      targetType: targetType,
+      gymId: gym.id,
+      trainerId: trainer?.id,
+    )) {
       return;
     }
 
@@ -118,11 +128,14 @@ class _ConsultationRequestPageState
       targetType: targetType,
       gymId: gym.id,
       gymName: gym.name,
+      trainerId: targetType == ConsultationTargetType.trainer
+          ? trainer?.id
+          : null,
       trainerName: targetType == ConsultationTargetType.trainer
-          ? gym.trainerName
+          ? trainer?.name
           : null,
       trainerRole: targetType == ConsultationTargetType.trainer
-          ? gym.trainerRole
+          ? trainer?.role
           : null,
       exerciseGoal: goalLabels[_exerciseGoal]!,
       healthPurpose: _healthPurpose == _HealthPurpose.other
@@ -159,11 +172,17 @@ class _ConsultationRequestPageState
       _ => null,
     };
     final Gym? gym = nearbyGym ?? myGym;
+    final bool trainerTarget =
+        widget.targetType == ConsultationTargetType.trainer;
+    // 트레이너 상담이면 대상 트레이너를 id 로 직접 읽는다.
+    final AsyncValue<Trainer?> trainerAsync = trainerTarget
+        ? ref.watch(trainerProvider(widget.trainerId ?? ''))
+        : const AsyncValue<Trainer?>.data(null);
+    final Trainer? trainer = trainerAsync.valueOrNull;
     final bool targetIsValid =
         widget.targetType != null &&
         gym != null &&
-        (widget.targetType != ConsultationTargetType.trainer ||
-            (gym.trainerName?.isNotEmpty ?? false));
+        (!trainerTarget || trainer != null);
 
     final Widget body;
     if (targetIsValid) {
@@ -172,9 +191,12 @@ class _ConsultationRequestPageState
         (ConsultationRequest request) =>
             request.targetType == targetType &&
             request.gymId == gym.id &&
+            (!trainerTarget || request.trainerId == trainer?.id) &&
             request.status == ConsultationStatus.pending,
       );
-      body = _buildForm(gym: gym, hasPending: hasPending);
+      body = _buildForm(gym: gym, trainer: trainer, hasPending: hasPending);
+    } else if (trainerTarget && trainerAsync.isLoading) {
+      body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
     } else if (widget.targetType == null ||
         widget.gymId.isEmpty ||
         gym != null) {
@@ -212,7 +234,11 @@ class _ConsultationRequestPageState
     );
   }
 
-  Widget _buildForm({required Gym gym, required bool hasPending}) {
+  Widget _buildForm({
+    required Gym gym,
+    required Trainer? trainer,
+    required bool hasPending,
+  }) {
     final AppLocalizations l = AppLocalizations.of(context);
     final Map<_ExerciseGoal, String> goalLabels = <_ExerciseGoal, String>{
       _ExerciseGoal.weightLoss: l.exGoalWeightLoss,
@@ -244,7 +270,11 @@ class _ConsultationRequestPageState
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: <Widget>[
-            _TargetCard(targetType: widget.targetType!, gym: gym),
+            _TargetCard(
+              targetType: widget.targetType!,
+              gym: gym,
+              trainer: trainer,
+            ),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
               title: l.exExerciseGoal,
@@ -331,6 +361,7 @@ class _ConsultationRequestPageState
                   ? null
                   : () => _submit(
                       gym: gym,
+                      trainer: trainer,
                       goalLabels: goalLabels,
                       purposeLabels: purposeLabels,
                       timeLabels: timeLabels,
@@ -366,10 +397,15 @@ class _ConsultationRequestPageState
 }
 
 class _TargetCard extends StatelessWidget {
-  const _TargetCard({required this.targetType, required this.gym});
+  const _TargetCard({
+    required this.targetType,
+    required this.gym,
+    required this.trainer,
+  });
 
   final ConsultationTargetType targetType;
   final Gym gym;
+  final Trainer? trainer;
 
   @override
   Widget build(BuildContext context) {
@@ -419,7 +455,7 @@ class _TargetCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            trainerTarget ? gym.trainerName! : gym.name,
+            trainerTarget ? (trainer?.name ?? gym.name) : gym.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -431,7 +467,7 @@ class _TargetCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             trainerTarget
-                ? (gym.trainerRole ?? l.exTrainerDedicated)
+                ? (trainer?.role ?? l.exTrainerDedicated)
                 : gym.address,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
