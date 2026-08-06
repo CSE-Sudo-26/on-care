@@ -1024,7 +1024,7 @@ class _ExerciseCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (showCharts) const SizedBox(width: 14),
+              if (showCharts) const SizedBox(width: 20),
               if (showCharts)
                 Expanded(
                   flex: 6,
@@ -1154,7 +1154,6 @@ class _ExerciseStat extends StatelessWidget {
         Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
@@ -1186,7 +1185,6 @@ class _ExerciseStat extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 20),
       ],
     );
   }
