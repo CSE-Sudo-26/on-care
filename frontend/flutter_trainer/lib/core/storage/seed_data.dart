@@ -172,6 +172,12 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     }
 
     // ---- Trainer's schedule for today ----
+    // 스케줄은 고객을 id 로 참조한다(#386). 슬롯 데이터는 이름만 들고 있으므로
+    // 시드 고객 목록에서 id 를 유도한다 — 매핑을 따로 손으로 관리하면 이름을
+    // 고칠 때 또 어긋난다. 미등록(상담)·공백 슬롯은 이름이 없어 null 로 남는다.
+    final seedClientIdByName = <String, String>{
+      for (final _Client c in _clients) c.name: 'seed-client-${c.id}',
+    };
     await db.batch((Batch b) {
       b.insertAll(db.trainerScheduleEntries, <TrainerScheduleEntriesCompanion>[
         for (var i = 0; i < _schedule.length; i++)
@@ -179,6 +185,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
             id: 'seed-schedule-$i',
             date: today,
             time: _schedule[i].time,
+            clientId: Value(seedClientIdByName[_schedule[i].clientName]),
             clientName: Value(_schedule[i].clientName),
             type: Value(_schedule[i].type),
             durationMinutes: Value(_schedule[i].durationMinutes),

@@ -2949,6 +2949,17 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _clientIdMeta = const VerificationMeta(
+    'clientId',
+  );
+  @override
+  late final GeneratedColumn<String> clientId = GeneratedColumn<String>(
+    'client_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _clientNameMeta = const VerificationMeta(
     'clientName',
   );
@@ -3031,6 +3042,7 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     id,
     date,
     time,
+    clientId,
     clientName,
     type,
     durationMinutes,
@@ -3071,6 +3083,12 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
       );
     } else if (isInserting) {
       context.missing(_timeMeta);
+    }
+    if (data.containsKey('client_id')) {
+      context.handle(
+        _clientIdMeta,
+        clientId.isAcceptableOrUnknown(data['client_id']!, _clientIdMeta),
+      );
     }
     if (data.containsKey('client_name')) {
       context.handle(
@@ -3143,6 +3161,10 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         DriftSqlType.string,
         data['${effectivePrefix}time'],
       )!,
+      clientId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_id'],
+      ),
       clientName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}client_name'],
@@ -3185,6 +3207,15 @@ class TrainerScheduleRow extends DataClass
   final String id;
   final String date;
   final String time;
+
+  /// 예약된 고객의 id. 이름은 식별자가 아니다 — 고객 이름을 바꾸면 과거
+  /// 세션이 통째로 끊기고, 조용히 "세션 0건" 리포트가 되어 그대로 회원에게
+  /// 전송될 수 있었다(#386).
+  ///
+  /// nullable 인 이유: 상담 등 미등록 고객 슬롯과 공백 슬롯에는 붙일 id 가
+  /// 없고, v3 이전에 저장된 기존 행도 값이 없다. 조회는 id 를 우선하고
+  /// 없을 때만 이름으로 폴백한다.
+  final String? clientId;
   final String clientName;
   final String type;
   final int durationMinutes;
@@ -3196,6 +3227,7 @@ class TrainerScheduleRow extends DataClass
     required this.id,
     required this.date,
     required this.time,
+    this.clientId,
     required this.clientName,
     required this.type,
     required this.durationMinutes,
@@ -3210,6 +3242,9 @@ class TrainerScheduleRow extends DataClass
     map['id'] = Variable<String>(id);
     map['date'] = Variable<String>(date);
     map['time'] = Variable<String>(time);
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<String>(clientId);
+    }
     map['client_name'] = Variable<String>(clientName);
     map['type'] = Variable<String>(type);
     map['duration_minutes'] = Variable<int>(durationMinutes);
@@ -3225,6 +3260,9 @@ class TrainerScheduleRow extends DataClass
       id: Value(id),
       date: Value(date),
       time: Value(time),
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
       clientName: Value(clientName),
       type: Value(type),
       durationMinutes: Value(durationMinutes),
@@ -3244,6 +3282,7 @@ class TrainerScheduleRow extends DataClass
       id: serializer.fromJson<String>(json['id']),
       date: serializer.fromJson<String>(json['date']),
       time: serializer.fromJson<String>(json['time']),
+      clientId: serializer.fromJson<String?>(json['clientId']),
       clientName: serializer.fromJson<String>(json['clientName']),
       type: serializer.fromJson<String>(json['type']),
       durationMinutes: serializer.fromJson<int>(json['durationMinutes']),
@@ -3260,6 +3299,7 @@ class TrainerScheduleRow extends DataClass
       'id': serializer.toJson<String>(id),
       'date': serializer.toJson<String>(date),
       'time': serializer.toJson<String>(time),
+      'clientId': serializer.toJson<String?>(clientId),
       'clientName': serializer.toJson<String>(clientName),
       'type': serializer.toJson<String>(type),
       'durationMinutes': serializer.toJson<int>(durationMinutes),
@@ -3274,6 +3314,7 @@ class TrainerScheduleRow extends DataClass
     String? id,
     String? date,
     String? time,
+    Value<String?> clientId = const Value.absent(),
     String? clientName,
     String? type,
     int? durationMinutes,
@@ -3285,6 +3326,7 @@ class TrainerScheduleRow extends DataClass
     id: id ?? this.id,
     date: date ?? this.date,
     time: time ?? this.time,
+    clientId: clientId.present ? clientId.value : this.clientId,
     clientName: clientName ?? this.clientName,
     type: type ?? this.type,
     durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -3298,6 +3340,7 @@ class TrainerScheduleRow extends DataClass
       id: data.id.present ? data.id.value : this.id,
       date: data.date.present ? data.date.value : this.date,
       time: data.time.present ? data.time.value : this.time,
+      clientId: data.clientId.present ? data.clientId.value : this.clientId,
       clientName: data.clientName.present
           ? data.clientName.value
           : this.clientName,
@@ -3320,6 +3363,7 @@ class TrainerScheduleRow extends DataClass
           ..write('id: $id, ')
           ..write('date: $date, ')
           ..write('time: $time, ')
+          ..write('clientId: $clientId, ')
           ..write('clientName: $clientName, ')
           ..write('type: $type, ')
           ..write('durationMinutes: $durationMinutes, ')
@@ -3336,6 +3380,7 @@ class TrainerScheduleRow extends DataClass
     id,
     date,
     time,
+    clientId,
     clientName,
     type,
     durationMinutes,
@@ -3351,6 +3396,7 @@ class TrainerScheduleRow extends DataClass
           other.id == this.id &&
           other.date == this.date &&
           other.time == this.time &&
+          other.clientId == this.clientId &&
           other.clientName == this.clientName &&
           other.type == this.type &&
           other.durationMinutes == this.durationMinutes &&
@@ -3365,6 +3411,7 @@ class TrainerScheduleEntriesCompanion
   final Value<String> id;
   final Value<String> date;
   final Value<String> time;
+  final Value<String?> clientId;
   final Value<String> clientName;
   final Value<String> type;
   final Value<int> durationMinutes;
@@ -3377,6 +3424,7 @@ class TrainerScheduleEntriesCompanion
     this.id = const Value.absent(),
     this.date = const Value.absent(),
     this.time = const Value.absent(),
+    this.clientId = const Value.absent(),
     this.clientName = const Value.absent(),
     this.type = const Value.absent(),
     this.durationMinutes = const Value.absent(),
@@ -3390,6 +3438,7 @@ class TrainerScheduleEntriesCompanion
     required String id,
     required String date,
     required String time,
+    this.clientId = const Value.absent(),
     this.clientName = const Value.absent(),
     this.type = const Value.absent(),
     this.durationMinutes = const Value.absent(),
@@ -3406,6 +3455,7 @@ class TrainerScheduleEntriesCompanion
     Expression<String>? id,
     Expression<String>? date,
     Expression<String>? time,
+    Expression<String>? clientId,
     Expression<String>? clientName,
     Expression<String>? type,
     Expression<int>? durationMinutes,
@@ -3419,6 +3469,7 @@ class TrainerScheduleEntriesCompanion
       if (id != null) 'id': id,
       if (date != null) 'date': date,
       if (time != null) 'time': time,
+      if (clientId != null) 'client_id': clientId,
       if (clientName != null) 'client_name': clientName,
       if (type != null) 'type': type,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
@@ -3434,6 +3485,7 @@ class TrainerScheduleEntriesCompanion
     Value<String>? id,
     Value<String>? date,
     Value<String>? time,
+    Value<String?>? clientId,
     Value<String>? clientName,
     Value<String>? type,
     Value<int>? durationMinutes,
@@ -3447,6 +3499,7 @@ class TrainerScheduleEntriesCompanion
       id: id ?? this.id,
       date: date ?? this.date,
       time: time ?? this.time,
+      clientId: clientId ?? this.clientId,
       clientName: clientName ?? this.clientName,
       type: type ?? this.type,
       durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -3469,6 +3522,9 @@ class TrainerScheduleEntriesCompanion
     }
     if (time.present) {
       map['time'] = Variable<String>(time.value);
+    }
+    if (clientId.present) {
+      map['client_id'] = Variable<String>(clientId.value);
     }
     if (clientName.present) {
       map['client_name'] = Variable<String>(clientName.value);
@@ -3503,6 +3559,7 @@ class TrainerScheduleEntriesCompanion
           ..write('id: $id, ')
           ..write('date: $date, ')
           ..write('time: $time, ')
+          ..write('clientId: $clientId, ')
           ..write('clientName: $clientName, ')
           ..write('type: $type, ')
           ..write('durationMinutes: $durationMinutes, ')
@@ -5109,6 +5166,7 @@ typedef $$TrainerScheduleEntriesTableCreateCompanionBuilder =
       required String id,
       required String date,
       required String time,
+      Value<String?> clientId,
       Value<String> clientName,
       Value<String> type,
       Value<int> durationMinutes,
@@ -5123,6 +5181,7 @@ typedef $$TrainerScheduleEntriesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> date,
       Value<String> time,
+      Value<String?> clientId,
       Value<String> clientName,
       Value<String> type,
       Value<int> durationMinutes,
@@ -5154,6 +5213,11 @@ class $$TrainerScheduleEntriesTableFilterComposer
 
   ColumnFilters<String> get time => $composableBuilder(
     column: $table.time,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientId => $composableBuilder(
+    column: $table.clientId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5217,6 +5281,11 @@ class $$TrainerScheduleEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get clientName => $composableBuilder(
     column: $table.clientName,
     builder: (column) => ColumnOrderings(column),
@@ -5270,6 +5339,9 @@ class $$TrainerScheduleEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get time =>
       $composableBuilder(column: $table.time, builder: (column) => column);
+
+  GeneratedColumn<String> get clientId =>
+      $composableBuilder(column: $table.clientId, builder: (column) => column);
 
   GeneratedColumn<String> get clientName => $composableBuilder(
     column: $table.clientName,
@@ -5348,6 +5420,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> date = const Value.absent(),
                 Value<String> time = const Value.absent(),
+                Value<String?> clientId = const Value.absent(),
                 Value<String> clientName = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> durationMinutes = const Value.absent(),
@@ -5360,6 +5433,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 id: id,
                 date: date,
                 time: time,
+                clientId: clientId,
                 clientName: clientName,
                 type: type,
                 durationMinutes: durationMinutes,
@@ -5374,6 +5448,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 required String id,
                 required String date,
                 required String time,
+                Value<String?> clientId = const Value.absent(),
                 Value<String> clientName = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> durationMinutes = const Value.absent(),
@@ -5386,6 +5461,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 id: id,
                 date: date,
                 time: time,
+                clientId: clientId,
                 clientName: clientName,
                 type: type,
                 durationMinutes: durationMinutes,
