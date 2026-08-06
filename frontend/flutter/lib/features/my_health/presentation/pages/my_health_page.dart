@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
@@ -63,9 +64,7 @@ class MyHealthPage extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _ProfileCard(
-                    profile: health.valueOrNull?.profile,
-                  ),
+                  child: _ProfileCard(profile: health.valueOrNull?.profile),
                 ),
                 const SizedBox(height: 20),
                 Padding(
@@ -881,12 +880,15 @@ class _TrainerGymSection extends ConsumerWidget {
   /// 연결된 헬스장이 없을 때 "헬스장 찾기"로 보낼 콜백.
   final VoidCallback onFindGym;
 
-  /// 카드를 누르면 확인 후 헬스장·트레이너 연결을 해제한다.
+  /// 확인 창을 띄우고, 승인되면 [disconnect] 를 실행한 뒤 연결 상태를 새로
+  /// 읽는다. 헬스장·트레이너 두 삭제가 같은 흐름을 쓴다.
   Future<void> _confirmDisconnect(
     BuildContext context,
-    WidgetRef ref,
-    Gym gym,
-  ) async {
+    WidgetRef ref, {
+    required String message,
+    required Future<void> Function(GymRepository repo) disconnect,
+  }) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final bool ok =
         await showDialog<bool>(
           context: context,
@@ -895,16 +897,16 @@ class _TrainerGymSection extends ConsumerWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            title: const Text(
-              '연결 삭제',
-              style: TextStyle(
+            title: Text(
+              l.myConnectionDeleteTitle,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: FigmaColors.ink,
               ),
             ),
             content: Text(
-              '${gym.name} 연결을 삭제하시겠습니까?',
+              message,
               style: const TextStyle(
                 fontSize: 13.5,
                 color: FigmaColors.textBody,
@@ -917,35 +919,61 @@ class _TrainerGymSection extends ConsumerWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: FigmaColors.textMuted,
                 ),
-                child: const Text('취소'),
+                child: Text(l.myCancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFFF3B30),
                 ),
-                child: const Text('삭제'),
+                child: Text(l.myDelete),
               ),
             ],
           ),
         ) ??
         false;
     if (!ok) return;
-    await ref.read(gymRepositoryProvider).disconnectMyGym();
+    await disconnect(ref.read(gymRepositoryProvider));
     // 해제를 기다리는 동안 탭을 벗어났다면 ref 가 이미 폐기됐을 수 있다.
     if (!context.mounted) return;
     ref.invalidate(myGymProvider);
   }
 
+  /// 헬스장 연결 삭제. 담당 트레이너가 있으면 함께 사라진다는 것을 알린다.
+  Future<void> _removeGym(BuildContext context, WidgetRef ref, Gym gym) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
+    return _confirmDisconnect(
+      context,
+      ref,
+      message: hasTrainer
+          ? l.myGymDisconnectWithTrainerConfirm(gym.name, gym.trainerName!)
+          : l.myGymDisconnectConfirm(gym.name),
+      disconnect: (GymRepository repo) => repo.disconnectMyGym(),
+    );
+  }
+
+  /// 헬스장은 그대로 두고 담당 트레이너 연결만 삭제.
+  Future<void> _removeTrainer(BuildContext context, WidgetRef ref, Gym gym) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _confirmDisconnect(
+      context,
+      ref,
+      message: l.myTrainerDisconnectConfirm(gym.trainerName!, gym.name),
+      disconnect: (GymRepository repo) => repo.disconnectMyTrainer(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> gymAsync = ref.watch(myGymProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          '내 트레이너 · 헬스장',
-          style: TextStyle(
+        Text(
+          l.myTrainerGymTitle,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: FigmaColors.ink,
@@ -954,12 +982,15 @@ class _TrainerGymSection extends ConsumerWidget {
         const SizedBox(height: 12),
         gymAsync.when(
           loading: () => const _GymSectionLoading(),
-          error: (_, _) => _GymSectionEmpty(onFind: onFindGym),
+          error: (_, _) =>
+              _GymSectionError(onRetry: () => ref.invalidate(myGymProvider)),
           data: (Gym? gym) => gym == null
               ? _GymSectionEmpty(onFind: onFindGym)
               : _GymSummaryCard(
                   gym: gym,
-                  onTap: () => _confirmDisconnect(context, ref, gym),
+                  onRemoveGym: () => _removeGym(context, ref, gym),
+                  onRemoveTrainer: () => _removeTrainer(context, ref, gym),
+                  onFindTrainer: onFindGym,
                 ),
         ),
       ],
@@ -967,14 +998,26 @@ class _TrainerGymSection extends ConsumerWidget {
   }
 }
 
+/// 연결된 헬스장과 담당 트레이너를 각각 한 줄로 보여준다. 두 연결은 따로
+/// 관리된다 — 트레이너만 떼거나, 헬스장을 떼면서 함께 정리하거나.
 class _GymSummaryCard extends StatelessWidget {
-  const _GymSummaryCard({required this.gym, required this.onTap});
+  const _GymSummaryCard({
+    required this.gym,
+    required this.onRemoveGym,
+    required this.onRemoveTrainer,
+    required this.onFindTrainer,
+  });
 
   final Gym gym;
-  final VoidCallback onTap;
+  final VoidCallback onRemoveGym;
+  final VoidCallback onRemoveTrainer;
+
+  /// 헬스장은 있는데 담당 트레이너가 없을 때 트레이너를 찾으러 보낸다.
+  final VoidCallback onFindTrainer;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final bool hasTrainer = gym.trainerName?.isNotEmpty ?? false;
     return Container(
       decoration: BoxDecoration(
@@ -984,93 +1027,164 @@ class _GymSummaryCard extends StatelessWidget {
         boxShadow: kCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: FigmaColors.primaryA(0.10),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.fitness_center,
-                      size: 18,
-                      color: FigmaColors.primary,
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: FigmaColors.primaryA(0.10),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          gym.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: FigmaColors.ink,
-                          ),
-                        ),
-                        Text(
-                          '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: FigmaColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: const Icon(
+                    Icons.fitness_center,
+                    size: 18,
+                    color: FigmaColors.primary,
                   ),
-                  // 카드 전체가 "연결 삭제" 동작이므로, 이동을 뜻하는 chevron
-                  // 대신 삭제 아이콘을 둔다.
-                  const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 20,
-                    color: FigmaColors.textFaint,
-                  ),
-                ],
-              ),
-              if (hasTrainer) ...<Widget>[
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: FigmaColors.hairline),
-                const SizedBox(height: 12),
-                Row(
-                  children: <Widget>[
-                    const Icon(
-                      Icons.person_outline,
-                      size: 15,
-                      color: FigmaColors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${gym.trainerName!} · ${gym.trainerRole ?? '퍼스널 트레이너'}',
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        gym.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: FigmaColors.textBody,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.ink,
                         ),
                       ),
-                    ),
-                  ],
+                      Text(
+                        '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _RemoveLinkButton(
+                  tooltip: l.myGymDisconnectTooltip,
+                  onTap: onRemoveGym,
                 ),
               ],
-            ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: FigmaColors.hairline),
+            const SizedBox(height: 12),
+            if (hasTrainer)
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.person_outline,
+                    size: 15,
+                    color: FigmaColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${gym.trainerName!} · ${gym.trainerRole ?? l.exTrainerDedicated}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textBody,
+                      ),
+                    ),
+                  ),
+                  _RemoveLinkButton(
+                    tooltip: l.myTrainerDisconnectTooltip,
+                    onTap: onRemoveTrainer,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.person_off_outlined,
+                    size: 15,
+                    color: FigmaColors.textFaint,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l.myNoTrainer,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onFindTrainer,
+                    style: TextButton.styleFrom(
+                      foregroundColor: FigmaColors.primary,
+                      minimumSize: const Size(48, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text(
+                      l.exFindTrainer,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 한 줄짜리 연결(헬스장 또는 트레이너)을 끊는 버튼. 시각적 아이콘은 20이지만
+/// 탭 영역은 접근성 최소 44×44 를 지킨다.
+class _RemoveLinkButton extends StatelessWidget {
+  const _RemoveLinkButton({required this.tooltip, required this.onTap});
+
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.delete_outline_rounded,
+                size: 20,
+                color: FigmaColors.textFaint,
+              ),
+            ),
           ),
         ),
       ),
@@ -1085,6 +1199,7 @@ class _GymSectionEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -1096,9 +1211,9 @@ class _GymSectionEmpty extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          const Text(
-            '아직 등록된 헬스장이 없어요',
-            style: TextStyle(
+          Text(
+            l.myNoGymConnected,
+            style: const TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: FigmaColors.textMuted,
@@ -1115,9 +1230,9 @@ class _GymSectionEmpty extends StatelessWidget {
               ),
             ),
             icon: const Icon(Icons.search, size: 16),
-            label: const Text(
-              '헬스장 찾기',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            label: Text(
+              l.exFindGym,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1145,6 +1260,41 @@ class _GymSectionLoading extends StatelessWidget {
           height: 24,
           child: CircularProgressIndicator(strokeWidth: 2.5),
         ),
+      ),
+    );
+  }
+}
+
+class _GymSectionError extends StatelessWidget {
+  const _GymSectionError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FigmaColors.hairline),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            l.myGymLoadFailed,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: Text(l.actionRetry)),
+        ],
       ),
     );
   }

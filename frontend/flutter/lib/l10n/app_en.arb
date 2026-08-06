@@ -558,7 +558,7 @@
   "exSpecialty": "Specialties",
   "exKakaoMapArea": "Kakao Map area",
   "exDefaultTrainerName": "Trainer Kim",
-  "exDefaultGymName": "Gangnam Fitness Center",
+  "exDefaultGymName": "On-Care Gym Sinchon",
   "exChatGreeting": "Hello, I'm {trainer}. 😊\nHow can I help you?",
   "@exChatGreeting": {
     "placeholders": {
@@ -597,6 +597,32 @@
   "myLogout": "Log out",
   "myLogoutConfirm": "Log out of your account?",
   "myCancel": "Cancel",
+  "myTrainerGymTitle": "My Trainer & Gym",
+  "myConnectionDeleteTitle": "Remove Connection",
+  "myDelete": "Remove",
+  "myGymDisconnectWithTrainerConfirm": "Disconnect {gym}?\nYour trainer link with {trainer} will also be removed.",
+  "@myGymDisconnectWithTrainerConfirm": {
+    "placeholders": {
+      "gym": {"type": "String"},
+      "trainer": {"type": "String"}
+    }
+  },
+  "myGymDisconnectConfirm": "Disconnect {gym}?",
+  "@myGymDisconnectConfirm": {
+    "placeholders": {"gym": {"type": "String"}}
+  },
+  "myTrainerDisconnectConfirm": "Disconnect trainer {trainer}?\nYour connection to {gym} will remain.",
+  "@myTrainerDisconnectConfirm": {
+    "placeholders": {
+      "trainer": {"type": "String"},
+      "gym": {"type": "String"}
+    }
+  },
+  "myGymDisconnectTooltip": "Disconnect gym",
+  "myTrainerDisconnectTooltip": "Disconnect trainer",
+  "myNoTrainer": "No assigned trainer",
+  "myNoGymConnected": "No gym connected yet",
+  "myGymLoadFailed": "Couldn't load your gym connection.",
   "mySave": "Save",
   "myProfileSaved": "Profile saved",
   "mySaveFailed": "Couldn't save. Please try again in a moment",
