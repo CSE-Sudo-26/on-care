@@ -29,6 +29,7 @@ class ScheduleSession {
     required this.id,
     required this.date,
     required this.time,
+    this.clientId,
     required this.clientName,
     required this.type,
     required this.durationMinutes,
@@ -48,7 +49,12 @@ class ScheduleSession {
   /// Slot time (e.g. "10:00").
   final String time;
 
-  /// Booked client's name — empty for a gap slot.
+  /// Booked client's id. Null for gap slots, 미등록(상담) 고객, and rows
+  /// stored before v3 — see the drift column comment (#386).
+  final String? clientId;
+
+  /// Booked client's display name — empty for a gap slot. 표시 전용이다.
+  /// 조회는 [clientId] 로 한다.
   final String clientName;
 
   /// Session kind (e.g. "1:1 PT", "상담") — empty for a gap.

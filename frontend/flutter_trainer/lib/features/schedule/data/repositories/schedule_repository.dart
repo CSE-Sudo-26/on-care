@@ -46,6 +46,7 @@ abstract interface class ScheduleRepository {
   Future<void> addSession({
     required String date,
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -56,6 +57,7 @@ abstract interface class ScheduleRepository {
   Future<void> updateSession(
     String id, {
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -145,20 +147,25 @@ class DriftScheduleRepository implements ScheduleRepository {
   /// A client's booked sessions, newest first. Drives the 고객 상세 루틴
   /// tab (what programs this person has been given).
   ///
-  /// Schedules reference a client by NAME — see `addClient`'s uniqueness
-  /// guard, which exists precisely so this lookup can't collide. Matched
-  /// on `lower(trim(name))`, the SAME normalisation that guard uses: an
-  /// exact compare would silently return nothing for a name stored with
-  /// stray whitespace or different case, and the weekly report would
-  /// then show 0 sessions for a client who clearly has some.
+  /// Sessions belonging to [client] — matched by **id**, not name (#386).
+  ///
+  /// 이름 매칭은 조용히 실패했다. 고객 이름을 바꾸거나 공백·대소문자가 어긋나면
+  /// 크래시도 오류 표시도 없이 주간 리포트가 "세션 0건" 이 되고, 트레이너가
+  /// 그걸 그대로 회원에게 전송할 수 있었다.
+  ///
+  /// v3 이전에 저장된 행은 `client_id` 가 null 이라 예전처럼 정규화된 이름으로
+  /// 폴백한다. 폴백은 `lower(trim(name))` — `addClient` 의 유일성 가드와 같은
+  /// 정규화라, 저장/조회 기준이 어긋나지 않는다.
   @override
   Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
     final query = _db.select(_db.trainerScheduleEntries)
       ..where(
         (t) =>
-            t.clientName.lower().trim().equals(
-              client.name.trim().toLowerCase(),
-            ) &
+            (t.clientId.equals(client.id) |
+                (t.clientId.isNull() &
+                    t.clientName.lower().trim().equals(
+                      client.name.trim().toLowerCase(),
+                    ))) &
             t.status.equals('공백').not(),
       )
       ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
@@ -174,6 +181,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   Future<void> addSession({
     required String date,
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -186,6 +194,7 @@ class DriftScheduleRepository implements ScheduleRepository {
             id: 'sched-${DateTime.now().microsecondsSinceEpoch}',
             date: date,
             time: time,
+            clientId: Value(clientId),
             clientName: Value(clientName),
             type: Value(type),
             durationMinutes: Value(durationMinutes),
@@ -201,6 +210,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   Future<void> updateSession(
     String id, {
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -210,6 +220,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       _db.trainerScheduleEntries,
     )..where((t) => t.id.equals(id))).write(
       TrainerScheduleEntriesCompanion(
+        clientId: Value(clientId),
         clientName: Value(clientName),
         time: Value(time),
         type: Value(type),
@@ -295,9 +306,17 @@ class DriftScheduleRepository implements ScheduleRepository {
           );
       if (changed != 1) return;
 
+      // 기록을 남길 고객도 id 로 찾는다. v3 이전 행만 이름으로 폴백한다.
+      final clientId = session.clientId;
       final client =
           await (_db.select(_db.trainerClients)
-                ..where((t) => t.name.equals(session.clientName))
+                ..where(
+                  (t) => clientId != null
+                      ? t.id.equals(clientId)
+                      : t.name.lower().trim().equals(
+                          session.clientName.trim().toLowerCase(),
+                        ),
+                )
                 ..limit(1))
               .getSingleOrNull();
 
@@ -354,6 +373,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       id: row.id,
       date: row.date,
       time: row.time,
+      clientId: row.clientId,
       clientName: row.clientName,
       type: row.type,
       durationMinutes: row.durationMinutes,

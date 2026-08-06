@@ -33,6 +33,7 @@ class _ThrowingScheduleRepository extends DriftScheduleRepository {
   Future<void> addSession({
     required String date,
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -69,6 +70,54 @@ void main() {
         '19:00',
       ]);
       expect(slots.where((s) => s.isGap).length, 2);
+    });
+
+    // #386 회귀: 스케줄이 고객을 이름으로 참조하던 시절에는 고객 이름을
+    // 바꾸면 과거 세션이 통째로 끊겼다. 크래시도 오류 표시도 없이 주간
+    // 리포트가 "세션 0건" 이 되고, 그대로 회원에게 전송될 수 있었다.
+    test('고객 이름을 바꿔도 과거 세션이 끊기지 않는다', () async {
+      final repo = DriftScheduleRepository(db);
+      const key = (id: 'seed-client-1', name: '김민수');
+      final before = await repo.watchClientSessions(key).first;
+      expect(before, isNotEmpty, reason: '시드에 김민수 세션이 있어야 한다');
+
+      await (db.update(db.trainerClients)
+            ..where((t) => t.id.equals('seed-client-1')))
+          .write(const TrainerClientsCompanion(name: Value('김민수2')));
+
+      final after = await repo
+          .watchClientSessions((id: 'seed-client-1', name: '김민수2'))
+          .first;
+      expect(after.length, before.length);
+    });
+
+    test('이름이 같아도 다른 고객의 세션은 섞이지 않는다', () async {
+      final repo = DriftScheduleRepository(db);
+      // 이름만 같고 id 가 다른 고객은 남의 세션을 가져오면 안 된다.
+      final sessions = await repo
+          .watchClientSessions((id: 'other-client', name: '김민수'))
+          .first;
+      expect(sessions, isEmpty);
+    });
+
+    test('v3 이전 행(client_id 없음)은 이름으로 폴백한다', () async {
+      // 마이그레이션만 거친 기존 설치를 흉내 낸다 — client_id 가 null 이다.
+      await db
+          .into(db.trainerScheduleEntries)
+          .insert(
+            TrainerScheduleEntriesCompanion.insert(
+              id: 'legacy-row',
+              date: ymd(DateTime.now()),
+              time: '21:00',
+              status: '예정',
+              clientName: const Value('  김민수  '), // 공백까지 섞인 기존 데이터
+            ),
+          );
+
+      final sessions = await DriftScheduleRepository(
+        db,
+      ).watchClientSessions((id: 'seed-client-1', name: '김민수')).first;
+      expect(sessions.any((s) => s.id == 'legacy-row'), isTrue);
     });
 
     test('decodes the PT program and expandability rules', () async {

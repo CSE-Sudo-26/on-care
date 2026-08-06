@@ -114,6 +114,7 @@ class DioScheduleRepository implements ScheduleRepository {
   Future<void> addSession({
     required String date,
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -126,6 +127,7 @@ class DioScheduleRepository implements ScheduleRepository {
           'date': date,
           'time': time,
           'client_name': clientName,
+          'member_id': ?clientId,
           'type': type,
           'duration_minutes': durationMinutes,
           'note': note,
@@ -138,6 +140,7 @@ class DioScheduleRepository implements ScheduleRepository {
   Future<void> updateSession(
     String id, {
     required String clientName,
+    String? clientId,
     required String time,
     required String type,
     required int durationMinutes,
@@ -148,6 +151,7 @@ class DioScheduleRepository implements ScheduleRepository {
         '/trainer/schedule/${Uri.encodeComponent(id)}',
         data: <String, Object?>{
           'client_name': clientName,
+          'member_id': ?clientId,
           'time': time,
           'type': type,
           'duration_minutes': durationMinutes,

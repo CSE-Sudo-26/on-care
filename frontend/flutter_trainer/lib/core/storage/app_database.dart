@@ -112,6 +112,14 @@ class TrainerScheduleEntries extends Table {
   TextColumn get id => text()();
   TextColumn get date => text()(); // YYYY-MM-DD (slides to today)
   TextColumn get time => text()(); // "10:00"
+  /// 예약된 고객의 id. 이름은 식별자가 아니다 — 고객 이름을 바꾸면 과거
+  /// 세션이 통째로 끊기고, 조용히 "세션 0건" 리포트가 되어 그대로 회원에게
+  /// 전송될 수 있었다(#386).
+  ///
+  /// nullable 인 이유: 상담 등 미등록 고객 슬롯과 공백 슬롯에는 붙일 id 가
+  /// 없고, v3 이전에 저장된 기존 행도 값이 없다. 조회는 id 를 우선하고
+  /// 없을 때만 이름으로 폴백한다.
+  TextColumn get clientId => text().nullable()();
   TextColumn get clientName => text().withDefault(const Constant(''))();
   TextColumn get type => text().withDefault(const Constant(''))();
   IntColumn get durationMinutes => integer().withDefault(const Constant(0))();
@@ -160,7 +168,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -172,6 +180,14 @@ class AppDatabase extends _$AppDatabase {
       // valid; the next re-seed backfills real values).
       if (from < 2) {
         await m.addColumn(trainerClients, trainerClients.sodiumWeekJson);
+      }
+      // v3: 스케줄이 고객을 이름 대신 id 로 참조한다(#386). 기존 행은 null 로
+      // 남고 조회가 이름으로 폴백하므로, 다음 재시딩 전까지도 끊기지 않는다.
+      if (from < 3) {
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.clientId,
+        );
       }
     },
   );
