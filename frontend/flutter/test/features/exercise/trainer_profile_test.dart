@@ -37,6 +37,20 @@ const Gym _withoutProfile = Gym(
   trainerRole: '퍼스널 트레이너',
 );
 
+const Gym _withWhitespaceOnlyProfile = Gym(
+  id: 'gym-whitespace-profile',
+  name: '공백 프로필 헬스장',
+  address: '서울 서대문구 테스트로 3',
+  distanceKm: 1.1,
+  rating: 4.0,
+  tags: <String>[],
+  trainerName: '공백테스트',
+  trainerRole: '퍼스널 트레이너',
+  trainerCareer: '  ',
+  trainerIntro: '\n ',
+  trainerCertifications: <String>['', '  '],
+);
+
 const AppConfig _config = AppConfig(
   environment: Environment.dev,
   apiBaseUrl: 'https://dev.api.test',
@@ -89,6 +103,14 @@ void main() {
     expect(find.text('자격증 · 인증'), findsNothing);
   });
 
+  testWidgets('공백뿐인 프로필 정보는 소개 섹션과 빈 칩을 만들지 않는다', (WidgetTester tester) async {
+    await pumpTrainerDetail(tester, _withWhitespaceOnlyProfile);
+
+    expect(find.text(_withWhitespaceOnlyProfile.trainerName!), findsOneWidget);
+    expect(find.text('트레이너 소개'), findsNothing);
+    expect(find.text('자격증 · 인증'), findsNothing);
+  });
+
   // 트레이너 앱은 별도 패키지라 seedTrainerProfile 을 import 할 수 없다.
   // 기대값을 여기 고정해 두어, 사용자 앱 목 데이터가 바뀌면 실패하도록 한다.
   // 값을 고칠 때는 frontend/flutter_trainer/lib/shared/models/trainer_profile.dart
@@ -100,7 +122,7 @@ void main() {
     expect(gym!.name, '온케어짐 신촌점');
     expect(gym.address, '서울 서대문구 신촌로 120');
     expect(gym.phone, '02-1234-5678');
-    expect(gym.weekdayHours, '06:00 - 23:00');
+    expect(gym.weekdayHours, '06:00 – 23:00');
     expect(gym.trainerName, '김트레이너');
     expect(gym.trainerRole, '퍼스널 트레이너');
     expect(gym.trainerCareer, '7년');
@@ -113,5 +135,18 @@ void main() {
       '퍼스널트레이닝 CPT',
       '스포츠 영양사',
     ]);
+  });
+
+  test('트레이너 연결 해제 후에도 같은 헬스장의 운영시간을 유지한다', () async {
+    final MockGymRepository repository = MockGymRepository();
+    final Gym? before = await repository.fetchMyGym();
+
+    await repository.disconnectMyTrainer();
+    final Gym? after = await repository.fetchMyGym();
+
+    expect(after, isNotNull);
+    expect(after!.id, before!.id);
+    expect(after.weekdayHours, before.weekdayHours);
+    expect(after.trainerName, isNull);
   });
 }

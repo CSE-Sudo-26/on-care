@@ -103,15 +103,17 @@ class _TrainerDetails extends StatelessWidget {
   final bool hasPending;
   final bool isMyTrainer;
 
-  /// 소개·경력·자격증 중 하나라도 있으면 프로필 섹션을 그린다.
-  bool get _hasProfile =>
-      (gym.trainerIntro?.isNotEmpty ?? false) ||
-      (gym.trainerCareer?.isNotEmpty ?? false) ||
-      gym.trainerCertifications.isNotEmpty;
-
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final String intro = gym.trainerIntro?.trim() ?? '';
+    final String career = gym.trainerCareer?.trim() ?? '';
+    final List<String> certifications = gym.trainerCertifications
+        .map((String certification) => certification.trim())
+        .where((String certification) => certification.isNotEmpty)
+        .toList(growable: false);
+    final bool hasProfile =
+        intro.isNotEmpty || career.isNotEmpty || certifications.isNotEmpty;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
@@ -162,25 +164,24 @@ class _TrainerDetails extends StatelessWidget {
             const SizedBox(height: 22),
             // 트레이너 앱 프로필(소개·경력·자격증)과 같은 값을 보여준다.
             // 세 항목이 모두 비면 섹션 자체를 숨긴다.
-            if (_hasProfile) ...<Widget>[
+            if (hasProfile) ...<Widget>[
               _DetailSection(
                 icon: Icons.badge_outlined,
                 title: l.exTrainerIntroSection,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    if (gym.trainerIntro?.isNotEmpty ?? false)
+                    if (intro.isNotEmpty)
                       Text(
-                        gym.trainerIntro!,
+                        intro,
                         style: const TextStyle(
                           fontSize: 13,
                           height: 1.5,
                           color: FigmaColors.textBody,
                         ),
                       ),
-                    if (gym.trainerCareer?.isNotEmpty ?? false) ...<Widget>[
-                      if (gym.trainerIntro?.isNotEmpty ?? false)
-                        const SizedBox(height: 12),
+                    if (career.isNotEmpty) ...<Widget>[
+                      if (intro.isNotEmpty) const SizedBox(height: 12),
                       Row(
                         children: <Widget>[
                           const Icon(
@@ -191,7 +192,7 @@ class _TrainerDetails extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              l.exTrainerCareer(gym.trainerCareer!),
+                              l.exTrainerCareer(career),
                               style: const TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
@@ -202,7 +203,7 @@ class _TrainerDetails extends StatelessWidget {
                         ],
                       ),
                     ],
-                    if (gym.trainerCertifications.isNotEmpty) ...<Widget>[
+                    if (certifications.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 14),
                       Text(
                         l.exTrainerCertifications,
@@ -217,7 +218,7 @@ class _TrainerDetails extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 6,
                         children: <Widget>[
-                          for (final String cert in gym.trainerCertifications)
+                          for (final String cert in certifications)
                             _CertChip(label: cert),
                         ],
                       ),
