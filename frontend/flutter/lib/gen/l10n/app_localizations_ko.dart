@@ -274,6 +274,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMetricNormal => '정상';
 
   @override
+  String dietAmountOver(String amount) {
+    return '목표보다 $amount 많아요';
+  }
+
+  @override
+  String dietAmountRemaining(String amount) {
+    return '목표까지 $amount 남았어요';
+  }
+
+  @override
   String get homeExerciseActiveTime => '주간 운동 시간';
 
   @override

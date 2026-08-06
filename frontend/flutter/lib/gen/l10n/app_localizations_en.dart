@@ -277,6 +277,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMetricNormal => 'On track';
 
   @override
+  String dietAmountOver(String amount) {
+    return '$amount over the goal';
+  }
+
+  @override
+  String dietAmountRemaining(String amount) {
+    return '$amount remaining to the goal';
+  }
+
+  @override
   String get homeExerciseActiveTime => 'Weekly active time';
 
   @override
