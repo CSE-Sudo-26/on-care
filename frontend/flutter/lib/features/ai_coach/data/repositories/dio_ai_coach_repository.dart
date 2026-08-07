@@ -8,6 +8,14 @@ class DioAiCoachRepository implements AiCoachRepository {
   DioAiCoachRepository(this._dio);
   final Dio _dio;
 
+  /// 채팅 응답 대기 시간. 전역 receiveTimeout(15초)으로는 모자란다.
+  ///
+  /// 코치 답변은 RAG 검색 + Gemini 생성이라 로컬 실측이 7.6~12.8초였다. 15초는
+  /// 로컬에서도 여유가 2초뿐이고 배포 후 네트워크 지연이 붙으면 정기적으로 넘는다.
+  /// 게다가 서버는 답변을 저장하므로, 앱만 타임아웃되면 사용자는 실패 메시지를 본
+  /// 뒤 다음에 채팅을 열었을 때 **본 적 없는 답변**을 발견하게 된다.
+  static const Duration _chatTimeout = Duration(seconds: 60);
+
   @override
   Future<AiCoachState> fetchState() async {
     final res = await _dio.get<Map<String, Object?>>('/ai-coach/feedback');
@@ -31,6 +39,7 @@ class DioAiCoachRepository implements AiCoachRepository {
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
       '/ai-coach/chat',
+      options: Options(receiveTimeout: _chatTimeout),
       data: <String, Object?>{
         'message': message,
         'history': <Map<String, Object?>>[for (final m in history) m.toJson()],
