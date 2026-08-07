@@ -43,7 +43,13 @@ jobs:
 
       - name: Build Flutter web
         working-directory: frontend/flutter
-        run: flutter build web --release --base-href "/frontend/"
+        # 카카오맵 JS 키(#329). 저장소에 두지 않고 Secrets 에서 주입한다.
+        # 시크릿이 비어 있으면 지도는 폴백 그래픽으로 뜨고 빌드는 깨지지 않는다.
+        # 이 키는 클라이언트 노출이 전제이며, 카카오 콘솔의
+        # [플랫폼 키 > JavaScript 키 > JavaScript SDK 도메인] 등록으로 보호된다.
+        run: >-
+          flutter build web --release --base-href "/frontend/"
+          --dart-define=KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }}
 
       - name: Install Flutter dependencies (trainer)
         working-directory: frontend/flutter_trainer
