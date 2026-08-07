@@ -88,3 +88,30 @@ class DietAnalyzeResponse(BaseModel):
     """POST /diet/analyze 응답: 저장된 entry id + 분석 결과."""
     entry_id: str
     analysis: DietAnalysis
+
+
+class DietRecommendationItem(BaseModel):
+    """홈 추천 카드 1장.
+
+    문자열(요리명·태그)을 내려주지 않는 게 핵심이다. 앱이 `key` 로 번들 이미지와
+    로케일 문구를 찾아 그리므로, 서버는 "무엇을 어떤 순서로"만 정한다.
+    `reason_text` 는 LLM 이 쓴 개인화 문구이며 없을 수 있다(그때 앱은 `reason_key`
+    의 l10n 기본 문구를 쓴다) — 영어 로케일에서 한국어가 새는 걸 막는 장치다.
+    """
+    key: str
+    reason_key: str
+    reason_text: str | None = None
+
+
+class DietRecommendationsResponse(BaseModel):
+    """GET /diet/recommendations 응답.
+
+    `basis` 는 추천의 근거를 사람이 읽는 한 줄로 요약한 것(예: "최근 3일 평균 나트륨
+    2,400mg"). 개인화가 실제로 일어났는지 화면에서 확인할 수 있게 노출한다.
+    `personalized=False` 면 근거 데이터가 없어 기본 순서로 내려준 것이다.
+    `source` 는 관측용: llm | rules | fallback.
+    """
+    items: list[DietRecommendationItem]
+    basis: str | None = None
+    personalized: bool = False
+    source: str = "rules"
