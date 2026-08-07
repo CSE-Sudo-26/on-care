@@ -6,12 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/app_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../support/consultation_test_support.dart';
 
 const Gym _gym = Gym(
   id: 'gym-action-test',
@@ -44,10 +47,11 @@ ConsultationRequest _consultation(ConsultationStatus status) {
     trainerId: _trainer.id,
     trainerName: _trainer.name,
     trainerRole: _trainer.role,
-    exerciseGoal: '체중 감량',
-    healthPurpose: '해당 없음',
+    exerciseGoal: ExerciseGoal.weightLoss,
+    healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
     preferredDate: DateTime(2026, 8),
-    preferredTimeSlot: '오후',
+    preferredTimeSlot: PreferredTimeSlot.afternoon,
     message: null,
     status: status,
     createdAt: DateTime(2026, 7, 31),
@@ -67,9 +71,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    consultationController = ConsultationRequestController();
+    consultationController = newTestConsultationController();
     if (consultation != null) {
-      consultationController.add(consultation);
+      await seedPending(consultationController, consultation);
     }
     router = buildAppRouter(config: _config);
     addTearDown(router.dispose);

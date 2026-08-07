@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
@@ -16,6 +19,20 @@ enum _ExerciseGoal { weightLoss, strength, fitness, posture, health, other }
 enum _HealthPurpose { weight, chronic, rehab, general, none, other }
 
 enum _PreferredTime { morning, afternoon, evening, flexible }
+
+// 화면 선택지 → 서버 계약 enum. 순서가 같으므로 index 로 잇되, 길이가 어긋나면
+// 조용히 틀린 값이 나가므로 아래 assert 로 막는다.
+extension on _ExerciseGoal {
+  ExerciseGoal get wire => ExerciseGoal.values[index];
+}
+
+extension on _HealthPurpose {
+  HealthPurposeType get wire => HealthPurposeType.values[index];
+}
+
+extension on _PreferredTime {
+  PreferredTimeSlot get wire => PreferredTimeSlot.values[index];
+}
 
 class ConsultationRequestPage extends ConsumerStatefulWidget {
   const ConsultationRequestPage({
@@ -99,13 +116,13 @@ class _ConsultationRequestPageState
       _preferredDate != null &&
       _preferredTime != null;
 
-  void _submit({
+  Future<void> _submit({
     required Gym gym,
     required Trainer? trainer,
     required Map<_ExerciseGoal, String> goalLabels,
     required Map<_HealthPurpose, String> purposeLabels,
     required Map<_PreferredTime, String> timeLabels,
-  }) {
+  }) async {
     if (_submitting) return;
     setState(() => _attempted = true);
     if (!_isValid) return;
@@ -137,21 +154,54 @@ class _ConsultationRequestPageState
       trainerRole: targetType == ConsultationTargetType.trainer
           ? trainer?.role
           : null,
-      exerciseGoal: goalLabels[_exerciseGoal]!,
-      healthPurpose: _healthPurpose == _HealthPurpose.other
+      // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
+      // 문구를 만들 수 없다(#327).
+      exerciseGoal: _exerciseGoal!.wire,
+      healthPurposeType: _healthPurpose!.wire,
+      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
           ? _healthPurposeController.text.trim()
-          : purposeLabels[_healthPurpose]!,
+          : null,
       preferredDate: _preferredDate!,
-      preferredTimeSlot: timeLabels[_preferredTime]!,
+      preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
       status: ConsultationStatus.pending,
       createdAt: now,
     );
-    if (!controller.add(request)) {
+    final ConsultationDraft draft = ConsultationDraft(
+      // 서버는 대상이 하나여야 한다 — 둘 다 오면 422.
+      gymId: targetType == ConsultationTargetType.gym ? gym.id : null,
+      trainerId: targetType == ConsultationTargetType.trainer
+          ? trainer?.id
+          : null,
+      exerciseGoal: _exerciseGoal!.wire,
+      healthPurposeType: _healthPurpose!.wire,
+      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
+          ? _healthPurposeController.text.trim()
+          : null,
+      preferredDate: _preferredDate!,
+      preferredTimeSlot: _preferredTime!.wire,
+      message: message.isEmpty ? null : message,
+    );
+
+    final ConsultationRequest? saved;
+    try {
+      saved = await controller.submit(draft: draft, display: request);
+    } on Object {
+      // 409 외의 실패(네트워크 등)를 잡지 않으면 _submitting 이 true 로 남아
+      // 제출 버튼이 영영 눌리지 않는다(리뷰 지적).
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).errorUnknown)),
+      );
+      return;
+    }
+    if (!mounted) return;
+    if (saved == null) {
       setState(() => _submitting = false);
       return;
     }
-    context.replace(AppRoutes.consultationComplete, extra: request);
+    context.replace(AppRoutes.consultationComplete, extra: saved);
   }
 
   @override
@@ -359,12 +409,14 @@ class _ConsultationRequestPageState
             FilledButton(
               onPressed: hasPending || _submitting
                   ? null
-                  : () => _submit(
-                      gym: gym,
-                      trainer: trainer,
-                      goalLabels: goalLabels,
-                      purposeLabels: purposeLabels,
-                      timeLabels: timeLabels,
+                  : () => unawaited(
+                      _submit(
+                        gym: gym,
+                        trainer: trainer,
+                        goalLabels: goalLabels,
+                        purposeLabels: purposeLabels,
+                        timeLabels: timeLabels,
+                      ),
                     ),
               style: FilledButton.styleFrom(
                 backgroundColor: FigmaColors.primary,

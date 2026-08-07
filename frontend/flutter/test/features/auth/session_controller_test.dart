@@ -5,8 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare/features/exercise/data/repositories/dio_consultation_repository.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
+
+import '../../support/consultation_test_support.dart';
 
 final ConsultationRequest _pendingRequest = ConsultationRequest(
   id: 'request-user-a',
@@ -16,10 +20,11 @@ final ConsultationRequest _pendingRequest = ConsultationRequest(
   trainerId: null,
   trainerName: null,
   trainerRole: null,
-  exerciseGoal: '체중 감량',
-  healthPurpose: '혈압 관리',
+  exerciseGoal: ExerciseGoal.weightLoss,
+  healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
   preferredDate: DateTime(2026, 7, 30),
-  preferredTimeSlot: '오후',
+  preferredTimeSlot: PreferredTimeSlot.afternoon,
   message: 'A 사용자의 문의 내용',
   status: ConsultationStatus.pending,
   createdAt: DateTime(2026, 7, 29),
@@ -33,13 +38,21 @@ void main() {
   });
 
   test('signOut clears consultation requests for the next user', () async {
-    final ProviderContainer container = ProviderContainer();
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        // 상담 컨트롤러가 appConfig 를 타므로 repository 를 직접 고정한다(#327).
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+      ],
+    );
     addTearDown(container.dispose);
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 
@@ -57,14 +70,22 @@ void main() {
     );
   });
 
-  test('enterDemo clears existing consultation requests', () {
-    final ProviderContainer container = ProviderContainer();
+  test('enterDemo clears existing consultation requests', () async {
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        // 상담 컨트롤러가 appConfig 를 타므로 repository 를 직접 고정한다(#327).
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+      ],
+    );
     addTearDown(container.dispose);
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 
@@ -89,7 +110,12 @@ void main() {
     });
     addTearDown(dio.close);
     final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[dioProvider.overrideWithValue(dio)],
+      overrides: <Override>[
+        dioProvider.overrideWithValue(dio),
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     final SessionController controller = container.read(
@@ -99,9 +125,10 @@ void main() {
     controller.enterDemo();
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 
@@ -129,7 +156,12 @@ void main() {
     });
     addTearDown(dio.close);
     final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[dioProvider.overrideWithValue(dio)],
+      overrides: <Override>[
+        dioProvider.overrideWithValue(dio),
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     final SessionController controller = container.read(
@@ -139,9 +171,10 @@ void main() {
     controller.enterDemo();
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 

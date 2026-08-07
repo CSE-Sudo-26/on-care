@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -118,7 +119,7 @@ class _CompletionContent extends StatelessWidget {
                   const Divider(height: 25, color: FigmaColors.hairline),
                   _SummaryRow(
                     label: l.exPreferredDate,
-                    value: '$date · ${request.preferredTimeSlot}',
+                    value: '$date · ${_timeLabel(l, request.preferredTimeSlot)}',
                   ),
                   const Divider(height: 25, color: FigmaColors.hairline),
                   _SummaryRow(
@@ -212,3 +213,12 @@ class _MissingRequest extends StatelessWidget {
     );
   }
 }
+
+/// 시간대 enum → 현지화 문구. 엔티티가 라벨 대신 계약 enum 을 들고 있으므로 화면이
+/// 렌더 시점에 만든다 — 그래야 서버에서 복원한 신청도 같은 문구로 보인다(#327).
+String _timeLabel(AppLocalizations l, PreferredTimeSlot slot) => switch (slot) {
+  PreferredTimeSlot.morning => l.exTimeMorning,
+  PreferredTimeSlot.afternoon => l.exTimeAfternoon,
+  PreferredTimeSlot.evening => l.exTimeEvening,
+  PreferredTimeSlot.flexible => l.exTimeFlexible,
+};

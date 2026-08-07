@@ -1,3 +1,5 @@
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
+
 enum ConsultationTargetType { gym, trainer }
 
 enum ConsultationStatus { pending, accepted, rejected }
@@ -12,13 +14,34 @@ class ConsultationRequest {
     required this.trainerName,
     required this.trainerRole,
     required this.exerciseGoal,
-    required this.healthPurpose,
+    required this.healthPurposeType,
+    required this.healthPurposeDetail,
     required this.preferredDate,
     required this.preferredTimeSlot,
     required this.message,
     required this.status,
     required this.createdAt,
   });
+
+  /// 서버가 접수하며 준 id 로 갈아끼울 때 쓴다 — 화면이 만든 임시 id 는 트레이너
+  /// 앱과 이어지지 않는다(#327).
+  ConsultationRequest copyWith({String? id}) => ConsultationRequest(
+    id: id ?? this.id,
+    targetType: targetType,
+    gymId: gymId,
+    gymName: gymName,
+    trainerId: trainerId,
+    trainerName: trainerName,
+    trainerRole: trainerRole,
+    exerciseGoal: exerciseGoal,
+    healthPurposeType: healthPurposeType,
+    healthPurposeDetail: healthPurposeDetail,
+    preferredDate: preferredDate,
+    preferredTimeSlot: preferredTimeSlot,
+    message: message,
+    status: status,
+    createdAt: createdAt,
+  );
 
   final String id;
   final ConsultationTargetType targetType;
@@ -30,11 +53,52 @@ class ConsultationRequest {
   final String? trainerId;
   final String? trainerName;
   final String? trainerRole;
-  final String exerciseGoal;
-  final String healthPurpose;
+  /// 표시용 라벨이 아니라 **계약 enum** 을 들고 있다. 서버는 코드를 주므로, 라벨을
+  /// 저장하면 `GET /consultations/me` 로 복원할 때 문구를 만들 수 없다(#327).
+  /// 화면이 이 값으로 현지화 문구를 고른다.
+  final ExerciseGoal exerciseGoal;
+  final HealthPurposeType healthPurposeType;
+
+  /// `healthPurposeType` 이 other 일 때 사용자가 적은 내용.
+  final String? healthPurposeDetail;
   final DateTime preferredDate;
-  final String preferredTimeSlot;
+  final PreferredTimeSlot preferredTimeSlot;
   final String? message;
   final ConsultationStatus status;
   final DateTime createdAt;
+}
+
+/// `GET /consultations/me` 응답 → 엔티티. (#327)
+ConsultationRequest consultationFromJson(Map<String, Object?> j) {
+  final bool isTrainer = j['target_type'] == 'trainer';
+  return ConsultationRequest(
+    id: j['id']! as String,
+    targetType: isTrainer
+        ? ConsultationTargetType.trainer
+        : ConsultationTargetType.gym,
+    gymId: (j['gym_id'] as String?) ?? '',
+    // 대상이 지워지면 서버가 이름을 못 준다 — 빈 문자열로 두고 화면이 처리한다.
+    gymName: (j['gym_name'] as String?) ?? '',
+    trainerId: j['trainer_id'] as String?,
+    trainerName: j['trainer_name'] as String?,
+    // 서버는 트레이너 직함을 상담 응답에 담지 않는다. 목록 카드는 이름만 쓴다.
+    trainerRole: null,
+    exerciseGoal: exerciseGoalFromWire(j['exercise_goal'] as String?),
+    healthPurposeType: healthPurposeFromWire(j['health_purpose_type'] as String?),
+    healthPurposeDetail: j['health_purpose_detail'] as String?,
+    preferredDate:
+        DateTime.tryParse((j['preferred_date'] as String?) ?? '') ??
+        DateTime.now(),
+    preferredTimeSlot: preferredTimeSlotFromWire(
+      j['preferred_time_slot'] as String?,
+    ),
+    message: j['message'] as String?,
+    status: switch (j['status']) {
+      'accepted' => ConsultationStatus.accepted,
+      'rejected' => ConsultationStatus.rejected,
+      _ => ConsultationStatus.pending,
+    },
+    createdAt:
+        DateTime.tryParse((j['created_at'] as String?) ?? '') ?? DateTime.now(),
+  );
 }

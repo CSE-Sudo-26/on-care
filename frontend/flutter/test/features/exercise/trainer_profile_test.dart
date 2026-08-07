@@ -67,6 +67,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          // gymRepository·consultationRepository 가 이 값으로 mock/실 API 를 고른다.
+          appConfigProvider.overrideWithValue(_config),
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
           // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
           gymFinderResultsProvider.overrideWith(
