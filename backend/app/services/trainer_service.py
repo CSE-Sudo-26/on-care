@@ -738,8 +738,24 @@ def get_member_trainer_id(db: Session, member_id: str) -> str | None:
     return link.trainer_id if link is not None else None
 
 
+def disconnect_member_gym(db: Session, member_id: str) -> bool:
+    """회원이 헬스장 연결을 끊는다 — 담당 트레이너도 함께 끊긴다.
+
+    떠난 헬스장의 트레이너를 담당으로 남겨 둘 수는 없다. 앱의 mock 도 같은 규칙이고
+    (`MockGymRepository.disconnectMyGym`), MY 탭의 헬스장 휴지통이 이 경로다.
+    둘 중 하나라도 끊었으면 True.
+    """
+    from app.services import gym_service
+
+    unlinked_gym = gym_service.unlink_member_gym(db, member_id)
+    unlinked_trainer = disconnect_member_coach(db, member_id)
+    return unlinked_gym or unlinked_trainer
+
+
 def disconnect_member_coach(db: Session, member_id: str) -> bool:
-    """회원이 담당 트레이너 연결을 끊는다. 끊었으면 True, 원래 없었으면 False.
+    """회원이 담당 트레이너 연결을 끊는다 — 헬스장 연결은 그대로 둔다.
+
+    끊었으면 True, 원래 없었으면 False.
 
     링크 행을 지우지 않고 `active=False` 로 내린다 — 지난 코칭 기록(루틴·채팅·일정)이
     링크를 참조하므로 삭제하면 이력이 끊긴다. 비활성 링크는 `_active_link` 가 제외해
@@ -766,6 +782,34 @@ def disconnect_member_coach(db: Session, member_id: str) -> bool:
     return True
 
 
+def _member_gym_out(db: Session, member_id: str, profile: TrainerProfile) -> TrainerGymOut:
+    """코치 요약에 실을 헬스장 — **회원 링크가 진실**이고, 트레이너 소속은 폴백이다.
+
+    회원이 트레이너와 다른 헬스장에 연결돼 있을 수 있으므로(트레이너 이적 등) 먼저
+    회원 링크를 본다. 링크가 없는 회원은 마이그레이션 백필 전 데이터이거나 담당만
+    있고 헬스장 연결이 아직 없는 경우라, 예전처럼 트레이너 소속을 보여 준다 —
+    갑자기 빈 카드가 되는 것보다 낫다.
+    """
+    from app.services import gym_service
+
+    gym = gym_service.get_member_gym(db, member_id)
+    if gym is not None:
+        return TrainerGymOut(
+            id=gym.id,
+            name=gym.name,
+            address=gym.address,
+            # TrainerGymOut.hours 는 한 줄이다. 카드가 평일 영업시간을 보여 주므로
+            # 주말 시간까지 합치지 않는다(트레이너 프로필의 gym_hours 와 같은 값).
+            hours=gym.weekday_hours or "",
+            phone=gym.phone or "",
+        )
+    return TrainerGymOut(
+        id=profile.gym_id,
+        name=profile.gym_name, address=profile.gym_address,
+        hours=profile.gym_hours, phone=profile.gym_phone,
+    )
+
+
 def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
     """회원의 '내 담당 코치' 요약. 활성 담당이 없으면 None(라우터 404)."""
     link = _active_link(db, member_id)
@@ -783,11 +827,7 @@ def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
         specialty=profile.specialty,
         career=f"{profile.career_years}년",
         intro=profile.intro,
-        gym=TrainerGymOut(
-            id=profile.gym_id,
-            name=profile.gym_name, address=profile.gym_address,
-            hours=profile.gym_hours, phone=profile.gym_phone,
-        ),
+        gym=_member_gym_out(db, member_id, profile),
         goal=link.goal,
     )
 

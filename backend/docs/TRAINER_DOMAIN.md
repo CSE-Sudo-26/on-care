@@ -149,10 +149,27 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 | GET | `/me/coach/chat/unread` | 미확인 수 |
 | POST | `/me/coach/chat` | 코치에게 메시지 전송 |
 | POST | `/me/coach/chat/read` | 읽음 처리 |
+| DELETE | `/me/coach` | **헬스장 + 담당 트레이너** 해제(멱등, 204) |
+| DELETE | `/me/coach/trainer` | **담당 트레이너만** 해제 — 헬스장은 유지(멱등, 204) |
 
 - 담당 코치는 **active 링크**만 인정(`get_member_trainer_id` → `active.is_(True)`).
   휴면 링크만 있으면 코치 조회/발신 불가(404/빈 목록).
 - `/me/coach/sessions`는 시간이 지나며 누적되는 PT 세션을 **최근 100건**으로 상한.
+
+### 회원↔헬스장 링크 (#444)
+
+회원의 "내 헬스장"은 `member_gyms`(회원당 1행, `member_id` PK)에 있다. 예전에는 담당
+트레이너의 소속(`trainer_profiles.gym_id`)에서 **파생**시켜, 트레이너만 해제해도 헬스장이
+함께 사라졌다 — 앱 MY 탭은 두 해제를 따로 제공하는데 서버가 그 구분을 표현하지 못했다.
+
+- `GET /me/gym` (헬스장 라우터) — 내 헬스장. 응답은 `/gyms/{id}` 와 같은 `GymOut` 이라
+  앱이 상세를 한 번 더 읽지 않는다. 연결이 없으면 404.
+- `GET /me/coach` 의 `gym` 도 이 링크가 진실이다. 링크가 없는 회원(백필 이전 데이터)만
+  예전처럼 트레이너 소속으로 폴백한다.
+- 헬스장 해제가 트레이너까지 끊는 것은 의도다 — 떠난 헬스장의 트레이너를 담당으로 남길
+  수 없다. 앱 mock(`MockGymRepository`)도 같은 규칙이다.
+- 링크를 **만드는** 경로는 아직 시드/백필뿐이다. 담당 배정 자체가 시드로만 생기는 현재
+  단계와 같다(헬스장 먼저 가입 → 트레이너 나중 선택 흐름은 후속).
 
 ## 7. 데모 시드 (`seed_trainer.py`, `seed_member_data.py`)
 

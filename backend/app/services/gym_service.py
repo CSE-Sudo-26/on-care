@@ -12,7 +12,7 @@ import math
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.models import GymProfile, Place, TrainerProfile, User
+from app.models.models import GymProfile, MemberGym, Place, TrainerProfile, User
 from app.schemas.gym_api import GymOut, TrainerOut
 
 
@@ -104,6 +104,39 @@ def get_gym(
         return None
     place, profile = row
     return _to_gym(place, profile, lat, lng)
+
+
+# ---- 회원의 내 헬스장 (#444) ----
+
+def get_member_gym_id(db: Session, member_id: str) -> str | None:
+    """회원이 직접 연결한 헬스장 id. 없으면 None.
+
+    담당 트레이너의 소속에서 파생하지 않는다 — 트레이너만 해제해도 헬스장은 남아야
+    한다. 트레이너 소속으로의 폴백은 호출부(`trainer_service.build_member_coach`)가
+    아직 백필되지 않은 데이터를 위해 따로 처리한다.
+    """
+    return db.scalar(select(MemberGym.gym_id).where(MemberGym.member_id == member_id))
+
+
+def get_member_gym(
+    db: Session, member_id: str, *, lat: float | None = None, lng: float | None = None
+) -> GymOut | None:
+    """회원의 '내 헬스장' 카드. 연결이 없거나 헬스장이 사라졌으면 None."""
+    gym_id = get_member_gym_id(db, member_id)
+    return None if gym_id is None else get_gym(db, gym_id, lat=lat, lng=lng)
+
+
+def unlink_member_gym(db: Session, member_id: str) -> bool:
+    """헬스장 연결 해제. 끊었으면 True, 원래 없었으면 False.
+
+    담당 링크와 달리 행을 지운다 — 이 링크를 참조하는 이력이 없다.
+    """
+    link = db.get(MemberGym, member_id)
+    if link is None:
+        return False
+    db.delete(link)
+    db.commit()
+    return True
 
 
 def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:

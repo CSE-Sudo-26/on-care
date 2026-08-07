@@ -277,6 +277,34 @@ class GymProfile(Base):
     )
 
 
+class MemberGym(Base):
+    """회원↔헬스장 링크 — 회원의 '내 헬스장'. (#444)
+
+    전에는 이 링크가 없어서 담당 트레이너의 소속(`TrainerProfile.gym_id`)에서
+    파생시켰다. 그래서 트레이너만 해제해도 헬스장이 함께 사라졌다 — 앱 MY 탭은
+    두 해제를 따로 제공하는데 서버가 그 구분을 표현하지 못했다.
+
+    `TrainerClient` 와 달리 `active` 이력 컬럼이 없다. 담당 링크는 루틴·채팅·일정이
+    참조해 지우면 이력이 끊기지만, 헬스장 링크를 참조하는 것은 없어 해제 시 행을
+    지우면 된다. 회원당 1곳이라는 불변식은 `member_id` 를 PK 로 두어 구조로 강제한다
+    (partial unique index 가 필요 없다).
+    """
+    __tablename__ = "member_gyms"
+
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 헬스장은 `places`(category='fitness'). 장소가 사라지면 링크도 사라진다 —
+    #: gym_id 는 NOT NULL 이라 SET NULL 을 쓸 수 없고, 없어진 헬스장을 '내 헬스장'
+    #: 으로 남겨 둘 이유도 없다.
+    gym_id: Mapped[str] = mapped_column(
+        ForeignKey("places.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ConsultationRequest(Base):
     """회원의 헬스장·트레이너 상담 요청."""
     __tablename__ = "consultation_requests"
