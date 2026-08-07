@@ -79,6 +79,17 @@ def upgrade() -> None:
         "trainer_profiles",
         sa.Column("gym_id", sa.String(length=64), nullable=True),
     )
+    # 추천 레일에 올릴 한 줄 사유. 값이 있는 트레이너만 `/trainers/recommended` 에
+    # 나온다 — 빈 문자열이 "추천 아님"을 뜻하므로 nullable 로 두지 않는다.
+    op.add_column(
+        "trainer_profiles",
+        sa.Column(
+            "recommend_reason",
+            sa.String(length=200),
+            nullable=False,
+            server_default="",
+        ),
+    )
     op.create_foreign_key(
         "fk_trainer_profiles_gym_id_places",
         "trainer_profiles",
@@ -99,6 +110,7 @@ def downgrade() -> None:
     op.drop_constraint(
         "fk_trainer_profiles_gym_id_places", "trainer_profiles", type_="foreignkey"
     )
+    op.drop_column("trainer_profiles", "recommend_reason")
     op.drop_column("trainer_profiles", "gym_id")
     op.drop_index("ix_gym_profiles_is_partner", table_name="gym_profiles")
     op.drop_table("gym_profiles")

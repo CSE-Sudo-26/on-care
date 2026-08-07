@@ -371,6 +371,10 @@ class TrainerProfile(Base):
         nullable=True,
         index=True,
     )
+    #: 추천 레일에 올릴 한 줄 사유. 빈 문자열이면 추천 대상이 아니다.
+    recommend_reason: Mapped[str] = mapped_column(
+        String(200), nullable=False, server_default="", default=""
+    )
     gym_name: Mapped[str] = mapped_column(String(100), default="")
     gym_address: Mapped[str] = mapped_column(String(300), default="")
     gym_hours: Mapped[str] = mapped_column(String(50), default="")
