@@ -345,9 +345,17 @@ void main() {
     });
   }
 
-  // 위 회귀 테스트는 한국어로만 돌아, 영어에서 카드 헤더가 넘치는 것을 놓쳤다
-  // (#440). 같은 문구가 영어에서 훨씬 길다 — '식단 · 영양' vs
-  // 'Diet & nutrition', '✦ AI 분석' vs '✦ AI analysis'.
+  // 위 회귀 테스트는 한국어로만 돌아 영어 폭을 전혀 보지 않았다(#440).
+  //
+  // 주의 — 여기서 재는 폭은 **실제 기기보다 보수적이다.** 위젯 테스트의 기본
+  // 폰트는 모든 글자를 `fontSize` 크기의 정사각형으로 그려서 라틴 문자가 실제의
+  // 약 2배로 잡힌다(`Diet & nutrition`@12.5px 가 200px, 실제 폰트는 ~85px).
+  // 따라서 이 테스트가 통과한다고 실제 기기에서 안전하다는 보장은 아니고,
+  // 반대로 여기서 넘친다고 사용자가 그대로 겪는다는 뜻도 아니다.
+  //
+  // 그래도 남겨 두는 이유는 헤더가 **줄어들 수 있는 구조인지**를 지키기
+  // 위해서다. 문구가 길어지면 그냥 넘치던 예전 구조(고유 폭 3개 + Spacer)로
+  // 되돌아가면 이 테스트가 먼저 깨진다.
   for (final double width in <double>[360, 390, 480]) {
     testWidgets('영어 로케일도 ${width}px 에서 넘치지 않는다 (#440)', (
       WidgetTester tester,
@@ -361,7 +369,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
-      // 헤더가 잘리면 더보기 링크부터 사라진다.
+      // 헤더가 줄어들지 못하면 밀려난 더보기 링크부터 넘친다.
       expect(find.text(en.homeDetails), findsWidgets);
       expect(find.text(en.homeAiAnalysisPill), findsWidgets);
       expect(tester.takeException(), isNull);
