@@ -749,10 +749,19 @@ def disconnect_member_coach(db: Session, member_id: str) -> bool:
     트레이너 승인을 기다리게 하면 회원이 관계를 벗어날 방법이 없어진다. 트레이너
     로스터에서는 즉시 사라진다.
     """
-    link = _active_link(db, member_id)
-    if link is None:
+    # 활성 링크를 **전부** 내린다. partial unique index 가 회원당 1건을 강제하지만,
+    # 정합성이 깨져 여러 건이 남은 경우 첫 건만 끄면 get_member_trainer_id() 가 계속
+    # 다른 링크를 반환해 "해제했는데 그대로"가 된다(리뷰 지적).
+    links = db.scalars(
+        select(TrainerClient).where(
+            TrainerClient.member_id == member_id,
+            TrainerClient.active.is_(True),
+        )
+    ).all()
+    if not links:
         return False
-    link.active = False
+    for link in links:
+        link.active = False
     db.commit()
     return True
 

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/data/repositories/dio_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 
 /// 백엔드 실응답을 그대로 돌려주는 어댑터. 필드명이 어긋나면 여기서 걸린다.
@@ -10,10 +11,15 @@ class _StubAdapter implements HttpClientAdapter {
   _StubAdapter(this.routes);
   final Map<String, Object?> routes;
   final List<String> calls = <String>[];
+  final Map<String, Map<String, dynamic>> queries = <String, Map<String, dynamic>>{};
+
+  /// 경로에 실제로 실려 나간 query parameter.
+  Map<String, dynamic> queryOf(String path) => queries[path] ?? <String, dynamic>{};
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, _, _) async {
     calls.add('${options.method} ${options.path}');
+    queries[options.path] = Map<String, dynamic>.from(options.queryParameters);
     final body = routes[options.path];
     if (body == null) {
       return ResponseBody.fromString('{"detail":"not found"}', 404,
@@ -82,7 +88,12 @@ void main() {
   test('거리 계산을 서버가 하도록 좌표를 함께 보낸다', () async {
     final adapter = _StubAdapter(<String, Object?>{'/gyms': _gymsJson});
     await DioGymRepository(_dio(adapter)).fetchNearby();
+
     expect(adapter.calls, contains('GET /gyms'));
+    // 경로만 보면 lat/lng 가 빠져도 통과한다 — 값까지 확인한다.
+    final Map<String, dynamic> q = adapter.queryOf('/gyms');
+    expect(q['lat'], kGymSearchLat);
+    expect(q['lng'], kGymSearchLng);
   });
 
   test('GET /trainers 응답이 Trainer 로 매핑된다', () async {

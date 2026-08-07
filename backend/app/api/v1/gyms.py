@@ -17,6 +17,18 @@ from app.services import gym_service
 router = APIRouter(tags=["gyms"])
 
 
+def _require_coordinate_pair(lat: float | None, lng: float | None) -> None:
+    """좌표는 쌍으로만 의미가 있다.
+
+    하나만 오면 거리 계산이 조용히 생략돼 `distance_km=0` 이 되고, 호출자는 자기가
+    준 좌표가 무시된 줄 모른다. 422 로 되돌려 준다.
+    """
+    if (lat is None) != (lng is None):
+        raise HTTPException(
+            status_code=422, detail="lat 과 lng 는 함께 보내야 합니다."
+        )
+
+
 @router.get("/gyms", response_model=list[GymOut])
 def list_gyms(
     current_user: CurrentUser,
@@ -26,6 +38,7 @@ def list_gyms(
     partner_only: bool = Query(False, description="제휴 헬스장만"),
 ) -> list[GymOut]:
     """헬스장 목록. 좌표를 주면 거리순, 없으면 이름순."""
+    _require_coordinate_pair(lat, lng)
     return gym_service.list_gyms(db, lat=lat, lng=lng, partner_only=partner_only)
 
 
@@ -37,6 +50,7 @@ def get_gym(
     lat: float | None = Query(None, ge=-90, le=90),
     lng: float | None = Query(None, ge=-180, le=180),
 ) -> GymOut:
+    _require_coordinate_pair(lat, lng)
     gym = gym_service.get_gym(db, gym_id, lat=lat, lng=lng)
     if gym is None:
         raise HTTPException(status_code=404, detail="헬스장을 찾을 수 없습니다.")
