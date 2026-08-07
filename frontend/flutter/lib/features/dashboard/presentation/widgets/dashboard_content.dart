@@ -288,9 +288,14 @@ class _HomeCard extends StatelessWidget {
 /// 홈 카드 헤더 — 제목 + AI 필 + 더보기 링크. 식단·운동 카드가 같은 구조라
 /// 한 곳에 둔다.
 ///
-/// 셋 다 고유 폭을 요구하고 `Spacer` 로 밀어내던 예전 구조는 문구가 긴
-/// 로케일에서 그대로 넘쳤다(영어 폰 폭에서 `RenderFlex overflowed`, #440).
+/// 셋 다 고유 폭을 요구하고 `Spacer` 로 밀어내던 예전 구조는 **줄어들 수가
+/// 없어서**, 폭이 모자라면 그대로 `RenderFlex overflowed` 를 냈다(#440).
 /// 더보기 링크는 누를 것이라 항상 남기고, 제목·필이 남는 폭에 맞춰 줄어든다.
+///
+/// 발견 경로는 영어 로케일 위젯 테스트였는데, 그 환경의 기본 폰트는 라틴
+/// 문자를 실제의 약 2배 폭으로 그린다. 즉 **실제 기기에서 잘려 보이던 것을
+/// 확인하고 고친 것은 아니다.** 그래도 이 구조가 맞다 — 문구·폰트·폭 중 하나만
+/// 달라져도 넘치던 것을, 넘치는 대신 줄어들게 바꾼 것이다.
 class _CardHeader extends StatelessWidget {
   const _CardHeader({required this.icon, required this.label, this.onOpen});
 
