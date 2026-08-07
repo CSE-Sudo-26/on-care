@@ -29,6 +29,8 @@ class MockGymRepository implements GymRepository {
     weekdayHours: '06:00 - 23:00',
     weekendHours: '08:00 - 20:00',
     phone: '02-1234-5678',
+    lat: 37.5559,
+    lng: 126.9368,
   );
 
   /// 같은 헬스장이지만 담당 트레이너 연결만 없는 상태.
@@ -42,6 +44,8 @@ class MockGymRepository implements GymRepository {
     weekdayHours: '06:00 - 23:00',
     weekendHours: '08:00 - 20:00',
     phone: '02-1234-5678',
+    lat: 37.5559,
+    lng: 126.9368,
   );
 
   static const Gym _healthmate = Gym(
@@ -56,6 +60,8 @@ class MockGymRepository implements GymRepository {
     weekdayHours: '05:30 - 24:00',
     weekendHours: '07:00 - 22:00',
     phone: '02-2345-6789',
+    lat: 37.5548,
+    lng: 126.9385,
   );
 
   static const Gym _bodyAndSoul = Gym(
@@ -70,6 +76,8 @@ class MockGymRepository implements GymRepository {
     weekdayHours: '06:00 - 22:00',
     weekendHours: '09:00 - 18:00',
     phone: '02-3456-7890',
+    lat: 37.5455,
+    lng: 126.9425,
   );
 
   @override

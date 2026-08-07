@@ -57,16 +57,31 @@ void main() {
     );
   });
 
-  test('GET /places/nearby returns four places with all categories', () async {
+  test('GET /places/nearby returns every category when unfiltered', () async {
     final res = await dio.get<List<Object?>>('/places/nearby');
     expect(res.statusCode, 200);
     final places = res.data!.cast<Map<String, Object?>>();
-    expect(places.length, 4);
     final categories = places.map((p) => p['category']! as String).toSet();
     expect(
       categories,
       containsAll(<String>['medical', 'fitness', 'healthy_food', 'pharmacy']),
     );
+  });
+
+  test('GET /places/nearby honours the category filter (#329)', () async {
+    // 필터를 무시하면 헬스장 찾기 시트에 병원·약국이 섞여 들어온다.
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{'category': 'fitness'},
+    );
+    final places = res.data!.cast<Map<String, Object?>>();
+    expect(places, isNotEmpty);
+    expect(
+      places.map((p) => p['category']! as String).toSet(),
+      <String>{'fitness'},
+    );
+    // 지도 핀을 찍으려면 좌표가 반드시 있어야 한다.
+    expect(places.every((p) => p['lat'] != null && p['lng'] != null), isTrue);
   });
 
   test('GET /healthz returns drift-local marker', () async {

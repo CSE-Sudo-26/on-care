@@ -130,3 +130,6 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+# 카카오맵 JavaScript 키 등 빌드 시 주입하는 값(#329).
+# dart_defines.example.json 만 커밋하고 실제 키가 든 파일은 올리지 않는다.
+dart_defines.json

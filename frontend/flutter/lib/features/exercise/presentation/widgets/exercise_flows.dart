@@ -449,7 +449,9 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<List<Gym>> async = ref.watch(nearbyGymsProvider);
+    // 제휴 헬스장 + 카카오 Local 주변 헬스장(#329). 트레이너 흐름이 쓰는
+    // nearbyGymsProvider 와 달리, 이 시트만 카카오 결과를 함께 본다.
+    final AsyncValue<List<Gym>> async = ref.watch(gymFinderResultsProvider);
     return _shell(
       context,
       Column(
@@ -724,24 +726,27 @@ class _GymResult extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      const Icon(
-                        Icons.star,
-                        size: 13,
-                        color: Color(0xFFF5B400),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        gym.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
+                  // 카카오 Local 은 평점을 주지 않는다(rating 0) — "0.0★" 대신
+                  // 뱃지를 통째로 감춘다.
+                  if (gym.rating > 0)
+                    Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.star,
+                          size: 13,
+                          color: Color(0xFFF5B400),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 2),
+                        Text(
+                          gym.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
                   Text(
                     '${gym.distanceKm.toStringAsFixed(1)}km',
                     style: const TextStyle(

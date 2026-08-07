@@ -1171,7 +1171,7 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Places ----
 
   Future<Response<Object?>> _placesNearby(RequestOptions options) async {
-    return _ok(options, <Map<String, Object?>>[
+    const rows = <Map<String, Object?>>[
       <String, Object?>{
         'id': 'p1',
         'name': '강남세브란스 가정의학과',
@@ -1180,15 +1180,6 @@ class LocalApiInterceptor extends Interceptor {
         'distance_meters': 420,
         'lat': 37.4979,
         'lng': 127.0276,
-      },
-      <String, Object?>{
-        'id': 'p2',
-        'name': '온케어 피트니스',
-        'category': 'fitness',
-        'address': '서울특별시 강남구 역삼로 55',
-        'distance_meters': 680,
-        'lat': 37.5005,
-        'lng': 127.0319,
       },
       <String, Object?>{
         'id': 'p3',
@@ -1208,6 +1199,54 @@ class LocalApiInterceptor extends Interceptor {
         'lat': 37.4995,
         'lng': 127.0263,
       },
+      // 헬스장 찾기(#329)가 보는 신촌 권역 후보. 카카오 Local `헬스장` 검색 실응답을
+      // 그대로 옮긴 것이라 id·이름·주소·거리·좌표가 전부 실데이터이고, 실 API 로
+      // 전환해도 같은 id 로 매칭된다(`kakao_gym_demo_profile.dart`).
+      // 제휴 헬스장(온케어짐/헬스메이트/바디앤소울)과 이름이 겹치지 않는 곳만 골랐다.
+      <String, Object?>{
+        'id': '11621774',
+        'name': '휘트니스에이든',
+        'category': 'fitness',
+        'address': '서울 마포구 신촌로 92',
+        'distance_meters': 127,
+        'lat': 37.5551767483122,
+        'lng': 126.935686079639,
+      },
+      <String, Object?>{
+        'id': '1558845892',
+        'name': '하이핏',
+        'category': 'fitness',
+        'address': '서울 서대문구 연세로4길 19',
+        'distance_meters': 186,
+        'lat': 37.5573727191112,
+        'lng': 126.937816432934,
+      },
+      <String, Object?>{
+        'id': '328969863',
+        'name': '빌드업짐 PT 신촌점',
+        'category': 'fitness',
+        'address': '서울 서대문구 연세로4길 1',
+        'distance_meters': 133,
+        'lat': 37.5570723299884,
+        'lng': 126.937142154792,
+      },
+      <String, Object?>{
+        'id': '696444256',
+        'name': '신인규피티스튜디오',
+        'category': 'fitness',
+        'address': '서울 서대문구 명물길 10',
+        'distance_meters': 177,
+        'lat': 37.5573851891011,
+        'lng': 126.937543667755,
+      },
+    ];
+
+    // 백엔드 계약과 동일하게 category 를 존중한다 — 없으면 전체를 준다.
+    // (필터링하지 않으면 헬스장 찾기에 병원·약국이 섞여 들어온다.)
+    final category = options.queryParameters['category'] as String?;
+    return _ok(options, <Map<String, Object?>>[
+      for (final row in rows)
+        if (category == null || row['category'] == category) row,
     ]);
   }
 
