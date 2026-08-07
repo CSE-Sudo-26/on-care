@@ -53,6 +53,23 @@
 > 정책이 복수 담당으로 바뀌면 이 인덱스를 제거하고 회원측 코치·채팅·루틴 API를
 > **목록 기반**으로 바꿔야 한다(현재는 단일 담당 가정).
 
+### 트레이너 헬스장 소속 정책 (`0020_gym_profiles_trainer_fk`)
+
+- 트레이너는 현재 **헬스장 한 곳**에만 소속한다. `TrainerProfile.gym_id`는
+  `places.id`를 참조하는 단일 nullable FK이며, 복수 소속 관계 테이블은 두지 않는다.
+- `gym_id`는 기존 프로필과 헬스장 삭제를 안전하게 처리하기 위해 nullable이다.
+  헬스장 `Place`가 삭제되면 `ON DELETE SET NULL`로 소속만 해제되고 트레이너
+  계정은 남는다. 트레이너 `User`가 삭제되면 프로필은 `ON DELETE CASCADE`로
+  함께 삭제된다.
+- 상담 요청은 `gym_id`가 실제로 존재하는 `Place`를 가리키고 그 장소의
+  `category == "fitness"`일 때만 트레이너를 유효한 대상으로 인정한다. FK만으로는
+  다른 카테고리를 막을 수 없어 `consultation_service._validate_target()`에서 검증한다.
+- 소속 변경 이력은 **현재 보존하지 않는다**. 프로필의 `gym_id`를 교체하며,
+  이력·복수 소속이 실제 요구되면 별도 관계 테이블로 확장한다.
+- 관계 판단의 기준은 `gym_id`다. 기존 `gym_name`, `gym_address`, `gym_hours`,
+  `gym_phone`은 트레이너 웹의 `gym {name, address, hours, phone}` 계약을
+  유지하기 위한 호환 필드로 당분간 남겨 둔다.
+
 ## 4. 트레이너 API (`/v1/trainer/*`, RequireTrainer)
 
 | Method | Path | 설명 |
