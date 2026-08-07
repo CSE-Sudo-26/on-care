@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
+import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
-/// The 운동기록 sub-tab: this week's completion bars + the workout
-/// history list (completion donut, exercises, feedback, trainer note).
+/// 운동 — the whole prescription→execution loop for one client, in the
+/// order the trainer reasons about it.
+///
+/// 배정된 루틴 (what this client was given) used to be its own 루틴 tab.
+/// Splitting it from the history meant the one question the tab exists to
+/// answer — "I assigned this; did they do it?" — needed two tabs and a
+/// memory of the first. They are one story, so they are one screen:
+/// what's active now, then this week at a glance, then what actually
+/// happened session by session.
 class WorkoutView extends ConsumerWidget {
   /// Creates the workout view for [client].
   const WorkoutView({super.key, required this.client});
@@ -23,35 +39,295 @@ class WorkoutView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(clientHistoryProvider(client.id));
+    final assigned = ref.watch(assignedRoutinesProvider(client.id));
+    final sessions = ref.watch(
+      clientSessionsProvider((id: client.id, name: client.name)),
+    );
 
-    return history.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => const Center(
-        child: Text(
-          '운동 기록을 불러오지 못했어요',
-          style: TextStyle(color: AppColors.mutedForeground),
+    // Each section owns its own async state. Gating the whole list on
+    // the history provider would mean a failing /history takes the
+    // routines and the PT sessions down with it — and those two used to
+    // be their own tab, reachable whether or not the history loaded.
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: <Widget>[
+        _AssignedRoutinesCard(clientId: client.id, assigned: assigned),
+        const SizedBox(height: AppSpacing.md),
+        _SessionsCard(sessions: sessions),
+        const SizedBox(height: AppSpacing.md),
+        _WeekCompletionCard(week: client.weekCompletion),
+        const SizedBox(height: AppSpacing.lg),
+        const Text(
+          '운동 기록',
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.subtleForeground,
+          ),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        ...history.when(
+          loading: () => const <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          ],
+          error: (e, _) => const <Widget>[
+            EmptyHint(message: '운동 기록을 불러오지 못했어요'),
+          ],
+          data: (entries) => <Widget>[
+            if (entries.isEmpty)
+              const EmptyHint(
+                message: '아직 운동 기록이 없어요',
+                icon: Icons.fitness_center_outlined,
+              ),
+            for (final entry in entries) ...<Widget>[
+              _HistoryCard(entry: entry),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 배정된 루틴 — what the member sees in their own app (server-side, real
+/// API only). Empty in demo mode, where the mock repository has no member
+/// backend to deliver to; the history below carries the story there.
+class _AssignedRoutinesCard extends StatelessWidget {
+  const _AssignedRoutinesCard({required this.clientId, required this.assigned});
+
+  final String clientId;
+  final AsyncValue<List<AssignedRoutine>> assigned;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: '배정된 루틴',
+      icon: Icons.assignment_turned_in_outlined,
+      dense: true,
+      trailing: CardLink(
+        label: '새 루틴',
+        onTap: () => context.go(AppRoutes.coachingFor(clientId)),
       ),
-      data: (entries) => ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+      child: assigned.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        error: (e, _) => const EmptyHint(message: '루틴을 불러오지 못했어요'),
+        data: (routines) => routines.isEmpty
+            ? const EmptyHint(
+                message: '아직 이 고객에게 배정된 루틴이 없어요',
+                icon: Icons.assignment_outlined,
+              )
+            : Column(
+                children: <Widget>[
+                  for (final routine in routines)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(
+                        children: <Widget>[
+                          _TypeChip(
+                            label: routine.type,
+                            ai: routine.source == 'ai',
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  routine.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.foreground,
+                                  ),
+                                ),
+                                if (routine.reason.isNotEmpty)
+                                  Text(
+                                    routine.reason,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: AppColors.subtleForeground,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${routine.minutes}분',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// PT 프로그램 이력 — the sessions actually on the calendar for this
+/// client and whether a program is attached.
+///
+/// Deliberately kept apart from 운동 기록 below: this is the *schedule*
+/// (including sessions still 예정), that is the *record* of what was
+/// completed. The 스케줄 tab answers the same question by date; this is
+/// the only place it's answered per client.
+class _SessionsCard extends StatelessWidget {
+  const _SessionsCard({required this.sessions});
+
+  final AsyncValue<List<ScheduleSession>> sessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = ymd(DateTime.now());
+    return SectionCard(
+      title: 'PT 프로그램 이력',
+      icon: Icons.event_note_outlined,
+      dense: true,
+      child: sessions.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        error: (e, _) => const EmptyHint(message: '일정을 불러오지 못했어요'),
+        data: (list) => list.isEmpty
+            ? const EmptyHint(
+                message: '등록된 PT 세션이 없어요',
+                icon: Icons.event_busy_outlined,
+              )
+            : Column(
+                children: <Widget>[
+                  for (final session in list.take(8))
+                    _SessionRow(session: session, today: today),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _SessionRow extends StatelessWidget {
+  const _SessionRow({required this.session, required this.today});
+
+  final ScheduleSession session;
+  final String today;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = DateTime.tryParse(session.date);
+    final label = date == null ? session.date : '${date.month}/${date.day}';
+    final exercises = session.program.map((p) => p.name).join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _WeekCompletionCard(week: client.weekCompletion),
-          const SizedBox(height: AppSpacing.lg),
-          const Text(
-            '운동 기록',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.subtleForeground,
+          SizedBox(
+            width: 46,
+            child: Text(
+              session.date == today ? '오늘' : label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: session.date == today
+                    ? AppColors.primary
+                    : AppColors.subtleForeground,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final entry in entries) ...<Widget>[
-            _HistoryCard(entry: entry),
-            const SizedBox(height: AppSpacing.md),
-          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '${session.type} · ${session.durationMinutes}분',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                Text(
+                  exercises.isEmpty ? '등록된 프로그램 없음' : exercises,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                    color: exercises.isEmpty
+                        ? AppColors.disabledForeground
+                        : AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            session.status,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: session.isDone ? AppColors.success : AppColors.primary,
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// AI-generated routines carry the navy sparkle; trainer-authored ones
+/// carry the orange the rest of the app uses for trainer edits.
+class _TypeChip extends StatelessWidget {
+  const _TypeChip({required this.label, required this.ai});
+
+  final String label;
+  final bool ai;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ai ? AppColors.primary : AppColors.brandOrange;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+      ),
+      child: ai
+          ? IconLabel(
+              icon: Icons.auto_awesome,
+              label: label,
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            )
+          : Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
     );
   }
 }

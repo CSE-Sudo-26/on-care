@@ -77,9 +77,12 @@ void main() {
       // Summary totals from the client row (also appears as the last
       // trend bar's label, so match ≥1).
       expect(find.text('2100'), findsWidgets);
-      expect(find.text('mg 초과'), findsOneWidget);
-      // 아침 is above the fold; the 7-day trend card pushes 점심/저녁
-      // lower, so reach them by scrolling.
+      // Twice: the detail header carries the same over-target tile on
+      // every sub-tab now, and this view has its own.
+      expect(find.text('mg 초과'), findsNWidgets(2));
+      // The detail header plus the 7-day trend card push every meal card
+      // down, so reach them by scrolling.
+      await tester.scrollUntilVisible(find.text('아침'), 150);
       expect(find.text('아침'), findsOneWidget);
       expect(find.text('오트밀, 바나나'), findsOneWidget);
       expect(find.text('315 kcal'), findsOneWidget);
@@ -114,7 +117,11 @@ void main() {
     ) async {
       await openDiet(tester, '이지수');
 
+      // The detail header sits above the list, so her 아침 card can start
+      // below the fold on the test viewport.
+      await tester.scrollUntilVisible(find.text('그릭요거트, 과일'), 150);
       expect(find.text('그릭요거트, 과일'), findsOneWidget);
+      // Under target in both the header tile and this view's own.
       expect(find.text('mg 초과'), findsNothing);
       await tester.scrollUntilVisible(
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
