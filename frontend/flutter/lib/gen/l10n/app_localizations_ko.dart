@@ -108,7 +108,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashboardMetricCalories => '칼로리';
 
   @override
-  String get dashboardMetricExercise => '운동';
+  String get dashboardMetricExercise => '주간 운동';
 
   @override
   String get dashboardMetricWeight => '체중';
@@ -265,7 +265,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeWeeklyExerciseTrend => '주간 운동 추이';
+  String get homeWeeklyExerciseTrend => '운동 추이';
 
   @override
   String get homeMetricOver => '초과';
@@ -284,16 +284,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeExerciseActiveTime => '주간 운동 시간';
+  String get homeExerciseActiveTime => '운동 시간';
 
   @override
-  String get homeExerciseBurned => '주간 소모 칼로리';
+  String get homeExerciseBurned => '소모 칼로리';
 
   @override
   String get homeExerciseCount => '주간 운동 횟수';
 
   @override
-  String get homeExerciseDays => '주간 운동 일수';
+  String get homeExerciseDays => '운동 일수';
 
   @override
   String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
@@ -670,13 +670,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exGymTab => '헬스장';
 
   @override
-  String get exMyGymTrainerSection => '내 헬스장·트레이너';
+  String get exMyGymSection => '내 헬스장';
 
   @override
   String get exConnected => '연결됨';
-
-  @override
-  String get exMyTrainer => '내 트레이너';
 
   @override
   String get exRecommendedGyms => '추천 헬스장';
@@ -688,7 +685,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSeeMore => '더보기';
 
   @override
-  String get exNoGymTrainer => '아직 연결된 헬스장이나 트레이너가 없어요.';
+  String get exNoConnectedGym => '아직 연결된 헬스장이 없어요.';
 
   @override
   String get exNoRecommendedGyms => '추천할 헬스장이 아직 없어요.';
@@ -698,6 +695,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exTrainerAffiliation => '소속 헬스장';
+
+  @override
+  String get exTrainerIntroSection => '트레이너 소개';
+
+  @override
+  String exTrainerCareer(String career) {
+    return '경력 $career';
+  }
+
+  @override
+  String get exTrainerCertifications => '자격증 · 인증';
 
   @override
   String get exTrainerRecommendationReason => '내 건강 목표 달성에 잘 맞는 트레이너예요';
@@ -928,9 +936,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exAiTopPick => '✦ AI 추천 1순위';
 
   @override
-  String get exTrainerChat => '트레이너 채팅';
-
-  @override
   String get exSendHealthSummary => '건강 요약 전달';
 
   @override
@@ -1043,37 +1048,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exKakaoMapArea => '카카오맵 영역';
-
-  @override
-  String get exDefaultTrainerName => '김트레이너';
-
-  @override
-  String get exDefaultGymName => '온케어짐 신촌점';
-
-  @override
-  String exChatGreeting(String trainer) {
-    return '안녕하세요, $trainer입니다. 😊\n무엇을 도와드릴까요?';
-  }
-
-  @override
-  String get exChatChipPt => 'PT 상담';
-
-  @override
-  String get exChatChipPass => '이용권 문의';
-
-  @override
-  String get exChatChipVisit => '방문 예약';
-
-  @override
-  String get exChatReply => '네, 확인했어요! 담당 트레이너가 곧 답변드릴게요. 편한 방문 시간도 알려주세요. 🙌';
-
-  @override
-  String exGymConsultSubtitle(String gym) {
-    return '$gym · 1:1 상담';
-  }
-
-  @override
-  String get exMessageHint => '메시지를 입력하세요';
 
   @override
   String get myTabTitle => 'MY';

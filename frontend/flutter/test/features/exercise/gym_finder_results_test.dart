@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/place/domain/entities/place.dart';
 import 'package:oncare/features/place/domain/entities/place_query.dart';
@@ -111,7 +112,17 @@ void main() {
     expect(buildUp.tags, isNotEmpty);
     expect(buildUp.phone, isNotNull);
     expect(buildUp.weekdayHours, isNotNull);
-    expect(buildUp.trainerName, isNotNull);
+  });
+
+  test('카카오 헬스장에도 소속 트레이너가 붙는다', () async {
+    // 트레이너는 Gym 이 아니라 Trainer 에 있고 gymId(= 카카오 place id)로 이어진다.
+    final container = _containerWith(const _KakaoFixtureRepository());
+    final trainers = await container.read(
+      gymTrainersProvider('328969863').future,
+    );
+
+    expect(trainers, isNotEmpty);
+    expect(trainers.every((Trainer t) => t.gymId == '328969863'), isTrue);
   });
 
   test('모든 헬스장이 지도 핀을 찍을 좌표를 갖는다', () async {
@@ -126,6 +137,6 @@ void main() {
     final gyms = await container.read(gymFinderResultsProvider.future);
 
     expect(gyms.length, 3);
-    expect(gyms.every((Gym g) => g.trainerName != null), isTrue);
+    expect(gyms.every((Gym g) => g.rating > 0), isTrue);
   });
 }

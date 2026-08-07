@@ -7,6 +7,7 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/error_view.dart';
@@ -281,14 +282,16 @@ Future<void> _showGymDetail(BuildContext context, Gym gym) {
   );
 }
 
-class _GymDetailDialog extends StatelessWidget {
+class _GymDetailDialog extends ConsumerWidget {
   const _GymDetailDialog({required this.gym});
   final Gym gym;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final List<Trainer> trainers =
+        ref.watch(gymTrainersProvider(gym.id)).valueOrNull ?? const <Trainer>[];
     return Dialog(
       backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
@@ -377,15 +380,18 @@ class _GymDetailDialog extends StatelessWidget {
               ),
               Text(gym.phone!, style: theme.textTheme.bodySmall),
             ],
-            if (gym.trainerName != null) ...<Widget>[
+            if (trainers.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),
               Text(
-                '전담 트레이너',
+                '소속 트레이너',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),
-              Text(gym.trainerName!, style: theme.textTheme.bodySmall),
+              Text(
+                trainers.map((Trainer t) => t.name).join(' · '),
+                style: theme.textTheme.bodySmall,
+              ),
             ],
             if (gym.tags.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.md),

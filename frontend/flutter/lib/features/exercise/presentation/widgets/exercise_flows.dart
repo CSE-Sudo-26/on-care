@@ -5,6 +5,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -651,17 +652,18 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
 /// A nearby-gym result card driven by a real [Gym]. The two actions wire to
 /// local flows (there is no O2O endpoint): 트레이너 채팅 opens the 1:1 상담
 /// sheet, 건강 요약 전달 confirms then shows a success SnackBar.
-class _GymResult extends StatelessWidget {
+class _GymResult extends ConsumerWidget {
   const _GymResult({required this.gym, this.top = false});
 
   final Gym gym;
   final bool top;
 
-  /// A short, real-data reason line for the AI-styled highlight box.
-  String _reason(AppLocalizations l) {
-    if (gym.trainerName != null) {
-      final String role = gym.trainerRole != null ? ' · ${gym.trainerRole}' : '';
-      return l.exReasonTrainer(gym.trainerName!, role);
+  /// A short, real-data reason line for the AI-styled highlight box. Uses the
+  /// gym's first trainer when it has one.
+  String _reason(AppLocalizations l, Trainer? trainer) {
+    if (trainer != null) {
+      final String role = trainer.role != null ? ' · ${trainer.role}' : '';
+      return l.exReasonTrainer(trainer.name, role);
     }
     if (gym.weekdayHours != null) {
       final String weekend = gym.weekendHours != null
@@ -673,9 +675,14 @@ class _GymResult extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String reason = _reason(l);
+    // 이 헬스장의 대표 트레이너(첫 번째)로 추천 문구와 채팅 상대를 정한다.
+    final Trainer? trainer = ref
+        .watch(gymTrainersProvider(gym.id))
+        .valueOrNull
+        ?.firstOrNull;
+    final String reason = _reason(l, trainer);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -810,49 +817,26 @@ class _GymResult extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => showGymChatSheet(context, gym: gym),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FigmaColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l.exTrainerChat,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _sendHealthSummary(context, gym.name),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: FigmaColors.primary,
+                side: BorderSide(color: FigmaColors.primaryA(0.3)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _sendHealthSummary(context, gym.name),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: FigmaColors.primary,
-                    side: BorderSide(color: FigmaColors.primaryA(0.3)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l.exSendHealthSummary,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+              child: Text(
+                l.exSendHealthSummary,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1103,7 +1087,11 @@ class _MapPainter extends CustomPainter {
 // ─────────────────────────────────────────────────────── 헬스장 정보 ──
 
 /// Gym detail sheet opened from the "헬스장 정보" button, driven by [gym].
-Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
+Future<void> showGymInfoSheet(
+  BuildContext context,
+  Gym gym, {
+  Trainer? trainer,
+}) {
   final AppLocalizations l = AppLocalizations.of(context);
   final String hours = gym.weekdayHours != null
       ? l.exGymWeekdayHours(gym.weekdayHours!) +
@@ -1111,9 +1099,9 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                 ? '\n${l.exGymWeekendHours(gym.weekendHours!)}'
                 : '')
       : '';
-  final String trainer = gym.trainerName != null
-      ? '${gym.trainerName}${gym.trainerRole != null ? ' · ${gym.trainerRole}' : ''}'
-      : '';
+  final String trainerLabel = trainer == null
+      ? ''
+      : '${trainer.name}${trainer.role != null ? ' · ${trainer.role}' : ''}';
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -1189,8 +1177,12 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                     l.exSpecialty,
                     gym.tags.join(' · '),
                   ),
-                if (trainer.isNotEmpty)
-                  _infoRow(Icons.person_outline, l.exTrainerDedicated, trainer),
+                if (trainerLabel.isNotEmpty)
+                  _infoRow(
+                    Icons.person_outline,
+                    l.exTrainerDedicated,
+                    trainerLabel,
+                  ),
               ],
             ),
           ),
@@ -1198,259 +1190,4 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
       ),
     ),
   );
-}
-
-// ─────────────────────────────────────────────────────── 1:1 상담 ──
-
-/// 1:1 consultation chat with the gym's trainer, personalised from [gym].
-Future<void> showGymChatSheet(BuildContext context, {Gym? gym}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) =>
-        _GymChatSheet(trainerName: gym?.trainerName, gymName: gym?.name),
-  );
-}
-
-class _GymMsg {
-  const _GymMsg(this.text, {required this.mine});
-  final String text;
-  final bool mine;
-}
-
-class _GymChatSheet extends StatefulWidget {
-  const _GymChatSheet({this.trainerName, this.gymName});
-
-  final String? trainerName;
-  final String? gymName;
-
-  @override
-  State<_GymChatSheet> createState() => _GymChatSheetState();
-}
-
-class _GymChatSheetState extends State<_GymChatSheet> {
-  final TextEditingController _c = TextEditingController();
-  late String _trainer;
-  late String _gym;
-  final List<_GymMsg> _msgs = <_GymMsg>[];
-  bool _seeded = false;
-
-  bool get _started => _msgs.any((_GymMsg m) => m.mine);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_seeded) return;
-    _seeded = true;
-    // Localized defaults/greeting need a BuildContext, so seed them here.
-    final AppLocalizations l = AppLocalizations.of(context);
-    _trainer = widget.trainerName ?? l.exDefaultTrainerName;
-    _gym = widget.gymName ?? l.exDefaultGymName;
-    _msgs.add(_GymMsg(l.exChatGreeting(_trainer), mine: false));
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _send([String? preset]) {
-    final String t = (preset ?? _c.text).trim();
-    if (t.isEmpty) return;
-    final AppLocalizations l = AppLocalizations.of(context);
-    setState(() {
-      _msgs.add(_GymMsg(t, mine: true));
-      _msgs.add(_GymMsg(l.exChatReply, mine: false));
-      _c.clear();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final List<String> chips = <String>[
-      l.exChatChipPt,
-      l.exChatChipPass,
-      l.exChatChipVisit,
-    ];
-    return _shell(
-      context,
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Center(child: _handle()),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEEF2F6),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 20,
-                    color: FigmaColors.textMuted,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        _trainer,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
-                        ),
-                      ),
-                      Text(
-                        l.exGymConsultSubtitle(_gym),
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: FigmaColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _closeBtn(context),
-              ],
-            ),
-          ),
-          Flexible(
-            child: Container(
-              color: const Color(0xFFF5F7FA),
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                children: <Widget>[
-                  for (final _GymMsg m in _msgs) ...<Widget>[
-                    _bubble(m),
-                    const SizedBox(height: 10),
-                  ],
-                  if (!_started)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final String q in chips)
-                          GestureDetector(
-                            onTap: () => _send(q),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 9,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: FigmaColors.primaryA(0.3),
-                                  width: 1.4,
-                                ),
-                              ),
-                              child: Text(
-                                q,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: FigmaColors.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: FigmaColors.softBlue,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: FigmaColors.primaryA(0.22)),
-                    ),
-                    child: TextField(
-                      controller: _c,
-                      onSubmitted: (_) => _send(),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        hintText: l.exMessageHint,
-                        hintStyle: const TextStyle(
-                          fontSize: 13,
-                          color: FigmaColors.textFaint,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _send(),
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: FigmaColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_upward,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bubble(_GymMsg m) {
-    return Align(
-      alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 260),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: m.mine ? FigmaColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: m.mine ? null : Border.all(color: FigmaColors.hairline),
-        ),
-        child: Text(
-          m.text,
-          style: TextStyle(
-            fontSize: 13.5,
-            height: 1.45,
-            fontWeight: FontWeight.w500,
-            color: m.mine ? Colors.white : FigmaColors.ink,
-          ),
-        ),
-      ),
-    );
-  }
 }

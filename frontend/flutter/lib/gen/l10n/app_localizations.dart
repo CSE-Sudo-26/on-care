@@ -299,7 +299,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashboardMetricExercise.
   ///
   /// In en, this message translates to:
-  /// **'Exercise'**
+  /// **'Weekly exercise'**
   String get dashboardMetricExercise;
 
   /// No description provided for @dashboardMetricWeight.
@@ -587,7 +587,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeeklyExerciseTrend.
   ///
   /// In en, this message translates to:
-  /// **'Weekly exercise trend'**
+  /// **'Exercise trend'**
   String get homeWeeklyExerciseTrend;
 
   /// No description provided for @homeMetricOver.
@@ -617,13 +617,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseActiveTime.
   ///
   /// In en, this message translates to:
-  /// **'Weekly active time'**
+  /// **'Active time'**
   String get homeExerciseActiveTime;
 
   /// No description provided for @homeExerciseBurned.
   ///
   /// In en, this message translates to:
-  /// **'Weekly calories'**
+  /// **'Calories'**
   String get homeExerciseBurned;
 
   /// No description provided for @homeExerciseCount.
@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeExerciseDays.
   ///
   /// In en, this message translates to:
-  /// **'Weekly workout days'**
+  /// **'Workout days'**
   String get homeExerciseDays;
 
   /// No description provided for @homeExerciseBurnProgress.
@@ -1334,23 +1334,17 @@ abstract class AppLocalizations {
   /// **'Gym'**
   String get exGymTab;
 
-  /// No description provided for @exMyGymTrainerSection.
+  /// No description provided for @exMyGymSection.
   ///
   /// In en, this message translates to:
-  /// **'My Gym & Trainer'**
-  String get exMyGymTrainerSection;
+  /// **'My Gym'**
+  String get exMyGymSection;
 
   /// No description provided for @exConnected.
   ///
   /// In en, this message translates to:
   /// **'Connected'**
   String get exConnected;
-
-  /// No description provided for @exMyTrainer.
-  ///
-  /// In en, this message translates to:
-  /// **'My Trainer'**
-  String get exMyTrainer;
 
   /// No description provided for @exRecommendedGyms.
   ///
@@ -1370,11 +1364,11 @@ abstract class AppLocalizations {
   /// **'See more'**
   String get exSeeMore;
 
-  /// No description provided for @exNoGymTrainer.
+  /// No description provided for @exNoConnectedGym.
   ///
   /// In en, this message translates to:
-  /// **'You don\'t have a connected gym or trainer yet.'**
-  String get exNoGymTrainer;
+  /// **'You don\'t have a connected gym yet.'**
+  String get exNoConnectedGym;
 
   /// No description provided for @exNoRecommendedGyms.
   ///
@@ -1393,6 +1387,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Gym'**
   String get exTrainerAffiliation;
+
+  /// No description provided for @exTrainerIntroSection.
+  ///
+  /// In en, this message translates to:
+  /// **'About the trainer'**
+  String get exTrainerIntroSection;
+
+  /// No description provided for @exTrainerCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'{career} of experience'**
+  String exTrainerCareer(String career);
+
+  /// No description provided for @exTrainerCertifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Certifications'**
+  String get exTrainerCertifications;
 
   /// No description provided for @exTrainerRecommendationReason.
   ///
@@ -1826,12 +1838,6 @@ abstract class AppLocalizations {
   /// **'✦ AI top pick'**
   String get exAiTopPick;
 
-  /// No description provided for @exTrainerChat.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer Chat'**
-  String get exTrainerChat;
-
   /// No description provided for @exSendHealthSummary.
   ///
   /// In en, this message translates to:
@@ -2023,60 +2029,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Kakao Map area'**
   String get exKakaoMapArea;
-
-  /// No description provided for @exDefaultTrainerName.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer Kim'**
-  String get exDefaultTrainerName;
-
-  /// No description provided for @exDefaultGymName.
-  ///
-  /// In en, this message translates to:
-  /// **'On-Care Gym Sinchon'**
-  String get exDefaultGymName;
-
-  /// No description provided for @exChatGreeting.
-  ///
-  /// In en, this message translates to:
-  /// **'Hello, I\'m {trainer}. 😊\nHow can I help you?'**
-  String exChatGreeting(String trainer);
-
-  /// No description provided for @exChatChipPt.
-  ///
-  /// In en, this message translates to:
-  /// **'PT consult'**
-  String get exChatChipPt;
-
-  /// No description provided for @exChatChipPass.
-  ///
-  /// In en, this message translates to:
-  /// **'Membership inquiry'**
-  String get exChatChipPass;
-
-  /// No description provided for @exChatChipVisit.
-  ///
-  /// In en, this message translates to:
-  /// **'Book a visit'**
-  String get exChatChipVisit;
-
-  /// No description provided for @exChatReply.
-  ///
-  /// In en, this message translates to:
-  /// **'Got it! Your trainer will reply soon. Please share a convenient time to visit. 🙌'**
-  String get exChatReply;
-
-  /// No description provided for @exGymConsultSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{gym} · 1:1 Consult'**
-  String exGymConsultSubtitle(String gym);
-
-  /// No description provided for @exMessageHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Type a message'**
-  String get exMessageHint;
 
   /// No description provided for @myTabTitle.
   ///

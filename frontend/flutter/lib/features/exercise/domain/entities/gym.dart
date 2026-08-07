@@ -1,6 +1,10 @@
 /// Membership / candidate gym used by the 헬스장 tab of the exercise page.
 /// Mirrors the prototype's `GymCard` + `GymFinder` data shape: card list
-/// with rating, distance, tags, hours, and optional trainer details.
+/// with rating, distance, tags, and hours.
+///
+/// Trainers are not part of this entity — a gym employs several of them, so
+/// they live in `Trainer` keyed by [id]. Fetch them with
+/// `GymRepository.fetchTrainersByGym`.
 class Gym {
   const Gym({
     required this.id,
@@ -9,9 +13,6 @@ class Gym {
     required this.distanceKm,
     required this.rating,
     required this.tags,
-    this.trainerName,
-    this.trainerRole,
-    this.trainerReason,
     this.weekdayHours,
     this.weekendHours,
     this.phone,
@@ -25,12 +26,6 @@ class Gym {
   final double distanceKm;
   final double rating;
   final List<String> tags;
-  final String? trainerName;
-  final String? trainerRole;
-
-  /// Per-trainer recommendation reason shown on the 추천 트레이너 card/detail.
-  /// Null falls back to the generic localized reason.
-  final String? trainerReason;
   final String? weekdayHours;
   final String? weekendHours;
   final String? phone;

@@ -8,6 +8,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/place/domain/entities/place.dart';
@@ -163,7 +164,7 @@ final nearbyGymsProvider = FutureProvider<List<Gym>>((ref) {
   return ref.watch(gymRepositoryProvider).fetchNearby();
 }, name: 'nearbyGyms');
 
-/// 헬스장 찾기 시트가 지도 중심으로 삼는 좌표 — 제휴 헬스장(온케어짐 신촌점)이
+/// 헬스장 찾기가 지도 중심으로 삼는 좌표 — 제휴 헬스장(온케어짐 신촌점)이
 /// 있는 신촌 권역. 기기 위치 권한이 붙기 전까지의 고정값이다.
 const PlaceQuery kGymFinderArea = PlaceQuery(
   lat: 37.5559,
@@ -174,8 +175,9 @@ const PlaceQuery kGymFinderArea = PlaceQuery(
 /// 카카오 Local 이 준 주변 헬스장을 [Gym] 형태로 옮긴다.
 ///
 /// 이름·주소·거리·좌표는 카카오 실데이터다. 카카오가 주지 않는 평점·전문분야·
-/// 영업시간·트레이너는 [kKakaoGymDemoProfiles] 에 등록된 곳이면 시연용 값으로
-/// 채우고, 없으면 비워 둔다(평점 0 이면 UI 가 뱃지를 감춘다).
+/// 영업시간은 [kKakaoGymDemoProfiles] 에 등록된 곳이면 시연용 값으로 채우고,
+/// 없으면 비워 둔다(평점 0 이면 UI 가 뱃지를 감춘다). 소속 트레이너는 [Gym] 이
+/// 아니라 [Trainer] 에 있으므로 `MockGymRepository` 가 gymId 로 들고 있다.
 Gym _gymFromPlace(Place p) {
   final KakaoGymDemoProfile? demo = kKakaoGymDemoProfiles[p.id];
   return Gym(
@@ -188,9 +190,6 @@ Gym _gymFromPlace(Place p) {
     phone: demo?.phone,
     weekdayHours: demo?.weekdayHours,
     weekendHours: demo?.weekendHours,
-    trainerName: demo?.trainerName,
-    trainerRole: demo?.trainerRole,
-    trainerReason: demo?.trainerReason,
     lat: p.lat,
     lng: p.lng,
   );
@@ -198,12 +197,11 @@ Gym _gymFromPlace(Place p) {
 
 String _gymNameKey(String name) => name.replaceAll(RegExp(r'\s+'), '');
 
-/// 헬스장 찾기 시트 전용 목록 — 제휴 헬스장(트레이너·평점 보유)을 앞에 두고,
+/// 헬스장 찾기 전용 목록 — 제휴 헬스장(평점·트레이너 보유)을 앞에 두고,
 /// 카카오 Local 의 주변 헬스장을 뒤에 이어 붙인다.
 ///
-/// [nearbyGymsProvider] 를 그대로 두는 이유: 트레이너 목록·상담 신청·헬스장 상세가
-/// 같은 provider 를 보고 트레이너 정보를 꺼내므로, 거기에 트레이너 없는 카카오
-/// 결과를 섞으면 그 화면들이 비어 버린다.
+/// [nearbyGymsProvider] 를 그대로 두는 이유: 트레이너 목록·상담 신청이 같은
+/// provider 를 보므로, 거기에 카카오 결과를 섞으면 그 화면들이 흐트러진다.
 final gymFinderResultsProvider = FutureProvider<List<Gym>>((ref) async {
   final List<Gym> partners = await ref.watch(nearbyGymsProvider.future);
 
@@ -225,3 +223,34 @@ final gymFinderResultsProvider = FutureProvider<List<Gym>>((ref) async {
       if (seen.add(_gymNameKey(g.name))) g,
   ];
 }, name: 'gymFinderResults');
+
+/// 담당 트레이너. 헬스장과 별도 provider 라, 트레이너만 해제해도 헬스장
+/// 카드는 그대로 남는다.
+final myTrainerProvider = FutureProvider<Trainer?>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchMyTrainer();
+}, name: 'myTrainer');
+
+/// 한 헬스장에 소속된 트레이너 전원. 헬스장 상세의 소속 트레이너 목록이 읽는다.
+final gymTrainersProvider = FutureProvider.family<List<Trainer>, String>((
+  ref,
+  String gymId,
+) {
+  return ref.watch(gymRepositoryProvider).fetchTrainersByGym(gymId);
+}, name: 'gymTrainers');
+
+/// 트레이너 상세가 자기 id 로 직접 읽는다.
+final trainerProvider = FutureProvider.family<Trainer?, String>((
+  ref,
+  String trainerId,
+) {
+  return ref.watch(gymRepositoryProvider).fetchTrainer(trainerId);
+}, name: 'trainer');
+
+final recommendedTrainersProvider = FutureProvider<List<Trainer>>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchRecommendedTrainers();
+}, name: 'recommendedTrainers');
+
+/// "트레이너 찾기" 목록이 읽는 전체 디렉터리.
+final allTrainersProvider = FutureProvider<List<Trainer>>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchAllTrainers();
+}, name: 'allTrainers');

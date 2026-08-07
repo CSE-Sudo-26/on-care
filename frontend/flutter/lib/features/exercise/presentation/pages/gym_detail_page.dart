@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -52,7 +53,11 @@ class GymDetailPage extends ConsumerWidget {
             request.gymId == gym.id &&
             request.status == ConsultationStatus.pending,
       );
-      body = _GymDetails(gym: gym, hasPending: hasPending);
+      body = _GymDetails(
+        gym: gym,
+        hasPending: hasPending,
+        isMyGym: myGym != null,
+      );
     } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
     } else if (nearbyAsync.hasError || myGymAsync.hasError) {
@@ -88,10 +93,15 @@ class GymDetailPage extends ConsumerWidget {
 }
 
 class _GymDetails extends StatelessWidget {
-  const _GymDetails({required this.gym, required this.hasPending});
+  const _GymDetails({
+    required this.gym,
+    required this.hasPending,
+    required this.isMyGym,
+  });
 
   final Gym gym;
   final bool hasPending;
+  final bool isMyGym;
 
   @override
   Widget build(BuildContext context) {
@@ -208,99 +218,32 @@ class _GymDetails extends StatelessWidget {
                 ),
               ),
             ],
-            if (gym.trainerName?.isNotEmpty ?? false) ...<Widget>[
-              const SizedBox(height: 12),
-              _DetailSection(
-                icon: Icons.person_outline,
-                title: l.exAffiliatedTrainer,
-                padding: EdgeInsets.zero,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () =>
-                        context.push(AppRoutes.trainerDetailPath(gym.id)),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: <Widget>[
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: const BoxDecoration(
-                              color: FigmaColors.iconTint,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.person_outline,
-                              size: 21,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  gym.trainerName!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: FigmaColors.ink,
-                                  ),
-                                ),
-                                if (gym.trainerRole != null) ...<Widget>[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    gym.trainerRole!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: FigmaColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: FigmaColors.textFaint,
-                          ),
-                        ],
+            const SizedBox(height: 12),
+            _AffiliatedTrainers(gymId: gym.id),
+            if (!isMyGym) ...<Widget>[
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: hasPending
+                    ? null
+                    : () => context.push(
+                        AppRoutes.consultationRequestPath(
+                          targetType: ConsultationTargetType.gym.name,
+                          gymId: gym.id,
+                        ),
                       ),
-                    ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: FigmaColors.primary,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                ),
+                child: Text(
+                  hasPending ? l.exConsultPendingCta : l.exGymConsultRequest,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: hasPending
-                  ? null
-                  : () => context.push(
-                      AppRoutes.consultationRequestPath(
-                        targetType: ConsultationTargetType.gym.name,
-                        gymId: gym.id,
-                      ),
-                    ),
-              style: FilledButton.styleFrom(
-                backgroundColor: FigmaColors.primary,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                hasPending ? l.exConsultPendingCta : l.exGymConsultRequest,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
           ],
         ),
       ),
@@ -359,6 +302,108 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 이 헬스장에 소속된 트레이너 전원. 헬스장당 여러 명일 수 있으므로 목록으로
+/// 그리고, 한 명도 없으면 섹션 자체를 숨긴다.
+class _AffiliatedTrainers extends ConsumerWidget {
+  const _AffiliatedTrainers({required this.gymId});
+
+  final String gymId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<Trainer> trainers =
+        ref.watch(gymTrainersProvider(gymId)).valueOrNull ?? const <Trainer>[];
+    if (trainers.isEmpty) return const SizedBox.shrink();
+
+    return _DetailSection(
+      icon: Icons.person_outline,
+      title: l.exAffiliatedTrainer,
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: <Widget>[
+          for (int i = 0; i < trainers.length; i++) ...<Widget>[
+            if (i > 0)
+              const Padding(
+                padding: EdgeInsets.only(left: 70),
+                child: Divider(height: 1, color: FigmaColors.hairline),
+              ),
+            _AffiliatedTrainerRow(trainer: trainers[i]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AffiliatedTrainerRow extends StatelessWidget {
+  const _AffiliatedTrainerRow({required this.trainer});
+
+  final Trainer trainer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.trainerDetailPath(trainer.id)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: FigmaColors.iconTint,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 21,
+                  color: FigmaColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      trainer.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                    if (trainer.role != null) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        trainer.role!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
+            ],
+          ),
+        ),
       ),
     );
   }

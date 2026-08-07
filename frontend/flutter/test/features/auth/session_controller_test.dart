@@ -13,6 +13,7 @@ final ConsultationRequest _pendingRequest = ConsultationRequest(
   targetType: ConsultationTargetType.gym,
   gymId: 'gym-1',
   gymName: 'A 사용자 상담 헬스장',
+  trainerId: null,
   trainerName: null,
   trainerRole: null,
   exerciseGoal: '체중 감량',

@@ -8,6 +8,7 @@ class ConsultationRequest {
     required this.targetType,
     required this.gymId,
     required this.gymName,
+    required this.trainerId,
     required this.trainerName,
     required this.trainerRole,
     required this.exerciseGoal,
@@ -23,6 +24,10 @@ class ConsultationRequest {
   final ConsultationTargetType targetType;
   final String gymId;
   final String gymName;
+
+  /// Set for trainer-target requests. A gym has several trainers, so pending
+  /// state must be matched on this rather than on [gymId].
+  final String? trainerId;
   final String? trainerName;
   final String? trainerRole;
   final String exerciseGoal;

@@ -143,8 +143,9 @@ GoRouter buildAppRouter({
       ),
       GoRoute(
         path: AppRoutes.trainerDetail,
-        builder: (context, state) =>
-            TrainerDetailPage(gymId: state.pathParameters['gymId'] ?? ''),
+        builder: (context, state) => TrainerDetailPage(
+          trainerId: state.pathParameters['trainerId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.consultationRequest,
@@ -158,6 +159,7 @@ GoRouter buildAppRouter({
           return ConsultationRequestPage(
             targetType: targetType,
             gymId: state.uri.queryParameters['gymId'] ?? '',
+            trainerId: state.uri.queryParameters['trainerId'],
           );
         },
       ),
