@@ -1285,7 +1285,11 @@ class LocalApiInterceptor extends Interceptor {
     _ => null,
   };
 
-  /// 두 좌표 사이 거리(m). 백엔드 `_haversine_m` 과 같은 계산이다.
+  /// 두 좌표 사이 거리(m). 백엔드 `places.py` 의 `_haversine_m` 과 같은 계산이다.
+  ///
+  /// 마지막 변환은 반올림이 아니라 **절삭**이어야 한다 — 백엔드가 `int(...)` 로
+  /// 소수점을 버리므로, `round()` 를 쓰면 같은 좌표에서 mock 과 실 응답의
+  /// `distance_meters` 가 1m 어긋난다(리뷰 지적).
   static int _haversineMeters(
     double lat1,
     double lng1,
@@ -1300,7 +1304,7 @@ class LocalApiInterceptor extends Interceptor {
     final double a =
         math.sin(dp / 2) * math.sin(dp / 2) +
         math.cos(p1) * math.cos(p2) * math.sin(dl / 2) * math.sin(dl / 2);
-    return (r * 2 * math.asin(math.sqrt(a))).round();
+    return (r * 2 * math.asin(math.sqrt(a))).toInt();
   }
 
   String _timeAgoKorean(Duration d) {

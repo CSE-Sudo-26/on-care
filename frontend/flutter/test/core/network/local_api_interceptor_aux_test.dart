@@ -108,6 +108,39 @@ void main() {
     expect(distances, orderedEquals(List<int>.of(distances)..sort()));
   });
 
+  test('GET /places/nearby 거리 계산이 백엔드 _haversine_m 과 같다', () async {
+    // 백엔드는 int(...) 로 절삭한다. round() 를 쓰면 1m 어긋난다(리뷰 지적).
+    // 아래 기대값은 backend/app/api/v1/places.py 의 _haversine_m 실행 결과다.
+    const sinchonLat = 37.5559;
+    const sinchonLng = 126.9368;
+    const expected = <String, int>{
+      '휘트니스에이든': 126,
+      '빌드업짐 PT 신촌점': 133,
+      '신인규피티스튜디오': 177,
+      '하이핏': 186,
+    };
+
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{
+        'lat': sinchonLat,
+        'lng': sinchonLng,
+        'radius_m': 20000,
+        'category': 'fitness',
+      },
+    );
+    final places = res.data!.cast<Map<String, Object?>>();
+    for (final place in places) {
+      final want = expected[place['name']! as String];
+      if (want == null) continue;
+      expect(
+        place['distance_meters'],
+        want,
+        reason: '${place['name']} 거리가 백엔드 계산과 다름',
+      );
+    }
+  });
+
   test('GET /places/nearby 는 radius_m 밖 장소를 제외한다', () async {
     // 서울시청 기준 500m 안에는 신촌 헬스장이 하나도 없다.
     final res = await dio.get<List<Object?>>(
