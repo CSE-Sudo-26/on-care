@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 
+import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -74,6 +75,10 @@ ProviderContainer _containerWith(
   final container = ProviderContainer(
     overrides: <Override>[
       placeRepositoryProvider.overrideWithValue(repo),
+      // 이 테스트가 보는 건 카카오(place) 경로다. useMockApi:false 일 때
+      // gymRepositoryProvider 가 실 API repo 를 만들면 dio 의존성이 딸려오므로
+      // 제휴 목록은 mock 으로 고정한다.
+      gymRepositoryProvider.overrideWithValue(MockGymRepository()),
       appConfigProvider.overrideWithValue(
         AppConfig(
           environment: Environment.dev,

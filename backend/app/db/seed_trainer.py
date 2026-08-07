@@ -123,6 +123,8 @@ def _seed_trainer_account(db: Session) -> None:
             trainer_id=TRAINER_ID,
             phone="010-1234-5678",
             specialty="퍼스널 트레이너",
+            # 추천 레일 노출 조건(#324). 비어 있으면 /trainers/recommended 에서 빠진다.
+            recommend_reason="혈압 관리와 운동 병행 지도",
             career_years=7,
             intro=(
                 "혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 "
@@ -134,6 +136,10 @@ def _seed_trainer_account(db: Session) -> None:
             gym_hours="06:00 – 23:00",
             gym_phone="02-1234-5678",
         ))
+    elif not profile.recommend_reason:
+        # 프로필이 이미 있으면 위 블록을 건너뛰므로, 나중에 추가된 컬럼은 영영 빈 채로
+        # 남는다. 추천 사유가 비면 /trainers/recommended 에서 빠지므로 백필한다(#324).
+        profile.recommend_reason = "혈압 관리와 운동 병행 지도"
     _safe_commit(db, "트레이너 데모 계정 시드 충돌")
 
 

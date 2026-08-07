@@ -64,6 +64,8 @@ void main() {
         overrides: <Override>[
           nearbyGymsProvider.overrideWith((ref) async => gyms),
           // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+          // gymRepositoryProvider 가 mock/실 API 를 이 값으로 고른다(#324).
+          appConfigProvider.overrideWithValue(_config),
           gymFinderResultsProvider.overrideWith((ref) async => gyms),
           myGymProvider.overrideWith((ref) async => myGym),
           myTrainerProvider.overrideWith((ref) async => null),

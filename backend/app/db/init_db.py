@@ -48,6 +48,10 @@ def init_db() -> None:
         # 김민수(user-demo) 링크가 성립한다.
         from app.db.seed_trainer import seed_trainer_domain
         seed_trainer_domain()
+        # 제휴 헬스장(#324). 트레이너 시드 뒤에 호출해야 gym_name → gym_id 연결이
+        # 걸린다. places 에 fitness 로 들어가므로 상담 대상 검증도 통과한다.
+        from app.db.seed_gyms import seed_partner_gyms
+        seed_partner_gyms()
         # 담당 회원 실데이터(식단·운동기록) — 트레이너 로스터/식단/기록을 실데이터로 채운다.
         # 회원 계정 시드(seed_trainer_domain) 뒤에 호출.
         from app.db.seed_member_data import seed_member_health_data

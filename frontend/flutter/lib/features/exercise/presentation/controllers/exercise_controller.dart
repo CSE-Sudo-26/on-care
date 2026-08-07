@@ -4,10 +4,12 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/exercise/data/kakao_gym_demo_profile.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_exercise_repository.dart';
+import 'package:oncare/features/exercise/data/repositories/dio_gym_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -146,15 +148,19 @@ final exerciseWeekViewProvider = Provider<AsyncValue<ExerciseWeek>>((ref) {
       .whenData((ExerciseWeek w) => applyTodayBonus(w, bonus));
 }, name: 'exerciseWeekView');
 
-/// Gym data has no backend endpoint yet — the prototype shipped only
-/// mock data, so wire the page to a static repository for now. A real
-/// `DioGymRepository` can be swapped in once `/gyms/*` lands.
-final gymRepositoryProvider = Provider<GymRepository>(
-  // 한 인스턴스를 provider 수명 동안 유지해, 연결 해제 상태가 MY 탭과
-  // 운동 탭에 함께 반영된다.
-  (ref) => MockGymRepository(),
-  name: 'gymRepository',
-);
+/// 헬스장·트레이너 디렉터리. 실 API 는 `/gyms`·`/trainers`(#324).
+///
+/// 데모(mock) 경로를 유지하는 이유: `LocalApiInterceptor` 에 `/gyms` 계열 핸들러가
+/// 없어 데모에서 실 repository 를 쓰면 요청이 갈 곳이 없다. 시드가 mock 과 같은
+/// id·문안이라 두 경로의 화면은 같다.
+final gymRepositoryProvider = Provider<GymRepository>((ref) {
+  if (ref.watch(appConfigProvider).useMockApi) {
+    // 한 인스턴스를 provider 수명 동안 유지해, 연결 해제 상태가 MY 탭과
+    // 운동 탭에 함께 반영된다.
+    return MockGymRepository();
+  }
+  return DioGymRepository(ref.watch(dioProvider));
+}, name: 'gymRepository');
 
 final myGymProvider = FutureProvider<Gym?>((ref) {
   return ref.watch(gymRepositoryProvider).fetchMyGym();
@@ -164,11 +170,11 @@ final nearbyGymsProvider = FutureProvider<List<Gym>>((ref) {
   return ref.watch(gymRepositoryProvider).fetchNearby();
 }, name: 'nearbyGyms');
 
-/// 헬스장 찾기가 지도 중심으로 삼는 좌표 — 제휴 헬스장(온케어짐 신촌점)이
-/// 있는 신촌 권역. 기기 위치 권한이 붙기 전까지의 고정값이다.
+/// 헬스장 찾기의 카카오 Local 조회 조건. 좌표는 지도 중심·실 API 조회와 같은
+/// 상수를 쓴다(`gym_search_area.dart`) — 따로 두면 조용히 어긋난다.
 const PlaceQuery kGymFinderArea = PlaceQuery(
-  lat: 37.5559,
-  lng: 126.9368,
+  lat: kGymSearchLat,
+  lng: kGymSearchLng,
   category: PlaceCategory.fitness,
 );
 
