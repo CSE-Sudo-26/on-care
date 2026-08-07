@@ -51,6 +51,9 @@ class MealRecommendations {
     required this.items,
     this.basis,
     this.personalized = false,
+    this.daysWithData = 0,
+    this.avgSodiumMg = 0,
+    this.sodiumLimitMg = 0,
   });
 
   factory MealRecommendations.fromJson(Map<String, Object?> json) {
@@ -62,6 +65,9 @@ class MealRecommendations {
       ],
       basis: json['basis'] as String?,
       personalized: (json['personalized'] as bool?) ?? false,
+      daysWithData: (json['days_with_data'] as num?)?.toInt() ?? 0,
+      avgSodiumMg: (json['avg_sodium_mg'] as num?)?.toInt() ?? 0,
+      sodiumLimitMg: (json['sodium_limit_mg'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -73,6 +79,16 @@ class MealRecommendations {
 
   /// false 면 근거 데이터가 없어 기본 순서로 내려온 것이다.
   final bool personalized;
+
+  /// 근거 수치 — 화면 문구는 앱이 l10n 으로 만든다. [basis] 는 서버가 조립한
+  /// 한국어 문장이라 영어 로케일에 그대로 쓸 수 없어 표시에 쓰지 않는다.
+  final int daysWithData;
+  final int avgSodiumMg;
+  final int sodiumLimitMg;
+
+  /// 나트륨이 권장치를 넘겼는지 — 근거 문구에 "권장 초과"를 붙일지 결정한다.
+  bool get sodiumOverLimit =>
+      sodiumLimitMg > 0 && avgSodiumMg > sodiumLimitMg;
 
   /// 서버를 아직 못 받았거나 실패했을 때 그리는 기본 추천.
   ///

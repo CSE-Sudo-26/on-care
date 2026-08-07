@@ -115,3 +115,10 @@ class DietRecommendationsResponse(BaseModel):
     basis: str | None = None
     personalized: bool = False
     source: str = "rules"
+
+    # 근거를 앱이 직접 문장으로 만들 수 있도록 수치도 함께 준다. `basis` 는 서버가
+    # 조립한 한국어 문장이라 영어 로케일에 그대로 쓸 수 없다(요리명·이유를 key 로
+    # 주고받는 것과 같은 이유). 화면 문구는 앱이 l10n 으로 만든다.
+    days_with_data: int = 0
+    avg_sodium_mg: int = 0
+    sodium_limit_mg: int = 0

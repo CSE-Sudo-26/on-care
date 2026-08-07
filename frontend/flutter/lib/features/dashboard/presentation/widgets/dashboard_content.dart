@@ -1571,6 +1571,23 @@ String? _reasonTextFor(AppLocalizations l, String reasonKey) => switch (reasonKe
   _ => null,
 };
 
+/// 개인화 근거 한 줄 — 예: "최근 3일 평균 나트륨 2,400mg · 권장 초과".
+///
+/// 서버가 준 `basis` 문자열을 쓰지 않고 수치로 다시 만든다. `basis` 는 서버가 조립한
+/// 한국어라 영어 로케일에 그대로 쓰면 문구가 섞인다(요리명·이유를 key 로 주고받는
+/// 것과 같은 이유).
+///
+/// 개인화되지 않았거나 근거 데이터가 없으면 null — 목업/데모 모드와 신규 가입자가
+/// 이 경로라, 화면에 아무것도 추가되지 않는다.
+String? _basisTextFor(AppLocalizations l, MealRecommendations recs) {
+  if (!recs.personalized || recs.daysWithData <= 0 || recs.avgSodiumMg <= 0) {
+    return null;
+  }
+  final String sodium = NumberFormat.decimalPattern().format(recs.avgSodiumMg);
+  final String base = l.homeRecBasisSodium(recs.daysWithData, sodium);
+  return recs.sodiumOverLimit ? '$base · ${l.homeRecBasisOverLimit}' : base;
+}
+
 /// 추천 응답 → 카드 목록.
 ///
 /// 앱이 모르는 key(서버 카탈로그가 먼저 늘어난 경우)는 그릴 방법이 없으므로
@@ -1612,6 +1629,9 @@ class _RecommendedMeals extends ConsumerWidget {
         ref.watch(dietRecommendationsProvider).valueOrNull ??
         MealRecommendations.fallback;
     final List<_RecMeal> meals = _cardsFor(l, recs);
+    // 개인화된 응답일 때만 근거를 보여준다. 목업/데모 모드와 신규 가입자는
+    // personalized=false 라 이 줄이 아예 나타나지 않는다(화면 불변).
+    final String? basis = _basisTextFor(l, recs);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1637,6 +1657,15 @@ class _RecommendedMeals extends ConsumerWidget {
                       l.homeAiAnalysisPill,
                       background: FigmaColors.primaryA(0.10),
                     ),
+                    if (basis != null)
+                      Text(
+                        basis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
                   ],
                 ),
               ),
