@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 
+import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
@@ -82,8 +83,10 @@ void main() {
     expect(summary.macros.proteinG, 45.0);
     expect(summary.macros.fatG, 45.0);
     expect(summary.macros.carbsPct, 45);
-    // 시드가 큐레이션한 '통합 조언'(짬뽕 시나리오)이 동적 경고 대신 노출된다.
-    expect(summary.sodiumWarning, contains('짬뽕'));
+    // 시드가 큐레이션한 '통합 조언'이 동적 나트륨 경고 대신 노출된다. 문구가
+    // 아니라 키로 내려와야 화면이 로케일에 맞게 고를 수 있다(#435).
+    expect(summary.aiAdviceKey, kDailyCombinedAdviceKey);
+    expect(summary.sodiumWarning, isNull);
     // Two baseline events always fall on today. One of the monthly demo
     // events can also land on today (5th/12th/22nd/26th), so keep this
     // assertion stable across the calendar while still checking the baseline.

@@ -6,6 +6,7 @@ import 'package:drift/drift.dart'
     show OrderClauseGenerator, OrderingMode, OrderingTerm, Value;
 import 'package:logger/logger.dart';
 
+import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
 
 /// A drift-backed dummy backend. Intercepts dio requests and serves
@@ -303,9 +304,11 @@ class LocalApiInterceptor extends Interceptor {
         .map((source) => source.key)
         .join('·');
 
-    // 데모 시드가 제공하는 큐레이션된 '통합 조언'이 있으면 우선 노출하고, 없으면
-    // (시드 없는 테스트 DB 등) 나트륨 상위 급원 기반 경고를 동적으로 생성한다.
+    // 데모 시드가 큐레이션 '통합 조언'을 준비해 뒀는지. 있으면 그것을 우선
+    // 노출하고, 없으면(시드 없는 테스트 DB 등) 나트륨 상위 급원 기반 경고를
+    // 동적으로 생성한다.
     final seededAdvice = await _db.readValue('dashboard_ai_advice');
+    final bool hasSeededAdvice = seededAdvice != null && seededAdvice.isNotEmpty;
 
     // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
@@ -371,8 +374,13 @@ class LocalApiInterceptor extends Interceptor {
       // Delta is a static demo number for now — full week-over-week
       // diff lands in a later phase.
       'week_score_delta': 12,
-      'sodium_warning': seededAdvice != null && seededAdvice.isNotEmpty
-          ? seededAdvice
+      // 시드가 큐레이션한 통합 조언은 **키로** 내려보낸다 — 문장은 ARB 가
+      // ko·en 양쪽으로 갖고 있고 화면이 로케일에 맞게 고른다(#435).
+      'ai_advice_key': hasSeededAdvice ? kDailyCombinedAdviceKey : null,
+      // 시드 조언이 없을 때(시드 없는 테스트 DB 등)만 나트륨 급원 기반 경고를
+      // 동적으로 만든다. 서버가 만드는 문장과 같은 성격이라 번역본이 없다.
+      'sodium_warning': hasSeededAdvice
+          ? null
           : totalSodium > 2000
           ? sodiumSourceNames.isNotEmpty
                 ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
