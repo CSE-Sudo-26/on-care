@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 
@@ -11,10 +12,6 @@ import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart
 class DioGymRepository implements GymRepository {
   DioGymRepository(this._dio);
   final Dio _dio;
-
-  /// 헬스장 찾기가 쓰는 기준 좌표(신촌). 거리를 서버가 계산하도록 함께 보낸다.
-  static const double _centerLat = 37.5559;
-  static const double _centerLng = 126.9368;
 
   static Gym _gym(Map<String, Object?> j) => Gym(
     id: j['id']! as String,
@@ -70,7 +67,7 @@ class DioGymRepository implements GymRepository {
   Future<List<Gym>> fetchNearby() => _list(
     '/gyms',
     _gym,
-    query: <String, Object?>{'lat': _centerLat, 'lng': _centerLng},
+    query: <String, Object?>{'lat': kGymSearchLat, 'lng': kGymSearchLng},
   );
 
   @override
@@ -105,7 +102,7 @@ class DioGymRepository implements GymRepository {
     try {
       final res = await _dio.get<Map<String, Object?>>(
         '/gyms/$gymId',
-        queryParameters: <String, Object?>{'lat': _centerLat, 'lng': _centerLng},
+        queryParameters: <String, Object?>{'lat': kGymSearchLat, 'lng': kGymSearchLng},
       );
       if (res.data != null) return _gym(res.data!);
     } on DioException catch (e) {

@@ -40,6 +40,33 @@ def test_list_gyms_sorts_by_distance_when_coordinates_given(client):
     assert gyms[0]["distance_km"] == 0
 
 
+def test_gyms_without_coordinates_sort_last(client, db_session):
+    """좌표를 모르는 헬스장은 distance_km 가 0 이라, 그냥 정렬하면 '가장 가까운 곳'
+    으로 맨 앞에 온다."""
+    from app.models.models import Place
+
+    db_session.add(
+        Place(
+            id="gym-no-coords-test",
+            name="좌표없는테스트짐",
+            category="fitness",
+            address="주소 미상",
+        )
+    )
+    db_session.commit()
+    try:
+        gyms = client.get("/v1/gyms", params=SINCHON).json()
+        ids = [g["id"] for g in gyms]
+        assert "gym-no-coords-test" in ids
+        assert ids[-1] == "gym-no-coords-test", ids
+        assert ids[0] == "gym-oncare-sinchon", ids
+    finally:
+        db_session.query(Place).filter(
+            Place.id == "gym-no-coords-test"
+        ).delete()
+        db_session.commit()
+
+
 def test_list_gyms_without_coordinates_has_zero_distance(client):
     gyms = client.get("/v1/gyms", params={"partner_only": True}).json()
     # 기준점이 없으면 거리를 지어내지 않는다.
@@ -190,3 +217,64 @@ def test_disconnect_my_coach_is_idempotent(client):
     # 담당이 없는 회원도 204 — 404 면 앱이 오류를 띄운다.
     assert client.delete("/v1/me/coach", headers=_auth(token)).status_code == 204
     assert client.delete("/v1/me/coach", headers=_auth(token)).status_code == 204
+
+
+def test_coordinates_must_be_sent_as_a_pair(client):
+    """하나만 오면 거리 계산이 조용히 생략돼 distance_km=0 이 된다 — 422 여야 한다."""
+    assert client.get("/v1/gyms", params={"lat": 37.5559}).status_code == 422
+    assert client.get("/v1/gyms", params={"lng": 126.9368}).status_code == 422
+    assert (
+        client.get(
+            "/v1/gyms/gym-oncare-sinchon", params={"lat": 37.5559}
+        ).status_code
+        == 422
+    )
+    # 둘 다 있거나 둘 다 없으면 정상.
+    assert client.get("/v1/gyms", params=SINCHON).status_code == 200
+    assert client.get("/v1/gyms").status_code == 200
+
+
+def test_discovered_gyms_expose_no_invented_numbers(client):
+    """실재 업체에 확인할 수 없는 평점·영업시간·태그를 붙여 내보내지 않는다.
+
+    주석은 API 응답에 남지 않는다 — 실제 상호·주소·전화와 함께 평점이 내려가면
+    화면에서는 실제 평점으로 읽힌다(리뷰 지적).
+    """
+    for gym_id in DISCOVERED_IDS:
+        gym = client.get(f"/v1/gyms/{gym_id}").json()
+        assert gym["rating"] == 0, gym["name"]      # 0 이면 UI 가 뱃지를 감춘다
+        assert gym["tags"] == [], gym["name"]
+        assert not gym["weekday_hours"], gym["name"]
+        assert not gym["weekend_hours"], gym["name"]
+        # 전화·주소는 카카오 실데이터라 그대로 노출한다.
+        assert gym["phone"], gym["name"]
+
+
+def test_disconnect_clears_every_active_link(client, db_session):
+    """활성 링크가 여러 개 남은 경우에도 전부 내려야 '해제했는데 그대로'가 안 된다."""
+    from app.models.models import TrainerClient
+    from app.services import trainer_service
+    from tests.test_consultations import _register_member
+
+    member_id, _token = _register_member(client)
+    # partial unique index 를 우회해 비정상 상태를 만든다(active 는 한 번에 하나여야
+    # 하지만, 깨졌을 때 해제가 동작하는지 본다).
+    db_session.add(
+        TrainerClient(
+            id=f"link-{member_id}-1", trainer_id="trainer-demo",
+            member_id=member_id, goal="테스트", active=True,
+        )
+    )
+    db_session.commit()
+    try:
+        assert trainer_service.disconnect_member_coach(db_session, member_id) is True
+        assert trainer_service.get_member_trainer_id(db_session, member_id) is None
+        remaining = db_session.query(TrainerClient).filter(
+            TrainerClient.member_id == member_id, TrainerClient.active.is_(True)
+        ).count()
+        assert remaining == 0
+    finally:
+        db_session.query(TrainerClient).filter(
+            TrainerClient.member_id == member_id
+        ).delete()
+        db_session.commit()

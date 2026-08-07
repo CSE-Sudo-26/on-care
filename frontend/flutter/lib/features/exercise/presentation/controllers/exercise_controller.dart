@@ -9,6 +9,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -169,11 +170,11 @@ final nearbyGymsProvider = FutureProvider<List<Gym>>((ref) {
   return ref.watch(gymRepositoryProvider).fetchNearby();
 }, name: 'nearbyGyms');
 
-/// 헬스장 찾기가 지도 중심으로 삼는 좌표 — 제휴 헬스장(온케어짐 신촌점)이
-/// 있는 신촌 권역. 기기 위치 권한이 붙기 전까지의 고정값이다.
+/// 헬스장 찾기의 카카오 Local 조회 조건. 좌표는 지도 중심·실 API 조회와 같은
+/// 상수를 쓴다(`gym_search_area.dart`) — 따로 두면 조용히 어긋난다.
 const PlaceQuery kGymFinderArea = PlaceQuery(
-  lat: 37.5559,
-  lng: 126.9368,
+  lat: kGymSearchLat,
+  lng: kGymSearchLng,
   category: PlaceCategory.fitness,
 );
 
