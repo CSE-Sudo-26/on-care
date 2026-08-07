@@ -180,10 +180,19 @@ class _ConsultationRequestPageState
       message: message.isEmpty ? null : message,
     );
 
-    final ConsultationRequest? saved = await controller.submit(
-      draft: draft,
-      display: request,
-    );
+    final ConsultationRequest? saved;
+    try {
+      saved = await controller.submit(draft: draft, display: request);
+    } on Object {
+      // 409 외의 실패(네트워크 등)를 잡지 않으면 _submitting 이 true 로 남아
+      // 제출 버튼이 영영 눌리지 않는다(리뷰 지적).
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).errorUnknown)),
+      );
+      return;
+    }
     if (!mounted) return;
     if (saved == null) {
       setState(() => _submitting = false);

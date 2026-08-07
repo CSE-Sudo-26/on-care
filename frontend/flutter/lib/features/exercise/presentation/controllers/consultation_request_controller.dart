@@ -61,7 +61,11 @@ class ConsultationRequestController
     try {
       id = await _repository.create(draft);
     } on DuplicatePendingConsultation {
-      // 다른 기기에서 이미 신청했을 수 있다 — 서버 판정을 따른다.
+      // 다른 기기에서 이미 신청했다는 뜻이다. 그냥 null 만 돌려주면 목록이 비어 있어
+      // hasPending 이 계속 false 이고, 사용자는 같은 대상에 다시 눌러 409 를 반복해서
+      // 받는다. 서버가 알려 준 '대기 중' 사실을 목록에 반영해 화면이 안내를 띄우게
+      // 한다(리뷰 지적).
+      state = <ConsultationRequest>[display, ...state];
       return null;
     }
 

@@ -13,7 +13,11 @@ ConsultationDraft draftFor(ConsultationRequest request) => ConsultationDraft(
   gymId: request.targetType == ConsultationTargetType.gym
       ? request.gymId
       : null,
-  trainerId: request.trainerId,
+  // gym 대상인데 trainerId 가 남아 있으면 toJson() 이 trainer 대상으로 해석해
+  // 실제 API 와 다른 payload 가 된다(리뷰 지적).
+  trainerId: request.targetType == ConsultationTargetType.trainer
+      ? request.trainerId
+      : null,
   exerciseGoal: ExerciseGoal.fitness,
   healthPurposeType: HealthPurposeType.general,
   healthPurposeDetail: null,

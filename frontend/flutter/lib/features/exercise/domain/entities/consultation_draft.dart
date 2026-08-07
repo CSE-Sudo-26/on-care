@@ -64,7 +64,24 @@ class ConsultationDraft {
   final PreferredTimeSlot preferredTimeSlot;
   final String? message;
 
-  Map<String, Object?> toJson() => <String, Object?>{
+  Map<String, Object?> toJson() {
+    // 서버는 대상이 정확히 하나여야 하고, other 목적에는 상세가 있어야 한다(422).
+    // 여기서 막지 않으면 둘 다 실린 payload 가 그대로 나가 원인을 찾기 어려운
+    // 422 로 돌아온다.
+    if ((gymId == null) == (trainerId == null)) {
+      throw ArgumentError(
+        '상담 대상은 헬스장·트레이너 중 정확히 하나여야 합니다 '
+        '(gymId=$gymId, trainerId=$trainerId).',
+      );
+    }
+    if (healthPurposeType == HealthPurposeType.other &&
+        (healthPurposeDetail == null || healthPurposeDetail!.trim().isEmpty)) {
+      throw ArgumentError('기타 건강관리 목적에는 상세 내용이 필요합니다.');
+    }
+    return _json();
+  }
+
+  Map<String, Object?> _json() => <String, Object?>{
     'target_type': trainerId != null ? 'trainer' : 'gym',
     'gym_id': gymId,
     'trainer_id': trainerId,

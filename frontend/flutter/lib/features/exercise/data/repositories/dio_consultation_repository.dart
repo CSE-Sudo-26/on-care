@@ -14,7 +14,13 @@ class DioConsultationRepository implements ConsultationRepository {
         '/consultations',
         data: draft.toJson(),
       );
-      return (res.data?['id'] as String?) ?? '';
+      final id = res.data?['id'];
+      // 빈 id 를 성공으로 넘기면 컨트롤러가 데모 응답으로 보고 화면이 만든 임시
+      // id 를 유지한다 — 서버에 생긴 상담과 화면의 상담이 영영 이어지지 않는다.
+      if (id is! String || id.isEmpty) {
+        throw StateError('상담 접수 응답에 id 가 없습니다: ${res.data}');
+      }
+      return id;
     } on DioException catch (e) {
       // 409 는 오류가 아니라 "이미 신청함" 상태다 — 화면이 오류 대신 기존 신청을
       // 보여줘야 한다.
