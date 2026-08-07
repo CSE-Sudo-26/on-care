@@ -25,7 +25,17 @@ class OpenAICoachLLM(CoachLLM):
         self._client = OpenAI(api_key=s.openai_api_key, timeout=60.0)
         self._model = s.openai_chat_model
 
-    def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        json_mode: bool = False,
+        thinking_budget: int | None = None,  # noqa: ARG002 - OpenAI 는 사고 예산 개념이 없다
+    ) -> LLMResult:
+        extra = (
+            {"response_format": {"type": "json_object"}} if json_mode else {}
+        )
         resp = self._client.chat.completions.create(
             model=self._model,
             messages=[
@@ -33,6 +43,7 @@ class OpenAICoachLLM(CoachLLM):
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.4,
+            **extra,
         )
         u = resp.usage
         return LLMResult(
@@ -58,13 +69,34 @@ class GeminiCoachLLM(CoachLLM):
         self._client = genai.Client(api_key=s.gemini_api_key)
         self._model = s.gemini_model
 
-    def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        json_mode: bool = False,
+        thinking_budget: int | None = None,
+    ) -> LLMResult:
+        # 사고 예산은 지연에 지배적이다. `gemini-flash-latest` 는 기본적으로 사고가
+        # 켜져 있어 짧은 JSON 응답도 10초 이상 걸린다(실측 12.9s). 작은 예산을 주면
+        # 1.5s 수준으로 떨어진다. 단 budget=0 은 이 모델이 400 으로 거부하므로,
+        # "사고 끄기"가 아니라 "예산 제한"으로만 쓴다.
+        # 주의: json_mode 를 사고 예산 없이 단독으로 켜면 오히려 크게 느려졌다(실측
+        # 177s). 둘은 함께 쓴다.
+        options: dict[str, object] = {
+            "system_instruction": system_prompt,
+            "temperature": 0.4,
+        }
+        if json_mode:
+            options["response_mime_type"] = "application/json"
+        if thinking_budget is not None:
+            options["thinking_config"] = self._types.ThinkingConfig(
+                thinking_budget=thinking_budget
+            )
         resp = self._client.models.generate_content(
             model=self._model,
             contents=[user_prompt],
-            config=self._types.GenerateContentConfig(
-                system_instruction=system_prompt, temperature=0.4
-            ),
+            config=self._types.GenerateContentConfig(**options),
         )
         um = getattr(resp, "usage_metadata", None)
         pt = getattr(um, "prompt_token_count", 0) if um else 0
@@ -93,7 +125,17 @@ class LiteLLMCoachLLM(CoachLLM):
         self._client = OpenAI(api_key=s.litellm_api_key, base_url=f"{s.litellm_base_url}/v1", timeout=60.0)
         self._model = s.litellm_chat_model
 
-    def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+    def generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        json_mode: bool = False,
+        thinking_budget: int | None = None,  # noqa: ARG002 - 프록시 모델마다 달라 전달하지 않는다
+    ) -> LLMResult:
+        extra = (
+            {"response_format": {"type": "json_object"}} if json_mode else {}
+        )
         resp = self._client.chat.completions.create(
             model=self._model,
             messages=[
@@ -101,6 +143,7 @@ class LiteLLMCoachLLM(CoachLLM):
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.4,
+            **extra,
         )
         u = resp.usage
         return LLMResult(
