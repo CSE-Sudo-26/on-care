@@ -104,6 +104,9 @@ class Settings(BaseSettings):
     # --- Rate limit (인증 엔드포인트 브루트포스 방어) ---
     rate_limit_enabled: bool = True
     rate_limit_auth_per_minute: int = 10  # IP·엔드포인트당 분당 시도 한도
+    # AI 코치 채팅 한도. 브루트포스 방어가 아니라 LLM 비용 가드라서 목적이 다르다.
+    # 사람이 대화하는 속도로는 걸리지 않되, 폭주하는 클라이언트는 막는 값.
+    coach_chat_per_minute: int = 20
 
     @property
     def admin_email_set(self) -> set[str]:

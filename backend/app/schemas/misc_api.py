@@ -129,9 +129,23 @@ class ChatTurn(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    history: list[ChatTurn] = []   # 직전 대화(선택). 최근 것부터가 아니라 시간순.
+    # 직전 대화(선택). 이제 서버가 대화를 저장하므로 보내지 않아도 맥락이 이어진다.
+    # 서버에 저장분이 없을 때만 쓰인다(목업→실 서버 전환 클라이언트 호환).
+    history: list[ChatTurn] = []
 
 
 class ChatReply(BaseModel):
     reply: str
     sources: list[str] = []        # 답변 근거로 쓰인 공공 가이드라인 제목
+
+
+class ChatMessageOut(BaseModel):
+    """저장된 대화 한 줄. sources 는 그 답변의 근거 문서 제목."""
+    role: str                      # user | coach
+    content: str
+    sources: list[str] = []
+    created_at: datetime
+
+
+class ChatHistory(BaseModel):
+    messages: list[ChatMessageOut] = []

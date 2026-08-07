@@ -1260,6 +1260,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aicDatePillToday => '오늘';
 
   @override
+  String get aicMedicalDisclaimer =>
+      'AI 코치는 식단·운동 관리를 돕는 참고용이에요. 진단·처방이 아니니 증상이 있으면 전문의와 상담해 주세요.';
+
+  @override
   String get aicInputHint => 'AI에게 무엇이든 물어보세요';
 
   @override

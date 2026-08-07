@@ -102,7 +102,25 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
+                      // 의료 조언 면책 — 코치는 식단·운동 코칭이지 진료가 아니다.
+                      // 시스템 프롬프트에도 진단 금지 지시가 있지만, 사용자가
+                      // 그걸 볼 수는 없으므로 화면에도 한 줄 남긴다.
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(
+                            l.aicMedicalDisclaimer,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              height: 1.4,
+                              color: FigmaColors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       for (final ChatMessage m in chat.messages) ...<Widget>[
                         _bubble(m),
                         const SizedBox(height: 16),

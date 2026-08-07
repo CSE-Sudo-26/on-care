@@ -431,6 +431,7 @@
   "navExerciseOptionSub": "종류와 시간 기록",
   "aicHeaderSubtitle": "언제든 물어보세요",
   "aicDatePillToday": "오늘",
+  "aicMedicalDisclaimer": "AI 코치는 식단·운동 관리를 돕는 참고용이에요. 진단·처방이 아니니 증상이 있으면 전문의와 상담해 주세요.",
   "aicInputHint": "AI에게 무엇이든 물어보세요",
   "aicQuickRepliesLabel": "이런 걸 물어보세요",
   "aicQuickReply1": "오늘 저녁 메뉴 추천해줘",

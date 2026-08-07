@@ -686,6 +686,7 @@
   "navExerciseOptionSub": "Log the type and duration",
   "aicHeaderSubtitle": "Ask me anytime",
   "aicDatePillToday": "Today",
+  "aicMedicalDisclaimer": "The AI coach is a reference for diet and exercise habits, not a diagnosis or prescription. Please consult a doctor about symptoms.",
   "aicInputHint": "Ask the AI anything",
   "aicQuickRepliesLabel": "Try asking",
   "aicQuickReply1": "Recommend a dinner menu for today",

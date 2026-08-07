@@ -2414,6 +2414,12 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get aicDatePillToday;
 
+  /// No description provided for @aicMedicalDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI coach is a reference for diet and exercise habits, not a diagnosis or prescription. Please consult a doctor about symptoms.'**
+  String get aicMedicalDisclaimer;
+
   /// No description provided for @aicInputHint.
   ///
   /// In en, this message translates to:

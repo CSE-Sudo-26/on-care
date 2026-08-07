@@ -6,6 +6,13 @@ class MockAiCoachRepository implements AiCoachRepository {
   const MockAiCoachRepository();
 
   @override
+  Future<List<ChatMessage>> fetchHistory() async {
+    // 목업/데모 모드는 서버에 저장된 대화가 없다. 빈 목록을 주면 채팅이 지금처럼
+    // welcome 메시지 하나로 시작한다(데모 화면 불변).
+    return const <ChatMessage>[];
+  }
+
+  @override
   Future<ChatMessage> sendMessage({
     required String message,
     required List<ChatMessage> history,

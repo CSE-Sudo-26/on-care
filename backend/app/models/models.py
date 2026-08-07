@@ -570,3 +570,61 @@ class AuditLog(Base):
     success: Mapped[bool] = mapped_column(Boolean, default=True)
     detail: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiConversation(Base):
+    """AI 코치(온이)와의 대화 스레드.
+
+    앱에는 대화 목록 UI 가 없고 채팅 시트 하나만 있으므로, 사용자당 활성 스레드
+    1개를 get-or-create 해서 쓴다(coach_service 참고). 나중에 스레드 목록이 필요해질
+    때를 대비해 테이블은 분리해 둔다 — 그때 컬럼 추가 없이 archived_at 만 채우면 된다.
+
+    트레이너↔회원 채팅(chat_messages)과는 다른 도메인이다. 이쪽은 사람 간 대화가
+    아니라 LLM 대화라 sender 대신 role(user|coach)을 쓰고 근거 문서를 함께 남긴다.
+    """
+    __tablename__ = "ai_conversations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    #: 비우면 활성 스레드. 값이 있으면 보관된 스레드(현재는 쓰지 않음).
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AiMessage(Base):
+    """AI 코치 대화의 한 줄.
+
+    `sources_json` 은 그 답변의 근거로 쓰인 공공 가이드라인 제목들이다. 답변과 함께
+    저장해야 대화를 복원했을 때도 근거 표시가 남는다(재접속 시 근거가 사라지면
+    "왜 이렇게 답했는지"를 되짚을 수 없다).
+    """
+    __tablename__ = "ai_messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("ai_conversations.id", ondelete="CASCADE"), index=True
+    )
+    #: 대화 내 순번(0부터). created_at 으로 정렬하면 안 되기 때문에 둔다 —
+    #: PostgreSQL 의 now() 는 트랜잭션 시각이라 같은 커밋에 저장되는 질문과 답변이
+    #: **동일한 created_at** 을 갖고, 그러면 정렬이 랜덤한 id 순으로 무너져 답변이
+    #: 질문보다 먼저 보인다(실제로 그렇게 나왔다).
+    seq: Mapped[int] = mapped_column(Integer, default=0)
+    role: Mapped[str] = mapped_column(String(10))  # user|coach
+    content: Mapped[str] = mapped_column(Text)
+    sources_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "seq", name="uq_ai_messages_convo_seq"),
+    )
