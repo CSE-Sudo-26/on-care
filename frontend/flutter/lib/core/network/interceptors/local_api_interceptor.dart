@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart'
@@ -1241,13 +1242,65 @@ class LocalApiInterceptor extends Interceptor {
       },
     ];
 
-    // 백엔드 계약과 동일하게 category 를 존중한다 — 없으면 전체를 준다.
-    // (필터링하지 않으면 헬스장 찾기에 병원·약국이 섞여 들어온다.)
-    final category = options.queryParameters['category'] as String?;
-    return _ok(options, <Map<String, Object?>>[
-      for (final row in rows)
-        if (category == null || row['category'] == category) row,
-    ]);
+    // category 는 언제나 존중한다 — 필터링하지 않으면 헬스장 찾기에 병원·약국이
+    // 섞여 들어온다.
+    //
+    // 좌표가 실제로 전달된 요청은 거리도 그 중심 기준으로 다시 재고 radius_m 밖을
+    // 잘라낸다. 고정 거리를 그대로 주면 지도 중심을 옮겼을 때 mock 과 실 응답이
+    // 어긋난다(리뷰 지적). 좌표가 없으면 걸러낼 기준이 없으므로 픽스처를 그대로
+    // 준다 — 이 픽스처는 여러 동네에 흩어져 있어 백엔드 기본 중심(서울시청·3km)을
+    // 적용하면 전부 사라진다. 실 백엔드의 시드는 시청 근처라 그런 문제가 없다.
+    final Map<String, dynamic> q = options.queryParameters;
+    final String? category = q['category'] as String?;
+    final double? lat = _asDouble(q['lat']);
+    final double? lng = _asDouble(q['lng']);
+    final int radiusM = (_asDouble(q['radius_m']) ?? 3000).round();
+
+    final List<Map<String, Object?>> out = <Map<String, Object?>>[];
+    for (final Map<String, Object?> row in rows) {
+      if (category != null && row['category'] != category) continue;
+      if (lat == null || lng == null) {
+        out.add(row);
+        continue;
+      }
+      final int distance = _haversineMeters(
+        lat,
+        lng,
+        row['lat']! as double,
+        row['lng']! as double,
+      );
+      if (distance > radiusM) continue;
+      out.add(<String, Object?>{...row, 'distance_meters': distance});
+    }
+    out.sort(
+      (Map<String, Object?> a, Map<String, Object?> b) =>
+          (a['distance_meters']! as int).compareTo(b['distance_meters']! as int),
+    );
+    return _ok(options, out);
+  }
+
+  static double? _asDouble(Object? v) => switch (v) {
+    final num n => n.toDouble(),
+    final String s => double.tryParse(s),
+    _ => null,
+  };
+
+  /// 두 좌표 사이 거리(m). 백엔드 `_haversine_m` 과 같은 계산이다.
+  static int _haversineMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const double r = 6371000;
+    final double p1 = lat1 * math.pi / 180;
+    final double p2 = lat2 * math.pi / 180;
+    final double dp = (lat2 - lat1) * math.pi / 180;
+    final double dl = (lng2 - lng1) * math.pi / 180;
+    final double a =
+        math.sin(dp / 2) * math.sin(dp / 2) +
+        math.cos(p1) * math.cos(p2) * math.sin(dl / 2) * math.sin(dl / 2);
+    return (r * 2 * math.asin(math.sqrt(a))).round();
   }
 
   String _timeAgoKorean(Duration d) {

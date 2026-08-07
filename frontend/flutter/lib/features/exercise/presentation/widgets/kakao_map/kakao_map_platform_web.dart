@@ -31,6 +31,10 @@ Widget? buildKakaoMap({
 
 const String _sdkUrl = 'https://dapi.kakao.com/v2/maps/sdk.js';
 
+/// SDK 로드 제한 시간. 스크립트가 load/error 어느 이벤트도 내지 않는 경우
+/// (프록시 지연·네트워크 블랙홀 등) 지도가 영영 빈 채로 남지 않게 한다.
+const Duration _sdkTimeout = Duration(seconds: 10);
+
 Future<void>? _sdkReady;
 
 /// SDK 를 한 번만 내려받고, `autoload=false` + `kakao.maps.load` 로 초기화를 기다린다.
@@ -70,7 +74,13 @@ Future<void> _ensureSdkLoaded() {
   );
 
   web.document.head!.append(script);
-  return _sdkReady = completer.future;
+  return _sdkReady = completer.future.timeout(
+    _sdkTimeout,
+    onTimeout: () => throw TimeoutException(
+      '카카오맵 SDK 로드가 ${_sdkTimeout.inSeconds}초 안에 끝나지 않았습니다.',
+      _sdkTimeout,
+    ),
+  );
 }
 
 JSObject? _global(String name) {
@@ -174,8 +184,10 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
     if (map == null) return;
 
     for (final JSObject old in _markers) {
-      // setMap(null) 이 지도에서 마커를 뗀다.
-      old.callMethod('setMap'.toJS);
+      // 카카오는 setMap(null) 로만 마커를 뗀다. 인자 없이 부르면 setMap(undefined)
+      // 가 되어 마커가 남고, 목록이 바뀔 때마다 핀이 쌓인다. callMethod 는 null 을
+      // 넘길 수 없어 callMethodVarArgs 를 쓴다.
+      old.callMethodVarArgs('setMap'.toJS, <JSAny?>[null]);
     }
     _markers.clear();
 

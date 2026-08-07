@@ -89,6 +89,8 @@ void main() {
     container = ProviderContainer(
       overrides: <Override>[
         nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+        // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+        gymFinderResultsProvider.overrideWith((ref) async => const <Gym>[_gym]),
         myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
         myTrainerProvider.overrideWith(
           (ref) async => hasMyGym ? _trainer : null,

@@ -63,6 +63,8 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           nearbyGymsProvider.overrideWith((ref) async => gyms),
+          // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+          gymFinderResultsProvider.overrideWith((ref) async => gyms),
           myGymProvider.overrideWith((ref) async => myGym),
           myTrainerProvider.overrideWith((ref) async => null),
           allTrainersProvider.overrideWith((ref) async => trainers),

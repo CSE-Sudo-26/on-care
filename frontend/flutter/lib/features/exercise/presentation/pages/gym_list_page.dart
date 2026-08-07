@@ -454,9 +454,11 @@ class _GymMap extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: KakaoMapView(
-          // 핀이 하나도 없으면 신촌 권역 기본 중심을 쓴다.
-          centerLat: located.isEmpty ? kGymFinderArea.lat : located.first.lat!,
-          centerLng: located.isEmpty ? kGymFinderArea.lng : located.first.lng!,
+          // 지도 중심은 언제나 검색 중심([kGymFinderArea])이다. 첫 결과 좌표를
+          // 쓰면 검색어·정렬·응답 순서에 따라 중심이 흔들려, 지도 중심과 장소
+          // 검색 중심이 같아야 한다는 요건이 깨진다.
+          centerLat: kGymFinderArea.lat,
+          centerLng: kGymFinderArea.lng,
           markers: <KakaoMapMarker>[
             for (final Gym g in located)
               KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),

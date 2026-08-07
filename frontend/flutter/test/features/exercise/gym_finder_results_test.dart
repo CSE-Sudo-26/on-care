@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/core/config/app_config.dart';
+
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -63,9 +65,23 @@ class _FailingPlaceRepository implements PlaceRepository {
       throw StateError('kakao down');
 }
 
-ProviderContainer _containerWith(PlaceRepository repo) {
+/// [useMockApi] 가 시연용 보강 데이터를 붙일지 정한다 — 실 API 응답에는 붙지 않아야
+/// 한다(지어낸 값이 실재 업체의 사실 정보처럼 보이면 안 된다).
+ProviderContainer _containerWith(
+  PlaceRepository repo, {
+  bool useMockApi = true,
+}) {
   final container = ProviderContainer(
-    overrides: <Override>[placeRepositoryProvider.overrideWithValue(repo)],
+    overrides: <Override>[
+      placeRepositoryProvider.overrideWithValue(repo),
+      appConfigProvider.overrideWithValue(
+        AppConfig(
+          environment: Environment.dev,
+          apiBaseUrl: 'http://localhost',
+          useMockApi: useMockApi,
+        ),
+      ),
+    ],
   );
   addTearDown(container.dispose);
   return container;
@@ -112,6 +128,25 @@ void main() {
     expect(buildUp.tags, isNotEmpty);
     expect(buildUp.phone, isNotNull);
     expect(buildUp.weekdayHours, isNotNull);
+  });
+
+  test('실 API 모드에서는 시연용 값을 붙이지 않는다', () async {
+    // 지어낸 평점·전문분야·영업시간이 실재 업체의 사실 정보처럼 보이면 안 된다.
+    final container = _containerWith(
+      const _KakaoFixtureRepository(),
+      useMockApi: false,
+    );
+    final gyms = await container.read(gymFinderResultsProvider.future);
+    final Gym buildUp = gyms.firstWhere((Gym g) => g.id == '328969863');
+
+    // 카카오가 준 값은 그대로 남는다
+    expect(buildUp.name, '빌드업짐 PT 신촌점');
+    expect(buildUp.hasCoordinates, isTrue);
+    // 지어낸 값은 붙지 않는다 (평점 0 이면 UI 가 뱃지를 감춘다)
+    expect(buildUp.rating, 0);
+    expect(buildUp.tags, isEmpty);
+    expect(buildUp.phone, isNull);
+    expect(buildUp.weekdayHours, isNull);
   });
 
   test('카카오 헬스장에도 소속 트레이너가 붙는다', () async {

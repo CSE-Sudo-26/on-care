@@ -175,11 +175,17 @@ const PlaceQuery kGymFinderArea = PlaceQuery(
 /// 카카오 Local 이 준 주변 헬스장을 [Gym] 형태로 옮긴다.
 ///
 /// 이름·주소·거리·좌표는 카카오 실데이터다. 카카오가 주지 않는 평점·전문분야·
-/// 영업시간은 [kKakaoGymDemoProfiles] 에 등록된 곳이면 시연용 값으로 채우고,
-/// 없으면 비워 둔다(평점 0 이면 UI 가 뱃지를 감춘다). 소속 트레이너는 [Gym] 이
-/// 아니라 [Trainer] 에 있으므로 `MockGymRepository` 가 gymId 로 들고 있다.
-Gym _gymFromPlace(Place p) {
-  final KakaoGymDemoProfile? demo = kKakaoGymDemoProfiles[p.id];
+/// 영업시간은 [allowDemoProfile] 일 때만 [kKakaoGymDemoProfiles] 의 시연용 값으로
+/// 채운다. **실 API 응답에는 붙이지 않는다** — 지어낸 값이 실재 업체의 사실
+/// 정보처럼 보이면 안 되기 때문이다(CodeRabbit 리뷰). 값이 없으면 비워 두고,
+/// 평점 0 이면 UI 가 뱃지를 감춘다.
+///
+/// 소속 트레이너는 [Gym] 이 아니라 [Trainer] 에 있으므로 `MockGymRepository` 가
+/// gymId 로 들고 있다.
+Gym _gymFromPlace(Place p, {required bool allowDemoProfile}) {
+  final KakaoGymDemoProfile? demo = allowDemoProfile
+      ? kKakaoGymDemoProfiles[p.id]
+      : null;
   return Gym(
     id: p.id,
     name: p.name,
@@ -204,13 +210,17 @@ String _gymNameKey(String name) => name.replaceAll(RegExp(r'\s+'), '');
 /// provider 를 보므로, 거기에 카카오 결과를 섞으면 그 화면들이 흐트러진다.
 final gymFinderResultsProvider = FutureProvider<List<Gym>>((ref) async {
   final List<Gym> partners = await ref.watch(nearbyGymsProvider.future);
+  // 시연용 보강값은 데모(mock) 경로에서만 붙인다.
+  final bool demo = ref.watch(appConfigProvider).useMockApi;
 
   List<Gym> discovered = const <Gym>[];
   try {
     final List<Place> places = await ref
         .watch(placeRepositoryProvider)
         .nearbyPlaces(kGymFinderArea);
-    discovered = places.map(_gymFromPlace).toList();
+    discovered = places
+        .map((Place p) => _gymFromPlace(p, allowDemoProfile: demo))
+        .toList();
   } on Object {
     // 카카오가 실패해도 제휴 목록은 그대로 보여준다(#329 폴백 요건).
   }
