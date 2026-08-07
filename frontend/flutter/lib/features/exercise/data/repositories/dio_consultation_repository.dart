@@ -1,0 +1,43 @@
+import 'package:dio/dio.dart';
+
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
+import 'package:oncare/features/exercise/domain/repositories/consultation_repository.dart';
+
+class DioConsultationRepository implements ConsultationRepository {
+  DioConsultationRepository(this._dio);
+  final Dio _dio;
+
+  @override
+  Future<String> create(ConsultationDraft draft) async {
+    try {
+      final res = await _dio.post<Map<String, Object?>>(
+        '/consultations',
+        data: draft.toJson(),
+      );
+      return (res.data?['id'] as String?) ?? '';
+    } on DioException catch (e) {
+      // 409 는 오류가 아니라 "이미 신청함" 상태다 — 화면이 오류 대신 기존 신청을
+      // 보여줘야 한다.
+      if (e.response?.statusCode == 409) {
+        throw const DuplicatePendingConsultation();
+      }
+      rethrow;
+    }
+  }
+}
+
+/// 데모용. `LocalApiInterceptor` 에 `/consultations` 핸들러가 없어 데모에서는 서버로
+/// 나가지 않는다. 중복 판정은 컨트롤러의 `hasPending` 이 이미 하므로 여기선 id 만
+/// 만들어 준다.
+class MockConsultationRepository implements ConsultationRepository {
+  const MockConsultationRepository();
+
+  /// 빈 id 를 돌려 화면이 만든 id 를 그대로 쓰게 한다 — 데모에는 서버가 없으므로
+  /// 서버 id 로 갈아끼울 것이 없다.
+  ///
+  /// 인위적 지연도 두지 않는다. 이전 구현이 동기였어서 데모 체감이 같아야 하고,
+  /// `testWidgets` 의 가짜 시간대에서는 `Future.delayed` 가 펌프 없이는 끝나지 않아
+  /// 위젯 테스트가 멈춘다.
+  @override
+  Future<String> create(ConsultationDraft draft) async => '';
+}

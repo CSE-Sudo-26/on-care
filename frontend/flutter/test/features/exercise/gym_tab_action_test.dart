@@ -13,6 +13,8 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
+import '../../support/consultation_test_support.dart';
+
 const Gym _gym = Gym(
   id: 'gym-action-test',
   name: '액션 테스트 헬스장',
@@ -67,9 +69,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    consultationController = ConsultationRequestController();
+    consultationController = newTestConsultationController();
     if (consultation != null) {
-      consultationController.add(consultation);
+      await seedPending(consultationController, consultation);
     }
     router = buildAppRouter(config: _config);
     addTearDown(router.dispose);

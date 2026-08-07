@@ -20,6 +20,25 @@ class ConsultationRequest {
     required this.createdAt,
   });
 
+  /// 서버가 접수하며 준 id 로 갈아끼울 때 쓴다 — 화면이 만든 임시 id 는 트레이너
+  /// 앱과 이어지지 않는다(#327).
+  ConsultationRequest copyWith({String? id}) => ConsultationRequest(
+    id: id ?? this.id,
+    targetType: targetType,
+    gymId: gymId,
+    gymName: gymName,
+    trainerId: trainerId,
+    trainerName: trainerName,
+    trainerRole: trainerRole,
+    exerciseGoal: exerciseGoal,
+    healthPurpose: healthPurpose,
+    preferredDate: preferredDate,
+    preferredTimeSlot: preferredTimeSlot,
+    message: message,
+    status: status,
+    createdAt: createdAt,
+  );
+
   final String id;
   final ConsultationTargetType targetType;
   final String gymId;

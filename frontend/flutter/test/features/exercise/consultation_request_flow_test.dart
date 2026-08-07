@@ -14,6 +14,8 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
+import '../../support/consultation_test_support.dart';
+
 const Gym _gym = Gym(
   id: 'gym-consult',
   name: '상담 테스트 헬스장',
@@ -88,6 +90,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     container = ProviderContainer(
       overrides: <Override>[
+        // gymRepository·consultationRepository 가 이 값으로 mock/실 API 를 고른다.
+        appConfigProvider.overrideWithValue(_config),
         nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
         // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
         gymFinderResultsProvider.overrideWith((ref) async => const <Gym>[_gym]),
@@ -120,13 +124,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  test('controller blocks a duplicate target but separates target types', () {
+  test('controller blocks a duplicate target but separates target types', () async {
     final ConsultationRequestController controller =
-        ConsultationRequestController();
+        newTestConsultationController();
 
-    expect(controller.add(_request(ConsultationTargetType.gym)), isTrue);
-    expect(controller.add(_request(ConsultationTargetType.gym)), isFalse);
-    expect(controller.add(_request(ConsultationTargetType.trainer)), isTrue);
+    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isTrue);
+    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isFalse);
+    expect(await seedPending(controller, _request(ConsultationTargetType.trainer)), isTrue);
     expect(controller.state, hasLength(2));
   });
 
