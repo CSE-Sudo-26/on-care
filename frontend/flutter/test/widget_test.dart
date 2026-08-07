@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 
 import 'package:oncare/app/app.dart';
+import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
@@ -46,6 +47,7 @@ void main() {
           dashboardRepositoryProvider.overrideWithValue(
             MockDashboardRepository(MockDietRepository()) as DashboardRepository,
           ),
+          sessionFeatureResetOverride(),
           if (locale != null) localeProvider.overrideWith((ref) => locale),
         ],
         child: const OncareApp(),
