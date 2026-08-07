@@ -226,6 +226,36 @@ def _seed_trainers(db: Session) -> int:
     return created
 
 
+def _seed_member_gym_links(db: Session) -> int:
+    """회원↔헬스장 링크(멱등). 담당 트레이너의 소속으로 채운다. (#444)
+
+    마이그레이션 `0021_member_gym_link` 의 백필과 같은 규칙이다. 스키마를
+    `create_all` 로 만드는 경로(로컬·테스트)에는 그 백필이 돌지 않으므로 여기서도
+    채워야 마이그레이션 DB 와 같은 상태가 된다.
+
+    이미 링크가 있는 회원은 건드리지 않는다 — 회원이 트레이너와 다른 헬스장으로
+    옮겼을 수 있고, 시드가 그걸 되돌리면 안 된다.
+    """
+    created = 0
+    rows = db.execute(
+        select(models.TrainerClient.member_id, models.TrainerProfile.gym_id)
+        .join(
+            models.TrainerProfile,
+            models.TrainerProfile.trainer_id == models.TrainerClient.trainer_id,
+        )
+        .where(
+            models.TrainerClient.active.is_(True),
+            models.TrainerProfile.gym_id.is_not(None),
+        )
+    ).all()
+    for member_id, gym_id in rows:
+        if db.get(models.MemberGym, member_id) is not None:
+            continue
+        db.add(models.MemberGym(member_id=member_id, gym_id=gym_id))
+        created += 1
+    return created
+
+
 def seed_partner_gyms() -> None:
     db: Session = SessionLocal()
     try:
@@ -278,10 +308,14 @@ def seed_partner_gyms() -> None:
             linked += 1
         db.commit()
 
-        if partner or discovered or trainers or linked:
+        members = _seed_member_gym_links(db)
+        db.commit()
+
+        if partner or discovered or trainers or linked or members:
             logger.info(
-                "헬스장 시드: 제휴 %d곳, 발견 %d곳, 트레이너 %d명, 소속 연결 %d명",
-                partner, discovered, trainers, linked,
+                "헬스장 시드: 제휴 %d곳, 발견 %d곳, 트레이너 %d명, 소속 연결 %d명, "
+                "회원 헬스장 %d명",
+                partner, discovered, trainers, linked, members,
             )
     finally:
         db.close()

@@ -42,6 +42,26 @@ def list_gyms(
     return gym_service.list_gyms(db, lat=lat, lng=lng, partner_only=partner_only)
 
 
+@router.get("/me/gym", response_model=GymOut)
+def my_gym(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+    lat: float | None = Query(None, ge=-90, le=90),
+    lng: float | None = Query(None, ge=-180, le=180),
+) -> GymOut:
+    """내 헬스장. 연결이 없으면 404. (#444)
+
+    `GET /me/coach` 와 나눠 둔다 — 담당 트레이너만 해제한 회원은 코치가 404 여도
+    헬스장 카드는 계속 떠야 한다. 응답은 `/gyms/{id}` 와 같은 형태라 앱이 상세를
+    한 번 더 읽지 않아도 된다.
+    """
+    _require_coordinate_pair(lat, lng)
+    gym = gym_service.get_member_gym(db, current_user.id, lat=lat, lng=lng)
+    if gym is None:
+        raise HTTPException(status_code=404, detail="연결된 헬스장이 없습니다.")
+    return gym
+
+
 @router.get("/gyms/{gym_id}", response_model=GymOut)
 def get_gym(
     gym_id: str,

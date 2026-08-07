@@ -50,10 +50,27 @@ def disconnect_my_coach(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
-    """담당 트레이너 연결 해제 — MY 탭의 연결 삭제.
+    """코치 관계 전체 해제 — MY 탭의 **헬스장** 휴지통.
 
-    이미 담당이 없으면 404 가 아니라 204 다. 해제는 멱등이어야 하고, 두 번 눌렀다고
+    `GET /me/coach` 가 트레이너와 헬스장을 함께 돌려주듯, 이 삭제도 둘 다 끊는다.
+    떠난 헬스장의 트레이너를 담당으로 남길 수는 없기 때문이다. 트레이너만 끊으려면
+    `DELETE /me/coach/trainer` 를 쓴다. (#444)
+
+    이미 연결이 없으면 404 가 아니라 204 다. 해제는 멱등이어야 하고, 두 번 눌렀다고
     오류 화면을 보일 이유가 없다.
+    """
+    trainer_service.disconnect_member_gym(db, current_user.id)
+
+
+@router.delete("/me/coach/trainer", status_code=204)
+def disconnect_my_trainer(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """담당 트레이너만 해제 — 헬스장 연결은 남는다. MY 탭의 **트레이너** 휴지통.
+
+    헬스장은 그대로 두고 담당만 바꾸는 흐름(트레이너 교체)이 있어야 하므로 전체
+    해제와 나눈다. 전체 해제와 마찬가지로 멱등이다. (#444)
     """
     trainer_service.disconnect_member_coach(db, current_user.id)
 
