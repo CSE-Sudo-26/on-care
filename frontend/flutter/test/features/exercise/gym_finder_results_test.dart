@@ -149,6 +149,54 @@ void main() {
     expect(buildUp.weekdayHours, isNull);
   });
 
+  test('모든 트레이너의 소속 헬스장이 목록에 존재한다', () async {
+    // gymId 가 목록에 없으면 화면의 헬스장 이름이 `?? ''` 로 빈칸이 된다.
+    final container = _containerWith(const _KakaoFixtureRepository());
+    final gyms = await container.read(gymFinderResultsProvider.future);
+    final trainers = await container.read(allTrainersProvider.future);
+    final Set<String> gymIds = gyms.map((Gym g) => g.id).toSet();
+
+    final orphans = trainers
+        .where((Trainer t) => !gymIds.contains(t.gymId))
+        .map((Trainer t) => '${t.name}(${t.gymId})')
+        .toList();
+    expect(orphans, isEmpty, reason: '소속 헬스장을 찾을 수 없는 트레이너');
+  });
+
+  test('추천 트레이너의 소속 헬스장도 전부 유효하다', () async {
+    final container = _containerWith(const _KakaoFixtureRepository());
+    final gyms = await container.read(gymFinderResultsProvider.future);
+    final recommended = await container.read(
+      recommendedTrainersProvider.future,
+    );
+    final Set<String> gymIds = gyms.map((Gym g) => g.id).toSet();
+
+    expect(recommended, isNotEmpty);
+    expect(
+      recommended.where((Trainer t) => !gymIds.contains(t.gymId)),
+      isEmpty,
+    );
+    // 이름이 겹치면 목록에서 서로 구분되지 않는다.
+    final names = recommended.map((Trainer t) => t.name).toList();
+    expect(names.toSet().length, names.length, reason: '추천 트레이너 이름 중복');
+  });
+
+  test('헬스장마다 트레이너가 2명 이상 있다', () async {
+    final container = _containerWith(const _KakaoFixtureRepository());
+    final gyms = await container.read(gymFinderResultsProvider.future);
+
+    for (final Gym gym in gyms) {
+      final trainers = await container.read(
+        gymTrainersProvider(gym.id).future,
+      );
+      expect(
+        trainers.length,
+        greaterThanOrEqualTo(2),
+        reason: '${gym.name} 소속 트레이너가 ${trainers.length}명',
+      );
+    }
+  });
+
   test('카카오 헬스장에도 소속 트레이너가 붙는다', () async {
     // 트레이너는 Gym 이 아니라 Trainer 에 있고 gymId(= 카카오 place id)로 이어진다.
     final container = _containerWith(const _KakaoFixtureRepository());

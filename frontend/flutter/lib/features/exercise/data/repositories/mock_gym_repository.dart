@@ -131,48 +131,104 @@ class MockGymRepository implements GymRepository {
         '재활 트레이닝 NASM-CES',
       ],
     ),
+    Trainer(
+      id: 'trainer-cho',
+      gymId: 'gym-bodyandsoul',
+      name: '조트레이너',
+      role: '시니어 운동 트레이너',
+      career: '12년',
+      intro: '60대 이상 회원 수업을 오래 맡았습니다. 균형 잡기와 낙상 예방 동작부터 '
+          '시작해 천천히 강도를 올립니다.',
+      certifications: <String>['건강운동관리사', '노인스포츠지도사'],
+    ),
     // 카카오 Local 에서 온 주변 헬스장의 소속 트레이너(#329). gymId 가 카카오
     // place id 라서 데모 픽스처와 실 API 응답 양쪽에 그대로 붙는다.
     // **시연용 가상 인물이다** — 실재 업체의 실제 트레이너가 아니다.
+    // 헬스장마다 추천 사유가 붙은 1명 + 사유 없는 1명을 둬, 추천 레일은 헬스장당
+    // 한 명만 올라가고 헬스장 상세에는 2명이 보인다.
     Trainer(
-      id: 'trainer-demo-yoon',
+      id: 'trainer-demo-jung',
       gymId: '11621774', // 휘트니스에이든
-      name: '윤트레이너',
+      name: '정트레이너',
       role: '퍼스널 트레이너',
-      reason: '체지방 감량 프로그램을 오래 운영했어요',
+      reason: '감량 정체기를 넘기는 방법을 같이 찾아요',
       career: '6년',
-      intro: '체형 교정과 다이어트를 함께 봅니다. 자세부터 잡고 강도를 올려요.',
+      intro: '체중이 멈춘 시점에 식사량과 운동량을 다시 맞추는 일을 자주 합니다. '
+          '몸무게보다 둘레와 체성분 변화를 기준으로 봅니다.',
       certifications: <String>['생활스포츠지도사 2급'],
+    ),
+    Trainer(
+      id: 'trainer-demo-ha',
+      gymId: '11621774',
+      name: '하트레이너',
+      role: '체형 교정 트레이너',
+      career: '4년',
+      intro: '오래 앉아 생긴 목·어깨 불편을 주로 다룹니다. 스트레칭과 가벼운 근력 '
+          '운동을 섞어 한 시간을 채웁니다.',
+      certifications: <String>['필라테스 지도자', '생활스포츠지도사 2급'],
     ),
     Trainer(
       id: 'trainer-demo-han',
       gymId: '1558845892', // 하이핏
       name: '한트레이너',
       role: '퍼스널 트레이너',
-      reason: '초보자 근력 루틴 설계에 강해요',
+      reason: '기구가 처음인 분께 눈높이를 맞춰요',
       career: '3년',
-      intro: '소그룹 수업 위주로 진행합니다. 처음 오시는 분도 부담 없이 시작할 수 있어요.',
+      intro: '기구 사용법부터 하나씩 익히는 수업입니다. 무게를 올리기 전에 자세가 '
+          '자리를 잡을 때까지 시간을 씁니다.',
       certifications: <String>['퍼스널트레이닝 CPT'],
+    ),
+    Trainer(
+      id: 'trainer-demo-oh',
+      gymId: '1558845892',
+      name: '오트레이너',
+      role: '그룹 PT 트레이너',
+      career: '5년',
+      intro: '3~5인 그룹 수업을 맡습니다. 서로 속도를 맞추다 보면 혼자 할 때보다 '
+          '빠지는 날이 줄어듭니다.',
+      certifications: <String>['생활스포츠지도사 2급'],
     ),
     Trainer(
       id: 'trainer-demo-seo',
       gymId: '328969863', // 빌드업짐 PT 신촌점
       name: '서트레이너',
       role: '재활 전문 트레이너',
-      reason: '무릎·허리 통증 관리 경험이 많아요',
+      reason: '병원 재활 이후 복귀 단계를 봐드려요',
       career: '10년',
-      intro: '통증 부위를 피해 가동 범위부터 넓히는 방식으로 지도합니다.',
-      certifications: <String>['물리치료사', '재활 트레이닝 NASM-CES'],
+      intro: '병원 재활이 끝난 뒤 일상 운동으로 넘어가는 구간을 맡습니다. 통증 기록을 '
+          '함께 남기며 주 단위로 강도를 조절합니다.',
+      certifications: <String>['물리치료사', '건강운동관리사'],
+    ),
+    Trainer(
+      id: 'trainer-demo-nam',
+      gymId: '328969863',
+      name: '남트레이너',
+      role: '퍼스널 트레이너',
+      career: '7년',
+      intro: '스쿼트와 데드리프트 자세 교정을 주로 합니다. 영상으로 찍어 함께 보면서 '
+          '바뀐 점을 확인합니다.',
+      certifications: <String>['퍼스널트레이닝 CPT'],
     ),
     Trainer(
       id: 'trainer-demo-moon',
       gymId: '696444256', // 신인규피티스튜디오
       name: '문트레이너',
       role: '퍼스널 트레이너',
-      reason: '식단과 운동을 함께 봐주는 방식이에요',
+      reason: '식단 기록을 매주 같이 점검해요',
       career: '7년',
-      intro: '1:1 수업만 진행하며 식단 기록을 같이 점검합니다.',
-      certifications: <String>['생활스포츠지도사 2급', '스포츠 영양사'],
+      intro: '1:1 수업만 진행합니다. 매주 식사 기록을 함께 보고 다음 주에 바꿀 것을 '
+          '한 가지씩 정합니다.',
+      certifications: <String>['스포츠 영양사', '생활스포츠지도사 2급'],
+    ),
+    Trainer(
+      id: 'trainer-demo-bae',
+      gymId: '696444256',
+      name: '배트레이너',
+      role: '러닝 코치',
+      career: '5년',
+      intro: '달리기 자세와 호흡을 봐드립니다. 무릎에 부담이 덜 가는 보폭을 찾는 데 '
+          '수업 시간을 많이 씁니다.',
+      certifications: <String>['생활스포츠지도사 2급'],
     ),
   ];
 

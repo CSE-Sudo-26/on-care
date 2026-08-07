@@ -65,7 +65,8 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
     );
     // 헬스장 이름만 붙이면 되므로, 목록을 못 읽어도 트레이너는 그대로 보인다.
     final List<Gym> gyms =
-        ref.watch(nearbyGymsProvider).valueOrNull ?? const <Gym>[];
+        // 카카오 헬스장 소속 트레이너도 헬스장 이름이 나와야 한다(#329).
+        ref.watch(gymFinderResultsProvider).valueOrNull ?? const <Gym>[];
 
     return Scaffold(
       backgroundColor: Colors.white,

@@ -28,6 +28,11 @@ class GymTab extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
     final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
+    // 트레이너 소속 헬스장 이름은 제휴 + 카카오를 모두 아는 목록에서 찾아야 한다.
+    // 제휴 목록만 보면 카카오 헬스장 소속 트레이너의 헬스장 이름이 빈칸이 된다(#329).
+    final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
+      gymFinderResultsProvider,
+    );
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
@@ -86,7 +91,7 @@ class GymTab extends ConsumerWidget {
           _RecommendedTrainerSection(
             trainersAsync: ref.watch(recommendedTrainersProvider),
             gymNames: <String, String>{
-              for (final Gym gym in nearbyAsync.valueOrNull ?? const <Gym>[])
+              for (final Gym gym in knownGymsAsync.valueOrNull ?? const <Gym>[])
                 gym.id: gym.name,
             },
             onMore: () => context.push(AppRoutes.trainers),
