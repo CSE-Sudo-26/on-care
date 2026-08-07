@@ -54,6 +54,7 @@ void main() {
     WidgetTester tester, {
     required Future<DashboardSummary> Function() load,
     Size size = const Size(800, 1600),
+    Locale locale = const Locale('ko'),
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -72,11 +73,11 @@ void main() {
             MockMemberCoachRepository(),
           ),
         ],
-        child: const MaterialApp(
-          locale: Locale('ko'),
+        child: MaterialApp(
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: DashboardContent()),
+          home: const Scaffold(body: DashboardContent()),
         ),
       ),
     );
@@ -340,6 +341,29 @@ void main() {
         find.byKey(const ValueKey<String>('dashboard-exercise-chart')),
         findsOneWidget,
       );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  // 위 회귀 테스트는 한국어로만 돌아, 영어에서 카드 헤더가 넘치는 것을 놓쳤다
+  // (#440). 같은 문구가 영어에서 훨씬 길다 — '식단 · 영양' vs
+  // 'Diet & nutrition', '✦ AI 분석' vs '✦ AI analysis'.
+  for (final double width in <double>[360, 390, 480]) {
+    testWidgets('영어 로케일도 ${width}px 에서 넘치지 않는다 (#440)', (
+      WidgetTester tester,
+    ) async {
+      await pumpDashboard(
+        tester,
+        load: () async => liveSummary,
+        size: Size(width, 2200),
+        locale: const Locale('en'),
+      );
+      await tester.pumpAndSettle();
+
+      final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+      // 헤더가 잘리면 더보기 링크부터 사라진다.
+      expect(find.text(en.homeDetails), findsWidgets);
+      expect(find.text(en.homeAiAnalysisPill), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   }

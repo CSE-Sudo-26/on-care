@@ -286,6 +286,50 @@ class _HomeCard extends StatelessWidget {
   }
 }
 
+/// 홈 카드 헤더 — 제목 + AI 필 + 더보기 링크. 식단·운동 카드가 같은 구조라
+/// 한 곳에 둔다.
+///
+/// 셋 다 고유 폭을 요구하고 `Spacer` 로 밀어내던 예전 구조는 문구가 긴
+/// 로케일에서 그대로 넘쳤다(영어 폰 폭에서 `RenderFlex overflowed`, #440).
+/// 더보기 링크는 누를 것이라 항상 남기고, 제목·필이 남는 폭에 맞춰 줄어든다.
+class _CardHeader extends StatelessWidget {
+  const _CardHeader({required this.icon, required this.label, this.onOpen});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Row(
+            children: <Widget>[
+              Flexible(child: _CardTitle(icon: icon, label: label)),
+              const SizedBox(width: 6),
+              // 필은 글자를 자르면 'AI ana…' 처럼 읽히지 않아 통째로 축소한다.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AiPill(
+                    l.homeAiAnalysisPill,
+                    background: FigmaColors.primaryA(0.10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        _DetailLink(onTap: onOpen),
+      ],
+    );
+  }
+}
+
 class _CardTitle extends StatelessWidget {
   const _CardTitle({required this.icon, required this.label});
   final IconData icon;
@@ -294,6 +338,7 @@ class _CardTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
           width: 24,
@@ -305,12 +350,17 @@ class _CardTitle extends StatelessWidget {
           child: Icon(icon, size: 14, color: FigmaColors.primary),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: FigmaColors.ink,
+        // 폭이 모자라면 제목부터 줄인다 — 아이콘·필·더보기는 남긴다(#440).
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
+            ),
           ),
         ),
       ],
@@ -355,20 +405,10 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              _CardTitle(
-                icon: Icons.restaurant_rounded,
-                label: l.homeDietNutritionTitle,
-              ),
-              const SizedBox(width: 6),
-              AiPill(
-                l.homeAiAnalysisPill,
-                background: FigmaColors.primaryA(0.10),
-              ),
-              const Spacer(),
-              _DetailLink(onTap: widget.onOpen),
-            ],
+          _CardHeader(
+            icon: Icons.restaurant_rounded,
+            label: l.homeDietNutritionTitle,
+            onOpen: widget.onOpen,
           ),
           const SizedBox(height: 14),
           // 상단: 칼로리·나트륨·당류를 큰 숫자 카드로 나란히. 탭하면 아래
@@ -807,20 +847,10 @@ class _ExerciseCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              _CardTitle(
-                icon: Icons.fitness_center_rounded,
-                label: l.dashboardMetricExercise,
-              ),
-              const SizedBox(width: 6),
-              AiPill(
-                l.homeAiAnalysisPill,
-                background: FigmaColors.primaryA(0.10),
-              ),
-              const Spacer(),
-              _DetailLink(onTap: onOpen),
-            ],
+          _CardHeader(
+            icon: Icons.fitness_center_rounded,
+            label: l.dashboardMetricExercise,
+            onOpen: onOpen,
           ),
           const SizedBox(height: 14),
           // 지표 3개는 왼쪽에 세로로, 주간 추이 그래프는 오른쪽에 나란히 둔다.
