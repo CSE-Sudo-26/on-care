@@ -4,6 +4,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/exercise/data/kakao_gym_demo_profile.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_exercise_repository.dart';
+import 'package:oncare/features/exercise/data/repositories/dio_gym_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -146,15 +147,19 @@ final exerciseWeekViewProvider = Provider<AsyncValue<ExerciseWeek>>((ref) {
       .whenData((ExerciseWeek w) => applyTodayBonus(w, bonus));
 }, name: 'exerciseWeekView');
 
-/// Gym data has no backend endpoint yet — the prototype shipped only
-/// mock data, so wire the page to a static repository for now. A real
-/// `DioGymRepository` can be swapped in once `/gyms/*` lands.
-final gymRepositoryProvider = Provider<GymRepository>(
-  // 한 인스턴스를 provider 수명 동안 유지해, 연결 해제 상태가 MY 탭과
-  // 운동 탭에 함께 반영된다.
-  (ref) => MockGymRepository(),
-  name: 'gymRepository',
-);
+/// 헬스장·트레이너 디렉터리. 실 API 는 `/gyms`·`/trainers`(#324).
+///
+/// 데모(mock) 경로를 유지하는 이유: `LocalApiInterceptor` 에 `/gyms` 계열 핸들러가
+/// 없어 데모에서 실 repository 를 쓰면 요청이 갈 곳이 없다. 시드가 mock 과 같은
+/// id·문안이라 두 경로의 화면은 같다.
+final gymRepositoryProvider = Provider<GymRepository>((ref) {
+  if (ref.watch(appConfigProvider).useMockApi) {
+    // 한 인스턴스를 provider 수명 동안 유지해, 연결 해제 상태가 MY 탭과
+    // 운동 탭에 함께 반영된다.
+    return MockGymRepository();
+  }
+  return DioGymRepository(ref.watch(dioProvider));
+}, name: 'gymRepository');
 
 final myGymProvider = FutureProvider<Gym?>((ref) {
   return ref.watch(gymRepositoryProvider).fetchMyGym();
