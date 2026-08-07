@@ -1,3 +1,4 @@
+import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -41,7 +42,10 @@ class MockDashboardRepository implements DashboardRepository {
       ],
       weekScore: 85,
       weekScoreDelta: 12,
-      sodiumWarning: '김치찌개·배추김치 섭취로 나트륨이 높아요.',
+      // 홈 '오늘의 AI 통합 조언' 자리. 시드 경로와 같은 큐레이션 문구를 쓴다 —
+      // 데모에서 홈이 읽는 값이 여기라서, 예전의 나트륨 단문을 두면 시드가
+      // 준비한 통합 조언이 화면에 영영 못 올라온다.
+      sodiumWarning: kDemoAiAdvice,
       exerciseFeedback: '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
     );
   }
