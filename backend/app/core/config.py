@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     nutrition_db_enrich: bool = True
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"  # 챗·인식 공용. 핀 버전은 은퇴로 404 → latest 별칭 사용
+    # Gemini HTTP 타임아웃(초). 걸지 않으면 무응답 시 호출 스레드가 무기한 묶여
+    # 워커 풀이 고갈된다(추천 경로는 스레드 풀에서 돈다).
+    gemini_timeout_seconds: float = 30.0
     coach_llm: str = "gemini"         # openai | gemini | litellm
     openai_api_key: str = ""
     openai_chat_model: str = "gpt-4o"

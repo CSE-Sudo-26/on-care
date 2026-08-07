@@ -2,9 +2,16 @@ import 'dart:typed_data';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 
 abstract class DietRepository {
   Future<DietDay> fetchToday();
+
+  /// GET /diet/recommendations — 홈 "AI 추천 식단".
+  ///
+  /// 서버가 최근 식단·건강 목표를 근거로 카탈로그에서 고른 결과다. 실패해도
+  /// 홈 화면이 비지 않도록, 호출부는 결과가 오기 전/에러 시 기본 추천을 그린다.
+  Future<MealRecommendations> fetchRecommendations();
 
   /// Upload a food photo for AI analysis (POST /diet/analyze). The server
   /// recognizes the foods, maps nutrition from the public DB, persists a

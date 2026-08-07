@@ -370,6 +370,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealTagHighFiber => '고식이섬유';
 
   @override
+  String homeRecBasisSodium(int days, String sodium) {
+    return '최근 $days일 평균 나트륨 ${sodium}mg';
+  }
+
+  @override
+  String get homeRecBasisOverLimit => '권장 초과';
+
+  @override
   String get homeRecMealsTitle => '이번 주 AI 추천 식단';
 
   @override

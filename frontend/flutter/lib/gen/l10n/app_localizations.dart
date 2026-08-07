@@ -782,6 +782,18 @@ abstract class AppLocalizations {
   /// **'High fiber'**
   String get homeMealTagHighFiber;
 
+  /// No description provided for @homeRecBasisSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}-day avg sodium {sodium}mg'**
+  String homeRecBasisSodium(int days, String sodium);
+
+  /// No description provided for @homeRecBasisOverLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'over the daily limit'**
+  String get homeRecBasisOverLimit;
+
   /// No description provided for @homeRecMealsTitle.
   ///
   /// In en, this message translates to:

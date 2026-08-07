@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
 /// Real-network implementation of [DietRepository]. Issues HTTP
@@ -24,6 +25,12 @@ class DioDietRepository implements DietRepository {
     final day = DietDay.fromJson(res.data!);
     _pruneStaleOverrides(day);
     return _applyOverrides(day);
+  }
+
+  @override
+  Future<MealRecommendations> fetchRecommendations() async {
+    final res = await _dio.get<Map<String, Object?>>('/diet/recommendations');
+    return MealRecommendations.fromJson(res.data!);
   }
 
   @override
