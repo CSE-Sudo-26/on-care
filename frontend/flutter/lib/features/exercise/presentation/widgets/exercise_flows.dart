@@ -7,6 +7,7 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 // Backend value sent as `dayLabel` — DO NOT localize (persisted to the server).
@@ -453,6 +454,9 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
     // 제휴 헬스장 + 카카오 Local 주변 헬스장(#329). 트레이너 흐름이 쓰는
     // nearbyGymsProvider 와 달리, 이 시트만 카카오 결과를 함께 본다.
     final AsyncValue<List<Gym>> async = ref.watch(gymFinderResultsProvider);
+    // 지도 핀은 아래 목록과 같은 것을 가리켜야 한다 — 검색어로 거른 뒤의 결과를
+    // 쓴다. 아직 로딩 중이면 핀 0개로 그려지고, 결과가 도착하면 다시 찍힌다.
+    final List<Gym> pinned = _filter(async.valueOrNull ?? const <Gym>[]);
     return _shell(
       context,
       Column(
@@ -554,7 +558,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const _MapPlaceholder(),
+                _LocatorMap(gyms: pinned),
                 const SizedBox(height: 16),
                 Row(
                   children: <Widget>[
@@ -894,71 +898,50 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
   );
 }
 
-Widget _closeBtn(BuildContext ctx) => Material(
-  color: const Color(0xFFF4F6F8),
-  shape: const CircleBorder(),
-  clipBehavior: Clip.antiAlias,
-  child: InkWell(
-    onTap: () => Navigator.of(ctx).pop(),
-    child: const SizedBox(
-      width: 32,
-      height: 32,
-      child: Icon(Icons.close, size: 16, color: FigmaColors.textSub),
-    ),
-  ),
-);
+// ─────────────────────────────────────────────────────────────── 지도 ──
 
-Widget _infoRow(IconData icon, String label, String value) => Padding(
-  padding: const EdgeInsets.symmetric(vertical: 6),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: FigmaColors.softBlue,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 16, color: FigmaColors.primary),
-      ),
-      const SizedBox(width: 12),
-      SizedBox(
-        width: 78,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 7),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
-            ),
-          ),
-        ),
-      ),
-      Expanded(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
-              height: 1.35,
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-);
+/// 로케이터 시트 지도의 높이. 실지도와 폴백 그래픽이 같은 자리를 차지해야
+/// 폴백으로 떨어질 때 시트 레이아웃이 흔들리지 않는다.
+const double _kLocatorMapHeight = 190;
 
-// ─────────────────────────────────────────────────────── 지도 그래픽 ──
+/// 시트 목록에 보이는 헬스장을 카카오맵 핀으로 찍는다. `KAKAO_JS_KEY` 가
+/// 없거나 web 이 아니거나 SDK 로드가 실패하면 [_MapPlaceholder] 그래픽으로
+/// 폴백한다(#329) — 데모가 비지 않게 하기 위한 요건이다.
+class _LocatorMap extends StatelessWidget {
+  const _LocatorMap({required this.gyms});
+
+  final List<Gym> gyms;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Gym> located = gyms
+        .where((Gym g) => g.hasCoordinates)
+        .toList(growable: false);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        height: _kLocatorMapHeight,
+        width: double.infinity,
+        child: KakaoMapView(
+          // 지도 중심은 언제나 검색 중심([kGymFinderArea])이다. 첫 결과 좌표를
+          // 쓰면 검색어에 따라 중심이 흔들려, 지도 중심과 장소 검색 중심이
+          // 같아야 한다는 요건이 깨진다.
+          centerLat: kGymFinderArea.lat,
+          centerLng: kGymFinderArea.lng,
+          markers: <KakaoMapMarker>[
+            for (final Gym g in located)
+              KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
+          ],
+          fallback: const _MapPlaceholder(),
+        ),
+      ),
+    );
+  }
+}
 
 /// A lightweight stylised map (roads, blocks, pins) so the locator reads as a
-/// map area without embedding a live Kakao Map.
+/// map area when the live Kakao Map is unavailable.
 class _MapPlaceholder extends StatelessWidget {
   const _MapPlaceholder();
 
@@ -968,7 +951,7 @@ class _MapPlaceholder extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: SizedBox(
-        height: 140,
+        height: _kLocatorMapHeight,
         width: double.infinity,
         child: Stack(
           children: <Widget>[
@@ -1082,112 +1065,4 @@ class _MapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ─────────────────────────────────────────────────────── 헬스장 정보 ──
-
-/// Gym detail sheet opened from the "헬스장 정보" button, driven by [gym].
-Future<void> showGymInfoSheet(
-  BuildContext context,
-  Gym gym, {
-  Trainer? trainer,
-}) {
-  final AppLocalizations l = AppLocalizations.of(context);
-  final String hours = gym.weekdayHours != null
-      ? l.exGymWeekdayHours(gym.weekdayHours!) +
-            (gym.weekendHours != null
-                ? '\n${l.exGymWeekendHours(gym.weekendHours!)}'
-                : '')
-      : '';
-  final String trainerLabel = trainer == null
-      ? ''
-      : '${trainer.name}${trainer.role != null ? ' · ${trainer.role}' : ''}';
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _shell(
-      ctx,
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Center(child: _handle()),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    l.exGymInfo,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: FigmaColors.ink,
-                    ),
-                  ),
-                ),
-                _closeBtn(ctx),
-              ],
-            ),
-          ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-              children: <Widget>[
-                const _MapPlaceholder(),
-                const SizedBox(height: 14),
-                Text(
-                  gym.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: FigmaColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: <Widget>[
-                    const Icon(Icons.star, size: 15, color: Color(0xFFF5B400)),
-                    const SizedBox(width: 3),
-                    Text(
-                      gym.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _infoRow(
-                  Icons.place_outlined,
-                  l.exAddress,
-                  '${gym.address} · ${gym.distanceKm.toStringAsFixed(1)}km',
-                ),
-                if (hours.isNotEmpty)
-                  _infoRow(Icons.schedule, l.exHours, hours),
-                if (gym.phone != null)
-                  _infoRow(Icons.call_outlined, l.exPhone, gym.phone!),
-                if (gym.tags.isNotEmpty)
-                  _infoRow(
-                    Icons.fitness_center,
-                    l.exSpecialty,
-                    gym.tags.join(' · '),
-                  ),
-                if (trainerLabel.isNotEmpty)
-                  _infoRow(
-                    Icons.person_outline,
-                    l.exTrainerDedicated,
-                    trainerLabel,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
