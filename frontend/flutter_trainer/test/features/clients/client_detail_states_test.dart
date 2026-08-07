@@ -175,7 +175,7 @@ void main() {
     expect(flags.isButton, isTrue);
   });
 
-  testWidgets('the chat is reached from the header message button, not a tab', (
+  testWidgets('the chat sits in the sub-tab row and never leaves it empty', (
     tester,
   ) async {
     await pumpTrainerApp(
@@ -184,12 +184,21 @@ void main() {
       at: AppRoutes.clientDetail('seed-client-1'),
     );
 
-    // 채팅 is not among the tab labels any more.
-    expect(find.text('채팅'), findsOneWidget); // the button's own label
+    // 채팅 is not a content tab — it is the row's trailing segment.
+    expect(find.text('채팅'), findsOneWidget);
     expect(clientSectionLabels, isNot(contains('채팅')));
 
     final button = find.byKey(const ValueKey<String>('client-chat-button'));
     expect(button, findsOneWidget);
+
+    // Same row as the content tabs: one strip answers "which section am I
+    // in", instead of the header owning half that answer.
+    expect(
+      tester.getCenter(button).dy,
+      tester.getCenter(find.text('식단')).dy,
+      reason: '채팅 세그먼트는 식단·운동과 같은 줄에 있어야 함',
+    );
+
     // Not selected while a content tab is open.
     expect(
       tester.getSemantics(button).flagsCollection.isSelected,
@@ -199,18 +208,20 @@ void main() {
     await tester.tap(button);
     await settle(tester);
 
-    // The thread opened, and the button now carries the selected state
-    // that the missing tab would have shown.
+    // The thread opened and the chat segment took the selection, so the
+    // strip still shows where you are — it used to go blank here.
     expect(find.byType(TextField), findsOneWidget); // the composer
     expect(
       tester.getSemantics(button).flagsCollection.isSelected,
       Tristate.isTrue,
     );
-    // Neither content tab claims selection while the chat is open.
-    expect(
-      tester.getSemantics(find.text('식단')).flagsCollection.isSelected,
-      Tristate.isFalse,
-    );
+    for (final String label in clientSectionLabels) {
+      expect(
+        tester.getSemantics(find.text(label)).flagsCollection.isSelected,
+        Tristate.isFalse,
+        reason: '채팅 중에는 콘텐츠 탭이 선택돼 있으면 안 됨',
+      );
+    }
   });
 
   testWidgets('the message button carries the unread count', (tester) async {

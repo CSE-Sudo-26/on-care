@@ -33,11 +33,12 @@ const List<String> clientSectionLabels = <String>['식단', '운동'];
 /// they belong — 운동, 식단, and the 리포트 tab that renders the same
 /// charts for the week.
 ///
-/// Chat is a header button, not a tab, the way a social profile puts
-/// "message" next to the name rather than beside the content tabs: 식단
-/// and 운동 are things you *read* about this person, chatting is
-/// something you *do* with them. It stays addressable either way (see
-/// [AppRoutes.clientChatSection]).
+/// Chat rides at the end of the sub-tab row rather than being a third equal
+/// tab: 식단 and 운동 are things you *read* about this person, chatting is
+/// something you *do* with them, and opening it marks the thread read. It
+/// hugs its content behind a divider so that difference is visible, while
+/// still living in the row that owns "which section am I in". It stays
+/// addressable either way (see [AppRoutes.clientChatSection]).
 ///
 /// The active sub-tab is **owned by the URL**, not by this widget: the
 /// dashboard links straight to a client's 식단 when sodium is over, and
@@ -125,11 +126,8 @@ class ClientDetailView extends ConsumerWidget {
             _Header(
               client: client,
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
-              unread: unread[client.id] ?? 0,
-              chatOpen: _chatOpen,
               showBack: showBack,
               onClose: onClose,
-              onOpenChat: () => onSectionChange(AppRoutes.clientChatSection),
               onToggleActive: canManageRoster
                   ? () => ref
                         .read(clientRepositoryProvider)
@@ -139,6 +137,10 @@ class ClientDetailView extends ConsumerWidget {
             _SubTabs(
               current: _tabIndex,
               onChanged: (i) => onSectionChange(AppRoutes.clientTabSections[i]),
+              clientName: client.name,
+              unread: unread[client.id] ?? 0,
+              chatOpen: _chatOpen,
+              onOpenChat: () => onSectionChange(AppRoutes.clientChatSection),
             ),
             Expanded(child: _body(client)),
           ],
@@ -217,11 +219,8 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.client,
     required this.alerts,
-    required this.unread,
-    required this.chatOpen,
     required this.showBack,
     required this.onClose,
-    required this.onOpenChat,
     required this.onToggleActive,
   });
 
@@ -230,18 +229,8 @@ class _Header extends StatelessWidget {
   /// Why this client is flagged; empty when they're fine today.
   final List<ClientAlert> alerts;
 
-  /// Messages waiting for a reply, shown on the message button.
-  final int unread;
-
-  /// Whether the chat thread is the open section (the button reads as
-  /// selected then, standing in for the tab chat no longer has).
-  final bool chatOpen;
-
   final bool showBack;
   final VoidCallback? onClose;
-
-  /// Opens the chat thread.
-  final VoidCallback onOpenChat;
 
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
@@ -401,13 +390,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        _MessageButton(
-          clientName: client.name,
-          unread: unread,
-          selected: chatOpen,
-          onTap: onOpenChat,
-        ),
         if (onClose != null)
           IconButton(
             icon: const Icon(Icons.close, size: 18),
@@ -420,13 +402,16 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The 채팅 entry point — a message button beside the client's name,
-/// the way a social profile offers to DM someone.
+/// The 채팅 entry point, rendered as the trailing segment of [_SubTabs].
+///
+/// Wears the tabs' selected-state language (same height, same radius, same
+/// accent fill) so one row speaks one visual grammar, but hugs its content
+/// instead of sharing the width — chat is a destination, not a peer view.
 ///
 /// Carries the unread count so the trainer can see there's something
 /// waiting without opening the thread (opening it marks it read).
-class _MessageButton extends StatelessWidget {
-  const _MessageButton({
+class _ChatSegment extends StatelessWidget {
+  const _ChatSegment({
     required this.clientName,
     required this.unread,
     required this.selected,
@@ -436,18 +421,22 @@ class _MessageButton extends StatelessWidget {
   final String clientName;
   final int unread;
 
-  /// Whether the chat is the open section — this is the only affordance
-  /// standing in for the tab chat gave up, so it has to show its state.
+  /// Whether the chat thread is the open section.
   final bool selected;
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? AppColors.primaryForeground : AppColors.primary;
+    final Color fg = selected
+        ? AppColors.accentForeground
+        : AppColors.subtleForeground;
     return Semantics(
       button: true,
       selected: selected,
+      // Same exclusive group as the content tabs — a screen reader reads all
+      // three as one set of destinations, which is what they now are.
+      inMutuallyExclusiveGroup: true,
       // The visible parts ('채팅' + the bare count) would otherwise be
       // announced after this label, reading as "…채팅, 안 읽은 메시지
       // 1개, 채팅, 1". One node, one sentence — so the tap action has to
@@ -458,19 +447,16 @@ class _MessageButton extends StatelessWidget {
           ? '$clientName님과 채팅, 안 읽은 메시지 $unread개'
           : '$clientName님과 채팅',
       child: Material(
-        color: selected
-            ? AppColors.primary
-            : AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: const BorderRadius.all(AppRadius.pill),
+        color: selected ? AppColors.accent : AppColors.inputBackground,
+        borderRadius: const BorderRadius.all(AppRadius.md),
         child: InkWell(
           key: const ValueKey<String>('client-chat-button'),
           onTap: onTap,
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 7,
-            ),
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          child: Container(
+            height: 32,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
@@ -479,7 +465,7 @@ class _MessageButton extends StatelessWidget {
                 Text(
                   '채팅',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: fg,
                   ),
@@ -493,17 +479,17 @@ class _MessageButton extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: selected
-                          ? AppColors.primaryForeground
+                          ? AppColors.accentForeground
                           : AppColors.primary,
                       borderRadius: const BorderRadius.all(AppRadius.pill),
                     ),
                     child: Text(
                       '$unread',
                       style: TextStyle(
-                        fontSize: 9.5,
+                        fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: selected
-                            ? AppColors.primary
+                            ? AppColors.accent
                             : AppColors.primaryForeground,
                       ),
                     ),
@@ -518,11 +504,36 @@ class _MessageButton extends StatelessWidget {
   }
 }
 
+/// The client's navigation strip: 식단 · 운동 as equal content tabs, then the
+/// chat entry point at the end of the same row.
+///
+/// Chat sits here rather than up in the header because it swaps the body the
+/// way the tabs do — when it lived beside the name, opening it left this row
+/// with nothing selected, which read as a broken tab bar. It is still not a
+/// peer of 식단/운동 (those are views of this person's data; chatting is
+/// something you *do*, and opening it marks the thread read), so the
+/// distinction is carried by shape instead of location: the tabs share the
+/// width, chat hugs its content behind a divider.
 class _SubTabs extends StatelessWidget {
-  const _SubTabs({required this.current, required this.onChanged});
+  const _SubTabs({
+    required this.current,
+    required this.onChanged,
+    required this.clientName,
+    required this.unread,
+    required this.chatOpen,
+    required this.onOpenChat,
+  });
 
+  /// Selected content tab, or -1 while the chat is open.
   final int current;
   final ValueChanged<int> onChanged;
+
+  final String clientName;
+
+  /// Messages waiting for a reply, shown on the chat segment.
+  final int unread;
+  final bool chatOpen;
+  final VoidCallback onOpenChat;
 
   @override
   Widget build(BuildContext context) {
@@ -580,6 +591,16 @@ class _SubTabs extends StatelessWidget {
             if (i < clientSectionLabels.length - 1)
               const SizedBox(width: AppSpacing.xs),
           ],
+          // Sets chat apart from the content tabs without leaving the row.
+          const SizedBox(width: AppSpacing.sm),
+          Container(width: 1, height: 16, color: AppColors.border),
+          const SizedBox(width: AppSpacing.sm),
+          _ChatSegment(
+            clientName: clientName,
+            unread: unread,
+            selected: chatOpen,
+            onTap: onOpenChat,
+          ),
         ],
       ),
     );
