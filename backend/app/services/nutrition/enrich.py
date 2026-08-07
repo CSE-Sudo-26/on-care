@@ -23,15 +23,14 @@
 """
 from __future__ import annotations
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.models import FoodNutrient
 from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.services.nutrition.matcher import match_in_rows
+from app.services.nutrition.table import NutrientRow, load_rows
 
 
-def _grams(food: RecognizedFood, match: FoodNutrient) -> float | None:
+def _grams(food: RecognizedFood, match: NutrientRow) -> float | None:
     """환산에 쓸 양(g). 인식기 추정이 우선, 없으면 알려진 1회 섭취량."""
     if food.amount_g and food.amount_g > 0:
         return float(food.amount_g)
@@ -49,7 +48,7 @@ def enrich_analysis(db: Session, analysis: DietAnalysis, enabled: bool = True) -
                 f.source = "estimate"
         return analysis
 
-    rows = db.scalars(select(FoodNutrient)).all()
+    rows = load_rows(db)
     for food in analysis.foods:
         match = match_in_rows(rows, food.name)
         grams = _grams(food, match) if match is not None else None

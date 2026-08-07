@@ -259,3 +259,91 @@ def test_vision_parser_keeps_amount_g():
     )
     assert [f.amount_g for f in analysis.foods] == [320.5, None, None]
 
+
+
+# ---------- 참조표 캐시 (#424) ----------
+
+def _count_queries(db, fn):
+    """fn 실행 중 나간 SQL 문 개수."""
+    from sqlalchemy import event
+
+    n = 0
+
+    def _seen(*_args, **_kw):
+        nonlocal n
+        n += 1
+
+    bind = db.get_bind()
+    event.listen(bind, "before_cursor_execute", _seen)
+    try:
+        fn()
+    finally:
+        event.remove(bind, "before_cursor_execute", _seen)
+    return n
+
+
+def test_nutrient_table_loads_once(db_session):
+    """전건 로드가 요청마다 반복되면 안 된다 — 두 번째부터는 DB 를 안 친다."""
+    from app.services.nutrition.table import invalidate, load_rows
+
+    invalidate()
+    assert _count_queries(db_session, lambda: load_rows(db_session)) == 1
+    assert _count_queries(db_session, lambda: load_rows(db_session)) == 0
+    # 캐시된 값도 실제 시드 내용이어야 한다(빈 튜플을 캐시해 놓고 통과하면 곤란).
+    assert any(r.name_norm == "김치찌개" for r in load_rows(db_session))
+
+
+def test_nutrient_table_cache_survives_detach(db_session):
+    """캐시가 ORM 인스턴스면 세션이 닫힌 뒤 속성 접근에서 터진다."""
+    from app.db.session import SessionLocal
+    from app.services.nutrition.table import invalidate, load_rows
+
+    invalidate()
+    other = SessionLocal()
+    try:
+        rows = load_rows(other)
+    finally:
+        other.close()
+    assert [r.name_norm for r in rows]          # detached 여도 읽힌다
+    assert load_rows(db_session) is rows        # 다른 세션도 같은 캐시를 쓴다
+
+
+def test_nutrient_table_cache_invalidated_on_commit(db_session):
+    """시드가 갱신되면 캐시가 비워져야 한다 — 안 그러면 새 음식이 영영 안 잡힌다."""
+    from app.models.models import FoodNutrient
+    from app.services.nutrition.matcher import match_food, normalize
+    from app.services.nutrition.table import load_rows
+
+    load_rows(db_session)                       # 캐시 채우기
+    assert match_food(db_session, "zzcacheinvalidate") is None
+
+    row = FoodNutrient(
+        name="zzcacheinvalidate", name_norm=normalize("zzcacheinvalidate"),
+        calories=100, sodium_mg=10, sugar_g=1, serving_size_g=100,
+    )
+    db_session.add(row)
+    db_session.commit()
+    try:
+        assert match_food(db_session, "zzcacheinvalidate") is not None
+    finally:
+        # 이 테스트는 삽입 전 상태(None)를 확인하므로 흔적을 남기면 재실행이 깨진다.
+        db_session.delete(row)
+        db_session.commit()
+
+
+def test_nutrient_table_cache_invalidated_on_rollback(db_session):
+    """되돌아간 트랜잭션의 행이 캐시에 남으면 안 된다."""
+    from app.models.models import FoodNutrient
+    from app.services.nutrition.matcher import match_food, normalize
+    from app.services.nutrition.table import invalidate, load_rows
+
+    invalidate()
+    db_session.add(FoodNutrient(
+        name="zzrollbackrow", name_norm=normalize("zzrollbackrow"),
+        calories=100, sodium_mg=10, sugar_g=1, serving_size_g=100,
+    ))
+    db_session.flush()
+    load_rows(db_session)                       # 미확정 행이 든 상태로 캐시 채우기
+    db_session.rollback()
+
+    assert match_food(db_session, "zzrollbackrow") is None
