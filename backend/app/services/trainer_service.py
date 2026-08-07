@@ -738,6 +738,25 @@ def get_member_trainer_id(db: Session, member_id: str) -> str | None:
     return link.trainer_id if link is not None else None
 
 
+def disconnect_member_coach(db: Session, member_id: str) -> bool:
+    """회원이 담당 트레이너 연결을 끊는다. 끊었으면 True, 원래 없었으면 False.
+
+    링크 행을 지우지 않고 `active=False` 로 내린다 — 지난 코칭 기록(루틴·채팅·일정)이
+    링크를 참조하므로 삭제하면 이력이 끊긴다. 비활성 링크는 `_active_link` 가 제외해
+    이후 조회는 '담당 없음'으로 동작한다.
+
+    회원 일방으로 끊을 수 있게 두는 이유: 앱의 MY 탭이 이미 해제 버튼을 제공하고,
+    트레이너 승인을 기다리게 하면 회원이 관계를 벗어날 방법이 없어진다. 트레이너
+    로스터에서는 즉시 사라진다.
+    """
+    link = _active_link(db, member_id)
+    if link is None:
+        return False
+    link.active = False
+    db.commit()
+    return True
+
+
 def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
     """회원의 '내 담당 코치' 요약. 활성 담당이 없으면 None(라우터 404)."""
     link = _active_link(db, member_id)
@@ -756,6 +775,7 @@ def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
         career=f"{profile.career_years}년",
         intro=profile.intro,
         gym=TrainerGymOut(
+            id=profile.gym_id,
             name=profile.gym_name, address=profile.gym_address,
             hours=profile.gym_hours, phone=profile.gym_phone,
         ),
@@ -836,6 +856,7 @@ def build_trainer_me(trainer: User, profile: TrainerProfile) -> TrainerMe:
         intro=profile.intro,
         certifications=_certifications(profile),
         gym=TrainerGymOut(
+            id=profile.gym_id,
             name=profile.gym_name,
             address=profile.gym_address,
             hours=profile.gym_hours,

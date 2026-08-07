@@ -29,6 +29,10 @@ def _validate_hhmm(v: str) -> str:
 
 
 class TrainerGymOut(BaseModel):
+    #: 소속 헬스장 id(`places.id`). 회원앱이 "내 헬스장" 카드에서 헬스장 상세로
+    #: 이동하고 상담 대상을 지정하는 데 필요하다 — 이름만으로는 목록의 헬스장과
+    #: 이어붙일 수 없다(#324). 아직 gym_id 가 없는 프로필은 None.
+    id: str | None = None
     name: str
     address: str
     hours: str

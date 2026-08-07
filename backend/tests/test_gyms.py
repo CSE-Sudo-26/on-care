@@ -165,3 +165,28 @@ def test_trainer_fields_match_app_contract(client):
     # career 는 "7년" 처럼 앱이 그대로 렌더하는 문자열이다.
     assert trainer["career"] is None or trainer["career"].endswith("년")
     assert isinstance(trainer["certifications"], list)
+
+
+def test_my_coach_exposes_gym_id(client, db_session):
+    """"내 헬스장" 카드가 헬스장 상세로 이동하려면 id 가 필요하다(#324).
+
+    데모 회원(user-demo)은 hashed_password 가 비어 있어 로그인할 수 없으므로
+    서비스를 직접 호출해 확인한다.
+    """
+    from app.services import trainer_service
+
+    coach = trainer_service.build_member_coach(db_session, "user-demo")
+    assert coach is not None, "시드가 user-demo ↔ 김트레이너를 연결해야 한다"
+    # 이름만으로는 목록의 헬스장과 이어붙일 수 없다.
+    assert coach.gym.id == "gym-oncare-sinchon"
+    assert coach.gym.name == "온케어짐 신촌점"
+
+
+def test_disconnect_my_coach_is_idempotent(client):
+    """해제는 두 번 눌러도 오류 화면이 뜨면 안 된다."""
+    from tests.test_consultations import _auth, _register_member
+
+    _member_id, token = _register_member(client)
+    # 담당이 없는 회원도 204 — 404 면 앱이 오류를 띄운다.
+    assert client.delete("/v1/me/coach", headers=_auth(token)).status_code == 204
+    assert client.delete("/v1/me/coach", headers=_auth(token)).status_code == 204

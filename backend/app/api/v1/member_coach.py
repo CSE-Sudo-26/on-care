@@ -45,6 +45,19 @@ def my_coach(
     return coach
 
 
+@router.delete("/me/coach", status_code=204)
+def disconnect_my_coach(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """담당 트레이너 연결 해제 — MY 탭의 연결 삭제.
+
+    이미 담당이 없으면 404 가 아니라 204 다. 해제는 멱등이어야 하고, 두 번 눌렀다고
+    오류 화면을 보일 이유가 없다.
+    """
+    trainer_service.disconnect_member_coach(db, current_user.id)
+
+
 @router.get("/me/coach/routines", response_model=list[RoutineOut])
 def my_routines(
     current_user: CurrentUser,
