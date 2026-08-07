@@ -5,6 +5,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:logger/logger.dart';
 
 import 'package:oncare/app/app.dart';
+import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
@@ -27,6 +28,7 @@ void main() {
         overrides: <Override>[
           appConfigProvider.overrideWithValue(config),
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
+          sessionFeatureResetOverride(),
           localeProvider.overrideWith((ref) => const Locale('en')),
         ],
         child: const OncareApp(),
