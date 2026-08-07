@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -146,18 +147,14 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final int minutes = _minutes.round();
     if (minutes <= 0) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.exEnterDuration)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.exEnterDuration)));
       return;
     }
     final ExerciseType type = _typeFromIndex(_type);
     final ExerciseSession? editing = widget.session;
     if (editing != null && editing.id == null) {
       // No id → PUT impossible; don't silently create a duplicate session.
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.exCannotEdit)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.exCannotEdit)));
       return;
     }
     // Intensity is persisted now, so always recompute calories from the
@@ -194,15 +191,11 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
       ref.invalidate(exerciseWeekProvider);
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(widget.isEdit ? l.exUpdated : l.exLogged),
-        ),
+        SnackBar(content: Text(widget.isEdit ? l.exUpdated : l.exLogged)),
       );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.exSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.exSaveFailed)));
     }
   }
 
@@ -237,7 +230,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                   child: Text(
                     l.exSave,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
                     ),
@@ -273,7 +266,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                     Text(
                       l.exDurationMinutes(_minutes.round()),
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: FigmaColors.primary,
                       ),
@@ -325,9 +318,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
                         child: Text(
                           l.exEstimatedCalories,
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: FigmaColors.textSub,
+                            color: AppColors.foreground,
                           ),
                         ),
                       ),
@@ -378,9 +371,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: on ? FigmaColors.primary : FigmaColors.textSub,
+            color: on ? FigmaColors.primary : AppColors.mutedForeground,
           ),
         ),
       ),
@@ -395,7 +388,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     style: const TextStyle(
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: FontWeight.w700,
       color: FigmaColors.ink,
     ),
@@ -505,7 +498,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                       const Icon(
                         Icons.search,
                         size: 16,
-                        color: FigmaColors.textFaint,
+                        color: FigmaColors.textMuted,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -514,7 +507,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                           onChanged: (String v) => setState(() => _query = v),
                           textInputAction: TextInputAction.search,
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             color: FigmaColors.ink,
                           ),
                           decoration: InputDecoration(
@@ -522,8 +515,8 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                             border: InputBorder.none,
                             hintText: l.exGymSearchHint,
                             hintStyle: const TextStyle(
-                              fontSize: 13,
-                              color: FigmaColors.textFaint,
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 12,
@@ -543,7 +536,7 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                             child: Icon(
                               Icons.close,
                               size: 15,
-                              color: FigmaColors.textFaint,
+                              color: FigmaColors.textMuted,
                             ),
                           ),
                         ),
@@ -558,13 +551,16 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                     Text(
                       l.exNearbyGyms,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    AiPill(l.exAiAnalysis, background: FigmaColors.primaryA(0.10)),
+                    AiPill(
+                      l.exAiAnalysis,
+                      background: FigmaColors.primaryA(0.10),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -579,9 +575,9 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                             child: Text(
                               l.exNoGymMatch(_query),
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: FigmaColors.textMuted,
+                                color: AppColors.mutedForeground,
                               ),
                             ),
                           ),
@@ -618,17 +614,18 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                           Text(
                             l.exGymsLoadError,
                             style: const TextStyle(
-                              fontSize: 13,
-                              color: FigmaColors.textMuted,
+                              fontSize: 14,
+                              color: AppColors.foreground,
                             ),
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton(
-                            onPressed: () =>
-                                ref.invalidate(nearbyGymsProvider),
+                            onPressed: () => ref.invalidate(nearbyGymsProvider),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: FigmaColors.primary,
-                              side: BorderSide(color: FigmaColors.primaryA(0.4)),
+                              side: BorderSide(
+                                color: FigmaColors.primaryA(0.4),
+                              ),
                             ),
                             child: Text(l.actionRetry),
                           ),
@@ -658,7 +655,9 @@ class _GymResult extends StatelessWidget {
   /// A short, real-data reason line for the AI-styled highlight box.
   String _reason(AppLocalizations l) {
     if (gym.trainerName != null) {
-      final String role = gym.trainerRole != null ? ' · ${gym.trainerRole}' : '';
+      final String role = gym.trainerRole != null
+          ? ' · ${gym.trainerRole}'
+          : '';
       return l.exReasonTrainer(gym.trainerName!, role);
     }
     if (gym.weekdayHours != null) {
@@ -705,7 +704,7 @@ class _GymResult extends StatelessWidget {
                     Text(
                       gym.name,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: FigmaColors.ink,
                       ),
@@ -714,8 +713,8 @@ class _GymResult extends StatelessWidget {
                     Text(
                       gym.address,
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: FigmaColors.textMuted,
+                        fontSize: 12.5,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                   ],
@@ -735,7 +734,7 @@ class _GymResult extends StatelessWidget {
                       Text(
                         gym.rating.toStringAsFixed(1),
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: FigmaColors.ink,
                         ),
@@ -745,8 +744,8 @@ class _GymResult extends StatelessWidget {
                   Text(
                     '${gym.distanceKm.toStringAsFixed(1)}km',
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: FigmaColors.textMuted,
+                      fontSize: 12.5,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                 ],
@@ -781,7 +780,7 @@ class _GymResult extends StatelessWidget {
                           child: Text(
                             t,
                             style: const TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: FigmaColors.primary,
                             ),
@@ -794,7 +793,7 @@ class _GymResult extends StatelessWidget {
                     Text(
                       reason,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         height: 1.5,
                         color: FigmaColors.ink,
                       ),
@@ -820,7 +819,7 @@ class _GymResult extends StatelessWidget {
               child: Text(
                 l.exSendHealthSummary,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -841,9 +840,7 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
     context: context,
     builder: (BuildContext ctx) => AlertDialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(
         l.exSendHealthSummary,
         style: const TextStyle(
@@ -855,9 +852,9 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
       content: Text(
         l.exSendHealthSummaryBody(gymName),
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           height: 1.5,
-          color: FigmaColors.textSub,
+          color: AppColors.foreground,
         ),
       ),
       actions: <Widget>[
@@ -865,7 +862,7 @@ Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
           onPressed: () => Navigator.of(ctx).pop(false),
           child: Text(
             l.exCancel,
-            style: const TextStyle(color: FigmaColors.textMuted),
+            style: const TextStyle(color: AppColors.mutedForeground),
           ),
         ),
         FilledButton(
@@ -918,9 +915,9 @@ Widget _infoRow(IconData icon, String label, String value) => Padding(
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textMuted,
+              color: AppColors.foreground,
             ),
           ),
         ),
@@ -931,7 +928,7 @@ Widget _infoRow(IconData icon, String label, String value) => Padding(
           child: Text(
             value,
             style: const TextStyle(
-              fontSize: 13.5,
+              fontSize: 14.5,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
               height: 1.35,
@@ -973,8 +970,8 @@ class _MapPlaceholder extends StatelessWidget {
                 child: Text(
                   l.exKakaoMapArea,
                   style: const TextStyle(
-                    fontSize: 9,
-                    color: FigmaColors.textMuted,
+                    fontSize: 11.5,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -1138,7 +1135,7 @@ Future<void> showGymInfoSheet(BuildContext context, Gym gym) {
                     Text(
                       gym.rating.toStringAsFixed(1),
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: FigmaColors.ink,
                       ),

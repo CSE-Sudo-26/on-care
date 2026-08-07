@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/ai_coach/domain/entities/chat_message.dart';
 import 'package:oncare/features/ai_coach/presentation/controllers/chat_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -95,9 +96,9 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                           child: Text(
                             l.aicDatePillToday,
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: FigmaColors.textSub,
+                              color: AppColors.mutedForeground,
                             ),
                           ),
                         ),
@@ -164,7 +165,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                     Text(
                       l.pageAiCoachTitle,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
@@ -172,7 +173,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                     Text(
                       l.aicHeaderSubtitle,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         color: FigmaColors.primary,
                       ),
@@ -225,7 +226,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
               child: Text(
                 m.content,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   height: 1.4,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
@@ -267,7 +268,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                     : Text(
                         m.content,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           height: 1.5,
                           fontWeight: FontWeight.w500,
                           color: FigmaColors.ink,
@@ -314,7 +315,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                       s,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: FigmaColors.primary,
                       ),
@@ -338,9 +339,9 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
           child: Text(
             l.aicQuickRepliesLabel,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textSub,
+              color: AppColors.mutedForeground,
             ),
           ),
         ),
@@ -367,7 +368,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                 child: Text(
                   q,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: FigmaColors.primary,
                   ),
@@ -406,21 +407,25 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                   width: 1.5,
                 ),
               ),
-              child: const Icon(Icons.add, size: 16, color: FigmaColors.primary),
+              child: const Icon(
+                Icons.add,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _controller,
                 onSubmitted: sending ? null : (_) => _send(),
-                style: const TextStyle(fontSize: 14, color: FigmaColors.ink),
+                style: const TextStyle(fontSize: 15, color: FigmaColors.ink),
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
                   hintText: l.aicInputHint,
                   hintStyle: const TextStyle(
-                    fontSize: 13,
-                    color: FigmaColors.textFaint,
+                    fontSize: 14,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -487,7 +492,8 @@ class _TypingDots extends StatelessWidget {
                       ),
                     )
                     .animate(
-                      onPlay: (AnimationController c) => c.repeat(reverse: true),
+                      onPlay: (AnimationController c) =>
+                          c.repeat(reverse: true),
                     )
                     .fade(
                       begin: 0.35,

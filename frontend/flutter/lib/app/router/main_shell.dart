@@ -26,7 +26,8 @@ class MainShell extends StatelessWidget {
     final double navBottomPadding = bottomInset > maxNavBottomPadding
         ? maxNavBottomPadding
         : bottomInset;
-    const double barHeight = 56;
+    // The larger navigation labels need a little more vertical room.
+    const double barHeight = 58;
     const double lift = 24; // headroom so the + button floats above the bar
     return Scaffold(
       // Let the page continue behind the transparent FAB headroom instead of
@@ -152,7 +153,7 @@ class _Destination extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: color,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -227,7 +228,9 @@ class _RecordAddSheet extends StatelessWidget {
         // Match the main content width so the sheet scales with the viewport
         // like the tab pages. The theme lifts the modal route cap to this
         // width too (see AppTheme._bottomSheetTheme); this centres the child.
-        constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+        constraints: const BoxConstraints(
+          maxWidth: AppBreakpoints.contentMaxWidth,
+        ),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -266,8 +269,8 @@ class _RecordAddSheet extends StatelessWidget {
                           Text(
                             l.navAddRecordSubtitle,
                             style: const TextStyle(
-                              fontSize: 13,
-                              color: FigmaColors.textSub,
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
                             ),
                           ),
                         ],
@@ -375,8 +378,8 @@ class _RecordOption extends StatelessWidget {
               Text(
                 subtitle,
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: FigmaColors.textSub,
+                  fontSize: 13.5,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],

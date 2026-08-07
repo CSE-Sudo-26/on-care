@@ -228,7 +228,10 @@ class _TagChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, color: AppColors.accentForeground),
+        style: const TextStyle(
+          fontSize: 13.5,
+          color: AppColors.accentForeground,
+        ),
       ),
     );
   }

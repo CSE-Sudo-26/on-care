@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -71,15 +72,15 @@ class CoachCard extends ConsumerWidget {
                           const Text(
                             '담당 트레이너',
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: FigmaColors.textMuted,
+                              color: AppColors.mutedForeground,
                             ),
                           ),
                           Text(
                             '${coach.name} · ${coach.specialty}',
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: FigmaColors.ink,
                             ),
@@ -100,7 +101,7 @@ class CoachCard extends ConsumerWidget {
             const Text(
               '트레이너 추천 추가 개인운동',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.ink,
               ),
@@ -109,7 +110,10 @@ class CoachCard extends ConsumerWidget {
             if (trainerRoutines.isEmpty)
               const Text(
                 '아직 트레이너가 추천한 개인운동이 없어요',
-                style: TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: AppColors.mutedForeground,
+                ),
               )
             else
               for (final CoachRoutine routine in trainerRoutines) ...<Widget>[
@@ -157,7 +161,7 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
               Text(
                 'AI 맞춤 운동',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: FigmaColors.ink,
                 ),
@@ -168,16 +172,19 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
           const Text(
             '나의 건강 기록과 트레이너 PT 피드백을 바탕으로 AI가 추천한 개인운동이에요',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12.5,
               height: 1.4,
-              color: FigmaColors.textMuted,
+              color: AppColors.mutedForeground,
             ),
           ),
           const SizedBox(height: 12),
           if (aiRoutines.isEmpty)
             const Text(
               '현재 추천할 수 있는 AI 맞춤 운동이 없어요',
-              style: TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+              style: TextStyle(
+                fontSize: 13.5,
+                color: AppColors.mutedForeground,
+              ),
             )
           else
             for (final CoachRoutine routine in aiRoutines) ...<Widget>[
@@ -212,7 +219,7 @@ class _RecommendedExerciseRow extends StatelessWidget {
                 Text(
                   routine.name,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.ink,
                   ),
@@ -222,8 +229,8 @@ class _RecommendedExerciseRow extends StatelessWidget {
                   Text(
                     routine.reason,
                     style: const TextStyle(
-                      fontSize: 11,
-                      color: FigmaColors.textBody,
+                      fontSize: 12.5,
+                      color: AppColors.foreground,
                     ),
                   ),
                 ],
@@ -234,7 +241,7 @@ class _RecommendedExerciseRow extends StatelessWidget {
           Text(
             '${routine.type} · ${routine.minutes}분',
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: FigmaColors.primary,
             ),
@@ -274,7 +281,7 @@ class _ChatButton extends StatelessWidget {
               const Text(
                 '트레이너와 채팅',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.primary,
                 ),
@@ -293,7 +300,7 @@ class _ChatButton extends StatelessWidget {
                   child: Text(
                     '$unread',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),

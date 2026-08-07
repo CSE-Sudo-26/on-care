@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
@@ -156,8 +157,8 @@ class _TrainerDetails extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 13,
-                  color: FigmaColors.textMuted,
+                  fontSize: 14,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
@@ -175,9 +176,9 @@ class _TrainerDetails extends StatelessWidget {
                       Text(
                         intro,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           height: 1.5,
-                          color: FigmaColors.textBody,
+                          color: AppColors.foreground,
                         ),
                       ),
                     if (career.isNotEmpty) ...<Widget>[
@@ -194,7 +195,7 @@ class _TrainerDetails extends StatelessWidget {
                             child: Text(
                               l.exTrainerCareer(career),
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: FigmaColors.ink,
                               ),
@@ -208,9 +209,9 @@ class _TrainerDetails extends StatelessWidget {
                       Text(
                         l.exTrainerCertifications,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: FigmaColors.textMuted,
+                          color: AppColors.mutedForeground,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -234,7 +235,7 @@ class _TrainerDetails extends StatelessWidget {
               child: Text(
                 gym.trainerReason ?? l.exTrainerRecommendationReason,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
                   color: FigmaColors.primary,
@@ -280,7 +281,7 @@ class _TrainerDetails extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   color: FigmaColors.ink,
                                 ),
@@ -291,18 +292,18 @@ class _TrainerDetails extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
                                   height: 1.4,
-                                  color: FigmaColors.textMuted,
+                                  color: AppColors.mutedForeground,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${gym.distanceKm.toStringAsFixed(1)}km',
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
-                                  color: FigmaColors.textBody,
+                                  color: AppColors.foreground,
                                 ),
                               ),
                             ],
@@ -371,7 +372,7 @@ class _CertChip extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
           color: FigmaColors.primary,
         ),
@@ -416,7 +417,7 @@ class _DetailSection extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: FigmaColors.ink,
                     ),
@@ -457,10 +458,7 @@ class _StateMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: FigmaColors.textMuted,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
             if (onRetry != null) ...<Widget>[
               const SizedBox(height: 12),

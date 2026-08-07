@@ -41,8 +41,8 @@ class MockDashboardRepository implements DashboardRepository {
       ],
       weekScore: 85,
       weekScoreDelta: 12,
-      sodiumWarning: '김치찌개·배추김치 섭취로 나트륨이 높아요.',
-      exerciseFeedback: '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
+      // 데모의 통합 조언은 화면의 다국어 리소스(homeAiAdviceBody)를 사용한다.
+      sodiumWarning: null,
     );
   }
 }
