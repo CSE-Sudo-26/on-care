@@ -15,6 +15,16 @@ class DioAiCoachRepository implements AiCoachRepository {
   }
 
   @override
+  Future<List<ChatMessage>> fetchHistory() async {
+    final res = await _dio.get<Map<String, Object?>>('/ai-coach/messages');
+    final raw = (res.data?['messages'] as List<Object?>?) ?? const <Object?>[];
+    return <ChatMessage>[
+      for (final Object? m in raw)
+        ChatMessage.fromStored(m! as Map<String, Object?>),
+    ];
+  }
+
+  @override
   Future<ChatMessage> sendMessage({
     required String message,
     required List<ChatMessage> history,
