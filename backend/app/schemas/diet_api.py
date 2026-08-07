@@ -8,7 +8,7 @@ entries[]: { id, meal_type, time_label, foods[], total_calories, carbs_g, protei
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.diet import DietAnalysis
@@ -114,7 +114,7 @@ class DietRecommendationsResponse(BaseModel):
     items: list[DietRecommendationItem]
     basis: str | None = None
     personalized: bool = False
-    source: str = "rules"
+    source: Literal["llm", "rules", "fallback"] = "rules"
 
     # 근거를 앱이 직접 문장으로 만들 수 있도록 수치도 함께 준다. `basis` 는 서버가
     # 조립한 한국어 문장이라 영어 로케일에 그대로 쓸 수 없다(요리명·이유를 key 로

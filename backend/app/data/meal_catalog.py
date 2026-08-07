@@ -51,6 +51,11 @@ class MealItem:
     protein_g: float
     fiber_g: float
     #: 이 요리가 특히 유리한 상황. 규칙 폴백의 점수 가중치로 쓰인다.
+    #:
+    #: 값은 반드시 `diet_recommendation_service.build_context` 가 **실제로 만들어 내는**
+    #: 신호여야 한다. 생성되지 않는 신호를 적어 두면 점수에 영영 반영되지 않으면서
+    #: 코드를 읽는 사람만 헷갈린다(전에 `fiber_low` 가 그랬다 — 식이섬유는 DietEntry 에
+    #: 컬럼 자체가 없어 신호를 만들 수 없다). 불일치는 테스트가 잡는다.
     good_for: tuple[str, ...] = field(default=())
 
 
@@ -89,7 +94,7 @@ CATALOG: tuple[MealItem, ...] = (
         tags=("고식이섬유", "채식", "한식"),
         default_reason=REASON_FIBER,
         calories=560, sodium_mg=720, sugar_g=9.0, protein_g=16.0, fiber_g=11.0,
-        good_for=("fiber_low", "sugar_high"),
+        good_for=("sugar_high",),
     ),
 )
 

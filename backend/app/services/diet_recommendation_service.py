@@ -83,8 +83,20 @@ _executor = ThreadPoolExecutor(
 #: 빈 자리가 없으면 기다리지 않고 곧장 규칙 폴백으로 내려간다.
 _llm_slots = threading.BoundedSemaphore(LLM_MAX_CONCURRENCY)
 
+#: 캐시 최대 항목 수. 넘으면 만료된 항목부터 정리한다. 만료를 읽을 때만 확인하면
+#: 다시 조회되지 않는 키(지난 날짜·사라진 신호 조합)가 영영 남아 메모리가 단조 증가한다.
+CACHE_MAX_ENTRIES = 1000
+
 #: key -> (만료 시각, 응답). 단일 인스턴스/데모 기준. 다중 인스턴스면 Redis 로 교체.
 _cache: dict[str, tuple[float, DietRecommendationsResponse]] = {}
+
+
+def _cache_put(key: str, response: DietRecommendationsResponse) -> None:
+    now = time.monotonic()
+    if len(_cache) >= CACHE_MAX_ENTRIES:
+        for expired in [k for k, (exp, _) in _cache.items() if exp <= now]:
+            del _cache[expired]
+    _cache[key] = (now + CACHE_TTL_SEC, response)
 
 
 def clear_cache() -> None:
@@ -113,8 +125,15 @@ class NutritionContext:
         return self.days_with_data > 0
 
     def fingerprint(self) -> str:
-        """캐시 키의 일부. 신호가 그대로면 추천도 그대로여야 한다."""
-        return "|".join(self.signals) or "none"
+        """캐시 키의 일부.
+
+        신호만 담으면 안 된다. 응답이 평균 나트륨 **수치**를 화면에 그대로 노출하므로,
+        사용자가 식단을 새로 기록해 평균이 바뀌어도 신호가 그대로면 최대 TTL 동안 예전
+        수치가 보인다(방금 입력한 값과 어긋나 보인다). 100mg 단위로 뭉뚱그려 키에 섞어
+        수치가 의미 있게 바뀔 때만 다시 만든다.
+        """
+        signals = "|".join(self.signals) or "none"
+        return f"{signals}:{self.avg_sodium_mg // 100}"
 
     def basis(self) -> str | None:
         """추천 근거 한 줄. 화면에 그대로 노출되므로 수치를 명시한다."""
@@ -388,7 +407,7 @@ def build_recommendations(
     if use_llm:
         try:
             response = _response(ctx, _llm_items(ctx), personalized=True, source="llm")
-            _cache[cache_key] = (time.monotonic() + CACHE_TTL_SEC, response)
+            _cache_put(cache_key, response)
             return response
         except LLMBusyError:
             logger.info("diet recommendation LLM 포화 — 규칙 폴백")
@@ -399,5 +418,5 @@ def build_recommendations(
 
     # 규칙 폴백도 신호를 반영한 진짜 추천이다(예: 나트륨 과다 → 저나트륨 상위).
     response = _response(ctx, _fallback_items(ctx), personalized=True, source="rules")
-    _cache[cache_key] = (time.monotonic() + CACHE_TTL_SEC, response)
+    _cache_put(cache_key, response)
     return response

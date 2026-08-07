@@ -106,6 +106,39 @@ def test_catalog_keys_are_unique_and_default_order_matches_catalog():
     assert RECOMMENDATION_COUNT == len(keys)
 
 
+def test_catalog_good_for_only_uses_signals_that_are_actually_generated():
+    """카탈로그의 `good_for` 는 build_context 가 만드는 신호의 부분집합이어야 한다.
+
+    생성되지 않는 신호를 적어 두면 점수에 영영 반영되지 않으면서 읽는 사람만 헷갈린다
+    (실제로 `fiber_low` 가 그랬다 — 식이섬유는 DietEntry 에 컬럼이 없어 신호를 만들 수
+    없다). 신호를 늘릴 때 이 테스트가 짝을 맞추도록 강제한다.
+    """
+    generated = {
+        "sodium_high", "sugar_high", "calorie_high", "calorie_low", "protein_low",
+    }
+    used = {signal for item in CATALOG for signal in item.good_for}
+    assert used <= generated, f"생성되지 않는 신호: {sorted(used - generated)}"
+
+
+def test_fingerprint_changes_when_displayed_numbers_change():
+    """신호가 같아도 화면에 뜨는 수치가 바뀌면 캐시가 갈려야 한다.
+
+    응답이 평균 나트륨을 그대로 노출하므로, 사용자가 식단을 새로 기록했는데 예전
+    수치가 남아 있으면 방금 입력한 값과 어긋나 보인다.
+    """
+    def _ctx(avg_sodium: int) -> svc.NutritionContext:
+        return svc.NutritionContext(
+            days_with_data=3, avg_sodium_mg=avg_sodium, avg_sugar_g=10.0,
+            avg_calories=1500, avg_protein_g=60.0, sodium_limit_mg=2000,
+            sugar_limit_g=50, calorie_limit=2000, conditions="", goals="",
+            signals=("sodium_high",),
+        )
+
+    assert _ctx(2850).fingerprint() != _ctx(2400).fingerprint()
+    # 잔변동으로 캐시가 매번 깨지지는 않는다(100mg 단위로 뭉뚱그림).
+    assert _ctx(2850).fingerprint() == _ctx(2870).fingerprint()
+
+
 def test_rule_rank_without_signals_is_exactly_current_home_order():
     """근거가 없으면 지금 화면 그대로여야 한다 — 목업/신규 가입자 경로."""
     ctx = svc.NutritionContext(

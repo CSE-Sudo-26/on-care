@@ -50,10 +50,10 @@ def diet_today(
 def diet_recommendations(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
-    use_llm: bool = Query(
-        True,
-        description="false 면 LLM 을 건너뛰고 규칙 추천만 쓴다(테스트·비용 절감용)",
-    ),
+    use_llm: Annotated[
+        bool,
+        Query(description="false 면 LLM 을 건너뛰고 규칙 추천만 쓴다(테스트·비용 절감용)"),
+    ] = True,
 ) -> DietRecommendationsResponse:
     """홈 'AI 추천 식단' — 카탈로그에서 개인화 선택.
 
