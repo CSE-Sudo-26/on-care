@@ -315,6 +315,16 @@ class TrainerMeUpdate(BaseModel):
         return self
 
 
+class TrainerGymAffiliation(BaseModel):
+    """PUT /trainer/me/gym — 소속 헬스장 설정·변경. (#452)
+
+    위 `gym_*` 문자열과 달리 실재하는 `places` 행을 가리킨다. 해제는 값 대신
+    DELETE 로 표현한다 — 이 필드에 null 을 허용하면 "안 보냈다"와 "지워라"가
+    같은 요청으로 섞인다.
+    """
+    gym_id: str = Field(min_length=1, max_length=64)
+
+
 # ---- 트레이너용 AI 코칭 (회원 데이터 기반) ----
 
 class ClientCoachRequest(BaseModel):

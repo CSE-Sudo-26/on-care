@@ -16,8 +16,8 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerProfile,
-    TrainerRoutine, TrainerSchedule, User,
+    ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
+    TrainerProfile, TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
@@ -924,19 +924,93 @@ def build_trainer_me(trainer: User, profile: TrainerProfile) -> TrainerMe:
     )
 
 
+#: `TrainerMeUpdate` 가 받는 호환용 헬스장 문자열. 소속(`gym_id`)이 설정돼 있으면
+#: 이 값들은 Place/GymProfile 에서 파생되므로 직접 수정할 수 없다(#452).
+GYM_TEXT_FIELDS = ("gym_name", "gym_address", "gym_hours", "gym_phone")
+
+
+class GymTextLockedByAffiliation(Exception):
+    """소속이 설정된 프로필에서 호환 문자열만 따로 바꾸려 한 경우. (#452)"""
+
+
 def update_trainer_profile(
     db: Session, trainer: User, profile: TrainerProfile, fields: dict
 ) -> TrainerMe:
-    """보낸 필드만 반영한다. 자격증은 통째로 교체(부분 병합은 순서가 모호하다)."""
+    """보낸 필드만 반영한다. 자격증은 통째로 교체(부분 병합은 순서가 모호하다).
+
+    `gym_id` 가 있으면 호환 문자열은 소속에서 파생된 값이라 여기서 못 고친다 —
+    문자열만 바꾸면 소속과 화면이 어긋난다. `GymTextLockedByAffiliation` 을 올리고
+    라우터가 409 로 돌려준다. 소속이 없는(레거시·해제) 프로필은 예전처럼 직접 적는다.
+    """
+    if profile.gym_id is not None and any(f in fields for f in GYM_TEXT_FIELDS):
+        raise GymTextLockedByAffiliation
+
     if "certifications" in fields:
         certs = [c.strip() for c in (fields["certifications"] or []) if c.strip()]
         profile.certifications_json = json.dumps(certs, ensure_ascii=False)
-    for column in (
-        "phone", "specialty", "career_years", "intro",
-        "gym_name", "gym_address", "gym_hours", "gym_phone",
-    ):
+    for column in ("phone", "specialty", "career_years", "intro", *GYM_TEXT_FIELDS):
         if column in fields:
             setattr(profile, column, fields[column])
+    db.commit()
+    db.refresh(profile)
+    return build_trainer_me(trainer, profile)
+
+
+# ---- 소속 헬스장 (#452) ----
+
+def _apply_gym_texts(profile: TrainerProfile, place: Place | None, gym: GymProfile | None) -> None:
+    """호환 문자열을 소속에서 파생시킨다 — 소속이 진실이고 문자열은 그 사본이다.
+
+    트레이너 앱은 아직 `gym.{name,address,hours,phone}` 만 읽으므로, 소속을 바꿔도
+    문자열이 그대로면 화면에는 예전 헬스장이 남는다. 해제(place=None)면 비운다 —
+    떠난 헬스장의 이름을 남겨 두면 회원 쪽 코치 카드가 그 값으로 폴백한다
+    (`_member_gym_out`).
+    """
+    if place is None:
+        profile.gym_name = ""
+        profile.gym_address = ""
+        profile.gym_hours = ""
+        profile.gym_phone = ""
+        return
+    # places.name(200) 이 trainer_profiles.gym_name(100) 보다 길다 — 넘치면 DB 가 막는다.
+    profile.gym_name = place.name[:100]
+    profile.gym_address = place.address[:300]
+    # 영업시간·전화는 헬스장 부가 정보(GymProfile)에만 있다. 카카오에서 발견한
+    # 헬스장은 부가 정보가 없어 빈 값이 정상이다.
+    profile.gym_hours = (gym.weekday_hours if gym else "")[:50]
+    profile.gym_phone = (gym.phone if gym else "")[:20]
+
+
+def set_trainer_gym(
+    db: Session, trainer: User, profile: TrainerProfile, gym_id: str
+) -> TrainerMe | None:
+    """소속 헬스장을 설정·변경한다. 유효한 헬스장이 아니면 None(라우터 404).
+
+    `places` 에 있고 category 가 'fitness' 인 곳만 받는다 — 상담 대상 검증
+    (`consultation_service._validate_target`)·헬스장 디렉터리와 같은 조건이라야
+    소속을 설정한 트레이너가 회원 화면에 제대로 뜬다(#451, #443).
+    """
+    place = db.scalar(
+        select(Place).where(Place.id == gym_id, Place.category == "fitness")
+    )
+    if place is None:
+        return None
+
+    profile.gym_id = place.id
+    _apply_gym_texts(profile, place, db.get(GymProfile, place.id))
+    db.commit()
+    db.refresh(profile)
+    return build_trainer_me(trainer, profile)
+
+
+def clear_trainer_gym(db: Session, trainer: User, profile: TrainerProfile) -> TrainerMe:
+    """소속 해제. 원래 없었어도 성공한다 — 해제는 두 번 눌러도 오류가 아니다.
+
+    회원↔헬스장 링크(`member_gyms`)는 건드리지 않는다. 회원이 직접 연결한 헬스장은
+    트레이너가 이적해도 회원의 선택으로 남는다(#444).
+    """
+    profile.gym_id = None
+    _apply_gym_texts(profile, None, None)
     db.commit()
     db.refresh(profile)
     return build_trainer_me(trainer, profile)

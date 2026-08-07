@@ -69,9 +69,14 @@
 - 관계 판단의 기준은 `gym_id`다. 기존 `gym_name`, `gym_address`, `gym_hours`,
   `gym_phone`은 트레이너 웹의 `gym {name, address, hours, phone}` 계약을
   유지하기 위한 호환 필드로 당분간 남겨 둔다.
-- 현재 `gym_id`를 채우는 경로는 `seed_gyms.py`의 `gym_name` 이름 매칭
-  백필뿐이다. 설정 API는 아직 없고, 트레이너 앱의 프로필 수정은
-  호환용 `gym_*` 문자열만 바꾼다(후속 과제).
+- `gym_id`는 `PUT /trainer/me/gym`으로 설정·변경하고 `DELETE /trainer/me/gym`으로
+  해제한다(#452). 시드(`seed_gyms.py`의 `gym_name` 이름 매칭 백필)는 기존 데이터를
+  이어 주는 용도로 남는다.
+- **호환 문자열 동기화 기준**: `gym_id`가 있으면 `gym_name`·`gym_address`·
+  `gym_hours`·`gym_phone`은 소속 `Place`/`GymProfile`에서 파생된 사본이다. 소속을
+  설정·변경하면 서버가 덮어쓰고, 해제하면 비운다. 그 동안 `PUT /trainer/me`로
+  문자열만 따로 바꾸는 요청은 **409**다 — 소속과 화면이 어긋나기 때문이다.
+  `gym_id`가 없는(레거시·해제 상태) 프로필에서는 예전처럼 직접 입력한다.
 
 ## 4. 트레이너 API (`/v1/trainer/*`, RequireTrainer)
 
@@ -79,6 +84,8 @@
 |---|---|---|
 | GET | `/trainer/me` | 내 트레이너 프로필 |
 | PUT | `/trainer/me` | 프로필 부분 수정(보낸 필드만; 이름/이메일은 계정 소관) |
+| PUT | `/trainer/me/gym` | 소속 헬스장 설정·변경(fitness `Place`만; 없으면 404) |
+| DELETE | `/trainer/me/gym` | 소속 해제(원래 없어도 200) |
 | POST | `/trainer/me/password` | 비밀번호 변경(현재 비밀번호 확인) |
 | GET | `/trainer/me/settings` | 알림 수신 설정 |
 | PUT | `/trainer/me/settings` | 알림 수신 설정 부분 수정 |
