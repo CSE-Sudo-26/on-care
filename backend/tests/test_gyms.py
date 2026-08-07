@@ -40,6 +40,33 @@ def test_list_gyms_sorts_by_distance_when_coordinates_given(client):
     assert gyms[0]["distance_km"] == 0
 
 
+def test_gyms_without_coordinates_sort_last(client, db_session):
+    """좌표를 모르는 헬스장은 distance_km 가 0 이라, 그냥 정렬하면 '가장 가까운 곳'
+    으로 맨 앞에 온다."""
+    from app.models.models import Place
+
+    db_session.add(
+        Place(
+            id="gym-no-coords-test",
+            name="좌표없는테스트짐",
+            category="fitness",
+            address="주소 미상",
+        )
+    )
+    db_session.commit()
+    try:
+        gyms = client.get("/v1/gyms", params=SINCHON).json()
+        ids = [g["id"] for g in gyms]
+        assert "gym-no-coords-test" in ids
+        assert ids[-1] == "gym-no-coords-test", ids
+        assert ids[0] == "gym-oncare-sinchon", ids
+    finally:
+        db_session.query(Place).filter(
+            Place.id == "gym-no-coords-test"
+        ).delete()
+        db_session.commit()
+
+
 def test_list_gyms_without_coordinates_has_zero_distance(client):
     gyms = client.get("/v1/gyms", params={"partner_only": True}).json()
     # 기준점이 없으면 거리를 지어내지 않는다.

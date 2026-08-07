@@ -78,7 +78,15 @@ def list_gyms(
 
     gyms = [_to_gym(place, profile, lat, lng) for place, profile in db.execute(query)]
     if lat is not None and lng is not None:
-        gyms.sort(key=lambda g: g.distance_km)
+        # 좌표를 모르는 헬스장은 distance_km 가 0 이라 그냥 정렬하면 '가장 가까운 곳'
+        # 으로 맨 앞에 온다. 뒤로 보내고 그 안에서는 이름순으로 둔다.
+        gyms.sort(
+            key=lambda g: (
+                g.lat is None or g.lng is None,
+                g.distance_km,
+                g.name,
+            )
+        )
     else:
         gyms.sort(key=lambda g: g.name)
     return gyms
