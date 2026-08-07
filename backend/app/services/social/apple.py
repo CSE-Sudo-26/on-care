@@ -16,6 +16,7 @@ JWKS 는 `PyJWKClient` 가 캐싱하고 키 회전 시 다시 가져온다. 매 
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from functools import lru_cache
 
@@ -34,6 +35,11 @@ APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys"
 #: 쓰면 정상 로그인이 실패한다. PyJWKClient 는 캐시에 없는 kid 를 만나면 다시 받아온다.
 _JWKS_CACHE_LIFESPAN = 600
 
+#: JWKS 조회 HTTP 타임아웃(초). 기본값 30 초는 로그인 한 번이 30 초를 기다린다는 뜻이라
+#: 너무 길다. 스레드로 넘겨 이벤트 루프는 막히지 않지만, 그 스레드도 오래 잡혀 있으면
+#: 안 되므로 짧게 끊고 실패시킨다(다른 provider 의 httpx timeout=5.0 과 맞춤).
+_JWKS_TIMEOUT_SEC = 5
+
 
 @lru_cache
 def _jwk_client() -> PyJWKClient:
@@ -45,6 +51,7 @@ def _jwk_client() -> PyJWKClient:
         APPLE_JWKS_URL,
         cache_keys=True,
         lifespan=_JWKS_CACHE_LIFESPAN,
+        timeout=_JWKS_TIMEOUT_SEC,
     )
 
 
@@ -76,7 +83,14 @@ class AppleVerifier(SocialVerifier):
             raise SocialAuthError("APPLE_CLIENT_IDS 미설정")
 
         try:
-            signing_key = _jwk_client().get_signing_key_from_jwt(token)
+            # PyJWKClient 는 urllib 기반이라 **동기 블로킹**이다(다른 provider 는
+            # httpx.AsyncClient 라 이 문제가 없다). 캐시가 비었거나 Apple 이 키를
+            # 회전한 직후에는 여기서 실제 HTTP 요청이 나가는데, async 핸들러에서
+            # 그대로 호출하면 그동안 **이벤트 루프 전체가 멈춰** 무관한 요청까지
+            # 함께 지연된다. 스레드로 넘겨 루프를 놓아 준다.
+            signing_key = await asyncio.to_thread(
+                _jwk_client().get_signing_key_from_jwt, token
+            )
         except Exception as exc:  # noqa: BLE001 — JWKS 조회 실패·kid 불일치 등
             raise SocialAuthError(f"apple 공개키 조회 실패: {exc}") from exc
 

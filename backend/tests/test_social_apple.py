@@ -10,6 +10,7 @@ Apple 은 토큰을 확인해 주는 조회 엔드포인트가 없어 서버가 
 from __future__ import annotations
 
 import asyncio
+import threading
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -40,17 +41,26 @@ def _apple_client_ids(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _stub_jwks(monkeypatch, keypair):
-    """JWKS 조회를 테스트 공개키로 대체 — 네트워크를 타지 않는다."""
+    """JWKS 조회를 테스트 공개키로 대체 — 네트워크를 타지 않는다.
+
+    조회가 **어느 스레드에서 실행됐는지**도 기록한다. 이벤트 루프를 막지 않는지
+    검증하는 데 쓴다.
+    """
     _, public = keypair
 
     class _Key:
         key = public
 
     class _Client:
+        called_on: list[int] = []
+
         def get_signing_key_from_jwt(self, token):  # noqa: ANN001
+            _Client.called_on.append(threading.get_ident())
             return _Key()
 
+    _Client.called_on = []
     monkeypatch.setattr(apple_mod, "_jwk_client", lambda: _Client())
+    return _Client
 
 
 def _token(keypair, **overrides) -> str:
@@ -191,3 +201,24 @@ def test_endpoint_rejection_matches_other_providers(client):
 
     assert apple.status_code == google.status_code == 401
     assert apple.json()["detail"] == google.json()["detail"]
+
+
+def test_jwks_lookup_runs_off_the_event_loop(keypair, _stub_jwks):
+    """JWKS 조회는 이벤트 루프 밖(다른 스레드)에서 실행돼야 한다.
+
+    PyJWKClient 는 urllib 기반이라 동기 블로킹이다. 캐시가 비었거나 Apple 이 키를
+    회전한 직후에는 실제 HTTP 요청이 나가는데, async 핸들러에서 그대로 호출하면
+    그동안 이벤트 루프가 멈춰 **무관한 요청까지 함께 지연된다.**
+    """
+    main_thread = threading.get_ident()
+
+    async def _run():
+        await AppleVerifier().verify(_token(keypair))
+        return threading.get_ident()
+
+    loop_thread = asyncio.run(_run())
+
+    assert _stub_jwks.called_on, "JWKS 조회가 호출되지 않았다"
+    # 코루틴이 도는 스레드와 JWKS 조회가 실행된 스레드가 달라야 한다.
+    assert _stub_jwks.called_on[0] != loop_thread
+    assert _stub_jwks.called_on[0] != main_thread
