@@ -10,6 +10,8 @@ LLM 은 붙이지 않고(=use_llm=False 또는 monkeypatch) 결정론적으로 �
 """
 from __future__ import annotations
 
+import threading
+import time
 import uuid
 from datetime import date, timedelta
 
@@ -22,6 +24,57 @@ from app.services import diet_recommendation_service as svc
 
 def _h(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _login(client, email: str) -> str:
+    return client.post(
+        "/v1/auth/login", data={"username": email, "password": "pw!"}
+    ).json()["access_token"]
+
+
+def _make_high_sodium_member(db_session) -> tuple:
+    """나트륨 과다 신호가 확실히 뜨는 회원을 만든다. (user, email) 반환.
+
+    시드 사용자를 쓰면 그 사용자의 최근 식단 유무에 따라 신호가 안 뜰 수 있고, 그러면
+    서비스가 LLM 경로를 아예 타지 않아 폴백 계약이 검증되지 않은 채 통과한다.
+
+    나트륨 신호만 뜨도록 나머지는 평범한 하루로 맞춘다. 칼로리를 너무 낮게 넣으면
+    calorie_low 신호가 같이 떠서 다른 요리가 끼어든다(그건 그것대로 옳은 동작).
+    """
+    from app.core.security import hash_password
+    from app.models.models import DietEntry, User
+
+    email = f"rec-sodium-{uuid.uuid4().hex[:8]}@example.com"
+    user = User(
+        id=f"user-{uuid.uuid4().hex[:12]}", email=email, name="나트륨 과다",
+        hashed_password=hash_password("pw!"), role="member",
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    today = date.today()
+    for offset in range(svc.LOOKBACK_DAYS):
+        day = (today - timedelta(days=offset)).isoformat()
+        for meal, cal, sodium in (
+            ("breakfast", 450, 800), ("lunch", 700, 1100), ("dinner", 650, 950)
+        ):
+            db_session.add(
+                DietEntry(
+                    id=f"diet-{uuid.uuid4().hex[:12]}", user_id=user.id, date=day,
+                    meal_type=meal, foods_json="[]", total_calories=cal,
+                    sodium_mg=sodium, sugar_g=5.0, protein_g=25.0,
+                )
+            )
+    db_session.commit()
+    return user, email
+
+
+def _cleanup_member(db_session, user) -> None:
+    from app.models.models import DietEntry, User
+
+    db_session.execute(delete(DietEntry).where(DietEntry.user_id == user.id))
+    db_session.execute(delete(User).where(User.id == user.id))
+    db_session.commit()
 
 
 @pytest.fixture
@@ -105,9 +158,11 @@ def test_parse_llm_items_rejects_unusable_output():
         avg_protein_g=0.0, sodium_limit_mg=2000, sugar_limit_g=50,
         calorie_limit=2000, conditions="", goals="", signals=("sodium_high",),
     )
-    with pytest.raises(Exception):
+    # ValueError 로 좁힌다. Exception 으로 두면 나중에 TypeError/AttributeError 가 나도
+    # 통과해 버려 버그를 잡지 못한다(json.JSONDecodeError 도 ValueError 하위 클래스다).
+    with pytest.raises(ValueError):
         svc._parse_llm_items('{"items": [{"key": "nope"}]}', ctx)
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         svc._parse_llm_items("not json at all", ctx)
 
 
@@ -184,38 +239,9 @@ def test_user_without_diet_history_gets_current_home_order(client, db_session):
 
 def test_high_sodium_history_surfaces_low_sodium_recommendation(client, db_session):
     """#275 수용 기준: 나트륨 과다 → 저염 추천이 근거와 함께 드러난다."""
-    from app.models.models import DietEntry, User
-    from app.core.security import hash_password
-
-    email = f"rec-sodium-{uuid.uuid4().hex[:8]}@example.com"
-    user = User(
-        id=f"user-{uuid.uuid4().hex[:12]}", email=email, name="나트륨 과다",
-        hashed_password=hash_password("pw!"), role="member",
-    )
-    db_session.add(user)
-    db_session.commit()
-
-    # 나트륨 신호만 뜨도록 나머지는 평범한 하루로 맞춘다. 칼로리를 너무 낮게 넣으면
-    # calorie_low 신호가 같이 떠서 다른 요리가 끼어든다(그건 그것대로 옳은 동작).
-    today = date.today()
-    for offset in range(svc.LOOKBACK_DAYS):
-        day = (today - timedelta(days=offset)).isoformat()
-        for meal, cal, sodium in (
-            ("breakfast", 450, 800), ("lunch", 700, 1100), ("dinner", 650, 950)
-        ):
-            db_session.add(
-                DietEntry(
-                    id=f"diet-{uuid.uuid4().hex[:12]}", user_id=user.id, date=day,
-                    meal_type=meal, foods_json="[]", total_calories=cal,
-                    sodium_mg=sodium, sugar_g=5.0, protein_g=25.0,
-                )
-            )
-    db_session.commit()
-
+    user, email = _make_high_sodium_member(db_session)
     try:
-        token = client.post(
-            "/v1/auth/login", data={"username": email, "password": "pw!"}
-        ).json()["access_token"]
+        token = _login(client, email)
         body = client.get(
             "/v1/diet/recommendations?use_llm=false", headers=_h(token)
         ).json()
@@ -227,20 +253,58 @@ def test_high_sodium_history_surfaces_low_sodium_recommendation(client, db_sessi
         assert "초과" in body["basis"]
         assert len(keys) == RECOMMENDATION_COUNT
     finally:
-        db_session.execute(delete(DietEntry).where(DietEntry.user_id == user.id))
-        db_session.execute(delete(User).where(User.id == user.id))
-        db_session.commit()
+        _cleanup_member(db_session, user)
 
 
-def test_llm_failure_degrades_to_rule_recommendations(client, member_token, monkeypatch):
-    """LLM 이 죽어도 화면은 그대로 뜬다 — graceful degrade."""
+def test_llm_failure_degrades_to_rule_recommendations(client, db_session, monkeypatch):
+    """LLM 이 죽어도 화면은 그대로 뜬다 — graceful degrade.
+
+    신호가 확실히 뜨는 사용자를 직접 만든다. 시드 사용자를 쓰면 그 사용자에게 최근
+    식단이 없을 때 서비스가 `_llm_items` 를 아예 호출하지 않고 곧장 fallback 을
+    반환해, "LLM 이 죽어도 규칙으로 내려간다"는 계약이 검증되지 않은 채 통과한다.
+    """
+    calls: list[str] = []
+
     def _boom(ctx):
+        calls.append("called")
         raise RuntimeError("Gemini down")
 
     monkeypatch.setattr(svc, "_llm_items", _boom)
-    res = client.get("/v1/diet/recommendations", headers=_h(member_token))
 
-    assert res.status_code == 200
-    body = res.json()
-    assert len(body["items"]) == RECOMMENDATION_COUNT
-    assert body["source"] in {"rules", "fallback"}
+    user, email = _make_high_sodium_member(db_session)
+    try:
+        token = _login(client, email)
+        res = client.get("/v1/diet/recommendations", headers=_h(token))
+
+        assert res.status_code == 200
+        body = res.json()
+        assert calls, "LLM 경로를 타지 않아 폴백이 검증되지 않았다"
+        assert body["source"] == "rules"       # fallback 이 아니라 신호를 반영한 규칙 추천
+        assert body["personalized"] is True
+        assert len(body["items"]) == RECOMMENDATION_COUNT
+        assert set(i["key"] for i in body["items"][:2]) == {"chicken_salad", "salmon"}
+    finally:
+        _cleanup_member(db_session, user)
+
+
+def test_llm_saturation_falls_back_without_waiting(client, db_session, monkeypatch):
+    """워커가 꽉 차면 큐에서 기다리지 않고 즉시 규칙 폴백으로 내려간다.
+
+    기다리면 어차피 타임아웃인데 요청 스레드만 붙잡혀, 부하 시 모든 응답이 느려진다.
+    """
+    monkeypatch.setattr(svc, "_llm_slots", threading.BoundedSemaphore(1))
+    svc._llm_slots.acquire()  # 유일한 자리를 미리 점유 → 포화 상태 재현
+
+    user, email = _make_high_sodium_member(db_session)
+    try:
+        token = _login(client, email)
+        started = time.monotonic()
+        body = client.get("/v1/diet/recommendations", headers=_h(token)).json()
+        elapsed = time.monotonic() - started
+
+        assert body["source"] == "rules"
+        assert len(body["items"]) == RECOMMENDATION_COUNT
+        # 타임아웃(6초)만큼 기다리지 않고 곧바로 폴백했는지
+        assert elapsed < svc.LLM_TIMEOUT_SEC
+    finally:
+        _cleanup_member(db_session, user)

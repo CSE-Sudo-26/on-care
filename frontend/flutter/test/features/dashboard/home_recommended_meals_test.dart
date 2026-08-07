@@ -94,12 +94,19 @@ void main() {
     );
   }
 
-  /// 캐러셀에 실제로 붙은 카드 제목을 순서대로 읽는다.
+  /// 캐러셀에 **실제로 그려진 순서대로** 카드 제목을 읽는다.
+  ///
+  /// 이름 목록을 미리 정해 두고 존재 여부만 확인하면 순서가 바뀌어도 통과해 버린다
+  /// (그렇게 짰다가 서버 정렬 반영을 검증하지 못했다). 가로 캐러셀이므로 각 제목
+  /// 위젯의 x 좌표로 정렬해 화면 순서를 그대로 얻는다.
   List<String> renderedMealNames(WidgetTester tester) {
-    return <String>[
+    final List<({String name, double dx})> found = <({String name, double dx})>[
       for (final String name in demoOrder)
-        if (find.text(name).evaluate().isNotEmpty) name,
-    ];
+        if (find.text(name).evaluate().isNotEmpty)
+          (name: name, dx: tester.getTopLeft(find.text(name)).dx),
+    ]..sort((({String name, double dx}) a, ({String name, double dx}) b) =>
+        a.dx.compareTo(b.dx));
+    return <String>[for (final entry in found) entry.name];
   }
 
   testWidgets('목업 모드 추천은 기존 카드·순서·문구 그대로다', (WidgetTester tester) async {
@@ -142,7 +149,9 @@ void main() {
       tester,
       recommendations: () async => const MealRecommendations(
         personalized: true,
-        basis: '최근 3일 평균 나트륨 2,400mg',
+        daysWithData: 3,
+        avgSodiumMg: 2400,
+        sodiumLimitMg: 2000,
         items: <MealRecommendation>[
           MealRecommendation(
             key: 'salmon',
@@ -155,11 +164,48 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final List<String> rendered = renderedMealNames(tester);
     // 서버가 준 두 장이 앞으로 오고, 나머지는 기본 순서로 채워져 5장을 유지한다.
-    expect(renderedMealNames(tester).length, demoOrder.length);
+    expect(rendered.length, demoOrder.length);
+    expect(rendered.take(2), <String>['연어 구이 + 나물', '닭가슴살 샐러드']);
+    // 기본 순서(닭가슴살 → 현미 → 연어)와 실제로 달라야 정렬이 반영된 것이다.
+    expect(rendered, isNot(demoOrder));
+
     expect(find.text('부족한 단백질을 채워요'), findsOneWidget);
     // 개인화 문구가 없는 항목은 기본 l10n 문구를 쓴다.
     expect(find.text('나트륨 조절에 좋아요'), findsOneWidget);
+  });
+
+  testWidgets('개인화되면 근거가 화면에 드러난다', (WidgetTester tester) async {
+    // #275 수용 기준: "추천 근거(나트륨 과다 → 저염)가 드러남".
+    await pumpHome(
+      tester,
+      recommendations: () async => const MealRecommendations(
+        personalized: true,
+        daysWithData: 3,
+        avgSodiumMg: 2400,
+        sodiumLimitMg: 2000,
+        items: <MealRecommendation>[
+          MealRecommendation(key: 'chicken_salad', reasonKey: 'sodium'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2,400mg'), findsOneWidget);
+    expect(find.textContaining('권장 초과'), findsOneWidget);
+  });
+
+  testWidgets('개인화되지 않으면 근거 줄이 아예 없다', (WidgetTester tester) async {
+    // 목업/데모 모드와 신규 가입자 경로 — 화면에 아무것도 추가되면 안 된다.
+    await pumpHome(
+      tester,
+      recommendations: () async => MealRecommendations.fallback,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('평균 나트륨'), findsNothing);
+    expect(find.textContaining('권장 초과'), findsNothing);
   });
 
   testWidgets('앱이 모르는 key 는 버리고 카드 수를 유지한다', (WidgetTester tester) async {
