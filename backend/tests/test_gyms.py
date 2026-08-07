@@ -196,6 +196,134 @@ def test_trainer_fields_match_app_contract(client):
     assert isinstance(trainer["certifications"], list)
 
 
+# ---- 디렉터리 소속 조건 (#451) ----
+
+@pytest.fixture
+def directory_trainer(client, db_session):
+    """소속을 지정해 트레이너를 만드는 팩토리. (trainer_id)
+
+    끝나면 지운다 — 디렉터리 인원 수·이름 중복을 세는 테스트가 있어 남겨 두면
+    그쪽이 깨진다.
+    """
+    from uuid import uuid4
+
+    from app.models import models
+
+    created: list[str] = []
+
+    def _make(*, gym_id: str | None) -> str:
+        trainer_id = f"trainer-test-{uuid4().hex[:10]}"
+        db_session.add(models.User(
+            id=trainer_id,
+            email=f"{trainer_id}@oncare.test",
+            name=f"소속테스트 {trainer_id[-6:]}",
+            hashed_password="",
+            role="trainer",
+        ))
+        db_session.flush()
+        db_session.add(models.TrainerProfile(
+            trainer_id=trainer_id,
+            gym_id=gym_id,
+            specialty="퍼스널 트레이너",
+            # 비면 추천 레일에서 사유 조건에 걸려 빠진다 — 소속 조건만 보려고 채운다.
+            recommend_reason="소속 조건 테스트",
+        ))
+        db_session.commit()
+        created.append(trainer_id)
+        return trainer_id
+
+    yield _make
+
+    from app.models import models as _models
+
+    for trainer_id in created:
+        db_session.query(_models.TrainerProfile).filter(
+            _models.TrainerProfile.trainer_id == trainer_id
+        ).delete()
+        db_session.query(_models.User).filter(
+            _models.User.id == trainer_id
+        ).delete()
+    db_session.commit()
+
+
+def test_trainer_with_fitness_gym_is_listed(client, directory_trainer):
+    """소속이 멀쩡하면 그대로 노출된다 — 아래 제외 테스트의 대조군."""
+    trainer_id = directory_trainer(gym_id="gym-oncare-sinchon")
+
+    listed = {t["id"] for t in client.get("/v1/trainers").json()}
+    assert trainer_id in listed
+    assert trainer_id in {t["id"] for t in client.get("/v1/trainers/recommended").json()}
+    assert client.get(f"/v1/trainers/{trainer_id}").status_code == 200
+
+
+def test_trainer_without_gym_is_hidden_from_directory(client, directory_trainer):
+    """소속이 없으면 목록·추천·상세 어디에도 나오지 않는다. (#451)"""
+    trainer_id = directory_trainer(gym_id=None)
+
+    assert trainer_id not in {t["id"] for t in client.get("/v1/trainers").json()}
+    assert trainer_id not in {
+        t["id"] for t in client.get("/v1/trainers/recommended").json()
+    }
+    assert client.get(f"/v1/trainers/{trainer_id}").status_code == 404
+
+
+def test_trainer_at_non_fitness_place_is_hidden(client, directory_trainer):
+    """place-1 은 medical 이다 — 헬스장이 아닌 곳 소속은 디렉터리에 새면 안 된다."""
+    trainer_id = directory_trainer(gym_id="place-1")
+
+    assert trainer_id not in {t["id"] for t in client.get("/v1/trainers").json()}
+    assert trainer_id not in {
+        t["id"] for t in client.get("/v1/trainers/recommended").json()
+    }
+    assert client.get(f"/v1/trainers/{trainer_id}").status_code == 404
+
+
+def test_gym_trainer_list_stays_a_subset_of_the_directory(client):
+    """헬스장 상세의 소속 트레이너는 디렉터리에도 있어야 한다.
+
+    두 경로가 같은 쿼리를 쓰는 한 성립한다 — 한쪽만 조건이 바뀌면 여기서 깨진다.
+    """
+    listed = {t["id"] for t in client.get("/v1/trainers").json()}
+    assert listed
+
+    for gym_id in PARTNER_IDS:
+        scoped = {t["id"] for t in client.get(f"/v1/gyms/{gym_id}/trainers").json()}
+        assert scoped <= listed, f"{gym_id}: {scoped - listed}"
+
+
+def test_listed_trainers_all_have_a_fitness_gym(client):
+    """디렉터리에 뜬 트레이너는 전부 헬스장 상세로 이어져야 한다.
+
+    `gym_id` 가 비어 있으면 앱이 소속 카드를 그릴 수 없고, 그 id 가 헬스장이 아니면
+    `/gyms/{id}` 가 404 를 낸다.
+    """
+    trainers = client.get("/v1/trainers").json()
+    assert trainers
+
+    for trainer in trainers:
+        gym_id = trainer["gym_id"]
+        assert gym_id, f"{trainer['name']} 의 소속이 비어 있다"
+        assert client.get(f"/v1/gyms/{gym_id}").status_code == 200, gym_id
+
+
+def test_hidden_trainer_is_also_rejected_by_consultation(client, directory_trainer):
+    """디렉터리에서 뺀 트레이너는 상담 대상도 아니다 — 두 조건이 같아야 한다(#443).
+
+    반대로 목록에 남겨 두면 회원은 고를 수 있는데 상담 요청에서만 404 를 받는다.
+    """
+    from tests.test_consultations import _auth, _payload, _register_member
+
+    trainer_id = directory_trainer(gym_id=None)
+    _member_id, token = _register_member(client)
+
+    r = client.post(
+        "/v1/consultations",
+        headers=_auth(token),
+        json=_payload(target_type="trainer", trainer_id=trainer_id),
+    )
+    assert r.status_code == 404, r.text
+
+
 def test_my_coach_exposes_gym_id(client, db_session):
     """"내 헬스장" 카드가 헬스장 상세로 이동하려면 id 가 필요하다(#324).
 
