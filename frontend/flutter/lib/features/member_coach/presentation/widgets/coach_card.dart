@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
@@ -15,6 +18,9 @@ class CoachCard extends ConsumerWidget {
     final coachAsync = ref.watch(memberCoachProvider);
     final coach = coachAsync.valueOrNull;
     if (coach == null) return const SizedBox.shrink();
+    // 트레이너 상세는 이제 트레이너 id 로 라우팅한다 — 한 헬스장에
+    // 여러 명이 있으므로 헬스장 id 로는 한 명을 특정할 수 없다.
+    final assignedTrainer = ref.watch(myTrainerProvider).valueOrNull;
 
     final List<CoachRoutine> trainerRoutines =
         (ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[])
@@ -34,46 +40,63 @@ class CoachCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: FigmaColors.iconTint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: FigmaColors.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Text(
-                        '담당 트레이너',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.textMuted,
-                        ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                key: const Key('assignedTrainerProfile'),
+                onTap: assignedTrainer == null
+                    ? null
+                    : () => context.push(
+                        AppRoutes.trainerDetailPath(assignedTrainer.id),
                       ),
-                      Text(
-                        '${coach.name} · ${coach.specialty}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.ink,
-                        ),
+                borderRadius: BorderRadius.circular(12),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: FigmaColors.iconTint,
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
+                      child: const Icon(
+                        Icons.person,
+                        color: FigmaColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text(
+                            '담당 트레이너',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: FigmaColors.textMuted,
+                            ),
+                          ),
+                          Text(
+                            '${coach.name} · ${coach.specialty}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: FigmaColors.textMuted,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 14),
             const Text(

@@ -262,17 +262,21 @@ class FigmaCircleButton extends StatelessWidget {
   }
 }
 
-/// The sticky title header used by the 식단 / 운동 / MY tabs: an extrabold
-/// title on the left, bell + calendar circle buttons on the right.
+/// The shared main-tab header: an optional brand icon and title on the left,
+/// with fixed tab actions on the right.
 class FigmaTabHeader extends StatelessWidget {
   const FigmaTabHeader({
     super.key,
     required this.title,
+    required this.trailingAction,
+    this.leading,
     this.onBell,
     this.onCalendar,
   });
 
   final String title;
+  final Widget trailingAction;
+  final Widget? leading;
   final VoidCallback? onBell;
   final VoidCallback? onCalendar;
 
@@ -282,16 +286,20 @@ class FigmaTabHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
       child: Row(
         children: <Widget>[
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: FigmaColors.ink,
-              letterSpacing: -0.5,
+          if (leading != null) ...<Widget>[leading!, const SizedBox(width: 6)],
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
-          const Spacer(),
           FigmaCircleButton(
             icon: Icons.notifications_none_rounded,
             showDot: true,
@@ -303,6 +311,8 @@ class FigmaTabHeader extends StatelessWidget {
             iconSize: 16,
             onTap: onCalendar,
           ),
+          const SizedBox(width: 10),
+          trailingAction,
         ],
       ),
     );

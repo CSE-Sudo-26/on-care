@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/my_health/data/repositories/mock_my_health_repository.dart';
@@ -25,6 +26,22 @@ class _FailingGymRepository implements GymRepository {
 
   @override
   Future<List<Gym>> fetchNearby() async => const <Gym>[];
+
+  @override
+  Future<Trainer?> fetchMyTrainer() async => null;
+
+  @override
+  Future<List<Trainer>> fetchTrainersByGym(String gymId) async =>
+      const <Trainer>[];
+
+  @override
+  Future<List<Trainer>> fetchAllTrainers() async => const <Trainer>[];
+
+  @override
+  Future<Trainer?> fetchTrainer(String trainerId) async => null;
+
+  @override
+  Future<List<Trainer>> fetchRecommendedTrainers() async => const <Trainer>[];
 }
 
 /// MY 탭의 "내 트레이너 · 헬스장" 섹션은 헬스장 연결과 트레이너 연결을 각각
@@ -33,19 +50,26 @@ class _FailingGymRepository implements GymRepository {
 ///
 /// 저장소를 직접 await 하지 않는 이유: [MockGymRepository] 의 `Future.delayed`
 /// 는 위젯 테스트의 가상 시계에서 만료되지 않아 테스트가 멈춘다. 연결 상태는
-/// 이미 해소된 [myGymProvider] 를 통해 확인한다.
+/// 이미 해소된 provider 를 통해 확인한다.
 void main() {
-  test('트레이너 해제 상태가 주변 헬스장 조회에도 반영된다', () async {
+  test('헬스장을 해제하면 트레이너 연결도 함께 사라진다', () async {
+    final MockGymRepository repository = MockGymRepository();
+
+    await repository.disconnectMyGym();
+
+    expect(await repository.fetchMyGym(), isNull);
+    expect(await repository.fetchMyTrainer(), isNull);
+  });
+
+  test('트레이너만 해제해도 헬스장 목록은 그대로다', () async {
     final MockGymRepository repository = MockGymRepository();
 
     await repository.disconnectMyTrainer();
-    final List<Gym> nearby = await repository.fetchNearby();
-    final Gym connectedGym = nearby.firstWhere(
-      (Gym gym) => gym.id == 'gym-oncare-sinchon',
-    );
 
-    expect(connectedGym.trainerName, isNull);
-    expect(connectedGym.trainerRole, isNull);
+    expect(await repository.fetchMyGym(), isNotNull);
+    expect(await repository.fetchMyTrainer(), isNull);
+    // 트레이너는 Gym 에 매달려 있지 않으므로 헬스장 목록은 영향을 받지 않는다.
+    expect(await repository.fetchNearby(), isNotEmpty);
   });
 
   Future<void> pumpMyTab(
@@ -85,6 +109,12 @@ void main() {
     return ProviderScope.containerOf(
       tester.element(find.byType(MyHealthPage)),
     ).read(myGymProvider.future);
+  }
+
+  Future<Trainer?> connectedTrainer(WidgetTester tester) {
+    return ProviderScope.containerOf(
+      tester.element(find.byType(MyHealthPage)),
+    ).read(myTrainerProvider.future);
   }
 
   /// 헬스장 행 / 트레이너 행의 삭제 버튼은 툴팁으로 구분한다.
@@ -164,6 +194,7 @@ void main() {
     expect(find.text('아직 등록된 헬스장이 없어요'), findsOneWidget);
     // 운동 탭도 같은 provider 를 읽으므로 그쪽에서도 연결이 사라진다.
     expect(await connectedGym(tester), isNull);
+    expect(await connectedTrainer(tester), isNull);
   });
 
   testWidgets('트레이너만 삭제하면 헬스장 연결은 남는다', (WidgetTester tester) async {
@@ -181,9 +212,8 @@ void main() {
     expect(find.text('담당 트레이너 없음'), findsOneWidget);
     expect(find.text('트레이너 찾기'), findsOneWidget);
 
-    final Gym? gym = await connectedGym(tester);
-    expect(gym, isNotNull);
-    expect(gym!.trainerName, isNull);
+    expect(await connectedGym(tester), isNotNull);
+    expect(await connectedTrainer(tester), isNull);
   });
 
   testWidgets('트레이너를 뗀 뒤에는 트레이너 삭제 버튼이 사라진다', (WidgetTester tester) async {

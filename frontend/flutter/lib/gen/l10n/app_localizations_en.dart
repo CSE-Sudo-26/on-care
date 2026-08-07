@@ -109,7 +109,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardMetricCalories => 'Calories';
 
   @override
-  String get dashboardMetricExercise => 'Exercise';
+  String get dashboardMetricExercise => 'Weekly exercise';
 
   @override
   String get dashboardMetricWeight => 'Weight';
@@ -268,7 +268,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeWeeklyExerciseTrend => 'Weekly exercise trend';
+  String get homeWeeklyExerciseTrend => 'Exercise trend';
 
   @override
   String get homeMetricOver => 'Over';
@@ -287,16 +287,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeExerciseActiveTime => 'Weekly active time';
+  String get homeExerciseActiveTime => 'Active time';
 
   @override
-  String get homeExerciseBurned => 'Weekly calories';
+  String get homeExerciseBurned => 'Calories';
 
   @override
   String get homeExerciseCount => 'Weekly workouts';
 
   @override
-  String get homeExerciseDays => 'Weekly workout days';
+  String get homeExerciseDays => 'Workout days';
 
   @override
   String get homeExerciseBurnProgress => 'Weekly burn goal';
@@ -678,13 +678,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exGymTab => 'Gym';
 
   @override
-  String get exMyGymTrainerSection => 'My Gym & Trainer';
+  String get exMyGymSection => 'My Gym';
 
   @override
   String get exConnected => 'Connected';
-
-  @override
-  String get exMyTrainer => 'My Trainer';
 
   @override
   String get exRecommendedGyms => 'Recommended Gyms';
@@ -696,8 +693,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSeeMore => 'See more';
 
   @override
-  String get exNoGymTrainer =>
-      'You don\'t have a connected gym or trainer yet.';
+  String get exNoConnectedGym => 'You don\'t have a connected gym yet.';
 
   @override
   String get exNoRecommendedGyms => 'No gym recommendations yet.';
@@ -707,6 +703,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exTrainerAffiliation => 'Gym';
+
+  @override
+  String get exTrainerIntroSection => 'About the trainer';
+
+  @override
+  String exTrainerCareer(String career) {
+    return '$career of experience';
+  }
+
+  @override
+  String get exTrainerCertifications => 'Certifications';
 
   @override
   String get exTrainerRecommendationReason =>
@@ -946,9 +953,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exAiTopPick => '✦ AI top pick';
 
   @override
-  String get exTrainerChat => 'Trainer Chat';
-
-  @override
   String get exSendHealthSummary => 'Share Health Summary';
 
   @override
@@ -1061,38 +1065,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exKakaoMapArea => 'Kakao Map area';
-
-  @override
-  String get exDefaultTrainerName => 'Trainer Kim';
-
-  @override
-  String get exDefaultGymName => 'On-Care Gym Sinchon';
-
-  @override
-  String exChatGreeting(String trainer) {
-    return 'Hello, I\'m $trainer. 😊\nHow can I help you?';
-  }
-
-  @override
-  String get exChatChipPt => 'PT consult';
-
-  @override
-  String get exChatChipPass => 'Membership inquiry';
-
-  @override
-  String get exChatChipVisit => 'Book a visit';
-
-  @override
-  String get exChatReply =>
-      'Got it! Your trainer will reply soon. Please share a convenient time to visit. 🙌';
-
-  @override
-  String exGymConsultSubtitle(String gym) {
-    return '$gym · 1:1 Consult';
-  }
-
-  @override
-  String get exMessageHint => 'Type a message';
 
   @override
   String get myTabTitle => 'MY';

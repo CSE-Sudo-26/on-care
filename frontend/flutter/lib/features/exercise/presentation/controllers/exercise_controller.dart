@@ -7,6 +7,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_exercise_reposit
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 
@@ -158,3 +159,34 @@ final myGymProvider = FutureProvider<Gym?>((ref) {
 final nearbyGymsProvider = FutureProvider<List<Gym>>((ref) {
   return ref.watch(gymRepositoryProvider).fetchNearby();
 }, name: 'nearbyGyms');
+
+/// 담당 트레이너. 헬스장과 별도 provider 라, 트레이너만 해제해도 헬스장
+/// 카드는 그대로 남는다.
+final myTrainerProvider = FutureProvider<Trainer?>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchMyTrainer();
+}, name: 'myTrainer');
+
+/// 한 헬스장에 소속된 트레이너 전원. 헬스장 상세의 소속 트레이너 목록이 읽는다.
+final gymTrainersProvider = FutureProvider.family<List<Trainer>, String>((
+  ref,
+  String gymId,
+) {
+  return ref.watch(gymRepositoryProvider).fetchTrainersByGym(gymId);
+}, name: 'gymTrainers');
+
+/// 트레이너 상세가 자기 id 로 직접 읽는다.
+final trainerProvider = FutureProvider.family<Trainer?, String>((
+  ref,
+  String trainerId,
+) {
+  return ref.watch(gymRepositoryProvider).fetchTrainer(trainerId);
+}, name: 'trainer');
+
+final recommendedTrainersProvider = FutureProvider<List<Trainer>>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchRecommendedTrainers();
+}, name: 'recommendedTrainers');
+
+/// "트레이너 찾기" 목록이 읽는 전체 디렉터리.
+final allTrainersProvider = FutureProvider<List<Trainer>>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchAllTrainers();
+}, name: 'allTrainers');
