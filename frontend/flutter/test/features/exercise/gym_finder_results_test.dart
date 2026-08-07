@@ -181,6 +181,27 @@ void main() {
     expect(names.toSet().length, names.length, reason: '추천 트레이너 이름 중복');
   });
 
+  test('모든 트레이너가 추천 사유를 갖고, 사유가 서로 겹치지 않는다', () async {
+    // 추천 레일은 사유가 있는 트레이너만 올리므로, 사유가 없으면 그 트레이너는
+    // 레일에서 조용히 빠진다.
+    final container = _containerWith(const _KakaoFixtureRepository());
+    final trainers = await container.read(allTrainersProvider.future);
+    final recommended = await container.read(
+      recommendedTrainersProvider.future,
+    );
+
+    final missing = trainers
+        .where((Trainer t) => !(t.reason?.isNotEmpty ?? false))
+        .map((Trainer t) => t.name);
+    expect(missing, isEmpty, reason: '추천 사유가 없는 트레이너');
+
+    // 전원이 사유를 가지므로 추천 레일 = 전체 트레이너
+    expect(recommended.length, trainers.length);
+
+    final reasons = trainers.map((Trainer t) => t.reason!).toList();
+    expect(reasons.toSet().length, reasons.length, reason: '추천 사유 문구 중복');
+  });
+
   test('헬스장마다 트레이너가 2명 이상 있다', () async {
     final container = _containerWith(const _KakaoFixtureRepository());
     final gyms = await container.read(gymFinderResultsProvider.future);

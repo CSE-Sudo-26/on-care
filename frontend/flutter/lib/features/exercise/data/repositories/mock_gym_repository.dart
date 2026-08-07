@@ -66,6 +66,7 @@ class MockGymRepository implements GymRepository {
     gymId: 'gym-oncare-sinchon',
     name: '김트레이너',
     role: '퍼스널 트레이너',
+    reason: '혈압 관리와 운동을 함께 봐드려요',
     career: '7년',
     intro:
         '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 '
@@ -92,6 +93,7 @@ class MockGymRepository implements GymRepository {
       gymId: 'gym-oncare-sinchon',
       name: '최트레이너',
       role: '그룹 PT 트레이너',
+      reason: '혼자 하기 어려울 때 소그룹으로 함께해요',
       career: '4년',
       intro: '2~4인 소그룹 수업을 진행합니다. 혼자 운동하기 어려운 분께 권해 드려요.',
       certifications: <String>['생활스포츠지도사 2급'],
@@ -112,6 +114,7 @@ class MockGymRepository implements GymRepository {
       gymId: 'gym-healthmate',
       name: '윤트레이너',
       role: '근력 전문 트레이너',
+      reason: '기초 근력부터 단계별로 올려드려요',
       career: '8년',
       intro: '기초 근력부터 파워리프팅까지 단계별로 지도합니다.',
       certifications: <String>['퍼스널트레이닝 CPT'],
@@ -136,6 +139,7 @@ class MockGymRepository implements GymRepository {
       gymId: 'gym-bodyandsoul',
       name: '조트레이너',
       role: '시니어 운동 트레이너',
+      reason: '어르신 균형 운동을 오래 지도했어요',
       career: '12년',
       intro: '60대 이상 회원 수업을 오래 맡았습니다. 균형 잡기와 낙상 예방 동작부터 '
           '시작해 천천히 강도를 올립니다.',
@@ -144,8 +148,6 @@ class MockGymRepository implements GymRepository {
     // 카카오 Local 에서 온 주변 헬스장의 소속 트레이너(#329). gymId 가 카카오
     // place id 라서 데모 픽스처와 실 API 응답 양쪽에 그대로 붙는다.
     // **시연용 가상 인물이다** — 실재 업체의 실제 트레이너가 아니다.
-    // 헬스장마다 추천 사유가 붙은 1명 + 사유 없는 1명을 둬, 추천 레일은 헬스장당
-    // 한 명만 올라가고 헬스장 상세에는 2명이 보인다.
     Trainer(
       id: 'trainer-demo-jung',
       gymId: '11621774', // 휘트니스에이든
@@ -162,6 +164,7 @@ class MockGymRepository implements GymRepository {
       gymId: '11621774',
       name: '하트레이너',
       role: '체형 교정 트레이너',
+      reason: '앉아서 굳은 목과 어깨를 풀어드려요',
       career: '4년',
       intro: '오래 앉아 생긴 목·어깨 불편을 주로 다룹니다. 스트레칭과 가벼운 근력 '
           '운동을 섞어 한 시간을 채웁니다.',
@@ -183,6 +186,7 @@ class MockGymRepository implements GymRepository {
       gymId: '1558845892',
       name: '오트레이너',
       role: '그룹 PT 트레이너',
+      reason: '여럿이 하면 빠지는 날이 줄어요',
       career: '5년',
       intro: '3~5인 그룹 수업을 맡습니다. 서로 속도를 맞추다 보면 혼자 할 때보다 '
           '빠지는 날이 줄어듭니다.',
@@ -204,6 +208,7 @@ class MockGymRepository implements GymRepository {
       gymId: '328969863',
       name: '남트레이너',
       role: '퍼스널 트레이너',
+      reason: '스쿼트·데드리프트 자세를 영상으로 잡아드려요',
       career: '7년',
       intro: '스쿼트와 데드리프트 자세 교정을 주로 합니다. 영상으로 찍어 함께 보면서 '
           '바뀐 점을 확인합니다.',
@@ -225,6 +230,7 @@ class MockGymRepository implements GymRepository {
       gymId: '696444256',
       name: '배트레이너',
       role: '러닝 코치',
+      reason: '무릎이 편한 달리기 자세를 찾아드려요',
       career: '5년',
       intro: '달리기 자세와 호흡을 봐드립니다. 무릎에 부담이 덜 가는 보폭을 찾는 데 '
           '수업 시간을 많이 씁니다.',
