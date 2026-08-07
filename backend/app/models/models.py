@@ -15,7 +15,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
-    func, text, true,
+    false, func, text, true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -246,6 +246,37 @@ class Place(Base):
     kakao_place_id: Mapped[str] = mapped_column(String(50), default="")
 
 
+class GymProfile(Base):
+    """헬스장 부가 정보 — `places`(category='fitness') 의 1:1 확장. (#324)
+
+    헬스장 자체는 `Place` 다. 상담 검증(`consultation_service`)과 `/places/nearby`
+    가 이미 `places` 를 쓰기 때문에 별도 테이블을 만들지 않았다. 다만 평점·영업시간
+    같은 헬스장 전용 값을 `places` 에 넣으면 병원·약국·건강식이 공유하는 테이블이
+    오염되므로 여기로 분리한다(`TrainerProfile` 이 `User` 를 확장하는 것과 같은 꼴).
+    """
+    __tablename__ = "gym_profiles"
+
+    place_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 카카오 Local 은 평점을 주지 않는다 — 발견된 헬스장은 None.
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weekday_hours: Mapped[str] = mapped_column(String(50), default="")
+    weekend_hours: Mapped[str] = mapped_column(String(50), default="")
+    phone: Mapped[str] = mapped_column(String(20), default="")
+    tags_json: Mapped[str] = mapped_column(Text, default="[]")  # ["다이어트", "재활운동"]
+    #: 제휴 헬스장만 트레이너 연결·상담이 가능하다.
+    is_partner: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), default=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class ConsultationRequest(Base):
     """회원의 헬스장·트레이너 상담 요청."""
     __tablename__ = "consultation_requests"
@@ -331,6 +362,15 @@ class TrainerProfile(Base):
     career_years: Mapped[int] = mapped_column(Integer, default=0)       # 7 → "7년"
     intro: Mapped[str] = mapped_column(Text, default="")
     certifications_json: Mapped[str] = mapped_column(Text, default="[]")  # ["생활스포츠지도사 2급", ...]
+    #: 소속 헬스장(`places.id`). 아래 gym_* 문자열 컬럼을 대신한다 — 문자열만으로는
+    #: 한 헬스장에 여러 트레이너를 묶을 수 없었다(#324, #301). 트레이너 앱이 아직
+    #: gym_* 를 읽으므로 두 표현이 당분간 공존하고, 값이 있으면 gym_id 가 우선이다.
+    gym_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey("places.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     gym_name: Mapped[str] = mapped_column(String(100), default="")
     gym_address: Mapped[str] = mapped_column(String(300), default="")
     gym_hours: Mapped[str] = mapped_column(String(50), default="")
