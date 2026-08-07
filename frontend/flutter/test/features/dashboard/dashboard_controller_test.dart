@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 
 class _FailingDashboardRepository implements DashboardRepository {
   const _FailingDashboardRepository();
@@ -90,6 +92,46 @@ void main() {
     expect(s.macros.carbsG, today.macros.carbsG);
     expect(s.macros.proteinG, today.macros.proteinG);
     expect(s.macros.fatG, today.macros.fatG);
+  });
+
+  // 저장소끼리 값이 맞아도, 홈 요약 provider 가 다시 읽지 않으면 화면은 옛
+  // 수치를 계속 보여준다. 식단 CRUD 가 하는 일(dietTodayProvider 무효화)만으로
+  // 홈 요약이 갱신되는지 본다(CodeRabbit 리뷰).
+  test('식단 무효화가 홈 요약 provider 를 다시 읽게 한다', () async {
+    const AppConfig config = AppConfig(
+      environment: Environment.dev,
+      apiBaseUrl: 'https://dev.api.test',
+      useMockApi: true,
+    );
+    final MockDietRepository diet = MockDietRepository();
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        appConfigProvider.overrideWithValue(config),
+        dietRepositoryProvider.overrideWithValue(diet),
+      ],
+    );
+    addTearDown(container.dispose);
+    // autoDispose 라 구독이 없으면 버려진다 — 화면이 떠 있는 상태를 흉내낸다.
+    final ProviderSubscription<AsyncValue<DashboardSummary>> sub = container
+        .listen(dashboardSummaryProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    final DashboardSummary before = await container.read(
+      dashboardSummaryProvider.future,
+    );
+    expect(before.dietEntries, 3);
+
+    final DietDay day = await diet.fetchToday();
+    await diet.deleteEntry(
+      day.entries.firstWhere((DietEntry e) => e.mealType == MealType.lunch).id!,
+    );
+    // 식단 화면이 CRUD 후 하는 것과 같다.
+    container.invalidate(dietTodayProvider);
+
+    final DashboardSummary after = await container.read(
+      dashboardSummaryProvider.future,
+    );
+    expect(after.dietEntries, 2);
   });
 
   // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
