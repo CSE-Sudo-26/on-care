@@ -53,6 +53,26 @@
 > 정책이 복수 담당으로 바뀌면 이 인덱스를 제거하고 회원측 코치·채팅·루틴 API를
 > **목록 기반**으로 바꿔야 한다(현재는 단일 담당 가정).
 
+### 트레이너 헬스장 소속 정책 (`0020_gym_profiles_trainer_fk`)
+
+- 트레이너는 현재 **헬스장 한 곳**에만 소속한다. `TrainerProfile.gym_id`는
+  `places.id`를 참조하는 단일 nullable FK이며, 복수 소속 관계 테이블은 두지 않는다.
+- `gym_id`는 기존 프로필과 헬스장 삭제를 안전하게 처리하기 위해 nullable이다.
+  헬스장 `Place`가 삭제되면 `ON DELETE SET NULL`로 소속만 해제되고 트레이너
+  계정은 남는다. 트레이너 `User`가 삭제되면 프로필은 `ON DELETE CASCADE`로
+  함께 삭제된다.
+- 상담 요청은 `gym_id`가 실제로 존재하는 `Place`를 가리키고 그 장소의
+  `category == "fitness"`일 때만 트레이너를 유효한 대상으로 인정한다. FK만으로는
+  다른 카테고리를 막을 수 없어 `consultation_service._validate_target()`에서 검증한다.
+- 소속 변경 이력은 **현재 보존하지 않는다**. 프로필의 `gym_id`를 교체하며,
+  이력·복수 소속이 실제 요구되면 별도 관계 테이블로 확장한다.
+- 관계 판단의 기준은 `gym_id`다. 기존 `gym_name`, `gym_address`, `gym_hours`,
+  `gym_phone`은 트레이너 웹의 `gym {name, address, hours, phone}` 계약을
+  유지하기 위한 호환 필드로 당분간 남겨 둔다.
+- 현재 `gym_id`를 채우는 경로는 `seed_gyms.py`의 `gym_name` 이름 매칭
+  백필뿐이다. 설정 API는 아직 없고, 트레이너 앱의 프로필 수정은
+  호환용 `gym_*` 문자열만 바꾼다(후속 과제).
+
 ## 4. 트레이너 API (`/v1/trainer/*`, RequireTrainer)
 
 | Method | Path | 설명 |
@@ -167,8 +187,13 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 
 ## 8. 마이그레이션 선형화 주의
 
-트레이너 마이그레이션은 스택이 **가장 마지막에 머지**되므로 병렬로 갈라졌던 번호를
-재선형화했다: `0010_diet_entry_macros`(#207) → `0011_health_daily_sugar_g`(#230/#231)
-→ **`0012_trainer_domain`**(도메인 테이블) → **`0013_trainer_active_coach_uq`**(회원당
-active 담당 1명 partial unique index). 반드시 `0010`·`0011`이 main에 반영된 뒤 머지해야
-alembic 단일 head가 유지된다. 자세한 배포/마이그레이션 절차는 배포 문서를 참고.
+트레이너 마이그레이션은 `0012_trainer_domain` →
+`0013_trainer_active_coach_uq` 뒤에 상담·트레이너 인덱스의 두 `0014` 분기를
+`0015_merge_alembic_heads`로 합친다. 그 뒤는 `0016_drop_vitals` →
+`0017_add_diet_exercise_goals` → `0018_diet_entry_sugar_g_float` →
+`0019_trainer_noti_settings` → **`0020_gym_profiles_trainer_fk`** 순의 단일
+chain이다. `0020`의 `down_revision`은 `0019_trainer_noti_settings`다.
+
+배포는 이 순서를 따라 `alembic upgrade head`를 실행하며, CI에서
+`alembic heads`가 하나인지 먼저 검증한다. 이미 별도 migration head를 적용한 DB는
+`down_revision`을 임의로 바꾸지 말고 배포 문서의 merge revision 절차를 따른다.
