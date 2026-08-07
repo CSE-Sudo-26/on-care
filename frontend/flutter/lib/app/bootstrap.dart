@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:oncare/app/app.dart';
+import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/core/logging/logging_provider_observer.dart';
@@ -76,6 +77,7 @@ Future<void> bootstrap() async {
         appLoggerProvider.overrideWithValue(logger),
         sharedPreferencesProvider.overrideWithValue(prefs),
         appDatabaseProvider.overrideWithValue(db),
+        sessionFeatureResetOverride(),
       ],
       child: const OncareApp(),
     ),
