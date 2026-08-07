@@ -68,6 +68,10 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+          // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+          gymFinderResultsProvider.overrideWith(
+            (ref) async => const <Gym>[_gym],
+          ),
           myGymProvider.overrideWith((ref) async => null),
           myTrainerProvider.overrideWith((ref) async => null),
           trainerProvider(trainer.id).overrideWith((ref) async => trainer),
@@ -135,7 +139,7 @@ void main() {
       expect(trainer.career, '7년');
       expect(
         trainer.intro,
-        '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 안전하고 효과적인 운동을 도와드려요.',
+        '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 회원 상태에 맞춘 AI 루틴을 활용해 안전한 강도부터 시작합니다.',
       );
       expect(trainer.certifications, <String>[
         '생활스포츠지도사 2급',

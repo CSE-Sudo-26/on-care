@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/features/exercise/data/kakao_gym_demo_profile.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_exercise_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
@@ -10,6 +11,9 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
+import 'package:oncare/features/place/domain/entities/place.dart';
+import 'package:oncare/features/place/domain/entities/place_query.dart';
+import 'package:oncare/features/place/presentation/controllers/place_controller.dart';
 
 final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
   // Local/demo mode serves the mock "오늘 PT 받은 날" scenario week (12회차 PT,
@@ -159,6 +163,76 @@ final myGymProvider = FutureProvider<Gym?>((ref) {
 final nearbyGymsProvider = FutureProvider<List<Gym>>((ref) {
   return ref.watch(gymRepositoryProvider).fetchNearby();
 }, name: 'nearbyGyms');
+
+/// 헬스장 찾기가 지도 중심으로 삼는 좌표 — 제휴 헬스장(온케어짐 신촌점)이
+/// 있는 신촌 권역. 기기 위치 권한이 붙기 전까지의 고정값이다.
+const PlaceQuery kGymFinderArea = PlaceQuery(
+  lat: 37.5559,
+  lng: 126.9368,
+  category: PlaceCategory.fitness,
+);
+
+/// 카카오 Local 이 준 주변 헬스장을 [Gym] 형태로 옮긴다.
+///
+/// 이름·주소·거리·좌표는 카카오 실데이터다. 카카오가 주지 않는 평점·전문분야·
+/// 영업시간은 [allowDemoProfile] 일 때만 [kKakaoGymDemoProfiles] 의 시연용 값으로
+/// 채운다. **실 API 응답에는 붙이지 않는다** — 지어낸 값이 실재 업체의 사실
+/// 정보처럼 보이면 안 되기 때문이다(CodeRabbit 리뷰). 값이 없으면 비워 두고,
+/// 평점 0 이면 UI 가 뱃지를 감춘다.
+///
+/// 소속 트레이너는 [Gym] 이 아니라 [Trainer] 에 있으므로 `MockGymRepository` 가
+/// gymId 로 들고 있다.
+Gym _gymFromPlace(Place p, {required bool allowDemoProfile}) {
+  final KakaoGymDemoProfile? demo = allowDemoProfile
+      ? kKakaoGymDemoProfiles[p.id]
+      : null;
+  return Gym(
+    id: p.id,
+    name: p.name,
+    address: p.address,
+    distanceKm: p.distanceMeters / 1000,
+    rating: demo?.rating ?? 0,
+    tags: demo?.tags ?? const <String>[],
+    phone: demo?.phone,
+    weekdayHours: demo?.weekdayHours,
+    weekendHours: demo?.weekendHours,
+    lat: p.lat,
+    lng: p.lng,
+  );
+}
+
+String _gymNameKey(String name) => name.replaceAll(RegExp(r'\s+'), '');
+
+/// 헬스장 찾기 전용 목록 — 제휴 헬스장(평점·트레이너 보유)을 앞에 두고,
+/// 카카오 Local 의 주변 헬스장을 뒤에 이어 붙인다.
+///
+/// [nearbyGymsProvider] 를 그대로 두는 이유: 트레이너 목록·상담 신청이 같은
+/// provider 를 보므로, 거기에 카카오 결과를 섞으면 그 화면들이 흐트러진다.
+final gymFinderResultsProvider = FutureProvider<List<Gym>>((ref) async {
+  final List<Gym> partners = await ref.watch(nearbyGymsProvider.future);
+  // 시연용 보강값은 데모(mock) 경로에서만 붙인다.
+  final bool demo = ref.watch(appConfigProvider).useMockApi;
+
+  List<Gym> discovered = const <Gym>[];
+  try {
+    final List<Place> places = await ref
+        .watch(placeRepositoryProvider)
+        .nearbyPlaces(kGymFinderArea);
+    discovered = places
+        .map((Place p) => _gymFromPlace(p, allowDemoProfile: demo))
+        .toList();
+  } on Object {
+    // 카카오가 실패해도 제휴 목록은 그대로 보여준다(#329 폴백 요건).
+  }
+
+  // 제휴 헬스장이 카카오에도 잡히면 중복이므로, 제휴 쪽(정보가 더 많다)을 남긴다.
+  final Set<String> seen = partners.map((Gym g) => _gymNameKey(g.name)).toSet();
+  return <Gym>[
+    ...partners,
+    for (final Gym g in discovered)
+      if (seen.add(_gymNameKey(g.name))) g,
+  ];
+}, name: 'gymFinderResults');
 
 /// 담당 트레이너. 헬스장과 별도 provider 라, 트레이너만 해제해도 헬스장
 /// 카드는 그대로 남는다.

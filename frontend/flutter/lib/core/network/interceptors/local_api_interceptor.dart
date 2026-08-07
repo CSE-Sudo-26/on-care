@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart'
@@ -1171,7 +1172,7 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Places ----
 
   Future<Response<Object?>> _placesNearby(RequestOptions options) async {
-    return _ok(options, <Map<String, Object?>>[
+    const rows = <Map<String, Object?>>[
       <String, Object?>{
         'id': 'p1',
         'name': '강남세브란스 가정의학과',
@@ -1180,15 +1181,6 @@ class LocalApiInterceptor extends Interceptor {
         'distance_meters': 420,
         'lat': 37.4979,
         'lng': 127.0276,
-      },
-      <String, Object?>{
-        'id': 'p2',
-        'name': '온케어 피트니스',
-        'category': 'fitness',
-        'address': '서울특별시 강남구 역삼로 55',
-        'distance_meters': 680,
-        'lat': 37.5005,
-        'lng': 127.0319,
       },
       <String, Object?>{
         'id': 'p3',
@@ -1208,7 +1200,111 @@ class LocalApiInterceptor extends Interceptor {
         'lat': 37.4995,
         'lng': 127.0263,
       },
-    ]);
+      // 헬스장 찾기(#329)가 보는 신촌 권역 후보. 카카오 Local `헬스장` 검색 실응답을
+      // 그대로 옮긴 것이라 id·이름·주소·거리·좌표가 전부 실데이터이고, 실 API 로
+      // 전환해도 같은 id 로 매칭된다(`kakao_gym_demo_profile.dart`).
+      // 제휴 헬스장(온케어짐/헬스메이트/바디앤소울)과 이름이 겹치지 않는 곳만 골랐다.
+      <String, Object?>{
+        'id': '11621774',
+        'name': '휘트니스에이든',
+        'category': 'fitness',
+        'address': '서울 마포구 신촌로 92',
+        'distance_meters': 127,
+        'lat': 37.5551767483122,
+        'lng': 126.935686079639,
+      },
+      <String, Object?>{
+        'id': '1558845892',
+        'name': '하이핏',
+        'category': 'fitness',
+        'address': '서울 서대문구 연세로4길 19',
+        'distance_meters': 186,
+        'lat': 37.5573727191112,
+        'lng': 126.937816432934,
+      },
+      <String, Object?>{
+        'id': '328969863',
+        'name': '빌드업짐 PT 신촌점',
+        'category': 'fitness',
+        'address': '서울 서대문구 연세로4길 1',
+        'distance_meters': 133,
+        'lat': 37.5570723299884,
+        'lng': 126.937142154792,
+      },
+      <String, Object?>{
+        'id': '696444256',
+        'name': '신인규피티스튜디오',
+        'category': 'fitness',
+        'address': '서울 서대문구 명물길 10',
+        'distance_meters': 177,
+        'lat': 37.5573851891011,
+        'lng': 126.937543667755,
+      },
+    ];
+
+    // category 는 언제나 존중한다 — 필터링하지 않으면 헬스장 찾기에 병원·약국이
+    // 섞여 들어온다.
+    //
+    // 좌표가 실제로 전달된 요청은 거리도 그 중심 기준으로 다시 재고 radius_m 밖을
+    // 잘라낸다. 고정 거리를 그대로 주면 지도 중심을 옮겼을 때 mock 과 실 응답이
+    // 어긋난다(리뷰 지적). 좌표가 없으면 걸러낼 기준이 없으므로 픽스처를 그대로
+    // 준다 — 이 픽스처는 여러 동네에 흩어져 있어 백엔드 기본 중심(서울시청·3km)을
+    // 적용하면 전부 사라진다. 실 백엔드의 시드는 시청 근처라 그런 문제가 없다.
+    final Map<String, dynamic> q = options.queryParameters;
+    final String? category = q['category'] as String?;
+    final double? lat = _asDouble(q['lat']);
+    final double? lng = _asDouble(q['lng']);
+    final int radiusM = (_asDouble(q['radius_m']) ?? 3000).round();
+
+    final List<Map<String, Object?>> out = <Map<String, Object?>>[];
+    for (final Map<String, Object?> row in rows) {
+      if (category != null && row['category'] != category) continue;
+      if (lat == null || lng == null) {
+        out.add(row);
+        continue;
+      }
+      final int distance = _haversineMeters(
+        lat,
+        lng,
+        row['lat']! as double,
+        row['lng']! as double,
+      );
+      if (distance > radiusM) continue;
+      out.add(<String, Object?>{...row, 'distance_meters': distance});
+    }
+    out.sort(
+      (Map<String, Object?> a, Map<String, Object?> b) =>
+          (a['distance_meters']! as int).compareTo(b['distance_meters']! as int),
+    );
+    return _ok(options, out);
+  }
+
+  static double? _asDouble(Object? v) => switch (v) {
+    final num n => n.toDouble(),
+    final String s => double.tryParse(s),
+    _ => null,
+  };
+
+  /// 두 좌표 사이 거리(m). 백엔드 `places.py` 의 `_haversine_m` 과 같은 계산이다.
+  ///
+  /// 마지막 변환은 반올림이 아니라 **절삭**이어야 한다 — 백엔드가 `int(...)` 로
+  /// 소수점을 버리므로, `round()` 를 쓰면 같은 좌표에서 mock 과 실 응답의
+  /// `distance_meters` 가 1m 어긋난다(리뷰 지적).
+  static int _haversineMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const double r = 6371000;
+    final double p1 = lat1 * math.pi / 180;
+    final double p2 = lat2 * math.pi / 180;
+    final double dp = (lat2 - lat1) * math.pi / 180;
+    final double dl = (lng2 - lng1) * math.pi / 180;
+    final double a =
+        math.sin(dp / 2) * math.sin(dp / 2) +
+        math.cos(p1) * math.cos(p2) * math.sin(dl / 2) * math.sin(dl / 2);
+    return (r * 2 * math.asin(math.sqrt(a))).toInt();
   }
 
   String _timeAgoKorean(Duration d) {

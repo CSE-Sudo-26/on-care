@@ -97,9 +97,11 @@ const TrainerProfile seedTrainerProfile = TrainerProfile(
   phone: '010-1234-5678',
   specialty: '퍼스널 트레이너',
   career: '7년',
+  // 회원앱 `MockGymRepository._kim.intro` 와 같은 문구여야 한다 — 한 사람이 두 앱에서
+  // 같게 읽혀야 하고, 회원앱 테스트가 이 값을 그대로 비교한다.
   intro:
-      '혈압 관리와 체중 감량 전문 트레이너입니다. 고객 맞춤형 AI 루틴으로 '
-      '안전하고 효과적인 운동을 도와드려요.',
+      '혈압 관리와 체중 감량을 함께 다루는 퍼스널 트레이너입니다. 회원 상태에 맞춘 '
+      'AI 루틴을 활용해 안전한 강도부터 시작합니다.',
   certifications: <String>['생활스포츠지도사 2급', '퍼스널트레이닝 CPT', '스포츠 영양사'],
   gym: TrainerGym(
     name: '온케어짐 신촌점',

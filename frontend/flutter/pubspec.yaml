@@ -52,14 +52,18 @@ dependencies:
   fl_chart: ^0.69.2
   flutter_animate: ^4.5.0
 
+  # 카카오맵 JS SDK 를 HtmlElementView 로 붙일 때 DOM 접근에 쓴다(web 전용 경로).
+  web: ^1.1.0
+
   # --- i18n / utilities ---
   intl: any
   logger: ^2.4.0
   equatable: ^2.0.7
 
-  # --- Maps (Q8) ---
-  google_maps_flutter: ^2.9.0
-  google_maps_flutter_web: ^0.5.10
+  # --- Maps ---
+  # 지도는 카카오맵으로 통일(#329) — 백엔드 장소 검색이 카카오 Local 이라 베이스맵도
+  # 같은 출처로 맞춘다. 카카오는 Flutter 용 지도 SDK 가 없어 web 은 JS SDK 를
+  # HtmlElementView 로 직접 삽입하므로 pub 의존성이 필요 없다.
   url_launcher: ^6.3.1
   image_picker: ^1.2.3
 

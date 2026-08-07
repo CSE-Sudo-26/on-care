@@ -26,7 +26,11 @@ class GymDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
+    // 목록(헬스장 찾기)이 제휴 + 카카오를 합쳐 보여주므로 상세도 같은 소스를 봐야
+    // 카카오에서 온 헬스장을 눌렀을 때 "찾을 수 없음"이 되지 않는다(#329).
+    final AsyncValue<List<Gym>> nearbyAsync = ref.watch(
+      gymFinderResultsProvider,
+    );
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
@@ -60,7 +64,7 @@ class GymDetailPage extends ConsumerWidget {
       body = _StateMessage(
         message: l.exGymsLoadError,
         onRetry: () {
-          ref.invalidate(nearbyGymsProvider);
+          ref.invalidate(gymFinderResultsProvider);
           ref.invalidate(myGymProvider);
         },
       );

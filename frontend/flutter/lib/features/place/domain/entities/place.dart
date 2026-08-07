@@ -8,6 +8,14 @@ PlaceCategory _categoryFromWire(String s) => switch (s) {
   _ => PlaceCategory.medical,
 };
 
+/// Inverse of [_categoryFromWire] — used for the `category` query parameter.
+String categoryToWire(PlaceCategory c) => switch (c) {
+  PlaceCategory.healthyFood => 'healthy_food',
+  PlaceCategory.fitness => 'fitness',
+  PlaceCategory.pharmacy => 'pharmacy',
+  PlaceCategory.medical => 'medical',
+};
+
 class Place {
   const Place({
     required this.id,

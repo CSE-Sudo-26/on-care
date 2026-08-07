@@ -80,6 +80,10 @@ void main() {
         overrides: <Override>[
           myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
           nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+          // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+          gymFinderResultsProvider.overrideWith(
+            (ref) async => const <Gym>[_gym],
+          ),
           myTrainerProvider.overrideWith((ref) async => trainer),
           trainerProvider(_trainer.id).overrideWith((ref) async => _trainer),
           gymTrainersProvider(

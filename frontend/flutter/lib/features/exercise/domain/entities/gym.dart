@@ -16,6 +16,8 @@ class Gym {
     this.weekdayHours,
     this.weekendHours,
     this.phone,
+    this.lat,
+    this.lng,
   });
 
   final String id;
@@ -27,4 +29,11 @@ class Gym {
   final String? weekdayHours;
   final String? weekendHours;
   final String? phone;
+
+  /// 지도 핀 좌표. 좌표를 모르는 헬스장은 목록에만 뜨고 핀은 생략된다
+  /// (제휴 데이터가 `/gyms/*` 로 옮겨가기 전까지는 비어 있을 수 있다 — #324).
+  final double? lat;
+  final double? lng;
+
+  bool get hasCoordinates => lat != null && lng != null;
 }

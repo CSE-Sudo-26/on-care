@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 enum _GymSort { recommended, distance, rating }
@@ -45,7 +46,9 @@ class _GymListPageState extends ConsumerState<GymListPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<List<Gym>> gymsAsync = ref.watch(nearbyGymsProvider);
+    // 제휴 헬스장 + 카카오 Local 주변 헬스장(#329). 카카오 쪽만 좌표가 있어도
+    // 지도는 뜨고, 카카오가 실패하면 제휴 목록만 남는다.
+    final AsyncValue<List<Gym>> gymsAsync = ref.watch(gymFinderResultsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -76,7 +79,9 @@ class _GymListPageState extends ConsumerState<GymListPage> {
                     onChanged: (String value) => setState(() => _query = value),
                   ),
                   const SizedBox(height: 16),
-                  const _GymMiniMap(pinCount: 3),
+                  _GymMap(
+                    gyms: _visibleGyms(gymsAsync.valueOrNull ?? const <Gym>[]),
+                  ),
                   const SizedBox(height: 16),
                   Expanded(
                     child: gymsAsync.when(
@@ -85,7 +90,7 @@ class _GymListPageState extends ConsumerState<GymListPage> {
                       ),
                       error: (Object _, StackTrace _) => _LoadError(
                         message: l.exGymsLoadError,
-                        onRetry: () => ref.invalidate(nearbyGymsProvider),
+                        onRetry: () => ref.invalidate(gymFinderResultsProvider),
                       ),
                       data: (List<Gym> gyms) {
                         final List<Gym> visible = _visibleGyms(gyms);
@@ -425,6 +430,43 @@ class _EmptyResults extends StatelessWidget {
         message,
         textAlign: TextAlign.center,
         style: const TextStyle(color: FigmaColors.textMuted, fontSize: 13),
+      ),
+    );
+  }
+}
+
+/// 목록에 보이는 헬스장을 카카오맵 핀으로 찍는다. `KAKAO_JS_KEY` 가 없거나
+/// SDK 로드가 실패하면 [_GymMiniMap] 그래픽으로 폴백한다(#329).
+class _GymMap extends StatelessWidget {
+  const _GymMap({required this.gyms});
+
+  final List<Gym> gyms;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Gym> located = gyms
+        .where((Gym g) => g.hasCoordinates)
+        .toList(growable: false);
+
+    return SizedBox(
+      // 핀이 여러 개 들어가야 해서 폴백 그래픽(150)보다 1.5배 높게 잡는다.
+      height: 225,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: KakaoMapView(
+          // 지도 중심은 언제나 검색 중심([kGymFinderArea])이다. 첫 결과 좌표를
+          // 쓰면 검색어·정렬·응답 순서에 따라 중심이 흔들려, 지도 중심과 장소
+          // 검색 중심이 같아야 한다는 요건이 깨진다.
+          centerLat: kGymFinderArea.lat,
+          centerLng: kGymFinderArea.lng,
+          markers: <KakaoMapMarker>[
+            for (final Gym g in located)
+              KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
+          ],
+          fallback: _GymMiniMap(
+            pinCount: located.isEmpty ? 3 : located.length,
+          ),
+        ),
       ),
     );
   }

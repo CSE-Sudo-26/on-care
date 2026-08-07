@@ -22,7 +22,8 @@ class TrainerDetailPage extends ConsumerWidget {
     final AsyncValue<Trainer?> trainerAsync = ref.watch(
       trainerProvider(trainerId),
     );
-    final AsyncValue<List<Gym>> gymsAsync = ref.watch(nearbyGymsProvider);
+    // 카카오 헬스장 소속 트레이너의 소속 헬스장 카드도 떠야 한다(#329).
+    final AsyncValue<List<Gym>> gymsAsync = ref.watch(gymFinderResultsProvider);
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
