@@ -44,7 +44,7 @@ void main() {
           // 9.8); the smoke test only inspects the nav, so the mock is
           // plenty.
           dashboardRepositoryProvider.overrideWithValue(
-            const MockDashboardRepository() as DashboardRepository,
+            MockDashboardRepository(MockDietRepository()) as DashboardRepository,
           ),
           if (locale != null) localeProvider.overrideWith((ref) => locale),
         ],
