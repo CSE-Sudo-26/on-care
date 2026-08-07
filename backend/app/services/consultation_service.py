@@ -51,10 +51,12 @@ def _validate_target(db: Session, payload: ConsultationCreate) -> None:
     trainer = db.scalar(
         select(User)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
+        .join(Place, Place.id == TrainerProfile.gym_id)
         .where(
             User.id == payload.trainer_id,
             User.role == "trainer",
             User.is_active.is_(True),
+            Place.category == "fitness",
         )
     )
     if trainer is None:
