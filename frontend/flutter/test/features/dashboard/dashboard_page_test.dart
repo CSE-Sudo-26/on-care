@@ -8,6 +8,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
 
 void main() {
@@ -28,7 +29,7 @@ void main() {
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           localeProvider.overrideWith((ref) => const Locale('ko')),
           dashboardRepositoryProvider.overrideWithValue(
-            const MockDashboardRepository(),
+            MockDashboardRepository(MockDietRepository()),
           ),
         ],
         child: const OncareApp(),
@@ -50,8 +51,9 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('식단 · 영양'), findsOneWidget);
-    expect(find.text('1,860'), findsWidgets);
-    expect(find.text('203.6g'), findsOneWidget);
+    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal, 탄수화물 120g.
+    expect(find.text('1,067'), findsWidgets);
+    expect(find.text('120g'), findsOneWidget);
     expect(find.text('오늘의 일정'), findsOneWidget);
     expect(find.text('병원 정기검진'), findsOneWidget);
   });

@@ -26,7 +26,7 @@ import 'package:oncare/shared/services/locale_provider.dart';
 /// 보게 바뀌자, 시드가 준비한 통합 조언 대신 mock 의 나트륨 단문이 노출됐다.
 void main() {
   test('데모 mock 요약이 통합 조언을 그대로 싣는다', () async {
-    final DashboardSummary summary = await const MockDashboardRepository()
+    final DashboardSummary summary = await MockDashboardRepository(MockDietRepository())
         .fetchSummary();
 
     // 홈은 sodiumWarning 을 통합 조언 자리로 쓴다(dashboard_content.dart).

@@ -5,6 +5,8 @@ import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repos
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
+import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 
 class _FailingDashboardRepository implements DashboardRepository {
   const _FailingDashboardRepository();
@@ -22,7 +24,7 @@ void main() {
         // Default impl is DioDashboardRepository (Stage 9.8). For
         // this unit test the React-shaped mock is enough.
         dashboardRepositoryProvider.overrideWithValue(
-          const MockDashboardRepository(),
+          MockDashboardRepository(MockDietRepository()),
         ),
       ],
     );
@@ -56,16 +58,67 @@ void main() {
   });
 
   test('MockDashboardRepository marks sodium as over-budget', () async {
-    const repo = MockDashboardRepository();
+    final repo = MockDashboardRepository(MockDietRepository());
     final s = await repo.fetchSummary();
     final sodium = s.indicators.firstWhere(
       (HealthIndicator h) => h.label == '나트륨',
     );
     expect(sodium.overBudget, isTrue);
     expect(sodium.progress, 1.0); // clamped
-    expect(s.macros.carbsG, 203.6);
-    expect(s.macros.proteinG, 109.3);
-    expect(s.macros.fatG, 66.5);
+    // 매크로는 식단 저장소가 준 값 그대로다(탄120·단45·지45 = 45/17/38%).
+    expect(s.macros.carbsG, 120);
+    expect(s.macros.proteinG, 45);
+    expect(s.macros.fatG, 45);
+  });
+
+  // 홈이 영양 수치를 따로 들고 있다가 식단 탭과 어긋났다 — 홈 2,329mg·4끼 vs
+  // 식단 3,428mg·3끼. 식단이 기준이므로 두 화면이 같은 값을 보는지 못박는다.
+  test('홈 요약의 영양 수치는 식단 하루치와 일치한다', () async {
+    final MockDietRepository diet = MockDietRepository();
+    final DietDay today = await diet.fetchToday();
+    final DashboardSummary s = await MockDashboardRepository(
+      diet,
+    ).fetchSummary();
+
+    num indicator(String label) =>
+        s.indicators.firstWhere((HealthIndicator h) => h.label == label).current;
+
+    expect(indicator('칼로리'), today.totalCalories);
+    expect(indicator('나트륨'), today.totalSodiumMg);
+    expect(indicator('당류'), today.totalSugarG);
+    expect(s.dietEntries, today.entries.length);
+    expect(s.macros.carbsG, today.macros.carbsG);
+    expect(s.macros.proteinG, today.macros.proteinG);
+    expect(s.macros.fatG, today.macros.fatG);
+  });
+
+  // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
+  test('식단 CRUD 가 홈 요약에 반영된다', () async {
+    final MockDietRepository diet = MockDietRepository();
+    final MockDashboardRepository dashboard = MockDashboardRepository(diet);
+
+    final DashboardSummary before = await dashboard.fetchSummary();
+    final DietDay day = await diet.fetchToday();
+    final DietEntry lunch = day.entries.firstWhere(
+      (DietEntry e) => e.mealType == MealType.lunch,
+    );
+    await diet.deleteEntry(lunch.id!);
+    final DashboardSummary after = await dashboard.fetchSummary();
+
+    num sodium(DashboardSummary s) => s.indicators
+        .firstWhere((HealthIndicator h) => h.label == '나트륨')
+        .current;
+
+    expect(before.dietEntries, 3);
+    expect(after.dietEntries, 2);
+    // 짬뽕(3,200mg)이 빠지면 목표 아래로 내려온다.
+    expect(sodium(after), lessThan(sodium(before)));
+    expect(
+      after.indicators
+          .firstWhere((HealthIndicator h) => h.label == '나트륨')
+          .overBudget,
+      isFalse,
+    );
   });
 
   test('DashboardSummary parses macros and supports older responses', () {
