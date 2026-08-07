@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from dataclasses import dataclass
@@ -31,6 +32,13 @@ from app.schemas.diet_api import DietRecommendationItem, DietRecommendationsResp
 from app.services.coach.llm import get_coach_llm
 
 logger = logging.getLogger(__name__)
+
+
+class LLMBusyError(RuntimeError):
+    """LLM 동시 호출 한도가 차서 호출을 시도조차 하지 않았음을 알린다.
+
+    "실패"와 구분해야 로그에서 장애와 포화를 헷갈리지 않는다.
+    """
 
 #: 신호를 뽑을 기간. 오늘 하루만 보면 아침 한 끼로 추천이 출렁이고, 너무 길게 보면
 #: 최근 개선이 묻힌다.
@@ -60,7 +68,20 @@ LLM_THINKING_BUDGET = 128
 #: 같은 신호 조합이면 결과가 같으므로 짧게 캐시한다.
 CACHE_TTL_SEC = 300
 
-_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="diet-rec-llm")
+LLM_MAX_CONCURRENCY = 4
+
+_executor = ThreadPoolExecutor(
+    max_workers=LLM_MAX_CONCURRENCY, thread_name_prefix="diet-rec-llm"
+)
+
+#: 진행 중인 LLM 호출 수를 워커 수로 제한한다.
+#:
+#: `future.result(timeout=...)` 은 **기다리기를 포기할 뿐 작업을 취소하지 않는다.**
+#: 그래서 느린 호출이 몰리면 워커 4개가 모두 묶이고, 이후 submit 은 무한 큐에 쌓인다.
+#: 그 상태에서는 새 요청이 LLM 을 호출해 보지도 못한 채 큐에서 타임아웃까지 기다렸다가
+#: 폴백한다 — 개인화는 조용히 사라지고 응답만 매번 느려진다.
+#: 빈 자리가 없으면 기다리지 않고 곧장 규칙 폴백으로 내려간다.
+_llm_slots = threading.BoundedSemaphore(LLM_MAX_CONCURRENCY)
 
 #: key -> (만료 시각, 응답). 단일 인스턴스/데모 기준. 다중 인스턴스면 Redis 로 교체.
 _cache: dict[str, tuple[float, DietRecommendationsResponse]] = {}
@@ -202,6 +223,30 @@ def _fallback_items(ctx: NutritionContext) -> list[DietRecommendationItem]:
     ]
 
 
+def _response(
+    ctx: NutritionContext,
+    items: list[DietRecommendationItem],
+    *,
+    personalized: bool,
+    source: str,
+) -> DietRecommendationsResponse:
+    """응답 조립 — 근거를 문장과 수치 양쪽으로 싣는다.
+
+    `basis` 는 서버가 조립한 한국어 문장이라 영어 로케일에 그대로 못 쓴다. 그래서
+    앱이 직접 문구를 만들 수 있도록 수치도 함께 준다(요리명·이유를 key 로 주고받는
+    것과 같은 이유).
+    """
+    return DietRecommendationsResponse(
+        items=items,
+        basis=ctx.basis(),
+        personalized=personalized,
+        source=source,
+        days_with_data=ctx.days_with_data,
+        avg_sodium_mg=ctx.avg_sodium_mg,
+        sodium_limit_mg=ctx.sodium_limit_mg,
+    )
+
+
 def _build_prompt(ctx: NutritionContext) -> tuple[str, str]:
     catalog_lines = "\n".join(
         f"- {i.key}: 태그={'/'.join(i.tags)}, {i.calories}kcal, "
@@ -291,13 +336,26 @@ def _parse_llm_items(raw: str, ctx: NutritionContext) -> list[DietRecommendation
 
 
 def _llm_items(ctx: NutritionContext) -> list[DietRecommendationItem]:
-    """LLM 호출 + 타임아웃. 실패는 호출부가 잡아 규칙 폴백으로 내린다."""
+    """LLM 호출 + 타임아웃. 실패는 호출부가 잡아 규칙 폴백으로 내린다.
+
+    빈 워커가 없으면 큐에서 기다리지 않고 즉시 실패시킨다(_llm_slots 주석 참고).
+    기다려 봐야 타임아웃이고, 그동안 요청 스레드만 붙잡아 두기 때문이다.
+    """
+    if not _llm_slots.acquire(blocking=False):
+        raise LLMBusyError("LLM 동시 호출 한도 초과 — 규칙 폴백")
+
     system, user = _build_prompt(ctx)
-    future = _executor.submit(
-        lambda: get_coach_llm().generate(
-            system, user, json_mode=True, thinking_budget=LLM_THINKING_BUDGET
-        )
-    )
+
+    def _call():
+        try:
+            return get_coach_llm().generate(
+                system, user, json_mode=True, thinking_budget=LLM_THINKING_BUDGET
+            )
+        finally:
+            # 타임아웃으로 호출부가 떠난 뒤라도 작업이 끝나면 자리를 반드시 돌려준다.
+            _llm_slots.release()
+
+    future = _executor.submit(_call)
     result = future.result(timeout=LLM_TIMEOUT_SEC)
     return _parse_llm_items(result.text, ctx)
 
@@ -315,39 +373,31 @@ def build_recommendations(
     # 근거가 없으면 LLM 을 부를 이유가 없다. 신규 가입자는 여기서 현재 홈 화면과
     # 동일한 기본 순서를 받는다.
     if not ctx.has_data or not ctx.signals:
-        return DietRecommendationsResponse(
-            items=_fallback_items(ctx),
-            basis=ctx.basis(),
-            personalized=False,
-            source="fallback",
-        )
+        return _response(ctx, _fallback_items(ctx), personalized=False, source="fallback")
 
-    cache_key = f"{user_id}:{(today or date.today()).isoformat()}:{ctx.fingerprint()}"
+    # use_llm 을 키에 넣지 않으면 규칙 응답이 LLM 요청에 재사용된다(디버깅·비용 절감용
+    # 호출 한 번이 그 사용자의 추천을 TTL 동안 규칙 결과로 고정해 버린다).
+    cache_key = (
+        f"{user_id}:{(today or date.today()).isoformat()}:"
+        f"{ctx.fingerprint()}:llm={use_llm}"
+    )
     hit = _cache.get(cache_key)
     if hit and hit[0] > time.monotonic():
         return hit[1]
 
     if use_llm:
         try:
-            response = DietRecommendationsResponse(
-                items=_llm_items(ctx),
-                basis=ctx.basis(),
-                personalized=True,
-                source="llm",
-            )
+            response = _response(ctx, _llm_items(ctx), personalized=True, source="llm")
             _cache[cache_key] = (time.monotonic() + CACHE_TTL_SEC, response)
             return response
+        except LLMBusyError:
+            logger.info("diet recommendation LLM 포화 — 규칙 폴백")
         except FutureTimeout:
             logger.warning("diet recommendation LLM timeout (%.1fs) — 규칙 폴백", LLM_TIMEOUT_SEC)
         except Exception:  # noqa: BLE001 - LLM 장애 종류와 무관하게 화면은 떠야 한다
             logger.warning("diet recommendation LLM 실패 — 규칙 폴백", exc_info=True)
 
     # 규칙 폴백도 신호를 반영한 진짜 추천이다(예: 나트륨 과다 → 저나트륨 상위).
-    response = DietRecommendationsResponse(
-        items=_fallback_items(ctx),
-        basis=ctx.basis(),
-        personalized=True,
-        source="rules",
-    )
+    response = _response(ctx, _fallback_items(ctx), personalized=True, source="rules")
     _cache[cache_key] = (time.monotonic() + CACHE_TTL_SEC, response)
     return response

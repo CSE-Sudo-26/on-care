@@ -66,7 +66,15 @@ class GeminiCoachLLM(CoachLLM):
         from google.genai import types
         self._genai = genai
         self._types = types
-        self._client = genai.Client(api_key=s.gemini_api_key)
+        # HTTP 타임아웃을 반드시 건다. 없으면 Gemini 가 응답하지 않을 때 호출 스레드가
+        # 무기한 묶인다 — 호출부의 future.result(timeout=...) 은 기다리기를 포기할 뿐
+        # 작업을 취소하지 못하므로, 여기서 끊어 주지 않으면 워커가 영영 반납되지 않는다.
+        self._client = genai.Client(
+            api_key=s.gemini_api_key,
+            http_options=types.HttpOptions(
+                timeout=int(s.gemini_timeout_seconds * 1000)  # SDK 는 밀리초
+            ),
+        )
         self._model = s.gemini_model
 
     def generate(
