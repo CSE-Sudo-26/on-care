@@ -1267,6 +1267,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aicDatePillToday => 'Today';
 
   @override
+  String get aicMedicalDisclaimer =>
+      'The AI coach is a reference for diet and exercise habits, not a diagnosis or prescription. Please consult a doctor about symptoms.';
+
+  @override
   String get aicInputHint => 'Ask the AI anything';
 
   @override
