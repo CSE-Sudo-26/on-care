@@ -5,6 +5,9 @@
 from __future__ import annotations
 
 PARTNER_IDS = {"gym-oncare-sinchon", "gym-healthmate", "gym-bodyandsoul"}
+#: 카카오 Local 에서 발견한 실재 업체 — 제휴는 아니지만 상담 대상이어야 한다.
+DISCOVERED_IDS = {"11621774", "1558845892", "328969863", "696444256"}
+SEEDED_IDS = PARTNER_IDS | DISCOVERED_IDS
 SINCHON = {"lat": 37.5559, "lng": 126.9368}
 
 
@@ -80,11 +83,20 @@ def test_gym_trainers_404_for_unknown_gym(client):
     assert client.get("/v1/gyms/no-such-gym/trainers").status_code == 404
 
 
-def test_gym_without_trainers_returns_empty_list(client):
-    # 소속 트레이너가 없는 제휴 헬스장은 404 가 아니라 빈 배열이어야 한다.
-    r = client.get("/v1/gyms/gym-bodyandsoul/trainers")
-    assert r.status_code == 200, r.text
-    assert r.json() == []
+def test_every_seeded_gym_has_at_least_two_trainers(client):
+    """앱 화면과 같은 구성이어야 한다 — 헬스장마다 트레이너 2명 이상."""
+    for gym_id in SEEDED_IDS:
+        trainers = client.get(f"/v1/gyms/{gym_id}/trainers").json()
+        assert len(trainers) >= 2, f"{gym_id} 소속 트레이너 {len(trainers)}명"
+
+
+def test_discovered_gyms_are_not_partners(client):
+    """카카오에서 발견한 실재 업체는 제휴가 아니다 — 구분이 유지돼야 한다."""
+    for gym_id in DISCOVERED_IDS:
+        gym = client.get(f"/v1/gyms/{gym_id}").json()
+        assert gym["is_partner"] is False, gym["name"]
+    partners = client.get("/v1/gyms", params={"partner_only": True}).json()
+    assert {g["id"] for g in partners} == PARTNER_IDS
 
 
 def test_trainer_directory_and_detail(client):
@@ -112,6 +124,35 @@ def test_recommended_only_includes_trainers_with_reason(client):
     recommended = client.get("/v1/trainers/recommended").json()
     assert recommended, "시드 트레이너에 추천 사유가 있어야 한다"
     assert all(t["reason"] for t in recommended)
+
+
+def test_seeded_trainers_cover_every_gym(client):
+    """앱 mock 과 같은 15명이 디렉터리에 있어야 화면이 달라지지 않는다."""
+    trainers = client.get("/v1/trainers").json()
+    assert len(trainers) >= 15
+
+    gym_ids = {t["gym_id"] for t in trainers if t["gym_id"]}
+    assert SEEDED_IDS <= gym_ids
+
+    # 이름이 겹치면 목록에서 서로 구분되지 않는다.
+    names = [t["name"] for t in trainers]
+    assert len(set(names)) == len(names), "트레이너 이름 중복"
+
+
+def test_consultation_works_for_a_discovered_gym(client):
+    """카카오 발견 헬스장이 places 에 없으면 상담이 404 로 실패한다.
+
+    헬스장 상세의 상담 버튼은 제휴 여부를 가리지 않으므로, 발견 헬스장도 상담
+    대상이어야 화면과 백엔드가 어긋나지 않는다(#324 → #327).
+    """
+    from tests.test_consultations import _auth, _payload, _register_member
+
+    _member_id, token = _register_member(client)
+    payload = _payload(gym_id="328969863")  # 빌드업짐 PT 신촌점
+    r = client.post("/v1/consultations", headers=_auth(token), json=payload)
+
+    assert r.status_code == 201, r.text
+    assert r.json()["gym_id"] == "328969863"
 
 
 def test_trainer_fields_match_app_contract(client):
