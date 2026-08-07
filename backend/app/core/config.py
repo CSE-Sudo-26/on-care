@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # 토큰 없이 접근 시 데모 사용자로 폴백(개발 편의). 운영(prod)에서는 항상 비활성.
     allow_demo_fallback: bool = True
 
+    # --- 소셜 로그인 ---
+    # Apple 로그인에서 허용할 `aud`(client_id) 목록, 콤마 구분.
+    # iOS 앱은 번들 ID, 웹은 Service ID 로 서로 다른 aud 를 받으므로 복수를 허용한다.
+    # 비어 있으면 Apple 로그인은 검증 불가로 **거부**된다(조용히 통과시키면 다른 앱용
+    # Apple 토큰으로도 로그인이 뚫린다).
+    apple_client_ids: str = ""
+
     # --- 장소(O2O) ---
     # 카카오 Local REST 키. 있으면 실검색, 없으면 시드 폴백(recognizer 팩토리와 같은 철학).
     kakao_rest_api_key: str = ""
