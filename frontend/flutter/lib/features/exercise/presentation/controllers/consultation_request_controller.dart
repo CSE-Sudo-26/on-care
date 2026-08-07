@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/core/config/app_config.dart';
@@ -19,9 +21,24 @@ final consultationRepositoryProvider = Provider<ConsultationRepository>((ref) {
 class ConsultationRequestController
     extends StateNotifier<List<ConsultationRequest>> {
   ConsultationRequestController(this._repository)
-    : super(const <ConsultationRequest>[]);
+    : super(const <ConsultationRequest>[]) {
+    // 앱을 다시 열면 목록이 비어 hasPending 이 false 가 되고, 사용자는 이미 낸
+    // 신청을 또 눌러 409 를 받는다. 기동 시 서버 상태로 채운다(#327).
+    unawaited(restore());
+  }
 
   final ConsultationRepository _repository;
+
+  /// 서버에 남은 내 신청으로 목록을 채운다. 실패는 삼킨다 — 복원이 안 됐다고
+  /// 화면을 오류로 덮을 이유가 없고, 중복은 서버가 409 로 막는다.
+  Future<void> restore() async {
+    try {
+      final List<ConsultationRequest> mine = await _repository.fetchMine();
+      if (mine.isNotEmpty) state = mine;
+    } on Object {
+      // 무시
+    }
+  }
 
   /// [trainerId] narrows trainer-target lookups to one person — a gym has
   /// several trainers, so a request to one must not block the others.

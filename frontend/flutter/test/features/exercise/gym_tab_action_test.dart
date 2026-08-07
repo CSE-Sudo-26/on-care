@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/app_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
@@ -46,10 +47,11 @@ ConsultationRequest _consultation(ConsultationStatus status) {
     trainerId: _trainer.id,
     trainerName: _trainer.name,
     trainerRole: _trainer.role,
-    exerciseGoal: '체중 감량',
-    healthPurpose: '해당 없음',
+    exerciseGoal: ExerciseGoal.weightLoss,
+    healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
     preferredDate: DateTime(2026, 8),
-    preferredTimeSlot: '오후',
+    preferredTimeSlot: PreferredTimeSlot.afternoon,
     message: null,
     status: status,
     createdAt: DateTime(2026, 7, 31),

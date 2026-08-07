@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/exercise/data/repositories/dio_consultation_repository.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 
@@ -19,10 +20,11 @@ final ConsultationRequest _pendingRequest = ConsultationRequest(
   trainerId: null,
   trainerName: null,
   trainerRole: null,
-  exerciseGoal: '체중 감량',
-  healthPurpose: '혈압 관리',
+  exerciseGoal: ExerciseGoal.weightLoss,
+  healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
   preferredDate: DateTime(2026, 7, 30),
-  preferredTimeSlot: '오후',
+  preferredTimeSlot: PreferredTimeSlot.afternoon,
   message: 'A 사용자의 문의 내용',
   status: ConsultationStatus.pending,
   createdAt: DateTime(2026, 7, 29),

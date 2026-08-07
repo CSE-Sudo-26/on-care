@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/repositories/consultation_repository.dart';
 
 class DioConsultationRepository implements ConsultationRepository {
@@ -30,6 +31,15 @@ class DioConsultationRepository implements ConsultationRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<List<ConsultationRequest>> fetchMine() async {
+    final res = await _dio.get<List<Object?>>('/consultations/me');
+    return (res.data ?? const <Object?>[])
+        .cast<Map<String, Object?>>()
+        .map(consultationFromJson)
+        .toList();
+  }
 }
 
 /// 데모용. `LocalApiInterceptor` 에 `/consultations` 핸들러가 없어 데모에서는 서버로
@@ -46,4 +56,9 @@ class MockConsultationRepository implements ConsultationRepository {
   /// 위젯 테스트가 멈춘다.
   @override
   Future<String> create(ConsultationDraft draft) async => '';
+
+  /// 데모에는 서버가 없으므로 복원할 것도 없다.
+  @override
+  Future<List<ConsultationRequest>> fetchMine() async =>
+      const <ConsultationRequest>[];
 }

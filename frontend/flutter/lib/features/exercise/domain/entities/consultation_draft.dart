@@ -97,3 +97,30 @@ class ConsultationDraft {
     'message': message,
   };
 }
+
+/// 서버 코드 → enum. 모르는 값은 `other`/`flexible` 로 떨어뜨려, 서버가 값을 추가해도
+/// 앱이 예외로 죽지 않게 한다.
+ExerciseGoal exerciseGoalFromWire(String? s) => switch (s) {
+  'weight_loss' => ExerciseGoal.weightLoss,
+  'strength' => ExerciseGoal.strength,
+  'fitness' => ExerciseGoal.fitness,
+  'posture' => ExerciseGoal.posture,
+  'health' => ExerciseGoal.health,
+  _ => ExerciseGoal.other,
+};
+
+HealthPurposeType healthPurposeFromWire(String? s) => switch (s) {
+  'weight' => HealthPurposeType.weight,
+  'chronic' => HealthPurposeType.chronic,
+  'rehab' => HealthPurposeType.rehab,
+  'general' => HealthPurposeType.general,
+  'none' => HealthPurposeType.none,
+  _ => HealthPurposeType.other,
+};
+
+PreferredTimeSlot preferredTimeSlotFromWire(String? s) => switch (s) {
+  'morning' => PreferredTimeSlot.morning,
+  'afternoon' => PreferredTimeSlot.afternoon,
+  'evening' => PreferredTimeSlot.evening,
+  _ => PreferredTimeSlot.flexible,
+};

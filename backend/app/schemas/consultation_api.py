@@ -68,6 +68,10 @@ class ConsultationOut(BaseModel):
     target_type: ConsultationTargetType
     gym_id: str | None
     trainer_id: str | None
+    #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 대상마다 상세를 다시 조회해야
+    #: 하고, 삭제된 대상은 이름을 영영 못 만든다(#327).
+    gym_name: str | None = None
+    trainer_name: str | None = None
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None

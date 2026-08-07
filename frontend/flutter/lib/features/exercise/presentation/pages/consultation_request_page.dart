@@ -154,12 +154,15 @@ class _ConsultationRequestPageState
       trainerRole: targetType == ConsultationTargetType.trainer
           ? trainer?.role
           : null,
-      exerciseGoal: goalLabels[_exerciseGoal]!,
-      healthPurpose: _healthPurpose == _HealthPurpose.other
+      // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
+      // 문구를 만들 수 없다(#327).
+      exerciseGoal: _exerciseGoal!.wire,
+      healthPurposeType: _healthPurpose!.wire,
+      healthPurposeDetail: _healthPurpose == _HealthPurpose.other
           ? _healthPurposeController.text.trim()
-          : purposeLabels[_healthPurpose]!,
+          : null,
       preferredDate: _preferredDate!,
-      preferredTimeSlot: timeLabels[_preferredTime]!,
+      preferredTimeSlot: _preferredTime!.wire,
       message: message.isEmpty ? null : message,
       status: ConsultationStatus.pending,
       createdAt: now,
