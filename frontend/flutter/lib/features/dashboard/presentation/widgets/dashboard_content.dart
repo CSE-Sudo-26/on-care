@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
+import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -227,9 +228,7 @@ class _CoachingBanner extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            summary.sodiumWarning ??
-                                summary.exerciseFeedback ??
-                                l.homeAiAdviceBody,
+                            aiAdviceBody(l, summary),
                             style: const TextStyle(
                               fontSize: 13.5,
                               height: 1.5,

@@ -92,6 +92,7 @@ class DashboardSummary {
     required this.weekScoreDelta,
     required this.sodiumWarning,
     this.exerciseFeedback,
+    this.aiAdviceKey,
   });
 
   /// 3-row health summary (칼로리 / 나트륨 / 당류).
@@ -138,6 +139,15 @@ class DashboardSummary {
 
   /// Exercise-side weekly feedback line. Optional for back-compat.
   final String? exerciseFeedback;
+
+  /// 표시 문자열 대신 **로케일 독립 식별자**로 내려오는 AI 조언. 값이 있으면
+  /// 화면이 [AppLocalizations] 로 풀어 쓰고, [sodiumWarning]·[exerciseFeedback]
+  /// 보다 우선한다.
+  ///
+  /// 데모(목·시드)가 쓰는 통로다. 서버가 만든 문장은 번역본이 없으므로 그대로
+  /// 문자열 필드로 오지만, 데모 문구는 앱이 ARB 에 이미 양쪽 로케일로 갖고
+  /// 있는데도 한국어 문자열을 실어 보내 영어 데모에서 한국어가 나왔다(#435).
+  final String? aiAdviceKey;
 
   HealthIndicator get calorieIndicator => indicators.firstWhere(
     (HealthIndicator indicator) => indicator.unit == 'kcal',
@@ -207,5 +217,6 @@ class DashboardSummary {
     weekScoreDelta: (json['week_score_delta']! as num).toInt(),
     sodiumWarning: json['sodium_warning'] as String?,
     exerciseFeedback: json['exercise_feedback'] as String?,
+    aiAdviceKey: json['ai_advice_key'] as String?,
   );
 }

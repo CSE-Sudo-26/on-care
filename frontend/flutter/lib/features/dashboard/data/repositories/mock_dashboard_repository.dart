@@ -64,11 +64,13 @@ class MockDashboardRepository implements DashboardRepository {
       ],
       weekScore: 85,
       weekScoreDelta: 12,
-      // 홈 '오늘의 AI 통합 조언' 자리. 시드 경로와 같은 큐레이션 문구를 쓴다 —
-      // 데모에서 홈이 읽는 값이 여기라서, 예전의 나트륨 단문을 두면 시드가
-      // 준비한 통합 조언이 화면에 영영 못 올라온다.
-      sodiumWarning: kDemoAiAdvice,
-      exerciseFeedback: '주간 운동 목표 80%를 달성했어요! 오늘 가볍게 걷기를 더해 100%를 채워봐요!',
+      // 홈 '오늘의 AI 통합 조언' 자리. 문구가 아니라 키만 싣는다 — 문장은
+      // ARB 가 ko·en 양쪽으로 갖고 있고, 화면이 로케일에 맞게 고른다(#435).
+      aiAdviceKey: kDailyCombinedAdviceKey,
+      sodiumWarning: null,
+      // `exerciseFeedback` 은 서버가 만든 문장이 들어오는 자리라 데모에서는
+      // 채우지 않는다(기본값 null). 한국어를 넣어 두면 조언 키가 못 풀렸을 때
+      // 영어 로케일로 한국어가 새고, 그때 ARB 기본 문구로 떨어져야 한다(#435).
     );
   }
 }
