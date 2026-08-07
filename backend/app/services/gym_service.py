@@ -161,10 +161,34 @@ def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:
 
 
 def _trainer_query():
+    """디렉터리에 노출할 트레이너 — 상담 대상 조건과 같아야 한다. (#451)
+
+    `consultation_service._validate_target` 은 상담 요청 시 트레이너의 소속을
+    `places`(category='fitness') 에서 검증한다. 여기서 role·active 만 보면
+    소속이 없는 트레이너가 목록·상세에 뜨고, 회원은 상담 신청 단계에서야 404 를
+    받는다. 두 곳이 같은 조건을 쓰도록 `places` 를 inner 조인한다.
+
+    따라서 다음 트레이너는 목록·추천·상세 어디에도 나오지 않는다(상세는 404):
+
+    - `gym_id` 가 NULL — 아직 소속이 백필되지 않았거나 해제된 경우.
+      `TrainerProfile.gym_id` 는 `places.id` 를 ondelete='SET NULL' 로 참조하므로,
+      헬스장이 지워지면 소속은 NULL 이 되고 여기서 함께 빠진다(가리키는 Place 가
+      없는 gym_id 는 FK 가 막아 준다).
+    - 소속 Place 의 category 가 'fitness' 가 아님 — 병원·약국 같은 다른 장소.
+
+    소속이 빠진 트레이너를 숨기는 쪽을 골랐다. 상담을 걸 수 없는 트레이너를 목록에
+    남기면 회원은 고를 수 있는데 마지막 단계에서만 막히고, 트레이너 앱이 소속을
+    채우면(#452) 그대로 다시 노출된다.
+    """
     return (
         select(User, TrainerProfile)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
-        .where(User.role == "trainer", User.is_active.is_(True))
+        .join(Place, Place.id == TrainerProfile.gym_id)
+        .where(
+            User.role == "trainer",
+            User.is_active.is_(True),
+            Place.category == "fitness",
+        )
     )
 
 
