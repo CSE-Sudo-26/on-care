@@ -340,6 +340,23 @@ def test_coach_gym_follows_the_member_link_not_the_trainer(db_session, connected
     assert coach.gym.name == "헬스메이트 신촌점"
 
 
+def test_gym_unlink_leaves_the_commit_to_its_caller(db_session, connected_member):
+    """헬스장 해제가 스스로 커밋하면 담당 해제와 원자적으로 묶을 수 없다.
+
+    각자 커밋하면 담당 해제가 실패했을 때 헬스장만 사라지고 트레이너는 살아 있는
+    반쪽 상태가 남는다(리뷰 지적).
+    """
+    from app.models import models
+    from app.services import gym_service
+
+    member_id, _token = connected_member()
+
+    assert gym_service.unlink_member_gym(db_session, member_id) is True
+    db_session.rollback()
+
+    assert db_session.get(models.MemberGym, member_id) is not None
+
+
 def test_coach_gym_falls_back_to_the_trainer_when_unlinked(db_session, connected_member):
     """링크가 없는 회원(백필 이전 데이터)은 예전처럼 트레이너 소속을 보여 준다.
 

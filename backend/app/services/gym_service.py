@@ -130,12 +130,15 @@ def unlink_member_gym(db: Session, member_id: str) -> bool:
     """헬스장 연결 해제. 끊었으면 True, 원래 없었으면 False.
 
     담당 링크와 달리 행을 지운다 — 이 링크를 참조하는 이력이 없다.
+
+    **커밋하지 않는다.** 헬스장 해제는 담당 트레이너 해제와 함께 일어나므로
+    (`trainer_service.disconnect_member_gym`), 여기서 커밋하면 뒤 단계가 실패했을 때
+    헬스장만 끊기고 담당은 남는 반쪽 상태가 된다. 커밋은 호출부가 한 번만 한다.
     """
     link = db.get(MemberGym, member_id)
     if link is None:
         return False
     db.delete(link)
-    db.commit()
     return True
 
 
