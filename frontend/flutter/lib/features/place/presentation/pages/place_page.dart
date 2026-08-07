@@ -8,6 +8,7 @@ import 'package:oncare/design_system/molecules/section_header.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
+import 'package:oncare/features/exercise/presentation/widgets/kakao_map/kakao_map_view.dart';
 import 'package:oncare/features/place/domain/entities/place.dart';
 import 'package:oncare/features/place/presentation/controllers/place_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -51,7 +52,7 @@ class _Body extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: <Widget>[
-        const _MapPlaceholder(),
+        _PlaceMap(places: places),
         const SizedBox(height: AppSpacing.lg),
         const SectionHeader('가까운 추천 장소'),
         for (final p in places) ...<Widget>[
@@ -63,6 +64,38 @@ class _Body extends StatelessWidget {
   }
 }
 
+/// 실지도와 폴백이 같은 높이를 차지해야 폴백으로 떨어질 때 목록이 밀리지 않는다.
+const double _kPlaceMapHeight = 160;
+
+/// 주변 장소를 카카오맵 핀으로 찍는다. `KAKAO_JS_KEY` 가 없거나 web 이 아니거나
+/// SDK 로드가 실패하면 [_MapPlaceholder] 로 폴백한다(#329).
+class _PlaceMap extends ConsumerWidget {
+  const _PlaceMap({required this.places});
+
+  final List<Place> places;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 지도 중심은 목록을 가져온 검색 중심([placeQueryProvider])과 같아야 한다.
+    final query = ref.watch(placeQueryProvider);
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(AppRadius.lg),
+      child: SizedBox(
+        height: _kPlaceMapHeight,
+        child: KakaoMapView(
+          centerLat: query.lat,
+          centerLng: query.lng,
+          markers: <KakaoMapMarker>[
+            for (final Place p in places)
+              KakaoMapMarker(lat: p.lat, lng: p.lng, title: p.name),
+          ],
+          fallback: const _MapPlaceholder(),
+        ),
+      ),
+    );
+  }
+}
+
 class _MapPlaceholder extends StatelessWidget {
   const _MapPlaceholder();
 
@@ -70,7 +103,7 @@ class _MapPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      height: 160,
+      height: _kPlaceMapHeight,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: const BorderRadius.all(AppRadius.lg),
@@ -82,12 +115,12 @@ class _MapPlaceholder extends StatelessWidget {
           Icon(Icons.map_outlined, size: 36, color: scheme.onSurfaceVariant),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Google Maps Flutter (API key needed)',
+            '지도를 표시할 수 없어요',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 2),
           Text(
-            '실제 지도 위젯은 Stage 7 릴리즈 전에 활성화',
+            '아래 목록은 그대로 볼 수 있어요',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
