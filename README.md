@@ -26,6 +26,8 @@
 [![트레이너 앱](https://img.shields.io/badge/WEB-트레이너-2E7DAB?style=for-the-badge&logo=safari&logoColor=white)](https://ewhasudo.zapto.org/trainer/)
 [![데모 영상](https://img.shields.io/badge/YOUTUBE-데모_영상-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/C4ivM_dlAww?si=8iOWmOpSxcpQmlU3)
 
+[프론트엔드 배포 구조 및 운영 절차](docs/frontend_deployment.md)
+
 <br/>
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white)
