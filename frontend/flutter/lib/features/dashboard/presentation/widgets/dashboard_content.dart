@@ -314,7 +314,9 @@ class _CardHeader extends StatelessWidget {
         Expanded(
           child: Row(
             children: <Widget>[
-              Flexible(child: _CardTitle(icon: icon, label: label)),
+              Flexible(
+                child: _CardTitle(icon: icon, label: label),
+              ),
               const SizedBox(width: 6),
               // 필은 글자를 자르면 'AI ana…' 처럼 읽히지 않아 통째로 축소한다.
               Flexible(
@@ -1432,7 +1434,7 @@ class _ExerciseBarPainter extends CustomPainter {
     final int n = data.length;
     final double slot = w / n;
     final double barW = math.min(slot * 0.5, 22);
-    const double labelGap = 14;
+    const double labelGap = 20;
 
     canvas.drawLine(
       Offset(0, h - 0.5),
@@ -1469,7 +1471,8 @@ class _ExerciseBarPainter extends CustomPainter {
         textDirection: ui.TextDirection.ltr,
       )..layout();
       final double lx = (cx - tp.width / 2).clamp(0.0, w - tp.width);
-      tp.paint(canvas, Offset(lx, top - tp.height - 3));
+      final double ly = math.max(0, top - tp.height - 3);
+      tp.paint(canvas, Offset(lx, ly));
     }
   }
 
@@ -1568,14 +1571,15 @@ Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
 /// 이유 코드 → 기본 문구. 서버가 개인화 문구(`reasonText`)를 주지 않았을 때 쓴다.
 /// 요리별 기본 이유는 카탈로그에 고정돼 있어, 이 경로면 화면이 서버 연동 이전과
 /// 완전히 같아진다.
-String? _reasonTextFor(AppLocalizations l, String reasonKey) => switch (reasonKey) {
-  'sodium' => l.homeMealReasonSodium,
-  'glucose' => l.homeMealReasonGlucose,
-  'omega' => l.homeMealReasonOmega,
-  'low_cal' => l.homeMealReasonLowCal,
-  'fiber' => l.homeMealReasonFiber,
-  _ => null,
-};
+String? _reasonTextFor(AppLocalizations l, String reasonKey) =>
+    switch (reasonKey) {
+      'sodium' => l.homeMealReasonSodium,
+      'glucose' => l.homeMealReasonGlucose,
+      'omega' => l.homeMealReasonOmega,
+      'low_cal' => l.homeMealReasonLowCal,
+      'fiber' => l.homeMealReasonFiber,
+      _ => null,
+    };
 
 /// 개인화 근거 한 줄 — 예: "최근 3일 평균 나트륨 2,400mg · 권장 초과".
 ///

@@ -1934,41 +1934,47 @@ abstract class AppLocalizations {
   /// **'{trainer}\'s openings'**
   String exTrainerAvailability(String trainer);
 
-  /// No description provided for @exSlotToday19.
+  /// No description provided for @exSlotWhen.
   ///
   /// In en, this message translates to:
-  /// **'Today 19:00'**
-  String get exSlotToday19;
+  /// **'{date} {time}'**
+  String exSlotWhen(String date, String time);
 
-  /// No description provided for @exSlotTomorrow0730.
+  /// No description provided for @exSlotRemaining.
   ///
   /// In en, this message translates to:
-  /// **'Tomorrow 07:30'**
-  String get exSlotTomorrow0730;
+  /// **'{count} left'**
+  String exSlotRemaining(int count);
 
-  /// No description provided for @exSlotTomorrow20.
+  /// No description provided for @exSlotFull.
   ///
   /// In en, this message translates to:
-  /// **'Tomorrow 20:00'**
-  String get exSlotTomorrow20;
+  /// **'Fully booked'**
+  String get exSlotFull;
 
-  /// No description provided for @exSlot1Left.
+  /// No description provided for @exSlotsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'1 spot left'**
-  String get exSlot1Left;
+  /// **'No times available'**
+  String get exSlotsEmpty;
 
-  /// No description provided for @exSlotAvailable.
+  /// No description provided for @exSlotsAllBooked.
   ///
   /// In en, this message translates to:
-  /// **'Open'**
-  String get exSlotAvailable;
+  /// **'All available times are fully booked'**
+  String get exSlotsAllBooked;
 
-  /// No description provided for @exSlot2Left.
+  /// No description provided for @exSlotsLoadError.
   ///
   /// In en, this message translates to:
-  /// **'2 spots left'**
-  String get exSlot2Left;
+  /// **'Could not load available times.'**
+  String get exSlotsLoadError;
+
+  /// No description provided for @exReserveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not book that time. Please try again.'**
+  String get exReserveFailed;
 
   /// No description provided for @exReserveConfirmedSlotGym.
   ///

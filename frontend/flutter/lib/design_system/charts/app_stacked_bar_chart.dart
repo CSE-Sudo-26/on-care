@@ -66,7 +66,7 @@ class AppStackedBarChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 24,
+              reservedSize: 28,
               interval: 1,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final i = value.toInt();

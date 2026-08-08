@@ -1017,22 +1017,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get exSlotToday19 => 'Today 19:00';
+  String exSlotWhen(String date, String time) {
+    return '$date $time';
+  }
 
   @override
-  String get exSlotTomorrow0730 => 'Tomorrow 07:30';
+  String exSlotRemaining(int count) {
+    return '$count left';
+  }
 
   @override
-  String get exSlotTomorrow20 => 'Tomorrow 20:00';
+  String get exSlotFull => 'Fully booked';
 
   @override
-  String get exSlot1Left => '1 spot left';
+  String get exSlotsEmpty => 'No times available';
 
   @override
-  String get exSlotAvailable => 'Open';
+  String get exSlotsAllBooked => 'All available times are fully booked';
 
   @override
-  String get exSlot2Left => '2 spots left';
+  String get exSlotsLoadError => 'Could not load available times.';
+
+  @override
+  String get exReserveFailed => 'Could not book that time. Please try again.';
 
   @override
   String exReserveConfirmedSlotGym(String slot, String gym) {

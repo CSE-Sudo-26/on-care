@@ -289,24 +289,30 @@ class _SourceChips extends StatelessWidget {
               color: AppColors.muted,
               borderRadius: BorderRadius.all(AppRadius.pill),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(
-                  Icons.menu_book_outlined,
-                  size: 12,
-                  color: AppColors.secondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  s,
-                  style: const TextStyle(
-                    fontSize: 12.5,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(
+                    Icons.menu_book_outlined,
+                    size: 12,
                     color: AppColors.secondary,
-                    fontWeight: FontWeight.w500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      s,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

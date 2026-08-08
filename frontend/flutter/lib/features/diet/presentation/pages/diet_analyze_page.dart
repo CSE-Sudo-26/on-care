@@ -31,6 +31,8 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
   DietAnalysisResult? _result;
   bool _loading = true;
   bool _failed = false;
+  late final String _idempotencyKey =
+      'diet-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(this)}';
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
             imageBytes: widget.imageBytes,
             filename: 'meal.jpg',
             mealType: widget.mealType,
+            idempotencyKey: _idempotencyKey,
           );
       if (!mounted) return;
       setState(() {

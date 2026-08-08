@@ -1048,7 +1048,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                       ),
                       const Spacer(),
                       Text(
-                        l.unitKcalValue(_total),
+                        '$_total ${l.unitKcal}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,

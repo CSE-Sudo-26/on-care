@@ -626,7 +626,8 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton(
-                            onPressed: () => ref.invalidate(nearbyGymsProvider),
+                            onPressed: () =>
+                                ref.invalidate(gymFinderResultsProvider),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: FigmaColors.primary,
                               side: BorderSide(
