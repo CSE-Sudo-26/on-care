@@ -222,12 +222,16 @@ class SessionController extends StateNotifier<SessionState> {
     state = const SessionState(status: SessionStatus.demo);
   }
 
-  /// Replaces the authenticated profile after a successful `/trainer/me`
-  /// mutation. Keeping this in the session owner prevents MY, the sidebar,
-  /// and subsequent consumers from showing different snapshots.
+  /// Replaces the authenticated or demo profile after a successful profile
+  /// mutation. Demo keeps its status and only updates the in-memory snapshot.
+  /// Keeping this in the session owner prevents MY, the sidebar, and
+  /// subsequent consumers from showing different snapshots.
   void replaceProfile(TrainerProfile profile) {
-    if (state.status != SessionStatus.authenticated) return;
-    state = SessionState(status: SessionStatus.authenticated, profile: profile);
+    final status = state.status;
+    if (status != SessionStatus.authenticated && status != SessionStatus.demo) {
+      return;
+    }
+    state = SessionState(status: status, profile: profile);
   }
 
   /// Signs out — clears persisted tokens and returns to the login screen.

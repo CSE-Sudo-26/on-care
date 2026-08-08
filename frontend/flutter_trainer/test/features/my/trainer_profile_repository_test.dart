@@ -106,7 +106,13 @@ void main() {
           requestOptions: RequestOptions(path: '/gyms'),
           statusCode: 200,
           data: <Object?>[
-            <String, Object?>{'id': 'gym-1', 'name': '온케어짐', 'address': '서울'},
+            <String, Object?>{
+              'id': 'gym-1',
+              'name': '온케어짐',
+              'address': '서울',
+              'weekday_hours': '06:00 – 23:00',
+              'phone': '02-1234-5678',
+            },
           ],
         ),
       );
@@ -115,6 +121,8 @@ void main() {
 
       expect(gyms.single.id, 'gym-1');
       expect(gyms.single.name, '온케어짐');
+      expect(gyms.single.hours, '06:00 – 23:00');
+      expect(gyms.single.phone, '02-1234-5678');
     });
 
     test('clearGym calls DELETE and returns the server view', () async {
@@ -166,6 +174,47 @@ void main() {
         ),
       );
     });
+
+    for (final scenario in <({int status, Type type, String detail})>[
+      (status: 422, type: ValidationError, detail: '경력 값을 확인해 주세요.'),
+      (status: 404, type: NotFoundError, detail: '선택한 헬스장이 없습니다.'),
+    ]) {
+      test('${scenario.status} preserves detail as ${scenario.type}', () async {
+        when(
+          () => dio.put<Map<String, Object?>>(
+            '/trainer/me',
+            data: any(named: 'data'),
+          ),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/trainer/me'),
+            type: DioExceptionType.badResponse,
+            response: Response<Object?>(
+              requestOptions: RequestOptions(path: '/trainer/me'),
+              statusCode: scenario.status,
+              data: <String, Object?>{'detail': scenario.detail},
+            ),
+          ),
+        );
+
+        await expectLater(
+          repository.update(
+            const TrainerProfileUpdate(
+              phone: '',
+              specialty: '',
+              careerYears: 0,
+              intro: '',
+              certifications: <String>[],
+            ),
+          ),
+          throwsA(
+            isA<AppError>()
+                .having((error) => error.runtimeType, 'type', scenario.type)
+                .having((error) => error.message, 'message', scenario.detail),
+          ),
+        );
+      });
+    }
   });
 
   test('mock repository persists profile and affiliation mutations', () async {
@@ -186,5 +235,9 @@ void main() {
     expect(restored.phone, '010-7777-8888');
     expect(restored.career, '9년');
     expect(restored.gym.id, 'gym-2');
+    expect(restored.gym.hours, '06:00 – 24:00');
+
+    await repository.clearGym();
+    expect((await repository.fetch()).gym.id, isNull);
   });
 }

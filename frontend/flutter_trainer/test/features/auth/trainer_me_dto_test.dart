@@ -51,5 +51,13 @@ void main() {
 
       expect(profile.certifications, isEmpty);
     });
+
+    test('safely converts a non-string gym id', () {
+      final profile = trainerProfileFromJson(<String, Object?>{
+        'gym': <String, Object?>{'id': 42, 'name': '온케어짐'},
+      });
+
+      expect(profile.gym.id, '42');
+    });
   });
 }

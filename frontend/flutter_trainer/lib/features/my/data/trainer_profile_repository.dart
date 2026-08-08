@@ -7,7 +7,10 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/features/auth/data/dtos/trainer_me_dto.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 
-/// Editable fields accepted by `PUT /trainer/me`.
+/// Editable fields accepted by `PUT /v1/trainer/me`.
+///
+/// Dio's base URL already contains `/v1`, so the request path stays
+/// `/trainer/me` rather than duplicating the API prefix.
 class TrainerProfileUpdate {
   const TrainerProfileUpdate({
     required this.phone,
@@ -49,11 +52,15 @@ class TrainerGymChoice {
     required this.id,
     required this.name,
     required this.address,
+    this.hours = '',
+    this.phone = '',
   });
 
   final String id;
   final String name;
   final String address;
+  final String hours;
+  final String phone;
 }
 
 abstract class TrainerProfileRepository {
@@ -88,6 +95,8 @@ class DioTrainerProfileRepository implements TrainerProfileRepository {
               id: row['id']! as String,
               name: row['name'] as String? ?? '',
               address: row['address'] as String? ?? '',
+              hours: row['weekday_hours'] as String? ?? '',
+              phone: row['phone'] as String? ?? '',
             ),
       ];
     } on DioException catch (error) {
@@ -162,8 +171,20 @@ class MockTrainerProfileRepository implements TrainerProfileRepository {
 
   @override
   Future<List<TrainerGymChoice>> listGyms() async => const <TrainerGymChoice>[
-    TrainerGymChoice(id: 'gym-1', name: '온케어짐 신촌점', address: '서울 서대문구'),
-    TrainerGymChoice(id: 'gym-2', name: '온케어짐 강남점', address: '서울 강남구'),
+    TrainerGymChoice(
+      id: 'gym-1',
+      name: '온케어짐 신촌점',
+      address: '서울 서대문구',
+      hours: '06:00 – 23:00',
+      phone: '02-1234-5678',
+    ),
+    TrainerGymChoice(
+      id: 'gym-2',
+      name: '온케어짐 강남점',
+      address: '서울 강남구',
+      hours: '06:00 – 24:00',
+      phone: '02-9876-5432',
+    ),
   ];
 
   @override
@@ -203,8 +224,8 @@ class MockTrainerProfileRepository implements TrainerProfileRepository {
         id: gymId,
         name: choice.name,
         address: choice.address,
-        hours: '',
-        phone: '',
+        hours: choice.hours,
+        phone: choice.phone,
       ),
     );
     return _profile;

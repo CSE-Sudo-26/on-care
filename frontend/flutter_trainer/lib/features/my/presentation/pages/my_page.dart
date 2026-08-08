@@ -71,6 +71,7 @@ class _MyPageState extends ConsumerState<MyPage> {
       <String, TextEditingController>{};
   final TextEditingController _newCert = TextEditingController();
   late List<String> _draftCerts;
+  late String _draftGymId;
 
   @override
   void initState() {
@@ -80,6 +81,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     _gym = _profile.gym;
     _certs = List<String>.of(_profile.certifications);
     _draftCerts = List<String>.of(_certs);
+    _draftGymId = _gym.id ?? '';
   }
 
   @override
@@ -100,6 +102,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     setState(() {
       _editing = true;
       _draftCerts = List<String>.of(_certs);
+      _draftGymId = _gym.id ?? '';
       _field('name', _profile.name).text = _profile.name;
       _field('email', _profile.email).text = _profile.email;
       _field('phone', _profile.phone).text = _profile.phone;
@@ -110,15 +113,15 @@ class _MyPageState extends ConsumerState<MyPage> {
       _field('gymAddress', _gym.address).text = _gym.address;
       _field('gymHours', _gym.hours).text = _gym.hours;
       _field('gymPhone', _gym.phone).text = _gym.phone;
-      _field('gymId', _gym.id ?? '').text = _gym.id ?? '';
     });
   }
 
   Future<void> _save() async {
     if (_saving) return;
-    final careerYears = int.tryParse(
-      RegExp(r'\d+').firstMatch(_fields['career']!.text)?.group(0) ?? '',
-    );
+    final careerMatch = RegExp(
+      r'^\s*(\d+)\s*년?\s*$',
+    ).firstMatch(_fields['career']!.text);
+    final careerYears = int.tryParse(careerMatch?.group(1) ?? '');
     if (careerYears == null || careerYears < 0 || careerYears > 80) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('경력은 0~80 사이의 연수로 입력해 주세요.')),
@@ -128,8 +131,9 @@ class _MyPageState extends ConsumerState<MyPage> {
 
     setState(() => _saving = true);
     final repository = ref.read(trainerProfileRepositoryProvider);
+    var profileSaved = false;
     try {
-      final draftGymId = _fields['gymId']!.text.trim();
+      final draftGymId = _draftGymId.trim();
       final currentGymId = _gym.id ?? '';
       var saved = await repository.update(
         TrainerProfileUpdate(
@@ -154,6 +158,7 @@ class _MyPageState extends ConsumerState<MyPage> {
               : null,
         ),
       );
+      profileSaved = true;
       if (draftGymId != currentGymId) {
         saved = draftGymId.isEmpty
             ? await repository.clearGym()
@@ -171,9 +176,7 @@ class _MyPageState extends ConsumerState<MyPage> {
       if (!mounted) return;
       if (restored != null) _applyRestoredProfile(restored);
       setState(() => _saving = false);
-      final message = error is AppError
-          ? error.message ?? '프로필을 저장하지 못했습니다.'
-          : '프로필을 저장하지 못했습니다.';
+      final message = _saveFailureMessage(error, profileSaved: profileSaved);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -186,6 +189,13 @@ class _MyPageState extends ConsumerState<MyPage> {
     });
   }
 
+  String _saveFailureMessage(Object error, {required bool profileSaved}) {
+    final detail = error is AppError ? error.message : null;
+    if (!profileSaved) return detail ?? '프로필을 저장하지 못했습니다.';
+    const partial = '소속 헬스장 변경에 실패했습니다. 나머지 프로필 정보는 저장됐어요.';
+    return detail == null ? partial : '$partial $detail';
+  }
+
   void _applySavedProfile(TrainerProfile saved) {
     ref.read(sessionControllerProvider.notifier).replaceProfile(saved);
     setState(() {
@@ -193,6 +203,7 @@ class _MyPageState extends ConsumerState<MyPage> {
       _gym = saved.gym;
       _certs = List<String>.of(saved.certifications);
       _draftCerts = List<String>.of(_certs);
+      _draftGymId = saved.gym.id ?? '';
       _editing = false;
       _saving = false;
       _saveFlash = true;
@@ -207,6 +218,7 @@ class _MyPageState extends ConsumerState<MyPage> {
       _gym = restored.gym;
       _certs = List<String>.of(restored.certifications);
       _draftCerts = List<String>.of(_certs);
+      _draftGymId = restored.gym.id ?? '';
       _editing = false;
     });
   }
@@ -270,13 +282,14 @@ class _MyPageState extends ConsumerState<MyPage> {
               label: '취소',
               background: AppColors.inputBackground,
               foreground: AppColors.subtleForeground,
-              onTap: () => setState(() {
-                if (_saving) return;
-                _editing = false;
-                // Drop the un-added cert draft too — otherwise it
-                // reappears on the next edit (PR review).
-                _newCert.clear();
-              }),
+              onTap: _saving
+                  ? null
+                  : () => setState(() {
+                      _editing = false;
+                      // Drop the un-added cert draft too — otherwise it
+                      // reappears on the next edit (PR review).
+                      _newCert.clear();
+                    }),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -335,6 +348,8 @@ class _MyPageState extends ConsumerState<MyPage> {
           editing: _editing,
           field: _field,
           choices: ref.watch(trainerGymChoicesProvider),
+          selectedGymId: _draftGymId,
+          onGymChanged: (value) => setState(() => _draftGymId = value),
         ),
       ],
     );
@@ -527,7 +542,7 @@ class _ChipButton extends StatelessWidget {
   final String label;
   final Color background;
   final Color foreground;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -660,7 +675,11 @@ class _ProfileCard extends StatelessWidget {
               controller: field('email', profile.email),
               enabled: false,
             ),
-            _EditField(label: '연락처', controller: field('phone', profile.phone)),
+            _EditField(
+              label: '연락처',
+              controller: field('phone', profile.phone),
+              inputKey: const ValueKey<String>('profile-phone'),
+            ),
             _EditField(
               label: '전문 분야',
               controller: field('specialty', profile.specialty),
@@ -668,6 +687,7 @@ class _ProfileCard extends StatelessWidget {
             _EditField(
               label: '경력',
               controller: field('career', profile.career),
+              inputKey: const ValueKey<String>('profile-career'),
             ),
             _EditField(
               label: '소개',
@@ -716,12 +736,14 @@ class _EditField extends StatelessWidget {
     required this.controller,
     this.maxLines = 1,
     this.enabled = true,
+    this.inputKey,
   });
 
   final String label;
   final TextEditingController controller;
   final int maxLines;
   final bool enabled;
+  final Key? inputKey;
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +762,7 @@ class _EditField extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           TextField(
+            key: inputKey,
             controller: controller,
             enabled: enabled,
             maxLines: maxLines,
@@ -979,12 +1002,16 @@ class _GymCard extends StatelessWidget {
     required this.editing,
     required this.field,
     required this.choices,
+    required this.selectedGymId,
+    required this.onGymChanged,
   });
 
   final TrainerGym gym;
   final bool editing;
   final TextEditingController Function(String, String) field;
   final AsyncValue<List<TrainerGymChoice>> choices;
+  final String selectedGymId;
+  final ValueChanged<String> onGymChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1006,27 +1033,28 @@ class _GymCard extends StatelessWidget {
                 _GymChoiceField(
                   currentGym: gym,
                   choices: choices,
-                  controller: field('gymId', gym.id ?? ''),
+                  selectedGymId: selectedGymId,
+                  onChanged: onGymChanged,
                 ),
                 _EditField(
                   label: '헬스장 이름',
                   controller: field('gymName', gym.name),
-                  enabled: gym.id == null,
+                  enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
                   label: '주소',
                   controller: field('gymAddress', gym.address),
-                  enabled: gym.id == null,
+                  enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
                   label: '운영 시간',
                   controller: field('gymHours', gym.hours),
-                  enabled: gym.id == null,
+                  enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
                   label: '연락처',
                   controller: field('gymPhone', gym.phone),
-                  enabled: gym.id == null,
+                  enabled: selectedGymId.isEmpty,
                 ),
               ],
             )
@@ -1098,12 +1126,14 @@ class _GymChoiceField extends StatelessWidget {
   const _GymChoiceField({
     required this.currentGym,
     required this.choices,
-    required this.controller,
+    required this.selectedGymId,
+    required this.onChanged,
   });
 
   final TrainerGym currentGym;
   final AsyncValue<List<TrainerGymChoice>> choices;
-  final TextEditingController controller;
+  final String selectedGymId;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1128,11 +1158,12 @@ class _GymChoiceField extends StatelessWidget {
               style: TextStyle(color: AppColors.destructive, fontSize: 11),
             ),
             data: (items) {
-              final currentId = controller.text;
+              final currentId = selectedGymId;
               final hasCurrent =
                   currentId.isEmpty ||
                   items.any((choice) => choice.id == currentId);
               return DropdownButtonFormField<String>(
+                key: ValueKey<String>(currentId),
                 initialValue: currentId,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -1165,7 +1196,7 @@ class _GymChoiceField extends StatelessWidget {
                       ),
                     ),
                 ],
-                onChanged: (value) => controller.text = value ?? '',
+                onChanged: (value) => onChanged(value ?? ''),
               );
             },
           ),

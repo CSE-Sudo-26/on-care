@@ -12,7 +12,7 @@ TrainerProfile trainerProfileFromJson(Map<String, Object?> json) {
   final gymJson = json['gym'];
   final gym = gymJson is Map<String, Object?>
       ? TrainerGym(
-          id: gymJson['id'] as String?,
+          id: _nullableStr(gymJson['id']),
           name: _str(gymJson['name']),
           address: _str(gymJson['address']),
           hours: _str(gymJson['hours']),
@@ -38,3 +38,5 @@ TrainerProfile trainerProfileFromJson(Map<String, Object?> json) {
 }
 
 String _str(Object? v) => v is String ? v : '';
+
+String? _nullableStr(Object? value) => value?.toString();
