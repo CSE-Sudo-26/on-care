@@ -34,11 +34,20 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   @override
   void initState() {
     super.initState();
-    // Opening the thread clears the unread badge.
     Future<void>.microtask(() async {
-      await ref.read(memberCoachRepositoryProvider).markRead();
-      if (mounted) ref.invalidate(coachUnreadProvider);
+      ref.invalidate(coachChatProvider);
+      await _markRead();
     });
+  }
+
+  Future<void> _markRead() async {
+    try {
+      await ref.read(memberCoachRepositoryProvider).markRead();
+    } catch (_) {
+      // 읽음 처리 실패는 이미 불러오는 대화 표시를 막지 않는다.
+      return;
+    }
+    if (mounted) ref.invalidate(coachUnreadProvider);
   }
 
   @override

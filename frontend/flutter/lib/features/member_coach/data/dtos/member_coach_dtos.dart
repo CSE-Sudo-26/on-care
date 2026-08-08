@@ -27,15 +27,36 @@ CoachRoutine coachRoutineFromJson(Map<String, Object?> json) {
 }
 
 /// `/me/coach/chat` element (ChatMessageOut) → [CoachMessage]. From the
-/// member's viewpoint `sender` is `me` | `trainer`; anything that isn't
-/// `trainer` maps to [CoachSender.me].
+/// member's viewpoint `sender` is `me` | `trainer`.
 CoachMessage coachMessageFromJson(Map<String, Object?> json) {
+  final CoachSender sender = switch (json['sender']) {
+    'me' => CoachSender.me,
+    'trainer' => CoachSender.trainer,
+    _ => throw const FormatException('Invalid member chat sender.'),
+  };
+
   return CoachMessage(
-    id: _str(json['id']),
-    sender: json['sender'] == 'trainer' ? CoachSender.trainer : CoachSender.me,
-    body: _str(json['body']),
-    timeLabel: _str(json['time_label']),
+    id: _requiredString(json, 'id'),
+    sender: sender,
+    body: _requiredString(json, 'body'),
+    timeLabel: _requiredString(json, 'time_label'),
+    createdAt: _requiredDateTime(json, 'created_at'),
   );
 }
 
 String _str(Object? v) => v is String ? v : '';
+
+String _requiredString(Map<String, Object?> json, String key) {
+  final Object? value = json[key];
+  if (value is String) return value;
+  throw FormatException('Invalid member chat $key.');
+}
+
+DateTime _requiredDateTime(Map<String, Object?> json, String key) {
+  final Object? value = json[key];
+  if (value is String) {
+    final DateTime? parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+  }
+  throw FormatException('Invalid member chat $key.');
+}

@@ -45,11 +45,12 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   ];
 
   final List<CoachMessage> _chat = <CoachMessage>[
-    const CoachMessage(
+    CoachMessage(
       id: 'seed-m1',
       sender: CoachSender.trainer,
       body: '오늘 점심 등록 잘 확인했어요. 나트륨만 조금 신경 써 주세요!',
       timeLabel: '13:20',
+      createdAt: DateTime.utc(2026, 1, 1, 13, 20),
     ),
   ];
 
@@ -79,6 +80,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
         timeLabel:
             '${now.hour.toString().padLeft(2, '0')}:'
             '${now.minute.toString().padLeft(2, '0')}',
+        createdAt: now,
       ),
     );
   }

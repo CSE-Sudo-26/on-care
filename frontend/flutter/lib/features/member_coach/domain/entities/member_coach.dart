@@ -55,12 +55,14 @@ class CoachMessage {
     required this.sender,
     required this.body,
     required this.timeLabel,
+    required this.createdAt,
   });
 
   final String id;
   final CoachSender sender;
   final String body;
   final String timeLabel;
+  final DateTime createdAt;
 
   bool get fromMe => sender == CoachSender.me;
 }
