@@ -14,6 +14,10 @@ abstract interface class MemberCoachRepository {
   /// Routines the coach has assigned (newest first).
   Future<List<CoachRoutine>> fetchRoutines();
 
+  /// PT sessions the coach booked. The trainer owns the schedule — the
+  /// member reads it only. (#490)
+  Future<List<CoachSession>> fetchSessions();
+
   /// The chat thread (oldest → newest).
   Future<List<CoachMessage>> fetchChat();
 

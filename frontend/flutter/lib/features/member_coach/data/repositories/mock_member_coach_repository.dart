@@ -63,6 +63,13 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   Future<List<CoachRoutine>> fetchRoutines() async =>
       List<CoachRoutine>.unmodifiable(_routines);
 
+  /// 데모에는 트레이너가 잡은 일정이 없다. (#490)
+  ///
+  /// 시드로 만들어 넣지 않는 이유: 데모 홈에 없던 카드가 생겨 화면이 지금과
+  /// 달라진다. 실모드에서만 나타나는 것이 맞다.
+  @override
+  Future<List<CoachSession>> fetchSessions() async => const <CoachSession>[];
+
   @override
   Future<List<CoachMessage>> fetchChat() async =>
       List<CoachMessage>.unmodifiable(_chat);
