@@ -24,6 +24,7 @@ from app.schemas.trainer_api import (
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
     TrainerNotificationSettings, WeeklyReportOut,
 )
+from app.services import notification_service
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
 # '초과 N일'이 앱 화면의 경고와 어긋나면 안 된다.
@@ -351,10 +352,18 @@ def build_chat_thread(
 
 def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
-    viewer: str = "trainer",
+    viewer: str = "trainer", notify: str | None = None,
 ) -> ChatMessageOut:
     """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
-    build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다."""
+    build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다.
+
+    [notify] 가 주어지면 그 종류로 회원 알림을 **같은 트랜잭션에** 얹는다(#489).
+    종류를 호출자가 정하는 이유: 주간 리포트도 이 함수로 나가므로, 여기서 판단하면
+    일반 메시지와 구분할 수 없다.
+
+    회원이 보낸 메시지에는 알림을 만들지 않는다 — 트레이너 앱은 unread 배지를 따로
+    쓰고, 알림함은 회원 것이다.
+    """
     msg = ChatMessage(
         id=f"chat-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
@@ -364,6 +373,19 @@ def send_message(
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)
+    if notify is not None and sender == "trainer":
+        trainer_name = db.scalar(select(User.name).where(User.id == trainer_id))
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notify,
+            title=(
+                "주간 리포트가 도착했어요"
+                if notify == notification_service.WEEKLY_REPORT
+                else f"{trainer_name or '트레이너'} 트레이너의 메시지"
+            ),
+            body=text,
+        )
     db.commit()
     db.refresh(msg)
     return ChatMessageOut(
@@ -449,6 +471,14 @@ def assign_routine(
         created_at=datetime.now(timezone.utc),
     )
     db.add(rt)
+    # 배정은 회원이 앱을 열기 전에는 알 수 없는 변화다(#489).
+    notification_service.queue(
+        db,
+        member_id=member_id,
+        kind=notification_service.EXERCISE,
+        title="새 운동 루틴이 배정되었어요",
+        body=f"{name} · {minutes}분",
+    )
     db.commit()
     db.refresh(rt)
     return RoutineOut(
@@ -600,6 +630,16 @@ def create_session(
         sort_order=0,
     )
     db.add(s)
+    # 회원 몫의 일정이 잡혔을 때만 알린다 — 가망 고객('신규 고객 · 상담')처럼
+    # member_id 가 없는 슬롯은 알릴 대상 자체가 없다(#489).
+    if member_id is not None:
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.EXERCISE,
+            title="새 일정이 등록되었어요",
+            body=f"{date} {time} · {type_}",
+        )
     db.commit()
     db.refresh(s)
     return _schedule_out(s)
