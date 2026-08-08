@@ -30,16 +30,27 @@ def _reset_seeded_threads(db_session):
 
 
 def _purge(db_session) -> None:
-    from app.db.seed_trainer import TRAINER_ID
+    """시드 회원의 비시드 채팅·루틴을 지운다.
+
+    범위를 **시드 회원(`_MEMBERS`)으로 한정**한다. `trainer_id` 만 걸면 페이지네이션
+    테스트가 즉석에서 만드는 회원(`pgmember-…`)처럼 다른 테스트가 자기 책임으로
+    만들고 지우는 데이터까지 함께 지운다 — 그건 이 픽스처가 관여할 범위가 아니다
+    (리뷰).
+    """
+    from app.db.seed_trainer import _MEMBERS, TRAINER_ID
     from app.models.models import ChatMessage, TrainerRoutine
+
+    seeded_members = [member_id for member_id, *_ in _MEMBERS]
 
     db_session.rollback()
     db_session.query(ChatMessage).filter(
         ChatMessage.trainer_id == TRAINER_ID,
+        ChatMessage.member_id.in_(seeded_members),
         ~ChatMessage.id.like("seed-chat-%"),
     ).delete(synchronize_session=False)
     db_session.query(TrainerRoutine).filter(
         TrainerRoutine.trainer_id == TRAINER_ID,
+        TrainerRoutine.member_id.in_(seeded_members),
         ~TrainerRoutine.id.like("seed-routine-%"),
     ).delete(synchronize_session=False)
     db_session.commit()
