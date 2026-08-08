@@ -155,7 +155,7 @@ Future<void> _pickAndAnalyze(
     }
     return;
   }
-  if (!sheetContext.mounted) return;
+  if (!navigator.mounted) return;
   navigator.pop();
   await showDietResultSheet(navigator.context, bytes, _currentMealType());
 }
