@@ -14,6 +14,9 @@ import 'package:oncare/features/notification/presentation/controllers/notificati
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 
 /// Connects session transitions to account-specific feature state.
+///
+/// Register every feature reset here. Riverpod overrides replace each other,
+/// so this must remain the single app-level registry.
 Override sessionFeatureResetOverride() {
   return sessionFeatureResetProvider.overrideWith((ref) {
     return () {

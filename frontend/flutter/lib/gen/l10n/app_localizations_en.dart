@@ -373,6 +373,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMealTagHighFiber => 'High fiber';
 
   @override
+  String homeRecBasisSodium(int days, String sodium) {
+    return '$days-day avg sodium ${sodium}mg';
+  }
+
+  @override
+  String get homeRecBasisOverLimit => 'over the daily limit';
+
+  @override
   String get homeRecMealsTitle => 'This week\'s AI meal picks';
 
   @override
@@ -1265,6 +1273,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aicDatePillToday => 'Today';
+
+  @override
+  String get aicMedicalDisclaimer =>
+      'The AI coach is a reference for diet and exercise habits, not a diagnosis or prescription. Please consult a doctor about symptoms.';
 
   @override
   String get aicInputHint => 'Ask the AI anything';

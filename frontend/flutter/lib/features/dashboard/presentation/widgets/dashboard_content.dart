@@ -11,6 +11,8 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
+import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
@@ -288,9 +290,14 @@ class _HomeCard extends StatelessWidget {
 /// 홈 카드 헤더 — 제목 + AI 필 + 더보기 링크. 식단·운동 카드가 같은 구조라
 /// 한 곳에 둔다.
 ///
-/// 셋 다 고유 폭을 요구하고 `Spacer` 로 밀어내던 예전 구조는 문구가 긴
-/// 로케일에서 그대로 넘쳤다(영어 폰 폭에서 `RenderFlex overflowed`, #440).
+/// 셋 다 고유 폭을 요구하고 `Spacer` 로 밀어내던 예전 구조는 **줄어들 수가
+/// 없어서**, 폭이 모자라면 그대로 `RenderFlex overflowed` 를 냈다(#440).
 /// 더보기 링크는 누를 것이라 항상 남기고, 제목·필이 남는 폭에 맞춰 줄어든다.
+///
+/// 발견 경로는 영어 로케일 위젯 테스트였는데, 그 환경의 기본 폰트는 라틴
+/// 문자를 실제의 약 2배 폭으로 그린다. 즉 **실제 기기에서 잘려 보이던 것을
+/// 확인하고 고친 것은 아니다.** 그래도 이 구조가 맞다 — 문구·폰트·폭 중 하나만
+/// 달라져도 넘치던 것을, 넘치는 대신 줄어들게 바꾼 것이다.
 class _CardHeader extends StatelessWidget {
   const _CardHeader({required this.icon, required this.label, this.onOpen});
 
@@ -1491,10 +1498,21 @@ class _RecMeal {
   final Color bg;
   final String tag;
   final Color tagColor;
+
+  /// 사진·태그·색은 그대로 두고 추천 이유 문구만 바꾼 사본.
+  /// 서버가 개인화 문구를 보냈을 때 쓴다.
+  _RecMeal withReason(String newReason) =>
+      _RecMeal(photo, emoji, name, newReason, bg, tag, tagColor);
 }
 
-List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
-  _RecMeal(
+/// 서버 카탈로그 key → 화면 표시(사진·이모지·문구·색).
+///
+/// 추천 API 는 무엇을 어떤 순서로 보여줄지(`key`)만 정하고, 실제 그리기는 여기서
+/// 한다. 사진은 앱 번들 에셋이고 문구는 로케일별 ARB 라, 서버가 문자열을 만들면
+/// 영어 화면에 한국어가 섞이고 사진 없는 요리가 나오기 때문이다.
+/// key 값은 백엔드 `app/data/meal_catalog.py` 와 일치해야 한다.
+Map<String, _RecMeal> _recMealsByKey(AppLocalizations l) => <String, _RecMeal>{
+  'chicken_salad': _RecMeal(
     'assets/images/rec-chicken-salad.jpg',
     '🥗',
     l.homeMealChickenSalad,
@@ -1503,7 +1521,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagLowSodium,
     FigmaColors.greenText,
   ),
-  _RecMeal(
+  'brown_rice_box': _RecMeal(
     'assets/images/rec-brown-rice-box.jpg',
     '🍱',
     l.homeMealBrownRiceBox,
@@ -1512,7 +1530,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagLowGi,
     FigmaColors.orangeText,
   ),
-  _RecMeal(
+  'salmon': _RecMeal(
     'assets/images/rec-salmon-steak.jpg',
     '🐟',
     l.homeMealSalmon,
@@ -1521,7 +1539,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagHighProtein,
     FigmaColors.primary,
   ),
-  _RecMeal(
+  'tofu': _RecMeal(
     'assets/images/rec-tofu-broccoli.png',
     '🥦',
     l.homeMealTofu,
@@ -1530,7 +1548,7 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagLowCal,
     FigmaColors.sugarPurple,
   ),
-  _RecMeal(
+  'namul_bibimbap': _RecMeal(
     'assets/images/rec-namul-bibimbap.png',
     '🥬',
     l.homeMealNamulBibimbap,
@@ -1539,15 +1557,81 @@ List<_RecMeal> _recMeals(AppLocalizations l) => <_RecMeal>[
     l.homeMealTagHighFiber,
     FigmaColors.greenText,
   ),
-];
+};
 
-class _RecommendedMeals extends StatelessWidget {
+/// 이유 코드 → 기본 문구. 서버가 개인화 문구(`reasonText`)를 주지 않았을 때 쓴다.
+/// 요리별 기본 이유는 카탈로그에 고정돼 있어, 이 경로면 화면이 서버 연동 이전과
+/// 완전히 같아진다.
+String? _reasonTextFor(AppLocalizations l, String reasonKey) => switch (reasonKey) {
+  'sodium' => l.homeMealReasonSodium,
+  'glucose' => l.homeMealReasonGlucose,
+  'omega' => l.homeMealReasonOmega,
+  'low_cal' => l.homeMealReasonLowCal,
+  'fiber' => l.homeMealReasonFiber,
+  _ => null,
+};
+
+/// 개인화 근거 한 줄 — 예: "최근 3일 평균 나트륨 2,400mg · 권장 초과".
+///
+/// 서버가 준 `basis` 문자열을 쓰지 않고 수치로 다시 만든다. `basis` 는 서버가 조립한
+/// 한국어라 영어 로케일에 그대로 쓰면 문구가 섞인다(요리명·이유를 key 로 주고받는
+/// 것과 같은 이유).
+///
+/// 개인화되지 않았거나 근거 데이터가 없으면 null — 목업/데모 모드와 신규 가입자가
+/// 이 경로라, 화면에 아무것도 추가되지 않는다.
+String? _basisTextFor(AppLocalizations l, MealRecommendations recs) {
+  if (!recs.personalized || recs.daysWithData <= 0 || recs.avgSodiumMg <= 0) {
+    return null;
+  }
+  final String sodium = NumberFormat.decimalPattern().format(recs.avgSodiumMg);
+  final String base = l.homeRecBasisSodium(recs.daysWithData, sodium);
+  return recs.sodiumOverLimit ? '$base · ${l.homeRecBasisOverLimit}' : base;
+}
+
+/// 추천 응답 → 카드 목록.
+///
+/// 앱이 모르는 key(서버 카탈로그가 먼저 늘어난 경우)는 그릴 방법이 없으므로
+/// 조용히 버리고, 그만큼을 기본 순서에서 채워 카드 수를 유지한다.
+List<_RecMeal> _cardsFor(AppLocalizations l, MealRecommendations recs) {
+  final Map<String, _RecMeal> byKey = _recMealsByKey(l);
+  final List<_RecMeal> cards = <_RecMeal>[];
+  final Set<String> used = <String>{};
+
+  for (final MealRecommendation rec in recs.items) {
+    final _RecMeal? base = byKey[rec.key];
+    if (base == null || used.contains(rec.key)) continue;
+    used.add(rec.key);
+    final String reason =
+        rec.reasonText ?? _reasonTextFor(l, rec.reasonKey) ?? base.reason;
+    cards.add(base.withReason(reason));
+  }
+
+  for (final String key in kDefaultMealKeys) {
+    if (cards.length >= kDefaultMealKeys.length) break;
+    if (used.contains(key)) continue;
+    used.add(key);
+    final _RecMeal? base = byKey[key];
+    if (base != null) cards.add(base);
+  }
+  return cards;
+}
+
+class _RecommendedMeals extends ConsumerWidget {
   const _RecommendedMeals();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final List<_RecMeal> meals = _recMeals(l);
+    // valueOrNull 이라 로딩·에러에서 기본 추천이 그대로 그려진다. 스켈레톤을 두면
+    // 홈 진입 때 카드가 한 번 비었다가 채워져 화면이 깜빡인다(목업 모드에서는
+    // 결과가 기본값과 같아 아예 아무 변화도 보이지 않는다).
+    final MealRecommendations recs =
+        ref.watch(dietRecommendationsProvider).valueOrNull ??
+        MealRecommendations.fallback;
+    final List<_RecMeal> meals = _cardsFor(l, recs);
+    // 개인화된 응답일 때만 근거를 보여준다. 목업/데모 모드와 신규 가입자는
+    // personalized=false 라 이 줄이 아예 나타나지 않는다(화면 불변).
+    final String? basis = _basisTextFor(l, recs);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1573,6 +1657,15 @@ class _RecommendedMeals extends StatelessWidget {
                       l.homeAiAnalysisPill,
                       background: FigmaColors.primaryA(0.10),
                     ),
+                    if (basis != null)
+                      Text(
+                        basis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: FigmaColors.textMuted,
+                        ),
+                      ),
                   ],
                 ),
               ),

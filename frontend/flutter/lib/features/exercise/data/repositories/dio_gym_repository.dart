@@ -7,8 +7,9 @@ import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart
 
 /// 헬스장·트레이너 디렉터리 실 API. (#324)
 ///
-/// 회원의 "내 헬스장/트레이너"는 별도 링크가 아니라 **담당 트레이너의 소속**에서
-/// 나온다(`GET /me/coach`). 백엔드에 회원↔헬스장 링크가 따로 없기 때문이다.
+/// 회원의 "내 헬스장"과 "내 트레이너"는 서버에서도 각각의 링크다 — 헬스장은
+/// `GET /me/gym`, 담당 트레이너는 `GET /me/coach`. 그래서 트레이너만 해제해도
+/// 헬스장 카드는 남는다(#444).
 class DioGymRepository implements GymRepository {
   DioGymRepository(this._dio);
   final Dio _dio;
@@ -94,14 +95,12 @@ class DioGymRepository implements GymRepository {
 
   @override
   Future<Gym?> fetchMyGym() async {
-    final coach = await _coach();
-    final gym = coach?['gym'] as Map<String, Object?>?;
-    final gymId = gym?['id'] as String?;
-    if (gymId == null) return null;
-    // 요약에는 평점·태그가 없다. 상세를 한 번 더 읽어 목록과 같은 카드를 만든다.
+    // 담당 트레이너를 거치지 않는다 — 트레이너만 해제한 회원은 `/me/coach` 가
+    // 404 여도 헬스장은 남아 있어야 한다(#444). 응답이 목록·상세와 같은 형태라
+    // 상세를 한 번 더 읽을 필요도 없다.
     try {
       final res = await _dio.get<Map<String, Object?>>(
-        '/gyms/$gymId',
+        '/me/gym',
         queryParameters: <String, Object?>{'lat': kGymSearchLat, 'lng': kGymSearchLng},
       );
       if (res.data != null) return _gym(res.data!);
@@ -120,12 +119,11 @@ class DioGymRepository implements GymRepository {
     return fetchTrainer(trainerId);
   }
 
+  /// 헬스장과 그곳 담당 트레이너를 함께 끊는다 — 떠난 헬스장의 트레이너를 담당으로
+  /// 남길 수 없다. mock 과 같은 규칙이다.
   @override
   Future<void> disconnectMyGym() => _dio.delete<void>('/me/coach');
 
-  /// 서버에는 회원↔헬스장 링크가 따로 없어 "트레이너만 해제"를 표현할 수 없다.
-  /// 담당 링크를 끊으면 헬스장도 함께 사라진다 — mock 과 달리 헬스장이 남지 않는다.
-  /// 회원↔헬스장 링크가 생기면(#301 후속) 여기를 나눈다.
   @override
-  Future<void> disconnectMyTrainer() => _dio.delete<void>('/me/coach');
+  Future<void> disconnectMyTrainer() => _dio.delete<void>('/me/coach/trainer');
 }

@@ -370,6 +370,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMealTagHighFiber => '고식이섬유';
 
   @override
+  String homeRecBasisSodium(int days, String sodium) {
+    return '최근 $days일 평균 나트륨 ${sodium}mg';
+  }
+
+  @override
+  String get homeRecBasisOverLimit => '권장 초과';
+
+  @override
   String get homeRecMealsTitle => '이번 주 AI 추천 식단';
 
   @override
@@ -1250,6 +1258,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aicDatePillToday => '오늘';
+
+  @override
+  String get aicMedicalDisclaimer =>
+      'AI 코치는 식단·운동 관리를 돕는 참고용이에요. 진단·처방이 아니니 증상이 있으면 전문의와 상담해 주세요.';
 
   @override
   String get aicInputHint => 'AI에게 무엇이든 물어보세요';

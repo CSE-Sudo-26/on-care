@@ -34,6 +34,16 @@ flutter build web --release \
   --dart-define=ENV=prod \
   --dart-define=API_BASE_URL=https://api.oncare.example.com
 
+# 기능별 실 백엔드 전환 (REAL_API)
+# USE_MOCK_API 는 전역이라 끄면 로그인·홈·식단·운동·채팅이 한꺼번에 실서버로 넘어간다.
+# 준비된 기능만 골라 실연동해 보여주고 싶을 때 쓴다. 지정하지 않으면 지금까지의
+# 데모 동작과 완전히 동일하다(기본 꺼짐).
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=http://localhost:8000/v1 \
+  --dart-define=REAL_API=ai-coach       # AI 코치만 실 Gemini, 나머지는 목업
+# 사용 가능한 키: ai-coach(/ai-coach) · auth(/auth) · diet(/diet)
+# 키 → 경로 대응은 lib/core/config/app_config.dart 의 kRealApiFeatures 참고.
+
 # Android
 flutter run -d <android-device>  # debug
 flutter build apk --release      # 또는 build appbundle

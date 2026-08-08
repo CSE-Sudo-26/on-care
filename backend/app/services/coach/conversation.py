@@ -1,0 +1,141 @@
+"""
+AI 코치 대화 영속화.
+
+`/ai-coach/chat` 은 원래 무상태였다. 히스토리를 클라가 매번 실어 보내는 구조라
+앱을 다시 켜거나 다른 기기로 옮기면 대화가 사라졌다(#274). 여기서 대화를 서버에
+저장하고 복원한다.
+
+설계 메모:
+- 앱에는 대화 목록 UI 가 없고 채팅 시트 하나만 있다. 그래서 사용자당 **활성 스레드
+  1개**를 get-or-create 해서 쓴다. 스레드 개념 자체는 테이블로 분리해 뒀으므로,
+  나중에 목록이 필요해지면 archived_at 을 채우는 것으로 확장된다.
+- 저장은 요청 단위로 사용자 메시지 + 코치 답변을 함께 커밋한다. 답변 생성이
+  실패해도 폴백 문구가 반환되므로 "질문만 남고 답이 없는" 상태는 생기지 않는다.
+- 근거 문서 제목(sources)은 답변과 함께 저장한다. 복원했을 때 근거가 사라지면
+  왜 그렇게 답했는지 되짚을 수 없다.
+"""
+from __future__ import annotations
+
+import json
+import uuid
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.models.models import AiConversation, AiMessage
+
+#: 한 대화에서 복원·프롬프트에 쓰는 최대 메시지 수. 오래된 대화가 길어져도
+#: 프롬프트가 무한정 커지지 않게 막는다(비용·지연 가드).
+MAX_HISTORY_MESSAGES = 50
+
+ROLE_USER = "user"
+ROLE_COACH = "coach"
+
+
+def _new_id(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:16]}"
+
+
+def get_or_create_active(db: Session, user_id: str) -> AiConversation:
+    """사용자의 활성 대화 스레드. 없으면 만든다."""
+    convo = db.scalar(
+        select(AiConversation)
+        .where(
+            AiConversation.user_id == user_id,
+            AiConversation.archived_at.is_(None),
+        )
+        .order_by(AiConversation.created_at.desc())
+        .limit(1)
+    )
+    if convo is not None:
+        return convo
+
+    convo = AiConversation(id=_new_id("aiconv"), user_id=user_id)
+    db.add(convo)
+    db.commit()
+    db.refresh(convo)
+    return convo
+
+
+def load_messages(db: Session, user_id: str) -> list[AiMessage]:
+    """활성 대화의 메시지를 시간순으로. 대화가 없으면 빈 목록.
+
+    스레드를 만들지 않는 조회 전용 경로다. 채팅 화면을 열기만 하고 아무 말도 하지
+    않은 사용자에게 빈 대화 레코드를 남기지 않는다.
+    """
+    convo = db.scalar(
+        select(AiConversation)
+        .where(
+            AiConversation.user_id == user_id,
+            AiConversation.archived_at.is_(None),
+        )
+        .order_by(AiConversation.created_at.desc())
+        .limit(1)
+    )
+    if convo is None:
+        return []
+
+    rows = db.scalars(
+        select(AiMessage)
+        .where(AiMessage.conversation_id == convo.id)
+        .order_by(AiMessage.seq.asc())
+    ).all()
+    return list(rows)[-MAX_HISTORY_MESSAGES:]
+
+
+def append_exchange(
+    db: Session,
+    user_id: str,
+    *,
+    question: str,
+    reply: str,
+    sources: list[str],
+) -> AiConversation:
+    """질문과 답변을 한 번에 저장한다.
+
+    두 줄을 한 커밋으로 묶어야 중간에 실패했을 때 질문만 남는 반쪽 대화가 생기지
+    않는다. 순서는 `seq` 로 고정한다 — created_at 은 쓸 수 없다. PostgreSQL 의
+    now() 는 트랜잭션 시각이라 같은 커밋의 두 줄이 **동일한 created_at** 을 갖고,
+    그러면 정렬이 랜덤한 id 순으로 무너져 답변이 질문보다 먼저 보인다.
+    """
+    convo = get_or_create_active(db, user_id)
+    # 빈 대화면 max 가 NULL 이라 coalesce 로 -1 → 첫 순번이 0 이 된다.
+    next_seq = db.scalar(
+        select(func.coalesce(func.max(AiMessage.seq), -1) + 1).where(
+            AiMessage.conversation_id == convo.id
+        )
+    )
+
+    db.add(
+        AiMessage(
+            id=_new_id("aimsg"),
+            conversation_id=convo.id,
+            seq=next_seq,
+            role=ROLE_USER,
+            content=question,
+            sources_json="[]",
+        )
+    )
+    db.add(
+        AiMessage(
+            id=_new_id("aimsg"),
+            conversation_id=convo.id,
+            seq=next_seq + 1,
+            role=ROLE_COACH,
+            content=reply,
+            sources_json=json.dumps(sources, ensure_ascii=False),
+        )
+    )
+    db.commit()
+    return convo
+
+
+def parse_sources(raw: str) -> list[str]:
+    """저장된 sources_json → 리스트. 깨진 값이면 빈 목록(화면이 죽으면 안 된다)."""
+    try:
+        value = json.loads(raw or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(value, list):
+        return []
+    return [str(v) for v in value]

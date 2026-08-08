@@ -117,6 +117,11 @@ flutter build web --release \
 ```
 0009_diet_idempotency_key → 0010_diet_entry_macros(#207) → 0011_health_daily_sugar_g(#231)
                           → 0012_trainer_domain(트레이너 도메인) → 0013_trainer_active_coach_uq(active 담당 unique index)
+                          → 0014_consultation_requests ─┐
+                          → 0014_drop_trainer_prof_ix ──┴→ 0015_merge_alembic_heads
+                          → 0016_drop_vitals → 0017_add_diet_exercise_goals
+                          → 0018_diet_entry_sugar_g_float → 0019_trainer_noti_settings
+                          → 0020_gym_profiles_trainer_fk
 ```
 
 **원칙**: 나중에 머지되는 마이그레이션의 `down_revision` 을 현재 main head 로 맞춰 한 줄로 잇는다

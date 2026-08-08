@@ -116,30 +116,34 @@ void main() {
     expect(await repo.fetchMyTrainer(), isNull);
   });
 
-  test('내 헬스장은 요약이 아니라 상세를 읽어 평점·태그를 채운다', () async {
-    const coachJson = '''
-    {"trainer_id":"trainer-demo","name":"김트레이너","specialty":"퍼스널 트레이너",
-     "career":"7년","intro":"소개","goal":"혈압 관리",
-     "gym":{"id":"gym-oncare-sinchon","name":"온케어짐 신촌점",
-            "address":"서울 서대문구 신촌로 120","hours":"06:00 – 23:00",
-            "phone":"02-1234-5678"}}
-    ''';
-    final adapter = _StubAdapter(<String, Object?>{
-      '/me/coach': coachJson,
-      '/gyms/gym-oncare-sinchon': _gymDetailJson,
-    });
+  test('내 헬스장은 담당 트레이너를 거치지 않고 /me/gym 에서 읽는다', () async {
+    // 트레이너만 해제한 회원은 /me/coach 가 404 다. 그걸 거쳐 읽으면 헬스장 카드가
+    // 함께 사라진다(#444).
+    final adapter = _StubAdapter(<String, Object?>{'/me/gym': _gymDetailJson});
 
     final gym = await DioGymRepository(_dio(adapter)).fetchMyGym();
     expect(gym, isNotNull);
-    // 요약(TrainerGymOut)에는 평점·태그가 없다 — 상세를 읽어야 카드가 목록과 같다.
+    // 목록과 같은 형태라 상세를 한 번 더 읽지 않는다.
     expect(gym!.rating, 4.7);
     expect(gym.tags, isNotEmpty);
-    expect(adapter.calls, contains('GET /gyms/gym-oncare-sinchon'));
+    expect(adapter.calls, <String>['GET /me/gym']);
+    // 거리 표시는 서버가 계산한다.
+    final Map<String, dynamic> q = adapter.queryOf('/me/gym');
+    expect(q['lat'], kGymSearchLat);
+    expect(q['lng'], kGymSearchLng);
   });
 
-  test('연결 해제는 DELETE /me/coach 로 나간다', () async {
-    final adapter = _StubAdapter(<String, Object?>{'/me/coach': '{}'});
-    await DioGymRepository(_dio(adapter)).disconnectMyGym();
-    expect(adapter.calls, contains('DELETE /me/coach'));
+  test('헬스장 해제는 DELETE /me/coach, 트레이너 해제는 DELETE /me/coach/trainer', () async {
+    // 두 휴지통이 같은 엔드포인트로 나가면 트레이너만 끊어도 헬스장이 사라진다.
+    final adapter = _StubAdapter(<String, Object?>{
+      '/me/coach': '{}',
+      '/me/coach/trainer': '{}',
+    });
+    final repo = DioGymRepository(_dio(adapter));
+
+    await repo.disconnectMyGym();
+    await repo.disconnectMyTrainer();
+
+    expect(adapter.calls, <String>['DELETE /me/coach', 'DELETE /me/coach/trainer']);
   });
 }

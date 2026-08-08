@@ -21,10 +21,16 @@ import 'package:oncare/core/storage/app_database.dart';
 /// `core/network/case_mapper.dart` so the contract matches the real
 /// server's Pydantic models.
 class LocalApiInterceptor extends Interceptor {
-  LocalApiInterceptor(this._db, this._logger);
+  LocalApiInterceptor(this._db, this._logger, {this.isRealApiPath});
 
   final AppDatabase _db;
   final Logger _logger;
+
+  /// 이 경로를 목업이 아니라 실 백엔드로 보내야 하는지 판정한다(`AppConfig.isRealApiPath`).
+  ///
+  /// 주입받는 이유는 이 인터셉터가 설정에 직접 의존하지 않게 하기 위해서다 —
+  /// 테스트에서 설정 전체를 세우지 않고 이 함수만 넘기면 된다.
+  final bool Function(String path)? isRealApiPath;
 
   // Path-pattern → handler map. Static paths get O(1) dispatch;
   // path-with-id endpoints (`/diet/entries/{id}`) fall to the regex
@@ -74,6 +80,13 @@ class LocalApiInterceptor extends Interceptor {
     final method = options.method.toUpperCase();
     final path = options.path;
     final key = '$method $path';
+
+    // REAL_API 로 켠 기능은 목업이 가로채지 않고 실 백엔드로 흘려보낸다.
+    // (null 을 돌려주면 다음 인터셉터를 거쳐 실 네트워크로 나간다.)
+    if (isRealApiPath != null && isRealApiPath!(path)) {
+      _logger.d('[local-api] $key → 실 백엔드(REAL_API)');
+      return null;
+    }
 
     try {
       // Static dispatch first.

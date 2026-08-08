@@ -12,7 +12,7 @@ import math
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.models import GymProfile, Place, TrainerProfile, User
+from app.models.models import GymProfile, MemberGym, Place, TrainerProfile, User
 from app.schemas.gym_api import GymOut, TrainerOut
 
 
@@ -106,6 +106,42 @@ def get_gym(
     return _to_gym(place, profile, lat, lng)
 
 
+# ---- 회원의 내 헬스장 (#444) ----
+
+def get_member_gym_id(db: Session, member_id: str) -> str | None:
+    """회원이 직접 연결한 헬스장 id. 없으면 None.
+
+    담당 트레이너의 소속에서 파생하지 않는다 — 트레이너만 해제해도 헬스장은 남아야
+    한다. 트레이너 소속으로의 폴백은 호출부(`trainer_service.build_member_coach`)가
+    아직 백필되지 않은 데이터를 위해 따로 처리한다.
+    """
+    return db.scalar(select(MemberGym.gym_id).where(MemberGym.member_id == member_id))
+
+
+def get_member_gym(
+    db: Session, member_id: str, *, lat: float | None = None, lng: float | None = None
+) -> GymOut | None:
+    """회원의 '내 헬스장' 카드. 연결이 없거나 헬스장이 사라졌으면 None."""
+    gym_id = get_member_gym_id(db, member_id)
+    return None if gym_id is None else get_gym(db, gym_id, lat=lat, lng=lng)
+
+
+def unlink_member_gym(db: Session, member_id: str) -> bool:
+    """헬스장 연결 해제. 끊었으면 True, 원래 없었으면 False.
+
+    담당 링크와 달리 행을 지운다 — 이 링크를 참조하는 이력이 없다.
+
+    **커밋하지 않는다.** 헬스장 해제는 담당 트레이너 해제와 함께 일어나므로
+    (`trainer_service.disconnect_member_gym`), 여기서 커밋하면 뒤 단계가 실패했을 때
+    헬스장만 끊기고 담당은 남는 반쪽 상태가 된다. 커밋은 호출부가 한 번만 한다.
+    """
+    link = db.get(MemberGym, member_id)
+    if link is None:
+        return False
+    db.delete(link)
+    return True
+
+
 def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:
     try:
         certs = json.loads(profile.certifications_json or "[]")
@@ -125,10 +161,34 @@ def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:
 
 
 def _trainer_query():
+    """디렉터리에 노출할 트레이너 — 상담 대상 조건과 같아야 한다. (#451)
+
+    `consultation_service._validate_target` 은 상담 요청 시 트레이너의 소속을
+    `places`(category='fitness') 에서 검증한다. 여기서 role·active 만 보면
+    소속이 없는 트레이너가 목록·상세에 뜨고, 회원은 상담 신청 단계에서야 404 를
+    받는다. 두 곳이 같은 조건을 쓰도록 `places` 를 inner 조인한다.
+
+    따라서 다음 트레이너는 목록·추천·상세 어디에도 나오지 않는다(상세는 404):
+
+    - `gym_id` 가 NULL — 아직 소속이 백필되지 않았거나 해제된 경우.
+      `TrainerProfile.gym_id` 는 `places.id` 를 ondelete='SET NULL' 로 참조하므로,
+      헬스장이 지워지면 소속은 NULL 이 되고 여기서 함께 빠진다(가리키는 Place 가
+      없는 gym_id 는 FK 가 막아 준다).
+    - 소속 Place 의 category 가 'fitness' 가 아님 — 병원·약국 같은 다른 장소.
+
+    소속이 빠진 트레이너를 숨기는 쪽을 골랐다. 상담을 걸 수 없는 트레이너를 목록에
+    남기면 회원은 고를 수 있는데 마지막 단계에서만 막히고, 트레이너 앱이 소속을
+    채우면(#452) 그대로 다시 노출된다.
+    """
     return (
         select(User, TrainerProfile)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
-        .where(User.role == "trainer", User.is_active.is_(True))
+        .join(Place, Place.id == TrainerProfile.gym_id)
+        .where(
+            User.role == "trainer",
+            User.is_active.is_(True),
+            Place.category == "fitness",
+        )
     )
 
 

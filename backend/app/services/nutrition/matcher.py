@@ -50,10 +50,7 @@ def match_in_rows(rows, name: str):
 
 
 def match_food(db, name: str):
-    """DB 세션으로 food_nutrients 전체를 읽어 매칭(작은 참조표라 전건 로드로 충분)."""
-    from sqlalchemy import select
+    """food_nutrients 전건에 매칭(작은 참조표라 전건 로드로 충분 — 로드는 캐시된다)."""
+    from app.services.nutrition.table import load_rows
 
-    from app.models.models import FoodNutrient
-
-    rows = db.scalars(select(FoodNutrient)).all()
-    return match_in_rows(rows, name)
+    return match_in_rows(load_rows(db), name)

@@ -34,9 +34,18 @@ final dioProvider = Provider<Dio>((ref) {
   // Order matters: LocalApi (drift-backed) and the legacy in-memory
   // MockApi both short-circuit before auth/logging fire.
   if (config.useMockApi) {
+    // REAL_API 로 켠 기능의 경로는 두 목업 인터셉터 모두 가로채지 않고 실 네트워크로
+    // 흘려보낸다 — 준비된 기능만 골라 실연동해 보여줄 수 있게(전역 USE_MOCK_API 는
+    // 끄는 순간 전 기능이 함께 넘어간다).
     dio.interceptors
-      ..add(LocalApiInterceptor(ref.watch(appDatabaseProvider), logger))
-      ..add(MockApiInterceptor(logger));
+      ..add(
+        LocalApiInterceptor(
+          ref.watch(appDatabaseProvider),
+          logger,
+          isRealApiPath: config.isRealApiPath,
+        ),
+      )
+      ..add(MockApiInterceptor(logger, isRealApiPath: config.isRealApiPath));
   }
   dio.interceptors.add(AuthInterceptor(ref));
   if (!config.isProd) {
