@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_coach_sheet.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -215,7 +217,7 @@ class _StatusView extends StatelessWidget {
 /// Identity, why this client is flagged, today's numbers, and the two
 /// things the trainer most often does next — above the tabs, so all of it
 /// stays on screen no matter which tab is open.
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({
     required this.client,
     required this.alerts,
@@ -236,7 +238,7 @@ class _Header extends StatelessWidget {
   final VoidCallback? onToggleActive;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -308,6 +310,21 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
+          // AI 코칭 상담(#497)은 실 API 모드에서만 — 데모에는 근거로 삼을 회원
+          // 기록이 없어 무엇을 물어도 의미 있는 답이 나오지 않는다. 기존 두
+          // 버튼 행은 그대로 두고 아래에 붙여, 데모 헤더가 지금과 같게 남는다.
+          if (ref.watch(clientCoachEnabledProvider)) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            ActionButton(
+              label: 'AI에게 묻기',
+              icon: Icons.psychology_outlined,
+              onPressed: () => showClientCoachSheet(
+                context,
+                memberId: client.id,
+                clientName: client.name,
+              ),
+            ),
+          ],
         ],
       ),
     );
