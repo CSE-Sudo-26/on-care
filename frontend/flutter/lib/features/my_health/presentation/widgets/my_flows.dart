@@ -627,22 +627,37 @@ class NotificationSettingsPage extends ConsumerStatefulWidget {
 
 class _NotificationSettingsPageState
     extends ConsumerState<NotificationSettingsPage> {
-  /// 저장 중인 값을 덮어쓰는 화면 상태. 서버 응답을 기다리는 동안에도 스위치가
-  /// 즉시 움직여야 한다 — 왕복을 기다리면 눌리지 않는 것처럼 보인다.
-  final Map<String, bool> _pending = <String, bool>{};
+  /// 이 화면에서 바꾼 값. 서버 응답을 기다리는 동안에도 스위치가 즉시 움직여야
+  /// 한다 — 왕복을 기다리면 눌리지 않는 것처럼 보인다.
+  ///
+  /// 저장에 **성공한 값도 여기 남는다.** 지우면 최초 조회값으로 돌아가는데,
+  /// 서버에는 저장된 값이 남아 있어 화면과 어긋난다.
+  final Map<String, bool> _local = <String, bool>{};
 
-  Future<void> _persist(String key, bool value) async {
-    setState(() => _pending[key] = value);
+  /// 키별 최신 요청 번호. 늦게 도착한 옛 응답이 최신 상태를 덮어쓰는 것을 막는다.
+  final Map<String, int> _requestSeq = <String, int>{};
+
+  /// 화면에 그릴 값 — 내가 바꾼 값이 우선, 없으면 서버 값.
+  bool _valueOf(String key, Map<String, bool> saved, bool fallback) =>
+      _local[key] ?? saved[key] ?? fallback;
+
+  Future<void> _persist(String key, bool value, bool previous) async {
+    final int seq = (_requestSeq[key] ?? 0) + 1;
+    _requestSeq[key] = seq;
+    setState(() => _local[key] = value);
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(notificationSettingsRepositoryProvider)
           .setValue(key, value);
     } on Object {
-      // 저장에 실패하면 화면을 서버 값으로 되돌린다. 켜진 줄 알았는데 안 오는
-      // 상태가 가장 나쁘다.
       if (!mounted) return;
-      setState(() => _pending.remove(key));
+      // 이 요청을 기다리는 사이 더 눌렀다면, 옛 실패로 최신 상태를 되돌리지
+      // 않는다(리뷰).
+      if (_requestSeq[key] != seq) return;
+      // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
+      // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
+      setState(() => _local[key] = previous);
       messenger.showSnackBar(
         const SnackBar(content: Text('알림 설정을 저장하지 못했어요')),
       );
@@ -674,13 +689,22 @@ class _NotificationSettingsPageState
                 ),
               ),
               Switch.adaptive(
-                value:
-                    _pending[kNotificationSettingItems[i].key] ??
-                    saved[kNotificationSettingItems[i].key] ??
-                    kNotificationSettingItems[i].fallback,
+                value: _valueOf(
+                  kNotificationSettingItems[i].key,
+                  saved,
+                  kNotificationSettingItems[i].fallback,
+                ),
                 activeThumbColor: FigmaColors.primary,
-                onChanged: (bool v) =>
-                    _persist(kNotificationSettingItems[i].key, v),
+                onChanged: (bool v) => _persist(
+                  kNotificationSettingItems[i].key,
+                  v,
+                  // 실패했을 때 돌아갈 곳 — 지금 화면에 보이는 값.
+                  _valueOf(
+                    kNotificationSettingItems[i].key,
+                    saved,
+                    kNotificationSettingItems[i].fallback,
+                  ),
+                ),
               ),
             ],
           ),

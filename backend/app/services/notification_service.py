@@ -64,6 +64,11 @@ def update_settings(
     db: Session, member_id: str, fields: dict[str, bool]
 ) -> dict[str, bool]:
     """보낸 항목만 반영한다. 없던 행은 기본값에서 시작해 만든다."""
+    # 바꿀 게 없으면 행을 만들지 않는다. 행 없음 == 기본값이므로 빈 요청에
+    # 기본값 행을 새로 남기는 것은 의미 없는 쓰기다(리뷰).
+    if not fields:
+        return get_settings(db, member_id)
+
     row = db.get(MemberNotificationSetting, member_id)
     if row is None:
         row = MemberNotificationSetting(
@@ -97,10 +102,16 @@ def wants(db: Session, member_id: str, kind: str) -> bool:
 
     설정을 읽지 못하면 **받는 쪽으로** 둔다 — 알림이 하나 더 오는 것보다 놓치는
     쪽이 나쁘다.
+
+    조회를 **savepoint 안에서** 한다. 예외를 잡는 것만으로는 부족하다 — DB 오류가
+    나면 세션이 실패 상태로 남아, 이어지는 `db.commit()`(메시지·루틴·일정을
+    저장하는 그 커밋)까지 함께 죽는다. 설정을 못 읽었다는 이유로 메시지가 사라지면
+    안 된다(리뷰). savepoint 를 되돌리면 바깥 트랜잭션은 멀쩡하다.
     """
     try:
-        return get_settings(db, member_id).get(kind, True)
-    except Exception:  # noqa: BLE001 — 설정 조회 실패가 알림을 막지 않는다
+        with db.begin_nested():
+            return get_settings(db, member_id).get(kind, True)
+    except Exception:  # noqa: BLE001 — 설정 조회 실패가 알림도 원래 요청도 막지 않는다
         return True
 
 

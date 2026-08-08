@@ -17,7 +17,11 @@ const AppConfig _demo = AppConfig(
 
 /// 저장 요청을 기록하고, 실패시킬 수도 있는 페이크.
 class _FakeRepository implements NotificationSettingsRepository {
-  _FakeRepository({Map<String, bool>? initial, this.failOnWrite = false})
+  _FakeRepository({
+    Map<String, bool>? initial,
+    this.failOnWrite = false,
+    this.failFrom,
+  })
     : _values =
           initial ??
           <String, bool>{
@@ -28,6 +32,9 @@ class _FakeRepository implements NotificationSettingsRepository {
 
   final Map<String, bool> _values;
   final bool failOnWrite;
+
+  /// N번째 쓰기부터 실패시킨다(1부터). 성공 뒤 실패를 재현할 때 쓴다.
+  final int? failFrom;
   final List<(String, bool)> writes = <(String, bool)>[];
 
   @override
@@ -35,7 +42,10 @@ class _FakeRepository implements NotificationSettingsRepository {
 
   @override
   Future<void> setValue(String key, bool value) async {
-    if (failOnWrite) throw StateError('write failed');
+    final int attempt = writes.length + 1;
+    if (failOnWrite || (failFrom != null && attempt >= failFrom!)) {
+      throw StateError('write failed');
+    }
     writes.add((key, value));
     _values[key] = value;
   }
@@ -125,6 +135,29 @@ void main() {
     final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
     expect(switches[index].value, isFalse);
     expect(find.text('알림 설정을 저장하지 못했어요'), findsOneWidget);
+  });
+
+  testWidgets('성공한 뒤 실패하면 최초값이 아니라 직전 값으로 돌아간다', (
+    WidgetTester tester,
+  ) async {
+    // 첫 저장이 성공하면 서버에는 그 값이 남는다. 다음 저장이 실패했다고 최초
+    // 조회값으로 되돌리면 화면과 서버가 어긋난다(CodeRabbit 리뷰).
+    final repo = _FakeRepository(failFrom: 2);
+    await _pump(tester, repository: repo);
+    final index = kNotificationSettingItems.indexWhere(
+      (NotificationSettingItem item) => item.key == 'notif_weekly_report',
+    );
+
+    // 1) 끔 → 켬 (성공). 서버 값은 이제 true.
+    await tester.tap(find.byType(Switch).at(index));
+    await tester.pumpAndSettle();
+    // 2) 켬 → 끔 (실패). 되돌아갈 곳은 true 다.
+    await tester.tap(find.byType(Switch).at(index));
+    await tester.pumpAndSettle();
+
+    expect(repo.writes, <(String, bool)>[('notif_weekly_report', true)]);
+    final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
+    expect(switches[index].value, isTrue);
   });
 
   testWidgets('데모는 기기 저장을 그대로 쓴다', (WidgetTester tester) async {

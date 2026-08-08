@@ -16,6 +16,8 @@ from uuid import uuid4
 
 import pytest
 
+from sqlalchemy import text
+
 from app.core.security import hash_password
 from app.models.models import (
     ChatMessage,
@@ -28,6 +30,7 @@ from app.models.models import (
     TrainerSchedule,
     User,
 )
+from app.services import notification_service
 
 EMAIL_PREFIX = "noti-test-"
 PLACE_PREFIX = "noti-place-"
@@ -261,6 +264,50 @@ def test_a_schedule_without_a_member_notifies_nobody(client, db_session):
 
     assert created.status_code == 201, created.text
     assert _titles(client, member_token) == []
+
+
+def test_a_settings_read_failure_still_delivers_the_message(
+    client, db_session, monkeypatch
+):
+    """설정 조회가 터져도 메시지는 저장된다. (CodeRabbit 리뷰)
+
+    예외를 잡는 것만으로는 부족하다 — DB 오류가 나면 세션이 실패 상태로 남아
+    이어지는 커밋까지 함께 죽는다. savepoint 로 격리해야 원래 요청이 산다.
+    """
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+
+    def _boom(db, member_id):  # noqa: ANN001
+        db.execute(text("SELECT 1 FROM does_not_exist"))
+        raise AssertionError("unreachable")
+
+    monkeypatch.setattr(notification_service, "get_settings", _boom)
+
+    sent = client.post(
+        f"/v1/trainer/clients/{member_id}/chat",
+        headers=_auth(trainer_token),
+        json={"text": "설정이 깨져도 도착해야 합니다"},
+    )
+
+    assert sent.status_code == 201, sent.text
+    thread = client.get("/v1/me/coach/chat", headers=_auth(member_token))
+    assert any(
+        m["body"] == "설정이 깨져도 도착해야 합니다" for m in thread.json()
+    )
+
+
+def test_an_empty_settings_update_creates_no_row(client, db_session):
+    """바꿀 게 없으면 기본값 행을 새로 남기지 않는다. (CodeRabbit 리뷰)"""
+    _, member_id, member_token, _ = _pair(client, db_session)
+
+    response = client.put(
+        "/v1/users/me/notification-settings",
+        headers=_auth(member_token),
+        json={},
+    )
+
+    assert response.status_code == 200, response.text
+    db_session.expire_all()
+    assert db_session.get(MemberNotificationSetting, member_id) is None
 
 
 # --- 수신 설정 --------------------------------------------------------------
