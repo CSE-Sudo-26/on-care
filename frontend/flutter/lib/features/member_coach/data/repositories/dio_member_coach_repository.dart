@@ -71,8 +71,11 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   Future<int> unreadCount() async {
     try {
       final res = await _dio.get<Map<String, Object?>>('/me/coach/chat/unread');
-      final v = res.data?['unread'];
-      return v is num ? v.toInt() : 0;
+      final Object? unread = res.data?['unread'];
+      if (unread is! int || unread < 0) {
+        throw const FormatException('Invalid unread message count.');
+      }
+      return unread;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return 0;
       throw AppError.fromDio(e);

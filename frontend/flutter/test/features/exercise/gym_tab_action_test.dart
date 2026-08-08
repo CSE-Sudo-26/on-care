@@ -79,6 +79,8 @@ void main() {
   Future<void> pumpGymTab(
     WidgetTester tester, {
     ConsultationRequest? consultation,
+    List<ConsultationRequest> additionalConsultations =
+        const <ConsultationRequest>[],
     bool hasMyGym = true,
     Trainer? trainer = _trainer,
     MemberCoach? coach,
@@ -90,6 +92,9 @@ void main() {
     consultationController = newTestConsultationController();
     if (consultation != null) {
       await seedPending(consultationController, consultation);
+    }
+    for (final ConsultationRequest request in additionalConsultations) {
+      await seedPending(consultationController, request);
     }
     router = buildAppRouter(config: _config);
     addTearDown(router.dispose);
@@ -238,6 +243,69 @@ void main() {
 
     expect(find.byType(TrainerChatPage), findsOneWidget);
     expect(find.text(_coach.name), findsOneWidget);
+  });
+
+  testWidgets('connected trainer can open chat without a member gym link', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester, hasMyGym: false, coach: _coach);
+
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsOneWidget);
+  });
+
+  testWidgets(
+    'pending consultation keeps its action without a member gym link',
+    (WidgetTester tester) async {
+      await pumpGymTab(
+        tester,
+        hasMyGym: false,
+        consultation: _consultation(ConsultationStatus.pending),
+        coach: _coach,
+      );
+
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(Scaffold).first),
+      );
+      expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+      expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
+    },
+  );
+
+  testWidgets('any pending consultation keeps the consultation action', (
+    WidgetTester tester,
+  ) async {
+    final ConsultationRequest recentAcceptedRequest = ConsultationRequest(
+      id: 'consultation-recent-accepted',
+      targetType: ConsultationTargetType.trainer,
+      gymId: _gym.id,
+      gymName: _gym.name,
+      trainerId: 'another-trainer',
+      trainerName: '박최근',
+      trainerRole: '전담 트레이너',
+      exerciseGoal: ExerciseGoal.weightLoss,
+      healthPurposeType: HealthPurposeType.chronic,
+      healthPurposeDetail: null,
+      preferredDate: DateTime(2026, 8),
+      preferredTimeSlot: PreferredTimeSlot.afternoon,
+      message: null,
+      status: ConsultationStatus.accepted,
+      createdAt: DateTime(2026, 8, 1),
+    );
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(ConsultationStatus.pending),
+      additionalConsultations: <ConsultationRequest>[recentAcceptedRequest],
+      coach: _coach,
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    expect(find.text(l.exViewConsultationRequest), findsOneWidget);
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
+    expect(find.text(l.exConsultPendingStatus), findsOneWidget);
+    expect(find.text('박최근'), findsNothing);
   });
 
   testWidgets('connected trainer shows unread count and caps it at 99+', (

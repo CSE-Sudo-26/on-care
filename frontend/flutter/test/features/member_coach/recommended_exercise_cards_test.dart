@@ -62,6 +62,24 @@ class _SendFailingMemberCoachRepository extends MockMemberCoachRepository {
   }
 }
 
+class _ReadTrackingMemberCoachRepository extends MockMemberCoachRepository {
+  int unreadCalls = 0;
+  int markReadCalls = 0;
+  bool _read = false;
+
+  @override
+  Future<int> unreadCount() async {
+    unreadCalls += 1;
+    return _read ? 0 : 1;
+  }
+
+  @override
+  Future<void> markRead() async {
+    markReadCalls += 1;
+    _read = true;
+  }
+}
+
 void main() {
   Future<void> pumpRecommendationCards(
     WidgetTester tester,
@@ -291,6 +309,40 @@ void main() {
 
     expect(find.textContaining('오늘 점심'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('읽음 처리 후 unread count를 갱신한다', (WidgetTester tester) async {
+    final repository = _ReadTrackingMemberCoachRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          home: Consumer(
+            builder: (BuildContext context, WidgetRef ref, Widget? child) {
+              ref.watch(coachUnreadProvider);
+              return Scaffold(
+                body: ElevatedButton(
+                  onPressed: () =>
+                      openTrainerChatPage(context, trainerName: '김트레이너'),
+                  child: const Text('채팅 열기'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.unreadCalls, 1);
+
+    await tester.tap(find.text('채팅 열기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.markReadCalls, 1);
+    expect(repository.unreadCalls, 2);
   });
 
   testWidgets('메시지 전송이 실패하면 입력 내용을 유지한다', (WidgetTester tester) async {

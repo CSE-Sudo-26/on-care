@@ -45,10 +45,15 @@ class GymTab extends ConsumerWidget {
     final ConsultationRequest? recentRequest = requests.isEmpty
         ? null
         : requests.first;
-    final ConsultationRequest? pendingRequest =
-        recentRequest?.status == ConsultationStatus.pending
-        ? recentRequest
-        : null;
+    ConsultationRequest? pendingRequest;
+    for (final ConsultationRequest request in requests) {
+      if (request.status == ConsultationStatus.pending) {
+        pendingRequest = request;
+        break;
+      }
+    }
+    final ConsultationRequest? displayedRequest =
+        pendingRequest ?? recentRequest;
     final bool showTrainerChat =
         assignedCoach != null && pendingRequest == null;
     final int unreadCoachMessages = showTrainerChat
@@ -92,11 +97,11 @@ class GymTab extends ConsumerWidget {
                 : null,
             unreadCoachMessages: unreadCoachMessages,
           ),
-          if (recentRequest != null) ...<Widget>[
+          if (displayedRequest != null) ...<Widget>[
             const SizedBox(height: 28),
             _RecentConsultationSection(
               key: recentConsultationKey,
-              request: recentRequest,
+              request: displayedRequest,
             ),
           ],
           const SizedBox(height: 28),
@@ -277,7 +282,21 @@ class _MyGymSection extends StatelessWidget {
       loading: () => const _SectionLoading(height: 180),
       error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
       data: (Gym? gym) => gym == null
-          ? _EmptyMyGym(onFind: onFind)
+          ? Column(
+              children: <Widget>[
+                _EmptyMyGym(onFind: onFind),
+                if (onPendingConsultationTap != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _PendingConsultationButton(onTap: onPendingConsultationTap!),
+                ] else if (onTrainerChatTap != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _TrainerChatButton(
+                    unread: unreadCoachMessages,
+                    onTap: onTrainerChatTap!,
+                  ),
+                ],
+              ],
+            )
           : _MyGymCard(
               gym: gym,
               trainer: trainer,
@@ -414,26 +433,7 @@ class _MyGymCard extends StatelessWidget {
           ],
           if (onPendingConsultationTap != null) ...<Widget>[
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onPendingConsultationTap,
-                style: FilledButton.styleFrom(
-                  backgroundColor: FigmaColors.primary,
-                  minimumSize: const Size(0, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  l.exViewConsultationRequest,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
+            _PendingConsultationButton(onTap: onPendingConsultationTap!),
           ] else if (onTrainerChatTap != null) ...<Widget>[
             const SizedBox(height: 14),
             _TrainerChatButton(
@@ -442,6 +442,34 @@ class _MyGymCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _PendingConsultationButton extends StatelessWidget {
+  const _PendingConsultationButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: FigmaColors.primary,
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          l.exViewConsultationRequest,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

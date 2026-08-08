@@ -148,6 +148,18 @@ void main() {
     expect(await repo.unreadCount(), 3);
   });
 
+  test('unreadCount rejects a malformed unread field', () async {
+    when(
+      () => dio.get<Map<String, Object?>>('/me/coach/chat/unread'),
+    ).thenAnswer(
+      (_) async => _ok<Map<String, Object?>>(<String, Object?>{
+        'unread': '3',
+      }, '/me/coach/chat/unread'),
+    );
+
+    expect(repo.unreadCount(), throwsFormatException);
+  });
+
   test('markRead POSTs the shared thread read endpoint', () async {
     when(
       () => dio.post<Map<String, Object?>>('/me/coach/chat/read'),
