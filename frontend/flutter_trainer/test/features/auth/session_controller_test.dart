@@ -338,6 +338,23 @@ void main() {
       );
     });
 
+    test(
+      'replaceProfile updates demo data without changing demo status',
+      () async {
+        final container = _makeContainer();
+        final controller = container.read(sessionControllerProvider.notifier);
+        await _settle();
+        controller.enterDemo();
+        final changed = seedTrainerProfile.copyWith(phone: '010-9999-0000');
+
+        controller.replaceProfile(changed);
+
+        final state = container.read(sessionControllerProvider);
+        expect(state.status, SessionStatus.demo);
+        expect(state.profile?.phone, '010-9999-0000');
+      },
+    );
+
     test('signOut clears tokens and returns to signed out', () async {
       final container = _makeContainer();
       final controller = container.read(sessionControllerProvider.notifier);

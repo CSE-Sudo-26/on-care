@@ -2,11 +2,17 @@
 class TrainerGym {
   /// Creates gym details.
   const TrainerGym({
+    this.id,
     required this.name,
     required this.address,
     required this.hours,
     required this.phone,
   });
+
+  /// Backend `places.id` used by `PUT /trainer/me/gym`.
+  ///
+  /// Legacy/demo profiles may not be affiliated with a persisted place.
+  final String? id;
 
   /// Gym name (e.g. "온케어짐 신촌점").
   final String name;

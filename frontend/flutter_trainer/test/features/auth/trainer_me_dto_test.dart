@@ -15,6 +15,7 @@ void main() {
         'intro': '안녕하세요',
         'certifications': <Object?>['CPT', '영양사'],
         'gym': <String, Object?>{
+          'id': 'gym-1',
           'name': '온케어짐 신촌점',
           'address': '서울 서대문구 신촌로 120',
           'hours': '06:00 – 23:00',
@@ -26,6 +27,7 @@ void main() {
       expect(profile.career, '7년');
       expect(profile.certifications, <String>['CPT', '영양사']);
       expect(profile.gym.name, '온케어짐 신촌점');
+      expect(profile.gym.id, 'gym-1');
       expect(profile.gym.hours, '06:00 – 23:00');
     });
 
@@ -48,6 +50,14 @@ void main() {
       });
 
       expect(profile.certifications, isEmpty);
+    });
+
+    test('safely converts a non-string gym id', () {
+      final profile = trainerProfileFromJson(<String, Object?>{
+        'gym': <String, Object?>{'id': 42, 'name': '온케어짐'},
+      });
+
+      expect(profile.gym.id, '42');
     });
   });
 }
