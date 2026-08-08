@@ -361,6 +361,24 @@
   "myProfileTitle": "내 프로필",
   "myNotifTitle": "알림 설정",
   "mySupportTitle": "고객 지원",
+  "myPointsBenefitsTitle": "포인트 사용처",
+  "myPointsBalance": "보유 {points}P",
+  "@myPointsBalance": {
+    "placeholders": {
+      "points": {"type": "int"}
+    }
+  },
+  "myPointsBenefitsSubtitle": "포인트로 받을 수 있는 혜택",
+  "myPointsBenefitsHint": "기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.",
+  "myPointsDiscountTitle": "포인트 차감 현금성 할인",
+  "myPointsDiscountDescription": "1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.",
+  "myPointsDiscountCost": "최대 10%",
+  "myPointsReportTitle": "혈당·혈압 예측 리포트 잠금 해제",
+  "myPointsReportDescription": "주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.",
+  "myPointsReportCost": "500P",
+  "myPointsRecipeTitle": "맞춤형 건강 식단 레시피 패키지",
+  "myPointsRecipeDescription": "건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.",
+  "myPointsRecipeCost": "500P",
   "myLogout": "로그아웃",
   "myLogoutConfirm": "로그아웃 하시겠어요?",
   "myCancel": "취소",

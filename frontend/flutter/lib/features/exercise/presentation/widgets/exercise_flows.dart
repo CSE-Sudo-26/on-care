@@ -73,23 +73,21 @@ int _estimateCalories(ExerciseType type, int minutes, int level) {
   return (perMin * minutes * factor).round();
 }
 
-Widget _shell(BuildContext context, Widget child) => SafeArea(
-  top: false,
-  child: ConstrainedBox(
-    constraints: BoxConstraints(
-      maxHeight: MediaQuery.of(context).size.height * 0.9,
-      // Match the main content width so the sheet scales with the viewport
-      // like the tab pages. The theme lifts the modal route cap to this
-      // width too (see AppTheme._bottomSheetTheme); this centres the child.
-      maxWidth: AppBreakpoints.contentMaxWidth,
+Widget _shell(BuildContext context, Widget child) => ConstrainedBox(
+  constraints: BoxConstraints(
+    maxHeight: MediaQuery.of(context).size.height * 0.9,
+    // Match the main content width so the sheet scales with the viewport
+    // like the tab pages. The theme lifts the modal route cap to this
+    // width too (see AppTheme._bottomSheetTheme); this centres the child.
+    maxWidth: AppBreakpoints.contentMaxWidth,
+  ),
+  child: Container(
+    key: const Key('exerciseAddSheet'),
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    child: Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: child,
-    ),
+    child: SafeArea(top: false, child: child),
   ),
 );
 
@@ -250,8 +248,9 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
           ),
           Flexible(
             child: ListView(
+              key: const Key('exerciseAddContent'),
               shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               children: <Widget>[
                 _Label(l.exExerciseType),
                 const SizedBox(height: 10),

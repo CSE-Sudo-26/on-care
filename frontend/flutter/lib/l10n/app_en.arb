@@ -599,6 +599,24 @@
   "myProfileTitle": "My Profile",
   "myNotifTitle": "Notification Settings",
   "mySupportTitle": "Customer Support",
+  "myPointsBenefitsTitle": "Use Points",
+  "myPointsBalance": "Balance: {points}P",
+  "@myPointsBalance": {
+    "placeholders": {
+      "points": {"type": "int"}
+    }
+  },
+  "myPointsBenefitsSubtitle": "Benefits available with points",
+  "myPointsBenefitsHint": "Keep logging your activity to earn points and use the benefits above.",
+  "myPointsDiscountTitle": "Cash discount with points",
+  "myPointsDiscountDescription": "Use points like cash for up to 10% off 1:1 coaching and personal training.",
+  "myPointsDiscountCost": "Up to 10%",
+  "myPointsReportTitle": "Unlock glucose and blood pressure reports",
+  "myPointsReportDescription": "View comprehensive weekly and monthly health-data reports.",
+  "myPointsReportCost": "500P",
+  "myPointsRecipeTitle": "Personalized healthy recipe package",
+  "myPointsRecipeDescription": "Get PDF and interactive meal guides tailored to goals such as diabetes prevention or weight loss.",
+  "myPointsRecipeCost": "500P",
   "myLogout": "Log out",
   "myLogoutConfirm": "Log out of your account?",
   "myCancel": "Cancel",

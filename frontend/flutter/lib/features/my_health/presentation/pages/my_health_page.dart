@@ -13,9 +13,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
-import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// MY tab, rebuilt to the On-Care Figma redesign: profile, role toggle
@@ -31,13 +29,13 @@ class MyHealthPage extends ConsumerWidget {
   void _openSetting(BuildContext context, _MySetting id) {
     switch (id) {
       case _MySetting.profile:
-        showProfileSheet(context);
+        openProfilePage(context);
       case _MySetting.goals:
-        showGoalsSheet(context);
+        openGoalsPage(context);
       case _MySetting.notif:
-        showNotifSheet(context);
+        openNotificationSettingsPage(context);
       case _MySetting.support:
-        showSupportSheet(context);
+        openSupportPage(context);
     }
   }
 
@@ -58,10 +56,7 @@ class MyHealthPage extends ConsumerWidget {
                 FigmaTabHeader(
                   title: l.myTabTitle,
                   trailingAction: const TrainerChatHeaderButton(),
-                  onBell: () => showRightSlidePanel<void>(
-                    context,
-                    content: const NotificationPanelBody(),
-                  ),
+                  onBell: () => context.push(AppRoutes.notification),
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
                 const SizedBox(height: 4),
@@ -213,8 +208,9 @@ class _PointsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: const Key('pointsBanner'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => _showPointsBenefitsSheet(context, points),
+      onTap: () => _openPointsBenefitsPage(context, points),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
@@ -263,16 +259,9 @@ class _PointsBanner extends StatelessWidget {
   }
 }
 
-/// Opens the "포인트 사용처" sheet — a new modal window (not an inline
-/// expansion) listing what points can be redeemed for.
-Future<void> _showPointsBenefitsSheet(BuildContext context, int? points) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _PointsBenefitsSheet(points: points),
-  );
+/// Opens point benefits as a full page above the member tab shell.
+Future<void> _openPointsBenefitsPage(BuildContext context, int? points) {
+  return context.push<void>(AppRoutes.myPoints, extra: points);
 }
 
 /// A point redemption option shown in the benefits sheet.
@@ -289,139 +278,88 @@ class _PointBenefit {
   final String cost;
 }
 
-const List<_PointBenefit> _pointBenefits = <_PointBenefit>[
+List<_PointBenefit> _pointBenefitsOf(AppLocalizations l) => <_PointBenefit>[
   _PointBenefit(
     icon: Icons.savings_rounded,
-    title: '포인트 차감 현금성 할인',
-    desc: '1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.',
-    cost: '최대 10%',
+    title: l.myPointsDiscountTitle,
+    desc: l.myPointsDiscountDescription,
+    cost: l.myPointsDiscountCost,
   ),
   _PointBenefit(
     icon: Icons.lock_open_rounded,
-    title: '혈당·혈압 예측 리포트 잠금 해제',
-    desc: '주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.',
-    cost: '500P',
+    title: l.myPointsReportTitle,
+    desc: l.myPointsReportDescription,
+    cost: l.myPointsReportCost,
   ),
   _PointBenefit(
     icon: Icons.menu_book_rounded,
-    title: '맞춤형 건강 식단 레시피 패키지',
-    desc: '건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.',
-    cost: '500P',
+    title: l.myPointsRecipeTitle,
+    desc: l.myPointsRecipeDescription,
+    cost: l.myPointsRecipeCost,
   ),
 ];
 
-/// Bottom-sheet window listing the point redemption options.
-class _PointsBenefitsSheet extends StatelessWidget {
-  const _PointsBenefitsSheet({required this.points});
+class PointsBenefitsPage extends StatelessWidget {
+  const PointsBenefitsPage({super.key, required this.points});
 
   final int? points;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-          maxWidth: 480,
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<_PointBenefit> benefits = _pointBenefitsOf(l);
+    return Scaffold(
+      key: const Key('pointsBenefitsPage'),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        scrolledUnderElevation: 0,
+        title: Text(
+          l.myPointsBenefitsTitle,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.ink,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE3E8EE),
-                  borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+              children: <Widget>[
+                Text(
+                  points != null
+                      ? l.myPointsBalance(points!)
+                      : l.myPointsBenefitsSubtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.primary,
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 16, 10),
-                child: Row(
+                const SizedBox(height: 16),
+                for (int i = 0; i < benefits.length; i++) ...<Widget>[
+                  _PointBenefitCard(benefit: benefits[i]),
+                  if (i < benefits.length - 1) const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 16),
+                Row(
                   children: <Widget>[
-                    Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: <Color>[
-                            FigmaColors.primary,
-                            FigmaColors.primaryDeep,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.star_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Text(
-                            '포인트 사용처',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: FigmaColors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            points != null
-                                ? '보유 ${points}P'
-                                : '포인트로 받을 수 있는 혜택',
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _SheetCloseButton(onTap: () => Navigator.of(context).pop()),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
-                  itemCount: _pointBenefits.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, int i) =>
-                      _PointBenefitCard(benefit: _pointBenefits[i]),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 6, 20, 18),
-                child: Row(
-                  children: <Widget>[
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       size: 14,
                       color: FigmaColors.textMuted,
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.',
-                        style: TextStyle(
+                        l.myPointsBenefitsHint,
+                        style: const TextStyle(
                           fontSize: 11.5,
                           color: FigmaColors.textMuted,
                           height: 1.35,
@@ -430,8 +368,8 @@ class _PointsBenefitsSheet extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -520,56 +458,6 @@ class _PointBenefitCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SheetCloseButton extends StatelessWidget {
-  const _SheetCloseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // 로케일에 맞는 "닫기"/"Close" 레이블(추가 ARB 키 없이 프레임워크 제공).
-    final String label = MaterialLocalizations.of(context).closeButtonTooltip;
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        label: label,
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            // 시각적 원은 32 유지, 탭 영역은 접근성 최소 48×48 보장.
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0xFFF4F6F8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: 17,
-                      color: FigmaColors.textSub,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

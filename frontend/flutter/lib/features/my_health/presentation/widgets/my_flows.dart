@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
@@ -21,91 +23,38 @@ Widget _shell(
   List<Widget> children, {
   bool saving = false,
 }) {
-  final Widget sheet = SafeArea(
-    top: false,
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-        // Match the main content width so the sheet scales with the viewport
-        // like the tab pages. The theme lifts the modal route cap to this
-        // width too (see AppTheme._bottomSheetTheme); this centres the child.
-        maxWidth: AppBreakpoints.contentMaxWidth,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  final Widget page = Scaffold(
+    key: const Key('mySettingsPage'),
+    backgroundColor: Colors.white,
+    appBar: AppBar(
+      centerTitle: true,
+      backgroundColor: Colors.white,
+      scrolledUnderElevation: 0,
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          color: FigmaColors.ink,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFDDE3EA),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                      ),
-                    ),
-                  ),
-                  Material(
-                    color: const Color(0xFFF4F6F8),
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      // Disabled while a save is in flight (blocks dismiss).
-                      onTap: saving ? null : () => Navigator.of(context).pop(),
-                      child: const SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: FigmaColors.textSub,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-                children: children,
-              ),
-            ),
-          ],
+      ),
+    ),
+    body: SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppBreakpoints.contentMaxWidth,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: children,
+          ),
         ),
       ),
     ),
   );
-  return PopScope(canPop: !saving, child: sheet);
-}
-
-Future<void> _open(BuildContext context, String title, List<Widget> body) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _shell(ctx, title, body),
-  );
+  return PopScope(canPop: !saving, child: page);
 }
 
 Widget _card(List<Widget> children) => Container(
@@ -302,18 +251,12 @@ Widget _saveRow({
 
 /// Profile editor — pre-fills from `profileProvider` and persists via
 /// `AccountRepository.updateProfile`.
-Future<void> showProfileSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => const _ProfileSheet(),
-  );
+Future<void> openProfilePage(BuildContext context) {
+  return context.push<void>(AppRoutes.mySettingsPath('profile'));
 }
 
-class _ProfileSheet extends ConsumerWidget {
-  const _ProfileSheet();
+class ProfileSettingsPage extends ConsumerWidget {
+  const ProfileSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -427,18 +370,12 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
 
 /// 건강 목표 시트 — 식단 일일 목표(6종) + 주간 운동 목표(3종)를 수정한다.
 /// 체중/혈압/혈당(vitals) 목표는 다루지 않는다.
-Future<void> showGoalsSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => const _GoalsSheet(),
-  );
+Future<void> openGoalsPage(BuildContext context) {
+  return context.push<void>(AppRoutes.mySettingsPath('goals'));
 }
 
-class _GoalsSheet extends ConsumerWidget {
-  const _GoalsSheet();
+class HealthGoalsPage extends ConsumerWidget {
+  const HealthGoalsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -686,24 +623,20 @@ String _notifLabel(AppLocalizations l, String prefKey) {
 
 /// Notification preferences — toggles load from and persist to
 /// SharedPreferences so they survive a reload.
-Future<void> showNotifSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => const _NotifSheet(),
-  );
+Future<void> openNotificationSettingsPage(BuildContext context) {
+  return context.push<void>(AppRoutes.mySettingsPath('notifications'));
 }
 
-class _NotifSheet extends ConsumerStatefulWidget {
-  const _NotifSheet();
+class NotificationSettingsPage extends ConsumerStatefulWidget {
+  const NotificationSettingsPage({super.key});
 
   @override
-  ConsumerState<_NotifSheet> createState() => _NotifSheetState();
+  ConsumerState<NotificationSettingsPage> createState() =>
+      _NotificationSettingsPageState();
 }
 
-class _NotifSheetState extends ConsumerState<_NotifSheet> {
+class _NotificationSettingsPageState
+    extends ConsumerState<NotificationSettingsPage> {
   late final SharedPreferences _prefs;
   final Map<String, bool> _on = <String, bool>{};
 
@@ -757,37 +690,46 @@ class _NotifSheetState extends ConsumerState<_NotifSheet> {
 // ───────────────────────────────────────────────────────── 고객 지원 ──
 
 /// Customer support entries.
-Future<void> showSupportSheet(BuildContext context) {
-  final AppLocalizations l = AppLocalizations.of(context);
-  return _open(context, l.mySupportTitle, <Widget>[
-    _supportRow(
-      Icons.help_outline,
-      l.mySupportFaq,
-      () => _comingSoon(context, l.mySupportFaq),
-    ),
-    _supportRow(
-      Icons.chat_bubble_outline,
-      l.mySupportInquiry,
-      () => _comingSoon(context, l.mySupportInquiry),
-    ),
-    _supportRow(
-      Icons.description_outlined,
-      l.myLegalTermsTitle,
-      () => _openLegal(context, _LegalDoc.terms),
-    ),
-    _supportRow(
-      Icons.privacy_tip_outlined,
-      l.myLegalPrivacyTitle,
-      () => _openLegal(context, _LegalDoc.privacy),
-    ),
-    const SizedBox(height: 12),
-    Center(
-      child: Text(
-        l.myAppVersion,
-        style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+Future<void> openSupportPage(BuildContext context) {
+  return context.push<void>(AppRoutes.mySettingsPath('support'));
+}
+
+class SupportPage extends StatelessWidget {
+  const SupportPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _shell(context, l.mySupportTitle, <Widget>[
+      _supportRow(
+        Icons.help_outline,
+        l.mySupportFaq,
+        () => _comingSoon(context, l.mySupportFaq),
       ),
-    ),
-  ]);
+      _supportRow(
+        Icons.chat_bubble_outline,
+        l.mySupportInquiry,
+        () => _comingSoon(context, l.mySupportInquiry),
+      ),
+      _supportRow(
+        Icons.description_outlined,
+        l.myLegalTermsTitle,
+        () => _openLegal(context, _LegalDoc.terms),
+      ),
+      _supportRow(
+        Icons.privacy_tip_outlined,
+        l.myLegalPrivacyTitle,
+        () => _openLegal(context, _LegalDoc.privacy),
+      ),
+      const SizedBox(height: 12),
+      Center(
+        child: Text(
+          l.myAppVersion,
+          style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+        ),
+      ),
+    ]);
+  }
 }
 
 void _comingSoon(BuildContext context, String label) {
@@ -798,13 +740,7 @@ void _comingSoon(BuildContext context, String label) {
 }
 
 void _openLegal(BuildContext context, _LegalDoc doc) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) => _LegalDocSheet(doc: doc),
-  );
+  context.push<void>(AppRoutes.mySettingsPath(doc.name));
 }
 
 Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
@@ -849,19 +785,17 @@ Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
 /// bodies are resolved from localizations via [_LegalDocSheet].
 enum _LegalDoc { terms, privacy }
 
-class _LegalDocSheet extends StatelessWidget {
-  const _LegalDocSheet({required this.doc});
-  final _LegalDoc doc;
+class LegalDocumentPage extends StatelessWidget {
+  const LegalDocumentPage({super.key, required this.document});
+
+  final String document;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String title = doc == _LegalDoc.terms
-        ? l.myLegalTermsTitle
-        : l.myLegalPrivacyTitle;
-    final String body = doc == _LegalDoc.terms
-        ? l.myLegalTermsBody
-        : l.myLegalPrivacyBody;
+    final bool isTerms = document == _LegalDoc.terms.name;
+    final String title = isTerms ? l.myLegalTermsTitle : l.myLegalPrivacyTitle;
+    final String body = isTerms ? l.myLegalTermsBody : l.myLegalPrivacyBody;
     return _shell(context, title, <Widget>[
       _card(<Widget>[
         Text(

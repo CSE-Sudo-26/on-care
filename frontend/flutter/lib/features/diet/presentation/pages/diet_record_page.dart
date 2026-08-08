@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
-import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 식단 tab, rebuilt to match the On-Care Figma redesign. The weekly date
 /// strip is centred on today (per the product request); the nutrition summary /
 /// AI feedback / meal log are driven by [dietTodayProvider], and the "식단 추가"
-/// and meal-edit flows open as bottom sheets wired to the diet repository.
+/// and meal-detail flows open as full pages wired to the diet repository.
 ///
 /// The backend currently exposes only "today", so a non-today selection shows
 /// an empty state until the per-date query lands (tracked as a follow-up).
@@ -150,10 +150,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                 FigmaTabHeader(
                   title: l.dietTitle,
                   trailingAction: const TrainerChatHeaderButton(),
-                  onBell: () => showRightSlidePanel<void>(
-                    context,
-                    content: const NotificationPanelBody(),
-                  ),
+                  onBell: () => context.push(AppRoutes.notification),
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
                 _DateStrip(
@@ -194,7 +191,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                           entries: day.entries,
                           onAdd: () => showDietAddSheet(context),
                           onEditMeal: (DietMeal m) =>
-                              showMealEditSheet(context, m),
+                              openMealDetailPage(context, m),
                         ),
                       ],
                     ),
@@ -1239,6 +1236,7 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: meal.id == null ? null : Key('mealCard-${meal.id}'),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
