@@ -1,0 +1,125 @@
+name: Deploy Frontend to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: frontend-aws-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy Flutter web apps
+    if: ${{ vars.AWS_FRONTEND_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Check Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies
+        working-directory: frontend/flutter
+        run: flutter pub get
+
+      - name: Download drift WASM (sqlite3.wasm + drift_worker.js)
+        working-directory: frontend/flutter
+        run: bash tool/fetch_drift_wasm.sh
+
+      - name: Build Flutter web
+        working-directory: frontend/flutter
+        run: >-
+          flutter build web --release --base-href "/frontend/"
+          --dart-define=KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }}
+
+      - name: Install Flutter dependencies (trainer)
+        working-directory: frontend/flutter_trainer
+        run: flutter pub get
+
+      - name: Download drift WASM (trainer)
+        working-directory: frontend/flutter_trainer
+        run: bash tool/fetch_drift_wasm.sh
+
+      - name: Build Flutter web (trainer)
+        working-directory: frontend/flutter_trainer
+        run: flutter build web --release --base-href "/trainer/"
+
+      - name: Prepare deploy files
+        run: |
+          set -euo pipefail
+          mkdir -p public/frontend public/trainer
+          cp index.html public/index.html
+          cp -R frontend/flutter/build/web/. public/frontend/
+          cp -R frontend/flutter_trainer/build/web/. public/trainer/
+          find public -name '*.js.symbols' -delete
+          echo "$GITHUB_SHA" > public/version.txt
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        with:
+          role-to-assume: ${{ vars.AWS_FRONTEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload files to S3
+        env:
+          BUCKET: ${{ vars.AWS_FRONTEND_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 sync public/ "s3://$BUCKET/" \
+            --delete \
+            --cache-control "public,max-age=300"
+
+      - name: Invalidate CloudFront cache and verify deployment
+        env:
+          DISTRIBUTION_ID: ${{ vars.AWS_FRONTEND_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --paths '/*' \
+            --query 'Invalidation.Id' \
+            --output text)
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$DISTRIBUTION_ID" \
+            --id "$INVALIDATION_ID"
+
+          DOMAIN=$(aws cloudfront get-distribution \
+            --id "$DISTRIBUTION_ID" \
+            --query 'Distribution.DomainName' \
+            --output text)
+          BASE_URL="https://$DOMAIN"
+
+          for path in / /frontend/ /trainer/; do
+            curl --fail --silent --show-error "$BASE_URL$path" > /dev/null
+          done
+          LIVE_SHA=$(curl --fail --silent --show-error "$BASE_URL/version.txt" | tr -d '[:space:]')
+          if [ "$LIVE_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::CloudFront version mismatch: expected=$GITHUB_SHA actual=$LIVE_SHA"
+            exit 1
+          fi
+
+          {
+            echo "### AWS frontend deployment"
+            echo "- URL: $BASE_URL/"
+            echo "- Commit: $GITHUB_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
