@@ -16,6 +16,8 @@ import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
@@ -1795,17 +1797,57 @@ class _RecMealCard extends StatelessWidget {
 
 // ───────────────────────────────────────────────────────── schedule ──
 
-class _ScheduleCard extends StatelessWidget {
+class _ScheduleCard extends ConsumerWidget {
   const _ScheduleCard({required this.items});
 
   final List<ScheduleItem> items;
 
+  /// 트레이너가 잡아 준 오늘의 PT 를 일정 항목으로 바꾼다. (#490)
+  ///
+  /// 별도 카드를 만들지 않고 여기 합치는 이유: 회원 입장에서 '오늘 뭐 하지'는
+  /// 하나의 질문이다. PT 만 따로 떼면 같은 시간대를 두 곳에서 봐야 한다.
+  ///
+  /// 데모는 담당 일정이 없어(`MockMemberCoachRepository.fetchSessions`) 빈
+  /// 목록이 오므로 카드가 지금과 똑같이 그려진다.
+  static List<ScheduleItem> _todaysSessions(List<CoachSession> sessions) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    return <ScheduleItem>[
+      for (final CoachSession session in sessions)
+        if (session.isUpcoming && session.date != null)
+          if (DateTime(
+                session.date!.year,
+                session.date!.month,
+                session.date!.day,
+              ) ==
+              today)
+            ScheduleItem(
+              time: session.time,
+              title: session.type,
+              emoji: '🏋️',
+            ),
+    ];
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final DateTime now = DateTime.now();
     final String weekday = _weekDayLabels(l)[now.weekday - 1];
     final String todayLabel = l.homeScheduleDate(weekday, now.month, now.day);
+    // 트레이너 일정과 내가 만든 일정을 한 목록으로 보여 준다. 시간순으로 섞어야
+    // '다음에 뭐가 있는지'를 한 번에 읽을 수 있다.
+    final List<ScheduleItem> merged =
+        <ScheduleItem>[
+          ...items,
+          ..._todaysSessions(
+            ref.watch(coachSessionsProvider).valueOrNull ??
+                const <CoachSession>[],
+          ),
+        ]..sort(
+          (ScheduleItem first, ScheduleItem second) =>
+              first.time.compareTo(second.time),
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1850,7 +1892,7 @@ class _ScheduleCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (items.isEmpty)
+        if (merged.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -1867,9 +1909,9 @@ class _ScheduleCard extends StatelessWidget {
             ),
           )
         else
-          for (int index = 0; index < items.length; index++) ...<Widget>[
-            _ScheduleItemCard(item: items[index]),
-            if (index != items.length - 1) const SizedBox(height: 8),
+          for (int index = 0; index < merged.length; index++) ...<Widget>[
+            _ScheduleItemCard(item: merged[index]),
+            if (index != merged.length - 1) const SizedBox(height: 8),
           ],
       ],
     );
