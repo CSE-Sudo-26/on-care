@@ -141,8 +141,23 @@ class DioGymRepository implements GymRepository {
       _list('/trainers/$trainerId/slots', _slot);
 
   @override
-  Future<void> reserve(String slotId) =>
-      _dio.post<void>('/reservations', data: <String, Object?>{
-        'slot_id': slotId,
-      });
+  Future<void> reserve(String slotId) async {
+    try {
+      await _dio.post<void>(
+        '/reservations',
+        data: <String, Object?>{'slot_id': slotId},
+      );
+    } on DioException catch (e) {
+      // 도메인 계약(GymRepository.reserve)은 "없음/마감"을 StateError 로
+      // 정의한다. 목과 실서버가 같은 예외를 내야 호출자가 한 갈래만 다룬다.
+      final int? code = e.response?.statusCode;
+      if (code == 404) {
+        throw StateError('slot not found: $slotId');
+      }
+      if (code == 409 || code == 410) {
+        throw StateError('slot no longer bookable: $slotId');
+      }
+      rethrow;
+    }
+  }
 }

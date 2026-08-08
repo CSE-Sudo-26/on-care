@@ -534,7 +534,7 @@ class _TrainerChatButton extends StatelessWidget {
 /// 슬롯은 트레이너에 귀속되므로 여기서 [trainerSlotsProvider] 를 직접 읽는다.
 /// 마감된 자리도 숨기지 않고 비활성으로 남겨, 그 트레이너의 하루가 "비어 있음"
 /// 이 아니라 "찼음" 으로 읽히게 한다.
-class _ReservationPanel extends ConsumerWidget {
+class _ReservationPanel extends ConsumerStatefulWidget {
   const _ReservationPanel({
     required this.gym,
     required this.trainer,
@@ -549,6 +549,15 @@ class _ReservationPanel extends ConsumerWidget {
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
 
+  @override
+  ConsumerState<_ReservationPanel> createState() => _ReservationPanelState();
+}
+
+class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
+  /// 요청이 오가는 동안 잡고 있는 슬롯 id. 예약은 멱등이 아니라서, 확정 버튼을
+  /// 두 번 누르면 좌석이 두 번 빠진다 — 그래서 진행 중에는 버튼을 잠근다.
+  String? _reserving;
+
   /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
   /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
   String _when(BuildContext context, AppLocalizations l, DateTime at) {
@@ -559,33 +568,36 @@ class _ReservationPanel extends ConsumerWidget {
     );
   }
 
-  Future<void> _reserve(
-    BuildContext context,
-    WidgetRef ref,
-    AppLocalizations l,
-    TrainerSlot slot,
-  ) async {
+  Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
+    if (_reserving != null) return;
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final String label = _when(context, l, slot.startsAt);
+    setState(() => _reserving = slot.id);
     try {
       await ref.read(gymRepositoryProvider).reserve(slot.id);
     } catch (_) {
+      if (mounted) setState(() => _reserving = null);
       messenger.showSnackBar(SnackBar(content: Text(l.exReserveFailed)));
       return;
     }
+    if (!mounted) return;
+    setState(() => _reserving = null);
     // 잔여 자리를 다시 읽어, 방금 잡은 자리가 목록에도 반영되게 한다.
-    ref.invalidate(trainerSlotsProvider(trainer.id));
+    ref.invalidate(trainerSlotsProvider(widget.trainer.id));
     messenger.showSnackBar(
-      SnackBar(content: Text(l.exReserveConfirmedSlotGym(label, gym.name))),
+      SnackBar(
+        content: Text(l.exReserveConfirmedSlotGym(label, widget.gym.name)),
+      ),
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<List<TrainerSlot>> slotsAsync = ref.watch(
-      trainerSlotsProvider(trainer.id),
+      trainerSlotsProvider(widget.trainer.id),
     );
+    final bool busy = _reserving != null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -611,7 +623,7 @@ class _ReservationPanel extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            l.exTrainerAvailability(trainer.name),
+            l.exTrainerAvailability(widget.trainer.name),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -634,7 +646,8 @@ class _ReservationPanel extends ConsumerWidget {
             ),
             error: (Object _, StackTrace _) => _SlotNotice(
               message: l.exSlotsLoadError,
-              onRetry: () => ref.invalidate(trainerSlotsProvider(trainer.id)),
+              onRetry: () =>
+                  ref.invalidate(trainerSlotsProvider(widget.trainer.id)),
             ),
             data: (List<TrainerSlot> slots) {
               if (slots.isEmpty) {
@@ -646,7 +659,7 @@ class _ReservationPanel extends ConsumerWidget {
               final TrainerSlot? picked = slots
                   .where(
                     (TrainerSlot slot) =>
-                        slot.id == selectedSlot && !slot.isFull,
+                        slot.id == widget.selectedSlot && !slot.isFull,
                   )
                   .firstOrNull;
               return Column(
@@ -667,8 +680,11 @@ class _ReservationPanel extends ConsumerWidget {
                               ? l.exSlotFull
                               : l.exSlotRemaining(slot.remaining),
                           selected: picked?.id == slot.id,
-                          // 마감된 자리는 고를 수 없다.
-                          onTap: slot.isFull ? null : () => onSlot(slot.id),
+                          // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                          // 선택도 잠근다.
+                          onTap: slot.isFull || busy
+                              ? null
+                              : () => widget.onSlot(slot.id),
                         ),
                     ],
                   ),
@@ -677,7 +693,7 @@ class _ReservationPanel extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () => _reserve(context, ref, l, picked),
+                        onPressed: busy ? null : () => _reserve(l, picked),
                         style: FilledButton.styleFrom(
                           backgroundColor: FigmaColors.primary,
                           minimumSize: const Size(0, 42),

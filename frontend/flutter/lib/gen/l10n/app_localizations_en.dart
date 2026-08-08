@@ -1033,7 +1033,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exSlotsEmpty => 'No times available';
 
   @override
-  String get exSlotsAllBooked => 'Every slot this week is taken';
+  String get exSlotsAllBooked => 'All available times are fully booked';
 
   @override
   String get exSlotsLoadError => 'Could not load available times.';

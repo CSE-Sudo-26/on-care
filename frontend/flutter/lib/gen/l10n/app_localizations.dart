@@ -1961,7 +1961,7 @@ abstract class AppLocalizations {
   /// No description provided for @exSlotsAllBooked.
   ///
   /// In en, this message translates to:
-  /// **'Every slot this week is taken'**
+  /// **'All available times are fully booked'**
   String get exSlotsAllBooked;
 
   /// No description provided for @exSlotsLoadError.

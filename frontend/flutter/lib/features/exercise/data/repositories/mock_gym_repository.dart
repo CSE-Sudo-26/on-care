@@ -323,41 +323,57 @@ class MockGymRepository implements GymRepository {
   static List<TrainerSlot> _seedSlots() {
     final DateTime today = DateTime.now();
     return <TrainerSlot>[
-      // 김트레이너 — 저녁 위주.
+      // 오늘 자리는 데모에서 "가까운 시간"을 보여주려고 둔다. 저녁에 앱을 켜면
+      // 이미 지나 목록에서 빠지므로, 트레이너마다 내일 이후 자리를 함께 둬서
+      // 어느 시각에 열어도 예약할 수 있는 자리가 남는다.
       TrainerSlot(
-        id: 'slot-kim-1',
+        id: 'slot-kim-today',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 0, 19, 0),
         capacity: 2,
         remaining: 1,
       ),
       TrainerSlot(
-        id: 'slot-kim-2',
+        id: 'slot-kim-1',
         trainerId: 'trainer-kim',
         startsAt: _at(today, 1, 7, 30),
         capacity: 2,
         remaining: 2,
       ),
       TrainerSlot(
-        id: 'slot-kim-3',
+        id: 'slot-kim-2',
         trainerId: 'trainer-kim',
+        // 마감된 자리도 남겨 두어야 "그날은 꽉 찼다"가 읽힌다.
         startsAt: _at(today, 1, 20, 0),
         capacity: 3,
-        // 마감된 자리도 남겨 두어야 "그날은 꽉 찼다"가 읽힌다.
         remaining: 0,
       ),
-      // 박트레이너 — 재활 세션이라 낮 시간대.
       TrainerSlot(
-        id: 'slot-park-1',
+        id: 'slot-kim-3',
+        trainerId: 'trainer-kim',
+        startsAt: _at(today, 2, 18, 0),
+        capacity: 2,
+        remaining: 2,
+      ),
+      // 박트레이너 — 재활 세션이라 1:1, 낮 시간대.
+      TrainerSlot(
+        id: 'slot-park-today',
         trainerId: 'trainer-park',
         startsAt: _at(today, 0, 14, 0),
         capacity: 1,
         remaining: 1,
       ),
       TrainerSlot(
+        id: 'slot-park-1',
+        trainerId: 'trainer-park',
+        startsAt: _at(today, 1, 11, 0),
+        capacity: 1,
+        remaining: 1,
+      ),
+      TrainerSlot(
         id: 'slot-park-2',
         trainerId: 'trainer-park',
-        startsAt: _at(today, 2, 11, 0),
+        startsAt: _at(today, 2, 15, 0),
         capacity: 1,
         remaining: 1,
       ),
@@ -371,14 +387,14 @@ class MockGymRepository implements GymRepository {
       ),
       // 강트레이너 — 교대근무 대응이라 이른 아침·늦은 밤.
       TrainerSlot(
-        id: 'slot-kang-1',
+        id: 'slot-kang-today',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 0, 6, 0),
         capacity: 2,
         remaining: 2,
       ),
       TrainerSlot(
-        id: 'slot-kang-2',
+        id: 'slot-kang-1',
         trainerId: 'trainer-kang',
         startsAt: _at(today, 1, 22, 0),
         capacity: 2,
@@ -398,9 +414,15 @@ class MockGymRepository implements GymRepository {
   @override
   Future<List<TrainerSlot>> fetchSlots(String trainerId) async {
     await Future<void>.delayed(const Duration(milliseconds: 60));
+    // 이미 지난 시간은 보여주지 않는다 — 저녁에 앱을 켰을 때 오늘 아침 자리가
+    // "예약 가능"으로 뜨면 안 된다.
+    final DateTime now = DateTime.now();
     final List<TrainerSlot> mine =
         _slots
-            .where((TrainerSlot slot) => slot.trainerId == trainerId)
+            .where(
+              (TrainerSlot slot) =>
+                  slot.trainerId == trainerId && slot.startsAt.isAfter(now),
+            )
             .toList()
           ..sort(
             (TrainerSlot a, TrainerSlot b) => a.startsAt.compareTo(b.startsAt),
@@ -417,6 +439,10 @@ class MockGymRepository implements GymRepository {
     }
     if (_slots[i].isFull) {
       throw StateError('slot already full: $slotId');
+    }
+    // 목록에서 이미 빠진 시간을 오래된 화면이 그대로 잡는 것도 막는다.
+    if (!_slots[i].startsAt.isAfter(DateTime.now())) {
+      throw StateError('slot already started: $slotId');
     }
     _slots[i] = _slots[i].copyWith(remaining: _slots[i].remaining - 1);
   }

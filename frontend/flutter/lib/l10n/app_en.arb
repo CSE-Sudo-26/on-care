@@ -565,7 +565,7 @@
   },
   "exSlotFull": "Fully booked",
   "exSlotsEmpty": "No times available",
-  "exSlotsAllBooked": "Every slot this week is taken",
+  "exSlotsAllBooked": "All available times are fully booked",
   "exSlotsLoadError": "Could not load available times.",
   "exReserveFailed": "Could not book that time. Please try again.",
   "exReserveConfirmedSlotGym": "{slot} · {gym} reservation confirmed",

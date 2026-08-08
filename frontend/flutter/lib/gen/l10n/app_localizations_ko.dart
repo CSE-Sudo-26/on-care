@@ -1016,7 +1016,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exSlotsEmpty => '예약 가능한 시간이 없어요';
 
   @override
-  String get exSlotsAllBooked => '이번 주 예약이 모두 찼어요';
+  String get exSlotsAllBooked => '예약 가능한 시간이 모두 찼어요';
 
   @override
   String get exSlotsLoadError => '예약 시간을 불러오지 못했어요.';
