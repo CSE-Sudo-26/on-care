@@ -1,14 +1,55 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock
 
 import pytest
+from sqlalchemy.orm import Session
 
 from app.models.models import (
     TrainerReservation,
     TrainerReservationSlot,
     TrainerSchedule,
+    User,
 )
+from app.services import reservation_service
+
+
+def test_reserve_flushes_schedule_before_reservation() -> None:
+    """The schedule FK target must exist before PostgreSQL inserts a booking."""
+    now = datetime.now(timezone.utc)
+    slot = TrainerReservationSlot(
+        id="slot-order-test",
+        trainer_id="trainer-demo",
+        starts_at=now + timedelta(days=1),
+        capacity=1,
+        remaining=1,
+    )
+    member = User(
+        id="member-order-test",
+        email="member-order-test@oncare.com",
+        name="예약 순서 회원",
+        role="member",
+    )
+    db = Mock(spec=Session)
+    db.scalar.side_effect = [slot, "trainer-client-id", None]
+
+    def set_database_defaults(instance) -> None:
+        if isinstance(instance, TrainerReservation):
+            instance.created_at = now
+
+    db.refresh.side_effect = set_database_defaults
+
+    result = reservation_service.reserve(db, member, slot.id, now=now)
+
+    call_names = [entry[0] for entry in db.mock_calls]
+    first_add = call_names.index("add")
+    flush = call_names.index("flush")
+    second_add = call_names.index("add", first_add + 1)
+    commit = call_names.index("commit")
+    assert first_add < flush < second_add < commit
+    assert result.schedule_id.startswith("sched-")
+    assert slot.remaining == 0
 
 
 def _login(client, email: str) -> str:

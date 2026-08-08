@@ -219,12 +219,23 @@ def reserve(
         status="booked",
     )
     slot.remaining -= 1
-    db.add_all([schedule, reservation])
+    # There is intentionally no ORM relationship between these persistence
+    # models. Without an explicit flush SQLAlchemy is free to INSERT the
+    # reservation before the schedule, which violates the schedule_id FK on
+    # PostgreSQL even though both objects were added before commit (#492).
+    db.add(schedule)
     try:
+        db.flush()
+        db.add(reservation)
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise DuplicateReservation("이미 예약했거나 마감된 슬롯입니다.") from exc
+        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if constraint == "uq_reservation_member_slot":
+            raise DuplicateReservation("이미 예약한 슬롯입니다.") from exc
+        # Do not turn an unexpected schema/programming error into a misleading
+        # 409. Let the global error handler report it as a server failure.
+        raise
     db.refresh(reservation)
     return ReservationOut(
         id=reservation.id,
