@@ -87,18 +87,20 @@ void main() {
             ..where((t) => t.id.equals('seed-client-1')))
           .write(const TrainerClientsCompanion(name: Value('김민수2')));
 
-      final after = await repo
-          .watchClientSessions((id: 'seed-client-1', name: '김민수2'))
-          .first;
+      final after = await repo.watchClientSessions((
+        id: 'seed-client-1',
+        name: '김민수2',
+      )).first;
       expect(after.length, before.length);
     });
 
     test('이름이 같아도 다른 고객의 세션은 섞이지 않는다', () async {
       final repo = DriftScheduleRepository(db);
       // 이름만 같고 id 가 다른 고객은 남의 세션을 가져오면 안 된다.
-      final sessions = await repo
-          .watchClientSessions((id: 'other-client', name: '김민수'))
-          .first;
+      final sessions = await repo.watchClientSessions((
+        id: 'other-client',
+        name: '김민수',
+      )).first;
       expect(sessions, isEmpty);
     });
 
@@ -421,6 +423,19 @@ void main() {
       // rather than an exact count.
       expect(find.text('빈 시간'), findsWidgets);
       expect(find.text('예정'), findsWidgets);
+    });
+
+    testWidgets('예약 슬롯 action opens the selected-day management sheet', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('예약 슬롯'));
+      await settle(tester);
+
+      expect(find.text('예약 슬롯 관리'), findsOneWidget);
+      expect(find.textContaining('회원이 예약할 시간을 엽니다'), findsOneWidget);
+      expect(find.text('열기'), findsOneWidget);
     });
 
     testWidgets('completed session expands to program, note, and send flow', (
