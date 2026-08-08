@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
@@ -92,8 +91,11 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Self sign-up only makes sense in demo/mock mode (see below).
-    final signUpEnabled = ref.watch(appConfigProvider).useMockApi;
+    // 가입 경로는 이제 실 API 모드에서도 열린다 — `/auth/trainer/register` 가
+    // 헬스장 초대 코드로 트레이너 계정을 만든다(#475). 전에는 회원용
+    // `/auth/register` 로 나가 role='member' 계정이 생겼고, 그 계정은
+    // `/trainer/me` 에서 403 이라 가입해도 아무것도 할 수 없었다.
+    const signUpEnabled = true;
     return Scaffold(
       // 사용자 앱 로그인 화면과 동일한 흰색 배경.
       backgroundColor: Colors.white,

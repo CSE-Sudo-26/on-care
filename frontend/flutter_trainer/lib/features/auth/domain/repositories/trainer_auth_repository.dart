@@ -35,12 +35,19 @@ abstract class TrainerAuthRepository {
     required String password,
   });
 
-  /// Creates a new trainer account (POST /v1/auth/register) and returns
-  /// tokens. Throws [AuthException] (e.g. 409 duplicate email).
+  /// Creates a new trainer account (POST /v1/auth/trainer/register) and
+  /// returns tokens. Throws [AuthException] (409 duplicate email, 422
+  /// unusable invite code).
+  ///
+  /// [inviteCode] is the gym's invite code and is **required**: it decides
+  /// which gym the new trainer belongs to. A trainer with no gym cannot be
+  /// a consultation target, so signing up without one would land the
+  /// account in a state where nothing works. (#475)
   Future<TrainerAuthTokens> register({
     required String email,
     required String password,
     required String name,
+    required String inviteCode,
   });
 
   /// Exchanges a provider (kakao/google) [token] for tokens

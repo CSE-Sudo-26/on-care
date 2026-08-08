@@ -34,6 +34,7 @@ class AuthField extends StatelessWidget {
     this.trailing,
     this.onSubmitted,
     this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   /// Field controller.
@@ -60,12 +61,18 @@ class AuthField extends StatelessWidget {
   /// Overrides the keyboard action button.
   final TextInputAction? textInputAction;
 
+  /// Auto-capitalisation. 초대 코드처럼 대문자로 적는 값에 쓴다 — 서버가
+  /// 대소문자를 구분하지 않지만, 화면이 코드 모양대로 보이는 편이 옮겨 적기
+  /// 쉽다. (#475)
+  final TextCapitalization textCapitalization;
+
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
       style: const TextStyle(color: _authText),
       textInputAction:
           textInputAction ??

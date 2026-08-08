@@ -37,11 +37,14 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
     required String email,
     required String password,
     required String name,
+    required String inviteCode,
   }) async {
     await Future<void>.delayed(_loginDelay);
     if (email.trim().isEmpty || password.isEmpty) {
       throw const AuthException('이메일과 비밀번호를 입력해 주세요');
     }
+    // 데모에는 코드를 검증할 백엔드가 없다. 화면이 기존과 똑같이 동작하도록
+    // 코드는 보지 않고 통과시킨다.
     return _demoTokens('signup');
   }
 

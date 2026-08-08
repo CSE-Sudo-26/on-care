@@ -31,9 +31,10 @@ from app.db.session import get_db
 from app.models.models import HealthProfile, User
 from app.schemas.user import (
     HealthGoalsUpdate, HealthProfileBrief, OnboardingRequest, ProfileUpdate,
-    ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, UserHealth,
-    UserMe, UserRegister,
+    ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, TrainerRegister,
+    UserHealth, UserMe, UserRegister,
 )
+from app.services import trainer_signup_service
 from app.services.health_service import DEMO_SETTINGS
 
 router = APIRouter(tags=["users"])
@@ -230,6 +231,59 @@ def register(
     db.refresh(user)
     audit(db, event="auth.register", user_id=user.id, ip=client_ip(request), success=True)
     return UserMe(id=user.id, name=user.name, email=user.email)
+
+
+@router.post(
+    "/auth/trainer/register",
+    response_model=UserMe,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("auth-register"))],
+)
+def register_trainer(
+    request: Request,
+    payload: TrainerRegister,
+    db: Annotated[Session, Depends(get_db)],
+) -> UserMe:
+    """헬스장 초대 코드로 트레이너 계정을 만든다. (#475)
+
+    `/auth/register` 와 나누는 이유: 그쪽은 `role='member'` 를 만든다. 한 엔드포인트에
+    역할 분기를 넣으면 코드 없이 트레이너를 만들 수 있는 경로가 생기기 쉽다.
+
+    코드가 소속 헬스장을 결정한다 — 소속 없는 트레이너는 상담 대상이 될 수 없어
+    (#443·#451) 가입 직후 아무것도 못 하는 상태가 된다.
+
+    회원 가입과 같은 rate limit 버킷을 쓴다. 코드를 무작위로 넣어 보는 시도도
+    가입 시도이므로 같은 한도가 맞다.
+    """
+    try:
+        trainer = trainer_signup_service.register_trainer(db, payload)
+    except trainer_signup_service.InviteCodeInvalid as exc:
+        audit(
+            db,
+            event="auth.trainer_register",
+            ip=client_ip(request),
+            success=False,
+            detail=payload.email,
+        )
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except trainer_signup_service.TrainerEmailTaken as exc:
+        audit(
+            db,
+            event="auth.trainer_register",
+            ip=client_ip(request),
+            success=False,
+            detail=payload.email,
+        )
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    audit(
+        db,
+        event="auth.trainer_register",
+        user_id=trainer.id,
+        ip=client_ip(request),
+        success=True,
+    )
+    return UserMe(id=trainer.id, name=trainer.name, email=trainer.email)
 
 
 @router.post(

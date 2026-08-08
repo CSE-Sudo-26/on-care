@@ -104,17 +104,26 @@ void main() {
   });
 
   group('register', () {
+    // 회원용 `/auth/register` 가 아니라 트레이너 전용 경로다 — 그쪽은
+    // role='member' 를 만들어 `/trainer/me` 가 403 인 계정이 생겼다. (#475)
+    const String path = '/auth/trainer/register';
+
     test('maps 409 to a duplicate-email AuthException', () async {
       when(
         () => dio.post<Map<String, Object?>>(
-          '/auth/register',
+          path,
           data: any(named: 'data'),
           options: any(named: 'options'),
         ),
-      ).thenThrow(_httpError(409, '/auth/register'));
+      ).thenThrow(_httpError(409, path));
 
       await expectLater(
-        repo.register(email: 'e@x.com', password: 'pw', name: '김'),
+        repo.register(
+          email: 'e@x.com',
+          password: 'pw',
+          name: '김',
+          inviteCode: 'ONCARE1',
+        ),
         throwsA(
           isA<AuthException>().having(
             (e) => e.message,
@@ -123,6 +132,66 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('maps 422 to an invite-code message', () async {
+      // 없는·만료된·이미 쓰인 코드를 서버가 구분하지 않는다. 트레이너가 할 일은
+      // 어느 경우든 헬스장에 코드를 다시 받는 것이라 결론이 같다.
+      when(
+        () => dio.post<Map<String, Object?>>(
+          path,
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(_httpError(422, path));
+
+      await expectLater(
+        repo.register(
+          email: 'e@x.com',
+          password: 'pw',
+          name: '김',
+          inviteCode: 'NOPE',
+        ),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            contains('초대 코드'),
+          ),
+        ),
+      );
+    });
+
+    test('sends the invite code to the trainer signup path', () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          path,
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(_httpError(409, path));
+
+      // 409 로 끝나지만, 여기서 확인하려는 것은 나간 payload 다.
+      await expectLater(
+        repo.register(
+          email: 'e@x.com',
+          password: 'pw',
+          name: '김',
+          inviteCode: 'ONCARE1',
+        ),
+        throwsA(isA<AuthException>()),
+      );
+
+      final data =
+          verify(
+                () => dio.post<Map<String, Object?>>(
+                  path,
+                  data: captureAny(named: 'data'),
+                  options: any(named: 'options'),
+                ),
+              ).captured.first
+              as Map<String, Object?>;
+      expect(data['invite_code'], 'ONCARE1');
     });
   });
 

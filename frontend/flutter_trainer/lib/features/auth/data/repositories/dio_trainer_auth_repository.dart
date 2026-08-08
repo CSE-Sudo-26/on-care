@@ -37,19 +37,28 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
     required String email,
     required String password,
     required String name,
+    required String inviteCode,
   }) async {
     try {
+      // 회원용 `/auth/register` 가 아니다 — 그쪽은 role='member' 를 만들어,
+      // 가입은 되는데 `/trainer/me` 가 403 을 주는 계정이 생겼다. (#475)
       await _dio.post<Map<String, Object?>>(
-        '/auth/register',
+        '/auth/trainer/register',
         data: <String, Object?>{
           'email': email,
           'password': password,
           'name': name,
+          'invite_code': inviteCode,
         },
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {
         throw const AuthException('이미 가입된 이메일입니다.');
+      }
+      if (e.response?.statusCode == 422) {
+        // 서버는 없는·만료된·이미 쓰인 코드를 구분하지 않는다. 어느 경우든
+        // 트레이너가 할 일은 헬스장에 코드를 다시 받는 것이라 결론이 같다.
+        throw const AuthException('사용할 수 없는 초대 코드예요. 헬스장에 확인해 주세요.');
       }
       throw _asAuth(e);
     }
