@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models.models import (
     ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
-    TrainerProfile, TrainerRoutine, TrainerSchedule, User,
+    TrainerProfile, TrainerReservation, TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
@@ -610,6 +610,15 @@ def _get_owned_session(db: Session, trainer_id: str, session_id: str) -> Trainer
     return s
 
 
+def _is_reservation_schedule(db: Session, session_id: str) -> bool:
+    """Return whether a member reservation owns this schedule row."""
+    return db.scalar(
+        select(TrainerReservation.id)
+        .where(TrainerReservation.schedule_id == session_id)
+        .limit(1)
+    ) is not None
+
+
 def create_session(
     db: Session, trainer_id: str, *, date: str, time: str, client_name: str,
     member_id: str | None, type_: str, duration_minutes: int, note: str,
@@ -656,6 +665,10 @@ def update_session(
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return None
+    if _is_reservation_schedule(db, session_id):
+        raise ScheduleConflict(
+            "예약으로 생성된 일정은 일반 일정 화면에서 수정할 수 없습니다."
+        )
     if s.status == "완료":
         raise ScheduleConflict("완료된 세션은 수정할 수 없습니다.")
     if "time" in fields:
@@ -684,6 +697,10 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return False
+    if _is_reservation_schedule(db, session_id):
+        raise ScheduleConflict(
+            "예약으로 생성된 일정은 일반 일정 화면에서 삭제할 수 없습니다."
+        )
     # 완료 세션은 완료 시 파생된 운동기록(sched-hist-{id})을 갖는다. 세션을 지우면 그
     # 파생 기록도 함께 지워 고아 레코드가 회원 이력에 남지 않게 한다(완료 시 적재의 역연산).
     if s.status == "완료":

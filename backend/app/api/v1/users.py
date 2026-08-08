@@ -34,7 +34,7 @@ from app.schemas.user import (
     ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, TrainerRegister,
     UserHealth, UserMe, UserRegister,
 )
-from app.services import trainer_signup_service
+from app.services import reservation_service, trainer_signup_service
 from app.services.health_service import DEMO_SETTINGS
 
 router = APIRouter(tags=["users"])
@@ -192,8 +192,11 @@ def delete_me(
     user: RequireMember,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
-    """회원 탈퇴. FK(ondelete=CASCADE)로 프로필·식단·운동·일정·알림·
-    소셜계정·개인 코치문서가 함께 삭제된다."""
+    """회원 탈퇴. 예약 좌석을 복구한 뒤 프로필·식단·운동·일정·알림·
+    소셜계정·개인 코치문서를 함께 삭제한다."""
+    reservation_service.cancel_member_reservations_for_account_deletion(
+        db, user.id
+    )
     db.delete(user)
     db.commit()
     return {"status": "deleted"}

@@ -5,6 +5,7 @@ FastAPI 진입점 (STEP 1: 골격 재구성).
 실행: uvicorn app.main:app --reload
 문서: http://localhost:8000/docs
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -13,9 +14,23 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
-    ai_coach, coach_docs, consultations, dashboard, diet, exercise, gyms,
-    member_coach, notifications, places, schedule, social, system, trainer,
-    trainers, users,
+    ai_coach,
+    coach_docs,
+    consultations,
+    dashboard,
+    diet,
+    exercise,
+    gyms,
+    member_coach,
+    notifications,
+    places,
+    reservations,
+    schedule,
+    social,
+    system,
+    trainer,
+    trainers,
+    users,
 )
 from app.core import observability
 from app.core.config import get_settings
@@ -71,6 +86,7 @@ if settings.security_headers:
             )
         return response
 
+
 # 관측성: request-id 미들웨어(가장 바깥 — 컨텍스트를 먼저 세팅) + 액세스 로그 + 전역 500 핸들러.
 # 보안 헤더 미들웨어 뒤에 설치해 request-id 미들웨어가 최외곽에서 감싸게 한다.
 observability.install(app)
@@ -90,6 +106,7 @@ app.include_router(coach_docs.router, prefix=settings.api_v1_prefix)
 app.include_router(trainer.router, prefix=settings.api_v1_prefix)
 app.include_router(member_coach.router, prefix=settings.api_v1_prefix)
 app.include_router(consultations.router, prefix=settings.api_v1_prefix)
+app.include_router(reservations.router, prefix=settings.api_v1_prefix)
 # 회원앱 헬스장·트레이너 디렉터리(#324). trainer(단수, 트레이너 앱 전용)와 별개다.
 app.include_router(gyms.router, prefix=settings.api_v1_prefix)
 app.include_router(trainers.router, prefix=settings.api_v1_prefix)

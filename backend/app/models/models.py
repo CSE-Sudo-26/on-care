@@ -8,14 +8,27 @@ ORM 모델 — 프론트 계약(LocalApiInterceptor + drift 스키마)에 맞춤
 
 이번 STEP 1 에서는 테이블 생성만 검증하고, 살은 이후 STEP 에서 채웁니다.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
-    false, func, text, true,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    func,
+    text,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,7 +55,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(20), default="member", server_default="member", index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     health_profile: Mapped["HealthProfile | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
@@ -51,21 +66,26 @@ class User(Base):
 
 class HealthProfile(Base):
     """건강 위험 정보 — /users/me/health 의 risk + 메타."""
+
     __tablename__ = "health_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
 
     risk_title: Mapped[str] = mapped_column(String(200), default="")
     risk_body: Mapped[str] = mapped_column(Text, default="")
-    risk_level: Mapped[str] = mapped_column(String(20), default="low")  # low|medium|high
+    risk_level: Mapped[str] = mapped_column(
+        String(20), default="low"
+    )  # low|medium|high
     conditions: Mapped[str] = mapped_column(Text, default="")  # "고혈압, 당뇨 전단계"
     goals: Mapped[str] = mapped_column(Text, default="")
 
     # 개인정보(내 프로필 모달) + 온보딩 인구통계
     phone: Mapped[str] = mapped_column(String(20), default="")
-    birth_date: Mapped[str] = mapped_column(String(10), default="")   # YYYY-MM-DD
-    gender: Mapped[str] = mapped_column(String(10), default="")       # male|female|other
+    birth_date: Mapped[str] = mapped_column(String(10), default="")  # YYYY-MM-DD
+    gender: Mapped[str] = mapped_column(String(10), default="")  # male|female|other
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # 일일 영양 목표(식단 관리용)
@@ -78,7 +98,9 @@ class HealthProfile(Base):
 
     # 주간 운동 목표(운동 관리용)
     weekly_workout_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    weekly_exercise_minutes_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_exercise_minutes_goal: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
     weekly_burn_goal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 온보딩 완료 여부(프론트 온보딩 게이팅용)
@@ -95,10 +117,13 @@ class HealthProfile(Base):
 
 class DietEntry(Base):
     """식단 기록 — drift DietEntries 대응. 나트륨·당류 포함."""
+
     __tablename__ = "diet_entries"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
     meal_type: Mapped[str] = mapped_column(String(20))  # breakfast|lunch|dinner|snack
     time_label: Mapped[str] = mapped_column(String(10), default="")
@@ -111,13 +136,19 @@ class DietEntry(Base):
     # 당류는 소수. 음식 단위(FoodNutrient.sugar_g)가 이미 Float 이라 항목 단위만
     # Integer 로 남아 있으면 6.3+8.5 같은 합이 절삭된다(프론트도 double 로 다룸).
     sugar_g: Mapped[float] = mapped_column(Float, default=0.0)
-    engine: Mapped[str] = mapped_column(String(20), default="")  # 인식 엔진(gemini|yolo)
+    engine: Mapped[str] = mapped_column(
+        String(20), default=""
+    )  # 인식 엔진(gemini|yolo)
     # 재시도 중복 저장 방지용 멱등키(클라 요청당 1회 생성). NULL 허용 → 기존/무키 요청은 제약 밖.
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     __table_args__ = (
-        UniqueConstraint("user_id", "idempotency_key", name="uq_diet_entries_user_idem"),
+        UniqueConstraint(
+            "user_id", "idempotency_key", name="uq_diet_entries_user_idem"
+        ),
     )
 
 
@@ -128,63 +159,87 @@ class FoodNutrient(Base):
     (LLM 은 '무엇인지' 식별에 강하고, 정확한 영양 수치는 이 공공 DB 가 제공.)
     수치는 1회 제공량(serving_size_g) 기준. name_norm 은 매칭용 정규화 이름.
     """
+
     __tablename__ = "food_nutrients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), index=True)
     name_norm: Mapped[str] = mapped_column(String(100), default="", index=True)
-    category: Mapped[str] = mapped_column(String(30), default="")  # 밥류|국·찌개류|구이류...
+    category: Mapped[str] = mapped_column(
+        String(30), default=""
+    )  # 밥류|국·찌개류|구이류...
     serving_size_g: Mapped[float | None] = mapped_column(Float, nullable=True)
-    calories: Mapped[float] = mapped_column(Float, default=0)      # kcal / 1인분
-    sodium_mg: Mapped[float] = mapped_column(Float, default=0)     # mg  / 1인분
-    sugar_g: Mapped[float] = mapped_column(Float, default=0)       # g   / 1인분
+    calories: Mapped[float] = mapped_column(Float, default=0)  # kcal / 1인분
+    sodium_mg: Mapped[float] = mapped_column(Float, default=0)  # mg  / 1인분
+    sugar_g: Mapped[float] = mapped_column(Float, default=0)  # g   / 1인분
     carbs_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     protein_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     fat_g: Mapped[float | None] = mapped_column(Float, nullable=True)
-    source: Mapped[str] = mapped_column(String(20), default="mfds")  # 데이터 출처(식약처=mfds)
+    source: Mapped[str] = mapped_column(
+        String(20), default="mfds"
+    )  # 데이터 출처(식약처=mfds)
 
 
 class ExerciseSession(Base):
     """운동 기록 — drift ExerciseSessions 대응."""
+
     __tablename__ = "exercise_sessions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     week_start: Mapped[str] = mapped_column(String(10), index=True)  # 월요일 YYYY-MM-DD
     day_label: Mapped[str] = mapped_column(String(4))  # 월/화/...
     type: Mapped[str] = mapped_column(String(20))  # cardio|strength|yoga|walking
     minutes: Mapped[int] = mapped_column(Integer, default=0)
     calories: Mapped[int] = mapped_column(Integer, default=0)
     # 운동 강도 — 칼로리 추정 배수의 근거이자 수정 시트 복원 값. light|moderate|high
-    intensity: Mapped[str] = mapped_column(String(20), default="moderate", server_default="moderate")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    intensity: Mapped[str] = mapped_column(
+        String(20), default="moderate", server_default="moderate"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class ScheduleEvent(Base):
     """일정 — drift ScheduleEvents 대응."""
+
     __tablename__ = "schedule_events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     date: Mapped[str] = mapped_column(String(10), index=True)
     time: Mapped[str] = mapped_column(String(10), default="")
     title: Mapped[str] = mapped_column(String(200))
-    category: Mapped[str] = mapped_column(String(20))  # hospital|exercise|meal|medication|other
+    category: Mapped[str] = mapped_column(
+        String(20)
+    )  # hospital|exercise|meal|medication|other
     emoji: Mapped[str] = mapped_column(String(10), default="")
     color_hex: Mapped[str] = mapped_column(String(10), default="#E0F2F7")
 
 
 class Notification(Base):
     """알림 — drift NotificationItems 대응."""
+
     __tablename__ = "notifications"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text, default="")
-    category: Mapped[str] = mapped_column(String(20))  # reminder|health_check|achievement|system
+    category: Mapped[str] = mapped_column(
+        String(20)
+    )  # reminder|health_check|achievement|system
     read: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class MemberNotificationSetting(Base):
@@ -237,6 +292,7 @@ class CoachDocument(Base):
     검색 시 (user_id == 현재사용자 OR user_id IS NULL) 로 가져오면
     내 개인기록 + 공용 가이드라인만 나오고 남의 개인기록은 절대 안 섞인다.
     """
+
     __tablename__ = "coach_documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -250,8 +306,12 @@ class CoachDocument(Base):
     domain: Mapped[str] = mapped_column(String(20), default="general", index=True)
     title: Mapped[str] = mapped_column(String(300), default="")
     content: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBED_DIM), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(EMBED_DIM), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class SocialAccount(Base):
@@ -260,13 +320,20 @@ class SocialAccount(Base):
     (provider, provider_user_id) 는 유일. 소셜 로그인 시 이 조합으로 사용자를 찾고,
     없으면 (이메일이 같은 기존 사용자에 연결하거나) 새 사용자를 만든다.
     """
+
     __tablename__ = "social_accounts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    provider: Mapped[str] = mapped_column(String(20), index=True)  # kakao|google|naver|apple
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(
+        String(20), index=True
+    )  # kakao|google|naver|apple
     provider_user_id: Mapped[str] = mapped_column(String(128))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     __table_args__ = (
         UniqueConstraint("provider", "provider_user_id", name="uq_social_provider_uid"),
@@ -275,11 +342,14 @@ class SocialAccount(Base):
 
 class Place(Base):
     """온오프라인 연결: 장소 — /places/nearby. 카카오맵 연동 자리."""
+
     __tablename__ = "places"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
-    category: Mapped[str] = mapped_column(String(30))  # medical|fitness|healthy_food|pharmacy
+    category: Mapped[str] = mapped_column(
+        String(30)
+    )  # medical|fitness|healthy_food|pharmacy
     address: Mapped[str] = mapped_column(String(300), default="")
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -294,6 +364,7 @@ class GymProfile(Base):
     같은 헬스장 전용 값을 `places` 에 넣으면 병원·약국·건강식이 공유하는 테이블이
     오염되므로 여기로 분리한다(`TrainerProfile` 이 `User` 를 확장하는 것과 같은 꼴).
     """
+
     __tablename__ = "gym_profiles"
 
     place_id: Mapped[str] = mapped_column(
@@ -304,7 +375,9 @@ class GymProfile(Base):
     weekday_hours: Mapped[str] = mapped_column(String(50), default="")
     weekend_hours: Mapped[str] = mapped_column(String(50), default="")
     phone: Mapped[str] = mapped_column(String(20), default="")
-    tags_json: Mapped[str] = mapped_column(Text, default="[]")  # ["다이어트", "재활운동"]
+    tags_json: Mapped[str] = mapped_column(
+        Text, default="[]"
+    )  # ["다이어트", "재활운동"]
     #: 제휴 헬스장만 트레이너 연결·상담이 가능하다.
     is_partner: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=false(), default=False, index=True
@@ -329,6 +402,7 @@ class MemberGym(Base):
     지우면 된다. 회원당 1곳이라는 불변식은 `member_id` 를 PK 로 두어 구조로 강제한다
     (partial unique index 가 필요 없다).
     """
+
     __tablename__ = "member_gyms"
 
     member_id: Mapped[str] = mapped_column(
@@ -347,6 +421,7 @@ class MemberGym(Base):
 
 class ConsultationRequest(Base):
     """회원의 헬스장·트레이너 상담 요청."""
+
     __tablename__ = "consultation_requests"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -408,9 +483,7 @@ class ConsultationRequest(Base):
             "created_at",
         ),
         # 트레이너 인박스의 두 경로 — 내 앞으로 온 것 / 내 헬스장으로 온 것. (#467)
-        Index(
-            "ix_consultation_requests_trainer_status", "trainer_id", "status"
-        ),
+        Index("ix_consultation_requests_trainer_status", "trainer_id", "status"),
         Index("ix_consultation_requests_gym_status", "gym_id", "status"),
     )
 
@@ -434,18 +507,22 @@ class TrainerProfile(Base):
     회원의 HealthProfile 과 별개(역할이 다른 계정). 이름/이메일은 User 에 있고,
     여기엔 전문분야·경력·자격증·소속 헬스장 정보만 둔다.
     """
+
     __tablename__ = "trainer_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     trainer_id: Mapped[str] = mapped_column(
         # unique=True 가 이미 유니크 인덱스를 만들므로 index=True 는 잉여(중복 인덱스). 제거.
-        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
     )
     phone: Mapped[str] = mapped_column(String(20), default="")
-    specialty: Mapped[str] = mapped_column(String(50), default="")     # 퍼스널 트레이너
-    career_years: Mapped[int] = mapped_column(Integer, default=0)       # 7 → "7년"
+    specialty: Mapped[str] = mapped_column(String(50), default="")  # 퍼스널 트레이너
+    career_years: Mapped[int] = mapped_column(Integer, default=0)  # 7 → "7년"
     intro: Mapped[str] = mapped_column(Text, default="")
-    certifications_json: Mapped[str] = mapped_column(Text, default="[]")  # ["생활스포츠지도사 2급", ...]
+    certifications_json: Mapped[str] = mapped_column(
+        Text, default="[]"
+    )  # ["생활스포츠지도사 2급", ...]
     #: 소속 헬스장(`places.id`). 아래 gym_* 문자열 컬럼을 대신한다 — 문자열만으로는
     #: 한 헬스장에 여러 트레이너를 묶을 수 없었다(#324, #301). 트레이너 앱이 아직
     #: gym_* 를 읽으므로 두 표현이 당분간 공존하고, 값이 있으면 gym_id 가 우선이다.
@@ -495,6 +572,7 @@ class TrainerInviteCode(Base):
     발급한다 — 사용 횟수를 세는 것보다 "누가 이 코드를 썼는지"가 남는 편이
     나중에 추적할 수 있다.
     """
+
     __tablename__ = "trainer_invite_codes"
 
     #: 사람이 옮겨 적는 값이라 코드 자체가 PK 다. 대문자·숫자만 쓰고 대소문자
@@ -527,6 +605,7 @@ class TrainerClient(Base):
     또한 회원측 API 는 '현재 담당 코치 1명'을 전제하므로, 회원당 active 링크는 최대
     1개로 partial unique index 로 강제한다(복수 트레이너 동시 배정 방지).
     """
+
     __tablename__ = "trainer_clients"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -539,14 +618,18 @@ class TrainerClient(Base):
     goal: Mapped[str] = mapped_column(String(200), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     __table_args__ = (
         UniqueConstraint("trainer_id", "member_id", name="uq_trainer_client"),
         # 회원당 active 담당은 최대 1명(휴면 링크는 과거 이력으로 여러 개 허용).
         Index(
-            "uq_trainer_client_active_member", "member_id",
-            unique=True, postgresql_where=text("active"),
+            "uq_trainer_client_active_member",
+            "member_id",
+            unique=True,
+            postgresql_where=text("active"),
         ),
     )
 
@@ -557,6 +640,7 @@ class TrainerRoutine(Base):
     source: 'ai'(AI 추천) | 'trainer'(트레이너 직접 배정). 회원 앱에서 '받은 루틴'
     으로도 읽힌다(양쪽에서 보이는 공유 데이터).
     """
+
     __tablename__ = "trainer_routines"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -568,11 +652,13 @@ class TrainerRoutine(Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     minutes: Mapped[int] = mapped_column(Integer, default=0)
-    type: Mapped[str] = mapped_column(String(20))       # 유산소|근력|스트레칭
+    type: Mapped[str] = mapped_column(String(20))  # 유산소|근력|스트레칭
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class RoutineHistory(Base):
@@ -581,6 +667,7 @@ class RoutineHistory(Base):
     회원이 자율 운동을 완료하거나(회원 앱), 트레이너가 PT 세션을 완료 처리하면
     (스케줄 완료 루프) 생성된다. date_label 은 저장하지 않고 date 로부터 파생한다.
     """
+
     __tablename__ = "routine_history"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -592,12 +679,18 @@ class RoutineHistory(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
-    kind_label: Mapped[str] = mapped_column(String(50), default="")  # 'PT 세션 · 트레이너 지도'
+    kind_label: Mapped[str] = mapped_column(
+        String(50), default=""
+    )  # 'PT 세션 · 트레이너 지도'
     completion_rate: Mapped[int] = mapped_column(Integer, default=0)  # 0..100
-    exercises_json: Mapped[str] = mapped_column(Text, default="[]")   # ["레그프레스 3세트", ...]
+    exercises_json: Mapped[str] = mapped_column(
+        Text, default="[]"
+    )  # ["레그프레스 3세트", ...]
     client_feedback: Mapped[str] = mapped_column(Text, default="")
     trainer_note: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class ChatMessage(Base):
@@ -607,6 +700,7 @@ class ChatMessage(Base):
     로 저장하고, 트레이너 API 응답에선 프론트 계약에 맞춰 'client' 로 노출한다.
     read_at 으로 양쪽 미확인 수를 계산.
     """
+
     __tablename__ = "chat_messages"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -618,7 +712,9 @@ class ChatMessage(Base):
     )
     sender: Mapped[str] = mapped_column(String(20))  # trainer|member
     body: Mapped[str] = mapped_column(Text)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -630,6 +726,7 @@ class TrainerSchedule(Base):
     회원과 매칭된 슬롯은 member_id 를 갖고, 상담/신규/공백은 client_name(표시용)만
     갖는다. status: 예정|완료|공백. program_json: [{name,sets,reps,weight}].
     """
+
     __tablename__ = "trainer_schedule"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -641,14 +738,79 @@ class TrainerSchedule(Base):
     )
     date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
     time: Mapped[str] = mapped_column(String(10), default="")  # "10:00"
-    client_name: Mapped[str] = mapped_column(String(100), default="")  # 표시용(상담/신규 포함)
+    client_name: Mapped[str] = mapped_column(
+        String(100), default=""
+    )  # 표시용(상담/신규 포함)
     type: Mapped[str] = mapped_column(String(30), default="")  # 1:1 PT|상담|...
     duration_minutes: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(10), default="예정")  # 예정|완료|공백
     note: Mapped[str] = mapped_column(Text, default="")
     program_json: Mapped[str] = mapped_column(Text, default="[]")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class TrainerReservationSlot(Base):
+    """A trainer-owned, member-bookable calendar slot."""
+
+    __tablename__ = "trainer_reservation_slots"
+    __table_args__ = (
+        CheckConstraint("capacity > 0", name="ck_reservation_slot_capacity_positive"),
+        CheckConstraint(
+            "remaining >= 0 AND remaining <= capacity",
+            name="ck_reservation_slot_remaining_range",
+        ),
+        Index("ix_reservation_slots_trainer_starts", "trainer_id", "starts_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    capacity: Mapped[int] = mapped_column(Integer)
+    remaining: Mapped[int] = mapped_column(Integer)
+    is_closed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), default=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TrainerReservation(Base):
+    """A member's persisted booking for one trainer slot."""
+
+    __tablename__ = "trainer_reservations"
+    __table_args__ = (
+        UniqueConstraint("member_id", "slot_id", name="uq_reservation_member_slot"),
+        Index("ix_reservations_slot_status", "slot_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    slot_id: Mapped[str] = mapped_column(
+        ForeignKey("trainer_reservation_slots.id", ondelete="RESTRICT"), index=True
+    )
+    schedule_id: Mapped[str] = mapped_column(
+        ForeignKey("trainer_schedule.id", ondelete="RESTRICT"), unique=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="booked", default="booked"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class AuditLog(Base):
@@ -657,6 +819,7 @@ class AuditLog(Base):
     user_id 는 FK 를 두지 않는다(사용자가 삭제돼도 감사 기록은 남아야 하므로).
     event 예: auth.login, auth.register, auth.social, admin.public_doc_upload.
     """
+
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -665,7 +828,9 @@ class AuditLog(Base):
     ip: Mapped[str] = mapped_column(String(64), default="")
     success: Mapped[bool] = mapped_column(Boolean, default=True)
     detail: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class AiConversation(Base):
@@ -678,6 +843,7 @@ class AiConversation(Base):
     트레이너↔회원 채팅(chat_messages)과는 다른 도메인이다. 이쪽은 사람 간 대화가
     아니라 LLM 대화라 sender 대신 role(user|coach)을 쓰고 근거 문서를 함께 남긴다.
     """
+
     __tablename__ = "ai_conversations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -703,6 +869,7 @@ class AiMessage(Base):
     저장해야 대화를 복원했을 때도 근거 표시가 남는다(재접속 시 근거가 사라지면
     "왜 이렇게 답했는지"를 되짚을 수 없다).
     """
+
     __tablename__ = "ai_messages"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

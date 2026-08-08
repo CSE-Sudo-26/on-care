@@ -486,7 +486,11 @@ def trainer_delete_session(
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """예약 삭제."""
-    if not trainer_service.delete_session(db, trainer.id, session_id):
+    try:
+        deleted = trainer_service.delete_session(db, trainer.id, session_id)
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if not deleted:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return {"status": "deleted"}
 

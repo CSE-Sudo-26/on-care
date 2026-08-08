@@ -13,6 +13,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -150,6 +151,18 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
   }
 
+  Future<void> _openReservationSlotsSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: AppRadius.card),
+      ),
+      builder: (context) => ReservationSlotsSheet(selectedDay: _selectedDay),
+    );
+  }
+
   Future<void> _confirmDelete(ScheduleSession s) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -262,6 +275,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ),
             );
           },
+        ),
+        ActionButton(
+          label: '예약 슬롯',
+          icon: Icons.event_available_outlined,
+          onPressed: () => _openReservationSlotsSheet(),
         ),
         ActionButton(
           label: '새 일정',
