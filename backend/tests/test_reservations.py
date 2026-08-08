@@ -298,14 +298,17 @@ def test_member_account_deletion_restores_slot_and_removes_schedule(
     db_session.flush()
     db_session.add(reservation)
     db_session.commit()
+    reservation_id = reservation.id
+    schedule_id = schedule.id
+    slot_id = slot.id
 
     deleted = client.delete("/v1/users/me", headers=_headers(member_token))
 
     assert deleted.status_code == 200, deleted.text
     db_session.expire_all()
-    assert db_session.get(TrainerReservation, reservation.id) is None
-    assert db_session.get(TrainerSchedule, schedule.id) is None
-    persisted_slot = db_session.get(TrainerReservationSlot, slot.id)
+    assert db_session.get(TrainerReservation, reservation_id) is None
+    assert db_session.get(TrainerSchedule, schedule_id) is None
+    persisted_slot = db_session.get(TrainerReservationSlot, slot_id)
     assert persisted_slot is not None
     assert persisted_slot.remaining == 1
     db_session.delete(persisted_slot)
