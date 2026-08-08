@@ -21,6 +21,8 @@ class ConsultationRequest {
     required this.message,
     required this.status,
     required this.createdAt,
+    this.decisionNote,
+    this.decidedAt,
   });
 
   /// 서버가 접수하며 준 id 로 갈아끼울 때 쓴다 — 화면이 만든 임시 id 는 트레이너
@@ -41,6 +43,8 @@ class ConsultationRequest {
     message: message,
     status: status,
     createdAt: createdAt,
+    decisionNote: decisionNote,
+    decidedAt: decidedAt,
   );
 
   final String id;
@@ -66,6 +70,18 @@ class ConsultationRequest {
   final String? message;
   final ConsultationStatus status;
   final DateTime createdAt;
+
+  /// 트레이너가 거절하며 남긴 사유. 승인이거나 사유를 적지 않았으면 null. (#473)
+  ///
+  /// "거절됨"만 보여 주면 사용자는 다시 신청해도 되는지, 다른 트레이너를 찾아야
+  /// 하는지 판단할 근거가 없다. 서버가 알림 본문으로도 같은 문장을 보낸다.
+  final String? decisionNote;
+
+  /// 승인·거절된 시각. 대기 중이면 null.
+  final DateTime? decidedAt;
+
+  /// 아직 답을 기다리는 중인가.
+  bool get isPending => status == ConsultationStatus.pending;
 }
 
 /// `GET /consultations/me` 응답 → 엔티티. (#327)
@@ -100,5 +116,11 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
     },
     createdAt:
         DateTime.tryParse((j['created_at'] as String?) ?? '') ?? DateTime.now(),
+    // 공백만 남은 사유는 null 로 접는다 — 빈 안내 줄이 그려지지 않도록.
+    decisionNote: switch (j['decision_note']) {
+      final String note when note.trim().isNotEmpty => note.trim(),
+      _ => null,
+    },
+    decidedAt: DateTime.tryParse((j['decided_at'] as String?) ?? ''),
   );
 }

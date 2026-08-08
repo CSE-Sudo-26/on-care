@@ -771,5 +771,8 @@
   "exConsultAcceptedStatus": "Accepted",
   "exConsultRejectedStatus": "Rejected",
   "exReturnExercise": "Return to Exercise",
-  "exConsultStatusSection": "Consultation Request Status"
+  "exConsultStatusSection": "Consultation Request Status",
+  "exConsultRejectedReasonLabel": "Reason for decline",
+  "exConsultRejectedNoReason": "No reason was given. Try requesting a consultation with another trainer.",
+  "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now."
 }

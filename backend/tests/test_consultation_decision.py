@@ -568,6 +568,58 @@ def test_reject_records_the_reason_and_creates_no_link(client, db_session):
     assert rejected and rejected[0]["body"] == "이번 달은 정원이 찼어요"
 
 
+def test_member_sees_the_reason_but_never_the_deciding_trainer(
+    client, db_session
+):
+    """회원 응답에는 사유·처리 시각만 싣고 처리자 id 는 싣지 않는다. (#473)
+
+    헬스장으로 보낸 문의는 소속 트레이너 누구나 처리할 수 있어, `decided_by` 를
+    흘리면 회원이 지정하지도 않은 트레이너를 알게 된다. 회원에게 필요한 것은
+    결과와 이유이지 누가 눌렀는지가 아니다.
+    """
+    gym = _gym(db_session)
+    trainer, trainer_token = _trainer(client, db_session, gym=gym)
+    _, member_token = _member(client)
+    consultation_id = _request_consultation(client, member_token, gym_id=gym.id)
+
+    client.post(
+        f"/v1/trainer/consultations/{consultation_id}/reject",
+        headers=_auth(trainer_token),
+        json={"note": "이번 달은 정원이 찼어요"},
+    )
+
+    mine = client.get("/v1/consultations/me", headers=_auth(member_token))
+
+    assert mine.status_code == 200, mine.text
+    row = next(r for r in mine.json() if r["id"] == consultation_id)
+    assert row["status"] == "rejected"
+    assert row["decision_note"] == "이번 달은 정원이 찼어요"
+    assert row["decided_at"] is not None
+    assert "decided_by" not in row
+    # 트레이너 인박스 쪽에는 그대로 남아 있어야 한다(누가 가져갔는지 이력).
+    inbox = client.get(
+        "/v1/trainer/consultations?status=all", headers=_auth(trainer_token)
+    )
+    taken = next(r for r in inbox.json() if r["id"] == consultation_id)
+    assert taken["decided_by"] == trainer.id
+
+
+def test_pending_consultation_has_no_decision_fields(client, db_session):
+    """대기 중인 요청은 사유·처리 시각이 비어 있다."""
+    trainer, _ = _trainer(client, db_session)
+    _, member_token = _member(client)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
+
+    mine = client.get("/v1/consultations/me", headers=_auth(member_token))
+
+    row = next(r for r in mine.json() if r["id"] == consultation_id)
+    assert row["status"] == "pending"
+    assert row["decision_note"] is None
+    assert row["decided_at"] is None
+
+
 def test_reject_after_accept_conflicts(client, db_session):
     trainer, trainer_token = _trainer(client, db_session)
     _, member_token = _member(client)

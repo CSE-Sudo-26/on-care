@@ -151,6 +151,7 @@ class _RecentConsultationSection extends StatelessWidget {
     final String date = MaterialLocalizations.of(
       context,
     ).formatMediumDate(request.preferredDate);
+    final Widget? outcome = _outcomeNote(context, l);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,6 +242,10 @@ class _RecentConsultationSection extends StatelessWidget {
                         color: FigmaColors.textBody,
                       ),
                     ),
+                    if (outcome != null) ...<Widget>[
+                      const SizedBox(height: 10),
+                      outcome,
+                    ],
                   ],
                 ),
               ),
@@ -248,6 +253,75 @@ class _RecentConsultationSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// 처리된 요청에 붙는 결과 안내. 대기 중이면 null. (#473)
+  ///
+  /// 거절은 사유가 본체다 — "거절됨" 배지만 보면 다시 신청해도 되는지, 다른
+  /// 트레이너를 찾아야 하는지 판단할 근거가 없다. 트레이너가 사유를 적지 않았을
+  /// 수도 있으므로 그때는 다음 행동을 안내한다.
+  Widget? _outcomeNote(BuildContext context, AppLocalizations l) {
+    switch (request.status) {
+      case ConsultationStatus.pending:
+        return null;
+      case ConsultationStatus.accepted:
+        return _OutcomeNote(
+          tone: FigmaColors.primary,
+          text: l.exConsultAcceptedGuide,
+        );
+      case ConsultationStatus.rejected:
+        final String? note = request.decisionNote;
+        return _OutcomeNote(
+          tone: FigmaColors.textMuted,
+          label: note == null ? null : l.exConsultRejectedReasonLabel,
+          text: note ?? l.exConsultRejectedNoReason,
+        );
+    }
+  }
+}
+
+/// 상태 카드 하단의 결과 안내 한 덩어리 — 승인 안내 또는 거절 사유.
+class _OutcomeNote extends StatelessWidget {
+  const _OutcomeNote({required this.tone, required this.text, this.label});
+
+  final Color tone;
+  final String? label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (label != null) ...<Widget>[
+            Text(
+              label!,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: tone,
+              ),
+            ),
+            const SizedBox(height: 3),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: FigmaColors.textBody,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

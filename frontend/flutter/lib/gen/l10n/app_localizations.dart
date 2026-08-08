@@ -2833,6 +2833,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Consultation Request Status'**
   String get exConsultStatusSection;
+
+  /// No description provided for @exConsultRejectedReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for decline'**
+  String get exConsultRejectedReasonLabel;
+
+  /// No description provided for @exConsultRejectedNoReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason was given. Try requesting a consultation with another trainer.'**
+  String get exConsultRejectedNoReason;
+
+  /// No description provided for @exConsultAcceptedGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re connected with your trainer. You can start chatting now.'**
+  String get exConsultAcceptedGuide;
 }
 
 class _AppLocalizationsDelegate

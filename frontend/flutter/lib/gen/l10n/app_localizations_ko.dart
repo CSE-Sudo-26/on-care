@@ -1477,4 +1477,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => '상담 요청 현황';
+
+  @override
+  String get exConsultRejectedReasonLabel => '거절 사유';
+
+  @override
+  String get exConsultRejectedNoReason =>
+      '사유를 남기지 않았어요. 다른 트레이너에게 상담을 요청해 보세요.';
+
+  @override
+  String get exConsultAcceptedGuide => '담당 트레이너와 연결되었어요. 이제 채팅으로 상담할 수 있어요.';
 }

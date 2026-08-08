@@ -52,7 +52,10 @@ const AppConfig _config = AppConfig(
   useMockApi: true,
 );
 
-ConsultationRequest _consultation(ConsultationStatus status) {
+ConsultationRequest _consultation(
+  ConsultationStatus status, {
+  String? decisionNote,
+}) {
   return ConsultationRequest(
     id: 'consultation-${status.name}',
     targetType: ConsultationTargetType.trainer,
@@ -69,6 +72,10 @@ ConsultationRequest _consultation(ConsultationStatus status) {
     message: null,
     status: status,
     createdAt: DateTime(2026, 7, 31),
+    decisionNote: decisionNote,
+    decidedAt: status == ConsultationStatus.pending
+        ? null
+        : DateTime(2026, 8, 2),
   );
 }
 
@@ -363,6 +370,75 @@ void main() {
       expect(find.text(l.exViewConsultationRequest), findsNothing);
     });
   }
+
+  // --- 처리 결과 안내 (#473) --------------------------------------------
+  //
+  // "거절됨" 배지만으로는 다시 신청해도 되는지, 다른 트레이너를 찾아야 하는지
+  // 알 수 없다. 사유가 결과 전달의 본체다.
+
+  testWidgets('거절된 요청은 트레이너가 남긴 사유를 보여준다', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(
+        ConsultationStatus.rejected,
+        decisionNote: '이번 달은 정원이 찼어요',
+      ),
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    expect(find.text('이번 달은 정원이 찼어요'), findsOneWidget);
+    expect(find.text(l.exConsultRejectedReasonLabel), findsOneWidget);
+  });
+
+  testWidgets('사유 없이 거절되면 다음 행동을 안내한다', (WidgetTester tester) async {
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(ConsultationStatus.rejected),
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    // 빈 사유 칸을 그리는 대신, 다른 트레이너를 찾도록 안내한다.
+    expect(find.text(l.exConsultRejectedNoReason), findsOneWidget);
+    expect(find.text(l.exConsultRejectedReasonLabel), findsNothing);
+  });
+
+  testWidgets('승인된 요청은 채팅으로 이어지는 안내를 보여준다', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(ConsultationStatus.accepted),
+      coach: _coach,
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    expect(find.text(l.exConsultAcceptedGuide), findsOneWidget);
+  });
+
+  testWidgets('대기 중인 요청에는 결과 안내가 붙지 않는다', (WidgetTester tester) async {
+    await pumpGymTab(
+      tester,
+      consultation: _consultation(ConsultationStatus.pending),
+    );
+    await scrollToCard(tester);
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    expect(find.text(l.exConsultAcceptedGuide), findsNothing);
+    expect(find.text(l.exConsultRejectedNoReason), findsNothing);
+  });
 
   testWidgets('my gym information keeps its detail route', (
     WidgetTester tester,

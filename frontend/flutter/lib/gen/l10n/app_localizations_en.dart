@@ -1503,4 +1503,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exConsultStatusSection => 'Consultation Request Status';
+
+  @override
+  String get exConsultRejectedReasonLabel => 'Reason for decline';
+
+  @override
+  String get exConsultRejectedNoReason =>
+      'No reason was given. Try requesting a consultation with another trainer.';
+
+  @override
+  String get exConsultAcceptedGuide =>
+      'You\'re connected with your trainer. You can start chatting now.';
 }
