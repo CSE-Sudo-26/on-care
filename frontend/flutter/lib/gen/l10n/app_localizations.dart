@@ -2084,6 +2084,84 @@ abstract class AppLocalizations {
   /// **'Customer Support'**
   String get mySupportTitle;
 
+  /// No description provided for @myPointsBenefitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Points'**
+  String get myPointsBenefitsTitle;
+
+  /// No description provided for @myPointsBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {points}P'**
+  String myPointsBalance(int points);
+
+  /// No description provided for @myPointsBenefitsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Benefits available with points'**
+  String get myPointsBenefitsSubtitle;
+
+  /// No description provided for @myPointsBenefitsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep logging your activity to earn points and use the benefits above.'**
+  String get myPointsBenefitsHint;
+
+  /// No description provided for @myPointsDiscountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash discount with points'**
+  String get myPointsDiscountTitle;
+
+  /// No description provided for @myPointsDiscountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use points like cash for up to 10% off 1:1 coaching and personal training.'**
+  String get myPointsDiscountDescription;
+
+  /// No description provided for @myPointsDiscountCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 10%'**
+  String get myPointsDiscountCost;
+
+  /// No description provided for @myPointsReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock glucose and blood pressure reports'**
+  String get myPointsReportTitle;
+
+  /// No description provided for @myPointsReportDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'View comprehensive weekly and monthly health-data reports.'**
+  String get myPointsReportDescription;
+
+  /// No description provided for @myPointsReportCost.
+  ///
+  /// In en, this message translates to:
+  /// **'500P'**
+  String get myPointsReportCost;
+
+  /// No description provided for @myPointsRecipeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalized healthy recipe package'**
+  String get myPointsRecipeTitle;
+
+  /// No description provided for @myPointsRecipeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Get PDF and interactive meal guides tailored to goals such as diabetes prevention or weight loss.'**
+  String get myPointsRecipeDescription;
+
+  /// No description provided for @myPointsRecipeCost.
+  ///
+  /// In en, this message translates to:
+  /// **'500P'**
+  String get myPointsRecipeCost;
+
   /// No description provided for @myLogout.
   ///
   /// In en, this message translates to:

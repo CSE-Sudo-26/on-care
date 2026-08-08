@@ -208,6 +208,7 @@ class _PointsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: const Key('pointsBanner'),
       behavior: HitTestBehavior.opaque,
       onTap: () => _openPointsBenefitsPage(context, points),
       child: Container(
@@ -260,11 +261,7 @@ class _PointsBanner extends StatelessWidget {
 
 /// Opens point benefits as a full page above the member tab shell.
 Future<void> _openPointsBenefitsPage(BuildContext context, int? points) {
-  return Navigator.of(context, rootNavigator: true).push<void>(
-    MaterialPageRoute<void>(
-      builder: (_) => _PointsBenefitsPage(points: points),
-    ),
-  );
+  return context.push<void>(AppRoutes.myPoints, extra: points);
 }
 
 /// A point redemption option shown in the benefits sheet.
@@ -281,34 +278,36 @@ class _PointBenefit {
   final String cost;
 }
 
-const List<_PointBenefit> _pointBenefits = <_PointBenefit>[
+List<_PointBenefit> _pointBenefitsOf(AppLocalizations l) => <_PointBenefit>[
   _PointBenefit(
     icon: Icons.savings_rounded,
-    title: '포인트 차감 현금성 할인',
-    desc: '1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.',
-    cost: '최대 10%',
+    title: l.myPointsDiscountTitle,
+    desc: l.myPointsDiscountDescription,
+    cost: l.myPointsDiscountCost,
   ),
   _PointBenefit(
     icon: Icons.lock_open_rounded,
-    title: '혈당·혈압 예측 리포트 잠금 해제',
-    desc: '주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.',
-    cost: '500P',
+    title: l.myPointsReportTitle,
+    desc: l.myPointsReportDescription,
+    cost: l.myPointsReportCost,
   ),
   _PointBenefit(
     icon: Icons.menu_book_rounded,
-    title: '맞춤형 건강 식단 레시피 패키지',
-    desc: '건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.',
-    cost: '500P',
+    title: l.myPointsRecipeTitle,
+    desc: l.myPointsRecipeDescription,
+    cost: l.myPointsRecipeCost,
   ),
 ];
 
-class _PointsBenefitsPage extends StatelessWidget {
-  const _PointsBenefitsPage({required this.points});
+class PointsBenefitsPage extends StatelessWidget {
+  const PointsBenefitsPage({super.key, required this.points});
 
   final int? points;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<_PointBenefit> benefits = _pointBenefitsOf(l);
     return Scaffold(
       key: const Key('pointsBenefitsPage'),
       backgroundColor: Colors.white,
@@ -316,9 +315,9 @@ class _PointsBenefitsPage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
-        title: const Text(
-          '포인트 사용처',
-          style: TextStyle(
+        title: Text(
+          l.myPointsBenefitsTitle,
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
             color: FigmaColors.ink,
@@ -334,7 +333,9 @@ class _PointsBenefitsPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
               children: <Widget>[
                 Text(
-                  points != null ? '보유 ${points}P' : '포인트로 받을 수 있는 혜택',
+                  points != null
+                      ? l.myPointsBalance(points!)
+                      : l.myPointsBenefitsSubtitle,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -342,23 +343,23 @@ class _PointsBenefitsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                for (int i = 0; i < _pointBenefits.length; i++) ...<Widget>[
-                  _PointBenefitCard(benefit: _pointBenefits[i]),
-                  if (i < _pointBenefits.length - 1) const SizedBox(height: 12),
+                for (int i = 0; i < benefits.length; i++) ...<Widget>[
+                  _PointBenefitCard(benefit: benefits[i]),
+                  if (i < benefits.length - 1) const SizedBox(height: 12),
                 ],
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   children: <Widget>[
-                    Icon(
+                    const Icon(
                       Icons.info_outline_rounded,
                       size: 14,
                       color: FigmaColors.textMuted,
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.',
-                        style: TextStyle(
+                        l.myPointsBenefitsHint,
+                        style: const TextStyle(
                           fontSize: 11.5,
                           color: FigmaColors.textMuted,
                           height: 1.35,

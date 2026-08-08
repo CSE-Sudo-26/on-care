@@ -1236,6 +1236,7 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: meal.id == null ? null : Key('mealCard-${meal.id}'),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),

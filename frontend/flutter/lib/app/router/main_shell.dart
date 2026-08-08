@@ -40,7 +40,10 @@ class MainShell extends StatelessWidget {
       // showing a separate white strip above the navigation bar.
       extendBody: true,
       body: navigationShell,
-      floatingActionButton: OniFab(onTap: () => showCoachingSheet(context)),
+      floatingActionButton: OniFab(
+        key: const Key('coachingFab'),
+        onTap: () => showCoachingSheet(context),
+      ),
       bottomNavigationBar: SizedBox(
         height: barHeight + lift + effectiveBottomPadding,
         child: Center(

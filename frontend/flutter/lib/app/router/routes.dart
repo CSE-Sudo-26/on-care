@@ -12,6 +12,9 @@ class AppRoutes {
   // Modal-ish routes (pushed from any tab)
   static const String aiCoach = '/ai-coach';
   static const String notification = '/notification';
+  static const String dietEntryDetail = '/diet/entries/:entryId';
+  static const String myPoints = '/my-health/points';
+  static const String mySettings = '/my-health/settings/:section';
   static const String place = '/place';
   static const String gyms = '/gyms';
   static const String trainers = '/trainers';
@@ -26,6 +29,12 @@ class AppRoutes {
 
   static String trainerDetailPath(String trainerId) =>
       '$trainers/${Uri.encodeComponent(trainerId)}';
+
+  static String dietEntryDetailPath(String entryId) =>
+      '$diet/entries/${Uri.encodeComponent(entryId)}';
+
+  static String mySettingsPath(String section) =>
+      '/my-health/settings/${Uri.encodeComponent(section)}';
 
   /// [trainerId] is required for trainer-target consultations — a gym has
   /// several trainers, so the gym id alone cannot identify one.

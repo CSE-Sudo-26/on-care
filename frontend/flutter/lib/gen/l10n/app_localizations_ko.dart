@@ -1081,6 +1081,49 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mySupportTitle => '고객 지원';
 
   @override
+  String get myPointsBenefitsTitle => '포인트 사용처';
+
+  @override
+  String myPointsBalance(int points) {
+    return '보유 ${points}P';
+  }
+
+  @override
+  String get myPointsBenefitsSubtitle => '포인트로 받을 수 있는 혜택';
+
+  @override
+  String get myPointsBenefitsHint => '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.';
+
+  @override
+  String get myPointsDiscountTitle => '포인트 차감 현금성 할인';
+
+  @override
+  String get myPointsDiscountDescription =>
+      '1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.';
+
+  @override
+  String get myPointsDiscountCost => '최대 10%';
+
+  @override
+  String get myPointsReportTitle => '혈당·혈압 예측 리포트 잠금 해제';
+
+  @override
+  String get myPointsReportDescription => '주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.';
+
+  @override
+  String get myPointsReportCost => '500P';
+
+  @override
+  String get myPointsRecipeTitle => '맞춤형 건강 식단 레시피 패키지';
+
+  @override
+  String get myPointsRecipeDescription =>
+      '건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.';
+
+  @override
+  String get myPointsRecipeCost => '500P';
+
+  @override
   String get myLogout => '로그아웃';
 
   @override

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
@@ -53,14 +55,6 @@ Widget _shell(
     ),
   );
   return PopScope(canPop: !saving, child: page);
-}
-
-Future<void> _open(BuildContext context, String title, List<Widget> body) {
-  return Navigator.of(context, rootNavigator: true).push<void>(
-    MaterialPageRoute<void>(
-      builder: (BuildContext ctx) => _shell(ctx, title, body),
-    ),
-  );
 }
 
 Widget _card(List<Widget> children) => Container(
@@ -258,14 +252,11 @@ Widget _saveRow({
 /// Profile editor — pre-fills from `profileProvider` and persists via
 /// `AccountRepository.updateProfile`.
 Future<void> openProfilePage(BuildContext context) {
-  return Navigator.of(
-    context,
-    rootNavigator: true,
-  ).push<void>(MaterialPageRoute<void>(builder: (_) => const _ProfileSheet()));
+  return context.push<void>(AppRoutes.mySettingsPath('profile'));
 }
 
-class _ProfileSheet extends ConsumerWidget {
-  const _ProfileSheet();
+class ProfileSettingsPage extends ConsumerWidget {
+  const ProfileSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -380,14 +371,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
 /// 건강 목표 시트 — 식단 일일 목표(6종) + 주간 운동 목표(3종)를 수정한다.
 /// 체중/혈압/혈당(vitals) 목표는 다루지 않는다.
 Future<void> openGoalsPage(BuildContext context) {
-  return Navigator.of(
-    context,
-    rootNavigator: true,
-  ).push<void>(MaterialPageRoute<void>(builder: (_) => const _GoalsSheet()));
+  return context.push<void>(AppRoutes.mySettingsPath('goals'));
 }
 
-class _GoalsSheet extends ConsumerWidget {
-  const _GoalsSheet();
+class HealthGoalsPage extends ConsumerWidget {
+  const HealthGoalsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -636,20 +624,19 @@ String _notifLabel(AppLocalizations l, String prefKey) {
 /// Notification preferences — toggles load from and persist to
 /// SharedPreferences so they survive a reload.
 Future<void> openNotificationSettingsPage(BuildContext context) {
-  return Navigator.of(
-    context,
-    rootNavigator: true,
-  ).push<void>(MaterialPageRoute<void>(builder: (_) => const _NotifSheet()));
+  return context.push<void>(AppRoutes.mySettingsPath('notifications'));
 }
 
-class _NotifSheet extends ConsumerStatefulWidget {
-  const _NotifSheet();
+class NotificationSettingsPage extends ConsumerStatefulWidget {
+  const NotificationSettingsPage({super.key});
 
   @override
-  ConsumerState<_NotifSheet> createState() => _NotifSheetState();
+  ConsumerState<NotificationSettingsPage> createState() =>
+      _NotificationSettingsPageState();
 }
 
-class _NotifSheetState extends ConsumerState<_NotifSheet> {
+class _NotificationSettingsPageState
+    extends ConsumerState<NotificationSettingsPage> {
   late final SharedPreferences _prefs;
   final Map<String, bool> _on = <String, bool>{};
 
@@ -704,36 +691,45 @@ class _NotifSheetState extends ConsumerState<_NotifSheet> {
 
 /// Customer support entries.
 Future<void> openSupportPage(BuildContext context) {
-  final AppLocalizations l = AppLocalizations.of(context);
-  return _open(context, l.mySupportTitle, <Widget>[
-    _supportRow(
-      Icons.help_outline,
-      l.mySupportFaq,
-      () => _comingSoon(context, l.mySupportFaq),
-    ),
-    _supportRow(
-      Icons.chat_bubble_outline,
-      l.mySupportInquiry,
-      () => _comingSoon(context, l.mySupportInquiry),
-    ),
-    _supportRow(
-      Icons.description_outlined,
-      l.myLegalTermsTitle,
-      () => _openLegal(context, _LegalDoc.terms),
-    ),
-    _supportRow(
-      Icons.privacy_tip_outlined,
-      l.myLegalPrivacyTitle,
-      () => _openLegal(context, _LegalDoc.privacy),
-    ),
-    const SizedBox(height: 12),
-    Center(
-      child: Text(
-        l.myAppVersion,
-        style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+  return context.push<void>(AppRoutes.mySettingsPath('support'));
+}
+
+class SupportPage extends StatelessWidget {
+  const SupportPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _shell(context, l.mySupportTitle, <Widget>[
+      _supportRow(
+        Icons.help_outline,
+        l.mySupportFaq,
+        () => _comingSoon(context, l.mySupportFaq),
       ),
-    ),
-  ]);
+      _supportRow(
+        Icons.chat_bubble_outline,
+        l.mySupportInquiry,
+        () => _comingSoon(context, l.mySupportInquiry),
+      ),
+      _supportRow(
+        Icons.description_outlined,
+        l.myLegalTermsTitle,
+        () => _openLegal(context, _LegalDoc.terms),
+      ),
+      _supportRow(
+        Icons.privacy_tip_outlined,
+        l.myLegalPrivacyTitle,
+        () => _openLegal(context, _LegalDoc.privacy),
+      ),
+      const SizedBox(height: 12),
+      Center(
+        child: Text(
+          l.myAppVersion,
+          style: const TextStyle(fontSize: 12, color: FigmaColors.textFaint),
+        ),
+      ),
+    ]);
+  }
 }
 
 void _comingSoon(BuildContext context, String label) {
@@ -744,9 +740,7 @@ void _comingSoon(BuildContext context, String label) {
 }
 
 void _openLegal(BuildContext context, _LegalDoc doc) {
-  Navigator.of(context, rootNavigator: true).push<void>(
-    MaterialPageRoute<void>(builder: (_) => _LegalDocSheet(doc: doc)),
-  );
+  context.push<void>(AppRoutes.mySettingsPath(doc.name));
 }
 
 Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
@@ -791,19 +785,17 @@ Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
 /// bodies are resolved from localizations via [_LegalDocSheet].
 enum _LegalDoc { terms, privacy }
 
-class _LegalDocSheet extends StatelessWidget {
-  const _LegalDocSheet({required this.doc});
-  final _LegalDoc doc;
+class LegalDocumentPage extends StatelessWidget {
+  const LegalDocumentPage({super.key, required this.document});
+
+  final String document;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String title = doc == _LegalDoc.terms
-        ? l.myLegalTermsTitle
-        : l.myLegalPrivacyTitle;
-    final String body = doc == _LegalDoc.terms
-        ? l.myLegalTermsBody
-        : l.myLegalPrivacyBody;
+    final bool isTerms = document == _LegalDoc.terms.name;
+    final String title = isTerms ? l.myLegalTermsTitle : l.myLegalPrivacyTitle;
+    final String body = isTerms ? l.myLegalTermsBody : l.myLegalPrivacyBody;
     return _shell(context, title, <Widget>[
       _card(<Widget>[
         Text(

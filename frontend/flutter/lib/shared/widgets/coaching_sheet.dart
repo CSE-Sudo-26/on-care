@@ -104,6 +104,7 @@ class _CoachingSheet extends ConsumerWidget {
         maxWidth: 480,
       ),
       child: Container(
+        key: const Key('coachingSheet'),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -166,6 +167,7 @@ class _CoachingSheet extends ConsumerWidget {
                 ),
               ),
               Padding(
+                key: const Key('coachingSheetCta'),
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: SizedBox(
                   width: double.infinity,

@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
@@ -150,7 +152,9 @@ Future<void> _pickAndAnalyze(
     // Permission denied / platform error / unreadable file — don't crash.
     if (sheetContext.mounted) {
       ScaffoldMessenger.of(sheetContext).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError)),
+        SnackBar(
+          content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError),
+        ),
       );
     }
     return;
@@ -467,7 +471,10 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
             const SizedBox(height: 14),
             Text(
               l.dietAnalyzingBody,
-              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              style: const TextStyle(
+                fontSize: 13,
+                color: FigmaColors.textMuted,
+              ),
             ),
           ],
         ),
@@ -480,7 +487,10 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           children: <Widget>[
             Text(
               l.dietAnalysisFailedBody,
-              style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+              style: const TextStyle(
+                fontSize: 13,
+                color: FigmaColors.textMuted,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -509,7 +519,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     }
 
     final DietAnalysisResult r = _result!;
-    final String recognized = r.foods.map((RecognizedFood f) => f.name).join(' · ');
+    final String recognized = r.foods
+        .map((RecognizedFood f) => f.name)
+        .join(' · ');
     return Column(
       children: <Widget>[
         Container(
@@ -598,9 +610,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
           child: FilledButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l.dietSaved)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(l.dietSaved)));
             },
             style: FilledButton.styleFrom(
               backgroundColor: FigmaColors.primary,
@@ -622,7 +634,11 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
 }
 
 class _ResultRow extends StatelessWidget {
-  const _ResultRow({required this.label, required this.value, required this.unit});
+  const _ResultRow({
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
   final String label;
   final String value;
   final String unit;
@@ -669,9 +685,87 @@ class _ResultRow extends StatelessWidget {
 
 /// Opens meal details as a full page above the member tab shell.
 Future<void> openMealDetailPage(BuildContext context, DietMeal meal) {
-  return Navigator.of(context, rootNavigator: true).push<void>(
-    MaterialPageRoute<void>(builder: (_) => _MealEditSheet(meal: meal)),
+  final String? id = meal.id;
+  if (id == null) return Future<void>.value();
+  return context.push<void>(AppRoutes.dietEntryDetailPath(id), extra: meal);
+}
+
+/// Full-page meal editor. [initialMeal] makes the first transition immediate;
+/// when a web URL is refreshed, the same meal is restored from today's data.
+class DietMealDetailPage extends ConsumerWidget {
+  const DietMealDetailPage({
+    super.key,
+    required this.entryId,
+    this.initialMeal,
+  });
+
+  final String entryId;
+  final DietMeal? initialMeal;
+
+  DietMeal _fromEntry(DietEntry entry) => DietMeal(
+    id: entry.id,
+    mealType: entry.mealType,
+    time: entry.timeLabel,
+    total: entry.totalCalories,
+    emoji: '',
+    thumbBg: Colors.white,
+    photoAsset: entry.photoAsset,
+    aiComment: entry.aiComment,
+    items: <DietFood>[
+      for (final FoodItem food in entry.foods)
+        DietFood(
+          food.name,
+          food.calories,
+          sodiumMg: food.sodiumMg,
+          sugarG: food.sugarG,
+        ),
+    ],
+    tags: const <DietTag>[],
+    sodium: entry.sodiumMg,
+    sugar: entry.sugarG,
   );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DietMeal? supplied = initialMeal;
+    if (supplied != null && supplied.id == entryId) {
+      return _MealEditSheet(meal: supplied);
+    }
+
+    final AppLocalizations l = AppLocalizations.of(context);
+    return ref
+        .watch(dietTodayProvider)
+        .when(
+          data: (DietDay day) {
+            for (final DietEntry entry in day.entries) {
+              if (entry.id == entryId) {
+                return _MealEditSheet(meal: _fromEntry(entry));
+              }
+            }
+            return _MealDetailUnavailable(message: l.dietLoadError);
+          },
+          loading: () => const Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, _) => _MealDetailUnavailable(message: l.dietLoadError),
+        );
+  }
+}
+
+class _MealDetailUnavailable extends StatelessWidget {
+  const _MealDetailUnavailable({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(backgroundColor: Colors.white),
+      body: Center(child: Text(message)),
+    );
+  }
 }
 
 class _MealEditSheet extends ConsumerStatefulWidget {
@@ -723,14 +817,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietSaved)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietSaveFailed)));
     }
   }
 
@@ -774,14 +864,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietDeleted)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietDeleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleteFailed)));
     }
   }
 
@@ -945,8 +1031,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
                     _FoodRow(
                       index: i + 1,
                       food: _foods[i],
-                      onDelete: () =>
-                          setState(() => _foods = <DietFood>[..._foods]..removeAt(i)),
+                      onDelete: () => setState(
+                        () => _foods = <DietFood>[..._foods]..removeAt(i),
+                      ),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -1039,7 +1126,10 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       color: FigmaColors.statBg,
       borderRadius: BorderRadius.circular(16),
     ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    ),
   );
 }
 
@@ -1123,11 +1213,7 @@ class _FoodRow extends StatelessWidget {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onDelete,
-            child: const Icon(
-              Icons.cancel,
-              size: 18,
-              color: Color(0xFFFFB4A8),
-            ),
+            child: const Icon(Icons.cancel, size: 18, color: Color(0xFFFFB4A8)),
           ),
         ],
       ),

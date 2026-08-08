@@ -82,6 +82,7 @@ Widget _shell(BuildContext context, Widget child) => ConstrainedBox(
     maxWidth: AppBreakpoints.contentMaxWidth,
   ),
   child: Container(
+    key: const Key('exerciseAddSheet'),
     decoration: const BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -247,6 +248,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
           ),
           Flexible(
             child: ListView(
+              key: const Key('exerciseAddContent'),
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               children: <Widget>[
