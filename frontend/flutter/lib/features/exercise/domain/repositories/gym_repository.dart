@@ -1,5 +1,6 @@
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 
 /// Gym + trainer directory, plus the user's own two links. Both live here
 /// because the links are coupled: leaving a gym also drops its trainer.
@@ -32,4 +33,15 @@ abstract class GymRepository {
 
   /// Drops only the trainer link; the gym link stays. No-op when unassigned.
   Future<void> disconnectMyTrainer();
+
+  /// Bookable times for one trainer, earliest first. Past slots are already
+  /// filtered out; booked-out ones are kept so the day reads as full rather
+  /// than empty.
+  Future<List<TrainerSlot>> fetchSlots(String trainerId);
+
+  /// Takes one place in [slotId].
+  ///
+  /// Throws [StateError] when the slot is unknown or already booked out, so a
+  /// stale screen cannot silently overbook.
+  Future<void> reserve(String slotId);
 }

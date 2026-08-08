@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 
 /// 헬스장·트레이너 디렉터리 실 API. (#324)
@@ -26,6 +27,14 @@ class DioGymRepository implements GymRepository {
     phone: j['phone'] as String?,
     lat: (j['lat'] as num?)?.toDouble(),
     lng: (j['lng'] as num?)?.toDouble(),
+  );
+
+  static TrainerSlot _slot(Map<String, Object?> j) => TrainerSlot(
+    id: j['id']! as String,
+    trainerId: (j['trainer_id'] as String?) ?? '',
+    startsAt: DateTime.parse(j['starts_at']! as String).toLocal(),
+    capacity: ((j['capacity'] as num?) ?? 0).toInt(),
+    remaining: ((j['remaining'] as num?) ?? 0).toInt(),
   );
 
   static Trainer _trainer(Map<String, Object?> j) => Trainer(
@@ -126,4 +135,14 @@ class DioGymRepository implements GymRepository {
 
   @override
   Future<void> disconnectMyTrainer() => _dio.delete<void>('/me/coach/trainer');
+
+  @override
+  Future<List<TrainerSlot>> fetchSlots(String trainerId) =>
+      _list('/trainers/$trainerId/slots', _slot);
+
+  @override
+  Future<void> reserve(String slotId) =>
+      _dio.post<void>('/reservations', data: <String, Object?>{
+        'slot_id': slotId,
+      });
 }

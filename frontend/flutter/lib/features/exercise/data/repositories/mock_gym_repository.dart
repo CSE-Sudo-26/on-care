@@ -1,5 +1,6 @@
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
 
 /// In-memory gym + trainer data matching the prototype's `GymCard` /
@@ -306,5 +307,117 @@ class MockGymRepository implements GymRepository {
     await Future<void>.delayed(const Duration(milliseconds: 60));
     // 헬스장 연결은 그대로 두고 담당 트레이너만 뗀다.
     _myTrainerId = null;
+  }
+
+  // ── 예약 슬롯 ──────────────────────────────────────────────────────────
+  //
+  // 슬롯은 트레이너마다 다르다. 시각은 저장소를 만든 시점의 "오늘"을 기준으로
+  // 잡아, 화면에 실제 날짜가 뜨고 날이 바뀌어도 문구가 어긋나지 않는다.
+  // 예약 결과는 이 인스턴스에 남으므로 화면을 나갔다 와도 유지된다.
+  late final List<TrainerSlot> _slots = _seedSlots();
+
+  static DateTime _at(DateTime day, int addDays, int hour, int minute) {
+    return DateTime(day.year, day.month, day.day + addDays, hour, minute);
+  }
+
+  static List<TrainerSlot> _seedSlots() {
+    final DateTime today = DateTime.now();
+    return <TrainerSlot>[
+      // 김트레이너 — 저녁 위주.
+      TrainerSlot(
+        id: 'slot-kim-1',
+        trainerId: 'trainer-kim',
+        startsAt: _at(today, 0, 19, 0),
+        capacity: 2,
+        remaining: 1,
+      ),
+      TrainerSlot(
+        id: 'slot-kim-2',
+        trainerId: 'trainer-kim',
+        startsAt: _at(today, 1, 7, 30),
+        capacity: 2,
+        remaining: 2,
+      ),
+      TrainerSlot(
+        id: 'slot-kim-3',
+        trainerId: 'trainer-kim',
+        startsAt: _at(today, 1, 20, 0),
+        capacity: 3,
+        // 마감된 자리도 남겨 두어야 "그날은 꽉 찼다"가 읽힌다.
+        remaining: 0,
+      ),
+      // 박트레이너 — 재활 세션이라 낮 시간대.
+      TrainerSlot(
+        id: 'slot-park-1',
+        trainerId: 'trainer-park',
+        startsAt: _at(today, 0, 14, 0),
+        capacity: 1,
+        remaining: 1,
+      ),
+      TrainerSlot(
+        id: 'slot-park-2',
+        trainerId: 'trainer-park',
+        startsAt: _at(today, 2, 11, 0),
+        capacity: 1,
+        remaining: 1,
+      ),
+      // 최트레이너 — 소그룹이라 정원이 크다.
+      TrainerSlot(
+        id: 'slot-choi-1',
+        trainerId: 'trainer-choi',
+        startsAt: _at(today, 1, 18, 30),
+        capacity: 4,
+        remaining: 3,
+      ),
+      // 강트레이너 — 교대근무 대응이라 이른 아침·늦은 밤.
+      TrainerSlot(
+        id: 'slot-kang-1',
+        trainerId: 'trainer-kang',
+        startsAt: _at(today, 0, 6, 0),
+        capacity: 2,
+        remaining: 2,
+      ),
+      TrainerSlot(
+        id: 'slot-kang-2',
+        trainerId: 'trainer-kang',
+        startsAt: _at(today, 1, 22, 0),
+        capacity: 2,
+        remaining: 1,
+      ),
+      TrainerSlot(
+        id: 'slot-lee-1',
+        trainerId: 'trainer-lee',
+        startsAt: _at(today, 2, 10, 0),
+        capacity: 2,
+        remaining: 2,
+      ),
+      // 윤트레이너는 슬롯이 없다 — 빈 상태를 데모에서도 볼 수 있어야 한다.
+    ];
+  }
+
+  @override
+  Future<List<TrainerSlot>> fetchSlots(String trainerId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final List<TrainerSlot> mine =
+        _slots
+            .where((TrainerSlot slot) => slot.trainerId == trainerId)
+            .toList()
+          ..sort(
+            (TrainerSlot a, TrainerSlot b) => a.startsAt.compareTo(b.startsAt),
+          );
+    return List<TrainerSlot>.unmodifiable(mine);
+  }
+
+  @override
+  Future<void> reserve(String slotId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final int i = _slots.indexWhere((TrainerSlot slot) => slot.id == slotId);
+    if (i < 0) {
+      throw StateError('slot not found: $slotId');
+    }
+    if (_slots[i].isFull) {
+      throw StateError('slot already full: $slotId');
+    }
+    _slots[i] = _slots[i].copyWith(remaining: _slots[i].remaining - 1);
   }
 }

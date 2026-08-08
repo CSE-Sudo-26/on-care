@@ -550,12 +550,24 @@
       }
     }
   },
-  "exSlotToday19": "Today 19:00",
-  "exSlotTomorrow0730": "Tomorrow 07:30",
-  "exSlotTomorrow20": "Tomorrow 20:00",
-  "exSlot1Left": "1 spot left",
-  "exSlotAvailable": "Open",
-  "exSlot2Left": "2 spots left",
+  "exSlotWhen": "{date} {time}",
+  "@exSlotWhen": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "exSlotRemaining": "{count} left",
+  "@exSlotRemaining": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "exSlotFull": "Fully booked",
+  "exSlotsEmpty": "No times available",
+  "exSlotsAllBooked": "Every slot this week is taken",
+  "exSlotsLoadError": "Could not load available times.",
+  "exReserveFailed": "Could not book that time. Please try again.",
   "exReserveConfirmedSlotGym": "{slot} · {gym} reservation confirmed",
   "@exReserveConfirmedSlotGym": {
     "placeholders": {

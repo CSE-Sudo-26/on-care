@@ -336,12 +336,24 @@
   "exTrainerDedicated": "전담 트레이너",
   "exAiSlotTitle": "✦ AI 추천 예약 시간",
   "exTrainerAvailability": "{trainer} 빈 시간",
-  "exSlotToday19": "오늘 19:00",
-  "exSlotTomorrow0730": "내일 07:30",
-  "exSlotTomorrow20": "내일 20:00",
-  "exSlot1Left": "잔여 1자리",
-  "exSlotAvailable": "여유 있음",
-  "exSlot2Left": "잔여 2자리",
+  "exSlotWhen": "{date} {time}",
+  "@exSlotWhen": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "exSlotRemaining": "잔여 {count}자리",
+  "@exSlotRemaining": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "exSlotFull": "예약 마감",
+  "exSlotsEmpty": "예약 가능한 시간이 없어요",
+  "exSlotsAllBooked": "이번 주 예약이 모두 찼어요",
+  "exSlotsLoadError": "예약 시간을 불러오지 못했어요.",
+  "exReserveFailed": "예약에 실패했어요. 잠시 후 다시 시도해 주세요",
   "exReserveConfirmedSlotGym": "{slot} · {gym} 예약이 확정됐어요",
   "exReserveConfirm": "{slot} 예약 확정",
   "exGymInfo": "헬스장 정보",
