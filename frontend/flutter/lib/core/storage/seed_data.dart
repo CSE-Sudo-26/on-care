@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v5']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v7']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -34,7 +35,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   final today = _fmtDate(DateTime.now());
   final weekStart = _fmtDate(_mondayOfThisWeek(DateTime.now()));
 
-  final seedDate = await db.readValue('seeded_v5');
+  final seedDate = await db.readValue('seeded_v7');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -58,12 +59,16 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     )..where((t) => t.id.like('seed-%'))).go();
   });
 
-  // Drop legacy flags (v2 boolean, v3/v4 date) if still around, so a fresh
-  // `readValue` next boot only sees the v5 key. Bumping v4→v5 forces every
-  // existing install to re-seed once (식단 3끼·짬뽕·통합 조언 반영).
+  // Drop legacy flags (v2 boolean, v3~v6 date) if still around, so a fresh
+  // `readValue` next boot only sees the v7 key. Bumping v6→v7 forces every
+  // existing install to re-seed once (통합 조언을 문구→키로 교체) — 저장 값만
+  // 바꾸고 키를 그대로 두면 오늘 이미 시드된 기기는 자정까지 옛 한국어 문장을
+  // 읽어 영어 로케일에서 계속 한글이 나온다.
   await db.deleteValue('seeded_v2');
   await db.deleteValue('seeded_v3');
   await db.deleteValue('seeded_v4');
+  await db.deleteValue('seeded_v5');
+  await db.deleteValue('seeded_v6');
   // Also clear the curated KV advice so re-seed state is fully reset: this
   // version re-writes it below, but if a later seed drops or renames the key
   // an existing install would otherwise keep the stale text forever.
@@ -386,14 +391,13 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
   });
 
-  // 홈 '오늘의 AI 통합 조언' 문구(큐레이션). 대시보드 요약이 이 값이 있으면
-  // 나트륨 급원 기반 동적 경고 대신 이 통합 조언을 노출한다.
-  await db.putValue(
-    'dashboard_ai_advice',
-    '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 마무리해 보세요.',
-  );
+  // 홈 '오늘의 AI 통합 조언'(큐레이션). 문구가 아니라 **키**를 저장한다 —
+  // 문장은 ARB 가 ko·en 양쪽으로 갖고 있고 화면이 로케일에 맞게 고른다(#435).
+  // 대시보드 요약은 이 값이 있으면 나트륨 급원 기반 동적 경고 대신 이 조언을
+  // 노출한다.
+  await db.putValue('dashboard_ai_advice', kDailyCombinedAdviceKey);
 
-  await db.putValue('seeded_v5', today);
+  await db.putValue('seeded_v7', today);
 }
 
 String _fmtDate(DateTime d) =>

@@ -81,8 +81,15 @@ def _create_trainer(
     role: str = "trainer",
     active: bool = True,
     with_profile: bool = True,
+    with_gym: bool = True,
+    gym_category: str = "fitness",
 ) -> User:
     suffix = uuid4().hex[:10]
+    gym = (
+        _create_place(db_session, category=gym_category)
+        if with_profile and with_gym
+        else None
+    )
     trainer = User(
         id=f"consult-trainer-{suffix}",
         email=f"{TEST_EMAIL_PREFIX}trainer-{suffix}@oncare.com",
@@ -93,7 +100,12 @@ def _create_trainer(
     db_session.add(trainer)
     db_session.flush()
     if with_profile:
-        db_session.add(TrainerProfile(trainer_id=trainer.id))
+        db_session.add(
+            TrainerProfile(
+                trainer_id=trainer.id,
+                gym_id=gym.id if gym is not None else None,
+            )
+        )
     db_session.commit()
     return trainer
 
@@ -315,6 +327,32 @@ def test_invalid_trainer_target_is_rejected(
         "/v1/consultations",
         headers=_auth(token),
         json=_payload(target_type="trainer", trainer_id=trainer_id),
+    )
+
+    assert response.status_code == 404
+
+
+def test_trainer_without_gym_is_rejected(client, db_session):
+    _, token = _register_member(client)
+    trainer = _create_trainer(db_session, with_gym=False)
+
+    response = client.post(
+        "/v1/consultations",
+        headers=_auth(token),
+        json=_payload(target_type="trainer", trainer_id=trainer.id),
+    )
+
+    assert response.status_code == 404
+
+
+def test_trainer_at_non_fitness_place_is_rejected(client, db_session):
+    _, token = _register_member(client)
+    trainer = _create_trainer(db_session, gym_category="medical")
+
+    response = client.post(
+        "/v1/consultations",
+        headers=_auth(token),
+        json=_payload(target_type="trainer", trainer_id=trainer.id),
     )
 
     assert response.status_code == 404
@@ -554,3 +592,26 @@ def test_trainer_cannot_access_consultation_endpoints(client):
     headers = _auth(token_response.json()["access_token"])
 
     assert client.get("/v1/consultations/me", headers=headers).status_code == 403
+
+
+def test_consultation_out_carries_target_names(client, db_session):
+    """목록 카드가 이름을 렌더한다 — id 만 주면 앱이 대상마다 상세를 다시 조회해야
+    하고, 대상이 지워지면 이름을 영영 못 만든다(#327)."""
+    token = _register_member(client)[1]
+    created = client.post(
+        "/v1/consultations",
+        headers=_auth(token),
+        json=_payload(gym_id="gym-oncare-sinchon"),
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["gym_name"] == "온케어짐 신촌점"
+
+    listed = client.get("/v1/consultations/me", headers=_auth(token)).json()
+    assert listed[0]["gym_name"] == "온케어짐 신촌점"
+    # 헬스장 상담이므로 트레이너 이름은 없다.
+    assert listed[0]["trainer_name"] is None
+
+    detail = client.get(
+        f"/v1/consultations/{created.json()['id']}", headers=_auth(token)
+    ).json()
+    assert detail["gym_name"] == "온케어짐 신촌점"

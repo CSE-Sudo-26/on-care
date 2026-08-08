@@ -23,6 +23,17 @@ class ChatMessage {
     'content': content,
   };
 
+  /// Parse a stored turn from `GET /ai-coach/messages` → `{ role, content, sources }`.
+  factory ChatMessage.fromStored(Map<String, Object?> json) => ChatMessage(
+    role: (json['role'] as String?) == 'user' ? ChatRole.user : ChatRole.coach,
+    content: ((json['content'] as String?) ?? '').trim(),
+    sources: <String>[
+      for (final Object? s
+          in (json['sources'] as List<Object?>?) ?? const <Object?>[])
+        s.toString(),
+    ],
+  );
+
   /// Parse a coach reply from `POST /ai-coach/chat` → `{ reply, sources }`.
   factory ChatMessage.coachFromReply(Map<String, Object?> json) => ChatMessage(
     role: ChatRole.coach,

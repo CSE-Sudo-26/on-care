@@ -279,7 +279,14 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   void _openClientChat() {
-    context.go(AppRoutes.clientDetail(widget.client.id));
+    // Explicit: the button says 채팅, and the detail's default section is
+    // a content tab now.
+    context.go(
+      AppRoutes.clientDetail(
+        widget.client.id,
+        section: AppRoutes.clientChatSection,
+      ),
+    );
   }
 
   @override

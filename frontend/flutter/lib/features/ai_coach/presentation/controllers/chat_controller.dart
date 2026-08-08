@@ -31,9 +31,28 @@ class ChatState {
 }
 
 class ChatController extends StateNotifier<ChatState> {
-  ChatController(this._repo) : super(const ChatState());
+  ChatController(this._repo) : super(const ChatState()) {
+    _restore();
+  }
 
   final AiCoachRepository _repo;
+
+  /// 서버에 저장된 이전 대화를 불러온다(재접속·다른 기기에서 대화 잇기).
+  ///
+  /// 실패해도 조용히 넘어간다. 히스토리를 못 불러온 것 때문에 채팅을 못 쓰게
+  /// 만들 이유가 없고, 화면은 welcome 메시지로 정상 동작한다. 목업 모드는 항상
+  /// 빈 목록이라 지금과 똑같이 welcome 하나로 시작한다.
+  Future<void> _restore() async {
+    try {
+      final stored = await _repo.fetchHistory();
+      if (stored.isEmpty || !mounted) return;
+      // 복원한 대화가 있으면 welcome 대신 그것을 보여준다 — 이어 하는 대화에
+      // 매번 인사가 끼어들면 맥락이 끊긴다.
+      state = state.copyWith(messages: stored);
+    } catch (_) {
+      // 무시: welcome 메시지 상태 유지
+    }
+  }
 
   Future<void> send(String text) async {
     final message = text.trim();

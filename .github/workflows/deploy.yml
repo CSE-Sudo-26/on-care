@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -43,7 +43,13 @@ jobs:
 
       - name: Build Flutter web
         working-directory: frontend/flutter
-        run: flutter build web --release --base-href "/frontend/"
+        # 카카오맵 JS 키(#329). 저장소에 두지 않고 Secrets 에서 주입한다.
+        # 시크릿이 비어 있으면 지도는 폴백 그래픽으로 뜨고 빌드는 깨지지 않는다.
+        # 이 키는 클라이언트 노출이 전제이며, 카카오 콘솔의
+        # [플랫폼 키 > JavaScript 키 > JavaScript SDK 도메인] 등록으로 보호된다.
+        run: >-
+          flutter build web --release --base-href "/frontend/"
+          --dart-define=KAKAO_JS_KEY=${{ secrets.KAKAO_JS_KEY }}
 
       - name: Install Flutter dependencies (trainer)
         working-directory: frontend/flutter_trainer
@@ -64,6 +70,12 @@ jobs:
           cp -R frontend/flutter/build/web/* public/frontend/
           mkdir -p public/trainer
           cp -R frontend/flutter_trainer/build/web/* public/trainer/
+          # CanvasKit ships wasm symbol maps for debugging stack traces. They are
+          # never fetched at runtime and cost ~8MB per app, so drop them to keep
+          # the Pages publish as short as possible.
+          find public -name '*.js.symbols' -delete
+          # Deploy marker: lets the verify step below tell which commit is live.
+          echo "$GITHUB_SHA" > public/version.txt
           touch public/.nojekyll
 
       - name: Configure GitHub Pages
@@ -78,12 +90,50 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      # actions/deploy-pages clamps its wait to 10 minutes and rejects any higher
+      # `timeout` input, but a degraded Pages backend can take longer and still
+      # publish successfully. So a timeout here is not conclusive — the verify
+      # step decides whether the deployment actually landed.
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+
+      - name: Verify the published site
+        if: steps.deployment.outcome != 'success'
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url || 'https://ewhasudo.zapto.org/' }}
+        run: |
+          base="${SITE_URL%/}"
+          # Absolute deadline, not an iteration count: an unresponsive host makes
+          # every curl burn its full --max-time, so counting iterations would let
+          # the poll run ~46 minutes and get killed by timeout-minutes instead.
+          deadline=$(( $(date +%s) + 1200 ))
+          echo "deploy-pages did not confirm within its 10 minute cap."
+          echo "Polling $base/version.txt for $GITHUB_SHA (up to 20 minutes)."
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            left=$(( deadline - $(date +%s) ))
+            budget=$(( left < 20 ? left : 20 ))
+            if [ "$budget" -lt 1 ]; then budget=1; fi
+            # -L matters: page_url comes back as http:// on some runs and Pages
+            # 301s to https, so without it curl returns the redirect body.
+            live=$(curl -fsSL --max-time "$budget" -H 'Cache-Control: no-cache' \
+              "$base/version.txt?cachebust=$(date +%s)" 2>/dev/null | tr -d '[:space:]') || live=''
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "Site is serving $GITHUB_SHA — deployment landed after the action gave up."
+              exit 0
+            fi
+            left=$(( deadline - $(date +%s) ))
+            echo "  still serving '${live:-<unreachable>}' (${left}s left)"
+            if [ "$left" -le 0 ]; then break; fi
+            sleep $(( left < 15 ? left : 15 ))
+          done
+          echo "::error::Pages never served $GITHUB_SHA within 20 minutes. Check https://www.githubstatus.com before retrying."
+          exit 1

@@ -29,6 +29,10 @@ def _validate_hhmm(v: str) -> str:
 
 
 class TrainerGymOut(BaseModel):
+    #: 소속 헬스장 id(`places.id`). 회원앱이 "내 헬스장" 카드에서 헬스장 상세로
+    #: 이동하고 상담 대상을 지정하는 데 필요하다 — 이름만으로는 목록의 헬스장과
+    #: 이어붙일 수 없다(#324). 아직 gym_id 가 없는 프로필은 None.
+    id: str | None = None
     name: str
     address: str
     hours: str
@@ -309,6 +313,16 @@ class TrainerMeUpdate(BaseModel):
             if getattr(self, field) is None:
                 raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
         return self
+
+
+class TrainerGymAffiliation(BaseModel):
+    """PUT /trainer/me/gym — 소속 헬스장 설정·변경. (#452)
+
+    위 `gym_*` 문자열과 달리 실재하는 `places` 행을 가리킨다. 해제는 값 대신
+    DELETE 로 표현한다 — 이 필드에 null 을 허용하면 "안 보냈다"와 "지워라"가
+    같은 요청으로 섞인다.
+    """
+    gym_id: str = Field(min_length=1, max_length=64)
 
 
 # ---- 트레이너용 AI 코칭 (회원 데이터 기반) ----

@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # 토큰 없이 접근 시 데모 사용자로 폴백(개발 편의). 운영(prod)에서는 항상 비활성.
     allow_demo_fallback: bool = True
 
+    # --- 소셜 로그인 ---
+    # Apple 로그인에서 허용할 `aud`(client_id) 목록, 콤마 구분.
+    # iOS 앱은 번들 ID, 웹은 Service ID 로 서로 다른 aud 를 받으므로 복수를 허용한다.
+    # 비어 있으면 Apple 로그인은 검증 불가로 **거부**된다(조용히 통과시키면 다른 앱용
+    # Apple 토큰으로도 로그인이 뚫린다).
+    apple_client_ids: str = ""
+
     # --- 장소(O2O) ---
     # 카카오 Local REST 키. 있으면 실검색, 없으면 시드 폴백(recognizer 팩토리와 같은 철학).
     kakao_rest_api_key: str = ""
@@ -54,6 +61,9 @@ class Settings(BaseSettings):
     nutrition_db_enrich: bool = True
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"  # 챗·인식 공용. 핀 버전은 은퇴로 404 → latest 별칭 사용
+    # Gemini HTTP 타임아웃(초). 걸지 않으면 무응답 시 호출 스레드가 무기한 묶여
+    # 워커 풀이 고갈된다(추천 경로는 스레드 풀에서 돈다).
+    gemini_timeout_seconds: float = 30.0
     coach_llm: str = "gemini"         # openai | gemini | litellm
     openai_api_key: str = ""
     openai_chat_model: str = "gpt-4o"
@@ -101,6 +111,9 @@ class Settings(BaseSettings):
     # --- Rate limit (인증 엔드포인트 브루트포스 방어) ---
     rate_limit_enabled: bool = True
     rate_limit_auth_per_minute: int = 10  # IP·엔드포인트당 분당 시도 한도
+    # AI 코치 채팅 한도. 브루트포스 방어가 아니라 LLM 비용 가드라서 목적이 다르다.
+    # 사람이 대화하는 속도로는 걸리지 않되, 폭주하는 클라이언트는 막는 값.
+    coach_chat_per_minute: int = 20
 
     @property
     def admin_email_set(self) -> set[str]:

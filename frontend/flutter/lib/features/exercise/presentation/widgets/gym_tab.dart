@@ -7,8 +7,12 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
@@ -28,16 +32,34 @@ class GymTab extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
     final AsyncValue<List<Gym>> nearbyAsync = ref.watch(nearbyGymsProvider);
+    // 트레이너 소속 헬스장 이름은 제휴 + 카카오를 모두 아는 목록에서 찾아야 한다.
+    // 제휴 목록만 보면 카카오 헬스장 소속 트레이너의 헬스장 이름이 빈칸이 된다(#329).
+    final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
+      gymFinderResultsProvider,
+    );
+    final MemberCoach? assignedCoach = ref
+        .watch(memberCoachProvider)
+        .valueOrNull;
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
     final ConsultationRequest? recentRequest = requests.isEmpty
         ? null
         : requests.first;
-    final ConsultationRequest? pendingRequest =
-        recentRequest?.status == ConsultationStatus.pending
-        ? recentRequest
-        : null;
+    ConsultationRequest? pendingRequest;
+    for (final ConsultationRequest request in requests) {
+      if (request.status == ConsultationStatus.pending) {
+        pendingRequest = request;
+        break;
+      }
+    }
+    final ConsultationRequest? displayedRequest =
+        pendingRequest ?? recentRequest;
+    final bool showTrainerChat =
+        assignedCoach != null && pendingRequest == null;
+    final int unreadCoachMessages = showTrainerChat
+        ? ref.watch(coachUnreadProvider).valueOrNull ?? 0
+        : 0;
     final GlobalKey recentConsultationKey = GlobalKey();
 
     void showRecentConsultation() {
@@ -60,6 +82,7 @@ class GymTab extends ConsumerWidget {
           const SizedBox(height: 10),
           _MyGymSection(
             gymAsync: myGymAsync,
+            trainer: ref.watch(myTrainerProvider).valueOrNull,
             selectedSlot: selectedSlot,
             onSlot: onSlot,
             onFind: onFind,
@@ -67,12 +90,19 @@ class GymTab extends ConsumerWidget {
             onPendingConsultationTap: pendingRequest == null
                 ? null
                 : showRecentConsultation,
+            onTrainerChatTap: showTrainerChat
+                ? () => openTrainerChatPage(
+                    context,
+                    trainerName: assignedCoach.name,
+                  )
+                : null,
+            unreadCoachMessages: unreadCoachMessages,
           ),
-          if (recentRequest != null) ...<Widget>[
+          if (displayedRequest != null) ...<Widget>[
             const SizedBox(height: 28),
             _RecentConsultationSection(
               key: recentConsultationKey,
-              request: recentRequest,
+              request: displayedRequest,
             ),
           ],
           const SizedBox(height: 28),
@@ -83,9 +113,13 @@ class GymTab extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
           _RecommendedTrainerSection(
-            gymsAsync: nearbyAsync,
+            trainersAsync: ref.watch(recommendedTrainersProvider),
+            gymNames: <String, String>{
+              for (final Gym gym in knownGymsAsync.valueOrNull ?? const <Gym>[])
+                gym.id: gym.name,
+            },
             onMore: () => context.push(AppRoutes.trainers),
-            onRetry: () => ref.invalidate(nearbyGymsProvider),
+            onRetry: () => ref.invalidate(recommendedTrainersProvider),
           ),
         ],
       ),
@@ -221,19 +255,27 @@ class _RecentConsultationSection extends StatelessWidget {
 class _MyGymSection extends StatelessWidget {
   const _MyGymSection({
     required this.gymAsync,
+    required this.trainer,
     required this.selectedSlot,
     required this.onSlot,
     required this.onFind,
     required this.onRetry,
     required this.onPendingConsultationTap,
+    required this.onTrainerChatTap,
+    required this.unreadCoachMessages,
   });
 
   final AsyncValue<Gym?> gymAsync;
+
+  /// 담당 트레이너. 헬스장과 별개로 해제될 수 있어 null 이면 트레이너 행이 빠진다.
+  final Trainer? trainer;
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
   final VoidCallback onFind;
   final VoidCallback onRetry;
   final VoidCallback? onPendingConsultationTap;
+  final VoidCallback? onTrainerChatTap;
+  final int unreadCoachMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -241,13 +283,30 @@ class _MyGymSection extends StatelessWidget {
       loading: () => const _SectionLoading(height: 180),
       error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
       data: (Gym? gym) => gym == null
-          ? _EmptyMyGym(onFind: onFind)
+          ? Column(
+              children: <Widget>[
+                _EmptyMyGym(onFind: onFind),
+                if (onPendingConsultationTap != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _PendingConsultationButton(onTap: onPendingConsultationTap!),
+                ] else if (onTrainerChatTap != null) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _TrainerChatButton(
+                    unread: unreadCoachMessages,
+                    onTap: onTrainerChatTap!,
+                  ),
+                ],
+              ],
+            )
           : _MyGymCard(
               gym: gym,
+              trainer: trainer,
               selectedSlot: selectedSlot,
               onSlot: onSlot,
               onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
               onPendingConsultationTap: onPendingConsultationTap,
+              onTrainerChatTap: onTrainerChatTap,
+              unreadCoachMessages: unreadCoachMessages,
             ),
     );
   }
@@ -256,23 +315,27 @@ class _MyGymSection extends StatelessWidget {
 class _MyGymCard extends StatelessWidget {
   const _MyGymCard({
     required this.gym,
+    required this.trainer,
     required this.selectedSlot,
     required this.onSlot,
     required this.onGymTap,
     required this.onPendingConsultationTap,
+    required this.onTrainerChatTap,
+    required this.unreadCoachMessages,
   });
 
   final Gym gym;
+  final Trainer? trainer;
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
   final VoidCallback? onPendingConsultationTap;
+  final VoidCallback? onTrainerChatTap;
+  final int unreadCoachMessages;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool hasTrainerName = gym.trainerName?.isNotEmpty ?? false;
-    final String trainer = hasTrainerName ? gym.trainerName! : l.exTrainer;
 
     return Container(
       width: double.infinity,
@@ -358,37 +421,109 @@ class _MyGymCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _ReservationPanel(
-            gym: gym,
-            trainer: trainer,
-            selectedSlot: selectedSlot,
-            onSlot: onSlot,
-          ),
+          // 담당 트레이너가 없으면 예약 패널을 숨긴다. 없는 사람의 빈 시간을
+          // 고르고 예약 완료 메시지까지 보게 되는 상태를 막는다.
+          if (trainer != null) ...<Widget>[
+            const SizedBox(height: 16),
+            _ReservationPanel(
+              gym: gym,
+              trainer: trainer!.name,
+              selectedSlot: selectedSlot,
+              onSlot: onSlot,
+            ),
+          ],
           if (onPendingConsultationTap != null) ...<Widget>[
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onPendingConsultationTap,
-                style: FilledButton.styleFrom(
-                  backgroundColor: FigmaColors.primary,
-                  minimumSize: const Size(0, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  l.exViewConsultationRequest,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+            _PendingConsultationButton(onTap: onPendingConsultationTap!),
+          ] else if (onTrainerChatTap != null) ...<Widget>[
+            const SizedBox(height: 14),
+            _TrainerChatButton(
+              unread: unreadCoachMessages,
+              onTap: onTrainerChatTap!,
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _PendingConsultationButton extends StatelessWidget {
+  const _PendingConsultationButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: FigmaColors.primary,
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          l.exViewConsultationRequest,
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrainerChatButton extends StatelessWidget {
+  const _TrainerChatButton({required this.unread, required this.onTap});
+
+  final int unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String unreadLabel = unread > 99 ? '99+' : '$unread';
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        key: const Key('gymTrainerChatButton'),
+        onPressed: onTap,
+        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text('트레이너와 채팅'),
+            if (unread > 0) ...<Widget>[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: const BoxDecoration(
+                  color: FigmaColors.redDot,
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                ),
+                child: Text(
+                  unreadLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: FigmaColors.primary,
+          minimumSize: const Size(0, 44),
+          side: BorderSide(color: FigmaColors.primaryA(0.25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }
@@ -648,12 +783,16 @@ class _GymRecommendationCard extends StatelessWidget {
 
 class _RecommendedTrainerSection extends StatelessWidget {
   const _RecommendedTrainerSection({
-    required this.gymsAsync,
+    required this.trainersAsync,
+    required this.gymNames,
     required this.onMore,
     required this.onRetry,
   });
 
-  final AsyncValue<List<Gym>> gymsAsync;
+  final AsyncValue<List<Trainer>> trainersAsync;
+
+  /// 소속 헬스장 이름만 붙이면 되므로, 헬스장 목록이 늦어도 카드는 그려진다.
+  final Map<String, String> gymNames;
   final VoidCallback onMore;
   final VoidCallback onRetry;
 
@@ -669,28 +808,26 @@ class _RecommendedTrainerSection extends StatelessWidget {
           onAction: onMore,
         ),
         const SizedBox(height: 10),
-        gymsAsync.when(
+        trainersAsync.when(
           loading: () => const _SectionLoading(height: 120),
           error: (Object _, StackTrace _) => _SectionError(onRetry: onRetry),
-          data: (List<Gym> gyms) {
-            final List<Gym> trainerGyms = gyms
-                .where((Gym gym) => gym.trainerName?.isNotEmpty ?? false)
-                .toList(growable: false);
-            if (trainerGyms.isEmpty) {
+          data: (List<Trainer> trainers) {
+            if (trainers.isEmpty) {
               return _EmptyRecommendation(message: l.exNoRecommendedTrainers);
             }
             return SizedBox(
               height: 120,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: trainerGyms.length,
+                itemCount: trainers.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (BuildContext context, int index) {
+                  final Trainer trainer = trainers[index];
                   return _TrainerRecommendationCard(
-                    gym: trainerGyms[index],
-                    onTap: () => context.push(
-                      AppRoutes.trainerDetailPath(trainerGyms[index].id),
-                    ),
+                    trainer: trainer,
+                    gymName: gymNames[trainer.gymId] ?? '',
+                    onTap: () =>
+                        context.push(AppRoutes.trainerDetailPath(trainer.id)),
                   );
                 },
               ),
@@ -703,9 +840,14 @@ class _RecommendedTrainerSection extends StatelessWidget {
 }
 
 class _TrainerRecommendationCard extends StatelessWidget {
-  const _TrainerRecommendationCard({required this.gym, required this.onTap});
+  const _TrainerRecommendationCard({
+    required this.trainer,
+    required this.gymName,
+    required this.onTap,
+  });
 
-  final Gym gym;
+  final Trainer trainer;
+  final String gymName;
   final VoidCallback? onTap;
 
   @override
@@ -737,7 +879,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  gym.trainerName!,
+                  trainer.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -749,7 +891,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 // '전담 트레이너'가 있던 자리·스타일에 소속 헬스장을 표기.
                 Text(
-                  gym.name,
+                  gymName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -759,7 +901,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  gym.trainerReason ?? l.exTrainerRecommendationReason,
+                  trainer.reason ?? l.exTrainerRecommendationReason,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

@@ -13,8 +13,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
-    ai_coach, coach_docs, consultations, dashboard, diet, exercise, member_coach,
-    notifications, places, schedule, social, system, trainer, users,
+    ai_coach, coach_docs, consultations, dashboard, diet, exercise, gyms,
+    member_coach, notifications, places, schedule, social, system, trainer,
+    trainers, users,
 )
 from app.core import observability
 from app.core.config import get_settings
@@ -89,3 +90,6 @@ app.include_router(coach_docs.router, prefix=settings.api_v1_prefix)
 app.include_router(trainer.router, prefix=settings.api_v1_prefix)
 app.include_router(member_coach.router, prefix=settings.api_v1_prefix)
 app.include_router(consultations.router, prefix=settings.api_v1_prefix)
+# 회원앱 헬스장·트레이너 디렉터리(#324). trainer(단수, 트레이너 앱 전용)와 별개다.
+app.include_router(gyms.router, prefix=settings.api_v1_prefix)
+app.include_router(trainers.router, prefix=settings.api_v1_prefix)

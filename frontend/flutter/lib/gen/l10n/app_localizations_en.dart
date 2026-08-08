@@ -171,7 +171,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeAiAdviceBody =>
-      'Your breakfast and evening PT session were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish the day well with the shoulder stretches your coach emphasized.';
+      'Your breakfast and evening PT were perfect! To bring down the sodium and blood sugar raised by the lunch jjamppong, drink plenty of water and finish well with the shoulder stretches your coach emphasized.';
 
   @override
   String get homeSodiumExceededBadge => 'Sodium over';
@@ -371,6 +371,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeMealTagHighFiber => 'High fiber';
+
+  @override
+  String homeRecBasisSodium(int days, String sodium) {
+    return '$days-day avg sodium ${sodium}mg';
+  }
+
+  @override
+  String get homeRecBasisOverLimit => 'over the daily limit';
 
   @override
   String get homeRecMealsTitle => 'This week\'s AI meal picks';
@@ -1090,6 +1098,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mySupportTitle => 'Customer Support';
 
   @override
+  String get myPointsBenefitsTitle => 'Use Points';
+
+  @override
+  String myPointsBalance(int points) {
+    return 'Balance: ${points}P';
+  }
+
+  @override
+  String get myPointsBenefitsSubtitle => 'Benefits available with points';
+
+  @override
+  String get myPointsBenefitsHint =>
+      'Keep logging your activity to earn points and use the benefits above.';
+
+  @override
+  String get myPointsDiscountTitle => 'Cash discount with points';
+
+  @override
+  String get myPointsDiscountDescription =>
+      'Use points like cash for up to 10% off 1:1 coaching and personal training.';
+
+  @override
+  String get myPointsDiscountCost => 'Up to 10%';
+
+  @override
+  String get myPointsReportTitle => 'Unlock glucose and blood pressure reports';
+
+  @override
+  String get myPointsReportDescription =>
+      'View comprehensive weekly and monthly health-data reports.';
+
+  @override
+  String get myPointsReportCost => '500P';
+
+  @override
+  String get myPointsRecipeTitle => 'Personalized healthy recipe package';
+
+  @override
+  String get myPointsRecipeDescription =>
+      'Get PDF and interactive meal guides tailored to goals such as diabetes prevention or weight loss.';
+
+  @override
+  String get myPointsRecipeCost => '500P';
+
+  @override
   String get myLogout => 'Log out';
 
   @override
@@ -1265,6 +1318,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aicDatePillToday => 'Today';
+
+  @override
+  String get aicMedicalDisclaimer =>
+      'The AI coach is a reference for diet and exercise habits, not a diagnosis or prescription. Please consult a doctor about symptoms.';
 
   @override
   String get aicInputHint => 'Ask the AI anything';

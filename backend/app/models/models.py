@@ -15,7 +15,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
-    func, text, true,
+    false, func, text, true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -246,6 +246,65 @@ class Place(Base):
     kakao_place_id: Mapped[str] = mapped_column(String(50), default="")
 
 
+class GymProfile(Base):
+    """헬스장 부가 정보 — `places`(category='fitness') 의 1:1 확장. (#324)
+
+    헬스장 자체는 `Place` 다. 상담 검증(`consultation_service`)과 `/places/nearby`
+    가 이미 `places` 를 쓰기 때문에 별도 테이블을 만들지 않았다. 다만 평점·영업시간
+    같은 헬스장 전용 값을 `places` 에 넣으면 병원·약국·건강식이 공유하는 테이블이
+    오염되므로 여기로 분리한다(`TrainerProfile` 이 `User` 를 확장하는 것과 같은 꼴).
+    """
+    __tablename__ = "gym_profiles"
+
+    place_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("places.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 카카오 Local 은 평점을 주지 않는다 — 발견된 헬스장은 None.
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weekday_hours: Mapped[str] = mapped_column(String(50), default="")
+    weekend_hours: Mapped[str] = mapped_column(String(50), default="")
+    phone: Mapped[str] = mapped_column(String(20), default="")
+    tags_json: Mapped[str] = mapped_column(Text, default="[]")  # ["다이어트", "재활운동"]
+    #: 제휴 헬스장만 트레이너 연결·상담이 가능하다.
+    is_partner: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), default=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MemberGym(Base):
+    """회원↔헬스장 링크 — 회원의 '내 헬스장'. (#444)
+
+    전에는 이 링크가 없어서 담당 트레이너의 소속(`TrainerProfile.gym_id`)에서
+    파생시켰다. 그래서 트레이너만 해제해도 헬스장이 함께 사라졌다 — 앱 MY 탭은
+    두 해제를 따로 제공하는데 서버가 그 구분을 표현하지 못했다.
+
+    `TrainerClient` 와 달리 `active` 이력 컬럼이 없다. 담당 링크는 루틴·채팅·일정이
+    참조해 지우면 이력이 끊기지만, 헬스장 링크를 참조하는 것은 없어 해제 시 행을
+    지우면 된다. 회원당 1곳이라는 불변식은 `member_id` 를 PK 로 두어 구조로 강제한다
+    (partial unique index 가 필요 없다).
+    """
+    __tablename__ = "member_gyms"
+
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: 헬스장은 `places`(category='fitness'). 장소가 사라지면 링크도 사라진다 —
+    #: gym_id 는 NOT NULL 이라 SET NULL 을 쓸 수 없고, 없어진 헬스장을 '내 헬스장'
+    #: 으로 남겨 둘 이유도 없다.
+    gym_id: Mapped[str] = mapped_column(
+        ForeignKey("places.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ConsultationRequest(Base):
     """회원의 헬스장·트레이너 상담 요청."""
     __tablename__ = "consultation_requests"
@@ -331,6 +390,19 @@ class TrainerProfile(Base):
     career_years: Mapped[int] = mapped_column(Integer, default=0)       # 7 → "7년"
     intro: Mapped[str] = mapped_column(Text, default="")
     certifications_json: Mapped[str] = mapped_column(Text, default="[]")  # ["생활스포츠지도사 2급", ...]
+    #: 소속 헬스장(`places.id`). 아래 gym_* 문자열 컬럼을 대신한다 — 문자열만으로는
+    #: 한 헬스장에 여러 트레이너를 묶을 수 없었다(#324, #301). 트레이너 앱이 아직
+    #: gym_* 를 읽으므로 두 표현이 당분간 공존하고, 값이 있으면 gym_id 가 우선이다.
+    gym_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey("places.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    #: 추천 레일에 올릴 한 줄 사유. 빈 문자열이면 추천 대상이 아니다.
+    recommend_reason: Mapped[str] = mapped_column(
+        String(200), nullable=False, server_default="", default=""
+    )
     gym_name: Mapped[str] = mapped_column(String(100), default="")
     gym_address: Mapped[str] = mapped_column(String(300), default="")
     gym_hours: Mapped[str] = mapped_column(String(50), default="")
@@ -498,3 +570,61 @@ class AuditLog(Base):
     success: Mapped[bool] = mapped_column(Boolean, default=True)
     detail: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiConversation(Base):
+    """AI 코치(온이)와의 대화 스레드.
+
+    앱에는 대화 목록 UI 가 없고 채팅 시트 하나만 있으므로, 사용자당 활성 스레드
+    1개를 get-or-create 해서 쓴다(coach_service 참고). 나중에 스레드 목록이 필요해질
+    때를 대비해 테이블은 분리해 둔다 — 그때 컬럼 추가 없이 archived_at 만 채우면 된다.
+
+    트레이너↔회원 채팅(chat_messages)과는 다른 도메인이다. 이쪽은 사람 간 대화가
+    아니라 LLM 대화라 sender 대신 role(user|coach)을 쓰고 근거 문서를 함께 남긴다.
+    """
+    __tablename__ = "ai_conversations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    #: 비우면 활성 스레드. 값이 있으면 보관된 스레드(현재는 쓰지 않음).
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AiMessage(Base):
+    """AI 코치 대화의 한 줄.
+
+    `sources_json` 은 그 답변의 근거로 쓰인 공공 가이드라인 제목들이다. 답변과 함께
+    저장해야 대화를 복원했을 때도 근거 표시가 남는다(재접속 시 근거가 사라지면
+    "왜 이렇게 답했는지"를 되짚을 수 없다).
+    """
+    __tablename__ = "ai_messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("ai_conversations.id", ondelete="CASCADE"), index=True
+    )
+    #: 대화 내 순번(0부터). created_at 으로 정렬하면 안 되기 때문에 둔다 —
+    #: PostgreSQL 의 now() 는 트랜잭션 시각이라 같은 커밋에 저장되는 질문과 답변이
+    #: **동일한 created_at** 을 갖고, 그러면 정렬이 랜덤한 id 순으로 무너져 답변이
+    #: 질문보다 먼저 보인다(실제로 그렇게 나왔다).
+    seq: Mapped[int] = mapped_column(Integer, default=0)
+    role: Mapped[str] = mapped_column(String(10))  # user|coach
+    content: Mapped[str] = mapped_column(Text)
+    sources_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "seq", name="uq_ai_messages_convo_seq"),
+    )

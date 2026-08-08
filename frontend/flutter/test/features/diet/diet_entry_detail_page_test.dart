@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_entry_detail_page.dart';
@@ -15,6 +16,10 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 class _RecordingDietRepository implements DietRepository {
   int updateCalls = 0;
   double? lastSugarG;
+
+  @override
+  Future<MealRecommendations> fetchRecommendations() async =>
+      MealRecommendations.fallback;
 
   @override
   Future<DietEntry> updateEntry({

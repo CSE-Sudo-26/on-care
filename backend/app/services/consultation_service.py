@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.models import ConsultationRequest, Place, TrainerProfile, User
-from app.schemas.consultation_api import ConsultationCreate
+from app.schemas.consultation_api import ConsultationCreate, ConsultationOut
 
 
 class InvalidConsultationRequest(Exception):
@@ -51,10 +51,12 @@ def _validate_target(db: Session, payload: ConsultationCreate) -> None:
     trainer = db.scalar(
         select(User)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
+        .join(Place, Place.id == TrainerProfile.gym_id)
         .where(
             User.id == payload.trainer_id,
             User.role == "trainer",
             User.is_active.is_(True),
+            Place.category == "fitness",
         )
     )
     if trainer is None:
@@ -65,7 +67,7 @@ def _validate_target(db: Session, payload: ConsultationCreate) -> None:
 
 def create_consultation(
     db: Session, member_id: str, payload: ConsultationCreate
-) -> ConsultationRequest:
+) -> ConsultationOut:
     if payload.preferred_date < date.today():
         raise InvalidConsultationRequest("상담 희망일은 오늘 이후여야 합니다.")
 
@@ -98,11 +100,43 @@ def create_consultation(
             ) from None
         raise
     db.refresh(consultation)
-    return consultation
+    return attach_target_names(db, [consultation])[0]
 
 
-def list_my_consultations(db: Session, member_id: str) -> list[ConsultationRequest]:
-    return list(
+def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[ConsultationOut]:
+    """상담 목록에 대상 이름을 붙인다. (#327)
+
+    앱 목록 카드가 헬스장·트레이너 이름을 렌더하므로 id 만 주면 대상마다 상세를 다시
+    조회해야 한다. 대상별로 한 번씩 모아 읽어 N+1 을 피한다.
+    """
+    gym_ids = {r.gym_id for r in rows if r.gym_id}
+    trainer_ids = {r.trainer_id for r in rows if r.trainer_id}
+
+    gym_names: dict[str, str] = {}
+    if gym_ids:
+        gym_names = {
+            p.id: p.name
+            for p in db.scalars(select(Place).where(Place.id.in_(gym_ids))).all()
+        }
+    trainer_names: dict[str, str] = {}
+    if trainer_ids:
+        trainer_names = {
+            u.id: u.name
+            for u in db.scalars(select(User).where(User.id.in_(trainer_ids))).all()
+        }
+
+    out: list[ConsultationOut] = []
+    for row in rows:
+        item = ConsultationOut.model_validate(row)
+        # 대상이 지워졌으면 이름은 None 으로 남는다 — 앱이 폴백 문구를 쓴다.
+        item.gym_name = gym_names.get(row.gym_id or "")
+        item.trainer_name = trainer_names.get(row.trainer_id or "")
+        out.append(item)
+    return out
+
+
+def list_my_consultations(db: Session, member_id: str) -> list[ConsultationOut]:
+    rows = list(
         db.scalars(
             select(ConsultationRequest)
             .where(ConsultationRequest.member_id == member_id)
@@ -112,14 +146,18 @@ def list_my_consultations(db: Session, member_id: str) -> list[ConsultationReque
             )
         ).all()
     )
+    return attach_target_names(db, rows)
 
 
 def get_my_consultation(
     db: Session, member_id: str, consultation_id: str
-) -> ConsultationRequest | None:
-    return db.scalar(
+) -> ConsultationOut | None:
+    row = db.scalar(
         select(ConsultationRequest).where(
             ConsultationRequest.id == consultation_id,
             ConsultationRequest.member_id == member_id,
         )
     )
+    if row is None:
+        return None
+    return attach_target_names(db, [row])[0]

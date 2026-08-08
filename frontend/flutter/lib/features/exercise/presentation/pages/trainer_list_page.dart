@@ -6,6 +6,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -22,17 +23,22 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
   String _query = '';
   _TrainerSort _sort = _TrainerSort.recommended;
 
-  List<_TrainerListItem> _visibleTrainers(List<Gym> gyms) {
+  List<_TrainerListItem> _visibleTrainers(
+    List<Trainer> trainers,
+    List<Gym> gyms,
+  ) {
     final String query = _query.trim().toLowerCase();
-    final List<_TrainerListItem> visible = gyms
-        .where((Gym gym) => gym.trainerName?.isNotEmpty ?? false)
+    final Map<String, String> gymNames = <String, String>{
+      for (final Gym gym in gyms) gym.id: gym.name,
+    };
+    final List<_TrainerListItem> visible = trainers
         .map(
-          (Gym gym) => _TrainerListItem(
-            gymId: gym.id,
-            name: gym.trainerName!,
-            role: gym.trainerRole,
-            gymName: gym.name,
-            reason: gym.trainerReason,
+          (Trainer trainer) => _TrainerListItem(
+            trainerId: trainer.id,
+            name: trainer.name,
+            role: trainer.role,
+            gymName: gymNames[trainer.gymId] ?? '',
+            reason: trainer.reason,
           ),
         )
         .where((_TrainerListItem trainer) {
@@ -55,7 +61,13 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AsyncValue<List<Gym>> gymsAsync = ref.watch(nearbyGymsProvider);
+    final AsyncValue<List<Trainer>> trainersAsync = ref.watch(
+      allTrainersProvider,
+    );
+    // 헬스장 이름만 붙이면 되므로, 목록을 못 읽어도 트레이너는 그대로 보인다.
+    final List<Gym> gyms =
+        // 카카오 헬스장 소속 트레이너도 헬스장 이름이 나와야 한다(#329).
+        ref.watch(gymFinderResultsProvider).valueOrNull ?? const <Gym>[];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -87,16 +99,17 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: gymsAsync.when(
+                    child: trainersAsync.when(
                       loading: () => const Center(
                         child: CircularProgressIndicator(strokeWidth: 3),
                       ),
                       error: (Object _, StackTrace _) => _LoadError(
                         message: l.exTrainersLoadError,
-                        onRetry: () => ref.invalidate(nearbyGymsProvider),
+                        onRetry: () => ref.invalidate(allTrainersProvider),
                       ),
-                      data: (List<Gym> gyms) {
+                      data: (List<Trainer> trainers) {
                         final List<_TrainerListItem> visible = _visibleTrainers(
+                          trainers,
                           gyms,
                         );
                         return Column(
@@ -121,7 +134,7 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
                                               trainer: visible[index],
                                               onTap: () => context.push(
                                                 AppRoutes.trainerDetailPath(
-                                                  visible[index].gymId,
+                                                  visible[index].trainerId,
                                                 ),
                                               ),
                                             );
@@ -145,14 +158,14 @@ class _TrainerListPageState extends ConsumerState<TrainerListPage> {
 
 class _TrainerListItem {
   const _TrainerListItem({
-    required this.gymId,
+    required this.trainerId,
     required this.name,
     required this.role,
     required this.gymName,
     required this.reason,
   });
 
-  final String gymId;
+  final String trainerId;
   final String name;
   final String? role;
   final String gymName;

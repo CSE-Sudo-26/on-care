@@ -3,22 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/app/session_feature_reset.dart';
+import 'package:oncare/core/network/auth_token.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/core/session/session_feature_reset.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare/features/exercise/data/repositories/dio_consultation_repository.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+
+import '../../support/consultation_test_support.dart';
 
 final ConsultationRequest _pendingRequest = ConsultationRequest(
   id: 'request-user-a',
   targetType: ConsultationTargetType.gym,
   gymId: 'gym-1',
   gymName: 'A 사용자 상담 헬스장',
+  trainerId: null,
   trainerName: null,
   trainerRole: null,
-  exerciseGoal: '체중 감량',
-  healthPurpose: '혈압 관리',
+  exerciseGoal: ExerciseGoal.weightLoss,
+  healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
   preferredDate: DateTime(2026, 7, 30),
-  preferredTimeSlot: '오후',
+  preferredTimeSlot: PreferredTimeSlot.afternoon,
   message: 'A 사용자의 문의 내용',
   status: ConsultationStatus.pending,
   createdAt: DateTime(2026, 7, 29),
@@ -32,15 +42,28 @@ void main() {
   });
 
   test('signOut clears consultation requests for the next user', () async {
-    final ProviderContainer container = ProviderContainer();
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        // 상담 컨트롤러가 appConfig 를 타므로 repository 를 직접 고정한다(#327).
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+        sessionFeatureResetOverride(),
+      ],
+    );
     addTearDown(container.dispose);
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
+    container.read(exerciseRoutineDoneProvider.notifier).state = <bool>[
+      true,
+      false,
+    ];
 
     await container.read(sessionControllerProvider.notifier).signOut();
 
@@ -54,16 +77,26 @@ void main() {
           ),
       isFalse,
     );
+    expect(container.read(exerciseRoutineDoneProvider), <bool>[false, false]);
   });
 
-  test('enterDemo clears existing consultation requests', () {
-    final ProviderContainer container = ProviderContainer();
+  test('enterDemo clears existing consultation requests', () async {
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        // 상담 컨트롤러가 appConfig 를 타므로 repository 를 직접 고정한다(#327).
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+        sessionFeatureResetOverride(),
+      ],
+    );
     addTearDown(container.dispose);
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 
@@ -88,7 +121,13 @@ void main() {
     });
     addTearDown(dio.close);
     final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[dioProvider.overrideWithValue(dio)],
+      overrides: <Override>[
+        dioProvider.overrideWithValue(dio),
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+        sessionFeatureResetOverride(),
+      ],
     );
     addTearDown(container.dispose);
     final SessionController controller = container.read(
@@ -98,9 +137,10 @@ void main() {
     controller.enterDemo();
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
 
@@ -128,7 +168,13 @@ void main() {
     });
     addTearDown(dio.close);
     final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[dioProvider.overrideWithValue(dio)],
+      overrides: <Override>[
+        dioProvider.overrideWithValue(dio),
+        consultationRepositoryProvider.overrideWithValue(
+          const MockConsultationRepository(),
+        ),
+        sessionFeatureResetOverride(),
+      ],
     );
     addTearDown(container.dispose);
     final SessionController controller = container.read(
@@ -138,11 +184,16 @@ void main() {
     controller.enterDemo();
 
     expect(
-      container
-          .read(consultationRequestControllerProvider.notifier)
-          .add(_pendingRequest),
+      await seedPending(
+        container.read(consultationRequestControllerProvider.notifier),
+        _pendingRequest,
+      ),
       isTrue,
     );
+    container.read(exerciseRoutineDoneProvider.notifier).state = <bool>[
+      true,
+      false,
+    ];
 
     await expectLater(
       controller.login(email: 'member@example.com', password: 'password'),
@@ -166,7 +217,40 @@ void main() {
           ),
       isTrue,
     );
+    expect(container.read(exerciseRoutineDoneProvider), <bool>[true, false]);
   });
+
+  test(
+    'login publishes the new token before resetting feature state',
+    () async {
+      final Dio dio = _authDio(<String, Object?>{
+        'access_token': 'next-user-access-token',
+        'refresh_token': 'next-user-refresh-token',
+      });
+      addTearDown(dio.close);
+
+      String? tokenSeenByFeatureReset;
+      final ProviderContainer container = ProviderContainer(
+        overrides: <Override>[
+          dioProvider.overrideWithValue(dio),
+          sessionFeatureResetProvider.overrideWith((ref) {
+            return () {
+              tokenSeenByFeatureReset = ref.read(authAccessTokenProvider);
+            };
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final SessionController controller = container.read(
+        sessionControllerProvider.notifier,
+      );
+      await _waitForSessionStatus(container, SessionStatus.signedOut);
+
+      await controller.login(email: 'member@example.com', password: 'password');
+
+      expect(tokenSeenByFeatureReset, 'next-user-access-token');
+    },
+  );
 }
 
 Dio _authDio(Map<String, Object?> response) {

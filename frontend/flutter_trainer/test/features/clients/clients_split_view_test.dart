@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -38,7 +39,7 @@ void main() {
     await settle(tester);
 
     // Panel opened in place — sub-tabs visible, no push (no back button).
-    expect(find.text('개요'), findsOneWidget);
+    expect(find.text('운동'), findsOneWidget);
     expect(find.text('채팅'), findsOneWidget);
     expect(find.text('식단'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
@@ -51,12 +52,12 @@ void main() {
 
     await tester.tap(card('김민수'));
     await settle(tester);
-    expect(find.text('개요'), findsOneWidget);
+    expect(find.text('운동'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close));
     await settle(tester);
 
-    expect(find.text('개요'), findsNothing);
+    expect(find.text('운동'), findsNothing);
     expect(find.textContaining('왼쪽에서 고객을 선택하면'), findsOneWidget);
   });
 
@@ -138,11 +139,38 @@ void main() {
     await tester.tap(card('김민수'));
     await settle(tester);
 
-    final ctx = tester.element(find.text('개요'));
+    final ctx = tester.element(find.text('운동'));
     final uri = GoRouterState.of(ctx).uri;
     // Path-based, not `?c=`: refresh, back/forward and shared links all
     // restore the same client AND the same sub-tab.
-    expect(uri.path, '/clients/seed-client-1/overview');
+    expect(uri.path, '/clients/seed-client-1/diet');
+  });
+
+  testWidgets('the detail header fits the narrowest split panel', (
+    tester,
+  ) async {
+    // Exactly at the breakpoint the panel is its thinnest (viewport −
+    // the 340px roster − the divider ≈ 559px), and the header is dense:
+    // name + 활성 + 채팅 button + close on one row, then three metric
+    // tiles, then two actions. Flutter throws on a RenderFlex overflow,
+    // so rendering it here is the assertion.
+    tester.view.physicalSize = const Size(AppLayout.splitBreakpoint, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      // 김민수 is over on sodium, so the alert row renders too.
+      at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('나트륨 초과'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('client-chat-button')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (
@@ -151,6 +179,6 @@ void main() {
     await openWide(tester);
     // A backend member id is not guaranteed URL-safe; the location must
     // survive one that isn't.
-    expect(AppRoutes.clientDetail('a b/c'), '/clients/a%20b%2Fc/overview');
+    expect(AppRoutes.clientDetail('a b/c'), '/clients/a%20b%2Fc/diet');
   });
 }

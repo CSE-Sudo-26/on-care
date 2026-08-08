@@ -15,6 +15,7 @@ import 'package:oncare/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:oncare/features/auth/presentation/pages/sign_up_page.dart';
 import 'package:oncare/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
+import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/presentation/pages/consultation_complete_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/consultation_request_page.dart';
@@ -24,6 +25,7 @@ import 'package:oncare/features/exercise/presentation/pages/gym_list_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/trainer_detail_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/trainer_list_page.dart';
 import 'package:oncare/features/my_health/presentation/pages/my_health_page.dart';
+import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/features/notification/presentation/pages/notification_page.dart';
 import 'package:oncare/features/place/presentation/pages/place_page.dart';
 
@@ -62,6 +64,7 @@ GoRouter buildAppRouter({
   SessionStatus Function()? readStatus,
   Listenable? refresh,
 }) {
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   return GoRouter(
     initialLocation: AppRoutes.signIn,
     debugLogDiagnostics: !config.isProd,
@@ -125,6 +128,32 @@ GoRouter buildAppRouter({
         builder: (context, state) => const NotificationPage(),
       ),
       GoRoute(
+        path: AppRoutes.dietEntryDetail,
+        builder: (context, state) => DietMealDetailPage(
+          entryId: state.pathParameters['entryId'] ?? '',
+          initialMeal: state.extra is DietMeal
+              ? state.extra! as DietMeal
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.myPoints,
+        builder: (context, state) => PointsBenefitsPage(
+          points: state.extra is int ? state.extra! as int : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.mySettings,
+        builder: (context, state) => switch (state.pathParameters['section']) {
+          'profile' => const ProfileSettingsPage(),
+          'goals' => const HealthGoalsPage(),
+          'notifications' => const NotificationSettingsPage(),
+          'terms' => const LegalDocumentPage(document: 'terms'),
+          'privacy' => const LegalDocumentPage(document: 'privacy'),
+          _ => const SupportPage(),
+        },
+      ),
+      GoRoute(
         path: AppRoutes.place,
         builder: (context, state) => const PlacePage(),
       ),
@@ -143,8 +172,9 @@ GoRouter buildAppRouter({
       ),
       GoRoute(
         path: AppRoutes.trainerDetail,
-        builder: (context, state) =>
-            TrainerDetailPage(gymId: state.pathParameters['gymId'] ?? ''),
+        builder: (context, state) => TrainerDetailPage(
+          trainerId: state.pathParameters['trainerId'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutes.consultationRequest,
@@ -158,6 +188,7 @@ GoRouter buildAppRouter({
           return ConsultationRequestPage(
             targetType: targetType,
             gymId: state.uri.queryParameters['gymId'] ?? '',
+            trainerId: state.uri.queryParameters['trainerId'],
           );
         },
       ),

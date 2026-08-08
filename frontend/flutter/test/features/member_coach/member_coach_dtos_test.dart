@@ -40,20 +40,49 @@ void main() {
         'sender': 'trainer',
         'body': '안녕하세요',
         'time_label': '13:20',
+        'created_at': '2026-08-07T13:20:00Z',
       });
       expect(m.sender, CoachSender.trainer);
       expect(m.fromMe, isFalse);
+      expect(m.createdAt, DateTime.utc(2026, 8, 7, 13, 20));
     });
 
-    test('maps my own message (me / anything else) to me', () {
+    test('maps my own message', () {
       final m = coachMessageFromJson(<String, Object?>{
         'id': 'm2',
         'sender': 'me',
         'body': '좋아요',
         'time_label': '13:21',
+        'created_at': '2026-08-07T13:21:00Z',
       });
       expect(m.sender, CoachSender.me);
       expect(m.fromMe, isTrue);
+    });
+
+    test('rejects an unknown sender', () {
+      expect(
+        () => coachMessageFromJson(<String, Object?>{
+          'id': 'm3',
+          'sender': 'client',
+          'body': '잘못된 발신자',
+          'time_label': '13:22',
+          'created_at': '2026-08-07T13:22:00Z',
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects an invalid created_at value', () {
+      expect(
+        () => coachMessageFromJson(<String, Object?>{
+          'id': 'm4',
+          'sender': 'trainer',
+          'body': '잘못된 시간',
+          'time_label': '13:23',
+          'created_at': 'not-a-date',
+        }),
+        throwsFormatException,
+      );
     });
   });
 }

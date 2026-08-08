@@ -28,8 +28,9 @@ from app.schemas.trainer_api import (
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineOptionsOut, RoutineOptionsRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
-    TrainerClientOut, TrainerMe, TrainerMeUpdate, TrainerNotificationSettings,
-    TrainerNotificationSettingsUpdate, TrainerPasswordChange, WeeklyReportOut,
+    TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
+    TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
+    TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import trainer_routine_options_service, trainer_service
 from app.services.coach.chat import answer as coach_answer
@@ -94,7 +95,47 @@ def trainer_update_me(
     if not fields:
         # 빈 PATCH 를 성공으로 처리하면 클라이언트가 저장됐다고 오해한다.
         raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
-    return trainer_service.update_trainer_profile(db, trainer, profile, fields)
+    try:
+        return trainer_service.update_trainer_profile(db, trainer, profile, fields)
+    except trainer_service.GymTextLockedByAffiliation as e:
+        # 값이 틀린 게 아니라 소속이 설정된 상태와 충돌하는 것이라 422 가 아니라 409.
+        raise HTTPException(
+            status_code=409,
+            detail="소속 헬스장이 설정돼 있어 헬스장 정보를 직접 수정할 수 없습니다. "
+                   "PUT /trainer/me/gym 으로 소속을 바꾸세요.",
+        ) from e
+
+
+@router.put("/trainer/me/gym", response_model=TrainerMe)
+def trainer_set_gym(
+    payload: TrainerGymAffiliation,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerMe:
+    """소속 헬스장 설정·변경. (#452)
+
+    시드(`seed_gyms`)의 이름 매칭 백필 말고는 `gym_id` 를 채울 길이 없었다. 자기
+    프로필만 바꿀 수 있고(`RequireTrainer` 가 토큰의 트레이너로 고정), 실재하는
+    fitness Place 가 아니면 404 다.
+    """
+    profile = _require_profile(db, trainer.id)
+    me = trainer_service.set_trainer_gym(db, trainer, profile, payload.gym_id)
+    if me is None:
+        raise HTTPException(status_code=404, detail="헬스장을 찾을 수 없습니다.")
+    return me
+
+
+@router.delete("/trainer/me/gym", response_model=TrainerMe)
+def trainer_clear_gym(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerMe:
+    """소속 해제. 원래 소속이 없어도 200 — 해제는 두 번 눌러도 오류가 아니다.
+
+    갱신된 프로필을 그대로 돌려주므로 클라이언트가 다시 GET 하지 않아도 된다.
+    """
+    profile = _require_profile(db, trainer.id)
+    return trainer_service.clear_trainer_gym(db, trainer, profile)
 
 
 @router.post("/trainer/me/password", status_code=200)

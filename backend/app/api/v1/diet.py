@@ -2,6 +2,7 @@
 식단 라우터 — 프론트 계약 정렬(얇은 라우터).
 
   GET  /diet/days/today          -> 오늘 식단 집계(나트륨·당류·macros + 코칭 메시지)
+  GET  /diet/recommendations     -> 홈 AI 추천 식단(카탈로그에서 개인화 선택)
   POST /diet/analyze             -> 사진 → 인식 → diet_entries 저장
   POST /diet/analyze?engine=yolo -> 엔진 강제(비교실험)
   PUT/DELETE /diet/entries/{id}  -> 끼니/영양소 수정·삭제(본인 소유만)
@@ -20,8 +21,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import CurrentUser
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.schemas.diet_api import DietAnalyzeResponse, DietEntryOut, DietEntryUpdate, DietTodayResponse
-from app.services import diet_service
+from app.schemas.diet_api import (
+    DietAnalyzeResponse,
+    DietEntryOut,
+    DietEntryUpdate,
+    DietRecommendationsResponse,
+    DietTodayResponse,
+)
+from app.services import diet_recommendation_service, diet_service
 from app.services.nutrition.enrich import enrich_analysis
 from app.services.recognizer.factory import get_recognizer
 
@@ -37,6 +44,24 @@ def diet_today(
     db: Annotated[Session, Depends(get_db)],
 ) -> DietTodayResponse:
     return diet_service.build_today(db, current_user.id)
+
+
+@router.get("/diet/recommendations", response_model=DietRecommendationsResponse)
+def diet_recommendations(
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+    use_llm: Annotated[
+        bool,
+        Query(description="false 면 LLM 을 건너뛰고 규칙 추천만 쓴다(테스트·비용 절감용)"),
+    ] = True,
+) -> DietRecommendationsResponse:
+    """홈 'AI 추천 식단' — 카탈로그에서 개인화 선택.
+
+    LLM 실패·지연·근거 부족 어느 경우에도 카드 수가 줄지 않는다(서비스 주석 참고).
+    """
+    return diet_recommendation_service.build_recommendations(
+        db, current_user.id, use_llm=use_llm
+    )
 
 
 @router.post("/diet/analyze", response_model=DietAnalyzeResponse)

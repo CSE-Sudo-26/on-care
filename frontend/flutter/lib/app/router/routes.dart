@@ -12,11 +12,14 @@ class AppRoutes {
   // Modal-ish routes (pushed from any tab)
   static const String aiCoach = '/ai-coach';
   static const String notification = '/notification';
+  static const String dietEntryDetail = '/diet/entries/:entryId';
+  static const String myPoints = '/my-health/points';
+  static const String mySettings = '/my-health/settings/:section';
   static const String place = '/place';
   static const String gyms = '/gyms';
   static const String trainers = '/trainers';
   static const String gymDetail = '/gyms/:gymId';
-  static const String trainerDetail = '/trainers/:gymId';
+  static const String trainerDetail = '/trainers/:trainerId';
   static const String consultationRequest = '/consultations/request';
   static const String consultationComplete = '/consultations/complete';
   static const String exerciseGym = '/exercise?tab=gym';
@@ -24,18 +27,28 @@ class AppRoutes {
   static String gymDetailPath(String gymId) =>
       '$gyms/${Uri.encodeComponent(gymId)}';
 
-  static String trainerDetailPath(String gymId) =>
-      '$trainers/${Uri.encodeComponent(gymId)}';
+  static String trainerDetailPath(String trainerId) =>
+      '$trainers/${Uri.encodeComponent(trainerId)}';
 
+  static String dietEntryDetailPath(String entryId) =>
+      '$diet/entries/${Uri.encodeComponent(entryId)}';
+
+  static String mySettingsPath(String section) =>
+      '/my-health/settings/${Uri.encodeComponent(section)}';
+
+  /// [trainerId] is required for trainer-target consultations — a gym has
+  /// several trainers, so the gym id alone cannot identify one.
   static String consultationRequestPath({
     required String targetType,
     required String gymId,
+    String? trainerId,
   }) {
     return Uri(
       path: consultationRequest,
       queryParameters: <String, String>{
         'targetType': targetType,
         'gymId': gymId,
+        if (trainerId != null && trainerId.isNotEmpty) 'trainerId': trainerId,
       },
     ).toString();
   }

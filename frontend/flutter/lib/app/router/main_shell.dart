@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +27,12 @@ class MainShell extends StatelessWidget {
     final double navBottomPadding = bottomInset > maxNavBottomPadding
         ? maxNavBottomPadding
         : bottomInset;
+    // Mobile safe areas already leave enough room for the destination labels.
+    // Flutter web usually reports a zero bottom inset, so the 4dp paint
+    // translation below can put the web font's descenders beyond the viewport
+    // edge. Reserve web-only paint room without changing the mobile layout.
+    const double webClipGuard = kIsWeb ? 12 : 0;
+    final double effectiveBottomPadding = navBottomPadding + webClipGuard;
     // The larger navigation labels need a little more vertical room.
     const double barHeight = 58;
     const double lift = 24; // headroom so the + button floats above the bar
@@ -34,9 +41,12 @@ class MainShell extends StatelessWidget {
       // showing a separate white strip above the navigation bar.
       extendBody: true,
       body: navigationShell,
-      floatingActionButton: OniFab(onTap: () => showCoachingSheet(context)),
+      floatingActionButton: OniFab(
+        key: const Key('coachingFab'),
+        onTap: () => showCoachingSheet(context),
+      ),
       bottomNavigationBar: SizedBox(
-        height: barHeight + lift + navBottomPadding,
+        height: barHeight + lift + effectiveBottomPadding,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 672),
@@ -50,8 +60,8 @@ class MainShell extends StatelessWidget {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    height: barHeight + navBottomPadding,
-                    padding: EdgeInsets.only(bottom: navBottomPadding),
+                    height: barHeight + effectiveBottomPadding,
+                    padding: EdgeInsets.only(bottom: effectiveBottomPadding),
                     decoration: const BoxDecoration(
                       color: AppColors.background,
                       border: Border(top: BorderSide(color: AppColors.border)),
@@ -177,6 +187,7 @@ class _NavAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: const Key('recordAddButton'),
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -222,20 +233,19 @@ class _RecordAddSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        // Match the main content width so the sheet scales with the viewport
-        // like the tab pages. The theme lifts the modal route cap to this
-        // width too (see AppTheme._bottomSheetTheme); this centres the child.
-        constraints: const BoxConstraints(
-          maxWidth: AppBreakpoints.contentMaxWidth,
+    return ConstrainedBox(
+      // Match the main content width so the sheet scales with the viewport
+      // like the tab pages. The theme lifts the modal route cap to this
+      // width too (see AppTheme._bottomSheetTheme); this centres the child.
+      constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+      child: Container(
+        key: const Key('recordAddSheet'),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+        child: SafeArea(
+          top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -281,7 +291,8 @@ class _RecordAddSheet extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                key: const Key('recordOptions'),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
                   children: <Widget>[
                     Expanded(

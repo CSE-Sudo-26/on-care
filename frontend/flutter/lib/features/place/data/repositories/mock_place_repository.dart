@@ -1,14 +1,15 @@
 import 'package:oncare/features/place/domain/entities/place.dart';
+import 'package:oncare/features/place/domain/entities/place_query.dart';
 import 'package:oncare/features/place/domain/repositories/place_repository.dart';
 
 class MockPlaceRepository implements PlaceRepository {
   const MockPlaceRepository();
 
   @override
-  Future<List<Place>> nearbyPlaces() async {
+  Future<List<Place>> nearbyPlaces(PlaceQuery query) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     // Coordinates centred on 강남역 area for the demo.
-    return const <Place>[
+    const all = <Place>[
       Place(
         id: 'p1',
         name: '강남세브란스 가정의학과',
@@ -46,5 +47,9 @@ class MockPlaceRepository implements PlaceRepository {
         lng: 127.0263,
       ),
     ];
+    // Mirror the backend's category filter so the mock and the real repository
+    // behave the same when a filter is applied.
+    if (query.category == null) return all;
+    return all.where((Place p) => p.category == query.category).toList();
   }
 }

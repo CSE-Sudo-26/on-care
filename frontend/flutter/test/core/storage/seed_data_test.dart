@@ -62,7 +62,7 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v5'), today);
+      expect(await db.readValue('seeded_v7'), today);
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
@@ -112,7 +112,7 @@ void main() {
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v5', '2020-01-01');
+      await db.putValue('seeded_v7', '2020-01-01');
 
       await seedIfEmpty(db);
 
@@ -124,7 +124,7 @@ void main() {
         isTrue,
         reason: 're-seed must overwrite stale dates with today',
       );
-      expect(await db.readValue('seeded_v5'), today);
+      expect(await db.readValue('seeded_v7'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -151,7 +151,7 @@ void main() {
 
       // Legacy flag cleared, v5 flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v5'), _todayString());
+      expect(await db.readValue('seeded_v7'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -181,7 +181,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v5', '2020-01-01');
+      await db.putValue('seeded_v7', '2020-01-01');
       await seedIfEmpty(db);
 
       final diet = await db.select(db.dietEntries).get();

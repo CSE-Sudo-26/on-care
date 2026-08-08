@@ -199,8 +199,7 @@ void main() {
       expect(find.text('1'), findsNWidgets(2));
 
       // Open 박성호's chat, then come back — his badge cleared, 이지수's
-      // stays. Opening the client lands on 개요, which does NOT mark the
-      // thread read; the badge clears only once the messages are on screen.
+      // stays. The badge clears once the messages are on screen.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'chat'),
@@ -223,10 +222,14 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — its 개요/채팅/식단/운동/루틴 sub-tabs are unique to it.
-      expect(find.text('개요'), findsOneWidget);
-      expect(find.text('채팅'), findsOneWidget);
+      // Detail opened — its 식단/운동 sub-tabs and the 채팅 button are
+      // unique to it.
+      expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('client-chat-button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {

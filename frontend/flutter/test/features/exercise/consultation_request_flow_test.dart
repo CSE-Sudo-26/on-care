@@ -7,11 +7,15 @@ import 'package:oncare/app/router/app_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../support/consultation_test_support.dart';
 
 const Gym _gym = Gym(
   id: 'gym-consult',
@@ -20,8 +24,13 @@ const Gym _gym = Gym(
   distanceKm: 0.7,
   rating: 4.8,
   tags: <String>['근력운동'],
-  trainerName: '김상담',
-  trainerRole: '전담 트레이너',
+);
+
+const Trainer _trainer = Trainer(
+  id: 'trainer-consult',
+  gymId: 'gym-consult',
+  name: '김상담',
+  role: '전담 트레이너',
 );
 
 const AppConfig _config = AppConfig(
@@ -36,16 +45,20 @@ ConsultationRequest _request(ConsultationTargetType targetType) {
     targetType: targetType,
     gymId: _gym.id,
     gymName: _gym.name,
+    trainerId: targetType == ConsultationTargetType.trainer
+        ? _trainer.id
+        : null,
     trainerName: targetType == ConsultationTargetType.trainer
-        ? _gym.trainerName
+        ? _trainer.name
         : null,
     trainerRole: targetType == ConsultationTargetType.trainer
-        ? _gym.trainerRole
+        ? _trainer.role
         : null,
-    exerciseGoal: '체중 감량',
-    healthPurpose: '해당 없음',
+    exerciseGoal: ExerciseGoal.weightLoss,
+    healthPurposeType: HealthPurposeType.chronic,
+  healthPurposeDetail: null,
     preferredDate: DateTime(2026, 7, 28),
-    preferredTimeSlot: '오후',
+    preferredTimeSlot: PreferredTimeSlot.afternoon,
     message: null,
     status: ConsultationStatus.pending,
     createdAt: DateTime(2026, 7, 26),
@@ -79,8 +92,19 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     container = ProviderContainer(
       overrides: <Override>[
+        // gymRepository·consultationRepository 가 이 값으로 mock/실 API 를 고른다.
+        appConfigProvider.overrideWithValue(_config),
         nearbyGymsProvider.overrideWith((ref) async => const <Gym>[_gym]),
+        // 헬스장 상세·찾기는 제휴 + 카카오를 합친 provider 를 본다(#329).
+        gymFinderResultsProvider.overrideWith((ref) async => const <Gym>[_gym]),
         myGymProvider.overrideWith((ref) async => hasMyGym ? _gym : null),
+        myTrainerProvider.overrideWith(
+          (ref) async => hasMyGym ? _trainer : null,
+        ),
+        trainerProvider(_trainer.id).overrideWith((ref) async => _trainer),
+        gymTrainersProvider(
+          _gym.id,
+        ).overrideWith((ref) async => const <Trainer>[_trainer]),
       ],
     );
     addTearDown(container.dispose);
@@ -102,13 +126,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  test('controller blocks a duplicate target but separates target types', () {
+  test('controller blocks a duplicate target but separates target types', () async {
     final ConsultationRequestController controller =
-        ConsultationRequestController();
+        newTestConsultationController();
 
-    expect(controller.add(_request(ConsultationTargetType.gym)), isTrue);
-    expect(controller.add(_request(ConsultationTargetType.gym)), isFalse);
-    expect(controller.add(_request(ConsultationTargetType.trainer)), isTrue);
+    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isTrue);
+    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isFalse);
+    expect(await seedPending(controller, _request(ConsultationTargetType.trainer)), isTrue);
     expect(controller.state, hasLength(2));
   });
 
@@ -129,14 +153,14 @@ void main() {
     expect(find.text(_gym.name), findsOneWidget);
     expect(find.textContaining(l.exTrainerAssignedLater), findsOneWidget);
 
-    router.go(AppRoutes.trainerDetailPath(_gym.id));
+    router.go(AppRoutes.trainerDetailPath(_trainer.id));
     await tester.pumpAndSettle();
     await _scrollTo(tester, find.text(l.exTrainerConsultRequest), 250);
     await tester.tap(find.text(l.exTrainerConsultRequest));
     await tester.pumpAndSettle();
 
-    expect(find.text(_gym.trainerName!), findsOneWidget);
-    expect(find.text(_gym.trainerRole!), findsOneWidget);
+    expect(find.text(_trainer.name), findsOneWidget);
+    expect(find.text(_trainer.role!), findsOneWidget);
     expect(find.textContaining(_gym.name), findsOneWidget);
   });
 

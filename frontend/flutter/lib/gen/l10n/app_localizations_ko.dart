@@ -168,7 +168,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeAiAdviceBody =>
-      '아침 식단과 저녁 PT 수업은 완벽했습니다! 다만 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해, 물을 충분히 마시고 코치님이 강조하신 어깨 스트레칭으로 오늘 하루를 건강하게 마무리해 보세요.';
+      '아침 식단과 저녁 PT는 완벽했습니다! 점심 짬뽕으로 높아진 나트륨과 혈당을 낮추기 위해 물을 충분히 마시고, 코치님이 강조하신 어깨 스트레칭으로 건강하게 마무리해 보세요.';
 
   @override
   String get homeSodiumExceededBadge => '나트륨 초과';
@@ -368,6 +368,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeMealTagHighFiber => '고식이섬유';
+
+  @override
+  String homeRecBasisSodium(int days, String sodium) {
+    return '최근 $days일 평균 나트륨 ${sodium}mg';
+  }
+
+  @override
+  String get homeRecBasisOverLimit => '권장 초과';
 
   @override
   String get homeRecMealsTitle => '이번 주 AI 추천 식단';
@@ -1073,6 +1081,49 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mySupportTitle => '고객 지원';
 
   @override
+  String get myPointsBenefitsTitle => '포인트 사용처';
+
+  @override
+  String myPointsBalance(int points) {
+    return '보유 ${points}P';
+  }
+
+  @override
+  String get myPointsBenefitsSubtitle => '포인트로 받을 수 있는 혜택';
+
+  @override
+  String get myPointsBenefitsHint => '기록을 꾸준히 남기면 포인트가 쌓이고, 위 혜택에 사용할 수 있어요.';
+
+  @override
+  String get myPointsDiscountTitle => '포인트 차감 현금성 할인';
+
+  @override
+  String get myPointsDiscountDescription =>
+      '1:1 코칭권·PT 결제 시 보유 포인트를 최대 10%까지 현금처럼 차감해요.';
+
+  @override
+  String get myPointsDiscountCost => '최대 10%';
+
+  @override
+  String get myPointsReportTitle => '혈당·혈압 예측 리포트 잠금 해제';
+
+  @override
+  String get myPointsReportDescription => '주간·월간 건강 데이터 종합 리포트를 열람할 수 있어요.';
+
+  @override
+  String get myPointsReportCost => '500P';
+
+  @override
+  String get myPointsRecipeTitle => '맞춤형 건강 식단 레시피 패키지';
+
+  @override
+  String get myPointsRecipeDescription =>
+      '건강 목표(당뇨 예방·체중 감량 등)에 맞춘 식단 가이드를 PDF·인터랙티브로 받아요.';
+
+  @override
+  String get myPointsRecipeCost => '500P';
+
+  @override
   String get myLogout => '로그아웃';
 
   @override
@@ -1250,6 +1301,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aicDatePillToday => '오늘';
+
+  @override
+  String get aicMedicalDisclaimer =>
+      'AI 코치는 식단·운동 관리를 돕는 참고용이에요. 진단·처방이 아니니 증상이 있으면 전문의와 상담해 주세요.';
 
   @override
   String get aicInputHint => 'AI에게 무엇이든 물어보세요';

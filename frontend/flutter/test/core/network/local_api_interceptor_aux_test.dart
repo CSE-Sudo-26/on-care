@@ -57,16 +57,102 @@ void main() {
     );
   });
 
-  test('GET /places/nearby returns four places with all categories', () async {
+  test('GET /places/nearby returns every category when unfiltered', () async {
     final res = await dio.get<List<Object?>>('/places/nearby');
     expect(res.statusCode, 200);
     final places = res.data!.cast<Map<String, Object?>>();
-    expect(places.length, 4);
     final categories = places.map((p) => p['category']! as String).toSet();
     expect(
       categories,
       containsAll(<String>['medical', 'fitness', 'healthy_food', 'pharmacy']),
     );
+  });
+
+  test('GET /places/nearby honours the category filter (#329)', () async {
+    // 필터를 무시하면 헬스장 찾기 시트에 병원·약국이 섞여 들어온다.
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{'category': 'fitness'},
+    );
+    final places = res.data!.cast<Map<String, Object?>>();
+    expect(places, isNotEmpty);
+    expect(
+      places.map((p) => p['category']! as String).toSet(),
+      <String>{'fitness'},
+    );
+    // 지도 핀을 찍으려면 좌표가 반드시 있어야 한다.
+    expect(places.every((p) => p['lat'] != null && p['lng'] != null), isTrue);
+  });
+
+  test('GET /places/nearby 는 요청 중심 기준으로 거리를 다시 계산한다', () async {
+    // 신촌(헬스장 찾기 중심)에서 보면 강남 시드 장소는 8km 넘게 떨어져 있다.
+    const sinchonLat = 37.5559;
+    const sinchonLng = 126.9368;
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{
+        'lat': sinchonLat,
+        'lng': sinchonLng,
+        'radius_m': 20000,
+        'category': 'fitness',
+      },
+    );
+    final places = res.data!.cast<Map<String, Object?>>();
+    expect(places, isNotEmpty);
+
+    // 고정값이 아니라 중심에서 잰 값이어야 한다: 신촌 헬스장은 1km 이내.
+    final near = places.first;
+    expect((near['distance_meters']! as int), lessThan(1000));
+    // 거리순 정렬
+    final distances = places.map((p) => p['distance_meters']! as int).toList();
+    expect(distances, orderedEquals(List<int>.of(distances)..sort()));
+  });
+
+  test('GET /places/nearby 거리 계산이 백엔드 _haversine_m 과 같다', () async {
+    // 백엔드는 int(...) 로 절삭한다. round() 를 쓰면 1m 어긋난다(리뷰 지적).
+    // 아래 기대값은 backend/app/api/v1/places.py 의 _haversine_m 실행 결과다.
+    const sinchonLat = 37.5559;
+    const sinchonLng = 126.9368;
+    const expected = <String, int>{
+      '휘트니스에이든': 126,
+      '빌드업짐 PT 신촌점': 133,
+      '신인규피티스튜디오': 177,
+      '하이핏': 186,
+    };
+
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{
+        'lat': sinchonLat,
+        'lng': sinchonLng,
+        'radius_m': 20000,
+        'category': 'fitness',
+      },
+    );
+    final places = res.data!.cast<Map<String, Object?>>();
+    for (final place in places) {
+      final want = expected[place['name']! as String];
+      if (want == null) continue;
+      expect(
+        place['distance_meters'],
+        want,
+        reason: '${place['name']} 거리가 백엔드 계산과 다름',
+      );
+    }
+  });
+
+  test('GET /places/nearby 는 radius_m 밖 장소를 제외한다', () async {
+    // 서울시청 기준 500m 안에는 신촌 헬스장이 하나도 없다.
+    final res = await dio.get<List<Object?>>(
+      '/places/nearby',
+      queryParameters: <String, Object?>{
+        'lat': 37.5665,
+        'lng': 126.9780,
+        'radius_m': 500,
+        'category': 'fitness',
+      },
+    );
+    expect(res.data!.cast<Map<String, Object?>>(), isEmpty);
   });
 
   test('GET /healthz returns drift-local marker', () async {

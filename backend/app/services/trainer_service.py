@@ -16,8 +16,8 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, RoutineHistory, TrainerClient, TrainerProfile,
-    TrainerRoutine, TrainerSchedule, User,
+    ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
+    TrainerProfile, TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
@@ -738,6 +738,88 @@ def get_member_trainer_id(db: Session, member_id: str) -> str | None:
     return link.trainer_id if link is not None else None
 
 
+def _deactivate_coach_links(db: Session, member_id: str) -> bool:
+    """활성 담당 링크를 전부 휴면으로 내린다(커밋 없음). 내린 게 있으면 True.
+
+    링크 행을 지우지 않고 `active=False` 로 내린다 — 지난 코칭 기록(루틴·채팅·일정)이
+    링크를 참조하므로 삭제하면 이력이 끊긴다. 비활성 링크는 `_active_link` 가 제외해
+    이후 조회는 '담당 없음'으로 동작한다.
+
+    **전부** 내리는 이유: partial unique index 가 회원당 1건을 강제하지만, 정합성이
+    깨져 여러 건이 남은 경우 첫 건만 끄면 get_member_trainer_id() 가 계속 다른 링크를
+    반환해 "해제했는데 그대로"가 된다(리뷰 지적).
+    """
+    links = db.scalars(
+        select(TrainerClient).where(
+            TrainerClient.member_id == member_id,
+            TrainerClient.active.is_(True),
+        )
+    ).all()
+    for link in links:
+        link.active = False
+    return bool(links)
+
+
+def disconnect_member_gym(db: Session, member_id: str) -> bool:
+    """회원이 헬스장 연결을 끊는다 — 담당 트레이너도 함께 끊긴다.
+
+    떠난 헬스장의 트레이너를 담당으로 남겨 둘 수는 없다. 앱의 mock 도 같은 규칙이고
+    (`MockGymRepository.disconnectMyGym`), MY 탭의 헬스장 휴지통이 이 경로다.
+    둘 중 하나라도 끊었으면 True.
+
+    두 해제를 **한 트랜잭션**으로 커밋한다. 각자 커밋하면 뒤 단계가 실패했을 때
+    헬스장만 사라지고 담당은 살아 있는 반쪽 상태가 남는다.
+    """
+    from app.services import gym_service
+
+    unlinked_gym = gym_service.unlink_member_gym(db, member_id)
+    unlinked_trainer = _deactivate_coach_links(db, member_id)
+    db.commit()
+    return unlinked_gym or unlinked_trainer
+
+
+def disconnect_member_coach(db: Session, member_id: str) -> bool:
+    """회원이 담당 트레이너 연결을 끊는다 — 헬스장 연결은 그대로 둔다.
+
+    끊었으면 True, 원래 없었으면 False.
+
+    회원 일방으로 끊을 수 있게 두는 이유: 앱의 MY 탭이 이미 해제 버튼을 제공하고,
+    트레이너 승인을 기다리게 하면 회원이 관계를 벗어날 방법이 없어진다. 트레이너
+    로스터에서는 즉시 사라진다.
+    """
+    deactivated = _deactivate_coach_links(db, member_id)
+    db.commit()
+    return deactivated
+
+
+def _member_gym_out(db: Session, member_id: str, profile: TrainerProfile) -> TrainerGymOut:
+    """코치 요약에 실을 헬스장 — **회원 링크가 진실**이고, 트레이너 소속은 폴백이다.
+
+    회원이 트레이너와 다른 헬스장에 연결돼 있을 수 있으므로(트레이너 이적 등) 먼저
+    회원 링크를 본다. 링크가 없는 회원은 마이그레이션 백필 전 데이터이거나 담당만
+    있고 헬스장 연결이 아직 없는 경우라, 예전처럼 트레이너 소속을 보여 준다 —
+    갑자기 빈 카드가 되는 것보다 낫다.
+    """
+    from app.services import gym_service
+
+    gym = gym_service.get_member_gym(db, member_id)
+    if gym is not None:
+        return TrainerGymOut(
+            id=gym.id,
+            name=gym.name,
+            address=gym.address,
+            # TrainerGymOut.hours 는 한 줄이다. 카드가 평일 영업시간을 보여 주므로
+            # 주말 시간까지 합치지 않는다(트레이너 프로필의 gym_hours 와 같은 값).
+            hours=gym.weekday_hours or "",
+            phone=gym.phone or "",
+        )
+    return TrainerGymOut(
+        id=profile.gym_id,
+        name=profile.gym_name, address=profile.gym_address,
+        hours=profile.gym_hours, phone=profile.gym_phone,
+    )
+
+
 def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
     """회원의 '내 담당 코치' 요약. 활성 담당이 없으면 None(라우터 404)."""
     link = _active_link(db, member_id)
@@ -755,10 +837,7 @@ def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
         specialty=profile.specialty,
         career=f"{profile.career_years}년",
         intro=profile.intro,
-        gym=TrainerGymOut(
-            name=profile.gym_name, address=profile.gym_address,
-            hours=profile.gym_hours, phone=profile.gym_phone,
-        ),
+        gym=_member_gym_out(db, member_id, profile),
         goal=link.goal,
     )
 
@@ -836,6 +915,7 @@ def build_trainer_me(trainer: User, profile: TrainerProfile) -> TrainerMe:
         intro=profile.intro,
         certifications=_certifications(profile),
         gym=TrainerGymOut(
+            id=profile.gym_id,
             name=profile.gym_name,
             address=profile.gym_address,
             hours=profile.gym_hours,
@@ -844,19 +924,93 @@ def build_trainer_me(trainer: User, profile: TrainerProfile) -> TrainerMe:
     )
 
 
+#: `TrainerMeUpdate` 가 받는 호환용 헬스장 문자열. 소속(`gym_id`)이 설정돼 있으면
+#: 이 값들은 Place/GymProfile 에서 파생되므로 직접 수정할 수 없다(#452).
+GYM_TEXT_FIELDS = ("gym_name", "gym_address", "gym_hours", "gym_phone")
+
+
+class GymTextLockedByAffiliation(Exception):
+    """소속이 설정된 프로필에서 호환 문자열만 따로 바꾸려 한 경우. (#452)"""
+
+
 def update_trainer_profile(
     db: Session, trainer: User, profile: TrainerProfile, fields: dict
 ) -> TrainerMe:
-    """보낸 필드만 반영한다. 자격증은 통째로 교체(부분 병합은 순서가 모호하다)."""
+    """보낸 필드만 반영한다. 자격증은 통째로 교체(부분 병합은 순서가 모호하다).
+
+    `gym_id` 가 있으면 호환 문자열은 소속에서 파생된 값이라 여기서 못 고친다 —
+    문자열만 바꾸면 소속과 화면이 어긋난다. `GymTextLockedByAffiliation` 을 올리고
+    라우터가 409 로 돌려준다. 소속이 없는(레거시·해제) 프로필은 예전처럼 직접 적는다.
+    """
+    if profile.gym_id is not None and any(f in fields for f in GYM_TEXT_FIELDS):
+        raise GymTextLockedByAffiliation
+
     if "certifications" in fields:
         certs = [c.strip() for c in (fields["certifications"] or []) if c.strip()]
         profile.certifications_json = json.dumps(certs, ensure_ascii=False)
-    for column in (
-        "phone", "specialty", "career_years", "intro",
-        "gym_name", "gym_address", "gym_hours", "gym_phone",
-    ):
+    for column in ("phone", "specialty", "career_years", "intro", *GYM_TEXT_FIELDS):
         if column in fields:
             setattr(profile, column, fields[column])
+    db.commit()
+    db.refresh(profile)
+    return build_trainer_me(trainer, profile)
+
+
+# ---- 소속 헬스장 (#452) ----
+
+def _apply_gym_texts(profile: TrainerProfile, place: Place | None, gym: GymProfile | None) -> None:
+    """호환 문자열을 소속에서 파생시킨다 — 소속이 진실이고 문자열은 그 사본이다.
+
+    트레이너 앱은 아직 `gym.{name,address,hours,phone}` 만 읽으므로, 소속을 바꿔도
+    문자열이 그대로면 화면에는 예전 헬스장이 남는다. 해제(place=None)면 비운다 —
+    떠난 헬스장의 이름을 남겨 두면 회원 쪽 코치 카드가 그 값으로 폴백한다
+    (`_member_gym_out`).
+    """
+    if place is None:
+        profile.gym_name = ""
+        profile.gym_address = ""
+        profile.gym_hours = ""
+        profile.gym_phone = ""
+        return
+    # places.name(200) 이 trainer_profiles.gym_name(100) 보다 길다 — 넘치면 DB 가 막는다.
+    profile.gym_name = place.name[:100]
+    profile.gym_address = place.address[:300]
+    # 영업시간·전화는 헬스장 부가 정보(GymProfile)에만 있다. 카카오에서 발견한
+    # 헬스장은 부가 정보가 없어 빈 값이 정상이다.
+    profile.gym_hours = (gym.weekday_hours if gym else "")[:50]
+    profile.gym_phone = (gym.phone if gym else "")[:20]
+
+
+def set_trainer_gym(
+    db: Session, trainer: User, profile: TrainerProfile, gym_id: str
+) -> TrainerMe | None:
+    """소속 헬스장을 설정·변경한다. 유효한 헬스장이 아니면 None(라우터 404).
+
+    `places` 에 있고 category 가 'fitness' 인 곳만 받는다 — 상담 대상 검증
+    (`consultation_service._validate_target`)·헬스장 디렉터리와 같은 조건이라야
+    소속을 설정한 트레이너가 회원 화면에 제대로 뜬다(#451, #443).
+    """
+    place = db.scalar(
+        select(Place).where(Place.id == gym_id, Place.category == "fitness")
+    )
+    if place is None:
+        return None
+
+    profile.gym_id = place.id
+    _apply_gym_texts(profile, place, db.get(GymProfile, place.id))
+    db.commit()
+    db.refresh(profile)
+    return build_trainer_me(trainer, profile)
+
+
+def clear_trainer_gym(db: Session, trainer: User, profile: TrainerProfile) -> TrainerMe:
+    """소속 해제. 원래 없었어도 성공한다 — 해제는 두 번 눌러도 오류가 아니다.
+
+    회원↔헬스장 링크(`member_gyms`)는 건드리지 않는다. 회원이 직접 연결한 헬스장은
+    트레이너가 이적해도 회원의 선택으로 남는다(#444).
+    """
+    profile.gym_id = None
+    _apply_gym_texts(profile, None, None)
     db.commit()
     db.refresh(profile)
     return build_trainer_me(trainer, profile)

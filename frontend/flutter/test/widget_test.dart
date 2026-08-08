@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 
 import 'package:oncare/app/app.dart';
+import 'package:oncare/app/router/app_router.dart';
+import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
@@ -44,8 +48,10 @@ void main() {
           // 9.8); the smoke test only inspects the nav, so the mock is
           // plenty.
           dashboardRepositoryProvider.overrideWithValue(
-            const MockDashboardRepository() as DashboardRepository,
+            MockDashboardRepository(MockDietRepository())
+                as DashboardRepository,
           ),
+          sessionFeatureResetOverride(),
           if (locale != null) localeProvider.overrideWith((ref) => locale),
         ],
         child: const OncareApp(),
@@ -62,6 +68,48 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  GoRouter appRouter(WidgetTester tester) {
+    return ProviderScope.containerOf(
+      tester.element(find.byType(OncareApp)),
+    ).read(appRouterProvider);
+  }
+
+  Future<double> openRecordSheetAndMeasureBottomSpacing(
+    WidgetTester tester,
+  ) async {
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('recordAddSheet'));
+    final options = find.byKey(const Key('recordOptions'));
+
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getBottomRight(sheet).dy, logicalHeight);
+
+    return tester.getBottomRight(sheet).dy - tester.getBottomRight(options).dy;
+  }
+
+  double bottomSpacingBetween(
+    WidgetTester tester,
+    String surfaceKey,
+    String contentKey,
+  ) {
+    return tester.getBottomRight(find.byKey(Key(surfaceKey))).dy -
+        tester.getBottomRight(find.byKey(Key(contentKey))).dy;
+  }
+
+  Future<void> openExerciseAddSheet(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+    final exerciseOption = find.descendant(
+      of: find.byKey(const Key('recordOptions')),
+      matching: find.text('운동'),
+    );
+    await tester.tap(exerciseOption);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Enters the Home tab in English after demo', (tester) async {
     await pumpApp(tester, locale: const Locale('en'));
     // Bottom-nav labels match the React original.
@@ -69,6 +117,197 @@ void main() {
     expect(find.text('Diet'), findsAtLeastNWidgets(1));
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
     expect(find.text('MY'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('record sheet has no fixed bottom gap without a system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    final bottomSpacing = await openRecordSheetAndMeasureBottomSpacing(tester);
+
+    expect(bottomSpacing, 0);
+  });
+
+  testWidgets('record sheet keeps only the required system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    final bottomSpacing = await openRecordSheetAndMeasureBottomSpacing(tester);
+
+    expect(bottomSpacing, 34);
+  });
+
+  testWidgets('diet add opens as a content-sized sheet without a bottom gap', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    final dietOption = find.descendant(
+      of: find.byKey(const Key('recordOptions')),
+      matching: find.text('식단'),
+    );
+    await tester.tap(dietOption);
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('dietAddSheet'));
+    final options = find.byKey(const Key('dietAddOptions'));
+    expect(sheet, findsOneWidget);
+    expect(tester.getTopLeft(sheet).dy, greaterThan(0));
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getBottomRight(sheet).dy, logicalHeight);
+    expect(
+      tester.getBottomRight(sheet).dy - tester.getBottomRight(options).dy,
+      0,
+    );
+    expect(find.byKey(const Key('recordAddSheet')), findsNothing);
+  });
+
+  testWidgets('exercise add has no fixed bottom gap without a system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await openExerciseAddSheet(tester);
+
+    expect(
+      bottomSpacingBetween(tester, 'exerciseAddSheet', 'exerciseAddContent'),
+      0,
+    );
+  });
+
+  testWidgets('exercise add keeps only the required system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await openExerciseAddSheet(tester);
+
+    expect(
+      bottomSpacingBetween(tester, 'exerciseAddSheet', 'exerciseAddContent'),
+      34,
+    );
+  });
+
+  testWidgets('coaching sheet has no fixed bottom gap without a system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.byKey(const Key('coachingFab')));
+    await tester.pumpAndSettle();
+
+    expect(
+      bottomSpacingBetween(tester, 'coachingSheet', 'coachingSheetCta'),
+      0,
+    );
+  });
+
+  testWidgets('coaching sheet keeps only the required system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.byKey(const Key('coachingFab')));
+    await tester.pumpAndSettle();
+
+    expect(
+      bottomSpacingBetween(tester, 'coachingSheet', 'coachingSheetCta'),
+      34,
+    );
+  });
+
+  testWidgets('header notification opens the existing full page', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    await tester.tap(find.byIcon(Icons.notifications_none_rounded).first);
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('notificationPage'));
+    expect(page, findsOneWidget);
+    expect(tester.getTopLeft(page).dy, 0);
+  });
+
+  testWidgets('point benefits use a full-page URL route', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.text('MY').first);
+    await tester.pumpAndSettle();
+
+    final banner = find.byKey(const Key('pointsBanner'));
+    await tester.ensureVisible(banner);
+    await tester.tap(banner);
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('pointsBenefitsPage'));
+    expect(page, findsOneWidget);
+    expect(
+      appRouter(tester).routeInformationProvider.value.uri.path,
+      AppRoutes.myPoints,
+    );
+  });
+
+  testWidgets('MY settings use full-page URL routes', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    appRouter(tester).go(AppRoutes.mySettingsPath('support'));
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('mySettingsPage'));
+    expect(page, findsOneWidget);
+    expect(
+      appRouter(tester).routeInformationProvider.value.uri.path,
+      AppRoutes.mySettingsPath('support'),
+    );
+  });
+
+  testWidgets('diet detail URL restores the full-page editor', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    appRouter(tester).go(AppRoutes.dietEntryDetailPath('mock-breakfast'));
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('mealDetailPage'));
+    expect(page, findsOneWidget);
+    expect(
+      appRouter(tester).routeInformationProvider.value.uri.path,
+      AppRoutes.dietEntryDetailPath('mock-breakfast'),
+    );
   });
 
   testWidgets('Tapping a bottom-nav destination switches branch', (
@@ -145,25 +384,28 @@ void main() {
     expect(find.text('나트륨 초과'), findsNothing);
   });
 
-  test('coaching/advice strings are localised — en English, ko Korean (리뷰 #292)', () {
-    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
-    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
-    final RegExp hangul = RegExp('[가-힣]');
+  test(
+    'coaching/advice strings are localised — en English, ko Korean (리뷰 #292)',
+    () {
+      final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+      final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+      final RegExp hangul = RegExp('[가-힣]');
 
-    // 코드에 하드코딩돼 있던 문구들이 이제 로케일별 ARB 로 분리됐다.
-    expect(en.coachCardDietTitle, 'Great breakfast — watch lunch sodium');
-    expect(ko.coachCardDietTitle, '아침 식단 훌륭, 점심 나트륨 주의');
-    expect(en.coachCardExerciseTitle, 'Upper-body PT session 12 done');
-    expect(en.homeAiAdviceTitle, "Today's combined AI advice");
-    expect(ko.homeAiAdviceTitle, '오늘의 AI 통합 조언');
-    expect(en.homeSodiumExceededBadge, 'Sodium over');
-    expect(ko.homeSodiumExceededBadge, '나트륨 초과');
+      // 코드에 하드코딩돼 있던 문구들이 이제 로케일별 ARB 로 분리됐다.
+      expect(en.coachCardDietTitle, 'Great breakfast — watch lunch sodium');
+      expect(ko.coachCardDietTitle, '아침 식단 훌륭, 점심 나트륨 주의');
+      expect(en.coachCardExerciseTitle, 'Upper-body PT session 12 done');
+      expect(en.homeAiAdviceTitle, "Today's combined AI advice");
+      expect(ko.homeAiAdviceTitle, '오늘의 AI 통합 조언');
+      expect(en.homeSodiumExceededBadge, 'Sodium over');
+      expect(ko.homeSodiumExceededBadge, '나트륨 초과');
 
-    // 영어 리소스에 한글이 남아 있지 않아야 한다.
-    expect(hangul.hasMatch(en.coachCardDietBody), isFalse);
-    expect(hangul.hasMatch(en.coachCardExerciseBody), isFalse);
-    expect(hangul.hasMatch(en.homeAiAdviceBody), isFalse);
-  });
+      // 영어 리소스에 한글이 남아 있지 않아야 한다.
+      expect(hangul.hasMatch(en.coachCardDietBody), isFalse);
+      expect(hangul.hasMatch(en.coachCardExerciseBody), isFalse);
+      expect(hangul.hasMatch(en.homeAiAdviceBody), isFalse);
+    },
+  );
 
   test('운동 탭 기간 토글·도넛 라벨이 로케일을 따른다 (#297)', () {
     final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
@@ -174,7 +416,11 @@ void main() {
     // 이번 달" 처럼 한 토글 안에 두 언어가 섞였다.
     expect(en.exThisMonth, 'This month');
     expect(ko.exThisMonth, '이번 달');
-    for (final String s in <String>[en.exToday, en.exThisWeek, en.exThisMonth]) {
+    for (final String s in <String>[
+      en.exToday,
+      en.exThisWeek,
+      en.exThisMonth,
+    ]) {
       expect(hangul.hasMatch(s), isFalse);
     }
 
@@ -202,7 +448,10 @@ void main() {
       ko.otherDateEmpty(ko.pageDietTitle).split('\n').first,
       ko.otherDateEmpty(ko.pageExerciseTitle).split('\n').first,
     );
-    expect(RegExp('[가-힣]').hasMatch(en.otherDateEmpty(en.pageDietTitle)), isFalse);
+    expect(
+      RegExp('[가-힣]').hasMatch(en.otherDateEmpty(en.pageDietTitle)),
+      isFalse,
+    );
   });
 
   test('운동 탭 UI 골격 문구가 로케일을 따른다 (#367)', () {

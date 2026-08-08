@@ -29,6 +29,7 @@ class NotificationPage extends ConsumerWidget {
     final notifier = ref.read(notificationControllerProvider.notifier);
 
     return Scaffold(
+      key: const Key('notificationPage'),
       appBar: AppBar(
         title: Text(l.pageNotificationTitle),
         actions: <Widget>[

@@ -60,7 +60,7 @@ void main() {
     });
 
     test('ids are percent-encoded so a "/" in an id cannot forge a path', () {
-      expect(AppRoutes.clientDetail('a/b'), '/clients/a%2Fb/overview');
+      expect(AppRoutes.clientDetail('a/b'), '/clients/a%2Fb/diet');
     });
 
     test('an unknown section falls back instead of dead-ending', () {

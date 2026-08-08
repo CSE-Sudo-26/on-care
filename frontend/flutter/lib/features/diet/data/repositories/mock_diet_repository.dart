@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
 /// In-memory stateful mock for demo mode (`useMockApi`). Seeds a realistic day,
@@ -193,6 +194,14 @@ class MockDietRepository implements DietRepository {
     );
     if (idempotencyKey != null) _analyzed[idempotencyKey] = result;
     return result;
+  }
+
+  @override
+  Future<MealRecommendations> fetchRecommendations() async {
+    // 목업/데모 모드는 개인화 근거가 없다(로그인하지 않은 둘러보기). 서버 연동
+    // 이전과 완전히 같은 카드·순서·문구가 나오도록 기본 추천을 그대로 돌려준다.
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    return MealRecommendations.fallback;
   }
 
   @override

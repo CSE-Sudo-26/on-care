@@ -53,12 +53,39 @@
 > 정책이 복수 담당으로 바뀌면 이 인덱스를 제거하고 회원측 코치·채팅·루틴 API를
 > **목록 기반**으로 바꿔야 한다(현재는 단일 담당 가정).
 
+### 트레이너 헬스장 소속 정책 (`0020_gym_profiles_trainer_fk`)
+
+- 트레이너는 현재 **헬스장 한 곳**에만 소속한다. `TrainerProfile.gym_id`는
+  `places.id`를 참조하는 단일 nullable FK이며, 복수 소속 관계 테이블은 두지 않는다.
+- `gym_id`는 기존 프로필과 헬스장 삭제를 안전하게 처리하기 위해 nullable이다.
+  헬스장 `Place`가 삭제되면 `ON DELETE SET NULL`로 소속만 해제되고 트레이너
+  계정은 남는다. 트레이너 `User`가 삭제되면 프로필은 `ON DELETE CASCADE`로
+  함께 삭제된다.
+- 상담 요청은 `gym_id`가 실제로 존재하는 `Place`를 가리키고 그 장소의
+  `category == "fitness"`일 때만 트레이너를 유효한 대상으로 인정한다. FK만으로는
+  다른 카테고리를 막을 수 없어 `consultation_service._validate_target()`에서 검증한다.
+- 소속 변경 이력은 **현재 보존하지 않는다**. 프로필의 `gym_id`를 교체하며,
+  이력·복수 소속이 실제 요구되면 별도 관계 테이블로 확장한다.
+- 관계 판단의 기준은 `gym_id`다. 기존 `gym_name`, `gym_address`, `gym_hours`,
+  `gym_phone`은 트레이너 웹의 `gym {name, address, hours, phone}` 계약을
+  유지하기 위한 호환 필드로 당분간 남겨 둔다.
+- `gym_id`는 `PUT /trainer/me/gym`으로 설정·변경하고 `DELETE /trainer/me/gym`으로
+  해제한다(#452). 시드(`seed_gyms.py`의 `gym_name` 이름 매칭 백필)는 기존 데이터를
+  이어 주는 용도로 남는다.
+- **호환 문자열 동기화 기준**: `gym_id`가 있으면 `gym_name`·`gym_address`·
+  `gym_hours`·`gym_phone`은 소속 `Place`/`GymProfile`에서 파생된 사본이다. 소속을
+  설정·변경하면 서버가 덮어쓰고, 해제하면 비운다. 그 동안 `PUT /trainer/me`로
+  문자열만 따로 바꾸는 요청은 **409**다 — 소속과 화면이 어긋나기 때문이다.
+  `gym_id`가 없는(레거시·해제 상태) 프로필에서는 예전처럼 직접 입력한다.
+
 ## 4. 트레이너 API (`/v1/trainer/*`, RequireTrainer)
 
 | Method | Path | 설명 |
 |---|---|---|
 | GET | `/trainer/me` | 내 트레이너 프로필 |
 | PUT | `/trainer/me` | 프로필 부분 수정(보낸 필드만; 이름/이메일은 계정 소관) |
+| PUT | `/trainer/me/gym` | 소속 헬스장 설정·변경(fitness `Place`만; 없으면 404) |
+| DELETE | `/trainer/me/gym` | 소속 해제(원래 없어도 200) |
 | POST | `/trainer/me/password` | 비밀번호 변경(현재 비밀번호 확인) |
 | GET | `/trainer/me/settings` | 알림 수신 설정 |
 | PUT | `/trainer/me/settings` | 알림 수신 설정 부분 수정 |
@@ -149,10 +176,27 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 | GET | `/me/coach/chat/unread` | 미확인 수 |
 | POST | `/me/coach/chat` | 코치에게 메시지 전송 |
 | POST | `/me/coach/chat/read` | 읽음 처리 |
+| DELETE | `/me/coach` | **헬스장 + 담당 트레이너** 해제(멱등, 204) |
+| DELETE | `/me/coach/trainer` | **담당 트레이너만** 해제 — 헬스장은 유지(멱등, 204) |
 
 - 담당 코치는 **active 링크**만 인정(`get_member_trainer_id` → `active.is_(True)`).
   휴면 링크만 있으면 코치 조회/발신 불가(404/빈 목록).
 - `/me/coach/sessions`는 시간이 지나며 누적되는 PT 세션을 **최근 100건**으로 상한.
+
+### 회원↔헬스장 링크 (#444)
+
+회원의 "내 헬스장"은 `member_gyms`(회원당 1행, `member_id` PK)에 있다. 예전에는 담당
+트레이너의 소속(`trainer_profiles.gym_id`)에서 **파생**시켜, 트레이너만 해제해도 헬스장이
+함께 사라졌다 — 앱 MY 탭은 두 해제를 따로 제공하는데 서버가 그 구분을 표현하지 못했다.
+
+- `GET /me/gym` (헬스장 라우터) — 내 헬스장. 응답은 `/gyms/{id}` 와 같은 `GymOut` 이라
+  앱이 상세를 한 번 더 읽지 않는다. 연결이 없으면 404.
+- `GET /me/coach` 의 `gym` 도 이 링크가 진실이다. 링크가 없는 회원(백필 이전 데이터)만
+  예전처럼 트레이너 소속으로 폴백한다.
+- 헬스장 해제가 트레이너까지 끊는 것은 의도다 — 떠난 헬스장의 트레이너를 담당으로 남길
+  수 없다. 앱 mock(`MockGymRepository`)도 같은 규칙이다.
+- 링크를 **만드는** 경로는 아직 시드/백필뿐이다. 담당 배정 자체가 시드로만 생기는 현재
+  단계와 같다(헬스장 먼저 가입 → 트레이너 나중 선택 흐름은 후속).
 
 ## 7. 데모 시드 (`seed_trainer.py`, `seed_member_data.py`)
 
@@ -167,8 +211,13 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 
 ## 8. 마이그레이션 선형화 주의
 
-트레이너 마이그레이션은 스택이 **가장 마지막에 머지**되므로 병렬로 갈라졌던 번호를
-재선형화했다: `0010_diet_entry_macros`(#207) → `0011_health_daily_sugar_g`(#230/#231)
-→ **`0012_trainer_domain`**(도메인 테이블) → **`0013_trainer_active_coach_uq`**(회원당
-active 담당 1명 partial unique index). 반드시 `0010`·`0011`이 main에 반영된 뒤 머지해야
-alembic 단일 head가 유지된다. 자세한 배포/마이그레이션 절차는 배포 문서를 참고.
+트레이너 마이그레이션은 `0012_trainer_domain` →
+`0013_trainer_active_coach_uq` 뒤에 상담·트레이너 인덱스의 두 `0014` 분기를
+`0015_merge_alembic_heads`로 합친다. 그 뒤는 `0016_drop_vitals` →
+`0017_add_diet_exercise_goals` → `0018_diet_entry_sugar_g_float` →
+`0019_trainer_noti_settings` → **`0020_gym_profiles_trainer_fk`** 순의 단일
+chain이다. `0020`의 `down_revision`은 `0019_trainer_noti_settings`다.
+
+배포는 이 순서를 따라 `alembic upgrade head`를 실행하며, CI에서
+`alembic heads`가 하나인지 먼저 검증한다. 이미 별도 migration head를 적용한 DB는
+`down_revision`을 임의로 바꾸지 말고 배포 문서의 merge revision 절차를 따른다.

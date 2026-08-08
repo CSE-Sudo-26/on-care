@@ -43,14 +43,20 @@ class RateLimiter:
 limiter = RateLimiter()
 
 
-def rate_limit(bucket: str):
-    """엔드포인트에 붙일 의존성 팩토리. bucket 은 엔드포인트 구분자."""
+def rate_limit(bucket: str, per_minute: int | None = None):
+    """엔드포인트에 붙일 의존성 팩토리. bucket 은 엔드포인트 구분자.
+
+    `per_minute` 를 주면 그 한도를, 안 주면 인증용 기본 한도를 쓴다. LLM 호출처럼
+    실패해도 비용이 나가는 엔드포인트는 브루트포스 방어와 목적이 달라 한도를 따로
+    잡는다.
+    """
 
     def _dep(request: Request) -> None:
         settings = get_settings()
         if not settings.rate_limit_enabled:
             return
         ip = request.client.host if request.client else "unknown"
-        limiter.check(f"{bucket}:{ip}", settings.rate_limit_auth_per_minute, 60.0)
+        limit = per_minute or settings.rate_limit_auth_per_minute
+        limiter.check(f"{bucket}:{ip}", limit, 60.0)
 
     return _dep
