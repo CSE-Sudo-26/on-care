@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ---- GET /users/me ----
@@ -57,6 +57,25 @@ class MemberNotificationSettingsUpdate(BaseModel):
     trainer_message: bool | None = None
     ai_coaching: bool | None = None
     weekly_report: bool | None = None
+
+    @model_validator(mode="after")
+    def _reject_null_for_non_nullable_fields(
+        self,
+    ) -> MemberNotificationSettingsUpdate:
+        """명시적 null 은 422. 누락은 '변경 없음'이다.
+
+        `None` 은 두 가지를 뜻할 수 있다 — 항목을 아예 안 보냈거나, `null` 을
+        보냈거나. 여기 다섯 항목은 모두 DB NOT NULL 이라 null 로 바꿀 수 있는
+        값이 아니다. 구분하지 않으면 `{"weekly_report": null}` 이 조용히 성공하고
+        아무것도 바뀌지 않는다.
+
+        `ScheduleUpdateRequest._reject_null_for_non_nullable_fields` 와 같은
+        규약이다(#377).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
 
 
 class UserHealth(BaseModel):

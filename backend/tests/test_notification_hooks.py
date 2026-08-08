@@ -295,6 +295,39 @@ def test_a_settings_read_failure_still_delivers_the_message(
     )
 
 
+def test_explicit_null_is_rejected(client, db_session):
+    """명시적 null 은 422 — 누락('변경 없음')과 구분한다. (CodeRabbit 리뷰)
+
+    다섯 항목 모두 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다. 구분하지
+    않으면 `{"weekly_report": null}` 이 조용히 성공하고 아무것도 바뀌지 않는다.
+    `ScheduleUpdateRequest` 와 같은 규약이다(#377).
+    """
+    _, _, member_token, _ = _pair(client, db_session)
+
+    response = client.put(
+        "/v1/users/me/notification-settings",
+        headers=_auth(member_token),
+        json={"weekly_report": None},
+    )
+
+    assert response.status_code == 422, response.text
+
+
+def test_omitted_fields_still_mean_no_change(client, db_session):
+    """누락은 여전히 '변경 없음'이다 — null 거절이 부분 수정을 막지 않는다."""
+    _, _, member_token, _ = _pair(client, db_session)
+
+    updated = client.put(
+        "/v1/users/me/notification-settings",
+        headers=_auth(member_token),
+        json={"weekly_report": True},
+    )
+
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["weekly_report"] is True
+    assert updated.json()["trainer_message"] is True
+
+
 def test_an_empty_settings_update_creates_no_row(client, db_session):
     """바꿀 게 없으면 기본값 행을 새로 남기지 않는다. (CodeRabbit 리뷰)"""
     _, member_id, member_token, _ = _pair(client, db_session)
