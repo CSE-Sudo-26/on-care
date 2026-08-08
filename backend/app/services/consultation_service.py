@@ -1,14 +1,27 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.models import ConsultationRequest, Place, TrainerProfile, User
-from app.schemas.consultation_api import ConsultationCreate, ConsultationOut
+from app.models.models import (
+    ConsultationRequest,
+    MemberGym,
+    Notification,
+    Place,
+    TrainerClient,
+    TrainerProfile,
+    User,
+)
+from app.schemas.consultation_api import (
+    ConsultationCreate,
+    ConsultationOut,
+    ConsultationStatusFilter,
+    TrainerConsultationOut,
+)
 
 
 class InvalidConsultationRequest(Exception):
@@ -21,6 +34,27 @@ class ConsultationTargetNotFound(Exception):
 
 class DuplicatePendingConsultation(Exception):
     pass
+
+
+class ConsultationNotFound(Exception):
+    """내 앞으로 온 요청이 아니거나 존재하지 않음 — 라우터가 404 로 옮긴다.
+
+    남의 헬스장 요청을 403 이 아니라 404 로 돌리는 이유: 403 은 "그 id 의 요청이
+    존재한다"를 알려 주어, id 를 훑는 것만으로 다른 헬스장의 상담 건수를 셀 수 있다.
+    """
+
+
+class ConsultationAlreadyDecided(Exception):
+    """이미 승인·거절된 요청을 다시 처리하려 함 — 409."""
+
+
+class MemberAlreadyCoached(Exception):
+    """회원에게 이미 다른 트레이너의 활성 담당이 있음 — 409.
+
+    `uq_trainer_client_active_member` partial unique index 가 DB 차원에서 막지만,
+    그때는 IntegrityError 라 트레이너에게 보여 줄 말이 없다. 먼저 확인해서 이유를
+    돌려준다.
+    """
 
 
 def _pending_query(member_id: str, payload: ConsultationCreate):
@@ -161,3 +195,261 @@ def get_my_consultation(
     if row is None:
         return None
     return attach_target_names(db, [row])[0]
+
+
+# ---------------------------------------------------------------------------
+# 트레이너 측 — 인박스 조회와 승인·거절. (#467)
+#
+# 여기가 회원↔트레이너 관계가 성립하는 유일한 지점이다. 이전에는 `TrainerClient`
+# 링크를 만드는 코드가 시드 스크립트뿐이어서, 실서비스에서 신규 회원이 트레이너를
+# 가질 방법이 없었다.
+# ---------------------------------------------------------------------------
+
+#: 요청의 운동 목표 → 담당 링크의 초기 코칭 목표 문구. 트레이너가 나중에 고쳐 쓰는
+#: 출발점이며, 비워 두면 로스터 카드의 목표 줄이 빈칸으로 뜬다.
+_GOAL_LABELS: dict[str, str] = {
+    "weight_loss": "체중 감량",
+    "strength": "근력 향상",
+    "fitness": "체력 증진",
+    "posture": "자세 교정",
+    "health": "건강 관리",
+    "other": "상담 후 설정",
+}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def trainer_gym_id(db: Session, trainer_id: str) -> str | None:
+    """트레이너의 소속 헬스장 id. 소속이 없으면 None."""
+    return db.scalar(
+        select(TrainerProfile.gym_id).where(
+            TrainerProfile.trainer_id == trainer_id
+        )
+    )
+
+
+def _inbox_scope(trainer_id: str, gym_id: str | None):
+    """트레이너가 볼 수 있는 요청의 범위.
+
+    두 갈래다 — 나를 지정한 요청(`target_type='trainer'`)과 내 소속 헬스장으로 온
+    요청(`target_type='gym'`). 소속이 없는 트레이너는 헬스장 갈래가 통째로 빠진다
+    (gym_id 가 None 인 조건을 걸면 대상 헬스장이 지워진 남의 요청까지 걸린다).
+    """
+    mine = (ConsultationRequest.target_type == "trainer") & (
+        ConsultationRequest.trainer_id == trainer_id
+    )
+    if gym_id is None:
+        return mine
+    via_gym = (ConsultationRequest.target_type == "gym") & (
+        ConsultationRequest.gym_id == gym_id
+    )
+    return or_(mine, via_gym)
+
+
+def _to_trainer_out(
+    db: Session, rows: list[ConsultationRequest]
+) -> list[TrainerConsultationOut]:
+    """대상 이름 + 요청한 회원 이름을 붙여 인박스 카드 형태로 만든다.
+
+    이름은 대상별로 한 번씩 모아 읽는다([attach_target_names] 와 같은 이유) — 카드마다
+    회원을 다시 조회하면 목록 길이만큼 쿼리가 늘어난다.
+    """
+    if not rows:
+        return []
+    base = {item.id: item for item in attach_target_names(db, rows)}
+    member_ids = {r.member_id for r in rows}
+    member_names = {
+        u.id: u.name
+        for u in db.scalars(select(User).where(User.id.in_(member_ids))).all()
+    }
+    out: list[TrainerConsultationOut] = []
+    for row in rows:
+        item = TrainerConsultationOut(
+            **base[row.id].model_dump(),
+            member_name=member_names.get(row.member_id),
+            via_gym=row.target_type == "gym",
+            decided_by=row.decided_by,
+            decided_at=row.decided_at,
+            decision_note=row.decision_note,
+        )
+        out.append(item)
+    return out
+
+
+def list_for_trainer(
+    db: Session, trainer_id: str, status: ConsultationStatusFilter = "pending"
+) -> list[TrainerConsultationOut]:
+    """트레이너 인박스. 기본은 미처리(`pending`)만, 최신 요청이 위로 온다."""
+    query = select(ConsultationRequest).where(
+        _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id))
+    )
+    if status != "all":
+        query = query.where(ConsultationRequest.status == status)
+    rows = list(
+        db.scalars(
+            query.order_by(
+                ConsultationRequest.created_at.desc(),
+                ConsultationRequest.id.desc(),
+            )
+        ).all()
+    )
+    return _to_trainer_out(db, rows)
+
+
+def pending_count_for_trainer(db: Session, trainer_id: str) -> int:
+    """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다."""
+    rows = db.scalars(
+        select(ConsultationRequest.id).where(
+            _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
+            ConsultationRequest.status == "pending",
+        )
+    ).all()
+    return len(rows)
+
+
+def _require_inbox_row(
+    db: Session, trainer_id: str, consultation_id: str
+) -> ConsultationRequest:
+    row = db.scalar(
+        select(ConsultationRequest).where(
+            ConsultationRequest.id == consultation_id,
+            _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
+        )
+    )
+    if row is None:
+        raise ConsultationNotFound("상담 요청을 찾을 수 없습니다.")
+    return row
+
+
+def _notify(db: Session, *, user_id: str, title: str, body: str) -> None:
+    """회원에게 처리 결과 알림을 남긴다(커밋은 호출자가 한다).
+
+    승인·거절은 회원이 앱을 열어 보기 전에는 알 수 없는 변화라 알림이 결과 전달의
+    유일한 경로다. 푸시 발송은 이번 범위 밖이며 여기서는 행만 남긴다.
+    """
+    db.add(
+        Notification(
+            id=f"noti-{uuid.uuid4().hex[:12]}",
+            user_id=user_id,
+            title=title,
+            body=body,
+            category="system",
+            read=False,
+        )
+    )
+
+
+def _link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
+    """담당이 생긴 회원을 트레이너의 헬스장에 연결한다(커밋 없음).
+
+    이미 다른 헬스장에 연결돼 있으면 **건드리지 않는다** — 회원이 직접 고른 '내
+    헬스장'을 승인이 말없이 옮기면 MY 탭이 이유 없이 바뀐다.
+    """
+    if gym_id is None:
+        return
+    if db.get(MemberGym, member_id) is not None:
+        return
+    if db.scalar(select(Place.id).where(Place.id == gym_id)) is None:
+        return
+    db.add(MemberGym(member_id=member_id, gym_id=gym_id))
+
+
+def accept(
+    db: Session, trainer_id: str, consultation_id: str, note: str | None = None
+) -> TrainerConsultationOut:
+    """상담을 승인하고 담당 링크를 만든다.
+
+    `pending` 에서만 진행한다. 회원에게 이미 다른 트레이너의 활성 담당이 있으면
+    [MemberAlreadyCoached] — 회원당 활성 담당은 1명이라는 불변식
+    (`uq_trainer_client_active_member`)을 IntegrityError 로 만나기 전에 막는다.
+
+    상태 전이·링크 생성·헬스장 연결·알림을 **한 트랜잭션**으로 커밋한다. 나눠 커밋하면
+    승인 표시만 남고 담당은 안 생긴 반쪽 상태가 생긴다.
+    """
+    row = _require_inbox_row(db, trainer_id, consultation_id)
+    if row.status != "pending":
+        raise ConsultationAlreadyDecided("이미 처리된 상담 요청입니다.")
+
+    existing = db.scalar(
+        select(TrainerClient).where(
+            TrainerClient.member_id == row.member_id,
+            TrainerClient.active.is_(True),
+        )
+    )
+    if existing is not None and existing.trainer_id != trainer_id:
+        raise MemberAlreadyCoached("이미 다른 트레이너가 담당 중인 회원입니다.")
+
+    if existing is None:
+        # 과거에 담당했다가 휴면으로 내려간 링크가 있으면 되살린다 — 새 행을 넣으면
+        # (trainer, member) 유일 제약에 걸리고, 지난 루틴·채팅 이력도 갈라진다.
+        dormant = db.scalar(
+            select(TrainerClient).where(
+                TrainerClient.trainer_id == trainer_id,
+                TrainerClient.member_id == row.member_id,
+            )
+        )
+        if dormant is not None:
+            dormant.active = True
+        else:
+            last_order = db.scalar(
+                select(func.max(TrainerClient.sort_order)).where(
+                    TrainerClient.trainer_id == trainer_id
+                )
+            )
+            db.add(
+                TrainerClient(
+                    id=f"tc-{uuid.uuid4().hex[:12]}",
+                    trainer_id=trainer_id,
+                    member_id=row.member_id,
+                    goal=_GOAL_LABELS.get(row.exercise_goal, ""),
+                    active=True,
+                    sort_order=(last_order or 0) + 1,
+                )
+            )
+        _link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
+
+    row.status = "accepted"
+    row.decided_by = trainer_id
+    row.decided_at = _now()
+    row.decision_note = note
+
+    trainer_name = db.scalar(select(User.name).where(User.id == trainer_id))
+    _notify(
+        db,
+        user_id=row.member_id,
+        title="상담 요청이 승인되었어요",
+        body=(
+            f"{trainer_name or '트레이너'} 트레이너가 담당으로 연결되었어요."
+            if note is None
+            else f"{trainer_name or '트레이너'} 트레이너가 담당으로 연결되었어요. {note}"
+        ),
+    )
+    db.commit()
+    db.refresh(row)
+    return _to_trainer_out(db, [row])[0]
+
+
+def reject(
+    db: Session, trainer_id: str, consultation_id: str, note: str | None = None
+) -> TrainerConsultationOut:
+    """상담을 거절한다. 담당 링크는 만들지 않고 사유만 남긴다."""
+    row = _require_inbox_row(db, trainer_id, consultation_id)
+    if row.status != "pending":
+        raise ConsultationAlreadyDecided("이미 처리된 상담 요청입니다.")
+
+    row.status = "rejected"
+    row.decided_by = trainer_id
+    row.decided_at = _now()
+    row.decision_note = note
+
+    _notify(
+        db,
+        user_id=row.member_id,
+        title="상담 요청이 반려되었어요",
+        body=note or "다른 트레이너에게 상담을 요청해 보세요.",
+    )
+    db.commit()
+    db.refresh(row)
+    return _to_trainer_out(db, [row])[0]

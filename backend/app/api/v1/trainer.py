@@ -23,6 +23,11 @@ from app.api.deps import RequireTrainer
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import TrainerClient, TrainerProfile
+from app.schemas.consultation_api import (
+    ConsultationDecision,
+    ConsultationStatusFilter,
+    TrainerConsultationOut,
+)
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
@@ -32,7 +37,11 @@ from app.schemas.trainer_api import (
     TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
-from app.services import trainer_routine_options_service, trainer_service
+from app.services import (
+    consultation_service,
+    trainer_routine_options_service,
+    trainer_service,
+)
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
@@ -72,6 +81,28 @@ def _require_client(db: Session, trainer_id: str, member_id: str) -> TrainerClie
     if link is None:
         raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
     return link
+
+
+def _decide(
+    action,
+    db: Session,
+    trainer_id: str,
+    consultation_id: str,
+    payload: ConsultationDecision,
+) -> TrainerConsultationOut:
+    """승인·거절 공통 예외 매핑. 두 라우트가 같은 실패 모드를 갖는다. (#467)
+
+    남의 헬스장 요청을 404 로 돌리는 것은 의도다 — 403 은 그 id 의 요청이 존재한다는
+    사실을 알려 주어 id 를 훑는 것만으로 남의 상담 건수를 셀 수 있다.
+    """
+    try:
+        return action(db, trainer_id, consultation_id, payload.note)
+    except consultation_service.ConsultationNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except consultation_service.ConsultationAlreadyDecided as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except consultation_service.MemberAlreadyCoached as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/trainer/me", response_model=TrainerMe)
@@ -544,3 +575,59 @@ def trainer_send_report(
         )
         text = report.message
     return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)
+
+
+# ---------------------------------------------------------------------------
+# 상담 인박스 — 회원↔트레이너 관계가 성립하는 지점. (#467)
+#
+# 회원이 보낸 상담 요청(POST /consultations)은 지금까지 pending 으로 저장된 뒤
+# 아무도 볼 수 없었다. 승인이 곧 담당 링크(trainer_clients) 생성이고, 그 링크 위에서
+# 고객 목록·루틴·리포트·채팅이 동작한다.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/trainer/consultations", response_model=list[TrainerConsultationOut])
+def trainer_consultations(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    status: Annotated[ConsultationStatusFilter, Query()] = "pending",
+) -> list[TrainerConsultationOut]:
+    """나를 지정한 요청 + 내 소속 헬스장으로 온 요청. 기본은 미처리만."""
+    return consultation_service.list_for_trainer(db, trainer.id, status)
+
+
+@router.get("/trainer/consultations/pending-count", response_model=dict[str, int])
+def trainer_consultations_pending_count(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, int]:
+    """인박스 배지용 미처리 건수."""
+    return {"count": consultation_service.pending_count_for_trainer(db, trainer.id)}
+
+
+@router.post(
+    "/trainer/consultations/{consultation_id}/accept",
+    response_model=TrainerConsultationOut,
+)
+def trainer_accept_consultation(
+    consultation_id: str,
+    payload: ConsultationDecision,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerConsultationOut:
+    """상담을 승인하고 회원을 담당 고객으로 편입한다."""
+    return _decide(consultation_service.accept, db, trainer.id, consultation_id, payload)
+
+
+@router.post(
+    "/trainer/consultations/{consultation_id}/reject",
+    response_model=TrainerConsultationOut,
+)
+def trainer_reject_consultation(
+    consultation_id: str,
+    payload: ConsultationDecision,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerConsultationOut:
+    """상담을 거절한다. 사유는 회원 알림 본문에 그대로 실린다."""
+    return _decide(consultation_service.reject, db, trainer.id, consultation_id, payload)
