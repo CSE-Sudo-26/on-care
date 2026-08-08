@@ -310,17 +310,39 @@ def pending_count_for_trainer(db: Session, trainer_id: str) -> int:
 
 
 def _require_inbox_row(
-    db: Session, trainer_id: str, consultation_id: str
+    db: Session, trainer_id: str, consultation_id: str, *, lock: bool = False
 ) -> ConsultationRequest:
-    row = db.scalar(
-        select(ConsultationRequest).where(
-            ConsultationRequest.id == consultation_id,
-            _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
-        )
+    """인박스 범위 안의 상담 행. 없거나 남의 것이면 [ConsultationNotFound].
+
+    [lock] 은 결정 경로 전용이다. 헬스장으로 온 요청은 같은 헬스장 트레이너 누구나
+    받을 수 있어 두 사람이 같은 순간에 승인할 수 있고, 잠금이 없으면 둘 다 `pending`
+    검사를 통과한 뒤 링크 삽입에서 제약에 걸린다(리뷰). 행을 잠가 직렬화한다.
+    """
+    query = select(ConsultationRequest).where(
+        ConsultationRequest.id == consultation_id,
+        _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
     )
+    if lock:
+        query = query.with_for_update()
+    row = db.scalar(query)
     if row is None:
         raise ConsultationNotFound("상담 요청을 찾을 수 없습니다.")
     return row
+
+
+def _commit_decision(db: Session) -> None:
+    """결정을 커밋한다. 경합으로 제약에 걸리면 '이미 처리됨'으로 수렴시킨다.
+
+    행 잠금이 같은 상담의 동시 처리는 막지만, 회원이 **다른 상담 경로로** 동시에
+    담당이 되는 경우까지는 막지 못한다 — 그때는 `uq_trainer_client_active_member`
+    가 잡는다. IntegrityError 를 그대로 두면 앱에는 500 으로 보이고, 앱은 409 본문의
+    문구를 보여 주도록 만들어져 있어 이유가 사라진다.
+    """
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConsultationAlreadyDecided("이미 처리된 상담 요청입니다.") from exc
 
 
 def _notify(db: Session, *, user_id: str, title: str, body: str) -> None:
@@ -368,7 +390,7 @@ def accept(
     상태 전이·링크 생성·헬스장 연결·알림을 **한 트랜잭션**으로 커밋한다. 나눠 커밋하면
     승인 표시만 남고 담당은 안 생긴 반쪽 상태가 생긴다.
     """
-    row = _require_inbox_row(db, trainer_id, consultation_id)
+    row = _require_inbox_row(db, trainer_id, consultation_id, lock=True)
     if row.status != "pending":
         raise ConsultationAlreadyDecided("이미 처리된 상담 요청입니다.")
 
@@ -408,7 +430,10 @@ def accept(
                     sort_order=(last_order or 0) + 1,
                 )
             )
-        _link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
+    # 링크 생성 여부와는 별개 조건이다 — 이미 이 트레이너의 담당인 회원이 헬스장
+    # 상담을 새로 넣고 승인받는 경우에도 헬스장 연결은 이뤄져야 한다(리뷰).
+    # 이미 연결된 회원에게는 no-op 이라 중복 호출이 무해하다.
+    _link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
 
     row.status = "accepted"
     row.decided_by = trainer_id
@@ -426,7 +451,7 @@ def accept(
             else f"{trainer_name or '트레이너'} 트레이너가 담당으로 연결되었어요. {note}"
         ),
     )
-    db.commit()
+    _commit_decision(db)
     db.refresh(row)
     return _to_trainer_out(db, [row])[0]
 
@@ -450,6 +475,6 @@ def reject(
         title="상담 요청이 반려되었어요",
         body=note or "다른 트레이너에게 상담을 요청해 보세요.",
     )
-    db.commit()
+    _commit_decision(db)
     db.refresh(row)
     return _to_trainer_out(db, [row])[0]

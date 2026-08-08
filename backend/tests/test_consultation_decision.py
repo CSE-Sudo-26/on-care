@@ -14,6 +14,8 @@ from uuid import uuid4
 
 import pytest
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.security import hash_password
 from app.models.models import (
     ConsultationRequest,
@@ -24,6 +26,7 @@ from app.models.models import (
     TrainerProfile,
     User,
 )
+from app.services import consultation_service
 
 EMAIL_PREFIX = "decide-test-"
 PLACE_PREFIX = "decide-place-"
@@ -295,7 +298,7 @@ def test_accept_links_member_into_roster(client, db_session):
 
 def test_accept_notifies_the_member(client, db_session):
     trainer, trainer_token = _trainer(client, db_session)
-    member_id, member_token = _member(client)
+    _, member_token = _member(client)
     consultation_id = _request_consultation(
         client, member_token, trainer_id=trainer.id
     )
@@ -376,6 +379,103 @@ def test_accept_rejects_member_already_coached(client, db_session):
 
     assert accepted.status_code == 200, accepted.text
     assert blocked.status_code == 409, blocked.text
+
+
+def test_commit_decision_maps_a_constraint_race_to_already_decided():
+    """경합으로 제약에 걸린 커밋은 500 이 아니라 '이미 처리됨'(409)이 된다.
+
+    아래의 두 트레이너 테스트는 TestClient 가 동기라 **진짜 경합을 재현하지 못한다**
+    — 늦은 요청은 잠금이 없어도 `status != pending` 에서 걸린다. 실제 경합에서만
+    도달하는 것은 커밋의 IntegrityError 경로이므로, 그 매핑을 여기서 직접 덮는다.
+    """
+
+    class _RacingSession:
+        """커밋이 제약 위반으로 실패하는 세션. 롤백 여부까지 확인한다."""
+
+        def __init__(self) -> None:
+            self.rolled_back = False
+
+        def commit(self) -> None:
+            raise IntegrityError("INSERT", {}, Exception("unique violation"))
+
+        def rollback(self) -> None:
+            self.rolled_back = True
+
+    session = _RacingSession()
+
+    with pytest.raises(consultation_service.ConsultationAlreadyDecided):
+        consultation_service._commit_decision(session)
+
+    # 롤백하지 않으면 세션이 실패한 트랜잭션에 갇혀 이후 쿼리가 전부 죽는다.
+    assert session.rolled_back is True
+
+
+def test_two_gym_trainers_both_see_the_request_and_only_one_wins(
+    client, db_session
+):
+    """헬스장 문의는 소속 트레이너 누구나 받는다 — 늦은 쪽은 409 여야 한다.
+
+    순차 호출이라 경합 자체는 재현하지 못하고(위 단위 테스트가 그 경로를 덮는다),
+    여기서는 인박스 공유 범위와 '한 명만 승인된다'는 결과 계약을 확인한다.
+    """
+    gym = _gym(db_session)
+    first_trainer, first_token = _trainer(client, db_session, gym=gym)
+    second_trainer, second_token = _trainer(client, db_session, gym=gym)
+    _, member_token = _member(client)
+    consultation_id = _request_consultation(client, member_token, gym_id=gym.id)
+
+    # 같은 요청이 두 트레이너의 인박스에 모두 보인다.
+    assert first_trainer.id != second_trainer.id
+    for token in (first_token, second_token):
+        inbox = client.get("/v1/trainer/consultations", headers=_auth(token))
+        assert consultation_id in {item["id"] for item in inbox.json()}
+
+    won = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(first_token),
+        json={},
+    )
+    lost = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(second_token),
+        json={},
+    )
+
+    assert won.status_code == 200, won.text
+    assert lost.status_code == 409, lost.text
+
+
+def test_accept_links_the_gym_for_an_existing_client(client, db_session):
+    """이미 담당 중인 회원이 헬스장 상담을 넣어도 헬스장 연결은 이뤄진다.
+
+    링크 생성과 헬스장 연결은 별개 조건이다 — 헬스장 연결을 '새 링크를 만든 경우'
+    안에 두면 기존 고객은 영영 연결되지 않는다(리뷰).
+    """
+    gym = _gym(db_session)
+    trainer, trainer_token = _trainer(client, db_session, gym=gym)
+    member_id, member_token = _member(client)
+
+    first = _request_consultation(client, member_token, trainer_id=trainer.id)
+    client.post(
+        f"/v1/trainer/consultations/{first}/accept",
+        headers=_auth(trainer_token),
+        json={},
+    )
+    # 담당은 이미 이 트레이너다. 헬스장 링크만 지운 뒤 헬스장 상담을 새로 넣는다.
+    db_session.query(MemberGym).filter(
+        MemberGym.member_id == member_id
+    ).delete(synchronize_session=False)
+    db_session.commit()
+
+    second = _request_consultation(client, member_token, gym_id=gym.id)
+    accepted = client.post(
+        f"/v1/trainer/consultations/{second}/accept",
+        headers=_auth(trainer_token),
+        json={},
+    )
+
+    assert accepted.status_code == 200, accepted.text
+    assert db_session.get(MemberGym, member_id).gym_id == gym.id
 
 
 def test_accept_foreign_request_is_not_found(client, db_session):

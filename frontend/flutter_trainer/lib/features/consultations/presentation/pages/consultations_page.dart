@@ -108,6 +108,12 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(success)));
     } on AppError catch (e) {
+      // A failed decision usually means the request moved on without us —
+      // another trainer at the same gym accepted it first. Refresh before
+      // showing the reason, or the card stays actionable and the trainer
+      // can keep pressing 승인 on something already decided (review).
+      ref.invalidate(consultationsProvider);
+      ref.invalidate(consultationPendingCountProvider);
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
       messenger.showSnackBar(
