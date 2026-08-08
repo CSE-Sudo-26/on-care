@@ -3,14 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
-import 'package:oncare/core/storage/prefs_store.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// 숫자 전용 입력 필터 — 붙여넣기/외부 키보드로 문자가 들어와 저장 시 int
 /// 파싱이 null 로 날아가는 것을 막는다.
@@ -587,22 +586,9 @@ class _GoalsSectionLabel extends StatelessWidget {
 
 // ───────────────────────────────────────────────────────── 알림 설정 ──
 
-/// One notification toggle: SharedPreferences key and the default used before
-/// the user has ever changed it. The display label is resolved from
-/// [_notifLabel] so it is never carried as a hardcoded string.
-class _NotifItem {
-  const _NotifItem(this.prefKey, this.fallback);
-  final String prefKey;
-  final bool fallback;
-}
-
-const List<_NotifItem> _notifItems = <_NotifItem>[
-  _NotifItem('notif_diet_log', true),
-  _NotifItem('notif_exercise_reminder', true),
-  _NotifItem('notif_trainer_message', true),
-  _NotifItem('notif_ai_coaching', true),
-  _NotifItem('notif_weekly_report', false),
-];
+/// 토글 목록은 저장소 계약(`kNotificationSettingItems`)이 갖는다 — 키를 서버와
+/// 공유하므로 화면이 따로 들고 있으면 어긋난다(#489). 표시 라벨은 [_notifLabel]
+/// 이 ARB 에서 찾는다.
 
 /// Localized label for a notification toggle, keyed off its stable prefKey.
 String _notifLabel(AppLocalizations l, String prefKey) {
@@ -622,8 +608,11 @@ String _notifLabel(AppLocalizations l, String prefKey) {
   }
 }
 
-/// Notification preferences — toggles load from and persist to
-/// SharedPreferences so they survive a reload.
+/// 알림 수신 설정.
+///
+/// 실모드는 계정 단위로 서버에 저장한다 — 기기를 바꿔도 유지되고, 무엇보다
+/// 서버가 설정을 알아야 알림을 만들 때 끌 수 있다(#489). 데모/목은 기존대로
+/// SharedPreferences 라 화면과 동작이 지금과 같다.
 Future<void> openNotificationSettingsPage(BuildContext context) {
   return context.push<void>(AppRoutes.mySettingsPath('notifications'));
 }
@@ -638,34 +627,45 @@ class NotificationSettingsPage extends ConsumerStatefulWidget {
 
 class _NotificationSettingsPageState
     extends ConsumerState<NotificationSettingsPage> {
-  late final SharedPreferences _prefs;
-  final Map<String, bool> _on = <String, bool>{};
+  /// 저장 중인 값을 덮어쓰는 화면 상태. 서버 응답을 기다리는 동안에도 스위치가
+  /// 즉시 움직여야 한다 — 왕복을 기다리면 눌리지 않는 것처럼 보인다.
+  final Map<String, bool> _pending = <String, bool>{};
 
-  @override
-  void initState() {
-    super.initState();
-    _prefs = ref.read(sharedPreferencesProvider);
-    for (final _NotifItem item in _notifItems) {
-      _on[item.prefKey] = _prefs.getBool(item.prefKey) ?? item.fallback;
+  Future<void> _persist(String key, bool value) async {
+    setState(() => _pending[key] = value);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(notificationSettingsRepositoryProvider)
+          .setValue(key, value);
+    } on Object {
+      // 저장에 실패하면 화면을 서버 값으로 되돌린다. 켜진 줄 알았는데 안 오는
+      // 상태가 가장 나쁘다.
+      if (!mounted) return;
+      setState(() => _pending.remove(key));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('알림 설정을 저장하지 못했어요')),
+      );
     }
-  }
-
-  void _persist(String key, bool value) {
-    setState(() => _on[key] = value);
-    _prefs.setBool(key, value);
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final Map<String, bool> saved =
+        ref.watch(notificationSettingsProvider).valueOrNull ??
+        <String, bool>{
+          for (final NotificationSettingItem item in kNotificationSettingItems)
+            item.key: item.fallback,
+        };
     return _shell(context, l.myNotifTitle, <Widget>[
       _card(<Widget>[
-        for (int i = 0; i < _notifItems.length; i++) ...<Widget>[
+        for (int i = 0; i < kNotificationSettingItems.length; i++) ...<Widget>[
           Row(
             children: <Widget>[
               Expanded(
                 child: Text(
-                  _notifLabel(l, _notifItems[i].prefKey),
+                  _notifLabel(l, kNotificationSettingItems[i].key),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -674,13 +674,17 @@ class _NotificationSettingsPageState
                 ),
               ),
               Switch.adaptive(
-                value: _on[_notifItems[i].prefKey] ?? _notifItems[i].fallback,
+                value:
+                    _pending[kNotificationSettingItems[i].key] ??
+                    saved[kNotificationSettingItems[i].key] ??
+                    kNotificationSettingItems[i].fallback,
                 activeThumbColor: FigmaColors.primary,
-                onChanged: (bool v) => _persist(_notifItems[i].prefKey, v),
+                onChanged: (bool v) =>
+                    _persist(kNotificationSettingItems[i].key, v),
               ),
             ],
           ),
-          if (i < _notifItems.length - 1)
+          if (i < kNotificationSettingItems.length - 1)
             const Divider(height: 1, color: FigmaColors.hairline),
         ],
       ]),

@@ -34,6 +34,31 @@ class SettingItem(BaseModel):
     kind: str
 
 
+class MemberNotificationSettings(BaseModel):
+    """회원 알림 수신 설정. (#489)
+
+    필드 이름은 사용자 앱이 로컬에 쓰던 키(`notif_*`)에서 접두사만 뗀 것이다 —
+    앱이 저장 위치만 서버로 옮기는 것이므로 새 이름을 만들면 화면과 대응이
+    흐려진다.
+    """
+
+    diet_log: bool
+    exercise_reminder: bool
+    trainer_message: bool
+    ai_coaching: bool
+    weekly_report: bool
+
+
+class MemberNotificationSettingsUpdate(BaseModel):
+    """부분 수정 — 보낸 항목만 반영한다."""
+
+    diet_log: bool | None = None
+    exercise_reminder: bool | None = None
+    trainer_message: bool | None = None
+    ai_coaching: bool | None = None
+    weekly_report: bool | None = None
+
+
 class UserHealth(BaseModel):
     profile: HealthProfileBrief
     risk: RiskInfo
