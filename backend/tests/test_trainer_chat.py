@@ -1,6 +1,49 @@
 """트레이너 채팅 + 루틴 배정(#251). DB 필요(로컬 skip, CI 실행)."""
 from __future__ import annotations
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_seeded_threads(db_session):
+    """시드 회원의 스레드를 매 테스트마다 시드 상태로 되돌린다. (#484)
+
+    `build_chat_thread` 는 최신 `limit`(기본 50)건만 준다. 그런데 메시지를 보내는
+    테스트가 시드 회원 스레드에 남긴 메시지를 지우지 않아, 실행을 거듭할수록 창이
+    테스트 잔여물로 채워졌다. 결국 시드 첫 메시지가 창 밖으로 밀려나
+    `test_chat_thread_seeded_and_sender_mapped` 가 간헐적으로 깨졌다 — 한 로컬
+    DB 에서는 `user-jisu` 스레드가 89건(시드 3건, 잔여물 86건)까지 불어 있었다.
+
+    CI 는 매 실행마다 DB 가 새것이라 초록불이었고, 그래서 로컬에서 반복 실행하는
+    사람에게만 걸렸다.
+
+    시드 행은 결정론적 id(`seed-chat-…` / `seed-routine-…`)를 갖는다. 그 밖의 것만
+    지우므로 시드는 그대로 남는다. **테스트 전에도** 지우는 이유: 이미 잔여물이
+    쌓인 DB 에서도 첫 실행부터 통과해야 한다.
+
+    루틴도 같은 방식으로 누적된다(한 로컬 DB 에서 `user-jisu` 55건). 지금은 단언이
+    최신 항목만 보지만, 목록에 limit 이 생기면 같은 방식으로 깨진다.
+    """
+    _purge(db_session)
+    yield
+    _purge(db_session)
+
+
+def _purge(db_session) -> None:
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import ChatMessage, TrainerRoutine
+
+    db_session.rollback()
+    db_session.query(ChatMessage).filter(
+        ChatMessage.trainer_id == TRAINER_ID,
+        ~ChatMessage.id.like("seed-chat-%"),
+    ).delete(synchronize_session=False)
+    db_session.query(TrainerRoutine).filter(
+        TrainerRoutine.trainer_id == TRAINER_ID,
+        ~TrainerRoutine.id.like("seed-routine-%"),
+    ).delete(synchronize_session=False)
+    db_session.commit()
+
 
 def _tok(client) -> str:
     return client.post(
