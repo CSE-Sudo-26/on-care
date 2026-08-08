@@ -289,7 +289,7 @@ void main() {
       preferredTimeSlot: PreferredTimeSlot.afternoon,
       message: null,
       status: ConsultationStatus.accepted,
-      createdAt: DateTime(2026, 8, 1),
+      createdAt: DateTime(2026, 8),
     );
     await pumpGymTab(
       tester,
