@@ -12,7 +12,7 @@ from app.models.models import (
     TrainerSchedule,
     User,
 )
-from app.services import reservation_service
+from app.services import reservation_service, trainer_service
 
 
 def test_reserve_flushes_schedule_before_reservation() -> None:
@@ -50,6 +50,29 @@ def test_reserve_flushes_schedule_before_reservation() -> None:
     assert first_add < flush < second_add < commit
     assert result.schedule_id.startswith("sched-")
     assert slot.remaining == 0
+
+
+def test_reserved_schedule_is_blocked_from_regular_update_and_delete() -> None:
+    schedule = TrainerSchedule(
+        id="reserved-schedule-test",
+        trainer_id="trainer-demo",
+    )
+    db = Mock(spec=Session)
+    db.get.return_value = schedule
+    db.scalar.return_value = "reservation-test"
+
+    with pytest.raises(trainer_service.ScheduleConflict):
+        trainer_service.update_session(
+            db,
+            "trainer-demo",
+            schedule.id,
+            {"time": "09:00"},
+        )
+    with pytest.raises(trainer_service.ScheduleConflict):
+        trainer_service.delete_session(db, "trainer-demo", schedule.id)
+
+    db.commit.assert_not_called()
+    db.delete.assert_not_called()
 
 
 def _login(client, email: str) -> str:
@@ -151,6 +174,41 @@ def test_reservation_persists_and_appears_in_trainer_schedule(
     )
     assert timeline.status_code == 200
     assert any(row["id"] == schedule.id for row in timeline.json())
+
+
+def test_reserved_schedule_cannot_be_updated_or_deleted_as_regular_schedule(
+    client, db_session, created_slots
+):
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+
+    reservation_id = booked.json()["id"]
+    schedule_id = booked.json()["schedule_id"]
+    updated = client.put(
+        f"/v1/trainer/schedule/{schedule_id}",
+        headers=_headers(trainer_token),
+        json={"time": "09:00"},
+    )
+    deleted = client.delete(
+        f"/v1/trainer/schedule/{schedule_id}",
+        headers=_headers(trainer_token),
+    )
+
+    assert updated.status_code == 409, updated.text
+    assert deleted.status_code == 409, deleted.text
+    db_session.expire_all()
+    assert db_session.get(TrainerReservation, reservation_id) is not None
+    assert db_session.get(TrainerSchedule, schedule_id) is not None
+    persisted_slot = db_session.get(TrainerReservationSlot, slot["id"])
+    assert persisted_slot is not None
+    assert persisted_slot.remaining == 0
 
 
 def test_duplicate_and_full_slot_return_409(client, created_slots):
