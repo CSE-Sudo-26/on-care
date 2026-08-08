@@ -48,9 +48,7 @@ class _Body extends ConsumerWidget {
       await ref.read(exerciseRepositoryProvider).deleteSession(id);
       ref.invalidate(exerciseWeekProvider); // 삭제가 이번 주 집계에 반영
     } catch (_) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.dietDeleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.dietDeleteFailed)));
     }
   }
 
@@ -152,9 +150,18 @@ class _Body extends ConsumerWidget {
               if (hasStackedSeries)
                 _LegendRow(
                   entries: <_LegendEntry>[
-                    _LegendEntry(label: l.exTypeCardio, color: const Color(0xFF60A5FA)),
-                    _LegendEntry(label: l.exTypeStrength, color: const Color(0xFF1E40AF)),
-                    _LegendEntry(label: l.exTypeStretching, color: const Color(0xFFBAE6FD)),
+                    _LegendEntry(
+                      label: l.exTypeCardio,
+                      color: const Color(0xFF60A5FA),
+                    ),
+                    _LegendEntry(
+                      label: l.exTypeStrength,
+                      color: const Color(0xFF1E40AF),
+                    ),
+                    _LegendEntry(
+                      label: l.exTypeStretching,
+                      color: const Color(0xFFBAE6FD),
+                    ),
                   ],
                 ),
             ],
@@ -210,7 +217,7 @@ class _StatTile extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
             ),
           ),
           const SizedBox(height: 4),
@@ -339,7 +346,7 @@ class _SessionCard extends StatelessWidget {
           Text(
             dateLabel,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -372,7 +379,7 @@ class _SessionCard extends StatelessWidget {
                       child: Text(
                         _typeLabel(session.type),
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.accentForeground,
                         ),
@@ -387,7 +394,7 @@ class _SessionCard extends StatelessWidget {
                   Text(
                     '소모 칼로리',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: AppColors.foreground,
                     ),
                   ),
                   Text(
@@ -415,7 +422,7 @@ class _SessionCard extends StatelessWidget {
           Text(
             '${session.minutes}분 운동',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
             ),
           ),
         ],

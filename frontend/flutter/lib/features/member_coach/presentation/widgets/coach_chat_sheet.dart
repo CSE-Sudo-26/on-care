@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 
@@ -121,7 +122,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                         Text(
                           widget.trainerName,
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                           ),
@@ -140,9 +141,9 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                             Text(
                               '담당 트레이너 · 상담 가능',
                               style: TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: FigmaColors.textMuted,
+                                color: AppColors.mutedForeground,
                               ),
                             ),
                           ],
@@ -168,7 +169,7 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                   error: (_, _) => const Center(
                     child: Text(
                       '대화를 불러오지 못했어요',
-                      style: TextStyle(color: FigmaColors.textMuted),
+                      style: TextStyle(color: AppColors.foreground),
                     ),
                   ),
                   data: (messages) => ListView.builder(
@@ -257,7 +258,7 @@ class _Bubble extends StatelessWidget {
                   child: Text(
                     message.body,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       height: 1.4,
                       fontWeight: FontWeight.w500,
                       color: fromMe ? Colors.white : FigmaColors.ink,
@@ -269,9 +270,11 @@ class _Bubble extends StatelessWidget {
                   message.timeLabel,
                   key: ValueKey<String>('coach-message-time-${message.id}'),
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: fromMe ? FigmaColors.primary : FigmaColors.textMuted,
+                    color: fromMe
+                        ? FigmaColors.primary
+                        : AppColors.mutedForeground,
                   ),
                 ),
               ],

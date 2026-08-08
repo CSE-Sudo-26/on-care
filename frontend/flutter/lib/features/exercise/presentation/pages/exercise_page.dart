@@ -8,6 +8,7 @@ import 'package:intl/intl.dart' show NumberFormat;
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -138,9 +139,9 @@ class _SubTabs extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: on ? FigmaColors.ink : FigmaColors.textMuted,
+                  color: on ? FigmaColors.ink : AppColors.mutedForeground,
                 ),
               ),
             ],
@@ -201,10 +202,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
           children: <Widget>[
             Text(
               l.exLoadError,
-              style: const TextStyle(
-                fontSize: 13,
-                color: FigmaColors.textMuted,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
             const SizedBox(height: 14),
             OutlinedButton(
@@ -247,7 +245,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               child: Text(
                 l.exWeekSummary,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
                 ),
@@ -394,9 +392,9 @@ class _ExerciseWeekStrip extends StatelessWidget {
                 Text(
                   l.dietWeekLabel(center.month, _weekOfMonth(center)),
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textSub,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
                 if (showTodayButton)
@@ -416,7 +414,7 @@ class _ExerciseWeekStrip extends StatelessWidget {
                       child: Text(
                         l.dietToday,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.primary,
                         ),
@@ -497,10 +495,10 @@ class _ExerciseOtherDay extends StatelessWidget {
           l.otherDateEmpty(l.pageExerciseTitle),
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 14,
             height: 1.5,
             fontWeight: FontWeight.w500,
-            color: FigmaColors.textMuted,
+            color: AppColors.foreground,
           ),
         ),
       ),
@@ -527,7 +525,7 @@ class _WeekDay extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color labelColor = isSelected || isToday
         ? FigmaColors.primary
-        : FigmaColors.textFaint;
+        : AppColors.mutedForeground;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -537,7 +535,7 @@ class _WeekDay extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: labelColor,
             ),
@@ -555,13 +553,13 @@ class _WeekDay extends StatelessWidget {
             child: Text(
               '${day.day}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: isSelected
                     ? Colors.white
                     : isToday
                     ? FigmaColors.primary
-                    : FigmaColors.textSub,
+                    : AppColors.mutedForeground,
               ),
             ),
           ),
@@ -604,7 +602,7 @@ class _StatCard extends StatelessWidget {
         : FigmaColors.ink;
     final Color labelColor = streak
         ? Colors.white.withValues(alpha: 0.8)
-        : FigmaColors.textMuted;
+        : AppColors.mutedForeground;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -628,7 +626,7 @@ class _StatCard extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: labelColor,
                   ),
@@ -658,13 +656,13 @@ class _StatCard extends StatelessWidget {
                   TextSpan(
                     text: ' $unit',
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: streak
                           ? Colors.white.withValues(alpha: 0.85)
                           : accent
                           ? FigmaColors.primary.withValues(alpha: 0.7)
-                          : FigmaColors.textMuted,
+                          : AppColors.mutedForeground,
                     ),
                   ),
               ],
@@ -818,7 +816,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
             Text(
               l.exActivityTitle,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.ink,
               ),
@@ -919,7 +917,7 @@ class _TodayDonut extends StatelessWidget {
                         Text(
                           '$total',
                           style: const TextStyle(
-                            fontSize: 26,
+                            fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                             height: 1,
@@ -929,9 +927,9 @@ class _TodayDonut extends StatelessWidget {
                         Text(
                           l.unitMinutes,
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: FigmaColors.textMuted,
+                            color: AppColors.mutedForeground,
                           ),
                         ),
                       ],
@@ -949,9 +947,9 @@ class _TodayDonut extends StatelessWidget {
                     Text(
                       l.exTodayTotalTime,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textMuted,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -999,16 +997,16 @@ class _DonutLegendRow extends StatelessWidget {
           child: Text(
             seg.label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w500,
-              color: FigmaColors.textSub,
+              color: AppColors.foreground,
             ),
           ),
         ),
         Text(
           l.unitMinutesValue(seg.minutes),
           style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
             color: FigmaColors.ink,
           ),
@@ -1097,9 +1095,11 @@ class _PeriodToggle extends StatelessWidget {
                 child: Text(
                   labels[i],
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: active == i ? Colors.white : FigmaColors.textMuted,
+                    color: active == i
+                        ? Colors.white
+                        : AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -1210,7 +1210,7 @@ class _ActivityChart extends StatelessWidget {
                             child: Tooltip(
                               richMessage: TextSpan(
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
                                   color: FigmaColors.ink,
                                   height: 1.15,
@@ -1278,9 +1278,9 @@ class _Legend extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: FigmaColors.textSub,
+            color: AppColors.mutedForeground,
           ),
         ),
       ],
@@ -1339,8 +1339,8 @@ class _StackedBarPainter extends CustomPainter {
     ];
 
     const TextStyle gridStyle = TextStyle(
-      fontSize: 8,
-      color: FigmaColors.textFaint,
+      fontSize: 9,
+      color: AppColors.mutedForeground,
     );
     for (final double g in grids) {
       final double y = chartH - (g / max) * chartH;
@@ -1431,9 +1431,9 @@ class _StackedBarPainter extends CustomPainter {
         text: TextSpan(
           text: i < dayLabels.length ? dayLabels[i] : '',
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 10,
             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-            color: isToday ? FigmaColors.primary : FigmaColors.textMuted,
+            color: isToday ? FigmaColors.primary : AppColors.mutedForeground,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1444,7 +1444,7 @@ class _StackedBarPainter extends CustomPainter {
           text: TextSpan(
             text: todayLabel,
             style: const TextStyle(
-              fontSize: 7.5,
+              fontSize: 8.5,
               fontWeight: FontWeight.w600,
               color: FigmaColors.primary,
             ),
@@ -1509,7 +1509,7 @@ class _ExerciseFeedback extends StatelessWidget {
                 Text(
                   l.exAiFeedback,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.primary,
                   ),
@@ -1518,7 +1518,7 @@ class _ExerciseFeedback extends StatelessWidget {
                 Text(
                   message,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     height: 1.5,
                     fontWeight: FontWeight.w500,
                     color: FigmaColors.ink,
@@ -1570,7 +1570,7 @@ class _PtLogCard extends StatelessWidget {
               Text(
                 '오늘 완료한 PT',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: FigmaColors.ink,
                 ),
@@ -1609,9 +1609,9 @@ class _PtLogCard extends StatelessWidget {
                   Text(
                     it,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF3A3A4A),
+                      color: AppColors.foreground,
                     ),
                   ),
                 ],
@@ -1651,7 +1651,7 @@ class _PtLogCard extends StatelessWidget {
                         Text(
                           '김트레이너',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                           ),
@@ -1659,9 +1659,9 @@ class _PtLogCard extends StatelessWidget {
                         Text(
                           '오늘의 피드백',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: FigmaColors.textMuted,
+                            color: AppColors.mutedForeground,
                           ),
                         ),
                       ],
@@ -1673,7 +1673,7 @@ class _PtLogCard extends StatelessWidget {
                   '숄더프레스할 때 오른쪽 어깨가 들리는 경향이 있으니, 마무리할 때 '
                   '회전근개 스트레칭을 꼭 해주세요!',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     height: 1.5,
                     fontWeight: FontWeight.w500,
                     color: FigmaColors.ink,
@@ -1716,7 +1716,7 @@ class _MetaChip extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: color,
             ),

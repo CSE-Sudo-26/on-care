@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
@@ -342,8 +343,8 @@ class _ConsultationRequestPageState
               Text(
                 l.exOtherGoalHint,
                 style: const TextStyle(
-                  fontSize: 11,
-                  color: FigmaColors.textMuted,
+                  fontSize: 12.5,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
@@ -482,7 +483,7 @@ class _TargetCard extends StatelessWidget {
                 child: Text(
                   l.exConsultTarget,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.primary,
                   ),
@@ -497,7 +498,7 @@ class _TargetCard extends StatelessWidget {
                 child: Text(
                   typeLabel,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.primary,
                   ),
@@ -523,7 +524,10 @@ class _TargetCard extends StatelessWidget {
                 : gym.address,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -533,9 +537,9 @@ class _TargetCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: FigmaColors.textBody,
+              color: AppColors.foreground,
             ),
           ),
         ],
@@ -630,12 +634,12 @@ class _DateField extends StatelessWidget {
                 child: Text(
                   text,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: date == null
                         ? FontWeight.w500
                         : FontWeight.w700,
                     color: date == null
-                        ? FigmaColors.textMuted
+                        ? AppColors.mutedForeground
                         : FigmaColors.ink,
                   ),
                 ),
@@ -659,7 +663,7 @@ class _FieldTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: FontWeight.w800,
         color: FigmaColors.ink,
       ),
@@ -679,7 +683,7 @@ class _ErrorText extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12.5,
           color: Theme.of(context).colorScheme.error,
         ),
       ),
@@ -705,7 +709,7 @@ class _PendingNotice extends StatelessWidget {
         message,
         textAlign: TextAlign.center,
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 13.5,
           fontWeight: FontWeight.w600,
           color: FigmaColors.primary,
         ),
@@ -738,10 +742,7 @@ class _StateMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: FigmaColors.textMuted,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
             ),
             if (onRetry != null) ...<Widget>[
               const SizedBox(height: 12),

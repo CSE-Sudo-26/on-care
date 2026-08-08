@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -100,9 +101,9 @@ class _CompletionContent extends StatelessWidget {
               l.exConsultCompletionInfo,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 height: 1.5,
-                color: FigmaColors.textMuted,
+                color: AppColors.foreground,
               ),
             ),
             const SizedBox(height: 28),
@@ -172,7 +173,10 @@ class _SummaryRow extends StatelessWidget {
           width: 92,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12, color: FigmaColors.textMuted),
+            style: const TextStyle(
+              fontSize: 13.5,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -183,7 +187,7 @@ class _SummaryRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: emphasized ? FigmaColors.primary : FigmaColors.ink,
             ),
@@ -207,7 +211,7 @@ class _MissingRequest extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+          style: const TextStyle(fontSize: 14, color: AppColors.foreground),
         ),
       ),
     );

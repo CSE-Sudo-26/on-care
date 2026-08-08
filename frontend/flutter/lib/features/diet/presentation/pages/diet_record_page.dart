@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
@@ -246,9 +247,9 @@ class _DateStrip extends StatelessWidget {
                 Text(
                   weekLabel,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: FigmaColors.textSub,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
                 if (showTodayButton)
@@ -267,7 +268,7 @@ class _DateStrip extends StatelessWidget {
                       child: Text(
                         l.dietToday,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.primary,
                         ),
@@ -348,7 +349,7 @@ class _DayCell extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final Color labelColor = isSelected || isToday
         ? FigmaColors.primary
-        : FigmaColors.textFaint;
+        : AppColors.mutedForeground;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -358,7 +359,7 @@ class _DayCell extends StatelessWidget {
           Text(
             _weekdayLabel(l, day.weekday),
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: labelColor,
             ),
@@ -377,13 +378,13 @@ class _DayCell extends StatelessWidget {
             child: Text(
               '${day.day}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: isSelected
                     ? Colors.white
                     : isToday
                     ? FigmaColors.primary
-                    : FigmaColors.textSub,
+                    : AppColors.mutedForeground,
               ),
             ),
           ),
@@ -489,7 +490,7 @@ class NutritionSummary extends StatelessWidget {
           Text(
             l.dietNutritionSummary,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -588,9 +589,9 @@ class _NutritionSummaryCard extends StatelessWidget {
                     Text(
                       l.homeCalorieIntake,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: FigmaColors.textSub,
+                        color: AppColors.foreground,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -612,9 +613,9 @@ class _NutritionSummaryCard extends StatelessWidget {
                             TextSpan(
                               text: ' / ${calories.goal} ${calories.unit}',
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: FigmaColors.textMuted,
+                                color: AppColors.mutedForeground,
                               ),
                             ),
                           ],
@@ -626,11 +627,11 @@ class _NutritionSummaryCard extends StatelessWidget {
                     Text(
                       calorieStatus,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: calories.isOverGoal
                             ? FigmaColors.dangerRed
-                            : FigmaColors.textSub,
+                            : AppColors.foreground,
                       ),
                     ),
                   ],
@@ -717,9 +718,9 @@ class _CalorieCircularProgress extends StatelessWidget {
               Text(
                 l.homeAchieveRate,
                 style: const TextStyle(
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: FigmaColors.textMuted,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
@@ -753,9 +754,9 @@ class _MacroProgressItem extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: FigmaColors.textSub,
+            color: AppColors.foreground,
           ),
         ),
         const SizedBox(height: 4),
@@ -768,7 +769,7 @@ class _MacroProgressItem extends StatelessWidget {
                 TextSpan(
                   text: macro.item.value,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
                   ),
@@ -949,9 +950,9 @@ class _NutritionStatusCard extends StatelessWidget {
                       child: Text(
                         item.label,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w700,
-                          color: FigmaColors.textSub,
+                          color: AppColors.foreground,
                         ),
                       ),
                     ),
@@ -977,9 +978,9 @@ class _NutritionStatusCard extends StatelessWidget {
                         TextSpan(
                           text: ' / ${item.goal}${item.unit}',
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: FigmaColors.textMuted,
+                            color: AppColors.mutedForeground,
                           ),
                         ),
                       ],
@@ -1002,7 +1003,7 @@ class _NutritionStatusCard extends StatelessWidget {
                         ? '${l.homeGoal} ${l.homeMetricOver}'
                         : l.homeMetricNormal,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: statusColor,
                     ),
@@ -1012,11 +1013,11 @@ class _NutritionStatusCard extends StatelessWidget {
                 Text(
                   differenceText,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: item.isOverGoal
                         ? FigmaColors.dangerRed
-                        : FigmaColors.textBody,
+                        : AppColors.foreground,
                     height: 1.3,
                   ),
                 ),
@@ -1098,7 +1099,7 @@ class _AiFeedback extends StatelessWidget {
                   Text(
                     l.dietAiFeedback,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: FigmaColors.primary,
                     ),
@@ -1107,7 +1108,7 @@ class _AiFeedback extends StatelessWidget {
                   Text(
                     message,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13.5,
                       height: 1.5,
                       fontWeight: FontWeight.w500,
                       color: FigmaColors.ink,
@@ -1149,7 +1150,7 @@ class _MealLog extends StatelessWidget {
               Text(
                 l.dietTodayMeals,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
                 ),
@@ -1167,10 +1168,10 @@ class _MealLog extends StatelessWidget {
                   l.dietEmptyLog,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 14,
                     height: 1.5,
                     fontWeight: FontWeight.w500,
-                    color: FigmaColors.textMuted,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -1214,7 +1215,7 @@ class _AddButton extends StatelessWidget {
               Text(
                 l.dietAddMeal,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -1267,7 +1268,7 @@ class _MealCard extends StatelessWidget {
                       child: Text(
                         mealBadge(l, meal.mealType),
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: FigmaColors.primary,
                         ),
@@ -1277,16 +1278,16 @@ class _MealCard extends StatelessWidget {
                     Text(
                       meal.time,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: FigmaColors.textFaint,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '${_formatInt(meal.total)} ${l.unitKcal}',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: FigmaColors.primary,
                       ),
@@ -1321,9 +1322,9 @@ class _MealCard extends StatelessWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        fontSize: 12.5,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF3A3A4A),
+                                        color: AppColors.foreground,
                                       ),
                                     ),
                                   ),
@@ -1333,9 +1334,9 @@ class _MealCard extends StatelessWidget {
                                     '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
                                     '${_formatG(f.sugarG)}${l.dietUnitG}',
                                     style: const TextStyle(
-                                      fontSize: 10.5,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: FigmaColors.textSub,
+                                      color: AppColors.mutedForeground,
                                     ),
                                   ),
                                 ],
@@ -1447,7 +1448,7 @@ class _TotalPill extends StatelessWidget {
             TextSpan(
               text: '$label ',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: color.withValues(alpha: 0.75),
               ),
@@ -1455,7 +1456,7 @@ class _TotalPill extends StatelessWidget {
             TextSpan(
               text: value,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
@@ -1490,10 +1491,10 @@ class _MealAiNote extends StatelessWidget {
             child: Text(
               text,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
-                color: FigmaColors.textBody,
+                color: AppColors.foreground,
               ),
             ),
           ),
@@ -1537,7 +1538,7 @@ class _DietError extends StatelessWidget {
         children: <Widget>[
           Text(
             l.dietLoadError,
-            style: const TextStyle(fontSize: 13, color: FigmaColors.textMuted),
+            style: const TextStyle(fontSize: 14, color: AppColors.foreground),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -1567,10 +1568,10 @@ class _EmptyDay extends StatelessWidget {
           l.otherDateEmpty(l.pageDietTitle),
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 14,
             height: 1.5,
             fontWeight: FontWeight.w500,
-            color: FigmaColors.textMuted,
+            color: AppColors.mutedForeground,
           ),
         ),
       ),

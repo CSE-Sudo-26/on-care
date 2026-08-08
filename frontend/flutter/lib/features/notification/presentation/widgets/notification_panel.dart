@@ -111,7 +111,7 @@ class _NotificationPanelBodyState extends ConsumerState<NotificationPanelBody> {
                   child: Text(
                     '표시할 알림이 없습니다',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: AppColors.foreground,
                     ),
                   ),
                 )

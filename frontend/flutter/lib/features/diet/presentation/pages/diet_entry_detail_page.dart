@@ -213,7 +213,7 @@ class _DietEntryDetailPageState extends ConsumerState<DietEntryDetailPage> {
                   ? Text(
                       '인식된 음식 정보가 없어요.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: AppColors.foreground,
                       ),
                     )
                   : Column(
@@ -478,7 +478,7 @@ class _TopInfo extends StatelessWidget {
     return Text(
       '$mealLabel · $displayTime',
       style: theme.textTheme.titleMedium?.copyWith(
-        color: AppColors.mutedForeground,
+        color: AppColors.foreground,
         fontWeight: FontWeight.w600,
       ),
     );
@@ -518,7 +518,7 @@ class _SummarySection extends StatelessWidget {
           Text(
             '나트륨 $sodiumLabel · 당류 $sugarLabel',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -526,7 +526,7 @@ class _SummarySection extends StatelessWidget {
           Text(
             macroLabel,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.mutedForeground,
+              color: AppColors.foreground,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -636,7 +636,7 @@ class _FoodFields extends StatelessWidget {
           '${l.homeMacroFat} ${_formatGrams(controllers.original.fatG)}g · '
           '${l.dietSodium} ${controllers.original.sodiumMg}mg',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: AppColors.mutedForeground,
+            color: AppColors.foreground,
           ),
         ),
       ],

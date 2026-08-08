@@ -66,7 +66,7 @@ class AppStackedBarChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 24,
+              reservedSize: 28,
               interval: 1,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final i = value.toInt();
@@ -120,7 +120,7 @@ class AppStackedBarChart extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w400,
-                          fontSize: 11,
+                          fontSize: 12.5,
                           height: 1.35,
                         ),
                       ),
@@ -134,7 +134,7 @@ class AppStackedBarChart extends StatelessWidget {
                     const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: 13.5,
                       height: 1.4,
                     ),
                     children: childLines,

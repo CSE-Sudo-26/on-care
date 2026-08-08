@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:oncare/design_system/tokens/colors.dart';
+
 /// Exact colour tokens lifted from the On-Care Figma (TypeScript) source so the
 /// Flutter screens reproduce the redesign 1:1.
 ///
@@ -29,7 +31,9 @@ class FigmaColors {
   static const Color greenTag = Color(0xFF34C782); // coaching 운동 tag
   static const Color orange = Color(0xFFFF953C); // fat bar / warn fill
   static const Color orangeText = Color(0xFFE8760A); // warn text
-  static const Color heartOrange = Color(0xFFFF953C); // spark accent(주의 오렌지로 통일)
+  static const Color heartOrange = Color(
+    0xFFFF953C,
+  ); // spark accent(주의 오렌지로 통일)
   static const Color sugarPurple = Color(0xFF9B8FD4); // 당류 chart
   static const Color sleepPurple = Color(0xFF6B7FE0); // 수면 chart
 
@@ -61,20 +65,16 @@ class FigmaColors {
 /// 예전에는 브랜드 블루(#3EAFDF) 그림자였는데, 홈 개편에서 회색으로 바꾸면서
 /// 나머지 탭도 같은 값으로 맞췄다.
 const List<BoxShadow> kCardShadow = <BoxShadow>[
-  BoxShadow(
-    color: Color(0x1A000000),
-    blurRadius: 14,
-    offset: Offset(0, 4),
-  ),
+  BoxShadow(color: Color(0x1A000000), blurRadius: 14, offset: Offset(0, 4)),
 ];
 
 /// Shared "/(목표|제한치)(단위)" suffix style, e.g. the "/275g" after a macro
 /// value. Standardized to the home 식단 영양 카드 탄단지 look — small, faint —
 /// so every "(현재)/(목표)(단위)" reads consistently across the app.
 const TextStyle kGoalSuffixStyle = TextStyle(
-  fontSize: 9,
+  fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: FigmaColors.textFaint,
+  color: AppColors.mutedForeground,
 );
 
 /// The On-Care mascot ("Oni") — a teal gradient disc with two eyes and a
@@ -190,7 +190,11 @@ class AiPill extends StatelessWidget {
 /// A filled heart in the brand colour — the On-Care wordmark logo used in the
 /// Home header.
 class HeartLogo extends StatelessWidget {
-  const HeartLogo({super.key, this.size = 20, this.color = FigmaColors.primary});
+  const HeartLogo({
+    super.key,
+    this.size = 20,
+    this.color = FigmaColors.primary,
+  });
 
   final double size;
   final Color color;

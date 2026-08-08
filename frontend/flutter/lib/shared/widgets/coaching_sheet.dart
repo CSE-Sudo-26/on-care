@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/ai_coach/domain/entities/ai_coach_state.dart';
 import 'package:oncare/features/ai_coach/presentation/controllers/ai_coach_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -136,7 +137,7 @@ class _CoachingSheet extends ConsumerWidget {
                           Text(
                             l.coachHeaderPill,
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               color: FigmaColors.primary,
                             ),
@@ -145,7 +146,7 @@ class _CoachingSheet extends ConsumerWidget {
                           Text(
                             l.coachHeaderSubtitle,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: FigmaColors.ink,
                             ),
@@ -191,7 +192,7 @@ class _CoachingSheet extends ConsumerWidget {
                     label: Text(
                       l.coachCtaChat,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -232,7 +233,7 @@ class _CoachCardTile extends StatelessWidget {
             child: Text(
               card.tag,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: card.tagColor,
               ),
@@ -246,7 +247,7 @@ class _CoachCardTile extends StatelessWidget {
                 Text(
                   card.title,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: FigmaColors.ink,
                     height: 1.3,
@@ -256,8 +257,8 @@ class _CoachCardTile extends StatelessWidget {
                 Text(
                   card.body,
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: FigmaColors.textMuted,
+                    fontSize: 13.5,
+                    color: AppColors.foreground,
                     height: 1.4,
                   ),
                 ),

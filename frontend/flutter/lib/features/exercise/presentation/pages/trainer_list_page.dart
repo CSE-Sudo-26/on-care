@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -184,7 +185,10 @@ class _SearchField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: FigmaColors.textMuted, fontSize: 13),
+        hintStyle: const TextStyle(
+          color: AppColors.mutedForeground,
+          fontSize: 13,
+        ),
         prefixIcon: const Icon(
           Icons.search,
           color: FigmaColors.textMuted,
@@ -226,7 +230,7 @@ class _ResultControls extends StatelessWidget {
           child: Text(
             countLabel,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
@@ -245,7 +249,7 @@ class _ResultControls extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               icon: const Icon(Icons.expand_more, size: 18),
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: FigmaColors.ink,
               ),
@@ -319,7 +323,7 @@ class _TrainerListCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: FigmaColors.ink,
                       ),
@@ -331,8 +335,8 @@ class _TrainerListCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: FigmaColors.textMuted,
+                        fontSize: 12.5,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -341,7 +345,7 @@ class _TrainerListCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: FigmaColors.primary,
                         height: 1.3,
@@ -382,7 +386,7 @@ class _LoadError extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: FigmaColors.textMuted, fontSize: 13),
+            style: const TextStyle(color: AppColors.foreground, fontSize: 13),
           ),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: onRetry, child: Text(l.actionRetry)),
@@ -403,7 +407,7 @@ class _EmptyResults extends StatelessWidget {
       child: Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: FigmaColors.textMuted, fontSize: 13),
+        style: const TextStyle(color: AppColors.foreground, fontSize: 13),
       ),
     );
   }

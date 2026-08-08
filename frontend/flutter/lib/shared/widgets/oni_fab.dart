@@ -53,7 +53,7 @@ class OniFab extends StatelessWidget {
                   child: Text(
                     badgeCount > 9 ? '9+' : '$badgeCount',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                       height: 1,

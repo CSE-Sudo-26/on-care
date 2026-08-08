@@ -33,7 +33,8 @@ class MainShell extends StatelessWidget {
     // edge. Reserve web-only paint room without changing the mobile layout.
     const double webClipGuard = kIsWeb ? 12 : 0;
     final double effectiveBottomPadding = navBottomPadding + webClipGuard;
-    const double barHeight = 56;
+    // The larger navigation labels need a little more vertical room.
+    const double barHeight = 58;
     const double lift = 24; // headroom so the + button floats above the bar
     return Scaffold(
       // Let the page continue behind the transparent FAB headroom instead of
@@ -162,7 +163,7 @@ class _Destination extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: color,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -278,8 +279,8 @@ class _RecordAddSheet extends StatelessWidget {
                           Text(
                             l.navAddRecordSubtitle,
                             style: const TextStyle(
-                              fontSize: 13,
-                              color: FigmaColors.textSub,
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
                             ),
                           ),
                         ],
@@ -388,8 +389,8 @@ class _RecordOption extends StatelessWidget {
               Text(
                 subtitle,
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: FigmaColors.textSub,
+                  fontSize: 13.5,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
