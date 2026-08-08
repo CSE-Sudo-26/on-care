@@ -28,6 +28,9 @@ class _FakeAiCoachRepository implements AiCoachRepository {
   }
 
   @override
+  Future<List<ChatMessage>> fetchHistory() async => const <ChatMessage>[];
+
+  @override
   Future<ChatMessage> sendMessage({
     required String message,
     required List<ChatMessage> history,

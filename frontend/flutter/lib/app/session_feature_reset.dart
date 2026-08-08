@@ -17,6 +17,7 @@ import 'package:oncare/features/schedule/presentation/controllers/schedule_contr
 ///
 /// Register every feature reset here. Riverpod overrides replace each other,
 /// so this must remain the single app-level registry.
+/// Keep `docs/SESSION_PROVIDER_AUDIT.md` in sync with this registry.
 Override sessionFeatureResetOverride() {
   return sessionFeatureResetProvider.overrideWith((ref) {
     return () {
@@ -35,6 +36,7 @@ Override sessionFeatureResetOverride() {
       ref.invalidate(chatControllerProvider);
       ref.invalidate(dashboardSummaryProvider);
       ref.invalidate(dietTodayProvider);
+      ref.invalidate(dietRecommendationsProvider);
       ref.invalidate(exerciseWeekProvider);
       ref.invalidate(exerciseRoutineDoneProvider);
       ref.invalidate(myGymProvider);

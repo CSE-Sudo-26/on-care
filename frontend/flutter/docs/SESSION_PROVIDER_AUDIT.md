@@ -17,7 +17,7 @@ const instance, in which case Riverpod may leave its dependents unchanged.
 | `profileProvider` | Non-auto-dispose account profile cache | Invalidate the cached profile |
 | `aiCoachStateProvider`, `chatControllerProvider` | Non-auto-dispose personalized suggestions and in-memory chat | Invalidate both leaves |
 | `dashboardSummaryProvider` | An active watcher can retain the previous account summary | Invalidate the summary |
-| `dietRepositoryProvider`, `dietTodayProvider` | The mock repository mutates meals in memory; the leaf caches today's diet | Recreate the mock root and invalidate the leaf |
+| `dietRepositoryProvider`, `dietTodayProvider`, `dietRecommendationsProvider` | The mock repository mutates meals in memory; the leaves cache today's diet and personalized recommendations | Recreate the mock root and invalidate both leaves |
 | `exerciseRepositoryProvider`, `exerciseWeekProvider` | The mock repository mutates sessions in memory; the leaf caches the week | Recreate the mock root and invalidate the leaf |
 | `exerciseRoutineDoneProvider` | Non-auto-dispose local completion flags | Restore the initial flags |
 | `gymRepositoryProvider`, `myGymProvider`, `myTrainerProvider` | The mock repository mutates membership links; leaves cache account links | Recreate the mock root and invalidate account leaves |
@@ -39,10 +39,15 @@ the new account.
 | --- | --- |
 | `themeModeProvider`, `localeProvider` | Device/app display preferences, not account data |
 | `placeQueryProvider`, place providers | Map position, filter, and public place search results |
-| `appConfigProvider`, logger, preferences, database | App infrastructure; resetting could break the container or delete local data |
+| `appConfigProvider`, logger, preferences, database | App infrastructure; account transitions must not recreate the container or delete persisted local data |
 | `appRouterProvider` | App navigation infrastructure |
 | `authAccessTokenProvider` | Written directly by `SessionController` before feature reset |
 | `authControllerProvider` | Legacy mock controller with no production consumer; the active session uses `SessionController` |
 
 Server records are never deleted by this reset. Providers are only disposed and
 recreated so the next read uses the current session.
+
+In mock builds, account and schedule requests can be served from the same Drift
+database by `LocalApiInterceptor`. Resetting their providers clears cached
+responses, but the next read can return the same persisted rows. Deleting or
+partitioning that local database is outside this provider-cache reset.
