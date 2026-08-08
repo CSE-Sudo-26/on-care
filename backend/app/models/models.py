@@ -794,13 +794,13 @@ class TrainerReservation(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     member_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
     slot_id: Mapped[str] = mapped_column(
         ForeignKey("trainer_reservation_slots.id", ondelete="RESTRICT"), index=True
     )
     schedule_id: Mapped[str] = mapped_column(
-        ForeignKey("trainer_schedule.id", ondelete="CASCADE"), unique=True
+        ForeignKey("trainer_schedule.id", ondelete="RESTRICT"), unique=True
     )
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default="booked", default="booked"

@@ -80,6 +80,18 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
 class MockReservationSlotRepository implements ReservationSlotRepository {
   final List<ReservationSlot> _slots = <ReservationSlot>[];
 
+  void _validateCapacity(int capacity) {
+    if (capacity < 1 || capacity > 100) {
+      throw StateError('정원은 1명 이상 100명 이하이어야 합니다.');
+    }
+  }
+
+  void _validateFuture(DateTime startsAt) {
+    if (!startsAt.isAfter(DateTime.now())) {
+      throw StateError('현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.');
+    }
+  }
+
   @override
   Future<List<ReservationSlot>> list() async {
     final now = DateTime.now();
@@ -92,6 +104,8 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     required DateTime startsAt,
     required int capacity,
   }) async {
+    _validateFuture(startsAt);
+    _validateCapacity(capacity);
     final slot = ReservationSlot(
       id: 'slot-${DateTime.now().microsecondsSinceEpoch}',
       startsAt: startsAt,
@@ -113,6 +127,8 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     if (index < 0) throw StateError('예약 슬롯을 찾을 수 없습니다.');
     final old = _slots[index];
     final nextCapacity = capacity ?? old.capacity;
+    _validateCapacity(nextCapacity);
+    if (startsAt != null) _validateFuture(startsAt);
     if (nextCapacity < old.booked) {
       throw StateError('이미 예약된 인원보다 정원을 줄일 수 없습니다.');
     }

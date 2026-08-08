@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock
+from unittest.mock import Mock, call
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.orm import Session
@@ -73,6 +74,46 @@ def test_reserved_schedule_is_blocked_from_regular_update_and_delete() -> None:
 
     db.commit.assert_not_called()
     db.delete.assert_not_called()
+
+
+def test_account_deletion_restores_seat_before_removing_booking() -> None:
+    slot = TrainerReservationSlot(
+        id="account-delete-slot",
+        trainer_id="trainer-demo",
+        capacity=2,
+        remaining=1,
+        starts_at=datetime.now(timezone.utc) + timedelta(days=1),
+    )
+    reservation = TrainerReservation(
+        id="account-delete-reservation",
+        member_id="account-delete-member",
+        slot_id=slot.id,
+        schedule_id="account-delete-schedule",
+        status="booked",
+    )
+    schedule = TrainerSchedule(
+        id=reservation.schedule_id,
+        trainer_id="trainer-demo",
+    )
+    reservation_rows = Mock()
+    reservation_rows.all.return_value = [reservation]
+    slot_rows = Mock()
+    slot_rows.all.return_value = [slot]
+    db = Mock(spec=Session)
+    db.scalars.side_effect = [reservation_rows, slot_rows]
+    db.get.return_value = schedule
+
+    reservation_service.cancel_member_reservations_for_account_deletion(
+        db, reservation.member_id
+    )
+
+    assert slot.remaining == 2
+    assert db.mock_calls.index(call.delete(reservation)) < db.mock_calls.index(
+        call.flush()
+    )
+    assert db.mock_calls.index(call.flush()) < db.mock_calls.index(
+        call.delete(schedule)
+    )
 
 
 def _login(client, email: str) -> str:
@@ -209,6 +250,66 @@ def test_reserved_schedule_cannot_be_updated_or_deleted_as_regular_schedule(
     persisted_slot = db_session.get(TrainerReservationSlot, slot["id"])
     assert persisted_slot is not None
     assert persisted_slot.remaining == 0
+
+
+def test_member_account_deletion_restores_slot_and_removes_schedule(
+    client, db_session
+):
+    suffix = uuid4().hex[:10]
+    email = f"reservation-delete-{suffix}@oncare.com"
+    password = "oncare123"
+    registered = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": password, "name": "탈퇴 예약 회원"},
+    )
+    assert registered.status_code == 201, registered.text
+    member_id = registered.json()["id"]
+    member_token = _login(client, email)
+
+    slot = TrainerReservationSlot(
+        id=f"slot-delete-{suffix}",
+        trainer_id="trainer-demo",
+        starts_at=datetime.now(timezone.utc) + timedelta(days=2),
+        capacity=1,
+        remaining=0,
+    )
+    schedule = TrainerSchedule(
+        id=f"sched-delete-{suffix}",
+        trainer_id="trainer-demo",
+        member_id=member_id,
+        date=(datetime.now(timezone.utc) + timedelta(days=2)).date().isoformat(),
+        time="10:00",
+        client_name="탈퇴 예약 회원",
+        type="1:1 PT",
+        duration_minutes=60,
+        status="예정",
+        note="회원 직접 예약",
+        program_json="[]",
+        sort_order=0,
+    )
+    reservation = TrainerReservation(
+        id=f"res-delete-{suffix}",
+        member_id=member_id,
+        slot_id=slot.id,
+        schedule_id=schedule.id,
+        status="booked",
+    )
+    db_session.add_all([slot, schedule])
+    db_session.flush()
+    db_session.add(reservation)
+    db_session.commit()
+
+    deleted = client.delete("/v1/users/me", headers=_headers(member_token))
+
+    assert deleted.status_code == 200, deleted.text
+    db_session.expire_all()
+    assert db_session.get(TrainerReservation, reservation.id) is None
+    assert db_session.get(TrainerSchedule, schedule.id) is None
+    persisted_slot = db_session.get(TrainerReservationSlot, slot.id)
+    assert persisted_slot is not None
+    assert persisted_slot.remaining == 1
+    db_session.delete(persisted_slot)
+    db_session.commit()
 
 
 def test_duplicate_and_full_slot_return_409(client, created_slots):

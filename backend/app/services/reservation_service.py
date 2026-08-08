@@ -162,6 +162,57 @@ def close_slot(db: Session, trainer_id: str, slot_id: str) -> TrainerSlotOut:
     return update_slot(db, trainer_id, slot_id, {"is_closed": True})
 
 
+def cancel_member_reservations_for_account_deletion(
+    db: Session, member_id: str
+) -> None:
+    """Cancel a member's bookings before deleting their account.
+
+    The caller owns the transaction. Reservations and their slots are locked,
+    seats are restored, reservation rows are flushed first to satisfy the
+    restrictive schedule/member FKs, and generated schedules are then removed.
+    """
+    reservations = db.scalars(
+        select(TrainerReservation)
+        .where(TrainerReservation.member_id == member_id)
+        .order_by(TrainerReservation.id)
+        .with_for_update()
+    ).all()
+    if not reservations:
+        return
+
+    booked_slot_ids = sorted(
+        {row.slot_id for row in reservations if row.status == "booked"}
+    )
+    slots = (
+        db.scalars(
+            select(TrainerReservationSlot)
+            .where(TrainerReservationSlot.id.in_(booked_slot_ids))
+            .order_by(TrainerReservationSlot.id)
+            .with_for_update()
+        ).all()
+        if booked_slot_ids
+        else []
+    )
+    slots_by_id = {slot.id: slot for slot in slots}
+    schedule_ids = [row.schedule_id for row in reservations]
+
+    for reservation in reservations:
+        if reservation.status == "booked":
+            slot = slots_by_id.get(reservation.slot_id)
+            if slot is not None:
+                slot.remaining = min(slot.capacity, slot.remaining + 1)
+        db.delete(reservation)
+
+    # No ORM relationships describe this ordering; flush the restrictive FK
+    # children before deleting their generated schedules or the member.
+    db.flush()
+    for schedule_id in schedule_ids:
+        schedule = db.get(TrainerSchedule, schedule_id)
+        if schedule is not None:
+            db.delete(schedule)
+    db.flush()
+
+
 def reserve(
     db: Session, member: User, slot_id: str, *, now: datetime | None = None
 ) -> ReservationOut:

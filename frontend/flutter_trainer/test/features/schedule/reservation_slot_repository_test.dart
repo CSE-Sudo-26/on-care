@@ -115,4 +115,56 @@ void main() {
     ).called(1);
     expect(closed.isClosed, isTrue);
   });
+
+  group('MockReservationSlotRepository validation', () {
+    test('create rejects past times and capacities outside 1 to 100', () async {
+      final mockRepository = MockReservationSlotRepository();
+      final future = DateTime.now().add(const Duration(days: 1));
+
+      await expectLater(
+        mockRepository.create(
+          startsAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          capacity: 1,
+        ),
+        throwsStateError,
+      );
+      await expectLater(
+        mockRepository.create(startsAt: future, capacity: 0),
+        throwsStateError,
+      );
+      await expectLater(
+        mockRepository.create(startsAt: future, capacity: 101),
+        throwsStateError,
+      );
+      expect(await mockRepository.list(), isEmpty);
+    });
+
+    test('update rejects past times and capacities outside 1 to 100', () async {
+      final mockRepository = MockReservationSlotRepository();
+      final slot = await mockRepository.create(
+        startsAt: DateTime.now().add(const Duration(days: 1)),
+        capacity: 2,
+      );
+
+      await expectLater(
+        mockRepository.update(slot.id, capacity: 0),
+        throwsStateError,
+      );
+      await expectLater(
+        mockRepository.update(slot.id, capacity: 101),
+        throwsStateError,
+      );
+      await expectLater(
+        mockRepository.update(
+          slot.id,
+          startsAt: DateTime.now().subtract(const Duration(minutes: 1)),
+        ),
+        throwsStateError,
+      );
+
+      final unchanged = (await mockRepository.list()).single;
+      expect(unchanged.capacity, 2);
+      expect(unchanged.startsAt, slot.startsAt);
+    });
+  });
 }

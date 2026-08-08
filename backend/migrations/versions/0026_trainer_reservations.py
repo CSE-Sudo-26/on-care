@@ -1,7 +1,7 @@
 """Persist trainer availability slots and member reservations.
 
-Revision ID: 0025_trainer_reservations
-Revises: 0024_trainer_invite_codes
+Revision ID: 0026_trainer_reservations
+Revises: 0025_member_noti_settings
 Create Date: 2026-08-08
 """
 
@@ -12,8 +12,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0025_trainer_reservations"
-down_revision: str | Sequence[str] | None = "0024_trainer_invite_codes"
+revision: str = "0026_trainer_reservations"
+down_revision: str | Sequence[str] | None = "0025_member_noti_settings"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -81,12 +81,12 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("cancelled_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(["member_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["member_id"], ["users.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(
             ["slot_id"], ["trainer_reservation_slots.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(
-            ["schedule_id"], ["trainer_schedule.id"], ondelete="CASCADE"
+            ["schedule_id"], ["trainer_schedule.id"], ondelete="RESTRICT"
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("member_id", "slot_id", name="uq_reservation_member_slot"),

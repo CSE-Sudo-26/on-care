@@ -109,6 +109,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               onPressed: () {
                 final capacity = int.tryParse(controller.text);
                 if (capacity == null ||
+                    capacity < 1 ||
                     capacity < slot.booked ||
                     capacity > 100) {
                   return;
