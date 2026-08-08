@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -64,6 +66,13 @@ class AppSidebar extends ConsumerWidget {
         .fold<int>(0, (sum, n) => sum + n);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
     final profile = ref.watch(sessionControllerProvider).profile;
+    // 상담 요청 only exists against the real API — the demo has no member
+    // backend to receive requests from, so the row is not built at all
+    // there and the demo sidebar stays exactly as it was. (#467)
+    final inbox = ref.watch(consultationInboxEnabledProvider);
+    final pendingConsultations = inbox
+        ? ref.watch(consultationPendingCountProvider).valueOrNull
+        : null;
 
     return Container(
       width: expanded ? AppLayout.sidebarWidth : AppLayout.sidebarRailWidth,
@@ -92,10 +101,26 @@ class AppSidebar extends ConsumerWidget {
                       badgeCount: switch (navDestinations[i].badge) {
                         NavBadge.unreadMessages => unread,
                         NavBadge.todayReservations => reservations,
+                        // Not reachable from this loop — 상담 요청 is not in
+                        // navDestinations and is rendered below with its
+                        // count passed in directly.
+                        NavBadge.pendingConsultations => null,
                         NavBadge.none => null,
                       },
                       onTap: () {
                         onSelect(i);
+                        onNavigate?.call();
+                      },
+                    ),
+                  if (inbox)
+                    _NavTile(
+                      destination: consultationsDestination,
+                      selected:
+                          currentIndex == AppShell.consultationsBranchIndex,
+                      expanded: expanded,
+                      badgeCount: pendingConsultations,
+                      onTap: () {
+                        onSelect(AppShell.consultationsBranchIndex);
                         onNavigate?.call();
                       },
                     ),
