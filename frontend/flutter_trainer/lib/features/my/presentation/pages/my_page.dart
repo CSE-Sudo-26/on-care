@@ -16,6 +16,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
+import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
@@ -31,7 +32,8 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 /// five surfaces they use every day. Two sections behind one switch:
 ///
 ///  * **내 정보** — profile, certifications, this month's stats, gym.
-///    Editing is page-local (mock) until `PUT /v1/trainer/me` lands.
+///    Edits persist through `PUT /v1/trainer/me` and the gym affiliation
+///    endpoints; mock mode follows the same repository contract.
 ///  * **설정** — notifications, account, app info, 로그아웃. Most rows
 ///    are placeholders today; they are shown (disabled, with a reason)
 ///    rather than hidden so the shape of the screen doesn't change when
@@ -55,6 +57,7 @@ class _MyPageState extends ConsumerState<MyPage> {
   late int _tab = widget.tab == 'settings' ? 1 : 0;
 
   bool _editing = false;
+  bool _saving = false;
   bool _saveFlash = false;
   Timer? _flashTimer;
 
@@ -107,35 +110,104 @@ class _MyPageState extends ConsumerState<MyPage> {
       _field('gymAddress', _gym.address).text = _gym.address;
       _field('gymHours', _gym.hours).text = _gym.hours;
       _field('gymPhone', _gym.phone).text = _gym.phone;
+      _field('gymId', _gym.id ?? '').text = _gym.id ?? '';
     });
   }
 
-  void _save() {
-    setState(() {
-      _gym = TrainerGym(
-        name: _fields['gymName']!.text,
-        address: _fields['gymAddress']!.text,
-        hours: _fields['gymHours']!.text,
-        phone: _fields['gymPhone']!.text,
+  Future<void> _save() async {
+    if (_saving) return;
+    final careerYears = int.tryParse(
+      RegExp(r'\d+').firstMatch(_fields['career']!.text)?.group(0) ?? '',
+    );
+    if (careerYears == null || careerYears < 0 || careerYears > 80) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('경력은 0~80 사이의 연수로 입력해 주세요.')),
       );
-      _profile = TrainerProfile(
-        name: _fields['name']!.text,
-        email: _fields['email']!.text,
-        phone: _fields['phone']!.text,
-        specialty: _fields['specialty']!.text,
-        career: _fields['career']!.text,
-        intro: _fields['intro']!.text,
-        certifications: List<String>.of(_draftCerts),
-        gym: _gym,
+      return;
+    }
+
+    setState(() => _saving = true);
+    final repository = ref.read(trainerProfileRepositoryProvider);
+    try {
+      final draftGymId = _fields['gymId']!.text.trim();
+      final currentGymId = _gym.id ?? '';
+      var saved = await repository.update(
+        TrainerProfileUpdate(
+          phone: _fields['phone']!.text.trim(),
+          specialty: _fields['specialty']!.text.trim(),
+          careerYears: careerYears,
+          intro: _fields['intro']!.text.trim(),
+          certifications: List<String>.of(_draftCerts),
+          // Affiliated gym text is derived by the server. Legacy profiles
+          // without a place id retain the original editable text contract.
+          gymName: currentGymId.isEmpty && draftGymId.isEmpty
+              ? _fields['gymName']!.text.trim()
+              : null,
+          gymAddress: currentGymId.isEmpty && draftGymId.isEmpty
+              ? _fields['gymAddress']!.text.trim()
+              : null,
+          gymHours: currentGymId.isEmpty && draftGymId.isEmpty
+              ? _fields['gymHours']!.text.trim()
+              : null,
+          gymPhone: currentGymId.isEmpty && draftGymId.isEmpty
+              ? _fields['gymPhone']!.text.trim()
+              : null,
+        ),
       );
-      _certs = List<String>.of(_draftCerts);
-      _editing = false;
-      _saveFlash = true;
-      _newCert.clear(); // same for save — a stale draft shouldn't linger
-    });
+      if (draftGymId != currentGymId) {
+        saved = draftGymId.isEmpty
+            ? await repository.clearGym()
+            : await repository.setGym(draftGymId);
+      }
+      if (!mounted) return;
+      _applySavedProfile(saved);
+    } catch (error) {
+      TrainerProfile? restored;
+      try {
+        restored = await repository.fetch();
+      } catch (_) {
+        restored = ref.read(sessionControllerProvider).profile;
+      }
+      if (!mounted) return;
+      if (restored != null) _applyRestoredProfile(restored);
+      setState(() => _saving = false);
+      final message = error is AppError
+          ? error.message ?? '프로필을 저장하지 못했습니다.'
+          : '프로필을 저장하지 못했습니다.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+
     _flashTimer?.cancel();
     _flashTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) setState(() => _saveFlash = false);
+    });
+  }
+
+  void _applySavedProfile(TrainerProfile saved) {
+    ref.read(sessionControllerProvider.notifier).replaceProfile(saved);
+    setState(() {
+      _profile = saved;
+      _gym = saved.gym;
+      _certs = List<String>.of(saved.certifications);
+      _draftCerts = List<String>.of(_certs);
+      _editing = false;
+      _saving = false;
+      _saveFlash = true;
+      _newCert.clear();
+    });
+  }
+
+  void _applyRestoredProfile(TrainerProfile restored) {
+    ref.read(sessionControllerProvider.notifier).replaceProfile(restored);
+    setState(() {
+      _profile = restored;
+      _gym = restored.gym;
+      _certs = List<String>.of(restored.certifications);
+      _draftCerts = List<String>.of(_certs);
+      _editing = false;
     });
   }
 
@@ -170,16 +242,16 @@ class _MyPageState extends ConsumerState<MyPage> {
         if (_tab == 0)
           if (_editing)
             ActionButton(
-              label: '저장',
-              icon: Icons.check,
+              label: _saving ? '저장 중' : '저장',
+              icon: _saving ? Icons.hourglass_top : Icons.check,
               primary: true,
-              onPressed: _save,
+              onPressed: _saving ? null : _save,
             )
           else
             ActionButton(
               label: '프로필 수정',
               icon: Icons.edit_outlined,
-              onPressed: _startEdit,
+              onPressed: _saving ? null : _startEdit,
             ),
       ],
       child: _tab == 0 ? _buildProfile() : _buildSettings(),
@@ -199,6 +271,7 @@ class _MyPageState extends ConsumerState<MyPage> {
               background: AppColors.inputBackground,
               foreground: AppColors.subtleForeground,
               onTap: () => setState(() {
+                if (_saving) return;
                 _editing = false;
                 // Drop the un-added cert draft too — otherwise it
                 // reappears on the next edit (PR review).
@@ -257,7 +330,12 @@ class _MyPageState extends ConsumerState<MyPage> {
         const SizedBox(height: AppSpacing.lg),
         _sectionLabel('소속 헬스장'),
         const SizedBox(height: AppSpacing.sm),
-        _GymCard(gym: _gym, editing: _editing, field: _field),
+        _GymCard(
+          gym: _gym,
+          editing: _editing,
+          field: _field,
+          choices: ref.watch(trainerGymChoicesProvider),
+        ),
       ],
     );
   }
@@ -572,8 +650,16 @@ class _ProfileCard extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Divider(height: 1, color: AppColors.borderStrong),
             ),
-            _EditField(label: '이름', controller: field('name', profile.name)),
-            _EditField(label: '이메일', controller: field('email', profile.email)),
+            _EditField(
+              label: '이름 (계정 정보)',
+              controller: field('name', profile.name),
+              enabled: false,
+            ),
+            _EditField(
+              label: '이메일 (계정 정보)',
+              controller: field('email', profile.email),
+              enabled: false,
+            ),
             _EditField(label: '연락처', controller: field('phone', profile.phone)),
             _EditField(
               label: '전문 분야',
@@ -629,11 +715,13 @@ class _EditField extends StatelessWidget {
     required this.label,
     required this.controller,
     this.maxLines = 1,
+    this.enabled = true,
   });
 
   final String label;
   final TextEditingController controller;
   final int maxLines;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -653,6 +741,7 @@ class _EditField extends StatelessWidget {
           const SizedBox(height: 3),
           TextField(
             controller: controller,
+            enabled: enabled,
             maxLines: maxLines,
             style: const TextStyle(
               fontSize: 12.5,
@@ -889,11 +978,13 @@ class _GymCard extends StatelessWidget {
     required this.gym,
     required this.editing,
     required this.field,
+    required this.choices,
   });
 
   final TrainerGym gym;
   final bool editing;
   final TextEditingController Function(String, String) field;
+  final AsyncValue<List<TrainerGymChoice>> choices;
 
   @override
   Widget build(BuildContext context) {
@@ -912,21 +1003,30 @@ class _GymCard extends StatelessWidget {
       child: editing
           ? Column(
               children: <Widget>[
+                _GymChoiceField(
+                  currentGym: gym,
+                  choices: choices,
+                  controller: field('gymId', gym.id ?? ''),
+                ),
                 _EditField(
                   label: '헬스장 이름',
                   controller: field('gymName', gym.name),
+                  enabled: gym.id == null,
                 ),
                 _EditField(
                   label: '주소',
                   controller: field('gymAddress', gym.address),
+                  enabled: gym.id == null,
                 ),
                 _EditField(
                   label: '운영 시간',
                   controller: field('gymHours', gym.hours),
+                  enabled: gym.id == null,
                 ),
                 _EditField(
                   label: '연락처',
                   controller: field('gymPhone', gym.phone),
+                  enabled: gym.id == null,
                 ),
               ],
             )
@@ -990,6 +1090,87 @@ class _GymCard extends StatelessWidget {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _GymChoiceField extends StatelessWidget {
+  const _GymChoiceField({
+    required this.currentGym,
+    required this.choices,
+    required this.controller,
+  });
+
+  final TrainerGym currentGym;
+  final AsyncValue<List<TrainerGymChoice>> choices;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            '소속 헬스장',
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.subtleForeground,
+            ),
+          ),
+          const SizedBox(height: 3),
+          choices.when(
+            loading: () => const LinearProgressIndicator(minHeight: 2),
+            error: (_, _) => const Text(
+              '헬스장 목록을 불러오지 못했습니다.',
+              style: TextStyle(color: AppColors.destructive, fontSize: 11),
+            ),
+            data: (items) {
+              final currentId = controller.text;
+              final hasCurrent =
+                  currentId.isEmpty ||
+                  items.any((choice) => choice.id == currentId);
+              return DropdownButtonFormField<String>(
+                initialValue: currentId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: AppColors.background,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(AppRadius.md),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                items: <DropdownMenuItem<String>>[
+                  const DropdownMenuItem<String>(
+                    value: '',
+                    child: Text('소속 없음'),
+                  ),
+                  if (!hasCurrent)
+                    DropdownMenuItem<String>(
+                      value: currentId,
+                      child: Text(currentGym.name),
+                    ),
+                  for (final choice in items)
+                    DropdownMenuItem<String>(
+                      value: choice.id,
+                      child: Text(
+                        choice.address.isEmpty
+                            ? choice.name
+                            : '${choice.name} · ${choice.address}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => controller.text = value ?? '',
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

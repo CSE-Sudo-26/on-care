@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -62,19 +63,28 @@ void main() {
     testWidgets('edit mode saves changes with a confirmation flash', (
       tester,
     ) async {
-      await openTab(tester);
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.my,
+      );
 
       await tester.tap(find.text('프로필 수정'));
       await tester.pump();
       expect(find.text('저장'), findsOneWidget);
 
-      // First edit field is 이름.
-      await tester.enterText(find.byType(TextField).first, '박트레이너');
+      // Name/email belong to the account and are read-only. The first
+      // editable profile field is the phone number.
+      await tester.enterText(find.byType(TextField).at(2), '010-9999-0000');
       await tester.tap(find.text('저장'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('변경사항이 저장됐어요'), findsOneWidget);
-      expect(find.text('박트레이너'), findsWidgets);
+      expect(
+        container.read(sessionControllerProvider).profile?.phone,
+        '010-9999-0000',
+      );
 
       // Flash expires (no pending timers at test end).
       await tester.pump(const Duration(seconds: 3));

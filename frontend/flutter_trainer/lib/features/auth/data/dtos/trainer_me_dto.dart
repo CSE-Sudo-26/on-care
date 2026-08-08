@@ -12,6 +12,7 @@ TrainerProfile trainerProfileFromJson(Map<String, Object?> json) {
   final gymJson = json['gym'];
   final gym = gymJson is Map<String, Object?>
       ? TrainerGym(
+          id: gymJson['id'] as String?,
           name: _str(gymJson['name']),
           address: _str(gymJson['address']),
           hours: _str(gymJson['hours']),

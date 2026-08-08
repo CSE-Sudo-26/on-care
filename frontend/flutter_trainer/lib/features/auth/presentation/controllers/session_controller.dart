@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
+import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 
 /// Owns the trainer session lifecycle: restore-on-launch (with token
 /// refresh), login / register / social login, demo bypass, and sign-out.
@@ -219,6 +220,14 @@ class SessionController extends StateNotifier<SessionState> {
     unawaited(_clearPersistedTokens());
     _setAccessToken(null);
     state = const SessionState(status: SessionStatus.demo);
+  }
+
+  /// Replaces the authenticated profile after a successful `/trainer/me`
+  /// mutation. Keeping this in the session owner prevents MY, the sidebar,
+  /// and subsequent consumers from showing different snapshots.
+  void replaceProfile(TrainerProfile profile) {
+    if (state.status != SessionStatus.authenticated) return;
+    state = SessionState(status: SessionStatus.authenticated, profile: profile);
   }
 
   /// Signs out — clears persisted tokens and returns to the login screen.
