@@ -64,6 +64,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<double> openRecordSheetAndMeasureBottomSpacing(
+    WidgetTester tester,
+  ) async {
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('recordAddSheet'));
+    final options = find.byKey(const Key('recordOptions'));
+
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getBottomRight(sheet).dy, logicalHeight);
+
+    return tester.getBottomRight(sheet).dy - tester.getBottomRight(options).dy;
+  }
+
   testWidgets('Enters the Home tab in English after demo', (tester) async {
     await pumpApp(tester, locale: const Locale('en'));
     // Bottom-nav labels match the React original.
@@ -71,6 +87,79 @@ void main() {
     expect(find.text('Diet'), findsAtLeastNWidgets(1));
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
     expect(find.text('MY'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('record sheet has no fixed bottom gap without a system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    final bottomSpacing = await openRecordSheetAndMeasureBottomSpacing(tester);
+
+    expect(bottomSpacing, 0);
+  });
+
+  testWidgets('record sheet keeps only the required system inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    final bottomSpacing = await openRecordSheetAndMeasureBottomSpacing(tester);
+
+    expect(bottomSpacing, 34);
+  });
+
+  testWidgets('diet add opens as a content-sized sheet without a bottom gap', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    await tester.tap(find.byKey(const Key('recordAddButton')));
+    await tester.pumpAndSettle();
+
+    final dietOption = find.descendant(
+      of: find.byKey(const Key('recordOptions')),
+      matching: find.text('식단'),
+    );
+    await tester.tap(dietOption);
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('dietAddSheet'));
+    final options = find.byKey(const Key('dietAddOptions'));
+    expect(sheet, findsOneWidget);
+    expect(tester.getTopLeft(sheet).dy, greaterThan(0));
+    final logicalHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(tester.getBottomRight(sheet).dy, logicalHeight);
+    expect(
+      tester.getBottomRight(sheet).dy - tester.getBottomRight(options).dy,
+      0,
+    );
+    expect(find.byKey(const Key('recordAddSheet')), findsNothing);
+  });
+
+  testWidgets('header notification opens the existing full page', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    await tester.tap(find.byIcon(Icons.notifications_none_rounded).first);
+    await tester.pumpAndSettle();
+
+    final page = find.byKey(const Key('notificationPage'));
+    expect(page, findsOneWidget);
+    expect(tester.getTopLeft(page).dy, 0);
   });
 
   testWidgets('Tapping a bottom-nav destination switches branch', (

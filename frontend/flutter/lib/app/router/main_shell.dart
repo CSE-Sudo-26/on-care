@@ -183,6 +183,7 @@ class _NavAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: const Key('recordAddButton'),
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -228,18 +229,19 @@ class _RecordAddSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        // Match the main content width so the sheet scales with the viewport
-        // like the tab pages. The theme lifts the modal route cap to this
-        // width too (see AppTheme._bottomSheetTheme); this centres the child.
-        constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+    return ConstrainedBox(
+      // Match the main content width so the sheet scales with the viewport
+      // like the tab pages. The theme lifts the modal route cap to this
+      // width too (see AppTheme._bottomSheetTheme); this centres the child.
+      constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+      child: Container(
+        key: const Key('recordAddSheet'),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -285,7 +287,8 @@ class _RecordAddSheet extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                key: const Key('recordOptions'),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
                   children: <Widget>[
                     Expanded(

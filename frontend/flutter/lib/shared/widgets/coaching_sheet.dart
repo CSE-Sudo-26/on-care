@@ -98,18 +98,18 @@ class _CoachingSheet extends ConsumerWidget {
           : live.map(_cardFromSuggestion).toList();
     }
 
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.88,
-          maxWidth: 480,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+        maxWidth: 480,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+        child: SafeArea(
+          top: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -166,7 +166,7 @@ class _CoachingSheet extends ConsumerWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(

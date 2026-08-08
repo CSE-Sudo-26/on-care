@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
-import 'package:oncare/features/notification/presentation/widgets/notification_panel.dart';
-import 'package:oncare/shared/widgets/modals/right_slide_panel.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// Home tab. The header now scrolls with the content (per the Figma redesign),
@@ -19,10 +19,7 @@ class DashboardPage extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: DashboardContent(
-          onNotificationTap: () => showRightSlidePanel<void>(
-            context,
-            content: const NotificationPanelBody(),
-          ),
+          onNotificationTap: () => context.push(AppRoutes.notification),
           onCalendarTap: () => showScheduleCalendarSheet(context),
         ),
       ),
