@@ -47,11 +47,10 @@ Vercel 프로젝트가 이 Git 저장소와 연결되어 있으면 저장소 안
 
 배포 완료 후 다음 항목을 확인합니다.
 
-- 랜딩페이지: `https://ewhasudo.zapto.org/`
-- 사용자 앱: `https://ewhasudo.zapto.org/frontend/`
-- 트레이너 앱: `https://ewhasudo.zapto.org/trainer/`
-- 배포 커밋: `https://ewhasudo.zapto.org/version.txt`
-- 응답 헤더의 `Server`가 `GitHub.com`인지 확인
+- 랜딩페이지 `https://ewhasudo.zapto.org/`가 정상 응답하는지 확인
+- 사용자 앱 `https://ewhasudo.zapto.org/frontend/`이 정상 응답하는지 확인
+- 트레이너 앱 `https://ewhasudo.zapto.org/trainer/`이 정상 응답하는지 확인
+- `https://ewhasudo.zapto.org/version.txt`의 값이 배포한 전체 커밋 SHA와 일치하는지 확인
 
 ## AWS 이전 원칙
 
