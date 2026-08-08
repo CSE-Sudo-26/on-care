@@ -12,6 +12,11 @@ enum NavBadge {
 
   /// Today's booked session count.
   todayReservations,
+
+  /// Undecided consultation requests. Supplied by the sidebar directly
+  /// rather than looked up from [navDestinations] — this destination is
+  /// conditional, so it is not in that list. (#467)
+  pendingConsultations,
 }
 
 /// One entry in the sidebar. The order of [navDestinations] is the tab
@@ -82,3 +87,18 @@ const List<NavDestination> navDestinations = <NavDestination>[
     route: AppRoutes.reports,
   ),
 ];
+
+/// 상담 요청 — deliberately NOT in [navDestinations]. (#467)
+///
+/// That list defines branch order (index N here is branch N there), and the
+/// row is only shown against the real API. A conditional entry would make
+/// the list's length depend on build config, which is exactly what
+/// `AppShell.myBranchIndex` reads. Keeping it separate lets the sidebar
+/// render it with an explicit branch index and leaves the demo untouched.
+const NavDestination consultationsDestination = NavDestination(
+  label: '상담 요청',
+  icon: Icons.mark_email_unread_outlined,
+  activeIcon: Icons.mark_email_unread,
+  route: AppRoutes.consultations,
+  badge: NavBadge.pendingConsultations,
+);

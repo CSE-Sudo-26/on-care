@@ -35,6 +35,14 @@ class AppRoutes {
   /// 내 정보 / 설정 — reached from the sidebar footer, not the nav list.
   static const String my = '/my';
 
+  /// 상담 요청 — the inbox where a member becomes a client. (#467)
+  ///
+  /// Its nav row only exists against the real API: the demo has no member
+  /// backend to receive requests from, so showing the row there would add
+  /// a permanently empty destination to a screen that must stay as it is.
+  /// The route itself is always registered so a deep link still resolves.
+  static const String consultations = '/consultations';
+
   // --- Client detail ---
 
   /// Every addressable sub-section of a client's detail panel.

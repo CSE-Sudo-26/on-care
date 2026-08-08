@@ -32,6 +32,10 @@ class AppShell extends StatelessWidget {
   /// a nav destination.
   static int get myBranchIndex => navDestinations.length;
 
+  /// Branch index of 상담 요청. Sits after [myBranchIndex] so adding it
+  /// could not shift any existing branch. (#467)
+  static int get consultationsBranchIndex => myBranchIndex + 1;
+
   void _goBranch(int index) {
     // Tapping the active destination resets it to its branch root (e.g.
     // 고객 상세에서 '고객'을 다시 누르면 목록으로) — the standard console

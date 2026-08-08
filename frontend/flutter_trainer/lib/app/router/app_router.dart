@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_in_
 import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_up_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/coaching_page.dart';
+import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare_trainer/features/my/presentation/pages/my_page.dart';
 import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
@@ -42,12 +43,13 @@ String? sessionRedirect(SessionStatus status, String location) {
 String? clientSectionRedirect(String? id) =>
     id == null ? null : AppRoutes.clientDetail(id);
 
-/// Builds the trainer routing tree: a six-branch [StatefulShellRoute]
+/// Builds the trainer routing tree: a seven-branch [StatefulShellRoute]
 /// behind an auth gate, plus the auth routes.
 ///
 /// Branches 0–4 are the sidebar destinations (대시보드 / 고객 / 스케줄 /
 /// AI 코칭 / 리포트) in [navDestinations] order; branch 5 is 내 정보 —
-/// reachable from the sidebar footer but not a nav row.
+/// reachable from the sidebar footer but not a nav row; branch 6 is
+/// 상담 요청, whose nav row appears only against the real API.
 ///
 /// [readStatus] drives [sessionRedirect]; [refresh] should fire whenever
 /// the session changes so the guard re-evaluates without rebuilding the
@@ -137,6 +139,17 @@ GoRouter buildAppRouter({
                 path: AppRoutes.my,
                 builder: (context, state) =>
                     MyPage(tab: state.uri.queryParameters['t']),
+              ),
+            ],
+          ),
+          // 상담 요청 is appended AFTER 내 정보 on purpose: `myBranchIndex`
+          // is `navDestinations.length`, so inserting here instead would
+          // shift 내 정보 and silently break the footer's selection. (#467)
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.consultations,
+                builder: (context, state) => const ConsultationsPage(),
               ),
             ],
           ),

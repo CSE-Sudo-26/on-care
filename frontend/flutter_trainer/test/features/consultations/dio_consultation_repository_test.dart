@@ -1,0 +1,299 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+
+class _MockDio extends Mock implements Dio {}
+
+Response<T> _ok<T>(T body, String path) => Response<T>(
+  requestOptions: RequestOptions(path: path),
+  statusCode: 200,
+  data: body,
+);
+
+DioException _httpError(int status, String path, {Object? body}) =>
+    DioException(
+      requestOptions: RequestOptions(path: path),
+      type: DioExceptionType.badResponse,
+      response: Response<Object?>(
+        requestOptions: RequestOptions(path: path),
+        statusCode: status,
+        data: body,
+      ),
+    );
+
+const AppConfig _demoConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: 'http://localhost/v1',
+  useMockApi: true,
+);
+
+const AppConfig _realConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: 'http://localhost/v1',
+  useMockApi: false,
+);
+
+void main() {
+  late _MockDio dio;
+  late DioConsultationRepository repo;
+
+  setUp(() {
+    dio = _MockDio();
+    repo = DioConsultationRepository(dio);
+  });
+
+  group('DioConsultationRepository', () {
+    test('fetch defaults to the pending filter', () async {
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async => _ok<List<dynamic>>(
+          <dynamic>[
+            <String, Object?>{
+              'id': 'consult-1',
+              'member_id': 'u1',
+              'member_name': '김민수',
+              'exercise_goal': 'strength',
+              'health_purpose_type': 'general',
+              'preferred_date': '2026-08-12',
+              'preferred_time_slot': 'morning',
+              'status': 'pending',
+              'via_gym': true,
+            },
+          ],
+          '/trainer/consultations',
+        ),
+      );
+
+      final list = await repo.fetch();
+
+      expect(list, hasLength(1));
+      expect(list.single.memberName, '김민수');
+      expect(list.single.viaGym, isTrue);
+      final captured = verify(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: captureAny(named: 'queryParameters'),
+        ),
+      ).captured.single as Map<String, Object?>;
+      expect(captured['status'], 'pending');
+    });
+
+    test('fetch skips malformed elements instead of throwing', () async {
+      when(
+        () => dio.get<List<dynamic>>(
+          '/trainer/consultations',
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async => _ok<List<dynamic>>(<dynamic>[
+          'nonsense',
+          <String, Object?>{
+            'id': 'consult-2',
+            'member_id': 'u2',
+            'member_name': '이지수',
+            'exercise_goal': 'fitness',
+            'health_purpose_type': 'general',
+            'preferred_date': '2026-08-13',
+            'preferred_time_slot': 'evening',
+            'status': 'pending',
+          },
+        ], '/trainer/consultations'),
+      );
+
+      final list = await repo.fetch();
+
+      expect(list.map((r) => r.id), <String>['consult-2']);
+    });
+
+    test('pendingCount reads the count field', () async {
+      when(
+        () => dio.get<Map<String, Object?>>(
+          '/trainer/consultations/pending-count',
+        ),
+      ).thenAnswer(
+        (_) async => _ok<Map<String, Object?>>(
+          <String, Object?>{'count': 3},
+          '/trainer/consultations/pending-count',
+        ),
+      );
+
+      expect(await repo.pendingCount(), 3);
+    });
+
+    test('accept posts to the accept path', () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/consult-1/accept',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer(
+        (_) async => _ok<Map<String, Object?>>(
+          <String, Object?>{},
+          '/trainer/consultations/consult-1/accept',
+        ),
+      );
+
+      await repo.accept('consult-1');
+
+      verify(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/consult-1/accept',
+          data: any(named: 'data'),
+        ),
+      ).called(1);
+    });
+
+    test('reject carries the note the member will receive', () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/consult-1/reject',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer(
+        (_) async => _ok<Map<String, Object?>>(
+          <String, Object?>{},
+          '/trainer/consultations/consult-1/reject',
+        ),
+      );
+
+      await repo.reject('consult-1', note: '정원이 찼어요');
+
+      final data = verify(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/consult-1/reject',
+          data: captureAny(named: 'data'),
+        ),
+      ).captured.single as Map<String, Object?>;
+      expect(data['note'], '정원이 찼어요');
+    });
+
+    test("409's own reason survives as the message shown to the trainer", () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/consult-1/accept',
+          data: any(named: 'data'),
+        ),
+      ).thenThrow(
+        _httpError(
+          409,
+          '/trainer/consultations/consult-1/accept',
+          body: <String, Object?>{'detail': '이미 다른 트레이너가 담당 중인 회원입니다.'},
+        ),
+      );
+
+      // The whole point of the 409 is its sentence — a generic network
+      // error would leave the trainer with no idea why it failed.
+      await expectLater(
+        repo.accept('consult-1'),
+        throwsA(
+          isA<ValidationError>().having(
+            (e) => e.message,
+            'message',
+            '이미 다른 트레이너가 담당 중인 회원입니다.',
+          ),
+        ),
+      );
+    });
+
+    test('a 404 stays a typed transport error', () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/nope/accept',
+          data: any(named: 'data'),
+        ),
+      ).thenThrow(_httpError(404, '/trainer/consultations/nope/accept'));
+
+      await expectLater(
+        repo.accept('nope'),
+        throwsA(isA<NotFoundError>()),
+      );
+    });
+
+    test('ids are percent-encoded into the path', () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/a%2Fb/accept',
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer(
+        (_) async => _ok<Map<String, Object?>>(
+          <String, Object?>{},
+          '/trainer/consultations/a%2Fb/accept',
+        ),
+      );
+
+      await repo.accept('a/b');
+
+      verify(
+        () => dio.post<Map<String, Object?>>(
+          '/trainer/consultations/a%2Fb/accept',
+          data: any(named: 'data'),
+        ),
+      ).called(1);
+    });
+  });
+
+  group('consultationRepositoryProvider', () {
+    test('demo mode resolves the inbox-less source', () {
+      final container = ProviderContainer(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(consultationRepositoryProvider),
+        isA<DemoConsultationRepository>(),
+      );
+      // The demo console must look exactly as it does today — no inbox
+      // row, no badge.
+      expect(container.read(consultationInboxEnabledProvider), isFalse);
+    });
+
+    test('real-API mode resolves the Dio source', () {
+      final container = ProviderContainer(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_realConfig),
+          dioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        container.read(consultationRepositoryProvider),
+        isA<DioConsultationRepository>(),
+      );
+      expect(container.read(consultationInboxEnabledProvider), isTrue);
+    });
+
+    test('the demo badge count is zero without issuing a request', () async {
+      final container = ProviderContainer(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(consultationPendingCountProvider.future), 0);
+    });
+
+    test('the demo source refuses decisions rather than faking them', () async {
+      const repo = DemoConsultationRepository();
+
+      expect(await repo.fetch(), isEmpty);
+      await expectLater(repo.accept('x'), throwsA(isA<ValidationError>()));
+      await expectLater(repo.reject('x'), throwsA(isA<ValidationError>()));
+    });
+  });
+}

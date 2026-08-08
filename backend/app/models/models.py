@@ -329,6 +329,17 @@ class ConsultationRequest(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending"
     )
+    #: 처리한 트레이너. 헬스장으로 온 요청(target_type='gym')은 소속 트레이너 누구나
+    #: 받을 수 있어 요청 대상(trainer_id)과 다른 값이므로 별도 컬럼이다. (#467)
+    decided_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    #: 승인·거절 시각. updated_at 은 어떤 수정으로도 갱신되어 근거가 못 된다.
+    decided_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: 거절 사유. 승인 시에는 비어 있다.
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -356,6 +367,11 @@ class ConsultationRequest(Base):
             "member_id",
             "created_at",
         ),
+        # 트레이너 인박스의 두 경로 — 내 앞으로 온 것 / 내 헬스장으로 온 것. (#467)
+        Index(
+            "ix_consultation_requests_trainer_status", "trainer_id", "status"
+        ),
+        Index("ix_consultation_requests_gym_status", "gym_id", "status"),
     )
 
 

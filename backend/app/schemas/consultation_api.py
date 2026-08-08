@@ -60,6 +60,24 @@ class ConsultationCreate(BaseModel):
         return self
 
 
+#: 트레이너 인박스가 걸 수 있는 상태 필터. `all` 은 처리 이력까지 함께 본다.
+ConsultationStatusFilter = Literal["pending", "accepted", "rejected", "all"]
+
+
+class ConsultationDecision(BaseModel):
+    """승인·거절 본문. 거절 사유는 회원 알림 본문에 그대로 실린다."""
+
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _normalize_note(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
+
+
 class ConsultationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,3 +99,22 @@ class ConsultationOut(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class TrainerConsultationOut(ConsultationOut):
+    """트레이너 인박스 카드. 회원용 [ConsultationOut] 에 처리 정보를 더한다.
+
+    회원 응답과 스키마를 나누는 이유: 회원에게는 **누가 처리했는지**가 필요 없고,
+    트레이너에게는 요청자 이름이 반드시 필요하다(회원 id 만으로는 카드를 못 그린다).
+    한 스키마에 다 담으면 회원 응답에도 처리자 id 가 실린다.
+    """
+
+    #: 요청한 회원 이름. 대상 이름과 같은 이유로 id 대신 함께 내려준다.
+    member_name: str | None = None
+    #: 이 요청이 내 앞으로 온 것(False)인지, 내 소속 헬스장으로 온 것(True)인지.
+    #: 카드가 "헬스장 문의" 배지를 다는 근거이며, 트레이너 지정 요청과 섞이면
+    #: 누구를 향한 요청인지 화면에서 구분할 수 없다.
+    via_gym: bool = False
+    decided_by: str | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
