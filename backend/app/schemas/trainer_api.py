@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
