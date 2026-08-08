@@ -11,6 +11,8 @@ from __future__ import annotations
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
+from app.schemas.partial_update import PartialUpdate
+
 from app.schemas.diet import DietAnalysis
 
 
@@ -63,8 +65,11 @@ class DietEntryOut(BaseModel):
     sugar_g: float
 
 
-class DietEntryUpdate(BaseModel):
-    """PUT /diet/entries/{id} — 끼니 정보와 영양소 부분 수정."""
+class DietEntryUpdate(PartialUpdate):
+    """PUT /diet/entries/{id} — 끼니 정보와 영양소 부분 수정.
+
+    모든 항목이 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#495).
+    """
     meal_type: str | None = None
     time_label: str | None = None
     total_calories: int | None = Field(None, ge=0)

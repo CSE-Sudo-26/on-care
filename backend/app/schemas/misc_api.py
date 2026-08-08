@@ -9,6 +9,8 @@ from datetime import date as _date, datetime
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.partial_update import PartialUpdate
+
 # 회원 일정 카테고리 허용값(프론트 계약).
 ScheduleCategory = Literal["hospital", "exercise", "meal", "medication", "other"]
 _HEX_COLOR = r"^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$"
@@ -60,8 +62,11 @@ class ScheduleEventCreate(BaseModel):
     _v_time = field_validator("time")(_valid_hhmm_or_empty)
 
 
-class ScheduleEventUpdate(BaseModel):
-    """일정 상세 수정(부분). 제공된 필드만 반영. 잘못된 값은 422."""
+class ScheduleEventUpdate(PartialUpdate):
+    """일정 상세 수정(부분). 제공된 필드만 반영. 잘못된 값은 422.
+
+    모든 항목이 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#495).
+    """
     date: str | None = Field(default=None, max_length=10)
     time: str | None = Field(default=None, max_length=10)
     title: str | None = Field(default=None, min_length=1, max_length=200)

@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.partial_update import PartialUpdate
+
 
 def _validate_ymd(v: str) -> str:
     try:
@@ -237,7 +239,7 @@ class ScheduleCreateRequest(BaseModel):
     _v_time = field_validator("time")(_validate_hhmm)
 
 
-class ScheduleUpdateRequest(BaseModel):
+class ScheduleUpdateRequest(PartialUpdate):
     """부분 수정 — 제공된 필드만 반영."""
     time: str | None = Field(default=None, max_length=10)
     client_name: str | None = Field(default=None, max_length=100)
@@ -252,18 +254,9 @@ class ScheduleUpdateRequest(BaseModel):
     def _v_time(cls, v: str | None) -> str | None:
         return _validate_hhmm(v) if v is not None else v
 
-    @model_validator(mode="after")
-    def _reject_null_for_non_nullable_fields(self) -> ScheduleUpdateRequest:
-        """부분 수정에서 명시적 null은 member_id(배정 해제)에만 허용한다.
-
-        나머지 필드는 DB NOT NULL 컬럼이므로 null을 그대로 반영하면 IntegrityError 500이
-        발생한다. 누락은 변경 없음, member_id null은 배정 해제, 그 외 null은 422로 구분한다.
-        """
-        nullable = {"member_id"}
-        for field in self.model_fields_set - nullable:
-            if getattr(self, field) is None:
-                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
-        return self
+    #: null 은 '배정 해제'를 뜻하는 member_id 에만 허용한다. 규약 본문은
+    #: `PartialUpdate` 에 있다(#495).
+    nullable_fields: ClassVar[frozenset[str]] = frozenset({"member_id"})
 
 
 class ScheduleCompleteRequest(BaseModel):
@@ -285,11 +278,13 @@ class MemberCoachOut(BaseModel):
 
 # ---- 트레이너 프로필 수정 ----
 
-class TrainerMeUpdate(BaseModel):
+class TrainerMeUpdate(PartialUpdate):
     """PUT /trainer/me — 보낸 필드만 반영(부분 수정).
 
     이름/이메일은 계정(User)에 속하므로 여기서 바꾸지 않는다. 프로필 화면에서
     바꿀 수 있는 값만 노출한다.
+
+    모든 항목이 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#495).
     """
     phone: str | None = Field(default=None, max_length=20)
     specialty: str | None = Field(default=None, max_length=50)
@@ -390,8 +385,11 @@ class TrainerNotificationSettings(BaseModel):
     reminder_lead_minutes: int
 
 
-class TrainerNotificationSettingsUpdate(BaseModel):
-    """부분 수정 — 보낸 필드만 반영."""
+class TrainerNotificationSettingsUpdate(PartialUpdate):
+    """부분 수정 — 보낸 필드만 반영.
+
+    세 항목 모두 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#495).
+    """
     notify_new_message: bool | None = None
     notify_session_reminder: bool | None = None
     reminder_lead_minutes: int | None = None

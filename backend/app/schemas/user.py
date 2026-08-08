@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.schemas.partial_update import PartialUpdate
+
 
 # ---- GET /users/me ----
 class UserMe(BaseModel):
@@ -49,8 +51,11 @@ class MemberNotificationSettings(BaseModel):
     weekly_report: bool
 
 
-class MemberNotificationSettingsUpdate(BaseModel):
-    """부분 수정 — 보낸 항목만 반영한다."""
+class MemberNotificationSettingsUpdate(PartialUpdate):
+    """부분 수정 — 보낸 항목만 반영한다.
+
+    다섯 항목 모두 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다(#489·#495).
+    """
 
     diet_log: bool | None = None
     exercise_reminder: bool | None = None
@@ -58,24 +63,6 @@ class MemberNotificationSettingsUpdate(BaseModel):
     ai_coaching: bool | None = None
     weekly_report: bool | None = None
 
-    @model_validator(mode="after")
-    def _reject_null_for_non_nullable_fields(
-        self,
-    ) -> MemberNotificationSettingsUpdate:
-        """명시적 null 은 422. 누락은 '변경 없음'이다.
-
-        `None` 은 두 가지를 뜻할 수 있다 — 항목을 아예 안 보냈거나, `null` 을
-        보냈거나. 여기 다섯 항목은 모두 DB NOT NULL 이라 null 로 바꿀 수 있는
-        값이 아니다. 구분하지 않으면 `{"weekly_report": null}` 이 조용히 성공하고
-        아무것도 바뀌지 않는다.
-
-        `ScheduleUpdateRequest._reject_null_for_non_nullable_fields` 와 같은
-        규약이다(#377).
-        """
-        for field in self.model_fields_set:
-            if getattr(self, field) is None:
-                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
-        return self
 
 
 class UserHealth(BaseModel):
@@ -155,6 +142,11 @@ class HealthGoalsUpdate(BaseModel):
     """PUT /users/me/health-goals — 식단 일일 목표(6종) + 주간 운동 목표(3종).
 
     체중/혈압/혈당(vitals) 목표는 다루지 않는다. 모두 선택(부분 저장 허용).
+
+    **여기만 `PartialUpdate` 를 쓰지 않는다**(#495). 목표 컬럼은 전부
+    `nullable=True` 이고, 명시적 null 은 '목표 해제'로 실제 동작한다 — 핸들러가
+    그대로 컬럼에 반영한다. 규약은 *NOT NULL 컬럼* 을 지키려는 것이므로 여기에는
+    해당하지 않고, 적용하면 목표를 지울 방법이 사라진다.
     """
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
@@ -183,8 +175,12 @@ class OnboardingRequest(BaseModel):
     daily_sugar_g: Optional[int] = None
 
 
-class ProfileUpdate(BaseModel):
-    """PUT /users/me — 내 프로필 모달(이름/이메일/전화/생년월일)."""
+class ProfileUpdate(PartialUpdate):
+    """PUT /users/me — 내 프로필 모달(이름/이메일/전화/생년월일).
+
+    네 항목 모두 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다. 전에는
+    핸들러가 `is not None` 으로 걸러 조용히 무시했다 — 저장된 줄 알게 된다(#495).
+    """
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
