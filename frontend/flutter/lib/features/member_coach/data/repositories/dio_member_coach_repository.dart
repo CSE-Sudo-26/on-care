@@ -31,8 +31,18 @@ class DioMemberCoachRepository implements MemberCoachRepository {
       _getList('/me/coach/routines', coachRoutineFromJson);
 
   @override
-  Future<List<CoachMessage>> fetchChat() =>
-      _getList('/me/coach/chat', coachMessageFromJson);
+  Future<List<CoachMessage>> fetchChat() async {
+    final List<CoachMessage> messages = await _getList(
+      '/me/coach/chat',
+      coachMessageFromJson,
+    );
+    messages.sort((CoachMessage first, CoachMessage second) {
+      final int createdAtOrder = first.createdAt.compareTo(second.createdAt);
+      if (createdAtOrder != 0) return createdAtOrder;
+      return first.id.compareTo(second.id);
+    });
+    return messages;
+  }
 
   @override
   Future<void> sendMessage(String text) async {
@@ -77,8 +87,12 @@ class DioMemberCoachRepository implements MemberCoachRepository {
       final res = await _dio.get<List<dynamic>>(path);
       final data = res.data ?? const <dynamic>[];
       return data
-          .whereType<Map<String, Object?>>()
-          .map(fromJson)
+          .map((dynamic item) {
+            if (item is! Map<String, Object?>) {
+              throw const FormatException('Invalid member coach list item.');
+            }
+            return fromJson(item);
+          })
           .toList(growable: false);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return <T>[];

@@ -48,6 +48,20 @@ const Trainer _assignedTrainer = Trainer(
   role: '퍼스널 트레이너',
 );
 
+class _ReadFailingMemberCoachRepository extends MockMemberCoachRepository {
+  @override
+  Future<void> markRead() async {
+    throw StateError('읽음 처리 실패');
+  }
+}
+
+class _SendFailingMemberCoachRepository extends MockMemberCoachRepository {
+  @override
+  Future<void> sendMessage(String text) async {
+    throw StateError('메시지 전송 실패');
+  }
+}
+
 void main() {
   Future<void> pumpRecommendationCards(
     WidgetTester tester,
@@ -125,9 +139,7 @@ void main() {
     expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsOneWidget);
   });
 
-  testWidgets('담당 트레이너 프로필은 트레이너 상세 경로로 이동한다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('담당 트레이너 프로필은 트레이너 상세 경로로 이동한다', (WidgetTester tester) async {
     final GoRouter router = GoRouter(
       routes: <RouteBase>[
         GoRoute(
@@ -241,10 +253,9 @@ void main() {
 
     expect(find.text('운동 후 확인할게요'), findsOneWidget);
     expect(find.textContaining('나 ·'), findsNothing);
-    final Finder sentBubble = find.ancestor(
-      of: find.text('운동 후 확인할게요'),
-      matching: find.byType(Container),
-    ).first;
+    final Finder sentBubble = find
+        .ancestor(of: find.text('운동 후 확인할게요'), matching: find.byType(Container))
+        .first;
     final BoxDecoration sentBubbleDecoration =
         tester.widget<Container>(sentBubble).decoration! as BoxDecoration;
     expect(sentBubbleDecoration.color, FigmaColors.primary);
@@ -263,5 +274,44 @@ void main() {
 
     expect(find.byType(TrainerChatPage), findsNothing);
     expect(find.byKey(const Key('underlyingFloatingButton')), findsOneWidget);
+  });
+
+  testWidgets('읽음 처리가 실패해도 대화 목록을 표시한다', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _ReadFailingMemberCoachRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('오늘 점심'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('메시지 전송이 실패하면 입력 내용을 유지한다', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _SendFailingMemberCoachRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '다시 보낼 메시지');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    final TextField input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.controller?.text, '다시 보낼 메시지');
+    expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
   });
 }

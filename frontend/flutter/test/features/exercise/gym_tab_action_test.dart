@@ -12,6 +12,10 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 import '../../support/consultation_test_support.dart';
@@ -32,6 +36,16 @@ const Trainer _trainer = Trainer(
   role: '전담 트레이너',
 );
 
+const MemberCoach _coach = MemberCoach(
+  trainerId: 'trainer-action-test',
+  name: '김액션',
+  specialty: '전담 트레이너',
+  career: '5년',
+  intro: '건강한 운동을 돕습니다.',
+  gymName: '액션 테스트 헬스장',
+  goal: '체력 강화',
+);
+
 const AppConfig _config = AppConfig(
   environment: Environment.dev,
   apiBaseUrl: 'https://dev.api.test',
@@ -49,7 +63,7 @@ ConsultationRequest _consultation(ConsultationStatus status) {
     trainerRole: _trainer.role,
     exerciseGoal: ExerciseGoal.weightLoss,
     healthPurposeType: HealthPurposeType.chronic,
-  healthPurposeDetail: null,
+    healthPurposeDetail: null,
     preferredDate: DateTime(2026, 8),
     preferredTimeSlot: PreferredTimeSlot.afternoon,
     message: null,
@@ -67,6 +81,8 @@ void main() {
     ConsultationRequest? consultation,
     bool hasMyGym = true,
     Trainer? trainer = _trainer,
+    MemberCoach? coach,
+    int unread = 0,
   }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -99,6 +115,11 @@ void main() {
           consultationRequestControllerProvider.overrideWith(
             (ref) => consultationController,
           ),
+          memberCoachRepositoryProvider.overrideWithValue(
+            MockMemberCoachRepository(),
+          ),
+          memberCoachProvider.overrideWith((ref) async => coach),
+          coachUnreadProvider.overrideWith((ref) async => unread),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -141,10 +162,7 @@ void main() {
     expect(find.text(l.exViewConsultationRequest), findsNothing);
     expect(find.text(l.exMyGymSection), findsOneWidget);
     expect(
-      find.descendant(
-        of: myGymCard(),
-        matching: find.text(_trainer.name),
-      ),
+      find.descendant(of: myGymCard(), matching: find.text(_trainer.name)),
       findsNothing,
     );
 
@@ -178,6 +196,7 @@ void main() {
     await pumpGymTab(
       tester,
       consultation: _consultation(ConsultationStatus.pending),
+      coach: _coach,
     );
     await scrollToCard(tester);
 
@@ -187,6 +206,7 @@ void main() {
     expect(find.text(l.exViewConsultationRequest), findsOneWidget);
     expect(find.text(l.exGymInfo), findsNothing);
     expect(find.text(l.exConsultButton), findsNothing);
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
 
     final Finder statusSection = find.text(l.exConsultStatusSection);
     final double statusTopBeforeTap = tester.getTopLeft(statusSection).dy;
@@ -198,6 +218,65 @@ void main() {
     expect(tester.getTopLeft(statusSection).dy, lessThan(statusTopBeforeTap));
     expect(consultationController.state, hasLength(requestCountBeforeTap));
     expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('connected trainer shows chat without a zero badge', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester, coach: _coach);
+    await scrollToCard(tester);
+
+    final Finder chatButton = find.byKey(const Key('gymTrainerChatButton'));
+    expect(chatButton, findsOneWidget);
+    expect(
+      find.descendant(of: chatButton, matching: find.text('0')),
+      findsNothing,
+    );
+
+    await tester.tap(chatButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TrainerChatPage), findsOneWidget);
+    expect(find.text(_coach.name), findsOneWidget);
+  });
+
+  testWidgets('connected trainer shows unread count and caps it at 99+', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester, coach: _coach, unread: 100);
+    await scrollToCard(tester);
+
+    final Finder chatButton = find.byKey(const Key('gymTrainerChatButton'));
+    expect(
+      find.descendant(of: chatButton, matching: find.text('99+')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: chatButton, matching: find.text('100')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('connected trainer shows the actual unread count below 100', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester, coach: _coach, unread: 7);
+    await scrollToCard(tester);
+
+    final Finder chatButton = find.byKey(const Key('gymTrainerChatButton'));
+    expect(
+      find.descendant(of: chatButton, matching: find.text('7')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('member without an active trainer has no chat action', (
+    WidgetTester tester,
+  ) async {
+    await pumpGymTab(tester);
+    await scrollToCard(tester);
+
+    expect(find.byKey(const Key('gymTrainerChatButton')), findsNothing);
   });
 
   for (final ConsultationStatus status in <ConsultationStatus>[
@@ -231,7 +310,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text(l.exGymDetailTitle), findsOneWidget);
-
   });
 
   testWidgets('담당 트레이너가 없으면 예약 패널을 감춘다', (WidgetTester tester) async {

@@ -255,6 +255,8 @@ class _ChatButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String unreadLabel = unread > 99 ? '99+' : '$unread';
+
     return Material(
       color: FigmaColors.softBlue,
       borderRadius: BorderRadius.circular(12),
@@ -293,7 +295,7 @@ class _ChatButton extends StatelessWidget {
                     borderRadius: BorderRadius.all(Radius.circular(999)),
                   ),
                   child: Text(
-                    '$unread',
+                    unreadLabel,
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,

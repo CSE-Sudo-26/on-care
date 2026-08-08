@@ -9,6 +9,9 @@ import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class GymTab extends ConsumerWidget {
@@ -33,6 +36,9 @@ class GymTab extends ConsumerWidget {
     final AsyncValue<List<Gym>> knownGymsAsync = ref.watch(
       gymFinderResultsProvider,
     );
+    final MemberCoach? assignedCoach = ref
+        .watch(memberCoachProvider)
+        .valueOrNull;
     final List<ConsultationRequest> requests = ref.watch(
       consultationRequestControllerProvider,
     );
@@ -43,6 +49,11 @@ class GymTab extends ConsumerWidget {
         recentRequest?.status == ConsultationStatus.pending
         ? recentRequest
         : null;
+    final bool showTrainerChat =
+        assignedCoach != null && pendingRequest == null;
+    final int unreadCoachMessages = showTrainerChat
+        ? ref.watch(coachUnreadProvider).valueOrNull ?? 0
+        : 0;
     final GlobalKey recentConsultationKey = GlobalKey();
 
     void showRecentConsultation() {
@@ -73,6 +84,13 @@ class GymTab extends ConsumerWidget {
             onPendingConsultationTap: pendingRequest == null
                 ? null
                 : showRecentConsultation,
+            onTrainerChatTap: showTrainerChat
+                ? () => openTrainerChatPage(
+                    context,
+                    trainerName: assignedCoach.name,
+                  )
+                : null,
+            unreadCoachMessages: unreadCoachMessages,
           ),
           if (recentRequest != null) ...<Widget>[
             const SizedBox(height: 28),
@@ -237,6 +255,8 @@ class _MyGymSection extends StatelessWidget {
     required this.onFind,
     required this.onRetry,
     required this.onPendingConsultationTap,
+    required this.onTrainerChatTap,
+    required this.unreadCoachMessages,
   });
 
   final AsyncValue<Gym?> gymAsync;
@@ -248,6 +268,8 @@ class _MyGymSection extends StatelessWidget {
   final VoidCallback onFind;
   final VoidCallback onRetry;
   final VoidCallback? onPendingConsultationTap;
+  final VoidCallback? onTrainerChatTap;
+  final int unreadCoachMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -263,6 +285,8 @@ class _MyGymSection extends StatelessWidget {
               onSlot: onSlot,
               onGymTap: () => context.push(AppRoutes.gymDetailPath(gym.id)),
               onPendingConsultationTap: onPendingConsultationTap,
+              onTrainerChatTap: onTrainerChatTap,
+              unreadCoachMessages: unreadCoachMessages,
             ),
     );
   }
@@ -276,6 +300,8 @@ class _MyGymCard extends StatelessWidget {
     required this.onSlot,
     required this.onGymTap,
     required this.onPendingConsultationTap,
+    required this.onTrainerChatTap,
+    required this.unreadCoachMessages,
   });
 
   final Gym gym;
@@ -284,6 +310,8 @@ class _MyGymCard extends StatelessWidget {
   final ValueChanged<String> onSlot;
   final VoidCallback onGymTap;
   final VoidCallback? onPendingConsultationTap;
+  final VoidCallback? onTrainerChatTap;
+  final int unreadCoachMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -406,8 +434,67 @@ class _MyGymCard extends StatelessWidget {
                 ),
               ),
             ),
+          ] else if (onTrainerChatTap != null) ...<Widget>[
+            const SizedBox(height: 14),
+            _TrainerChatButton(
+              unread: unreadCoachMessages,
+              onTap: onTrainerChatTap!,
+            ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _TrainerChatButton extends StatelessWidget {
+  const _TrainerChatButton({required this.unread, required this.onTap});
+
+  final int unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String unreadLabel = unread > 99 ? '99+' : '$unread';
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        key: const Key('gymTrainerChatButton'),
+        onPressed: onTap,
+        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text('트레이너와 채팅'),
+            if (unread > 0) ...<Widget>[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: const BoxDecoration(
+                  color: FigmaColors.redDot,
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                ),
+                child: Text(
+                  unreadLabel,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: FigmaColors.primary,
+          minimumSize: const Size(0, 44),
+          side: BorderSide(color: FigmaColors.primaryA(0.25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }
@@ -710,9 +797,8 @@ class _RecommendedTrainerSection extends StatelessWidget {
                   return _TrainerRecommendationCard(
                     trainer: trainer,
                     gymName: gymNames[trainer.gymId] ?? '',
-                    onTap: () => context.push(
-                      AppRoutes.trainerDetailPath(trainer.id),
-                    ),
+                    onTap: () =>
+                        context.push(AppRoutes.trainerDetailPath(trainer.id)),
                   );
                 },
               ),
