@@ -5,8 +5,8 @@
 """
 from __future__ import annotations
 
-from typing import Optional
-from pydantic import BaseModel
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---- GET /users/me ----
@@ -62,6 +62,25 @@ class UserRegister(BaseModel):
     email: str
     password: str
     name: str = ""
+
+
+class TrainerRegister(UserRegister):
+    """트레이너 가입 — 회원 가입에 헬스장 초대 코드를 더한다. (#475)
+
+    코드가 소속 헬스장을 결정한다. 소속 없는 트레이너는 상담 대상이 될 수 없어
+    (#443·#451) 가입 직후 아무것도 못 하는 상태가 되므로, 소속을 가입 시점에
+    확정한다.
+    """
+
+    invite_code: str = Field(min_length=1, max_length=32)
+
+    @field_validator("invite_code", mode="before")
+    @classmethod
+    def _normalize_code(cls, value: Any) -> Any:
+        # 사람이 옮겨 적는 값이다. 공백과 대소문자 차이를 코드 오류로 만들지 않는다.
+        if isinstance(value, str):
+            return value.strip().upper()
+        return value
 
 
 # ---- 프로필 / 온보딩 / 건강 목표 ----

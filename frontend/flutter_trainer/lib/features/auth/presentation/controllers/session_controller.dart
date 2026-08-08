@@ -166,12 +166,14 @@ class SessionController extends StateNotifier<SessionState> {
     required String email,
     required String password,
     required String name,
+    required String inviteCode,
   }) async {
     _userActionStarted = true;
     final tokens = await _repo.register(
       email: email,
       password: password,
       name: name,
+      inviteCode: inviteCode,
     );
     await _establish(tokens);
   }
