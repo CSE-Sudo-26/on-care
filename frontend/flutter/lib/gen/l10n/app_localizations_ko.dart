@@ -1000,22 +1000,29 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get exSlotToday19 => '오늘 19:00';
+  String exSlotWhen(String date, String time) {
+    return '$date $time';
+  }
 
   @override
-  String get exSlotTomorrow0730 => '내일 07:30';
+  String exSlotRemaining(int count) {
+    return '잔여 $count자리';
+  }
 
   @override
-  String get exSlotTomorrow20 => '내일 20:00';
+  String get exSlotFull => '예약 마감';
 
   @override
-  String get exSlot1Left => '잔여 1자리';
+  String get exSlotsEmpty => '예약 가능한 시간이 없어요';
 
   @override
-  String get exSlotAvailable => '여유 있음';
+  String get exSlotsAllBooked => '예약 가능한 시간이 모두 찼어요';
 
   @override
-  String get exSlot2Left => '잔여 2자리';
+  String get exSlotsLoadError => '예약 시간을 불러오지 못했어요.';
+
+  @override
+  String get exReserveFailed => '예약에 실패했어요. 잠시 후 다시 시도해 주세요';
 
   @override
   String exReserveConfirmedSlotGym(String slot, String gym) {

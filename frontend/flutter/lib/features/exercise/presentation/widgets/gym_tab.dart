@@ -7,6 +7,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
+import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
@@ -426,7 +427,7 @@ class _MyGymCard extends StatelessWidget {
             const SizedBox(height: 16),
             _ReservationPanel(
               gym: gym,
-              trainer: trainer!.name,
+              trainer: trainer!,
               selectedSlot: selectedSlot,
               onSlot: onSlot,
             ),
@@ -528,7 +529,12 @@ class _TrainerChatButton extends StatelessWidget {
   }
 }
 
-class _ReservationPanel extends StatelessWidget {
+/// 담당 트레이너의 실제 예약 가능 시간.
+///
+/// 슬롯은 트레이너에 귀속되므로 여기서 [trainerSlotsProvider] 를 직접 읽는다.
+/// 마감된 자리도 숨기지 않고 비활성으로 남겨, 그 트레이너의 하루가 "비어 있음"
+/// 이 아니라 "찼음" 으로 읽히게 한다.
+class _ReservationPanel extends ConsumerStatefulWidget {
   const _ReservationPanel({
     required this.gym,
     required this.trainer,
@@ -537,13 +543,61 @@ class _ReservationPanel extends StatelessWidget {
   });
 
   final Gym gym;
-  final String trainer;
+  final Trainer trainer;
+
+  /// 선택된 슬롯 id. 부모(운동 탭)가 들고 있다.
   final String? selectedSlot;
   final ValueChanged<String> onSlot;
 
   @override
+  ConsumerState<_ReservationPanel> createState() => _ReservationPanelState();
+}
+
+class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
+  /// 요청이 오가는 동안 잡고 있는 슬롯 id. 예약은 멱등이 아니라서, 확정 버튼을
+  /// 두 번 누르면 좌석이 두 번 빠진다 — 그래서 진행 중에는 버튼을 잠근다.
+  String? _reserving;
+
+  /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
+  /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
+  String _when(BuildContext context, AppLocalizations l, DateTime at) {
+    final MaterialLocalizations m = MaterialLocalizations.of(context);
+    return l.exSlotWhen(
+      m.formatMediumDate(at),
+      m.formatTimeOfDay(TimeOfDay.fromDateTime(at)),
+    );
+  }
+
+  Future<void> _reserve(AppLocalizations l, TrainerSlot slot) async {
+    if (_reserving != null) return;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final String label = _when(context, l, slot.startsAt);
+    setState(() => _reserving = slot.id);
+    try {
+      await ref.read(gymRepositoryProvider).reserve(slot.id);
+    } catch (_) {
+      if (mounted) setState(() => _reserving = null);
+      messenger.showSnackBar(SnackBar(content: Text(l.exReserveFailed)));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _reserving = null);
+    // 잔여 자리를 다시 읽어, 방금 잡은 자리가 목록에도 반영되게 한다.
+    ref.invalidate(trainerSlotsProvider(widget.trainer.id));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l.exReserveConfirmedSlotGym(label, widget.gym.name)),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final AsyncValue<List<TrainerSlot>> slotsAsync = ref.watch(
+      trainerSlotsProvider(widget.trainer.id),
+    );
+    final bool busy = _reserving != null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -569,7 +623,7 @@ class _ReservationPanel extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            l.exTrainerAvailability(trainer),
+            l.exTrainerAvailability(widget.trainer.name),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -579,58 +633,140 @@ class _ReservationPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final List<String> slot in <List<String>>[
-                <String>[l.exSlotToday19, l.exSlot1Left],
-                <String>[l.exSlotTomorrow0730, l.exSlotAvailable],
-                <String>[l.exSlotTomorrow20, l.exSlot2Left],
-              ])
-                _SlotChip(
-                  label: slot[0],
-                  sub: slot[1],
-                  selected: selectedSlot == slot[0],
-                  onTap: () => onSlot(slot[0]),
-                ),
-            ],
-          ),
-          if (selectedSlot != null) ...<Widget>[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        l.exReserveConfirmedSlotGym(selectedSlot!, gym.name),
-                      ),
-                    ),
-                  );
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: FigmaColors.primary,
-                  minimumSize: const Size(0, 42),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  l.exReserveConfirm(selectedSlot!),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+          slotsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
               ),
             ),
-          ],
+            error: (Object _, StackTrace _) => _SlotNotice(
+              message: l.exSlotsLoadError,
+              onRetry: () =>
+                  ref.invalidate(trainerSlotsProvider(widget.trainer.id)),
+            ),
+            data: (List<TrainerSlot> slots) {
+              if (slots.isEmpty) {
+                return _SlotNotice(message: l.exSlotsEmpty);
+              }
+              final bool allBooked = slots.every(
+                (TrainerSlot slot) => slot.isFull,
+              );
+              final TrainerSlot? picked = slots
+                  .where(
+                    (TrainerSlot slot) =>
+                        slot.id == widget.selectedSlot && !slot.isFull,
+                  )
+                  .firstOrNull;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (allBooked) ...<Widget>[
+                    _SlotNotice(message: l.exSlotsAllBooked),
+                    const SizedBox(height: 10),
+                  ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      for (final TrainerSlot slot in slots)
+                        _SlotChip(
+                          label: _when(context, l, slot.startsAt),
+                          sub: slot.isFull
+                              ? l.exSlotFull
+                              : l.exSlotRemaining(slot.remaining),
+                          selected: picked?.id == slot.id,
+                          // 마감된 자리는 고를 수 없고, 예약이 오가는 중에는
+                          // 선택도 잠근다.
+                          onTap: slot.isFull || busy
+                              ? null
+                              : () => widget.onSlot(slot.id),
+                        ),
+                    ],
+                  ),
+                  if (picked != null) ...<Widget>[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: busy ? null : () => _reserve(l, picked),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: FigmaColors.primary,
+                          minimumSize: const Size(0, 42),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          l.exReserveConfirm(
+                            _when(context, l, picked.startsAt),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// 슬롯이 없거나 전부 찼거나 조회에 실패했을 때의 한 줄 안내.
+class _SlotNotice extends StatelessWidget {
+  const _SlotNotice({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Row(
+      children: <Widget>[
+        const Icon(
+          Icons.event_busy_outlined,
+          size: 14,
+          color: FigmaColors.textMuted,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: FigmaColors.textMuted,
+            ),
+          ),
+        ),
+        if (onRetry != null)
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              minimumSize: const Size(48, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(
+              l.actionRetry,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1034,12 +1170,17 @@ class _SlotChip extends StatelessWidget {
   final String label;
   final String sub;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// null 이면 마감된 자리다 — 눌리지 않고 흐리게 그려진다.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final bool disabled = onTap == null;
     return Material(
-      color: selected ? FigmaColors.primary : Colors.white,
+      color: selected
+          ? FigmaColors.primary
+          : (disabled ? FigmaColors.softBlue : Colors.white),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -1061,7 +1202,9 @@ class _SlotChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : FigmaColors.ink,
+                  color: selected
+                      ? Colors.white
+                      : (disabled ? FigmaColors.textFaint : FigmaColors.ink),
                 ),
               ),
               Text(
@@ -1071,7 +1214,9 @@ class _SlotChip extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   color: selected
                       ? Colors.white.withValues(alpha: 0.8)
-                      : FigmaColors.textMuted,
+                      : (disabled
+                            ? FigmaColors.textFaint
+                            : FigmaColors.textMuted),
                 ),
               ),
             ],
