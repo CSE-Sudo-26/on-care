@@ -97,6 +97,14 @@ class ConsultationOut(BaseModel):
     preferred_time_slot: PreferredTimeSlot
     message: str | None
     status: str
+    #: 거절 사유. 트레이너가 남긴 문장이 그대로 온다. (#473)
+    #:
+    #: 처리자 id(`decided_by`)는 **회원 응답에 싣지 않는다** — 회원에게 필요한 것은
+    #: 결과와 이유이지 누가 눌렀는지가 아니고, 헬스장으로 보낸 문의는 소속 트레이너
+    #: 누구나 처리할 수 있어 id 를 흘리면 지정하지도 않은 트레이너를 알게 된다.
+    decision_note: str | None = None
+    #: 처리 시각. 화면이 "언제 답을 받았는지"를 보여 준다.
+    decided_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +123,6 @@ class TrainerConsultationOut(ConsultationOut):
     #: 카드가 "헬스장 문의" 배지를 다는 근거이며, 트레이너 지정 요청과 섞이면
     #: 누구를 향한 요청인지 화면에서 구분할 수 없다.
     via_gym: bool = False
+    #: 처리한 트레이너. 헬스장 문의는 소속 트레이너 누구나 받을 수 있어, 인박스
+    #: 이력에서 "누가 가져갔는지"가 필요하다. 회원 응답에는 없는 필드다.
     decided_by: str | None = None
-    decided_at: datetime | None = None
-    decision_note: str | None = None

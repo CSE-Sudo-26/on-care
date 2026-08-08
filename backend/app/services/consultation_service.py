@@ -266,13 +266,13 @@ def _to_trainer_out(
     }
     out: list[TrainerConsultationOut] = []
     for row in rows:
+        # `decision_note` / `decided_at` 은 회원용 스키마가 이미 갖고 있어
+        # model_dump() 에 실려 온다(#473). 여기서 다시 넘기면 중복 인자다.
         item = TrainerConsultationOut(
             **base[row.id].model_dump(),
             member_name=member_names.get(row.member_id),
             via_gym=row.target_type == "gym",
             decided_by=row.decided_by,
-            decided_at=row.decided_at,
-            decision_note=row.decision_note,
         )
         out.append(item)
     return out
