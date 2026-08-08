@@ -39,6 +39,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     consultation_service,
+    notification_service,
     trainer_routine_options_service,
     trainer_service,
 )
@@ -302,7 +303,10 @@ def trainer_send_chat(
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="빈 메시지는 보낼 수 없습니다.")
-    return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)
+    return trainer_service.send_message(
+        db, trainer.id, member_id, "trainer", text,
+        notify=notification_service.TRAINER_MESSAGE,
+    )
 
 
 @router.post("/trainer/clients/{member_id}/chat/read")
@@ -578,7 +582,10 @@ def trainer_send_report(
             db, trainer.id, member_id, _date.fromisoformat(day)
         )
         text = report.message
-    return trainer_service.send_message(db, trainer.id, member_id, "trainer", text)
+    return trainer_service.send_message(
+        db, trainer.id, member_id, "trainer", text,
+        notify=notification_service.WEEKLY_REPORT,
+    )
 
 
 # ---------------------------------------------------------------------------

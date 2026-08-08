@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ---- GET /users/me ----
@@ -32,6 +32,50 @@ class SettingItem(BaseModel):
     label: str
     icon: str
     kind: str
+
+
+class MemberNotificationSettings(BaseModel):
+    """회원 알림 수신 설정. (#489)
+
+    필드 이름은 사용자 앱이 로컬에 쓰던 키(`notif_*`)에서 접두사만 뗀 것이다 —
+    앱이 저장 위치만 서버로 옮기는 것이므로 새 이름을 만들면 화면과 대응이
+    흐려진다.
+    """
+
+    diet_log: bool
+    exercise_reminder: bool
+    trainer_message: bool
+    ai_coaching: bool
+    weekly_report: bool
+
+
+class MemberNotificationSettingsUpdate(BaseModel):
+    """부분 수정 — 보낸 항목만 반영한다."""
+
+    diet_log: bool | None = None
+    exercise_reminder: bool | None = None
+    trainer_message: bool | None = None
+    ai_coaching: bool | None = None
+    weekly_report: bool | None = None
+
+    @model_validator(mode="after")
+    def _reject_null_for_non_nullable_fields(
+        self,
+    ) -> MemberNotificationSettingsUpdate:
+        """명시적 null 은 422. 누락은 '변경 없음'이다.
+
+        `None` 은 두 가지를 뜻할 수 있다 — 항목을 아예 안 보냈거나, `null` 을
+        보냈거나. 여기 다섯 항목은 모두 DB NOT NULL 이라 null 로 바꿀 수 있는
+        값이 아니다. 구분하지 않으면 `{"weekly_report": null}` 이 조용히 성공하고
+        아무것도 바뀌지 않는다.
+
+        `ScheduleUpdateRequest._reject_null_for_non_nullable_fields` 와 같은
+        규약이다(#377).
+        """
+        for field in self.model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field}에는 null을 사용할 수 없습니다.")
+        return self
 
 
 class UserHealth(BaseModel):

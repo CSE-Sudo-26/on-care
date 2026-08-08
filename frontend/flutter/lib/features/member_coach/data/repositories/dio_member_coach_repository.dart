@@ -31,6 +31,10 @@ class DioMemberCoachRepository implements MemberCoachRepository {
       _getList('/me/coach/routines', coachRoutineFromJson);
 
   @override
+  Future<List<CoachSession>> fetchSessions() =>
+      _getList('/me/coach/sessions', coachSessionFromJson);
+
+  @override
   Future<List<CoachMessage>> fetchChat() async {
     final List<CoachMessage> messages = await _getList(
       '/me/coach/chat',

@@ -26,6 +26,23 @@ CoachRoutine coachRoutineFromJson(Map<String, Object?> json) {
   );
 }
 
+/// `/me/coach/sessions` element (ScheduleSessionOut) → [CoachSession].
+///
+/// 날짜가 깨져도 던지지 않는다 — 한 행 때문에 일정 전체가 사라지면 안 된다.
+/// 화면이 date == null 인 항목을 걸러낸다.
+CoachSession coachSessionFromJson(Map<String, Object?> json) {
+  return CoachSession(
+    id: _str(json['id']),
+    date: DateTime.tryParse(_str(json['date'])),
+    time: _str(json['time']),
+    type: _str(json['type']),
+    durationMinutes: json['duration_minutes'] is num
+        ? (json['duration_minutes']! as num).toInt()
+        : 0,
+    status: _str(json['status']),
+  );
+}
+
 /// `/me/coach/chat` element (ChatMessageOut) → [CoachMessage]. From the
 /// member's viewpoint `sender` is `me` | `trainer`.
 CoachMessage coachMessageFromJson(Map<String, Object?> json) {

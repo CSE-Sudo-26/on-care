@@ -27,6 +27,12 @@ final coachRoutinesProvider = FutureProvider<List<CoachRoutine>>((ref) {
   return ref.watch(memberCoachRepositoryProvider).fetchRoutines();
 });
 
+/// 트레이너가 잡아 준 PT 일정. 담당이 없거나 잡힌 일정이 없으면 빈 목록이라,
+/// 화면이 늘어나지 않는다. (#490)
+final coachSessionsProvider = FutureProvider<List<CoachSession>>((ref) {
+  return ref.watch(memberCoachRepositoryProvider).fetchSessions();
+}, name: 'coachSessions');
+
 /// The member↔coach chat thread (oldest → newest).
 final coachChatProvider = FutureProvider<List<CoachMessage>>((ref) {
   return ref.watch(memberCoachRepositoryProvider).fetchChat();

@@ -3,6 +3,9 @@
 
   GET  /notifications              -> 최신순 배열 (time_ago 포함)
   POST /notifications/{id}/read    -> 읽음 처리
+
+회원 알림 수신 설정(GET/PUT /users/me/notification-settings)도 여기 둔다 — 알림을
+만드는 일과 끄는 일은 같은 도메인이다. (#489)
 """
 from __future__ import annotations
 
@@ -13,10 +16,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser
+from app.api.deps import CurrentUser, RequireMember
 from app.db.session import get_db
 from app.models.models import Notification
 from app.schemas.misc_api import NotificationAction, NotificationOut
+from app.schemas.user import (
+    MemberNotificationSettings,
+    MemberNotificationSettingsUpdate,
+)
+from app.services import notification_service
 
 router = APIRouter(tags=["notifications"])
 
@@ -64,6 +72,47 @@ def list_notifications(
         )
         for r in rows
     ]
+
+
+@router.get(
+    "/users/me/notification-settings",
+    response_model=MemberNotificationSettings,
+)
+def get_notification_settings(
+    user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberNotificationSettings:
+    """회원 알림 수신 설정. 저장한 적이 없으면 기본값을 준다. (#489)
+
+    전에는 앱이 SharedPreferences 에만 저장해 기기를 바꾸면 초기화됐고, 서버가
+    설정을 몰라 알림을 만들 때 끌 수도 없었다.
+    """
+    return MemberNotificationSettings(
+        **_settings_payload(notification_service.get_settings(db, user.id))
+    )
+
+
+@router.put(
+    "/users/me/notification-settings",
+    response_model=MemberNotificationSettings,
+)
+def update_notification_settings(
+    payload: MemberNotificationSettingsUpdate,
+    user: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberNotificationSettings:
+    """보낸 항목만 반영한다."""
+    fields = {
+        f"notif_{name}": value
+        for name, value in payload.model_dump(exclude_none=True).items()
+    }
+    updated = notification_service.update_settings(db, user.id, fields)
+    return MemberNotificationSettings(**_settings_payload(updated))
+
+
+def _settings_payload(settings: dict[str, bool]) -> dict[str, bool]:
+    """서비스의 `notif_*` 키를 응답 필드 이름으로 옮긴다."""
+    return {key.removeprefix("notif_"): value for key, value in settings.items()}
 
 
 @router.get("/notifications/unread-count", response_model=dict)

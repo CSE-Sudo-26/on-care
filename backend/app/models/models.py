@@ -242,6 +242,46 @@ class Notification(Base):
     )
 
 
+class MemberNotificationSetting(Base):
+    """회원 알림 수신 설정 — 기기가 아니라 계정 단위. (#489)
+
+    전에는 사용자 앱이 SharedPreferences 에만 저장해 기기를 바꾸면 초기화됐고,
+    무엇보다 **서버가 몰라서 알림을 만들 때 끌 수가 없었다.**
+
+    컬럼 이름은 앱이 쓰던 키(`notif_*`)에서 접두사만 뗀 것이다. 새 이름을 만들면
+    앱 화면과 대응이 흐려진다. 트레이너 쪽(`TrainerProfile.notify_*`)과 대칭이지만
+    항목이 달라 테이블을 나눈다.
+
+    행이 없으면 기본값(`notification_service.DEFAULTS`)이다 — 가입할 때마다 행을
+    만들지 않아도 되고, 기본값을 바꾸면 한 번도 설정을 건드리지 않은 회원에게
+    바로 적용된다.
+    """
+    __tablename__ = "member_notification_settings"
+
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    diet_log: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    exercise_reminder: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    trainer_message: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    ai_coaching: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
+    #: 주간 리포트만 기본 꺼짐 — 앱의 현재 기본값과 같다.
+    weekly_report: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), default=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class CoachDocument(Base):
     """RAG 코치용 문서 + 임베딩 (STEP 7).
 

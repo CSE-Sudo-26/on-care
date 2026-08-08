@@ -45,6 +45,45 @@ class CoachRoutine {
   bool get isAiRecommended => source == 'ai';
 }
 
+/// A PT session the coach booked for the member — `/me/coach/sessions`.
+///
+/// The trainer owns the schedule: the member can see it but not change it, so
+/// this carries no edit affordance. (#490)
+class CoachSession {
+  /// Creates a booked session.
+  const CoachSession({
+    required this.id,
+    required this.date,
+    required this.time,
+    required this.type,
+    required this.durationMinutes,
+    required this.status,
+  });
+
+  /// Server id.
+  final String id;
+
+  /// `YYYY-MM-DD` parsed. Unparseable dates keep the session out of the
+  /// screen rather than throwing — one bad row must not blank the list.
+  final DateTime? date;
+
+  /// `HH:MM` as the server sent it.
+  final String time;
+
+  /// 1:1 PT · 그룹 · 상담 …
+  final String type;
+
+  /// Session length.
+  final int durationMinutes;
+
+  /// 예정 | 완료 | 공백.
+  final String status;
+
+  /// Whether this session is still ahead. 완료된 세션은 '오늘의 일정'에
+  /// 남겨 둘 이유가 없다.
+  bool get isUpcoming => status != '완료';
+}
+
 /// Chat message viewpoint for the member: their own message vs the coach's.
 enum CoachSender { me, trainer }
 
