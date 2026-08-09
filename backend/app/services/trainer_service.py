@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -760,6 +761,23 @@ def _is_reservation_schedule(db: Session, session_id: str) -> bool:
     ) is not None
 
 
+def _dump_program(
+    program: Sequence[ProgramItem | Mapping[str, object]],
+) -> str:
+    """Serialize validated program items from create and partial-update paths.
+
+    Schedule creation passes ``ProgramItem`` instances, while
+    ``ScheduleUpdateRequest.model_dump()`` recursively converts the same items
+    to dictionaries before calling the service.  Supporting both forms keeps
+    the service boundary consistent for API and direct service callers.
+    """
+    items = [
+        item.model_dump() if isinstance(item, ProgramItem) else dict(item)
+        for item in program
+    ]
+    return json.dumps(items, ensure_ascii=False)
+
+
 def create_session(
     db: Session, trainer_id: str, *, date: str, time: str, client_name: str,
     member_id: str | None, type_: str, duration_minutes: int, note: str,
@@ -776,7 +794,7 @@ def create_session(
         duration_minutes=duration_minutes,
         status="예정",
         note=note,
-        program_json=json.dumps([p.model_dump() for p in program], ensure_ascii=False),
+        program_json=_dump_program(program),
         sort_order=0,
     )
     db.add(s)
@@ -832,9 +850,7 @@ def update_session(
     if "note" in fields:
         s.note = fields["note"]
     if "program" in fields and fields["program"] is not None:
-        s.program_json = json.dumps(
-            [p.model_dump() for p in fields["program"]], ensure_ascii=False
-        )
+        s.program_json = _dump_program(fields["program"])
     db.commit()
     db.refresh(s)
     return _schedule_out(s)
