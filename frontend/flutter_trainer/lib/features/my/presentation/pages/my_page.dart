@@ -241,6 +241,8 @@ class _MyPageState extends ConsumerState<MyPage> {
   /// 로그인 화면에 도달한다(라우터의 인증 게이트). (#505)
   Future<void> _deleteAccount() async {
     final messenger = ScaffoldMessenger.of(context);
+    // messenger 와 같이 await 전에 잡아 둔다.
+    final AppLocalizations l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => _DeleteAccountDialog(name: _profile.name),
@@ -252,7 +254,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     } on AppError catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(e.message ?? '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(e.message ?? l.myDeleteFailed)),
       );
       return;
     }
@@ -588,14 +590,15 @@ class _DeleteAccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Row(
       children: <Widget>[
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
-                '계정 탈퇴',
+              Text(
+                l.myDeleteAccount,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -604,8 +607,8 @@ class _DeleteAccountRow extends StatelessWidget {
               ),
               Text(
                 enabled
-                    ? '담당 회원 연결과 예약이 함께 사라져요'
-                    : '데모 모드에는 지울 계정이 없어요',
+                    ? l.myDeleteHint
+                    : l.myDeleteDemo,
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w500,
@@ -621,9 +624,9 @@ class _DeleteAccountRow extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: AppColors.destructive,
           ),
-          child: const Text(
-            '탈퇴',
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+          child: Text(
+            l.myDeleteAction,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -662,20 +665,17 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('계정을 탈퇴할까요?'),
+      title: Text(l.myDeleteTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '담당 회원 연결과 예약이 사라지고, 회원에게 알림이 전달돼요. '
-            '이 작업은 되돌릴 수 없어요.',
-            style: TextStyle(fontSize: 12.5),
-          ),
+          Text(l.myDeleteBody, style: const TextStyle(fontSize: 12.5)),
           const SizedBox(height: AppSpacing.md),
           Text(
-            '계속하려면 이름(${widget.name})을 입력해 주세요',
+            l.myDeleteConfirmPrompt(widget.name),
             style: const TextStyle(
               fontSize: 11.5,
               color: AppColors.mutedForeground,
@@ -698,9 +698,9 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           key: const ValueKey<String>('delete-account-submit'),
           // 이름이 맞아야 눌린다 — 확인 절차가 형식만 남지 않도록.
           onPressed: _matches ? () => Navigator.of(context).pop(true) : null,
-          child: const Text(
-            '탈퇴',
-            style: TextStyle(color: AppColors.destructive),
+          child: Text(
+            l.myDeleteAction,
+            style: const TextStyle(color: AppColors.destructive),
           ),
         ),
       ],

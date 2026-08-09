@@ -14,6 +14,10 @@ import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart'
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 문구 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// 탈퇴 호출을 기록하는 페이크.
 class _FakeAccountRepository implements TrainerAccountRepository {
@@ -73,14 +77,14 @@ void main() {
   testWidgets('설정에 탈퇴 진입점이 있다', (tester) async {
     await _pumpSettings(tester);
 
-    expect(find.text('계정 탈퇴'), findsOneWidget);
+    expect(find.text(_ko.myDeleteAccount), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('delete-account')), findsOneWidget);
   });
 
   testWidgets('지울 계정이 없는 빌드에서는 비활성이고 사유를 보여 준다', (tester) async {
     await _pumpSettings(tester, supportsDeletion: false);
 
-    expect(find.text('데모 모드에는 지울 계정이 없어요'), findsOneWidget);
+    expect(find.text(_ko.myDeleteDemo), findsOneWidget);
     final button = tester.widget<TextButton>(
       find.byKey(const ValueKey<String>('delete-account')),
     );
@@ -91,7 +95,7 @@ void main() {
     final repo = await _pumpSettings(tester);
 
     await _tapDelete(tester);
-    expect(find.text('계정을 탈퇴할까요?'), findsOneWidget);
+    expect(find.text(_ko.myDeleteTitle), findsOneWidget);
 
     // 이름이 맞기 전에는 눌리지 않는다 — 예/아니오만으로는 실수를 못 거른다.
     final submit = find.byKey(
@@ -123,7 +127,7 @@ void main() {
     final repo = await _pumpSettings(tester);
 
     await _tapDelete(tester);
-    await tester.tap(find.text('취소'));
+    await tester.tap(find.text(_ko.actionCancel));
     await settle(tester);
 
     expect(repo.deleteCalls, 0);
