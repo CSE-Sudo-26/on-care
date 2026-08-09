@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
@@ -150,8 +149,7 @@ class MockDietRepository implements DietRepository {
 
   @override
   Future<DietAnalysisResult> analyze({
-    required Uint8List imageBytes,
-    required String filename,
+    required MealPhoto photo,
     required String mealType,
     String? idempotencyKey,
   }) async {

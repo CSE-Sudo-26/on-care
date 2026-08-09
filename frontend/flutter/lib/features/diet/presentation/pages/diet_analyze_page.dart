@@ -7,20 +7,21 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 
-/// Uploads [imageBytes] to POST /diet/analyze, shows a live "분석 중" state
+/// Uploads [photo] to POST /diet/analyze, shows a live "분석 중" state
 /// while the recognizer + nutrition mapping runs, then the recognized
 /// foods + nutrition. Pops `true` once the user confirms (the entry is
 /// already persisted server-side), so the record page can refresh.
 class DietAnalyzePage extends ConsumerStatefulWidget {
   const DietAnalyzePage({
-    required this.imageBytes,
+    required this.photo,
     required this.mealType,
     super.key,
   });
 
-  final Uint8List imageBytes;
+  final MealPhoto photo;
   final String mealType;
 
   @override
@@ -49,8 +50,7 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
       final result = await ref
           .read(dietRepositoryProvider)
           .analyze(
-            imageBytes: widget.imageBytes,
-            filename: 'meal.jpg',
+            photo: widget.photo,
             mealType: widget.mealType,
             idempotencyKey: _idempotencyKey,
           );
@@ -88,14 +88,14 @@ class _DietAnalyzePageState extends ConsumerState<DietAnalyzePage> {
       ),
       body: SafeArea(
         child: _loading
-            ? _Analyzing(imageBytes: widget.imageBytes)
+            ? _Analyzing(imageBytes: widget.photo.bytes)
             : _failed
             ? _Failed(
                 onRetry: _run,
                 onClose: () => Navigator.of(context).pop(false),
               )
             : _Result(
-                imageBytes: widget.imageBytes,
+                imageBytes: widget.photo.bytes,
                 result: _result!,
                 onDone: () => Navigator.of(context).pop(true),
               ),

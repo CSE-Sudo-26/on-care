@@ -1088,6 +1088,42 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load the photo. Please try again in a moment.'**
   String get dietPhotoLoadError;
 
+  /// No description provided for @dietCameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is off. Turn it on in Settings to take a photo of your meal.'**
+  String get dietCameraPermissionDenied;
+
+  /// No description provided for @dietPhotoPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access is off. Turn it on in Settings to pick a meal photo from your library.'**
+  String get dietPhotoPermissionDenied;
+
+  /// No description provided for @dietPhotoUnsupportedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'That photo format isn\'t supported. Please try a JPG or PNG photo.'**
+  String get dietPhotoUnsupportedFormat;
+
+  /// No description provided for @dietPhotoTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'That photo is too large. Please try a different one.'**
+  String get dietPhotoTooLarge;
+
+  /// No description provided for @dietOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get dietOpenSettings;
+
+  /// No description provided for @dietOpenSettingsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open Settings. Turn on camera and photo access under Settings > Oncare.'**
+  String get dietOpenSettingsFailed;
+
   /// No description provided for @dietAnalyzing.
   ///
   /// In en, this message translates to:

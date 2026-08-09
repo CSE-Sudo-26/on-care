@@ -549,6 +549,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietPhotoLoadError => '사진을 불러오지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
+  String get dietCameraPermissionDenied =>
+      '카메라 접근이 허용되지 않았어요. 설정에서 카메라를 켜면 음식 사진을 촬영할 수 있어요';
+
+  @override
+  String get dietPhotoPermissionDenied =>
+      '사진 접근이 허용되지 않았어요. 설정에서 사진을 켜면 보관함에서 음식 사진을 고를 수 있어요';
+
+  @override
+  String get dietPhotoUnsupportedFormat =>
+      '지원하지 않는 사진 형식이에요. JPG 또는 PNG 사진으로 다시 시도해 주세요';
+
+  @override
+  String get dietPhotoTooLarge => '사진 용량이 너무 커요. 다른 사진으로 다시 시도해 주세요';
+
+  @override
+  String get dietOpenSettings => '설정 열기';
+
+  @override
+  String get dietOpenSettingsFailed =>
+      '설정을 열지 못했어요. 설정 > 온케어에서 카메라·사진 접근을 켜주세요';
+
+  @override
   String get dietAnalyzing => '분석 중…';
 
   @override
