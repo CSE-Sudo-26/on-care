@@ -806,7 +806,13 @@ def update_session(
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return None
-    if _is_reservation_schedule(db, session_id):
+    # A reservation owns the booking coordinates and lifecycle, so changing
+    # its time/member/type/duration through the general schedule API would
+    # desynchronise the slot and remaining count. The trainer may still add
+    # the PT plan and memo: those fields do not alter the reservation.
+    if _is_reservation_schedule(db, session_id) and not set(fields).issubset(
+        {"program", "note"}
+    ):
         raise ScheduleConflict(
             "예약으로 생성된 일정은 일반 일정 화면에서 수정할 수 없습니다."
         )

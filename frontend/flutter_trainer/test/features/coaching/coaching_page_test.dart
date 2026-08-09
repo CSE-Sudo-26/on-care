@@ -11,6 +11,7 @@ import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
@@ -19,6 +20,7 @@ import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_re
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
@@ -55,26 +57,68 @@ class _SlowChatRepository extends DriftChatRepository {
 
 /// Counts registration calls and delays them, to test the in-flight
 /// double-tap guard.
-class _SlowCountingRoutineRepository extends AiRoutineRepository {
-  _SlowCountingRoutineRepository(super.db);
+class _SlowCountingScheduleRepository extends DriftScheduleRepository {
+  _SlowCountingScheduleRepository(super.db);
 
   int registerCalls = 0;
 
   @override
-  Future<bool> registerToSchedule({
+  Future<bool> registerProgram({
     required String date,
+    required String clientId,
     required String clientName,
-    required List<Map<String, Object?>> program,
+    required String time,
+    required List<ProgramItem> program,
   }) async {
     registerCalls++;
     // Keep the write in flight across client-switching/scroll animations.
     await Future<void>.delayed(const Duration(seconds: 5));
-    return super.registerToSchedule(
+    return super.registerProgram(
       date: date,
+      clientId: clientId,
       clientName: clientName,
+      time: time,
       program: program,
     );
   }
+}
+
+/// Captures the schedule operation selected by the coaching page without
+/// performing a local write. Dio behavior is covered by its repository test.
+class _CapturingScheduleRepository extends DriftScheduleRepository {
+  _CapturingScheduleRepository(super.db);
+
+  int registerCalls = 0;
+  String? clientId;
+  List<ProgramItem>? program;
+
+  @override
+  Future<bool> registerProgram({
+    required String date,
+    required String clientId,
+    required String clientName,
+    required String time,
+    required List<ProgramItem> program,
+  }) async {
+    registerCalls++;
+    this.clientId = clientId;
+    this.program = program;
+    return true;
+  }
+}
+
+/// Supplies explicit non-drift suggestions to tests that focus on real API
+/// assignment behavior rather than on the initial recommendation source.
+class _FixedAiRoutineRepository implements AiRoutineRepository {
+  const _FixedAiRoutineRepository(this.items);
+
+  final List<AiRoutineItem> items;
+
+  @override
+  Stream<List<AiRoutineItem>> watchRoutine(
+    String clientId, {
+    String? clientName,
+  }) => Stream<List<AiRoutineItem>>.value(items);
 }
 
 /// A fixed one-client roster for real-API-mode tests (real
@@ -216,7 +260,33 @@ class _FakeTrainerAuthRepository implements TrainerAuthRepository {
 }
 
 void main() {
-  group('AiRoutineRepository.watchRoutine', () {
+  test('real API mode never exposes bundled drift recommendations', () async {
+    final container = ProviderContainer(
+      overrides: <Override>[
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            environment: Environment.dev,
+            apiBaseUrl: 'http://localhost/v1',
+            useMockApi: false,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      container.read(aiRoutineRepositoryProvider),
+      isA<EmptyAiRoutineRepository>(),
+    );
+    expect(
+      await container.read(
+        aiRoutineProvider((id: 'real-client-1', name: '김민수')).future,
+      ),
+      isEmpty,
+    );
+  });
+
+  group('demo coaching repositories', () {
     late AppDatabase db;
 
     setUp(() async {
@@ -226,7 +296,7 @@ void main() {
     tearDown(() => db.close());
 
     test('returns the 3 seeded suggestions in order per client', () async {
-      final repo = AiRoutineRepository(db);
+      final repo = DriftAiRoutineRepository(db);
       final minsu = await repo.watchRoutine('seed-client-1').first;
       expect(minsu.length, 3);
       expect(minsu.first.name, '저강도 유산소 (걷기)');
@@ -240,7 +310,7 @@ void main() {
     test(
       'resolves live backend ids through the matching client name',
       () async {
-        final repo = AiRoutineRepository(db);
+        final repo = DriftAiRoutineRepository(db);
 
         final minsu = await repo
             .watchRoutine('user-demo', clientName: '김민수')
@@ -254,18 +324,15 @@ void main() {
     test(
       'registerToTodaySchedule attaches to an existing 예정 session',
       () async {
-        final repo = AiRoutineRepository(db);
+        final repo = DriftScheduleRepository(db);
         // 박성호 has a seeded 15:00 예정 session.
-        final attached = await repo.registerToSchedule(
+        final attached = await repo.registerProgram(
           date: ymd(DateTime.now()),
+          clientId: 'seed-client-3',
           clientName: '박성호',
-          program: <Map<String, Object?>>[
-            <String, Object?>{
-              'name': '저강도 유산소',
-              'sets': 1,
-              'reps': '30분',
-              'weight': '-',
-            },
+          time: '10:00',
+          program: const <ProgramItem>[
+            ProgramItem(name: '저강도 유산소', sets: 1, reps: '30분', weight: '-'),
           ],
         );
         expect(attached, isTrue);
@@ -280,18 +347,15 @@ void main() {
     test(
       'registerToTodaySchedule books a new slot when no 예정 exists',
       () async {
-        final repo = AiRoutineRepository(db);
+        final repo = DriftScheduleRepository(db);
         // 김민수's only session today is 완료 — a new slot gets booked.
-        final attached = await repo.registerToSchedule(
+        final attached = await repo.registerProgram(
           date: ymd(DateTime.now()),
+          clientId: 'seed-client-1',
           clientName: '김민수',
-          program: <Map<String, Object?>>[
-            <String, Object?>{
-              'name': '코어 강화',
-              'sets': 1,
-              'reps': '10분',
-              'weight': '-',
-            },
+          time: '10:00',
+          program: const <ProgramItem>[
+            ProgramItem(name: '코어 강화', sets: 1, reps: '10분', weight: '-'),
           ],
         );
         expect(attached, isFalse);
@@ -621,10 +685,9 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         extraOverrides: <Override>[
-          // Shares the app's seeded DB so the AI suggestions load.
-          aiRoutineRepositoryProvider.overrideWith(
+          scheduleRepositoryProvider.overrideWith(
             (ref) =>
-                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+                _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
       );
@@ -648,8 +711,8 @@ void main() {
       await settle(tester);
 
       final repo =
-          container.read(aiRoutineRepositoryProvider)
-              as _SlowCountingRoutineRepository;
+          container.read(scheduleRepositoryProvider)
+              as _SlowCountingScheduleRepository;
       expect(repo.registerCalls, 1);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
@@ -661,9 +724,9 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         extraOverrides: <Override>[
-          aiRoutineRepositoryProvider.overrideWith(
+          scheduleRepositoryProvider.overrideWith(
             (ref) =>
-                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+                _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
       );
@@ -740,9 +803,9 @@ void main() {
         tester,
         token: 'demo-trainer-token',
         extraOverrides: <Override>[
-          aiRoutineRepositoryProvider.overrideWith(
+          scheduleRepositoryProvider.overrideWith(
             (ref) =>
-                _SlowCountingRoutineRepository(ref.watch(appDatabaseProvider)),
+                _SlowCountingScheduleRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
       );
@@ -785,8 +848,8 @@ void main() {
       await settle(tester);
 
       final repo =
-          container.read(aiRoutineRepositoryProvider)
-              as _SlowCountingRoutineRepository;
+          container.read(scheduleRepositoryProvider)
+              as _SlowCountingScheduleRepository;
       expect(repo.registerCalls, 1);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
@@ -887,9 +950,6 @@ void main() {
   });
 
   group('CoachingPage — real API mode (subin21cc review)', () {
-    // Matches a seeded drift client by NAME so aiRoutineProvider's
-    // clientName fallback still resolves local AI suggestions for a
-    // client id the real API (not drift) issued.
     const realClient = TrainerClient(
       id: 'real-client-1',
       name: '김민수',
@@ -906,6 +966,30 @@ void main() {
       sodiumWeek: <int>[],
     );
 
+    const realSuggestions = <AiRoutineItem>[
+      AiRoutineItem(
+        id: 'real-suggestion-1',
+        name: '저강도 유산소 (걷기)',
+        minutes: 30,
+        type: '유산소',
+        reason: '실 API 배정 테스트',
+      ),
+      AiRoutineItem(
+        id: 'real-suggestion-2',
+        name: '코어 스트레칭',
+        minutes: 15,
+        type: '스트레칭',
+        reason: '실 API 배정 테스트',
+      ),
+      AiRoutineItem(
+        id: 'real-suggestion-3',
+        name: '스쿼트',
+        minutes: 15,
+        type: '근력',
+        reason: '실 API 배정 테스트',
+      ),
+    ];
+
     const realConfig = AppConfig(
       environment: Environment.dev,
       apiBaseUrl: 'http://localhost/v1',
@@ -916,6 +1000,8 @@ void main() {
       WidgetTester tester, {
       bool chatFails = false,
       Object? assignError,
+      bool includeInitialSuggestions = true,
+      void Function(_CapturingScheduleRepository repo)? captureSchedule,
     }) async {
       final routineRepo = _SpyTrainerRoutineRepository(
         throwOnAssign: assignError,
@@ -932,6 +1018,18 @@ void main() {
             const _FakeTrainerAuthRepository(),
           ),
           trainerRoutineRepositoryProvider.overrideWithValue(routineRepo),
+          if (includeInitialSuggestions)
+            aiRoutineRepositoryProvider.overrideWithValue(
+              const _FixedAiRoutineRepository(realSuggestions),
+            ),
+          if (captureSchedule != null)
+            scheduleRepositoryProvider.overrideWith((ref) {
+              final repo = _CapturingScheduleRepository(
+                ref.watch(appDatabaseProvider),
+              );
+              captureSchedule(repo);
+              return repo;
+            }),
           chatRepositoryProvider.overrideWithValue(
             _FakeRealChatRepository(failSend: chatFails),
           ),
@@ -952,6 +1050,33 @@ void main() {
       await tester.tap(find.textContaining('님에게 전송'));
       await settle(tester);
     }
+
+    testWidgets(
+      'real-API schedule registration uses the selected member id and the '
+      'shared schedule repository',
+      (tester) async {
+        late _CapturingScheduleRepository scheduleRepo;
+        await openRealApiTab(
+          tester,
+          captureSchedule: (repo) => scheduleRepo = repo,
+        );
+
+        await tester.scrollUntilVisible(
+          find.text('오늘 PT 스케줄에 등록'),
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
+        await tester.pump();
+        await tester.tap(find.text('오늘 PT 스케줄에 등록'));
+        await settle(tester);
+
+        expect(scheduleRepo.registerCalls, 1);
+        expect(scheduleRepo.clientId, 'real-client-1');
+        expect(scheduleRepo.program, isNotEmpty);
+        expect(find.text('오늘 스케줄에 등록됨'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'real-API assign delivery does not depend on the chat repository '

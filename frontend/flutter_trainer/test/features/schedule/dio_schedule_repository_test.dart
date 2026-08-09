@@ -38,12 +38,14 @@ Map<String, dynamic> _session({
   String date = '2026-08-06',
   String time = '10:00',
   String clientName = '김민수',
+  String? memberId = 'm1',
   String status = '예정',
   List<dynamic> program = const <dynamic>[],
 }) => <String, dynamic>{
   'id': id,
   'date': date,
   'time': time,
+  'member_id': memberId,
   'client_name': clientName,
   'type': '1:1 PT',
   'duration_minutes': 60,
@@ -223,6 +225,90 @@ void main() {
         'sets': 3,
         'reps': '12회',
         'weight': '60kg',
+      });
+    },
+  );
+
+  test(
+    'registerProgram updates the earliest upcoming session for the member',
+    () async {
+      stubGet(<dynamic>[
+        _session(id: 'done', time: '09:00', status: '완료'),
+        _session(id: 'late', time: '15:00'),
+        _session(id: 'early', time: '11:00'),
+      ]);
+      when(
+        () => dio.put<Map<String, dynamic>>(any(), data: any(named: 'data')),
+      ).thenAnswer((_) async => _okMap('$_schedulePath/early'));
+
+      final attached = await repo.registerProgram(
+        date: '2026-08-06',
+        clientId: 'm1',
+        clientName: '김민수',
+        time: '16:00',
+        program: const <ProgramItem>[
+          ProgramItem(name: '스쿼트', sets: 1, reps: '20분', weight: '-'),
+        ],
+      );
+
+      expect(attached, isTrue);
+      expect(capturedQuery(), <String, String>{
+        'date': '2026-08-06',
+        'member_id': 'm1',
+      });
+      final verification = verify(
+        () => dio.put<Map<String, dynamic>>(
+          captureAny(),
+          data: captureAny(named: 'data'),
+        ),
+      );
+      final captured = verification.captured;
+      expect(captured[0], '$_schedulePath/early');
+      expect((captured[1] as Map<String, Object?>).keys, <String>['program']);
+    },
+  );
+
+  test(
+    'registerProgram creates a real PT session when none is upcoming',
+    () async {
+      stubGet(<dynamic>[_session(id: 'done', time: '09:00', status: '완료')]);
+      when(
+        () => dio.post<Map<String, dynamic>>(
+          _schedulePath,
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async => _okMap(_schedulePath));
+
+      final attached = await repo.registerProgram(
+        date: '2026-08-06',
+        clientId: 'm1',
+        clientName: '김민수',
+        time: '16:00',
+        program: const <ProgramItem>[
+          ProgramItem(name: '플랭크', sets: 1, reps: '10분', weight: '-'),
+        ],
+      );
+
+      expect(attached, isFalse);
+      final body =
+          verify(
+                () => dio.post<Map<String, dynamic>>(
+                  _schedulePath,
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
+      expect(body['member_id'], 'm1');
+      expect(body['client_name'], '김민수');
+      expect(body['date'], '2026-08-06');
+      expect(body['time'], '16:00');
+      expect(body['type'], '1:1 PT');
+      expect(body['duration_minutes'], 60);
+      expect((body['program'] as List<Object?>).single, <String, Object?>{
+        'name': '플랭크',
+        'sets': 1,
+        'reps': '10분',
+        'weight': '-',
       });
     },
   );
