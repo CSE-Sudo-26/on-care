@@ -663,6 +663,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTypeOtherChip => '기타';
 
   @override
+  String get exSourceTrainerPt => '트레이너 PT';
+
+  @override
   String get exLevelLight => '가벼움';
 
   @override

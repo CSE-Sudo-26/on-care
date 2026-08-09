@@ -342,6 +342,10 @@
   "exTypeStretching": "Stretching",
   "exTypeOther": "Exercise",
   "exTypeOtherChip": "Other",
+  "exSourceTrainerPt": "Trainer PT",
+  "@exSourceTrainerPt": {
+    "description": "Badge on an exercise record the trainer created by completing a PT session. Read-only for the member."
+  },
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
   "exLevelHigh": "High",

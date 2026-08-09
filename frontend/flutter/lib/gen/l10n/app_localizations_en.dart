@@ -671,6 +671,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exTypeOtherChip => 'Other';
 
   @override
+  String get exSourceTrainerPt => 'Trainer PT';
+
+  @override
   String get exLevelLight => 'Light';
 
   @override

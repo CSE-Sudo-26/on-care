@@ -1316,6 +1316,12 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get exTypeOtherChip;
 
+  /// Badge on an exercise record the trainer created by completing a PT session. Read-only for the member.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer PT'**
+  String get exSourceTrainerPt;
+
   /// No description provided for @exLevelLight.
   ///
   /// In en, this message translates to:

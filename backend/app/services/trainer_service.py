@@ -16,15 +16,16 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
-    TrainerProfile, TrainerReservation, TrainerRoutine, TrainerSchedule, User,
+    ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
+    TrainerClient, TrainerProfile, TrainerReservation, TrainerRoutine,
+    TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
     TrainerNotificationSettings, WeeklyReportOut,
 )
-from app.services import notification_service
+from app.services import exercise_service, notification_service
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
 # '초과 N일'이 앱 화면의 경고와 어긋나면 안 된다.
@@ -701,27 +702,84 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
         raise ScheduleConflict(
             "예약으로 생성된 일정은 일반 일정 화면에서 삭제할 수 없습니다."
         )
-    # 완료 세션은 완료 시 파생된 운동기록(sched-hist-{id})을 갖는다. 세션을 지우면 그
-    # 파생 기록도 함께 지워 고아 레코드가 회원 이력에 남지 않게 한다(완료 시 적재의 역연산).
+    # 완료 세션은 완료 시 파생된 기록을 갖는다 — 트레이너 이력(sched-hist-{id})과
+    # 회원 운동 기록(sched-ex-{id}) 두 개다. 세션을 지우면 둘 다 함께 지워 고아
+    # 레코드가 남지 않게 한다(완료 시 적재의 역연산). 회원 쪽을 빠뜨리면 회원의
+    # 주간 집계에만 지워진 PT 가 계속 잡힌다.
     if s.status == "완료":
         hist = db.get(RoutineHistory, f"sched-hist-{s.id}")
         if hist is not None:
             db.delete(hist)
+        derived = db.get(ExerciseSession, _derived_exercise_id(s.id))
+        if derived is not None:
+            db.delete(derived)
     db.delete(s)
     db.commit()
     return True
 
 
+#: PT 완료가 파생시키는 회원 운동 기록의 종류. `TrainerSchedule.type` 은 화면용
+#: 한국어 라벨('1:1 PT'|'상담')이고 `ExerciseSession.type` 은 계약 값이라 매핑이
+#: 필요하다. 여기 없는 종류는 **운동이 아니므로 기록을 만들지 않는다** — 상담
+#: 한 시간이 회원 주간 운동량으로 잡히면 집계가 거짓이 된다.
+_SESSION_EXERCISE_TYPE = {"1:1 PT": "strength"}
+
+#: PT 는 트레이너가 붙어서 끌고 가는 시간이라 수기 입력의 '보통'보다 낮게 볼
+#: 이유가 없다. 강도를 따로 입력받는 자리가 트레이너 앱에 없으므로 기본값을 쓴다.
+_PT_INTENSITY = "moderate"
+
+
+def _derived_exercise_id(session_id: str) -> str:
+    """PT 완료가 파생시킨 운동 기록의 id — 슬롯 기준 결정론적.
+
+    `sched-hist-{id}` 와 같은 이유다. 동시 완료나 재호출에도 같은 id 가 나와
+    중복 행이 생기지 않는다.
+    """
+    return f"sched-ex-{session_id}"
+
+
+def _add_member_exercise_log(
+    db: Session, s: TrainerSchedule
+) -> ExerciseSession | None:
+    """완료된 PT 세션을 회원 쪽 운동 기록으로 적재. 대상이 아니면 None.
+
+    `RoutineHistory` 는 트레이너 화면 전용이라(`/trainer/clients/{id}/history`)
+    회원 앱에서는 읽지 않는다. 회원의 운동 탭·홈 대시보드 주간 집계는 전부
+    `ExerciseSession` 에서 나오므로, 두 곳 모두에 남겨야 회원이 받은 PT 가
+    자기 기록에 잡힌다. (#499)
+    """
+    ex_type = _SESSION_EXERCISE_TYPE.get(s.type)
+    if s.member_id is None or ex_type is None or s.duration_minutes <= 0:
+        return None
+    row = ExerciseSession(
+        id=_derived_exercise_id(s.id),
+        user_id=s.member_id,
+        # 주차·요일은 완료 시점이 아니라 **세션 날짜** 기준이다. 지난 주 세션을
+        # 오늘 완료 처리해도 그 주의 집계로 들어가야 한다.
+        week_start=exercise_service.monday_of_str(s.date),
+        day_label=exercise_service.weekday_label_of(s.date),
+        type=ex_type,
+        minutes=s.duration_minutes,
+        calories=exercise_service.estimate_calories(
+            ex_type, s.duration_minutes, _PT_INTENSITY
+        ),
+        intensity=_PT_INTENSITY,
+        source="trainer_pt",
+    )
+    db.add(row)
+    return row
+
+
 def complete_session(
     db: Session, trainer_id: str, session_id: str, note: str
 ) -> ScheduleSessionOut | None:
-    """예정→완료. 매칭된 회원이 있으면 운동기록(RoutineHistory)으로 적재해
-    '예약→수업→기록' 루프를 닫는다.
+    """예정→완료. 매칭된 회원이 있으면 트레이너 쪽 기록(RoutineHistory)과 회원 쪽
+    기록(ExerciseSession)으로 함께 적재해 '예약→수업→기록' 루프를 닫는다.
 
     - 소유 슬롯 아님 → None(404).
     - 공백/미래 일정 → ScheduleError(400).
     - 이미 완료 → 그대로 반환(멱등, 중복 기록 없음).
-    기록 id 는 슬롯 기준 결정론적(sched-hist-{id})이라 동시/재호출에도 중복되지 않는다.
+    두 기록 모두 id 가 슬롯 기준 결정론적이라 동시/재호출에도 중복되지 않는다.
     """
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
@@ -764,6 +822,7 @@ def complete_session(
             exercises_json=json.dumps(exercises, ensure_ascii=False),
             trainer_note=note,
         ))
+        _add_member_exercise_log(db, s)
     db.commit()
     db.refresh(s)
     return _schedule_out(s)

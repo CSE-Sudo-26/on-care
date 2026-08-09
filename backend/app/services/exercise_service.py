@@ -13,15 +13,60 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
+
+#: 운동 타입별 분당 소모 칼로리. 회원 앱의 `_estimateCalories`
+#: (`exercise_flows.dart`) 표를 그대로 옮긴 값이다 — 수기 입력은 앱이 계산해
+#: 보내고 PT 완료분은 서버가 계산하므로, 두 값이 다르면 같은 운동인데 회원
+#: 화면에서 칼로리가 갈린다.
+_KCAL_PER_MIN = {
+    "cardio": 9.0,
+    "strength": 6.0,
+    "walking": 4.0,
+    "stretching": 3.0,
+    "yoga": 3.0,
+    "other": 5.0,
+}
+
+#: 강도 배수 — 회원 앱 `_intensityFactor` 와 같다.
+_INTENSITY_FACTOR = {"light": 0.85, "moderate": 1.0, "high": 1.2}
 
 
 def monday_of_this_week_str() -> str:
     now = datetime.now()
     monday = now - timedelta(days=now.weekday())
     return monday.strftime("%Y-%m-%d")
+
+
+def monday_of_str(day: str) -> str:
+    """`day`(YYYY-MM-DD) 가 속한 주의 월요일.
+
+    지난 주 세션을 오늘 완료 처리할 수 있으므로, 파생 기록의 주차는 완료 시점이
+    아니라 **세션 날짜** 기준이어야 한다. 형식이 깨진 값은 이번 주로 떨어뜨린다.
+    """
+    try:
+        d = date.fromisoformat(day)
+    except (TypeError, ValueError):
+        return monday_of_this_week_str()
+    return (d - timedelta(days=d.weekday())).isoformat()
+
+
+def weekday_label_of(day: str) -> str:
+    """`day`(YYYY-MM-DD) 의 요일 라벨(월~일). 형식이 깨지면 오늘 요일."""
+    try:
+        d = date.fromisoformat(day)
+    except (TypeError, ValueError):
+        return WEEKDAY_LABELS[datetime.now().weekday()]
+    return WEEKDAY_LABELS[d.weekday()]
+
+
+def estimate_calories(type_: str, minutes: int, intensity: str) -> int:
+    """분·강도로 소모 칼로리 추정. 회원 앱과 같은 표를 쓴다."""
+    per_min = _KCAL_PER_MIN.get(type_, _KCAL_PER_MIN["other"])
+    factor = _INTENSITY_FACTOR.get(intensity, 1.0)
+    return round(per_min * max(minutes, 0) * factor)
 
 
 def _date_label_for_day(day_label: str) -> str:
@@ -103,6 +148,7 @@ def build_current_week(rows: list) -> dict:
             "id": r.id, "day_label": r.day_label, "type": r.type,
             "minutes": r.minutes, "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
+            "source": getattr(r, "source", "member") or "member",
             "date_label": _date_label_for_day(r.day_label),
             "time_label": _default_time_label(r.type),
             "items": _default_items(r.type),

@@ -225,6 +225,7 @@
   "exTypeStretching": "스트레칭",
   "exTypeOther": "운동",
   "exTypeOtherChip": "기타",
+  "exSourceTrainerPt": "트레이너 PT",
   "exLevelLight": "가벼움",
   "exLevelModerate": "보통",
   "exLevelHigh": "높음",
