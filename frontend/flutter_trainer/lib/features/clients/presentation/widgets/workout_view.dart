@@ -897,7 +897,11 @@ class _RoutineEditDialogState extends State<_RoutineEditDialog> {
     // 서버 제약(name 100자·minutes 0~600·reason 200자)과 같은 값으로 미리
     // 거른다 — 422 를 받아 오면 "수정하지 못했어요"라는 애매한 문구만 남아,
     // 무엇이 문제인지 트레이너가 알 수 없다.
-    if (name.length > 100) {
+    //
+    // 세는 단위도 서버와 맞춘다. Pydantic 의 max_length 는 파이썬 문자(코드
+    // 포인트) 수인데 Dart 의 String.length 는 UTF-16 코드 유닛 수라, 이모지가
+    // 들어가면 서버가 받아 줄 값을 화면이 먼저 막는다. runes 로 센다.
+    if (name.runes.length > 100) {
       setState(() => _error = '루틴 이름은 100자 이내로 입력해 주세요');
       return;
     }
@@ -905,7 +909,7 @@ class _RoutineEditDialogState extends State<_RoutineEditDialog> {
       setState(() => _error = '시간은 0~600분 사이로 입력해 주세요');
       return;
     }
-    if (reason.length > 200) {
+    if (reason.runes.length > 200) {
       setState(() => _error = '사유는 200자 이내로 입력해 주세요');
       return;
     }

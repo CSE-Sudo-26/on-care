@@ -173,6 +173,25 @@ void main() {
     expect(repo.updates, isEmpty);
   });
 
+  testWidgets('길이는 서버와 같은 문자 단위로 센다', (tester) async {
+    final repo = await _pumpWorkoutTab(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('routine-edit-rt-1')));
+    await settle(tester);
+
+    // 이모지 100자 = UTF-16 코드 유닛 200. String.length 로 세면 서버가 받아
+    // 줄 값을 화면이 먼저 막는다.
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('routine-edit-name')),
+      '😀' * 100,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('routine-edit-save')));
+    await settle(tester);
+
+    expect(find.textContaining('100자 이내'), findsNothing);
+    expect(repo.updates, hasLength(1));
+  });
+
   testWidgets('삭제는 확인을 받은 뒤에만 나간다', (tester) async {
     final repo = await _pumpWorkoutTab(tester);
 
