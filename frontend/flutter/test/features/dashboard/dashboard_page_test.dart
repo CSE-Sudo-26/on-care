@@ -51,9 +51,9 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('식단 · 영양'), findsOneWidget);
-    // 수치는 식단 하루치에서 온다 — 칼로리 1,517kcal, 탄수화물 140g.
-    expect(find.text('1,517'), findsWidgets);
-    expect(find.text('140g'), findsOneWidget);
+    // 수치는 식단 하루치에서 온다 — 칼로리 1,067kcal, 탄수화물 120g (저녁 제외, #548).
+    expect(find.text('1,067'), findsWidgets);
+    expect(find.text('120g'), findsOneWidget);
     expect(find.text('오늘의 일정'), findsOneWidget);
     expect(find.text('병원 정기검진'), findsOneWidget);
   });

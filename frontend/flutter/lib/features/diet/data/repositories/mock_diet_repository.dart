@@ -19,7 +19,7 @@ class MockDietRepository implements DietRepository {
   MockDietRepository();
 
   static const String _aiCoachMessage =
-      '점심 짬뽕과 저녁 두부 샐러드의 베이컨·올리브로 나트륨과 지방 섭취가 높았어요. 다음 식사는 양념을 줄인 채소와 단백질 위주로 구성해 보세요.';
+      '점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.';
 
   final List<DietEntry> _entries = <DietEntry>[
     const DietEntry(
@@ -112,35 +112,11 @@ class MockDietRepository implements DietRepository {
         ),
       ],
     ),
-    const DietEntry(
-      id: 'mock-dinner',
-      mealType: MealType.dinner,
-      timeLabel: '18:40',
-      totalCalories: 450,
-      sodiumMg: 580,
-      sugarG: 7,
-      carbsG: 20,
-      proteinG: 34,
-      fatG: 27,
-      photoAsset: 'assets/images/diet-tofu-salad.jpg',
-      aiComment: '두부와 채소로 단백질과 식이섬유를 챙겼지만 베이컨과 올리브로 나트륨이 다소 높아요.',
-      foods: <FoodItem>[
-        FoodItem(
-          name: '두부 샐러드',
-          calories: 450,
-          sodiumMg: 580,
-          sugarG: 7,
-          carbsG: 20,
-          proteinG: 34,
-          fatG: 27,
-        ),
-      ],
-    ),
   ];
 
-  int _totalCalories = 1517;
-  int _totalSodiumMg = 4008;
-  double _totalSugarG = 24.8;
+  int _totalCalories = 1067;
+  int _totalSodiumMg = 3428;
+  double _totalSugarG = 17.8;
   int _seq = 0;
 
   // idempotencyKey → 이미 기록한 분석 결과. 응답 유실 후 재시도(같은 키)에
