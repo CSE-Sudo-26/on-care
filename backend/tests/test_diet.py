@@ -56,6 +56,7 @@ def test_get_diet_day_by_date_aggregates_only_current_user(client, db_session):
             hashed_password="",
         )
     )
+    db_session.flush()
     db_session.add_all(
         [
             DietEntry(

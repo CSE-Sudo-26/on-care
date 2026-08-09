@@ -534,7 +534,6 @@ const List<DietEntry> _twoDaysAgoEntries = <DietEntry>[
         name: '현미밥',
         calories: 280,
         sodiumMg: 5,
-        sugarG: 0,
         carbsG: 58,
         proteinG: 6,
         fatG: 2,

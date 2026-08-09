@@ -131,6 +131,8 @@ void main() {
     );
     final dynamic trendPainter = trendPaint.painter;
 
+    // The concrete painter is private to the dashboard widget.
+    // ignore: avoid_dynamic_calls
     expect(trendPainter.cur, <double>[
       1100,
       1200,
