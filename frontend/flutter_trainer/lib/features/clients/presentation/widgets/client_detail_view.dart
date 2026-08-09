@@ -555,10 +555,11 @@ class _SubTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const ValueKey<String>('client-detail-sub-tabs'),
       color: AppColors.card,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        0,
+        AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.md,
       ),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart'
     show clientSectionLabels;
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -173,6 +174,29 @@ void main() {
       reason: '기본 선택된 식단 탭이 selected 로 안내돼야 함',
     );
     expect(flags.isButton, isTrue);
+  });
+
+  testWidgets('the sub-tab row keeps an 8px gap below the header actions', (
+    tester,
+  ) async {
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientDetail('seed-client-1'),
+    );
+
+    final strip = tester.widget<Container>(
+      find.byKey(const ValueKey<String>('client-detail-sub-tabs')),
+    );
+    expect(
+      strip.padding,
+      const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+    );
   });
 
   testWidgets('the chat sits in the sub-tab row and never leaves it empty', (
