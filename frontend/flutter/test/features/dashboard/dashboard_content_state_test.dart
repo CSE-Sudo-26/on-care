@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
@@ -66,18 +67,19 @@ void main() {
     Size size = const Size(800, 1600),
     Locale locale = const Locale('ko'),
     List<Override> extraOverrides = const <Override>[],
+    UserProfile profile = const UserProfile(
+      id: 'member',
+      name: '테스트',
+      email: 'member@example.com',
+    ),
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          profileProvider.overrideWith(
-            (ref) async => const UserProfile(
-              id: 'member',
-              name: '테스트',
-              email: 'member@example.com',
-            ),
+          accountRepositoryProvider.overrideWithValue(
+            MockAccountRepository(profile: profile),
           ),
           dashboardSummaryProvider.overrideWith((ref) => load()),
           memberCoachRepositoryProvider.overrideWithValue(
@@ -334,12 +336,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('운동 카드 소모 목표는 서버 값(exerciseBurnGoal)을 쓴다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('운동 카드는 프로필의 운동 목표 3종을 쓴다', (WidgetTester tester) async {
     await pumpDashboard(
       tester,
-      // 화면에 하드코딩됐던 1,500 이 아니라 요약이 내려준 값이 보여야 한다.
       load: () async => const DashboardSummary(
         indicators: <HealthIndicator>[
           HealthIndicator(label: '칼로리', current: 1067, max: 2000, unit: 'kcal'),
@@ -357,11 +356,21 @@ void main() {
         weekScoreDelta: 0,
         sodiumWarning: null,
       ),
+      profile: const UserProfile(
+        id: 'member',
+        name: '테스트',
+        email: 'member@example.com',
+        weeklyWorkoutGoal: 5,
+        weeklyExerciseMinutesGoal: 240,
+        weeklyBurnGoal: 900,
+      ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(' /800kcal'), findsOneWidget);
-    expect(find.text(' /1,500kcal'), findsNothing);
+    expect(find.text(' /5일'), findsOneWidget);
+    expect(find.text(' /240분'), findsOneWidget);
+    expect(find.text(' /900kcal'), findsOneWidget);
+    expect(find.text(' /800kcal'), findsNothing);
   });
 
   for (final width in <double>[360, 480, 800]) {

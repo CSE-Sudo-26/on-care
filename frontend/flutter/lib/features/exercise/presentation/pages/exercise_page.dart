@@ -178,10 +178,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
     final AsyncValue<ExerciseWeek> weekAsync = ref.watch(
       exerciseWeekViewProvider,
     );
-    // 주간 소모 목표는 서버(exercise_burn_goal)에서 온다. 홈 운동 카드도 같은
-    // 값을 읽어 두 화면의 목표치가 어긋나지 않는다. 출처(대시보드 요약)와
-    // 로딩 전 기본값 처리는 공용 provider 안에 있다.
-    final int burnGoal = ref.watch(exerciseBurnGoalProvider);
+    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     final DateTime today = _today;
     final DateTime center = today.add(Duration(days: _weekShift * 7));
     final bool atToday = _weekShift == 0 && _selected == today;
@@ -263,7 +260,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       // 홈 운동 카드의 '주간 운동 일수'와 동일한 정의.
                       value: '${week.workoutCount}',
                       unit: l.unitDays,
-                      goal: '3', // 주 3일 이상
+                      goal: '${goals.workouts}',
                       accent: true,
                     ),
                   ),
@@ -273,7 +270,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       label: l.exStatTime,
                       value: '${week.totalMinutes}',
                       unit: l.unitMinutes,
-                      goal: '150',
+                      goal: '${goals.minutes}',
                       accent: true,
                     ),
                   ),
@@ -283,7 +280,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                       label: l.exStatCalories,
                       value: '${week.totalCalories}',
                       unit: l.unitKcal,
-                      goal: NumberFormat('#,###').format(burnGoal),
+                      goal: NumberFormat('#,###').format(goals.burnCalories),
                       accent: true,
                     ),
                   ),

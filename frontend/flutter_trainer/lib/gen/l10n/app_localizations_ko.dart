@@ -33,10 +33,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navClients => '고객';
 
   @override
-  String get navSchedule => '일정';
+  String get navSchedule => '스케줄';
 
   @override
-  String get navCoaching => '코칭';
+  String get navCoaching => 'AI 코칭';
 
   @override
   String get navReports => '리포트';
@@ -1271,6 +1271,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFieldMinutes => '운동 시간';
+
+  @override
+  String get routineFieldTotalMinutes => '총 운동시간';
 
   @override
   String get routineFieldIntensity => '운동 강도';

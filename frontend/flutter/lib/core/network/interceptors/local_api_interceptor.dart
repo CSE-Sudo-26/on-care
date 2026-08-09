@@ -14,7 +14,6 @@ const Map<String, String> _seedDietPhotoAssets = <String, String>{
       'assets/images/breakfast-scrambled-egg-strawberry.jpg',
   'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
   'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
-  'seed-diet-dinner': 'assets/images/diet-tofu-salad.jpg',
   'seed-diet-yesterday-breakfast':
       'assets/images/diet-oatmeal-banana.jpeg',
   'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',
@@ -294,6 +293,12 @@ class LocalApiInterceptor extends Interceptor {
 
   Future<Response<Object?>> _dashboardSummary(RequestOptions options) async {
     final today = _todayDateString();
+    final profile = await _mergedProfile();
+    final int calorieGoal =
+        (profile['daily_calories'] as num?)?.toInt() ?? 2000;
+    final int sodiumGoal =
+        (profile['daily_sodium_mg'] as num?)?.toInt() ?? 2000;
+    final int sugarGoal = (profile['daily_sugar_g'] as num?)?.toInt() ?? 50;
 
     // Diet aggregates.
     final dietRows = await (_db.select(
@@ -368,11 +373,6 @@ class LocalApiInterceptor extends Interceptor {
         <String, Object?>{'time': r.time, 'title': r.title, 'emoji': r.emoji},
     ];
 
-    // Heuristic "week score": stretch diet+exercise into a 0..100 band
-    // so the card always renders something even on an empty database.
-    final calRatio = (totalCalories / 2000.0).clamp(0.0, 1.0);
-    final exRatio = (exerciseMinutes / 60.0).clamp(0.0, 1.0);
-    final score = (50 + calRatio * 25 + exRatio * 25).round();
     final now = DateTime.now();
     final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final nutritionByDate = <String, Map<String, num>>{
@@ -398,27 +398,46 @@ class LocalApiInterceptor extends Interceptor {
           ...nutritionByDate[_dateString(monday.add(Duration(days: index)))]!,
         },
     ];
+    final loggedNutritionDays = nutritionWeek
+        .where((day) => (day['calories']! as num) > 0)
+        .toList();
+    final averageSodium = loggedNutritionDays.isEmpty
+        ? totalSodium.toDouble()
+        : loggedNutritionDays.fold<double>(
+                0,
+                (total, day) => total + (day['sodium_mg']! as num).toDouble(),
+              ) /
+              loggedNutritionDays.length;
+    var score = 50;
+    if (averageSodium <= sodiumGoal) score += 20;
+    if (exerciseMinutes >= 150) {
+      score += 30;
+    } else if (exerciseMinutes > 0) {
+      score += 15;
+    }
 
     return _ok(options, <String, Object?>{
       'indicators': <Map<String, Object?>>[
         <String, Object?>{
           'label': '칼로리',
           'current': totalCalories,
-          'max': 2000,
+          'max': calorieGoal,
           'unit': 'kcal',
+          'over_budget': totalCalories > calorieGoal,
         },
         <String, Object?>{
           'label': '나트륨',
           'current': totalSodium,
-          'max': 2000,
+          'max': sodiumGoal,
           'unit': 'mg',
-          'over_budget': totalSodium > 2000,
+          'over_budget': totalSodium > sodiumGoal,
         },
         <String, Object?>{
           'label': '당류',
           'current': totalSugar,
-          'max': 50,
+          'max': sugarGoal,
           'unit': 'g',
+          'over_budget': totalSugar > sugarGoal,
         },
       ],
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
@@ -442,10 +461,10 @@ class LocalApiInterceptor extends Interceptor {
       // 동적으로 만든다. 서버가 만드는 문장과 같은 성격이라 번역본이 없다.
       'sodium_warning': hasSeededAdvice
           ? null
-          : totalSodium > 2000
+          : totalSodium > sodiumGoal
           ? sodiumSourceNames.isNotEmpty
                 ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
-                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
+                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(${sodiumGoal}mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
           ? '이번 주 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
@@ -1154,9 +1173,9 @@ class LocalApiInterceptor extends Interceptor {
     'daily_carbs_g': 275,
     'daily_protein_g': 100,
     'daily_fat_g': 55,
-    'weekly_workout_goal': 7,
-    'weekly_exercise_minutes_goal': 150,
-    'weekly_burn_goal': 1500,
+    'weekly_workout_goal': null,
+    'weekly_exercise_minutes_goal': null,
+    'weekly_burn_goal': null,
     'onboarded': true,
   };
 

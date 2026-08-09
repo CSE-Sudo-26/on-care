@@ -33,22 +33,21 @@ void main() {
   test('dio → LocalApi → DietDay.fromJson round-trips totals', () async {
     final res = await dio.get<Map<String, Object?>>('/diet/days/today');
     final day = DietDay.fromJson(res.data!);
-    expect(day.entries.length, 4);
-    expect(day.totalCalories, 1517);
-    expect(day.totalSodiumMg, 4008);
-    expect(day.totalSugarG, closeTo(24.8, 0.001));
-    expect(day.macros.carbsG, closeTo(140.0, 0.001));
-    expect(day.macros.proteinG, closeTo(79.0, 0.001));
-    expect(day.macros.fatG, closeTo(72.0, 0.001));
+    // 오늘 저녁은 데모 시연(사진으로 저녁 기록)을 위해 비워 둔다 (#548).
+    expect(day.entries.length, 3);
+    expect(
+      day.entries.every((entry) => entry.mealType != MealType.dinner),
+      isTrue,
+    );
+    expect(day.totalCalories, 1067);
+    expect(day.totalSodiumMg, 3428);
+    expect(day.totalSugarG, closeTo(17.8, 0.001));
+    expect(day.macros.carbsG, closeTo(120.0, 0.001));
+    expect(day.macros.proteinG, closeTo(45.0, 0.001));
+    expect(day.macros.fatG, closeTo(45.0, 0.001));
     expect(
       <int>[day.macros.carbsPct, day.macros.proteinPct, day.macros.fatPct],
-      <int>[37, 21, 42],
-    );
-    expect(
-      day.entries
-          .firstWhere((entry) => entry.mealType == MealType.dinner)
-          .photoAsset,
-      'assets/images/diet-tofu-salad.jpg',
+      <int>[45, 17, 38],
     );
     final pastRes = await dio.get<Map<String, Object?>>(
       '/diet/days/${_daysAgoString(2)}',

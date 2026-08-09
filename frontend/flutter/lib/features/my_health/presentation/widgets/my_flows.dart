@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/my_health/domain/support_links.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -18,6 +21,39 @@ import 'package:url_launcher/url_launcher.dart';
 final List<TextInputFormatter> _digitsOnly = <TextInputFormatter>[
   FilteringTextInputFormatter.digitsOnly,
 ];
+
+void _showTopNotification(
+  ScaffoldMessengerState messenger,
+  String message, {
+  required bool isError,
+}) {
+  messenger.hideCurrentMaterialBanner();
+  late final ScaffoldFeatureController<
+    MaterialBanner,
+    MaterialBannerClosedReason
+  >
+  controller;
+  controller = messenger.showMaterialBanner(
+    MaterialBanner(
+      elevation: 3,
+      margin: const EdgeInsets.all(12),
+      leading: Icon(
+        isError ? Icons.error_outline : Icons.check_circle_outline,
+        color: isError ? FigmaColors.dangerRed : FigmaColors.primary,
+      ),
+      content: Text(message),
+      actions: <Widget>[
+        IconButton(
+          tooltip: '닫기',
+          onPressed: () => controller.close(),
+          icon: const Icon(Icons.close),
+        ),
+      ],
+    ),
+  );
+  final dismissTimer = Timer(const Duration(seconds: 3), controller.close);
+  unawaited(controller.closed.whenComplete(dismissTimer.cancel));
+}
 
 Widget _shell(
   BuildContext context,
@@ -403,36 +439,39 @@ class _GoalsForm extends ConsumerStatefulWidget {
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
   late final TextEditingController _kcal = _ctl(
     widget.initial.dailyCalories,
-    2000,
+    UserProfile.defaultDailyCalories,
   );
   late final TextEditingController _sodium = _ctl(
     widget.initial.dailySodiumMg,
-    2000,
+    UserProfile.defaultDailySodiumMg,
   );
   late final TextEditingController _sugar = _ctl(
     widget.initial.dailySugarG,
-    50,
+    UserProfile.defaultDailySugarG,
   );
   late final TextEditingController _carbs = _ctl(
     widget.initial.dailyCarbsG,
-    275,
+    UserProfile.defaultDailyCarbsG,
   );
   late final TextEditingController _protein = _ctl(
     widget.initial.dailyProteinG,
-    100,
+    UserProfile.defaultDailyProteinG,
   );
-  late final TextEditingController _fat = _ctl(widget.initial.dailyFatG, 55);
+  late final TextEditingController _fat = _ctl(
+    widget.initial.dailyFatG,
+    UserProfile.defaultDailyFatG,
+  );
   late final TextEditingController _workouts = _ctl(
     widget.initial.weeklyWorkoutGoal,
-    7,
+    UserProfile.defaultWeeklyWorkoutGoal,
   );
   late final TextEditingController _minutes = _ctl(
     widget.initial.weeklyExerciseMinutesGoal,
-    150,
+    UserProfile.defaultWeeklyExerciseMinutesGoal,
   );
   late final TextEditingController _burn = _ctl(
     widget.initial.weeklyBurnGoal,
-    1500,
+    UserProfile.defaultWeeklyBurnGoal,
   );
   bool _saving = false;
 
@@ -466,7 +505,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
-      await ref
+      final UserProfile updatedProfile = await ref
           .read(accountRepositoryProvider)
           .updateHealthGoals(
             dailyCalories: _val(_kcal),
@@ -480,12 +519,15 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
             weeklyBurnGoal: _val(_burn),
           );
       if (!mounted) return;
-      ref.invalidate(profileProvider);
+      ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
+      ref.invalidate(dashboardSummaryProvider);
       navigator.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('건강 목표가 저장되었어요')));
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (!messenger.mounted) return;
+      _showTopNotification(messenger, '건강 목표가 저장되었어요', isError: false);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.mySaveFailed)));
+      _showTopNotification(messenger, l.mySaveFailed, isError: true);
     }
   }
 

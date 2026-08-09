@@ -20,6 +20,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -843,6 +844,7 @@ class _ExerciseCard extends ConsumerWidget {
     final int count = wk?.workoutCount ?? summary.exerciseCount;
     final double burned = (wk?.totalCalories ?? summary.exerciseCalories)
         .toDouble();
+    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
     // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = DateTime.now().weekday - 1;
@@ -882,7 +884,7 @@ class _ExerciseCard extends ConsumerWidget {
                       icon: Icons.timer_outlined,
                       label: l.homeExerciseActiveTime,
                       value: '$minutes',
-                      goal: '150',
+                      goal: '${goals.minutes}',
                       unit: l.unitMinutes,
                     ),
                     const SizedBox(height: 14),
@@ -890,19 +892,16 @@ class _ExerciseCard extends ConsumerWidget {
                       icon: Icons.local_fire_department_rounded,
                       label: l.homeExerciseBurned,
                       value: nf.format(burned),
-                      // 주간 소모 목표는 서버(exercise_burn_goal) 값을 쓴다.
-                      // 운동 탭 '이번 주 운동 요약'도 같은 값을 읽어 두 화면이
-                      // 항상 일치한다.
-                      goal: nf.format(summary.exerciseBurnGoal),
+                      goal: nf.format(goals.burnCalories),
                       unit: l.unitKcal,
                     ),
                     const SizedBox(height: 14),
                     _ExerciseStat(
                       icon: Icons.check_circle_outline_rounded,
                       label: l.homeExerciseDays,
-                      // 값 = 주간 운동한 날짜 수(workoutCount), 목표 = 주 3일 이상.
+                      // 값 = 주간 운동한 날짜 수(workoutCount).
                       value: '$count',
-                      goal: '3',
+                      goal: '${goals.workouts}',
                       unit: l.unitDays,
                     ),
                   ],
@@ -1149,11 +1148,13 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
     cur: <double>[1650, 2100, 1480, 1720, 1390, 1860, 967],
     unit: 'kcal',
     goal: 2000,
-    // 눈금 2개. 라벨 칸은 16px 인데 네 개(1000·1500·2000·2500)를 68px 축에
-    // 값 비례로 놓으면 칸 간격이 16px 을 밑돌아 아래쪽 라벨끼리 겹쳐 숫자를
-    // 읽을 수 없었다. 목표선은 따로 그리지 않으므로(상단 '목표 N' 라벨과
-    // 데이터 포인트 상태색으로만 표현) 2000 을 빼도 잃는 정보가 없다.
-    ticks: <double>[1500, 2500],
+    // 맨 아래 0 눈금은 당류 그래프와 같은 기준선 역할이라 항상 넣는다 —
+    // 세 지표가 한 카드에서 탭으로 바뀌는데 축의 바닥이 서로 달랐다 (#548).
+    // 그 위 눈금은 2개만 둔다. 라벨 칸은 16px 인데 촘촘히(1000·1500·2000·2500)
+    // 놓으면 칸 간격이 16px 을 밑돌아 아래쪽 라벨끼리 겹쳐 숫자를 읽을 수
+    // 없었다. 목표선은 따로 그리지 않으므로(상단 '목표 N' 라벨과 데이터
+    // 포인트 상태색으로만 표현) 2000 을 빼도 잃는 정보가 없다.
+    ticks: <double>[0, 1500, 2500],
     color: FigmaColors.primary,
     warn: false,
   ),
@@ -1161,7 +1162,7 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
     cur: <double>[1600, 1900, 2200, 1550, 1850, 2600, 3421],
     unit: 'mg',
     goal: 2000,
-    ticks: <double>[1500, 2500, 3500],
+    ticks: <double>[0, 1750, 3500],
     color: FigmaColors.orange,
     warn: true,
   ),

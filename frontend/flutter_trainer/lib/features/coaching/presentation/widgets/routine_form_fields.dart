@@ -67,11 +67,16 @@ class RoutineMinutesSlider extends StatelessWidget {
   const RoutineMinutesSlider({
     required this.minutes,
     required this.onChanged,
+    this.label,
     super.key,
   });
 
   final int minutes;
   final ValueChanged<int> onChanged;
+
+  /// Optional context-specific label. Individual exercises use the default
+  /// `routineFieldMinutes`; generation constraints pass the total-time label.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +88,7 @@ class RoutineMinutesSlider extends StatelessWidget {
         Row(
           children: <Widget>[
             Text(
-              l.routineFieldMinutes,
+              label ?? l.routineFieldMinutes,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
