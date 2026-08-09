@@ -14,7 +14,6 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/workout_vie
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
-import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -27,13 +26,10 @@ const List<String> clientSectionLabels = <String>['식단', '운동'];
 /// The client detail body — a header that answers "how is this person
 /// doing right now?" plus the 식단/운동 sub-tabs.
 ///
-/// The header carries what used to be the 개요 tab: the alert badges and
-/// today's calorie/sodium/sugar numbers. Those are the questions the
-/// trainer has on *every* tab, so paying a tab for them meant the answer
-/// was missing exactly when they were reading the chat or the diet. The
-/// two trends 개요 also drew (주간 이행률, 나트륨 추이) now live only where
-/// they belong — 운동, 식단, and the 리포트 tab that renders the same
-/// charts for the week.
+/// The header carries only the alert badges from the former 개요 tab. Detailed
+/// nutrition values live in 식단 and workout trends live in 운동, avoiding a
+/// duplicate summary while keeping actionable signals such as 나트륨 초과
+/// visible from every section.
 ///
 /// Chat rides at the end of the sub-tab row rather than being a third equal
 /// tab: 식단 and 운동 are things you *read* about this person, chatting is
@@ -214,9 +210,9 @@ class _StatusView extends StatelessWidget {
   }
 }
 
-/// Identity, why this client is flagged, today's numbers, and the two
-/// things the trainer most often does next — above the tabs, so all of it
-/// stays on screen no matter which tab is open.
+/// Identity, why this client is flagged, and the two things the trainer most
+/// often does next — above the tabs, so actionable context stays visible no
+/// matter which tab is open without duplicating the tab-specific summaries.
 class _Header extends ConsumerWidget {
   const _Header({
     required this.client,
@@ -263,33 +259,6 @@ class _Header extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              MetricTile(
-                label: '칼로리',
-                value: client.calories,
-                unit: 'kcal',
-                color: AppColors.foreground,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              MetricTile(
-                label: '나트륨',
-                value: client.sodiumMg,
-                unit: 'mg',
-                color: AppColors.foreground,
-                warn: client.sodiumOverBudget,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              MetricTile(
-                label: '당류',
-                value: client.sugarG,
-                unit: 'g',
-                color: AppColors.foreground,
-                warn: client.sugarG > sugarTargetG,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
               Expanded(

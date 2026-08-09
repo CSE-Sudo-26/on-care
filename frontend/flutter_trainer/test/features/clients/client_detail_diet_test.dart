@@ -5,6 +5,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -74,12 +75,13 @@ void main() {
       await openDiet(tester, '김민수');
 
       expect(find.text('오늘 영양 요약'), findsOneWidget);
-      // Summary totals from the client row (also appears as the last
-      // trend bar's label, so match ≥1).
+      // Nutrition metrics live only in the diet tab, not in the shared
+      // detail header. The alert badge remains visible above the tabs.
+      expect(find.byType(MetricTile), findsNWidgets(3));
+      expect(find.text('나트륨 초과'), findsOneWidget);
+      // The sodium total also appears as the last trend bar's label.
       expect(find.text('2100'), findsWidgets);
-      // Twice: the detail header carries the same over-target tile on
-      // every sub-tab now, and this view has its own.
-      expect(find.text('mg 초과'), findsNWidgets(2));
+      expect(find.text('mg 초과'), findsOneWidget);
       // The detail header plus the 7-day trend card push every meal card
       // down, so reach them by scrolling.
       await tester.scrollUntilVisible(find.text('아침'), 150);
@@ -121,7 +123,7 @@ void main() {
       // below the fold on the test viewport.
       await tester.scrollUntilVisible(find.text('그릭요거트, 과일'), 150);
       expect(find.text('그릭요거트, 과일'), findsOneWidget);
-      // Under target in both the header tile and this view's own.
+      // Under target in the diet summary.
       expect(find.text('mg 초과'), findsNothing);
       await tester.scrollUntilVisible(
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
