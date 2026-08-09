@@ -261,6 +261,19 @@ void main() {
     },
   );
 
+  test('sodium goal changes week score using the FastAPI criteria', () async {
+    final before = await dio.get<Map<String, Object?>>('/dashboard/summary');
+    expect(before.data!['week_score'], 65);
+
+    await dio.put<Object?>(
+      '/users/me/health-goals',
+      data: <String, Object?>{'daily_sodium_mg': 2500},
+    );
+
+    final after = await dio.get<Map<String, Object?>>('/dashboard/summary');
+    expect(after.data!['week_score'], 85);
+  });
+
   test(
     'sodium_warning handles one source name with a final consonant',
     () async {

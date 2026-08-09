@@ -49,7 +49,8 @@ void _showTopNotification(
       ],
     ),
   );
-  Timer(const Duration(seconds: 3), controller.close);
+  final dismissTimer = Timer(const Duration(seconds: 3), controller.close);
+  unawaited(controller.closed.whenComplete(dismissTimer.cancel));
 }
 
 Widget _shell(

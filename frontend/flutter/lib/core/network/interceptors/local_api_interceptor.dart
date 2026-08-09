@@ -374,13 +374,6 @@ class LocalApiInterceptor extends Interceptor {
         <String, Object?>{'time': r.time, 'title': r.title, 'emoji': r.emoji},
     ];
 
-    // Heuristic "week score": stretch diet+exercise into a 0..100 band
-    // so the card always renders something even on an empty database.
-    final calRatio = calorieGoal > 0
-        ? (totalCalories / calorieGoal).clamp(0.0, 1.0)
-        : 0.0;
-    final exRatio = (exerciseMinutes / 60.0).clamp(0.0, 1.0);
-    final score = (50 + calRatio * 25 + exRatio * 25).round();
     final now = DateTime.now();
     final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final nutritionByDate = <String, Map<String, num>>{
@@ -406,6 +399,23 @@ class LocalApiInterceptor extends Interceptor {
           ...nutritionByDate[_dateString(monday.add(Duration(days: index)))]!,
         },
     ];
+    final loggedNutritionDays = nutritionWeek
+        .where((day) => (day['calories']! as num) > 0)
+        .toList();
+    final averageSodium = loggedNutritionDays.isEmpty
+        ? totalSodium.toDouble()
+        : loggedNutritionDays.fold<double>(
+                0,
+                (total, day) => total + (day['sodium_mg']! as num).toDouble(),
+              ) /
+              loggedNutritionDays.length;
+    var score = 50;
+    if (averageSodium <= sodiumGoal) score += 20;
+    if (exerciseMinutes >= 150) {
+      score += 30;
+    } else if (exerciseMinutes > 0) {
+      score += 15;
+    }
 
     return _ok(options, <String, Object?>{
       'indicators': <Map<String, Object?>>[
