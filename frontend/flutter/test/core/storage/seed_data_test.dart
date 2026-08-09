@@ -14,6 +14,13 @@ String _todayString() {
       '${now.day.toString().padLeft(2, '0')}';
 }
 
+String _daysAgoString(int days) {
+  final date = DateTime.now().subtract(Duration(days: days));
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+}
+
 void main() {
   late AppDatabase db;
 
@@ -35,11 +42,35 @@ void main() {
       final exercise = await db.select(db.exerciseSessions).get();
 
       expect(diet, isNotEmpty);
-      expect(
-        diet.every((r) => r.date == today),
-        isTrue,
-        reason: 'all seeded diet rows must use today\'s date',
+      expect(diet.where((r) => r.date == today).length, 4);
+      expect(diet.where((r) => r.date == _daysAgoString(1)).length, 3);
+      expect(diet.where((r) => r.date == _daysAgoString(2)).length, 3);
+      expect(diet.where((r) => r.date == _daysAgoString(3)), isEmpty);
+      final salmonDinner = diet.firstWhere(
+        (row) => row.id == 'seed-diet-two-days-ago-dinner',
       );
+      final salmonDinnerFoods =
+          (jsonDecode(salmonDinner.foodsJson) as List<Object?>)
+              .cast<Map<String, Object?>>();
+      expect(salmonDinnerFoods.map((food) => food['name']), <String>[
+        '연어구이',
+        '현미밥',
+      ]);
+      for (final date in <String>[
+        today,
+        _daysAgoString(1),
+        _daysAgoString(2),
+      ]) {
+        final mealTypes = diet
+            .where((row) => row.date == date)
+            .map((row) => row.mealType)
+            .toSet();
+        expect(
+          mealTypes,
+          containsAll(<String>['breakfast', 'lunch', 'dinner']),
+        );
+      }
+      expect(diet.where((row) => row.mealType == 'snack').length, 1);
       // Schedule seeds a couple of events on today (for the dashboard's
       // "오늘의 일정") plus a few spread across the current month (for the
       // calendar). All stay within the current month so the date-slide
@@ -62,7 +93,7 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v7'), today);
+      expect(await db.readValue('seeded_v12'), today);
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
@@ -80,16 +111,23 @@ void main() {
 
     test('diet seed has consistent realistic nutrition totals', () async {
       await seedIfEmpty(db);
-      final diet = await db.select(db.dietEntries).get();
+      final allDiet = await db.select(db.dietEntries).get();
+      final diet = allDiet
+          .where((entry) => entry.date == _todayString())
+          .toList();
 
-      expect(diet.length, 3);
+      expect(diet.length, 4);
       expect(
         diet.fold<int>(0, (sum, entry) => sum + entry.totalCalories),
-        1067,
+        1517,
       );
-      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 3428);
+      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 4008);
+      expect(
+        diet.fold<double>(0, (sum, entry) => sum + entry.sugarG),
+        closeTo(24.8, 0.001),
+      );
 
-      for (final entry in diet) {
+      for (final entry in allDiet) {
         final foods = (jsonDecode(entry.foodsJson) as List<Object?>)
             .cast<Map<String, Object?>>();
         expect(
@@ -106,25 +144,28 @@ void main() {
           ),
           entry.sodiumMg,
         );
+        expect(
+          foods.fold<double>(
+            0,
+            (sum, food) => sum + (food['sugar_g']! as num).toDouble(),
+          ),
+          closeTo(entry.sugarG, 0.001),
+        );
       }
     });
 
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v7', '2020-01-01');
+      await db.putValue('seeded_v12', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final today = _todayString();
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
-      expect(
-        diet.every((r) => r.date == today),
-        isTrue,
-        reason: 're-seed must overwrite stale dates with today',
-      );
-      expect(await db.readValue('seeded_v7'), today);
+      expect(diet.where((r) => r.date == today).length, 4);
+      expect(await db.readValue('seeded_v12'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -149,9 +190,9 @@ void main() {
 
       await seedIfEmpty(db);
 
-      // Legacy flag cleared, v5 flag set to today.
+      // Legacy flag cleared, current flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v7'), _todayString());
+      expect(await db.readValue('seeded_v12'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -159,9 +200,9 @@ void main() {
       expect(
         diet.any((r) => r.id == 'seed-diet-stale'),
         isFalse,
-        reason: 'stale v2 seed rows must be wiped on v5 migration',
+        reason: 'stale v2 seed rows must be wiped during migration',
       );
-      expect(diet.every((r) => r.date == _todayString()), isTrue);
+      expect(diet.where((r) => r.date == _todayString()).length, 4);
     });
 
     test('user-added (non-seed) rows survive a re-seed', () async {
@@ -181,7 +222,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v7', '2020-01-01');
+      await db.putValue('seeded_v12', '2020-01-01');
       await seedIfEmpty(db);
 
       final diet = await db.select(db.dietEntries).get();

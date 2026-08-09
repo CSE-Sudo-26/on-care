@@ -1,4 +1,5 @@
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -445,5 +446,48 @@ class MockGymRepository implements GymRepository {
       throw StateError('slot already started: $slotId');
     }
     _slots[i] = _slots[i].copyWith(remaining: _slots[i].remaining - 1);
+    _reservations.add(
+      MyReservation(
+        // 데모는 서버가 없으니 슬롯 id 로 결정론적 id 를 만든다 — 취소가 어느
+        // 예약을 가리키는지 화면과 저장소가 같은 값을 본다.
+        id: 'res-$slotId',
+        slotId: slotId,
+        trainerId: _slots[i].trainerId,
+        startsAt: _slots[i].startsAt,
+        cancellable: true,
+      ),
+    );
+  }
+
+  /// 데모에서 잡아 둔 예약. 인스턴스에 남으므로 화면을 나갔다 와도 유지된다.
+  final List<MyReservation> _reservations = <MyReservation>[];
+
+  @override
+  Future<List<MyReservation>> fetchMyReservations() async {
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    return List<MyReservation>.unmodifiable(_reservations);
+  }
+
+  @override
+  Future<void> cancelReservation(String reservationId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final int i = _reservations.indexWhere(
+      (MyReservation r) => r.id == reservationId,
+    );
+    if (i < 0) {
+      throw StateError('reservation not found: $reservationId');
+    }
+    final MyReservation reservation = _reservations[i];
+    if (!reservation.startsAt.isAfter(DateTime.now())) {
+      throw StateError('reservation no longer cancellable: $reservationId');
+    }
+    // 좌석을 되돌린다 — 실서버와 같은 결과가 화면에 보여야 한다.
+    final int s = _slots.indexWhere((TrainerSlot slot) => slot.id == reservation.slotId);
+    if (s >= 0) {
+      _slots[s] = _slots[s].copyWith(
+        remaining: (_slots[s].remaining + 1).clamp(0, _slots[s].capacity),
+      );
+    }
+    _reservations.removeAt(i);
   }
 }

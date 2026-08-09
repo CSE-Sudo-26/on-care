@@ -30,6 +30,20 @@ _ALLOWED_TYPES = {"cardio", "strength", "yoga", "walking", "stretching", "other"
 _ALLOWED_INTENSITIES = {"light", "moderate", "high"}
 
 
+def _reject_if_derived(row: ExerciseSession) -> None:
+    """트레이너 PT 완료로 파생된 기록은 회원이 고칠 수 없다. (#499)
+
+    404 가 아니라 409 다 — 기록은 분명히 존재하고 회원 것이며, 화면에도 보인다.
+    없는 척하면 앱이 목록에서 사라진 줄 알고 잘못 갱신한다. 삭제하려면 트레이너가
+    그 세션을 지워야 하고, 그러면 이 기록도 함께 사라진다.
+    """
+    if row.source != "member":
+        raise HTTPException(
+            status_code=409,
+            detail="트레이너가 완료 처리한 PT 기록은 수정하거나 삭제할 수 없습니다.",
+        )
+
+
 @router.get("/exercise/weeks/current", response_model=ExerciseWeekResponse)
 def current_week(
     current_user: CurrentUser,
@@ -104,6 +118,7 @@ def update_session(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="운동 기록을 찾을 수 없습니다.")
+    _reject_if_derived(row)
 
     day_label = payload.day_label or row.day_label
     if day_label not in WEEKDAY_LABELS:
@@ -135,6 +150,7 @@ def delete_session(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="운동 기록을 찾을 수 없습니다.")
+    _reject_if_derived(row)
     db.delete(row)
     db.commit()
     return {"status": "deleted"}

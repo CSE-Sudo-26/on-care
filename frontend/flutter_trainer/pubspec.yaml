@@ -17,6 +17,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # --- Localization (#501) ---
+  # 사용자 앱과 같은 gen-l10n 파이프라인. arb 는 lib/l10n, 생성물은 lib/gen/l10n.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
   cupertino_icons: ^1.0.8
 
   # --- State management & DI ---
@@ -66,6 +72,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true   # l10n.yaml 기반 flutter gen-l10n 활성화 (#501)
 
   assets:
     - assets/images/

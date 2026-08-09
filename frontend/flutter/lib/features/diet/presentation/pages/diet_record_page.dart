@@ -14,11 +14,8 @@ import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// 식단 tab, rebuilt to match the On-Care Figma redesign. The weekly date
 /// strip is centred on today (per the product request); the nutrition summary /
-/// AI feedback / meal log are driven by [dietTodayProvider], and the "식단 추가"
+/// AI feedback / meal log are driven by the selected date, and the "식단 추가"
 /// and meal-detail flows open as full pages wired to the diet repository.
-///
-/// The backend currently exposes only "today", so a non-today selection shows
-/// an empty state until the per-date query lands (tracked as a follow-up).
 class DietRecordPage extends ConsumerStatefulWidget {
   const DietRecordPage({super.key});
 
@@ -136,7 +133,9 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
       (int i) => center.add(Duration(days: i - 3)),
     );
     final bool atToday = _weekShift == 0 && _selected == today;
-    final AsyncValue<DietDay> diet = ref.watch(dietTodayProvider);
+    final AsyncValue<DietDay> diet = atToday
+        ? ref.watch(dietTodayProvider)
+        : ref.watch(dietByDateProvider(_selected));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -174,29 +173,34 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   }),
                 ),
                 const SizedBox(height: 8),
-                if (!atToday)
-                  const _EmptyDay()
-                else
-                  diet.when(
-                    loading: () => const _DietLoading(),
-                    error: (Object e, StackTrace _) => _DietError(
-                      onRetry: () => ref.invalidate(dietTodayProvider),
-                    ),
-                    data: (DietDay day) => Column(
-                      children: <Widget>[
-                        NutritionSummary(day: day),
-                        const SizedBox(height: 20),
-                        _AiFeedback(message: day.aiCoachMessage),
-                        const SizedBox(height: 20),
-                        _MealLog(
-                          entries: day.entries,
-                          onAdd: () => showDietAddSheet(context),
-                          onEditMeal: (DietMeal m) =>
-                              openMealDetailPage(context, m),
-                        ),
-                      ],
-                    ),
+                diet.when(
+                  loading: () => const _DietLoading(),
+                  error: (Object e, StackTrace _) => _DietError(
+                    onRetry: () {
+                      if (atToday) {
+                        ref.invalidate(dietTodayProvider);
+                      } else {
+                        ref.invalidate(dietByDateProvider(_selected));
+                      }
+                    },
                   ),
+                  data: (DietDay day) => !atToday && day.entries.isEmpty
+                      ? const _EmptyDay()
+                      : Column(
+                          children: <Widget>[
+                            NutritionSummary(day: day),
+                            const SizedBox(height: 20),
+                            _AiFeedback(message: day.aiCoachMessage),
+                            const SizedBox(height: 20),
+                            _MealLog(
+                              entries: day.entries,
+                              onAdd: () => showDietAddSheet(context),
+                              onEditMeal: (DietMeal m) =>
+                                  openMealDetailPage(context, m),
+                            ),
+                          ],
+                        ),
+                ),
               ],
             ),
           ),

@@ -7,17 +7,20 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 void main() {
   late Dio dio;
   late DioDietRepository repository;
+  late List<String> requestedPaths;
 
   setUp(() {
+    requestedPaths = <String>[];
     dio = Dio(BaseOptions(baseUrl: 'https://example.test'));
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (RequestOptions options, RequestInterceptorHandler handler) {
+          requestedPaths.add(options.path);
           handler.resolve(
             Response<Map<String, Object?>>(
               requestOptions: options,
               statusCode: 200,
-              data: options.path == '/diet/days/today'
+              data: options.path.startsWith('/diet/days/')
                   ? _staleDayResponse
                   : _staleResponse,
             ),
@@ -30,6 +33,14 @@ void main() {
 
   tearDown(() {
     dio.close();
+  });
+
+  test('fetchByDate requests the selected YYYY-MM-DD date', () async {
+    final day = await repository.fetchByDate(DateTime(2026, 8, 3));
+
+    expect(requestedPaths, <String>['/diet/days/2026-08-03']);
+    expect(day.totalCalories, 100);
+    expect(day.entries.single.id, 'diet-edit');
   });
 
   test(

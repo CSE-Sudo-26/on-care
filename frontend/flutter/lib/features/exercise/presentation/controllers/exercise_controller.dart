@@ -10,6 +10,7 @@ import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.d
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
@@ -280,3 +281,12 @@ final trainerSlotsProvider = FutureProvider.family<List<TrainerSlot>, String>((
 ) {
   return ref.watch(gymRepositoryProvider).fetchSlots(trainerId);
 }, name: 'trainerSlots');
+
+/// 내가 잡아 둔 예약. 예약 패널이 '내 자리'를 표시하고 취소를 걸 근거다. (#502)
+///
+/// 슬롯 목록과 따로 두는 이유: 슬롯은 트레이너별이고 예약은 회원별이라 무효화
+/// 시점이 다르다. 취소하면 둘 다 invalidate 해야 잔여 자리와 내 예약이 함께
+/// 맞는다.
+final myReservationsProvider = FutureProvider<List<MyReservation>>((ref) {
+  return ref.watch(gymRepositoryProvider).fetchMyReservations();
+}, name: 'myReservations');

@@ -19,7 +19,7 @@ class MockDietRepository implements DietRepository {
   MockDietRepository();
 
   static const String _aiCoachMessage =
-      '점심 짬뽕으로 나트륨과 혈당 부담이 크게 높아졌어요! 오늘 저녁은 간을 하지 않은 두부/닭가슴살 샐러드나 채소 위주 식단으로 가볍게 드시고, 물을 자주 드셔주세요.';
+      '점심 짬뽕과 저녁 두부 샐러드의 베이컨·올리브로 나트륨과 지방 섭취가 높았어요. 다음 식사는 양념을 줄인 채소와 단백질 위주로 구성해 보세요.';
 
   final List<DietEntry> _entries = <DietEntry>[
     const DietEntry(
@@ -62,7 +62,7 @@ class MockDietRepository implements DietRepository {
       totalCalories: 750,
       sodiumMg: 3200,
       sugarG: 8.5,
-      // 오늘 3끼 합계가 탄120·단45·지45g(→ 45/17/38%)이 되도록 맞춘 값.
+      // 홈 대시보드와 같은 식단 원본을 사용하도록 유지한다.
       // 홈 대시보드 시드(seed_data.dart)의 짬뽕과 동일하게 유지한다.
       carbsG: 107,
       proteinG: 29,
@@ -112,11 +112,35 @@ class MockDietRepository implements DietRepository {
         ),
       ],
     ),
+    const DietEntry(
+      id: 'mock-dinner',
+      mealType: MealType.dinner,
+      timeLabel: '18:40',
+      totalCalories: 450,
+      sodiumMg: 580,
+      sugarG: 7,
+      carbsG: 20,
+      proteinG: 34,
+      fatG: 27,
+      photoAsset: 'assets/images/diet-tofu-salad.jpg',
+      aiComment: '두부와 채소로 단백질과 식이섬유를 챙겼지만 베이컨과 올리브로 나트륨이 다소 높아요.',
+      foods: <FoodItem>[
+        FoodItem(
+          name: '두부 샐러드',
+          calories: 450,
+          sodiumMg: 580,
+          sugarG: 7,
+          carbsG: 20,
+          proteinG: 34,
+          fatG: 27,
+        ),
+      ],
+    ),
   ];
 
-  int _totalCalories = 1067;
-  int _totalSodiumMg = 3428;
-  double _totalSugarG = 17.8;
+  int _totalCalories = 1517;
+  int _totalSodiumMg = 4008;
+  double _totalSugarG = 24.8;
   int _seq = 0;
 
   // idempotencyKey → 이미 기록한 분석 결과. 응답 유실 후 재시도(같은 키)에
@@ -218,6 +242,33 @@ class MockDietRepository implements DietRepository {
   }
 
   @override
+  Future<DietDay> fetchByDate(DateTime date) async {
+    final DateTime now = DateTime.now();
+    final DateTime selectedDate = DateTime(date.year, date.month, date.day);
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final int daysAgo = today.difference(selectedDate).inDays;
+    if (daysAgo == 0) return fetchToday();
+    if (daysAgo == 1) {
+      return _historicalDay(
+        _yesterdayEntries,
+        '나트륨을 잘 조절했고 단백질도 고르게 섭취한 하루였어요.',
+      );
+    }
+    if (daysAgo == 2) {
+      return _historicalDay(_twoDaysAgoEntries, '연어와 현미밥으로 탄단지 균형을 잘 맞췄어요.');
+    }
+
+    return const DietDay(
+      entries: <DietEntry>[],
+      totalCalories: 0,
+      totalSodiumMg: 0,
+      totalSugarG: 0,
+      macros: DietMacros.zero(),
+      aiCoachMessage: '',
+    );
+  }
+
+  @override
   Future<void> deleteEntry(String id) async {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     final int idx = _entries.indexWhere((DietEntry e) => e.id == id);
@@ -304,6 +355,211 @@ class MockDietRepository implements DietRepository {
 
   int _nonNegInt(int v) => v < 0 ? 0 : v;
   double _nonNegDouble(double v) => v < 0 ? 0 : v;
+}
+
+const List<DietEntry> _yesterdayEntries = <DietEntry>[
+  DietEntry(
+    id: 'mock-yesterday-breakfast',
+    mealType: MealType.breakfast,
+    timeLabel: '08:10',
+    totalCalories: 355,
+    sodiumMg: 101,
+    sugarG: 20,
+    carbsG: 69,
+    proteinG: 11.3,
+    fatG: 6.4,
+    photoAsset: 'assets/images/diet-oatmeal-banana.jpeg',
+    aiComment: '오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '오트밀',
+        calories: 250,
+        sodiumMg: 100,
+        sugarG: 6,
+        carbsG: 42,
+        proteinG: 10,
+        fatG: 6,
+      ),
+      FoodItem(
+        name: '바나나',
+        calories: 105,
+        sodiumMg: 1,
+        sugarG: 14,
+        carbsG: 27,
+        proteinG: 1.3,
+        fatG: 0.4,
+      ),
+    ],
+  ),
+  DietEntry(
+    id: 'mock-yesterday-lunch',
+    mealType: MealType.lunch,
+    timeLabel: '12:30',
+    totalCalories: 315,
+    sodiumMg: 395,
+    sugarG: 10,
+    carbsG: 19,
+    proteinG: 34,
+    fatG: 11.1,
+    photoAsset: 'assets/images/diet-chicken-salad.jpg',
+    aiComment: '닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '닭가슴살 샐러드',
+        calories: 315,
+        sodiumMg: 395,
+        sugarG: 10,
+        carbsG: 19,
+        proteinG: 34,
+        fatG: 11.1,
+      ),
+    ],
+  ),
+  DietEntry(
+    id: 'mock-yesterday-dinner',
+    mealType: MealType.dinner,
+    timeLabel: '18:45',
+    totalCalories: 610,
+    sodiumMg: 1305,
+    sugarG: 5.7,
+    carbsG: 85,
+    proteinG: 30,
+    fatG: 17.5,
+    photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
+    aiComment: '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '된장찌개',
+        calories: 300,
+        sodiumMg: 1300,
+        sugarG: 5,
+        carbsG: 18,
+        proteinG: 24,
+        fatG: 15,
+      ),
+      FoodItem(
+        name: '밥',
+        calories: 310,
+        sodiumMg: 5,
+        sugarG: 0.7,
+        carbsG: 67,
+        proteinG: 6,
+        fatG: 2.5,
+      ),
+    ],
+  ),
+];
+
+const List<DietEntry> _twoDaysAgoEntries = <DietEntry>[
+  DietEntry(
+    id: 'mock-two-days-ago-breakfast',
+    mealType: MealType.breakfast,
+    timeLabel: '08:35',
+    totalCalories: 320,
+    sodiumMg: 80,
+    sugarG: 9,
+    carbsG: 14,
+    proteinG: 23,
+    fatG: 21,
+    photoAsset: 'assets/images/diet-greek-yogurt-nuts.jpeg',
+    aiComment: '그릭 요거트의 단백질과 견과류의 불포화지방을 고르게 섭취했어요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '그릭 요거트',
+        calories: 170,
+        sodiumMg: 75,
+        sugarG: 7,
+        carbsG: 8,
+        proteinG: 18,
+        fatG: 8,
+      ),
+      FoodItem(
+        name: '견과류',
+        calories: 150,
+        sodiumMg: 5,
+        sugarG: 2,
+        carbsG: 6,
+        proteinG: 5,
+        fatG: 13,
+      ),
+    ],
+  ),
+  DietEntry(
+    id: 'mock-two-days-ago-lunch',
+    mealType: MealType.lunch,
+    timeLabel: '12:20',
+    totalCalories: 610,
+    sodiumMg: 900,
+    sugarG: 12,
+    carbsG: 92,
+    proteinG: 20,
+    fatG: 16,
+    photoAsset: 'assets/images/diet-vegetable-bibimbap.jpg',
+    aiComment: '야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '야채비빔밥',
+        calories: 610,
+        sodiumMg: 900,
+        sugarG: 12,
+        carbsG: 92,
+        proteinG: 20,
+        fatG: 16,
+      ),
+    ],
+  ),
+  DietEntry(
+    id: 'mock-two-days-ago-dinner',
+    mealType: MealType.dinner,
+    timeLabel: '18:50',
+    totalCalories: 675,
+    sodiumMg: 510,
+    sugarG: 9,
+    carbsG: 77,
+    proteinG: 41,
+    fatG: 21,
+    photoAsset: 'assets/images/diet-salmon-brown-rice.jpeg',
+    aiComment: '연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.',
+    foods: <FoodItem>[
+      FoodItem(
+        name: '연어구이',
+        calories: 395,
+        sodiumMg: 505,
+        sugarG: 9,
+        carbsG: 19,
+        proteinG: 35,
+        fatG: 19,
+      ),
+      FoodItem(
+        name: '현미밥',
+        calories: 280,
+        sodiumMg: 5,
+        carbsG: 58,
+        proteinG: 6,
+        fatG: 2,
+      ),
+    ],
+  ),
+];
+
+DietDay _historicalDay(List<DietEntry> entries, String aiCoachMessage) {
+  return DietDay(
+    entries: entries,
+    totalCalories: entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.totalCalories,
+    ),
+    totalSodiumMg: entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.sodiumMg,
+    ),
+    totalSugarG: entries.fold<double>(
+      0,
+      (double sum, DietEntry entry) => sum + entry.sugarG,
+    ),
+    macros: _toDietMacros(_sumMacroGrams(entries)),
+    aiCoachMessage: aiCoachMessage,
+  );
 }
 
 typedef _MacroGrams = ({double carbsG, double proteinG, double fatG});

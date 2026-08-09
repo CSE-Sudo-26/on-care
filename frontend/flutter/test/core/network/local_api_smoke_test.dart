@@ -33,16 +33,32 @@ void main() {
   test('dio → LocalApi → DietDay.fromJson round-trips totals', () async {
     final res = await dio.get<Map<String, Object?>>('/diet/days/today');
     final day = DietDay.fromJson(res.data!);
-    expect(day.entries.length, 3);
-    expect(day.totalCalories, 1067);
-    expect(day.totalSodiumMg, 3428);
-    // v5 시드 탄단지 = 120/45/45 (→ 45/17/38%).
-    expect(day.macros.carbsG, closeTo(120.0, 0.001));
-    expect(day.macros.proteinG, closeTo(45.0, 0.001));
-    expect(day.macros.fatG, closeTo(45.0, 0.001));
+    expect(day.entries.length, 4);
+    expect(day.totalCalories, 1517);
+    expect(day.totalSodiumMg, 4008);
+    expect(day.totalSugarG, closeTo(24.8, 0.001));
+    expect(day.macros.carbsG, closeTo(140.0, 0.001));
+    expect(day.macros.proteinG, closeTo(79.0, 0.001));
+    expect(day.macros.fatG, closeTo(72.0, 0.001));
     expect(
       <int>[day.macros.carbsPct, day.macros.proteinPct, day.macros.fatPct],
-      <int>[45, 17, 38],
+      <int>[37, 21, 42],
+    );
+    expect(
+      day.entries
+          .firstWhere((entry) => entry.mealType == MealType.dinner)
+          .photoAsset,
+      'assets/images/diet-tofu-salad.jpg',
+    );
+    final pastRes = await dio.get<Map<String, Object?>>(
+      '/diet/days/${_daysAgoString(2)}',
+    );
+    final pastDay = DietDay.fromJson(pastRes.data!);
+    expect(
+      pastDay.entries
+          .firstWhere((entry) => entry.mealType == MealType.dinner)
+          .photoAsset,
+      'assets/images/diet-salmon-brown-rice.jpeg',
     );
   });
 
@@ -67,22 +83,33 @@ void main() {
   test('dio → LocalApi → DashboardSummary aggregates seeded data', () async {
     final res = await dio.get<Map<String, Object?>>('/dashboard/summary');
     final summary = DashboardSummary.fromJson(res.data!);
+    final dietRes = await dio.get<Map<String, Object?>>('/diet/days/today');
+    final todayDiet = DietDay.fromJson(dietRes.data!);
     // 혈당 row was removed from the home summary; indicator list now
     // ends at 당류 (calories / sodium / sugar).
     expect(summary.indicators.length, 3);
     final cal = summary.indicators.firstWhere((i) => i.label == '칼로리');
-    expect(cal.current, 1067);
+    final sodium = summary.indicators.firstWhere((i) => i.label == '나트륨');
+    final sugar = summary.indicators.firstWhere((i) => i.label == '당류');
+    expect(cal.current, todayDiet.totalCalories);
+    expect(sodium.current, todayDiet.totalSodiumMg);
+    expect(sugar.current, todayDiet.totalSugarG);
     expect(
       summary.indicators.any((i) => i.label == '혈당'),
       isFalse,
       reason: '혈당 row should no longer be in the home summary',
     );
-    // 3 seeded meals (아침·점심·간식).
-    expect(summary.dietEntries, 3);
-    expect(summary.macros.carbsG, 120.0);
-    expect(summary.macros.proteinG, 45.0);
-    expect(summary.macros.fatG, 45.0);
-    expect(summary.macros.carbsPct, 45);
+    // 4 seeded meals (아침·점심·저녁·간식).
+    expect(summary.dietEntries, todayDiet.entries.length);
+    expect(summary.macros.carbsG, todayDiet.macros.carbsG);
+    expect(summary.macros.proteinG, todayDiet.macros.proteinG);
+    expect(summary.macros.fatG, todayDiet.macros.fatG);
+    expect(summary.macros.carbsPct, todayDiet.macros.carbsPct);
+    expect(summary.nutritionWeek, hasLength(7));
+    final todayTrend = summary.nutritionWeek[DateTime.now().weekday - 1];
+    expect(todayTrend.calories, todayDiet.totalCalories);
+    expect(todayTrend.sodiumMg, todayDiet.totalSodiumMg);
+    expect(todayTrend.sugarG, todayDiet.totalSugarG);
     // 시드가 큐레이션한 '통합 조언'이 동적 나트륨 경고 대신 노출된다. 문구가
     // 아니라 키로 내려와야 화면이 로케일에 맞게 고를 수 있다(#435).
     expect(summary.aiAdviceKey, kDailyCombinedAdviceKey);
@@ -96,4 +123,11 @@ void main() {
     );
     expect(summary.todaySchedule.length, inInclusiveRange(2, 3));
   });
+}
+
+String _daysAgoString(int days) {
+  final date = DateTime.now().subtract(Duration(days: days));
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 }

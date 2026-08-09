@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -24,6 +25,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 내 정보 / 설정 — reached from the sidebar footer, not the nav list.
 ///
@@ -33,11 +35,14 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 ///
 ///  * **내 정보** — profile, certifications, this month's stats, gym.
 ///    Edits persist through `PUT /v1/trainer/me` and the gym affiliation
-///    endpoints; mock mode follows the same repository contract.
-///  * **설정** — notifications, account, app info, 로그아웃. Most rows
-///    are placeholders today; they are shown (disabled, with a reason)
-///    rather than hidden so the shape of the screen doesn't change when
-///    the endpoints arrive.
+///    endpoints; mock mode follows the same repository contract (#477, #452).
+///    이름·이메일 입력은 비활성이다 — 값이 없어서가 아니라 **계정 소관**이라
+///    여기서 바꾸지 않는다.
+///  * **설정** — 알림 수신 설정은 `GET/PUT /v1/trainer/me/settings`(#379),
+///    비밀번호 변경은 `POST /v1/trainer/me/password` 로 서버에 저장된다.
+///    비밀번호 변경만 **데모에서 비활성**이고(바꿀 계정이 없다) 그 사유를 함께
+///    보여 준다 — 미구현이 아니라 그 빌드에서만 막히는 것이다.
+///    앱 정보(서비스·버전·문의)는 표시 전용이다.
 ///
 /// The Figma mock's "역할 전환" section is intentionally omitted — the
 /// trainer and member apps use fully separate accounts (CLAUDE.local.md).
@@ -118,13 +123,16 @@ class _MyPageState extends ConsumerState<MyPage> {
 
   Future<void> _save() async {
     if (_saving) return;
+    // 숫자만 읽는다. 전에는 한국어 '년' 접미사를 정규식에 박아 뒀는데, 영어
+    // 로케일에서 "7 years" 를 입력하면 매칭에 실패했다. (#501)
     final careerMatch = RegExp(
-      r'^\s*(\d+)\s*년?\s*$',
+      r'^\s*(\d+)\s*\S*\s*$',
     ).firstMatch(_fields['career']!.text);
     final careerYears = int.tryParse(careerMatch?.group(1) ?? '');
     if (careerYears == null || careerYears < 0 || careerYears > 80) {
+      final AppLocalizations l = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('경력은 0~80 사이의 연수로 입력해 주세요.')),
+        SnackBar(content: Text(l.myCareerInvalid)),
       );
       return;
     }
@@ -190,9 +198,10 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 
   String _saveFailureMessage(Object error, {required bool profileSaved}) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final detail = error is AppError ? error.message : null;
-    if (!profileSaved) return detail ?? '프로필을 저장하지 못했습니다.';
-    const partial = '소속 헬스장 변경에 실패했습니다. 나머지 프로필 정보는 저장됐어요.';
+    if (!profileSaved) return detail ?? l.myProfileSaveFailed;
+    final partial = l.myGymChangeFailed;
     return detail == null ? partial : '$partial $detail';
   }
 
@@ -238,13 +247,14 @@ class _MyPageState extends ConsumerState<MyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return PageScaffold(
-      title: _tab == 0 ? '내 정보' : '설정',
+      title: _tab == 0 ? l.myTabProfile : l.myTabSettings,
       subtitle: _profile.name,
       maxWidth: AppLayout.contentMaxWidth,
       actions: <Widget>[
         SegmentedSwitch(
-          labels: const <String>['내 정보', '설정'],
+          labels: <String>[l.myTabProfile, l.myTabSettings],
           selected: _tab,
           onChanged: (i) {
             setState(() => _tab = i);
@@ -254,14 +264,14 @@ class _MyPageState extends ConsumerState<MyPage> {
         if (_tab == 0)
           if (_editing)
             ActionButton(
-              label: _saving ? '저장 중' : '저장',
+              label: _saving ? l.mySaving : l.actionSave,
               icon: _saving ? Icons.hourglass_top : Icons.check,
               primary: true,
               onPressed: _saving ? null : _save,
             )
           else
             ActionButton(
-              label: '프로필 수정',
+              label: l.myEditProfile,
               icon: Icons.edit_outlined,
               onPressed: _saving ? null : _startEdit,
             ),
@@ -271,6 +281,7 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 
   Widget _buildProfile() {
+    final AppLocalizations l = AppLocalizations.of(context);
     final clientCount = ref.watch(clientsProvider).valueOrNull?.length ?? 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -279,7 +290,7 @@ class _MyPageState extends ConsumerState<MyPage> {
           Align(
             alignment: Alignment.centerRight,
             child: _ChipButton(
-              label: '취소',
+              label: l.actionCancel,
               background: AppColors.inputBackground,
               foreground: AppColors.subtleForeground,
               onTap: _saving
@@ -307,8 +318,8 @@ class _MyPageState extends ConsumerState<MyPage> {
                 color: AppColors.success.withValues(alpha: 0.25),
               ),
             ),
-            child: const Text(
-              '변경사항이 저장됐어요',
+            child: Text(
+              l.mySaved,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -320,7 +331,7 @@ class _MyPageState extends ConsumerState<MyPage> {
         ],
         _ProfileCard(profile: _profile, editing: _editing, field: _field),
         const SizedBox(height: AppSpacing.lg),
-        _sectionLabel('자격증 · 인증'),
+        _sectionLabel(l.myCertifications),
         const SizedBox(height: AppSpacing.sm),
         _CertsCard(
           certs: _editing ? _draftCerts : _certs,
@@ -337,11 +348,11 @@ class _MyPageState extends ConsumerState<MyPage> {
           onRemove: (i) => setState(() => _draftCerts.removeAt(i)),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _sectionLabel('이번 달 통계'),
+        _sectionLabel(l.myMonthStats),
         const SizedBox(height: AppSpacing.sm),
         _StatsCard(clientCount: clientCount),
         const SizedBox(height: AppSpacing.lg),
-        _sectionLabel('소속 헬스장'),
+        _sectionLabel(l.myGym),
         const SizedBox(height: AppSpacing.sm),
         _GymCard(
           gym: _gym,
@@ -365,14 +376,16 @@ class _MyPageState extends ConsumerState<MyPage> {
     await change();
     if (!mounted) return;
     final controller = ref.read(trainerSettingsProvider.notifier);
-    final error = controller.lastError;
-    if (error != null) {
+    if (controller.lastError) {
       controller.clearError();
-      messenger.showSnackBar(SnackBar(content: Text(error)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).mySettingsSaveFailed)),
+      );
     }
   }
 
   Widget _buildSettings() {
+    final AppLocalizations l = AppLocalizations.of(context);
     final settings = ref.watch(trainerSettingsProvider);
     final controller = ref.read(trainerSettingsProvider.notifier);
     final account = ref.watch(trainerAccountRepositoryProvider);
@@ -381,22 +394,22 @@ class _MyPageState extends ConsumerState<MyPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         SectionCard(
-          title: '알림',
+          title: l.myNotifications,
           icon: Icons.notifications_none,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               _SwitchRow(
-                label: '새 메시지 알림',
-                hint: '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요',
+                label: l.myNotifNewMessage,
+                hint: l.myNotifNewMessageHint,
                 value: settings.newMessageAlerts,
                 onChanged: (v) =>
                     _applySetting(() => controller.setNewMessageAlerts(v)),
               ),
               const Divider(height: 1, color: AppColors.borderStrong),
               _SwitchRow(
-                label: '수업 시작 전 알림',
-                hint: '예정된 세션이 다가오면 대시보드에서 강조해요',
+                label: l.myNotifSessionReminder,
+                hint: l.myNotifSessionReminderHint,
                 value: settings.sessionReminders,
                 onChanged: (v) =>
                     _applySetting(() => controller.setSessionReminders(v)),
@@ -405,9 +418,9 @@ class _MyPageState extends ConsumerState<MyPage> {
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '알림 시점',
+                        l.myReminderLead,
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -417,7 +430,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                     ),
                     SegmentedSwitch(
                       labels: <String>[
-                        for (final m in reminderLeadOptions) '$m분 전',
+                        for (final m in reminderLeadOptions) l.myMinutesBefore(m),
                       ],
                       selected: reminderLeadOptions.indexOf(
                         settings.reminderLeadMinutes,
@@ -435,7 +448,7 @@ class _MyPageState extends ConsumerState<MyPage> {
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
-          title: '계정',
+          title: l.myAccount,
           icon: Icons.lock_outline,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -446,8 +459,8 @@ class _MyPageState extends ConsumerState<MyPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const Text(
-                          '비밀번호 변경',
+                        Text(
+                          l.myChangePassword,
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
@@ -456,8 +469,8 @@ class _MyPageState extends ConsumerState<MyPage> {
                         ),
                         Text(
                           account.supportsPasswordChange
-                              ? '현재 비밀번호를 확인한 뒤 교체해요'
-                              : '데모 모드에는 계정이 없어 변경할 수 없어요',
+                              ? l.myChangePasswordHint
+                              : l.myChangePasswordDemo,
                           style: const TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w500,
@@ -468,7 +481,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                     ),
                   ),
                   ActionButton(
-                    label: '변경',
+                    label: l.actionChange,
                     icon: Icons.key_outlined,
                     onPressed: account.supportsPasswordChange
                         ? _openPasswordSheet
@@ -479,7 +492,7 @@ class _MyPageState extends ConsumerState<MyPage> {
               const SizedBox(height: AppSpacing.md),
               const Divider(height: 1, color: AppColors.borderStrong),
               const SizedBox(height: AppSpacing.md),
-              _InfoRow(label: '로그인 계정', value: _profile.email),
+              _InfoRow(label: l.myLoginAccount, value: _profile.email),
               const SizedBox(height: AppSpacing.md),
               // 역할 전환 대신 로그아웃만 둔다 (계정 기반 분리).
               _LogoutButton(onTap: _signOut),
@@ -488,13 +501,13 @@ class _MyPageState extends ConsumerState<MyPage> {
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
-          title: '앱 정보',
+          title: l.myAppInfo,
           icon: Icons.info_outline,
           child: Column(
             children: <Widget>[
-              const _InfoRow(label: '서비스', value: 'On-Care 트레이너'),
-              const _InfoRow(label: '버전', value: '0.1.0'),
-              _InfoRow(label: '문의', value: seedTrainerProfile.email),
+              _InfoRow(label: l.myService, value: l.appTitle),
+              _InfoRow(label: l.myVersion, value: '0.1.0'),
+              _InfoRow(label: l.myContact, value: seedTrainerProfile.email),
             ],
           ),
         ),
@@ -524,9 +537,10 @@ class _MyPageState extends ConsumerState<MyPage> {
       builder: (context) => const _PasswordSheet(),
     );
     if (changed == true && mounted) {
+      final AppLocalizations l = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('비밀번호를 변경했어요')));
+      ).showSnackBar(SnackBar(content: Text(l.myPasswordChanged)));
     }
   }
 }
@@ -584,6 +598,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -650,7 +665,7 @@ class _ProfileCard extends StatelessWidget {
                         _Tag(text: profile.specialty, color: AppColors.success),
                         const SizedBox(width: AppSpacing.xs),
                         _Tag(
-                          text: '경력 ${profile.career}',
+                          text: l.myCareerYears(profile.career),
                           color: AppColors.accent,
                         ),
                       ],
@@ -666,31 +681,31 @@ class _ProfileCard extends StatelessWidget {
               child: Divider(height: 1, color: AppColors.borderStrong),
             ),
             _EditField(
-              label: '이름 (계정 정보)',
+              label: l.myFieldName,
               controller: field('name', profile.name),
               enabled: false,
             ),
             _EditField(
-              label: '이메일 (계정 정보)',
+              label: l.myFieldEmail,
               controller: field('email', profile.email),
               enabled: false,
             ),
             _EditField(
-              label: '연락처',
+              label: l.myFieldPhone,
               controller: field('phone', profile.phone),
               inputKey: const ValueKey<String>('profile-phone'),
             ),
             _EditField(
-              label: '전문 분야',
+              label: l.myFieldSpecialty,
               controller: field('specialty', profile.specialty),
             ),
             _EditField(
-              label: '경력',
+              label: l.myFieldCareer,
               controller: field('career', profile.career),
               inputKey: const ValueKey<String>('profile-career'),
             ),
             _EditField(
-              label: '소개',
+              label: l.myFieldIntro,
               controller: field('intro', profile.intro),
               maxLines: 3,
             ),
@@ -808,6 +823,7 @@ class _CertsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -869,7 +885,7 @@ class _CertsCard extends StatelessWidget {
                   child: TextField(
                     controller: newCert,
                     decoration: InputDecoration(
-                      hintText: '자격증 추가...',
+                      hintText: l.myAddCertification,
                       isDense: true,
                       filled: true,
                       fillColor: AppColors.background,
@@ -886,7 +902,7 @@ class _CertsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 _ChipButton(
-                  label: '추가',
+                  label: l.myAdd,
                   background: AppColors.primary,
                   foreground: AppColors.primaryForeground,
                   onTap: onAdd,
@@ -908,6 +924,7 @@ class _StatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -925,20 +942,20 @@ class _StatsCard extends StatelessWidget {
           _Stat(
             icon: Icons.people_alt_outlined,
             value: '$clientCount',
-            unit: '명',
-            label: '담당 고객',
+            unit: l.dashUnitPeople,
+            label: l.myStatClients,
           ),
-          const _Stat(
+          _Stat(
             icon: Icons.check_circle_outline_rounded,
             value: '24',
-            unit: '회',
-            label: '완료 세션',
+            unit: l.unitTimes,
+            label: l.myStatSessionsDone,
           ),
-          const _Stat(
+          _Stat(
             icon: Icons.send_rounded,
             value: '18',
-            unit: '건',
-            label: '루틴 전송',
+            unit: l.dashUnitCount,
+            label: l.myStatRoutinesSent,
           ),
         ],
       ),
@@ -1015,6 +1032,7 @@ class _GymCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -1037,22 +1055,22 @@ class _GymCard extends StatelessWidget {
                   onChanged: onGymChanged,
                 ),
                 _EditField(
-                  label: '헬스장 이름',
+                  label: l.myGymName,
                   controller: field('gymName', gym.name),
                   enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
-                  label: '주소',
+                  label: l.myGymAddress,
                   controller: field('gymAddress', gym.address),
                   enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
-                  label: '운영 시간',
+                  label: l.myGymHours,
                   controller: field('gymHours', gym.hours),
                   enabled: selectedGymId.isEmpty,
                 ),
                 _EditField(
-                  label: '연락처',
+                  label: l.myFieldPhone,
                   controller: field('gymPhone', gym.phone),
                   enabled: selectedGymId.isEmpty,
                 ),
@@ -1100,8 +1118,8 @@ class _GymCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const StatusDotLabel(
-                      label: '영업 중',
+                    StatusDotLabel(
+                      label: l.myGymOpen,
                       color: AppColors.success,
                     ),
                   ],
@@ -1112,8 +1130,8 @@ class _GymCard extends StatelessWidget {
                 ),
                 Row(
                   children: <Widget>[
-                    _GymDetail(label: '운영 시간', value: gym.hours),
-                    _GymDetail(label: '연락처', value: gym.phone),
+                    _GymDetail(label: l.myGymHours, value: gym.hours),
+                    _GymDetail(label: l.myFieldPhone, value: gym.phone),
                   ],
                 ),
               ],
@@ -1137,13 +1155,14 @@ class _GymChoiceField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '소속 헬스장',
+          Text(
+            l.myGym,
             style: TextStyle(
               fontSize: 9.5,
               fontWeight: FontWeight.w600,
@@ -1153,8 +1172,8 @@ class _GymChoiceField extends StatelessWidget {
           const SizedBox(height: 3),
           choices.when(
             loading: () => const LinearProgressIndicator(minHeight: 2),
-            error: (_, _) => const Text(
-              '헬스장 목록을 불러오지 못했습니다.',
+            error: (_, _) => Text(
+              l.myGymListFailed,
               style: TextStyle(color: AppColors.destructive, fontSize: 11),
             ),
             data: (items) {
@@ -1176,9 +1195,9 @@ class _GymChoiceField extends StatelessWidget {
                   ),
                 ),
                 items: <DropdownMenuItem<String>>[
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                     value: '',
-                    child: Text('소속 없음'),
+                    child: Text(l.myNoGym),
                   ),
                   if (!hasCurrent)
                     DropdownMenuItem<String>(
@@ -1248,6 +1267,7 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -1263,13 +1283,13 @@ class _LogoutButton extends StatelessWidget {
             borderRadius: const BorderRadius.all(AppRadius.card),
             border: Border.all(color: AppColors.borderStrong),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(Icons.logout, size: 16, color: AppColors.destructive),
               SizedBox(width: AppSpacing.sm),
               Text(
-                '로그아웃',
+                l.mySignOut,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -1391,15 +1411,18 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     final current = _current.text;
     final next = _next.text;
     if (current.isEmpty) {
-      _fail(_PasswordField.current, '현재 비밀번호를 입력해 주세요');
+      final AppLocalizations l = AppLocalizations.of(context);
+      _fail(_PasswordField.current, l.myPwCurrentRequired);
       return;
     }
     if (next.length < _minLength) {
-      _fail(_PasswordField.next, '새 비밀번호는 $_minLength자 이상이어야 해요');
+      final AppLocalizations l = AppLocalizations.of(context);
+      _fail(_PasswordField.next, l.myPwTooShort(_minLength));
       return;
     }
     if (next != _confirm.text) {
-      _fail(_PasswordField.confirm, '새 비밀번호가 서로 달라요');
+      final AppLocalizations l = AppLocalizations.of(context);
+      _fail(_PasswordField.confirm, l.myPwMismatch);
       return;
     }
     setState(() {
@@ -1416,14 +1439,20 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       // The server's own wording (현재 비밀번호가 일치하지 않습니다 …) is
       // more useful than anything generic we could substitute, and it is
       // always about the current password — that is the only value it
-      // verifies.
+      // verifies. 다만 그 문장은 한국어뿐이라 영어 화면에서는 기본 문구로
+      // 물러난다. (#501)
       if (mounted) {
-        _fail(_PasswordField.current, e.message ?? '비밀번호를 변경할 수 없어요');
+        final AppLocalizations l = AppLocalizations.of(context);
+        _fail(
+          _PasswordField.current,
+          serverDetailOr(l, e.message, l.myPwChangeFailed),
+        );
       }
       return;
     } catch (_) {
       if (mounted) {
-        _fail(_PasswordField.current, '변경에 실패했어요. 잠시 후 다시 시도해 주세요');
+        final AppLocalizations l = AppLocalizations.of(context);
+        _fail(_PasswordField.current, l.myPwChangeRetry);
       }
       return;
     } finally {
@@ -1453,6 +1482,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -1464,8 +1494,8 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '비밀번호 변경',
+          Text(
+            l.myChangePassword,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -1475,21 +1505,21 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
           const SizedBox(height: AppSpacing.lg),
           _PasswordInput(
             controller: _current,
-            hint: '현재 비밀번호',
+            hint: l.myPwCurrent,
             errorText: _errorFor(_PasswordField.current),
             onChanged: _clearError,
           ),
           const SizedBox(height: AppSpacing.sm),
           _PasswordInput(
             controller: _next,
-            hint: '새 비밀번호 ($_minLength자 이상)',
+            hint: l.myPwNew(_minLength),
             errorText: _errorFor(_PasswordField.next),
             onChanged: _clearError,
           ),
           const SizedBox(height: AppSpacing.sm),
           _PasswordInput(
             controller: _confirm,
-            hint: '새 비밀번호 확인',
+            hint: l.myPwConfirm,
             errorText: _errorFor(_PasswordField.confirm),
             onChanged: _clearError,
           ),
@@ -1504,7 +1534,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
                 height: 44,
                 alignment: Alignment.center,
                 child: Text(
-                  _saving ? '변경 중…' : '변경하기',
+                  _saving ? l.myPwChanging : l.myPwChangeAction,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
