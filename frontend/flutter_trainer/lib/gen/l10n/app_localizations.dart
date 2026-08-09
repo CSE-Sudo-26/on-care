@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Requests'**
   String get navConsultations;
 
+  /// No description provided for @navNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get navNotifications;
+
   /// No description provided for @navMy.
   ///
   /// In en, this message translates to:

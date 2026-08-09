@@ -45,6 +45,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navConsultations => '상담 요청';
 
   @override
+  String get navNotifications => '알림';
+
+  @override
   String get navMy => '내 정보';
 
   @override

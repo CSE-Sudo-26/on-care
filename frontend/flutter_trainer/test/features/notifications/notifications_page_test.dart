@@ -12,8 +12,11 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
 import 'package:oncare_trainer/features/notifications/domain/entities/trainer_notification.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 
 import '../../helpers/pump_app.dart';
+
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 TrainerNotification _notification({
   String id = 'noti-1',
@@ -55,7 +58,13 @@ class _FakeNotificationRepository implements TrainerNotificationRepository {
     _rows = <TrainerNotification>[
       for (final TrainerNotification r in _rows)
         if (r.id == id)
-          _notification(id: r.id, title: r.title, body: r.body, kind: r.kind, read: true)
+          _notification(
+            id: r.id,
+            title: r.title,
+            body: r.body,
+            kind: r.kind,
+            read: true,
+          )
         else
           r,
     ];
@@ -67,7 +76,13 @@ class _FakeNotificationRepository implements TrainerNotificationRepository {
     final int n = _rows.where((TrainerNotification r) => !r.read).length;
     _rows = <TrainerNotification>[
       for (final TrainerNotification r in _rows)
-        _notification(id: r.id, title: r.title, body: r.body, kind: r.kind, read: true),
+        _notification(
+          id: r.id,
+          title: r.title,
+          body: r.body,
+          kind: r.kind,
+          read: true,
+        ),
     ];
     return n;
   }
@@ -78,7 +93,10 @@ void main() {
     await withWideSurface(tester, () async {
       await pumpTrainerApp(tester, token: 'demo-token');
 
-      expect(find.text(notificationsDestination.label), findsNothing);
+      expect(
+        find.text(navLabel(_ko, notificationsDestination.label)),
+        findsNothing,
+      );
     });
   });
 
@@ -94,7 +112,10 @@ void main() {
         ],
       );
 
-      expect(find.text(notificationsDestination.label), findsOneWidget);
+      expect(
+        find.text(navLabel(_ko, notificationsDestination.label)),
+        findsOneWidget,
+      );
     });
   });
 

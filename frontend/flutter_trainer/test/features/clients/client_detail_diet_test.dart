@@ -4,10 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 
 import '../../helpers/pump_app.dart';
+
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// Seeded client ids by display name — the detail is addressed by id.
 const Map<String, String> seedClientIds = <String, String>{
@@ -79,9 +82,18 @@ void main() {
       // detail header. The alert badge remains visible above the tabs.
       expect(find.byType(MetricTile), findsNWidgets(3));
       expect(find.text('나트륨 초과'), findsOneWidget);
-      // The sodium total also appears as the last trend bar's label.
-      expect(find.text('2100'), findsWidgets);
-      expect(find.text('mg 초과'), findsOneWidget);
+      final sodiumTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricSodium,
+      );
+      expect(sodiumTile, findsOneWidget);
+      expect(
+        find.descendant(of: sodiumTile, matching: find.text('2100')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sodiumTile, matching: find.text('mg 초과')),
+        findsOneWidget,
+      );
       // The detail header plus the 7-day trend card push every meal card
       // down, so reach them by scrolling.
       await tester.scrollUntilVisible(find.text('아침'), 150);
