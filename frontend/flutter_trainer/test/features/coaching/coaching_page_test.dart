@@ -119,6 +119,20 @@ class _FixedClientRepository implements ClientRepository {
 /// ambiguous (network) failure message from the generic one (subin21cc
 /// review Major#2a).
 class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
+
+  @override
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> deleteRoutine(String memberId, String routineId) async {}
+
   _SpyTrainerRoutineRepository({this.throwOnAssign});
 
   final Object? throwOnAssign;

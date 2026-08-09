@@ -96,14 +96,14 @@ class WorkoutView extends ConsumerWidget {
 /// 배정된 루틴 — what the member sees in their own app (server-side, real
 /// API only). Empty in demo mode, where the mock repository has no member
 /// backend to deliver to; the history below carries the story there.
-class _AssignedRoutinesCard extends StatelessWidget {
+class _AssignedRoutinesCard extends ConsumerWidget {
   const _AssignedRoutinesCard({required this.clientId, required this.assigned});
 
   final String clientId;
   final AsyncValue<List<AssignedRoutine>> assigned;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SectionCard(
       title: '배정된 루틴',
       icon: Icons.assignment_turned_in_outlined,
@@ -170,6 +170,13 @@ class _AssignedRoutinesCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
+                          ),
+                          // 배정 뒤 정정·철회. 전에는 잘못 넣어도 고칠 수 없어
+                          // 새 루틴을 하나 더 배정했고, 회원 앱에는 둘 다
+                          // 그대로 보였다. (#504)
+                          _RoutineActions(
+                            clientId: clientId,
+                            routine: routine,
                           ),
                         ],
                       ),
@@ -686,6 +693,245 @@ class _NoteBox extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 배정된 루틴 한 줄의 수정·삭제. (#504)
+///
+/// 목록 안에 두는 이유: 잘못 배정한 것을 발견하는 자리가 곧 고치는 자리여야
+/// 한다. 별도 편집 화면으로 보내면 어느 루틴을 고치는 중인지 다시 확인해야 한다.
+class _RoutineActions extends ConsumerStatefulWidget {
+  const _RoutineActions({required this.clientId, required this.routine});
+
+  final String clientId;
+  final AssignedRoutine routine;
+
+  @override
+  ConsumerState<_RoutineActions> createState() => _RoutineActionsState();
+}
+
+class _RoutineActionsState extends ConsumerState<_RoutineActions> {
+  /// 요청이 오가는 동안 잠근다 — 삭제를 두 번 누르면 두 번째는 404 다.
+  bool _busy = false;
+
+  Future<void> _edit() async {
+    final result = await showDialog<({String name, int minutes, String reason})>(
+      context: context,
+      builder: (_) => _RoutineEditDialog(routine: widget.routine),
+    );
+    if (result == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .updateRoutine(
+            widget.clientId,
+            widget.routine.id,
+            name: result.name,
+            minutes: result.minutes,
+            reason: result.reason,
+          );
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    messenger.showSnackBar(const SnackBar(content: Text('루틴을 수정했어요')));
+  }
+
+  Future<void> _delete() async {
+    // 되돌릴 수 없는 동작이라 확인을 받는다 — 회원 앱에서도 곧바로 사라진다.
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('루틴을 삭제할까요?'),
+        content: Text('${widget.routine.name} 배정이 회원 앱에서도 사라져요.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              '삭제',
+              style: TextStyle(color: AppColors.destructive),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .deleteRoutine(widget.clientId, widget.routine.id);
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('루틴을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    messenger.showSnackBar(const SnackBar(content: Text('루틴을 삭제했어요')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_busy) {
+      return const Padding(
+        padding: EdgeInsets.only(left: AppSpacing.sm),
+        child: SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          key: ValueKey<String>('routine-edit-${widget.routine.id}'),
+          onPressed: _edit,
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          color: AppColors.mutedForeground,
+          tooltip: '루틴 수정',
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+        ),
+        IconButton(
+          key: ValueKey<String>('routine-delete-${widget.routine.id}'),
+          onPressed: _delete,
+          icon: const Icon(Icons.delete_outline, size: 16),
+          color: AppColors.destructive,
+          tooltip: '루틴 삭제',
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+}
+
+/// 루틴 수정 다이얼로그. 이름·시간·사유만 다룬다.
+///
+/// 종류(type)를 빼 둔 이유: 그 값은 서버가 Literal 로 검증하는 계약값이고,
+/// 종류를 바꾸는 것은 사실상 다른 루틴을 주는 일이라 새로 배정하는 편이 맞다.
+class _RoutineEditDialog extends StatefulWidget {
+  const _RoutineEditDialog({required this.routine});
+
+  final AssignedRoutine routine;
+
+  @override
+  State<_RoutineEditDialog> createState() => _RoutineEditDialogState();
+}
+
+class _RoutineEditDialogState extends State<_RoutineEditDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.routine.name,
+  );
+  late final TextEditingController _minutes = TextEditingController(
+    text: widget.routine.minutes.toString(),
+  );
+  late final TextEditingController _reason = TextEditingController(
+    text: widget.routine.reason,
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _minutes.dispose();
+    _reason.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    final minutes = int.tryParse(_minutes.text.trim());
+    if (name.isEmpty) {
+      setState(() => _error = '루틴 이름을 입력해 주세요');
+      return;
+    }
+    // 서버 범위(0~600)와 같은 값으로 미리 거른다 — 422 를 받아 오는 것보다
+    // 그 자리에서 알려 주는 편이 낫다.
+    if (minutes == null || minutes < 0 || minutes > 600) {
+      setState(() => _error = '시간은 0~600분 사이로 입력해 주세요');
+      return;
+    }
+    Navigator.of(context).pop((
+      name: name,
+      minutes: minutes,
+      reason: _reason.text.trim(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('루틴 수정'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          TextField(
+            key: const ValueKey<String>('routine-edit-name'),
+            controller: _name,
+            decoration: const InputDecoration(labelText: '루틴 이름'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey<String>('routine-edit-minutes'),
+            controller: _minutes,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: '시간(분)'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey<String>('routine-edit-reason'),
+            controller: _reason,
+            decoration: const InputDecoration(labelText: '사유 (선택)'),
+          ),
+          if (_error != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _error!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.destructive,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        TextButton(
+          key: const ValueKey<String>('routine-edit-save'),
+          onPressed: _submit,
+          child: const Text('저장'),
+        ),
+      ],
     );
   }
 }

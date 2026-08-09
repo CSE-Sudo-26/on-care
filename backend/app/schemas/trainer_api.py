@@ -142,6 +142,23 @@ class RoutineAssignRequest(BaseModel):
     source: RoutineSource = "trainer"
 
 
+class RoutineUpdateRequest(PartialUpdate):
+    """루틴 부분 수정. 보낸 필드만 반영한다. (#504)
+
+    `source` 는 없다 — 그 값은 "누가 만들었나"(trainer|ai)라는 사실이지 트레이너가
+    고칠 값이 아니다. AI 가 만든 루틴을 손봤다고 해서 트레이너가 만든 것이 되지는
+    않는다.
+
+    null 을 허용하는 필드가 없다. 이름·시간·종류·사유 어느 것도 '지우는 것'이
+    기능이 아니라, 명시적 null 은 422 다(#495 규약).
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    minutes: int | None = Field(default=None, ge=0, le=600)
+    type: RoutineType | None = None
+    reason: str | None = Field(default=None, max_length=200)
+
+
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 
