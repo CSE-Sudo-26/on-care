@@ -100,8 +100,9 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
+      final AppLocalizations l = AppLocalizations.of(context);
       if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(

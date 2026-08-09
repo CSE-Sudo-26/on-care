@@ -1156,5 +1156,25 @@
     }
   },
   "clientNoGoal": "No goal set",
-  "clientNoChat": "No messages yet"
+  "clientNoChat": "No messages yet",
+  "chatJustNow": "Just now",
+  "chartNotEnoughData": "Not enough data yet",
+  "reportEmptyResponse": "The report response was empty",
+  "authErrInvalidCredentials": "That email or password isn't right.",
+  "authErrEmailTaken": "That email is already registered.",
+  "authErrInviteCodeInvalid": "That invite code isn't valid. Please check with your gym.",
+  "authErrSessionExpired": "Your session expired. Please sign in again.",
+  "authErrNoSocialToken": "No social sign-in token",
+  "authErrNetwork": "Please check your network connection.",
+  "authErrGeneric": "Something went wrong signing in. Please try again in a moment.",
+  "authErrEmptyResponse": "The response was empty.",
+  "coachDemoUnavailable": "AI coaching isn't available in demo mode",
+  "coachNotMyClient": "That isn't one of your clients",
+  "coachAskFailed": "Couldn't send your question",
+  "consultDemoUnavailable": "Consultation actions aren't available in demo mode",
+  "slotCapacityRange": "Capacity must be between 1 and 100.",
+  "slotFutureOnly": "Booking slots can only be set for future times.",
+  "slotNotFound": "Booking slot not found.",
+  "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
+  "authErrNotTrainer": "Please sign in with a trainer account."
 }

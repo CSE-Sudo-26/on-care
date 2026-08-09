@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A nutrition metric tile (칼로리/나트륨/당류) shared by the 식단
 /// sub-tab and the AI 루틴 tab's diet summary. Neutral [color] base;
@@ -35,6 +36,7 @@ class MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -64,7 +66,7 @@ class MetricTile extends StatelessWidget {
               ),
             ),
             Text(
-              warn ? '$unit 초과' : unit,
+              warn ? l.metricOverBy(unit) : unit,
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: warn ? FontWeight.w700 : FontWeight.w400,

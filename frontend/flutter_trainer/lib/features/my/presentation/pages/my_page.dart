@@ -372,10 +372,11 @@ class _MyPageState extends ConsumerState<MyPage> {
     await change();
     if (!mounted) return;
     final controller = ref.read(trainerSettingsProvider.notifier);
-    final error = controller.lastError;
-    if (error != null) {
+    if (controller.lastError) {
       controller.clearError();
-      messenger.showSnackBar(SnackBar(content: Text(error)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).mySettingsSaveFailed)),
+      );
     }
   }
 

@@ -1665,4 +1665,64 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientNoChat => '아직 대화가 없어요';
+
+  @override
+  String get chatJustNow => '방금';
+
+  @override
+  String get chartNotEnoughData => '데이터가 아직 부족해요';
+
+  @override
+  String get reportEmptyResponse => '리포트 응답이 비어 있어요';
+
+  @override
+  String get authErrInvalidCredentials => '이메일 또는 비밀번호가 올바르지 않습니다.';
+
+  @override
+  String get authErrEmailTaken => '이미 가입된 이메일입니다.';
+
+  @override
+  String get authErrInviteCodeInvalid => '사용할 수 없는 초대 코드예요. 헬스장에 확인해 주세요.';
+
+  @override
+  String get authErrSessionExpired => '세션이 만료됐어요. 다시 로그인해 주세요.';
+
+  @override
+  String get authErrNoSocialToken => '소셜 로그인 토큰이 없어요';
+
+  @override
+  String get authErrNetwork => '네트워크 연결을 확인해 주세요.';
+
+  @override
+  String get authErrGeneric => '로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get authErrEmptyResponse => '응답이 비어 있어요.';
+
+  @override
+  String get coachDemoUnavailable => '데모 모드에서는 AI 코칭을 사용할 수 없어요';
+
+  @override
+  String get coachNotMyClient => '담당 고객이 아니에요';
+
+  @override
+  String get coachAskFailed => '질문을 보낼 수 없어요';
+
+  @override
+  String get consultDemoUnavailable => '데모 모드에서는 상담을 처리할 수 없어요';
+
+  @override
+  String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';
+
+  @override
+  String get slotFutureOnly => '현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.';
+
+  @override
+  String get slotNotFound => '예약 슬롯을 찾을 수 없습니다.';
+
+  @override
+  String get slotCapacityBelowBooked => '이미 예약된 인원보다 정원을 줄일 수 없습니다.';
+
+  @override
+  String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';
 }

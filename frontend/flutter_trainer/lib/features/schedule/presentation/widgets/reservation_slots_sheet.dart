@@ -190,7 +190,16 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
         return data['detail'] as String;
       }
     }
-    if (error is StateError) return error.message.toString();
+    if (error is StateError) {
+      // 목 리포지토리는 코드를 던진다 — 문구는 여기서 붙인다. (#501)
+      return switch (error.message.toString()) {
+        SlotErrorCodes.capacityRange => l.slotCapacityRange,
+        SlotErrorCodes.futureOnly => l.slotFutureOnly,
+        SlotErrorCodes.notFound => l.slotNotFound,
+        SlotErrorCodes.capacityBelowBooked => l.slotCapacityBelowBooked,
+        _ => l.slotActionFailed,
+      };
+    }
     return l.slotActionFailed;
   }
 

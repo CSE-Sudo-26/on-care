@@ -1,23 +1,46 @@
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Raised when a login attempt is rejected (empty credentials, invalid
 /// credentials, or a network failure). Carries a Korean, user-facing
 /// [message] ready to surface in a snackbar.
-class AuthException implements Exception {
-  const AuthException(this.message);
+/// 로그인·가입 실패의 **원인 코드**. 문구가 아니다.
+///
+/// 리포지토리에는 컨텍스트가 없어 로케일을 알 수 없다. 여기서 한국어 문장을
+/// 들고 있으면 영어 로케일에서 그 문장만 한국어로 남는다. 화면이 코드를 받아
+/// 자기 언어의 문구를 붙인다. (#501)
+enum AuthFailure {
+  invalidCredentials,
+  emailTaken,
+  inviteCodeInvalid,
+  sessionExpired,
+  noSocialToken,
+  emptyCredentials,
+  network,
+  emptyResponse,
+  notTrainer,
+  unknown,
+}
 
-  final String message;
+class AuthException implements Exception {
+  const AuthException(this.failure, {this.detail});
+
+  /// 무엇이 잘못됐는가. 화면이 이 값으로 문구를 고른다.
+  final AuthFailure failure;
+
+  /// 서버가 준 사유(있을 때). 서버 문구의 다국어는 별건이라 그대로 보여 준다.
+  final String? detail;
 
   @override
-  String toString() => 'AuthException: $message';
+  String toString() => 'AuthException: $failure${detail == null ? '' : ' ($detail)'}';
 }
 
 /// Raised when the authenticated account is not a trainer (the backend
 /// answers `/trainer/me` with 403). The trainer app and the member app
 /// use fully separate accounts, so a member credential must be rejected.
 class NotTrainerException extends AuthException {
-  const NotTrainerException([super.message = '트레이너 계정으로 로그인해 주세요.']);
+  const NotTrainerException() : super(AuthFailure.notTrainer);
 }
 
 /// Authenticates a trainer against the backend and reads the trainer
@@ -73,4 +96,23 @@ abstract class TrainerAuthRepository {
   ///    (`NetworkError` / `ServerError`), NOT [AuthException], so restore
   ///    treats a transient failure as recoverable and keeps the tokens.
   Future<TrainerProfile> fetchProfile(String accessToken);
+}
+
+/// 실패 코드 → 현재 로케일의 문구. 서버가 준 사유가 있으면 그것을 우선한다
+/// (서버 문구의 다국어는 별건). (#501)
+String authFailureText(AppLocalizations l, AuthException e) {
+  final detail = e.detail;
+  if (detail != null && detail.trim().isNotEmpty) return detail;
+  return switch (e.failure) {
+    AuthFailure.invalidCredentials => l.authErrInvalidCredentials,
+    AuthFailure.emailTaken => l.authErrEmailTaken,
+    AuthFailure.inviteCodeInvalid => l.authErrInviteCodeInvalid,
+    AuthFailure.sessionExpired => l.authErrSessionExpired,
+    AuthFailure.noSocialToken => l.authErrNoSocialToken,
+    AuthFailure.emptyCredentials => l.authErrEmptyCredentials,
+    AuthFailure.network => l.authErrNetwork,
+    AuthFailure.emptyResponse => l.authErrEmptyResponse,
+    AuthFailure.notTrainer => l.authErrNotTrainer,
+    AuthFailure.unknown => l.authErrGeneric,
+  };
 }

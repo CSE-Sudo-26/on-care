@@ -3103,6 +3103,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No messages yet'**
   String get clientNoChat;
+
+  /// No description provided for @chatJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get chatJustNow;
+
+  /// No description provided for @chartNotEnoughData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data yet'**
+  String get chartNotEnoughData;
+
+  /// No description provided for @reportEmptyResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The report response was empty'**
+  String get reportEmptyResponse;
+
+  /// No description provided for @authErrInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'That email or password isn\'t right.'**
+  String get authErrInvalidCredentials;
+
+  /// No description provided for @authErrEmailTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'That email is already registered.'**
+  String get authErrEmailTaken;
+
+  /// No description provided for @authErrInviteCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That invite code isn\'t valid. Please check with your gym.'**
+  String get authErrInviteCodeInvalid;
+
+  /// No description provided for @authErrSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session expired. Please sign in again.'**
+  String get authErrSessionExpired;
+
+  /// No description provided for @authErrNoSocialToken.
+  ///
+  /// In en, this message translates to:
+  /// **'No social sign-in token'**
+  String get authErrNoSocialToken;
+
+  /// No description provided for @authErrNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your network connection.'**
+  String get authErrNetwork;
+
+  /// No description provided for @authErrGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong signing in. Please try again in a moment.'**
+  String get authErrGeneric;
+
+  /// No description provided for @authErrEmptyResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The response was empty.'**
+  String get authErrEmptyResponse;
+
+  /// No description provided for @coachDemoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AI coaching isn\'t available in demo mode'**
+  String get coachDemoUnavailable;
+
+  /// No description provided for @coachNotMyClient.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t one of your clients'**
+  String get coachNotMyClient;
+
+  /// No description provided for @coachAskFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send your question'**
+  String get coachAskFailed;
+
+  /// No description provided for @consultDemoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation actions aren\'t available in demo mode'**
+  String get consultDemoUnavailable;
+
+  /// No description provided for @slotCapacityRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity must be between 1 and 100.'**
+  String get slotCapacityRange;
+
+  /// No description provided for @slotFutureOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slots can only be set for future times.'**
+  String get slotFutureOnly;
+
+  /// No description provided for @slotNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slot not found.'**
+  String get slotNotFound;
+
+  /// No description provided for @slotCapacityBelowBooked.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity can\'t be lower than the number already booked.'**
+  String get slotCapacityBelowBooked;
+
+  /// No description provided for @authErrNotTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in with a trainer account.'**
+  String get authErrNotTrainer;
 }
 
 class _AppLocalizationsDelegate

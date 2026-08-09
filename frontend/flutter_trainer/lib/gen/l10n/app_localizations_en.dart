@@ -1706,4 +1706,72 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientNoChat => 'No messages yet';
+
+  @override
+  String get chatJustNow => 'Just now';
+
+  @override
+  String get chartNotEnoughData => 'Not enough data yet';
+
+  @override
+  String get reportEmptyResponse => 'The report response was empty';
+
+  @override
+  String get authErrInvalidCredentials =>
+      'That email or password isn\'t right.';
+
+  @override
+  String get authErrEmailTaken => 'That email is already registered.';
+
+  @override
+  String get authErrInviteCodeInvalid =>
+      'That invite code isn\'t valid. Please check with your gym.';
+
+  @override
+  String get authErrSessionExpired =>
+      'Your session expired. Please sign in again.';
+
+  @override
+  String get authErrNoSocialToken => 'No social sign-in token';
+
+  @override
+  String get authErrNetwork => 'Please check your network connection.';
+
+  @override
+  String get authErrGeneric =>
+      'Something went wrong signing in. Please try again in a moment.';
+
+  @override
+  String get authErrEmptyResponse => 'The response was empty.';
+
+  @override
+  String get coachDemoUnavailable =>
+      'AI coaching isn\'t available in demo mode';
+
+  @override
+  String get coachNotMyClient => 'That isn\'t one of your clients';
+
+  @override
+  String get coachAskFailed => 'Couldn\'t send your question';
+
+  @override
+  String get consultDemoUnavailable =>
+      'Consultation actions aren\'t available in demo mode';
+
+  @override
+  String get slotCapacityRange => 'Capacity must be between 1 and 100.';
+
+  @override
+  String get slotFutureOnly =>
+      'Booking slots can only be set for future times.';
+
+  @override
+  String get slotNotFound => 'Booking slot not found.';
+
+  @override
+  String get slotCapacityBelowBooked =>
+      'Capacity can\'t be lower than the number already booked.';
+
+  @override
+  String get authErrNotTrainer => 'Please sign in with a trainer account.';
 }

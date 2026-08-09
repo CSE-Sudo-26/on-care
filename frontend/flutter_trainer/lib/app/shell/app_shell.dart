@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Persistent console shell: a left [AppSidebar] plus the active branch.
 ///
@@ -38,7 +39,7 @@ class AppShell extends StatelessWidget {
 
   void _goBranch(int index) {
     // Tapping the active destination resets it to its branch root (e.g.
-    // 고객 상세에서 '고객'을 다시 누르면 목록으로) — the standard console
+    // 고객 상세에서 l.clientsTitle을 다시 누르면 목록으로) — the standard console
     // behaviour; tapping another switches branch, keeping its state.
     navigationShell.goBranch(
       index,
@@ -102,6 +103,7 @@ class _CompactBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AppBar(
       backgroundColor: AppColors.card,
       surfaceTintColor: Colors.transparent,
@@ -109,7 +111,7 @@ class _CompactBar extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: 0,
       iconTheme: const IconThemeData(color: AppColors.mutedForeground),
       shape: const Border(bottom: BorderSide(color: AppColors.borderStrong)),
-      title: const Padding(
+      title: Padding(
         padding: EdgeInsets.only(left: AppSpacing.xs),
         child: Text.rich(
           TextSpan(
@@ -119,7 +121,7 @@ class _CompactBar extends StatelessWidget implements PreferredSizeWidget {
                 style: TextStyle(color: AppColors.foreground),
               ),
               TextSpan(
-                text: '트레이너',
+                text: l.appWordmarkTrainer,
                 style: TextStyle(color: AppColors.primary),
               ),
             ],
