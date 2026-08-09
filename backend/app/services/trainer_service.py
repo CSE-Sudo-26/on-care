@@ -17,7 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.models.models import (
     ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
-    TrainerProfile, TrainerReservation, TrainerRoutine, TrainerSchedule, User,
+    TrainerProfile, TrainerReservation, TrainerReservationSlot, TrainerRoutine,
+    TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
@@ -430,6 +431,70 @@ def unread_counts_for_trainer(db: Session, trainer_id: str) -> dict[str, int]:
 
 
 # ---- 루틴 배정 (트레이너/AI → 회원, 양쪽에서 보이는 공유 데이터) ----
+
+def delete_trainer_account(db: Session, trainer: User) -> None:
+    """트레이너 탈퇴. 담당 회원에게 알린 뒤 계정을 지운다. (#505)
+
+    **담당 회원이 남아 있어도 막지 않는다.** 막으면 담당이 있는 트레이너는 계정을
+    영영 지울 수 없고, 그만두는 사람에게 "회원을 먼저 다 정리하라" 고 요구하는 것은
+    현실적이지 않다. 대신 회원이 모르게 사라지지 않도록 알림을 남긴다 — 회원 앱의
+    '내 담당 코치'가 어느 날 조용히 비어 있으면 앱이 고장 난 것으로 읽힌다.
+
+    삭제 순서가 중요하다. `trainer_reservations` 는 회원·슬롯·일정을 모두
+    **RESTRICT** 로 참조한다. 슬롯과 일정은 트레이너 삭제 시 CASCADE 로 지워지므로,
+    예약 행을 먼저 치우지 않으면 그 CASCADE 가 FK 에서 막힌다.
+
+    나머지(프로필·채팅·루틴·일정·슬롯·이력·알림)는 `users.id` CASCADE 가 처리한다.
+    상담 요청의 `trainer_id`·`decided_by` 는 SET NULL 이라 요청 이력은 남는다.
+    """
+    member_ids = list(
+        db.scalars(
+            select(TrainerClient.member_id).where(
+                TrainerClient.trainer_id == trainer.id
+            )
+        ).all()
+    )
+
+    # 이 트레이너의 슬롯에 걸린 예약을 먼저 치운다. 좌석을 되돌릴 필요는 없다 —
+    # 슬롯 자체가 함께 사라진다.
+    reservations = db.scalars(
+        select(TrainerReservation)
+        .join(
+            TrainerReservationSlot,
+            TrainerReservationSlot.id == TrainerReservation.slot_id,
+        )
+        .where(TrainerReservationSlot.trainer_id == trainer.id)
+        .order_by(TrainerReservation.id)
+        .with_for_update()
+    ).all()
+    booked_member_ids = {row.member_id for row in reservations}
+    for reservation in reservations:
+        db.delete(reservation)
+    # RESTRICT 자식을 먼저 비운 뒤에야 트레이너 삭제의 CASCADE 가 성립한다.
+    db.flush()
+
+    trainer_name = trainer.name or "트레이너"
+    for member_id in member_ids:
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.TRAINER_MESSAGE,
+            title="담당 트레이너 연결이 해제되었어요",
+            body=f"{trainer_name} 트레이너가 서비스를 떠났습니다. 새 트레이너를 찾아보세요.",
+        )
+    # 예약만 있고 담당은 아닌 회원에게도 알린다 — 잡아 둔 수업이 사라진다.
+    for member_id in booked_member_ids - set(member_ids):
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.TRAINER_MESSAGE,
+            title="예약한 수업이 취소되었어요",
+            body=f"{trainer_name} 트레이너가 서비스를 떠나 예약이 취소되었습니다.",
+        )
+
+    db.delete(trainer)
+    db.commit()
+
 
 def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순)."""

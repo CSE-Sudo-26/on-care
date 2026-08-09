@@ -188,6 +188,20 @@ def trainer_change_password(
     return {"status": "changed"}
 
 
+@router.delete("/trainer/me")
+def trainer_delete_me(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """트레이너 탈퇴. 담당 회원에게 알린 뒤 계정과 딸린 데이터를 지운다. (#505)
+
+    회원 탈퇴(`DELETE /users/me`)와 대칭이다. 담당 회원이 남아 있어도 막지 않는다 —
+    막으면 담당이 있는 트레이너는 계정을 영영 지울 수 없다.
+    """
+    trainer_service.delete_trainer_account(db, trainer)
+    return {"status": "deleted"}
+
+
 @router.get("/trainer/me/settings", response_model=TrainerNotificationSettings)
 def trainer_settings(
     trainer: RequireTrainer,

@@ -228,6 +228,30 @@ class _MyPageState extends ConsumerState<MyPage> {
     await ref.read(sessionControllerProvider.notifier).signOut();
   }
 
+  /// 계정 탈퇴. 이름 확인을 받은 뒤에만 나가고, 성공하면 로그아웃과 같은 경로로
+  /// 로그인 화면에 도달한다(라우터의 인증 게이트). (#505)
+  Future<void> _deleteAccount() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _DeleteAccountDialog(name: _profile.name),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(trainerAccountRepositoryProvider).deleteAccount();
+    } on AppError catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.message ?? '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요')),
+      );
+      return;
+    }
+    // 계정이 사라졌으므로 남은 토큰은 무효다 — 세션을 비워 인증 게이트가
+    // 로그인 화면으로 돌려보내게 한다.
+    await ref.read(sessionControllerProvider.notifier).signOut();
+  }
+
   @override
   void didUpdateWidget(MyPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -483,6 +507,13 @@ class _MyPageState extends ConsumerState<MyPage> {
               const SizedBox(height: AppSpacing.md),
               // 역할 전환 대신 로그아웃만 둔다 (계정 기반 분리).
               _LogoutButton(onTap: _signOut),
+              const SizedBox(height: AppSpacing.md),
+              // 탈퇴는 로그아웃 아래, 더 조용한 문구로 둔다 — 매일 쓰는 동작
+              // 옆에 같은 무게로 놓으면 잘못 누르기 쉽다. (#505)
+              _DeleteAccountRow(
+                enabled: account.supportsDeletion,
+                onTap: _deleteAccount,
+              ),
             ],
           ),
         ),
@@ -528,6 +559,138 @@ class _MyPageState extends ConsumerState<MyPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('비밀번호를 변경했어요')));
     }
+  }
+}
+
+/// 계정 탈퇴 진입점. 되돌릴 수 없는 동작이라 이름을 그대로 입력받는다.
+///
+/// 확인 다이얼로그의 예/아니오만으로는 실수를 거르지 못한다 — 담당 회원 링크와
+/// 예약이 함께 사라지고, 회원에게는 알림이 간다. (#505)
+class _DeleteAccountRow extends StatelessWidget {
+  const _DeleteAccountRow({required this.enabled, required this.onTap});
+
+  final bool enabled;
+  final Future<void> Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                '계정 탈퇴',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              Text(
+                enabled
+                    ? '담당 회원 연결과 예약이 함께 사라져요'
+                    : '데모 모드에는 지울 계정이 없어요',
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.disabledForeground,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          key: const ValueKey<String>('delete-account'),
+          onPressed: enabled ? onTap : null,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.destructive,
+          ),
+          child: const Text(
+            '탈퇴',
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 탈퇴 확인 — 트레이너 이름을 그대로 입력해야 진행된다.
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog({required this.name});
+
+  final String name;
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final TextEditingController _input = TextEditingController();
+  bool _matches = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _input.addListener(() {
+      final next = _input.text.trim() == widget.name.trim();
+      if (next != _matches) setState(() => _matches = next);
+    });
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('계정을 탈퇴할까요?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Text(
+            '담당 회원 연결과 예약이 사라지고, 회원에게 알림이 전달돼요. '
+            '이 작업은 되돌릴 수 없어요.',
+            style: TextStyle(fontSize: 12.5),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            '계속하려면 이름(${widget.name})을 입력해 주세요',
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextField(
+            key: const ValueKey<String>('delete-account-confirm'),
+            controller: _input,
+            autofocus: true,
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('취소'),
+        ),
+        TextButton(
+          key: const ValueKey<String>('delete-account-submit'),
+          // 이름이 맞아야 눌린다 — 확인 절차가 형식만 남지 않도록.
+          onPressed: _matches ? () => Navigator.of(context).pop(true) : null,
+          child: const Text(
+            '탈퇴',
+            style: TextStyle(color: AppColors.destructive),
+          ),
+        ),
+      ],
+    );
   }
 }
 
