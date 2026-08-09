@@ -13,6 +13,10 @@ class ExerciseSessionOut(BaseModel):
     date_label: str
     time_label: str
     items: list[str]
+    # 이 기록을 누가 만들었나. member=회원이 직접 남김, trainer_pt=트레이너가 PT
+    # 세션을 완료해 파생된 기록. 앱은 이 값으로 배지를 붙이고 수정·삭제를 감춘다.
+    # 기본값이 있어야 이 필드를 모르는 기존 클라이언트가 깨지지 않는다. (#499)
+    source: str = "member"
 
 
 class ExerciseWeekResponse(BaseModel):

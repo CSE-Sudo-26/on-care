@@ -10,8 +10,10 @@ import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/my_health/domain/support_links.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// 숫자 전용 입력 필터 — 붙여넣기/외부 키보드로 문자가 들어와 저장 시 int
 /// 파싱이 null 로 날아가는 것을 막는다.
@@ -766,15 +768,21 @@ class SupportPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return _shell(context, l.mySupportTitle, <Widget>[
+      // FAQ·1:1 문의는 앱 안에 화면을 만들지 않고 운영 중인 카카오톡 채널로
+      // 보낸다. 문의는 사람이 답해야 하는 일이고 그 창구는 이미 있다. (#507)
       _supportRow(
         Icons.help_outline,
         l.mySupportFaq,
-        () => _comingSoon(context, l.mySupportFaq),
+        () => _openExternal(context, kSupportChannelUrl),
+        external: true,
+        hint: l.mySupportExternalHint,
       ),
       _supportRow(
         Icons.chat_bubble_outline,
         l.mySupportInquiry,
-        () => _comingSoon(context, l.mySupportInquiry),
+        () => _openExternal(context, kSupportChatUrl),
+        external: true,
+        hint: l.mySupportExternalHint,
       ),
       _supportRow(
         Icons.description_outlined,
@@ -800,18 +808,40 @@ class SupportPage extends StatelessWidget {
   }
 }
 
-void _comingSoon(BuildContext context, String label) {
+/// 외부 링크를 연다. 실패하면 사유를 알린다.
+///
+/// 조용히 아무 일도 일어나지 않는 것이 가장 나쁘다 — 카카오톡이 없거나 열 수 있는
+/// 앱이 없을 때, 사용자는 앱이 고장 난 것으로 읽는다. (#507)
+Future<void> _openExternal(BuildContext context, String url) async {
   final AppLocalizations l = AppLocalizations.of(context);
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(l.myComingSoon(label))));
+  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  bool opened = false;
+  try {
+    opened = await launchUrl(
+      Uri.parse(url),
+      // 앱 안 웹뷰가 아니라 브라우저·카카오톡으로 넘긴다 — 로그인된 채널
+      // 세션을 그대로 쓸 수 있어야 문의가 이어진다.
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (_) {
+    opened = false;
+  }
+  if (!opened) {
+    messenger.showSnackBar(SnackBar(content: Text(l.mySupportOpenFailed)));
+  }
 }
 
 void _openLegal(BuildContext context, _LegalDoc doc) {
   context.push<void>(AppRoutes.mySettingsPath(doc.name));
 }
 
-Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
+Widget _supportRow(
+  IconData icon,
+  String label,
+  VoidCallback onTap, {
+  bool external = false,
+  String? hint,
+}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Material(
@@ -827,17 +857,32 @@ Widget _supportRow(IconData icon, String label, VoidCallback onTap) {
               Icon(icon, size: 18, color: FigmaColors.primary),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: FigmaColors.ink,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                    if (hint != null)
+                      Text(
+                        hint,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: FigmaColors.textFaint,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
+              // 앱 밖으로 나가는 행은 화살표 대신 외부 링크 아이콘을 쓴다 —
+              // 눌렀을 때 무엇이 일어나는지 미리 보이게.
+              Icon(
+                external ? Icons.open_in_new : Icons.chevron_right,
                 size: 18,
                 color: FigmaColors.textFaint,
               ),

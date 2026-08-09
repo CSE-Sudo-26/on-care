@@ -1,0 +1,252 @@
+"""트레이너 탈퇴. (#505) DB 필요.
+
+회원은 `DELETE /users/me` 로 탈퇴할 수 있었지만 트레이너에게는 같은 경로가 없어,
+한번 만든 계정을 지울 방법이 없었다(#475 로 생성 경로가 열린 뒤로는 더더욱).
+
+시드 트레이너를 지우면 다른 테스트가 무너지므로, 여기서는 매번 **새 트레이너를
+만들어** 그 계정을 지운다.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+import pytest
+from sqlalchemy import select
+
+
+def _h(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _login(client, email: str, password: str) -> str:
+    res = client.post(
+        "/v1/auth/login", data={"username": email, "password": password}
+    )
+    assert res.status_code == 200, res.text
+    return res.json()["access_token"]
+
+
+@pytest.fixture()
+def invite_code(db_session) -> str:
+    """새 트레이너를 만들 초대 코드(+ 소속 헬스장). 테스트가 끝나면 지운다."""
+    from app.models import models
+
+    gym = models.Place(
+        id=f"place-del-{uuid4().hex[:10]}",
+        name="탈퇴 테스트 헬스장",
+        category="fitness",
+        address="서울",
+    )
+    db_session.add(gym)
+    db_session.commit()
+
+    code = models.TrainerInviteCode(
+        code=f"DEL{uuid4().hex[:8].upper()}",
+        gym_id=gym.id,
+    )
+    db_session.add(code)
+    db_session.commit()
+    yield code.code
+
+    row = db_session.get(models.TrainerInviteCode, code.code)
+    if row is not None:
+        db_session.delete(row)
+        db_session.commit()
+    place = db_session.get(models.Place, gym.id)
+    if place is not None:
+        db_session.delete(place)
+        db_session.commit()
+
+
+def _register_member(client) -> tuple[str, str]:
+    """새 회원과 토큰. 시드 회원은 이미 담당 트레이너가 있어
+    `uq_trainer_client_active_member` 에 걸린다."""
+    email = f"del-member-{uuid4().hex[:8]}@oncare.com"
+    client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "pw!12345", "name": "탈퇴 테스트 회원"},
+    )
+    token = _login(client, email, "pw!12345")
+    me = client.get("/v1/users/me", headers=_h(token))
+    assert me.status_code == 200, me.text
+    return token, me.json()["id"]
+
+
+@pytest.fixture()
+def make_trainer(client, db_session):
+    """트레이너를 만들고, 테스트가 **실패해도** 남지 않게 치운다.
+
+    테스트 본문에서 만들고 본문에서 지우면, 중간에 실패한 실행이 계정을 남긴다.
+    남은 트레이너는 이름이 같아 `test_seeded_trainers_cover_every_gym` 의 중복
+    검사를 깨뜨린다 — 실제로 겪었다.
+    """
+    from app.models import models
+
+    created: list[str] = []
+
+    def _make(invite_code: str) -> tuple[str, str]:
+        email = f"del-trainer-{uuid4().hex[:8]}@oncare.com"
+        res = client.post(
+            "/v1/auth/trainer/register",
+            json={
+                "email": email,
+                "password": "pw!12345",
+                "name": f"탈퇴 트레이너 {uuid4().hex[:4]}",
+                "invite_code": invite_code,
+            },
+        )
+        assert res.status_code in (200, 201), res.text
+        token = _login(client, email, "pw!12345")
+        me = client.get("/v1/trainer/me", headers=_h(token))
+        assert me.status_code == 200, me.text
+        created.append(me.json()["id"])
+        return token, me.json()["id"]
+
+    yield _make
+
+    for trainer_id in created:
+        row = db_session.get(models.User, trainer_id)
+        if row is None:
+            continue  # 테스트가 이미 지웠다 — 정상 경로.
+        from app.services import trainer_service
+
+        trainer_service.delete_trainer_account(db_session, row)
+
+
+def test_trainer_can_delete_their_account(client, db_session, invite_code, make_trainer):
+    from app.models import models
+
+    token, trainer_id = make_trainer(invite_code)
+
+    deleted = client.delete("/v1/trainer/me", headers=_h(token))
+    assert deleted.status_code == 200, deleted.text
+
+    db_session.expire_all()
+    assert db_session.get(models.User, trainer_id) is None
+    # 프로필도 CASCADE 로 함께 사라진다.
+    assert (
+        db_session.scalar(
+            select(models.TrainerProfile).where(
+                models.TrainerProfile.trainer_id == trainer_id
+            )
+        )
+        is None
+    )
+
+
+def test_deleted_trainer_cannot_sign_in_again(client, invite_code, make_trainer):
+    email_token, _ = make_trainer(invite_code)
+    client.delete("/v1/trainer/me", headers=_h(email_token))
+
+    # 지운 계정의 토큰으로는 아무것도 읽을 수 없다.
+    assert client.get("/v1/trainer/me", headers=_h(email_token)).status_code in (
+        401,
+        403,
+        404,
+    )
+
+
+def test_deleting_with_clients_unlinks_and_notifies_them(
+    client, db_session, invite_code, make_trainer
+):
+    """담당 회원이 남아 있어도 막지 않되, 회원이 모르게 사라지지 않는다."""
+    from app.models import models
+
+    token, trainer_id = make_trainer(invite_code)
+    _, member_id = _register_member(client)
+    link = models.TrainerClient(
+        id=f"tc-{uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        goal="테스트",
+        active=True,
+        sort_order=1,
+    )
+    db_session.add(link)
+    db_session.commit()
+
+    before = db_session.scalars(
+        select(models.Notification).where(
+            models.Notification.user_id == member_id
+        )
+    ).all()
+
+    assert client.delete("/v1/trainer/me", headers=_h(token)).status_code == 200
+
+    db_session.expire_all()
+    # 담당 링크는 CASCADE 로 사라진다.
+    assert (
+        db_session.scalar(
+            select(models.TrainerClient).where(
+                models.TrainerClient.trainer_id == trainer_id
+            )
+        )
+        is None
+    )
+    after = db_session.scalars(
+        select(models.Notification).where(
+            models.Notification.user_id == member_id
+        )
+    ).all()
+    assert len(after) == len(before) + 1
+    assert any("연결이 해제" in row.title for row in after)
+
+
+def test_deleting_a_trainer_with_bookings_clears_them(
+    client, db_session, invite_code, make_trainer
+):
+    """예약은 회원·슬롯·일정을 RESTRICT 로 참조한다 — 먼저 치우지 않으면 삭제가 막힌다."""
+    from app.models import models
+
+    token, trainer_id = make_trainer(invite_code)
+    member_token, member_id = _register_member(client)
+    # 예약하려면 담당 링크가 있어야 한다(reserve 의 조건).
+    db_session.add(
+        models.TrainerClient(
+            id=f"tc-{uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            goal="테스트",
+            active=True,
+            sort_order=1,
+        )
+    )
+    db_session.commit()
+
+    slot = client.post(
+        "/v1/trainer/reservation-slots",
+        headers=_h(token),
+        json={
+            "starts_at": (
+                datetime.now(timezone.utc) + timedelta(days=5)
+            ).isoformat(),
+            "capacity": 1,
+        },
+    )
+    assert slot.status_code == 201, slot.text
+    booked = client.post(
+        "/v1/reservations",
+        headers=_h(member_token),
+        json={"slot_id": slot.json()["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+    reservation_id = booked.json()["id"]
+    schedule_id = booked.json()["schedule_id"]
+
+    deleted = client.delete("/v1/trainer/me", headers=_h(token))
+    assert deleted.status_code == 200, deleted.text
+
+    db_session.expire_all()
+    assert db_session.get(models.TrainerReservation, reservation_id) is None
+    # 슬롯과 그 예약이 만든 일정도 CASCADE 로 사라진다.
+    assert db_session.get(models.TrainerReservationSlot, slot.json()["id"]) is None
+    assert db_session.get(models.TrainerSchedule, schedule_id) is None
+
+
+def test_a_member_cannot_delete_a_trainer_account(client):
+    """회원 토큰으로는 트레이너 탈퇴 경로를 쓸 수 없다."""
+    member_token = _login(client, "jisu@oncare.com", "oncare123")
+    assert (
+        client.delete("/v1/trainer/me", headers=_h(member_token)).status_code == 403
+    )

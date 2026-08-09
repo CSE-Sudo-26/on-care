@@ -55,3 +55,19 @@ class ReservationOut(BaseModel):
     schedule_id: str
     status: str
     created_at: datetime
+
+
+class MyReservationOut(BaseModel):
+    """회원의 예약 한 건 — '내 예약' 목록과 취소 버튼이 읽는 형태. (#502)
+
+    슬롯 시각을 함께 실어 준다. 앱이 이걸 알아야 어느 자리가 내 예약인지 표시하고
+    지난 예약에 취소 버튼을 띄우지 않을 수 있다.
+    """
+
+    id: str
+    slot_id: str
+    trainer_id: str
+    starts_at: datetime
+    #: 이 시각을 지나면 취소할 수 없다. 서버 판단을 그대로 내려, 앱이 자기
+    #: 시계로 다시 계산하다 서버와 어긋나는 일이 없게 한다.
+    cancellable: bool

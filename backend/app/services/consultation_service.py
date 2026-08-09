@@ -22,6 +22,7 @@ from app.schemas.consultation_api import (
     ConsultationStatusFilter,
     TrainerConsultationOut,
 )
+from app.services import notification_service
 
 
 class InvalidConsultationRequest(Exception):
@@ -124,6 +125,7 @@ def create_consultation(
         status="pending",
     )
     db.add(consultation)
+    _notify_trainers_of_new_request(db, consultation, member_id)
     try:
         db.commit()
     except IntegrityError:
@@ -135,6 +137,39 @@ def create_consultation(
         raise
     db.refresh(consultation)
     return attach_target_names(db, [consultation])[0]
+
+
+def _notify_trainers_of_new_request(
+    db: Session, consultation: ConsultationRequest, member_id: str
+) -> None:
+    """새 상담 요청을 받을 트레이너(들)에게 알림을 남긴다. 커밋은 호출자가 한다. (#503)
+
+    대상이 트레이너면 그 사람에게만, 헬스장이면 **그 헬스장 소속 트레이너 전원**에게
+    남긴다 — 헬스장으로 온 요청은 소속 누구나 받을 수 있고(#467), 아무에게도
+    알리지 않으면 인박스를 열어 보는 사람만 우연히 발견하게 된다.
+    """
+    if consultation.trainer_id is not None:
+        trainer_ids = [consultation.trainer_id]
+    elif consultation.gym_id is not None:
+        trainer_ids = list(
+            db.scalars(
+                select(TrainerProfile.trainer_id).where(
+                    TrainerProfile.gym_id == consultation.gym_id
+                )
+            ).all()
+        )
+    else:
+        return
+
+    member_name = db.scalar(select(User.name).where(User.id == member_id)) or "회원"
+    for trainer_id in trainer_ids:
+        notification_service.queue_for_trainer(
+            db,
+            trainer_id=trainer_id,
+            kind=notification_service.TRAINER_CONSULTATION_KIND,
+            title="새 상담 요청이 도착했어요",
+            body=f"{member_name} 회원 · {consultation.preferred_date}",
+        )
 
 
 def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[ConsultationOut]:

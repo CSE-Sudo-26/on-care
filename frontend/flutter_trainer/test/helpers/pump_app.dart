@@ -36,6 +36,7 @@ Future<ProviderContainer> pumpTrainerApp(
   bool seed = true,
   String? at,
   List<Override> extraOverrides = const <Override>[],
+  Locale locale = const Locale('ko'),
 }) async {
   // A persisted session lives in secure storage now (access + refresh).
   // Reset the in-memory mock per test so state never leaks between them.
@@ -64,7 +65,7 @@ Future<ProviderContainer> pumpTrainerApp(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: const OncareTrainerApp(),
+      child: OncareTrainerApp(locale: locale),
     ),
   );
   await settle(tester);

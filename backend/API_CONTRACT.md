@@ -67,8 +67,9 @@
 | POST | `/exercise/sessions` | 입력 `{ type, minutes(>0), calories, intensity(light\|moderate\|high), day_label? }` → 생성된 `sessions[]` 항목 |
 | PUT | `/exercise/sessions/{id}` | 입력 동일(부분 갱신) → 갱신된 항목 |
 
-`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, intensity(light|moderate|high), date_label, time_label, items[str] }`
+`sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, intensity(light|moderate|high), source(member|trainer_pt), date_label, time_label, items[str] }`
 `intensity`: 생략 시 `moderate`. 수정 시트가 저장된 강도로 복원되고 칼로리 추정 배수(0.85/1.0/1.2)의 근거가 된다.
+`source`: 생략 시 `member`. `trainer_pt` 는 트레이너가 PT 세션을 완료 처리해 서버가 파생시킨 기록(id 는 `sched-ex-{session_id}`)으로, 근거가 트레이너에게 있어 **회원의 PUT/DELETE 는 409** 로 거절된다. 지우려면 트레이너가 그 세션을 삭제해야 하고 그러면 이 기록도 함께 사라진다. (#499)
 `day_labels`: `["월","화","수","목","금","토","일"]`
 `daily_calories`: 요일별 소모 칼로리(합 = `total_calories`). 홈 '주간 추이' 차트가 이 시리즈를 읽으며, 비어 있으면 클라이언트가 데모 상수로 폴백한다.
 
@@ -130,6 +131,49 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 - **무카테고리**: `category` 생략 시 네 카테고리를 **모두 검색·병합**하고 각 결과를 해당
   카테고리로 태깅한다(공급자 간 의미 일치, 빈 category 없음).
 - **검증**: `lat`(-90~90)·`lng`(-180~180)·`category`(허용값)는 위반 시 **422**.
+
+### 트레이너 디렉터리 (회원앱 탐색)
+
+| Method | Path | 응답 |
+|---|---|---|
+| GET | `/trainers` | `[{ id, gym_id, name, role, reason, career, intro, certifications[] }]` |
+| GET | `/trainers/recommended` | 같은 형태 — 홈·운동 탭 추천 레일 |
+| GET | `/trainers/{trainer_id}` | 단건(없으면 404) |
+
+- **노출 조건**: 소속(`gym_id`)이 있고 그 장소가 `category='fitness'` 인 트레이너만. 상담 요청 시의 대상 검증과 같은 조건이라, 목록에 뜬 트레이너는 상담을 걸 수 있다. (#451)
+- **`/trainers/recommended` 순서**: 회원마다 다르다. 회원의 만성질환(`conditions`)·목표(`goals`)·가장 최근 상담의 `exercise_goal`·내 헬스장(`MemberGym`)을 신호로 점수를 매겨 내림차순 정렬한다. 동점은 경력 → id 로 갈라 같은 회원이 새로고침해도 순서가 흔들리지 않는다. (#500)
+- **신호가 없는 회원**(온보딩 전 등)은 운영자가 `recommend_reason` 을 적어 둔 트레이너만 **기존 순서 그대로** 받는다. 빈 목록을 주지 않는다.
+- **`reason`**: 운영자가 쓴 `recommend_reason` 이 우선이고, 비어 있을 때만 점수 근거에서 만든 문구가 채워진다(예: `회원님이 다니는 헬스장 소속 · 체중 감량 지도 경험`).
+
+### 예약 (회원 ↔ 트레이너 슬롯)
+
+| Method | Path | 응답 |
+|---|---|---|
+| GET | `/trainers/{trainer_id}/slots` | `[{ id, trainer_id, starts_at, capacity, remaining, is_closed }]` |
+| POST | `/reservations` | 입력 `{ slot_id }` → `{ id, slot_id, schedule_id, status, created_at }` |
+| GET | `/reservations/me` | `[{ id, slot_id, trainer_id, starts_at, cancellable }]` — 내 예약 |
+| DELETE | `/reservations/{id}` | 취소 → `{ status: "cancelled" }` |
+
+- **예약은 트레이너 일정을 만듭니다.** 확정 시 `trainer_schedule` 에 `1:1 PT` 세션이 생기고, 취소하면 그 일정과 좌석이 함께 돌아갑니다. 회원 탈퇴 경로와 **같은 함수**(`reservation_service._release`)를 씁니다. (#502)
+- **취소 마감**: 슬롯 시작 시각까지. 이미 시작한 수업은 **409** — 자리를 비우는 게 아니라 기록을 지우는 일이라 트레이너가 판단할 몫입니다.
+- **남의 예약·없는 예약은 404** 로 같습니다. 존재 여부조차 드러내지 않습니다(상담 요청과 같은 규칙).
+- `cancellable` 은 **서버 판단**입니다. 앱이 자기 시계로 다시 계산하면 시각이 어긋난 기기에서 버튼은 눌리는데 서버가 409 를 주는 상태가 됩니다.
+- 취소는 트레이너에게 알림 행을 남깁니다(`notifications`). 트레이너는 `/trainer/notifications` 로 읽습니다(#503).
+
+### 트레이너 알림함
+
+| Method | Path | 응답 |
+|---|---|---|
+| GET | `/trainer/notifications` | `[{ id, title, body, category, read, created_at, time_ago }]` (최신순, 최대 100건) |
+| GET | `/trainer/notifications/unread-count` | `{ unread(int) }` |
+| POST | `/trainer/notifications/{id}/read` | `{ id, read: true }` |
+| POST | `/trainer/notifications/read-all` | `{ marked_read(int) }` |
+
+- **회원용 `/notifications` 를 재사용하지 않습니다.** `get_current_user` 가 트레이너 계정을 **403** 으로 막는 회원 전용 경로입니다(역할 분리). 저장되는 행은 같은 `notifications` 테이블이고 `user_id` 가 일반 사용자 FK라 스키마 변경은 없습니다. (#503)
+- `category` 는 트레이너 전용 값입니다 — `message`|`consultation`|`reservation`. 회원 알림의 집합(`reminder|health_check|achievement|system`)과 겹치지 않습니다. 한 테이블을 공유하지만 읽는 화면과 이동할 곳이 다릅니다.
+- **생성 지점**: 회원의 새 메시지(`POST /me/coach/chat`), 새 상담 요청(`POST /consultations` — 트레이너 지정이면 그 사람, 헬스장이면 소속 트레이너 전원), 새 예약·예약 취소.
+- **수신 설정**: 메시지 알림만 `trainer_profiles.notify_new_message` 로 끌 수 있습니다. 상담 요청·예약은 끄는 스위치가 설정 화면에 없고, 놓쳐도 되는 종류가 아니라 항상 남깁니다.
+- 남의 알림 읽음 처리는 **404** 입니다.
 
 ### 트레이너 도메인 / 회원측 코치 미러
 

@@ -10,6 +10,10 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show weekdayLabels;
+import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
 /// The 식단 sub-tab: today's nutrition summary (칼로리/나트륨/당류),
 /// per-meal records, and a conditional AI comment.
@@ -22,13 +26,14 @@ class DietView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final diet = ref.watch(clientDietProvider(client.id));
 
     return diet.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => const Center(
+      error: (e, _) => Center(
         child: Text(
-          '식단을 불러오지 못했어요',
+          l.dietLoadFailed,
           style: TextStyle(color: AppColors.mutedForeground),
         ),
       ),
@@ -41,12 +46,20 @@ class DietView extends ConsumerWidget {
             _SodiumTrendCard(client: client),
           ],
           const SizedBox(height: AppSpacing.md),
-          for (final meal in meals) ...<Widget>[
-            _MealCard(entry: meal),
-            const SizedBox(height: AppSpacing.sm),
+          // Nothing logged yet: say so, and withhold the verdict. The
+          // summary tiles read 0 either way, and `_AiComment` would call
+          // a blank day "균형이 잘 맞아요" — praise for a member who has
+          // not recorded a single meal.
+          if (meals.isEmpty)
+            EmptyHint(message: l.dietEmpty, icon: Icons.restaurant_outlined)
+          else ...<Widget>[
+            for (final meal in meals) ...<Widget>[
+              _MealCard(entry: meal),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.xs),
+            _AiComment(client: client),
           ],
-          const SizedBox(height: AppSpacing.xs),
-          _AiComment(client: client),
         ],
       ),
     );
@@ -62,6 +75,7 @@ class _NutritionSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -73,8 +87,8 @@ class _NutritionSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '오늘 영양 요약',
+          Text(
+            l.dietTodaySummary,
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -85,14 +99,14 @@ class _NutritionSummary extends StatelessWidget {
           Row(
             children: <Widget>[
               MetricTile(
-                label: '칼로리',
+                label: l.metricCalories,
                 value: client.calories,
                 unit: 'kcal',
                 color: AppColors.accentDark,
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
-                label: '나트륨',
+                label: l.metricSodium,
                 value: client.sodiumMg,
                 unit: 'mg',
                 // Neutral base like the other tiles — orange comes only
@@ -102,7 +116,7 @@ class _NutritionSummary extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
-                label: '당류',
+                label: l.metricSugar,
                 value: client.sugarG,
                 unit: 'g',
                 // Navy base like the other tiles — orange only when over.
@@ -125,18 +139,12 @@ class _SodiumTrendCard extends StatelessWidget {
 
   final TrainerClient client;
 
-  static const List<String> _weekdayShort = <String>[
-    '월',
-    '화',
-    '수',
-    '목',
-    '금',
-    '토',
-    '일',
-  ];
+  /// 요일 라벨은 로케일을 따르므로 const 로 둘 수 없다. (#501)
+  static List<String> _weekdayShort(AppLocalizations l) => weekdayLabels(l);
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final week = client.sodiumWeek;
     final maxMg = <int>[
       ...week,
@@ -152,7 +160,7 @@ class _SodiumTrendCard extends StatelessWidget {
     final today = DateTime.now();
     final labels = <String>[
       for (var i = week.length - 1; i >= 0; i--)
-        _weekdayShort[today.subtract(Duration(days: i)).weekday - 1],
+        _weekdayShort(l)[today.subtract(Duration(days: i)).weekday - 1],
     ];
 
     return Container(
@@ -168,9 +176,9 @@ class _SodiumTrendCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '최근 7일 나트륨 추이',
+                  l.dietSodiumTrend,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -180,7 +188,7 @@ class _SodiumTrendCard extends StatelessWidget {
               ),
               if (avg != null)
                 Text(
-                  '평균 ${avg}mg',
+                  l.dietAverageMg(avg),
                   style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
@@ -210,8 +218,8 @@ class _SodiumTrendCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             overDays > 0
-                ? '지난 7일 중 $overDays일 목표(${sodiumTargetMg}mg)를 초과했어요.'
-                : '지난 7일 모두 목표(${sodiumTargetMg}mg) 이내예요. 좋아요!',
+                ? l.dietSodiumOverDays(overDays, sodiumTargetMg)
+                : l.dietSodiumAllWithin(sodiumTargetMg),
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
@@ -285,6 +293,7 @@ class _MealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -341,7 +350,7 @@ class _MealCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '나트륨 ${entry.sodiumMg}mg',
+            l.dietSodiumValue(entry.sodiumMg),
             style: const TextStyle(
               fontSize: 10.5,
               color: AppColors.subtleForeground,
@@ -361,6 +370,7 @@ class _AiComment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final over = client.sodiumOverBudget;
     final sodiumMg = client.sodiumMg;
     return Container(
@@ -373,18 +383,17 @@ class _AiComment extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const IconLabel(
+          IconLabel(
             icon: Icons.auto_awesome,
-            label: 'AI 분석',
+            label: l.dietAiAnalysis,
             color: AppColors.accent,
             fontSize: 10,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             over
-                ? '나트륨이 목표치를 ${sodiumMg - sodiumTargetMg}mg 초과했어요. '
-                      '오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.'
-                : '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.',
+                ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
+                : l.dietAiBalanced,
             style: const TextStyle(
               fontSize: 12,
               height: 1.55,

@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/oni_avatar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The AI's read on the roster, in one sentence, plus the action it
 /// implies. Shares the Oni mascot with the member app so "AI가 말한다"
@@ -24,10 +25,11 @@ class AiSummaryCard extends StatelessWidget {
   final DashboardSummary summary;
 
   /// The headline sentence for [summary]. Pure, so the wording rules are
-  /// testable without a widget pump.
-  static String messageFor(DashboardSummary summary) {
+  /// testable without a widget pump — 로케일도 인자로 받아 테스트가 어느
+  /// 언어를 검사하는지 명시한다. (#501)
+  static String messageFor(AppLocalizations l, DashboardSummary summary) {
     if (summary.totalClients == 0) {
-      return '아직 담당 고객이 없어요. 고객을 등록하면 식단·운동 데이터를 모아 코칭 포인트를 짚어 드릴게요.';
+      return l.dashAiNoClients;
     }
     final sodium = summary.attention
         .where((a) => a.alerts.contains(ClientAlert.sodiumOver))
@@ -37,23 +39,20 @@ class AiSummaryCard extends StatelessWidget {
         .length;
 
     if (summary.unreadTotal > 0) {
-      return '고객 ${summary.unreadClients}명이 답장을 기다리고 있어요. '
-          '먼저 대화를 확인하고 오늘 루틴을 조정해 보세요.';
+      return l.dashAiUnread(summary.unreadClients);
     }
     if (sodium > 0) {
-      return '이번 주 담당 고객 ${summary.totalClients}명 중 $sodium명이 '
-          '나트륨 목표를 넘겼어요. 저염 식단과 유산소 중심 루틴을 제안해 보세요.';
+      return l.dashAiSodium(summary.totalClients, sodium);
     }
     if (low > 0) {
-      return '$low명의 주간 이행률이 $lowCompletionThreshold% 아래예요. '
-          '강도를 낮춘 루틴으로 다시 습관을 잡아 주세요.';
+      return l.dashAiLowCompletion(low, lowCompletionThreshold);
     }
-    return '담당 고객 ${summary.totalClients}명 모두 목표 범위 안이에요. '
-        '지금 강도를 유지하면서 다음 주 목표를 올려 보세요.';
+    return l.dashAiAllOnTrack(summary.totalClients);
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -72,9 +71,9 @@ class AiSummaryCard extends StatelessWidget {
             children: <Widget>[
               const OniAvatar(size: 28),
               const SizedBox(width: AppSpacing.sm),
-              const Text(
-                'AI 코칭 요약',
-                style: TextStyle(
+              Text(
+                l.dashAiSummaryTitle,
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: AppColors.foreground,
@@ -87,9 +86,9 @@ class AiSummaryCard extends StatelessWidget {
                   color: AppColors.card,
                   borderRadius: BorderRadius.all(AppRadius.pill),
                 ),
-                child: const Text(
-                  '오늘',
-                  style: TextStyle(
+                child: Text(
+                  l.dashToday,
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primary,
@@ -100,7 +99,7 @@ class AiSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            messageFor(summary),
+            messageFor(l, summary),
             style: const TextStyle(
               fontSize: 12.5,
               height: 1.55,
@@ -112,7 +111,7 @@ class AiSummaryCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: ActionButton(
-              label: 'AI 루틴 만들기',
+              label: l.dashCreateAiRoutine,
               icon: Icons.auto_awesome,
               primary: true,
               onPressed: () => context.go(AppRoutes.coaching),

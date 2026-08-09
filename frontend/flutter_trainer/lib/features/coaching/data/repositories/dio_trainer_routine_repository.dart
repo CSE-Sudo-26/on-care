@@ -37,6 +37,59 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
   }
 
   @override
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  }) async {
+    // 보낼 필드만 담는다 — 서버의 부분 수정 규약(#495)에서 명시적 null 은 422 다.
+    final body = <String, Object?>{
+      if (name case final String value) 'name': value,
+      if (minutes case final int value) 'minutes': value,
+      if (type case final String value) 'type': value,
+      if (reason case final String value) 'reason': value,
+    };
+    await _routineCall(
+      () => _dio.put<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(memberId)}'
+        '/routines/${Uri.encodeComponent(routineId)}',
+        data: body,
+      ),
+      routineId,
+    );
+  }
+
+  @override
+  Future<void> deleteRoutine(String memberId, String routineId) async {
+    await _routineCall(
+      () => _dio.delete<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(memberId)}'
+        '/routines/${Uri.encodeComponent(routineId)}',
+      ),
+      routineId,
+    );
+  }
+
+  /// 404(없음·남의 배정)는 [StateError] 로 옮긴다 — 목과 실서버가 같은 예외를
+  /// 내야 화면이 한 갈래만 다룬다. 나머지는 [AppError].
+  Future<void> _routineCall(
+    Future<void> Function() call,
+    String routineId,
+  ) async {
+    try {
+      await call();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw StateError('routine not found: $routineId');
+      }
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
       Stream<List<AssignedRoutine>>.fromFuture(_fetch(memberId));
 

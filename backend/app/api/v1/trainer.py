@@ -16,13 +16,13 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
-from app.models.models import TrainerClient, TrainerProfile
+from app.models.models import Notification, TrainerClient, TrainerProfile
 from app.schemas.consultation_api import (
     ConsultationDecision,
     ConsultationStatusFilter,
@@ -31,10 +31,10 @@ from app.schemas.consultation_api import (
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
-    RoutineOptionsOut, RoutineOptionsRequest,
+    RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
-    TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
+    TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import (
@@ -46,6 +46,10 @@ from app.services import (
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
+
+#: 알림함이 한 번에 내려주는 최대 건수. 회원 이력과 같은 이유로 상한을 둔다 —
+#: 오래된 알림 무제한 로드를 막는다.
+_NOTIFICATION_LIMIT = 100
 
 # 계약 형식은 정확히 YYYY-MM-DD. date.fromisoformat 는 3.11+ 에서 basic ISO·주 날짜도 받으므로
 # 정규식으로 먼저 좁힌 뒤 달력 유효성을 확인한다(schedule 라우트와 동일 규약).
@@ -186,6 +190,20 @@ def trainer_change_password(
     trainer.hashed_password = hash_password(payload.new_password)
     db.commit()
     return {"status": "changed"}
+
+
+@router.delete("/trainer/me")
+def trainer_delete_me(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """트레이너 탈퇴. 담당 회원에게 알린 뒤 계정과 딸린 데이터를 지운다. (#505)
+
+    회원 탈퇴(`DELETE /users/me`)와 대칭이다. 담당 회원이 남아 있어도 막지 않는다 —
+    막으면 담당이 있는 트레이너는 계정을 영영 지울 수 없다.
+    """
+    trainer_service.delete_trainer_account(db, trainer)
+    return {"status": "deleted"}
 
 
 @router.get("/trainer/me/settings", response_model=TrainerNotificationSettings)
@@ -352,6 +370,54 @@ def trainer_assign_routine(
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
     )
+
+
+@router.put(
+    "/trainer/clients/{member_id}/routines/{routine_id}",
+    response_model=RoutineOut,
+)
+def trainer_update_routine(
+    member_id: str,
+    routine_id: str,
+    payload: RoutineUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """배정한 루틴 수정(부분). 이름·시간·종류·사유만 바뀐다. (#504)
+
+    남의 배정과 없는 루틴은 똑같이 404 다 — 존재 여부를 드러내지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        # 빈 PUT 을 성공으로 처리하면 클라이언트가 저장됐다고 오해한다.
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    if "name" in fields and not fields["name"].strip():
+        raise HTTPException(status_code=400, detail="루틴 이름이 필요합니다.")
+    if "name" in fields:
+        fields["name"] = fields["name"].strip()
+    try:
+        return trainer_service.update_routine(
+            db, trainer.id, member_id, routine_id, fields
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/clients/{member_id}/routines/{routine_id}")
+def trainer_delete_routine(
+    member_id: str,
+    routine_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """배정한 루틴 철회. 회원 앱에서도 사라진다. (#504)"""
+    _require_client(db, trainer.id, member_id)
+    try:
+        trainer_service.delete_routine(db, trainer.id, member_id, routine_id)
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
 
 
 @router.post(
@@ -642,3 +708,84 @@ def trainer_reject_consultation(
 ) -> TrainerConsultationOut:
     """상담을 거절한다. 사유는 회원 알림 본문에 그대로 실린다."""
     return _decide(consultation_service.reject, db, trainer.id, consultation_id, payload)
+
+
+# ---- 알림함 (#503) ----
+#
+# 회원용 `/notifications` 를 재사용할 수 없다 — `get_current_user` 가 트레이너
+# 계정을 403 으로 막는 **회원 전용** 경로다(역할 분리). 저장되는 행은 같은
+# `notifications` 테이블이고 `user_id` 가 일반 사용자 FK라 스키마 변경은 없다.
+
+def _notification_out(row: Notification) -> TrainerNotificationOut:
+    return TrainerNotificationOut(
+        id=row.id,
+        title=row.title,
+        body=row.body,
+        category=row.category,
+        read=row.read,
+        created_at=row.created_at,
+        time_ago=notification_service.time_ago(row.created_at),
+    )
+
+
+@router.get("/trainer/notifications", response_model=list[TrainerNotificationOut])
+def trainer_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerNotificationOut]:
+    """트레이너가 받은 알림(최신순)."""
+    rows = db.scalars(
+        select(Notification)
+        .where(Notification.user_id == trainer.id)
+        .order_by(Notification.created_at.desc())
+        .limit(_NOTIFICATION_LIMIT)
+    ).all()
+    return [_notification_out(row) for row in rows]
+
+
+@router.get("/trainer/notifications/unread-count", response_model=dict)
+def trainer_unread_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """사이드바 배지가 읽는 값."""
+    count = db.scalar(
+        select(func.count())
+        .select_from(Notification)
+        .where(Notification.user_id == trainer.id, Notification.read.is_(False))
+    )
+    return {"unread": int(count or 0)}
+
+
+@router.post("/trainer/notifications/read-all")
+def trainer_read_all_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    marked = db.execute(
+        update(Notification)
+        .where(Notification.user_id == trainer.id, Notification.read.is_(False))
+        .values(read=True)
+    ).rowcount
+    db.commit()
+    return {"marked_read": int(marked or 0)}
+
+
+@router.post("/trainer/notifications/{notification_id}/read")
+def trainer_read_notification(
+    notification_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    row = db.scalar(
+        select(Notification).where(
+            Notification.id == notification_id,
+            # 남의 알림은 존재조차 드러내지 않는다.
+            Notification.user_id == trainer.id,
+        )
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="알림을 찾을 수 없습니다.")
+    row.read = True
+    db.commit()
+    return {"id": row.id, "read": True}

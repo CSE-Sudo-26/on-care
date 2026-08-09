@@ -457,3 +457,169 @@ def test_schedule_rejects_a_malformed_date(client):
         headers=_sched_auth(token),
     )
     assert r.status_code == 422
+
+
+# ---- PT 완료 → 회원 쪽 운동 기록 파생 (#499) ----
+
+def _member_h(client) -> dict:
+    """회원(user-jisu) 헤더. 시드가 demo_login_password 로 만든 계정."""
+    token = client.post(
+        "/v1/auth/login",
+        data={"username": "jisu@oncare.com", "password": "oncare123"},
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture()
+def make_pt_session(client):
+    """PT 세션을 만들고 테스트 끝에 지우는 팩토리.
+
+    정리하지 않으면 회원 이력이 테스트마다 쌓여, 최신 60건만 내려주는
+    `build_client_history` 의 상한에 닿는 순간 **다른 테스트**가 깨진다
+    (#484 와 같은 누적 데이터 취약성). 세션을 지우면 파생 기록도 함께
+    사라지므로 회원의 주간 집계도 원래대로 돌아온다.
+    """
+    created: list[tuple[str, str]] = []
+
+    def _make(token: str, **over) -> str:
+        body = {
+            "date": _today(), "time": "20:00", "client_name": "이지수",
+            "member_id": "user-jisu", "type": "1:1 PT", "duration_minutes": 60,
+        }
+        body.update(over)
+        r = client.post("/v1/trainer/schedule", json=body, headers=_h(token))
+        assert r.status_code == 201, r.text
+        sid = r.json()["id"]
+        created.append((sid, token))
+        return sid
+
+    yield _make
+
+    for sid, token in created:
+        client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token))
+
+
+def test_complete_session_adds_member_exercise_log(client, make_pt_session):
+    """PT 완료가 트레이너 이력뿐 아니라 **회원 쪽** 운동 기록으로도 잡힌다.
+
+    RoutineHistory 는 트레이너 화면 전용이라, 이것만으로는 회원의 운동 탭·홈
+    대시보드 주간 집계에 아무것도 늘지 않았다.
+    """
+    token = _tok(client)
+    mh = _member_h(client)
+
+    before = client.get("/v1/exercise/weeks/current", headers=mh).json()
+    sid = make_pt_session(token, time="20:05", duration_minutes=45)
+
+    done = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    assert done.status_code == 200, done.text
+
+    after = client.get("/v1/exercise/weeks/current", headers=mh).json()
+    assert after["total_minutes"] == before["total_minutes"] + 45
+    # 칼로리는 회원 앱과 같은 표(strength=6kcal/분, moderate=1.0)로 추정한다.
+    assert after["total_calories"] == before["total_calories"] + 270
+
+    derived = [s for s in after["sessions"] if s["id"] == f"sched-ex-{sid}"]
+    assert len(derived) == 1
+    assert derived[0]["source"] == "trainer_pt"
+    assert derived[0]["type"] == "strength"
+
+
+def test_complete_session_exercise_log_is_idempotent(client, make_pt_session):
+    """재호출해도 회원 기록이 중복되지 않는다(결정론적 id)."""
+    token = _tok(client)
+    mh = _member_h(client)
+    sid = make_pt_session(token, time="20:10", duration_minutes=30)
+
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    once = client.get("/v1/exercise/weeks/current", headers=mh).json()["total_minutes"]
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    twice = client.get("/v1/exercise/weeks/current", headers=mh).json()["total_minutes"]
+
+    assert once == twice
+
+
+def test_completed_consultation_makes_no_exercise_log(client, db_session, make_pt_session):
+    """상담은 운동이 아니다 — 회원 주간 운동량으로 잡히면 집계가 거짓이 된다."""
+    from app.models import models
+
+    token = _tok(client)
+    sid = make_pt_session(token, time="20:15", type="상담", duration_minutes=30)
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+
+    db_session.expire_all()
+    assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is None
+    # 트레이너 쪽 이력은 기존대로 남는다 — 이 변경은 회원 기록만 다룬다.
+    assert db_session.get(models.RoutineHistory, f"sched-hist-{sid}") is not None
+
+
+def test_past_session_lands_in_its_own_week(client, db_session, make_pt_session):
+    """지난 주 세션을 오늘 완료해도 그 주의 집계로 들어간다.
+
+    완료 시점의 월요일을 쓰면 지난 주 PT 가 이번 주 운동량으로 잡힌다.
+    """
+    from datetime import date, timedelta
+
+    from app.models import models
+
+    token = _tok(client)
+    past = date.today() - timedelta(days=9)
+    sid = make_pt_session(token, date=past.isoformat(), time="20:20")
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+
+    db_session.expire_all()
+    row = db_session.get(models.ExerciseSession, f"sched-ex-{sid}")
+    assert row is not None
+    assert row.week_start == (past - timedelta(days=past.weekday())).isoformat()
+    assert row.day_label == ["월", "화", "수", "목", "금", "토", "일"][past.weekday()]
+
+
+def test_delete_completed_session_removes_member_exercise_log(client, db_session, make_pt_session):
+    """세션을 지우면 회원 쪽 파생 기록도 사라진다 — 회원 집계에만 유령 PT 가 남지 않도록."""
+    from app.models import models
+
+    token = _tok(client)
+    sid = make_pt_session(token, time="20:25")
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+    db_session.expire_all()
+    assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is not None
+
+    assert client.delete(f"/v1/trainer/schedule/{sid}", headers=_h(token)).status_code == 200
+    db_session.expire_all()
+    assert db_session.get(models.ExerciseSession, f"sched-ex-{sid}") is None
+
+
+def test_member_cannot_edit_or_delete_derived_log(client, make_pt_session):
+    """파생 기록의 근거는 트레이너에게 있다 — 회원이 고치면 리포트가 딛고 선 값이 흔들린다."""
+    token = _tok(client)
+    mh = _member_h(client)
+    sid = make_pt_session(token, time="20:30")
+    client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
+
+    ex_id = f"sched-ex-{sid}"
+    put = client.put(
+        f"/v1/exercise/sessions/{ex_id}",
+        json={"type": "cardio", "minutes": 5, "calories": 10, "intensity": "light"},
+        headers=mh,
+    )
+    assert put.status_code == 409, put.text
+    assert client.delete(f"/v1/exercise/sessions/{ex_id}", headers=mh).status_code == 409
+
+
+def test_member_own_log_still_editable(client):
+    """회원이 직접 남긴 기록은 그대로 수정·삭제된다(가드가 과잉 적용되지 않는다)."""
+    mh = _member_h(client)
+    sid = client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 20, "calories": 180, "day_label": "월"},
+        headers=mh,
+    ).json()["id"]
+
+    put = client.put(
+        f"/v1/exercise/sessions/{sid}",
+        json={"type": "cardio", "minutes": 25, "calories": 200, "intensity": "moderate"},
+        headers=mh,
+    )
+    assert put.status_code == 200, put.text
+    assert put.json()["source"] == "member"
+    assert client.delete(f"/v1/exercise/sessions/{sid}", headers=mh).status_code == 200

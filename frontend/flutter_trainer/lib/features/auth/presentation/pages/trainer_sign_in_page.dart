@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Trainer login screen — email/password login plus a "로그인 없이 데모
 /// 둘러보기" bypass. Layout follows the user app's sign-in page; the
@@ -52,9 +53,12 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // 요청 중 화면을 떠났으면 여기서 끝낸다 — 아래 `AppLocalizations.of` 가
+      // 이미 해제된 context 를 조회하게 된다.
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrSocialFailed)),
       );
     }
   }
@@ -66,7 +70,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('이메일과 비밀번호를 입력해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrEmptyCredentials)),
       );
       return;
     }
@@ -78,18 +82,22 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
-      if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _loading = false);
+      messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('로그인에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrSignInFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     // 가입 경로는 이제 실 API 모드에서도 열린다 — `/auth/trainer/register` 가
     // 헬스장 초대 코드로 트레이너 계정을 만든다(#475). 전에는 회원용
@@ -120,7 +128,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'On - Care 트레이너',
+                    l.appTitleSpaced,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -129,7 +137,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '고객 관리를 위한 트레이너 전용 앱',
+                    l.authTagline,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF64748B),
@@ -139,14 +147,14 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
 
                   AuthField(
                     controller: _email,
-                    hint: '이메일',
+                    hint: l.authEmail,
                     icon: Icons.mail_outline,
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AuthField(
                     controller: _password,
-                    hint: '비밀번호',
+                    hint: l.authPassword,
                     icon: Icons.lock_outline,
                     obscure: _obscure,
                     onSubmitted: (_) => _login(),
@@ -163,17 +171,19 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
 
                   AuthGradientButton(
                     loading: _loading,
-                    label: '로그인',
+                    label: l.authSignIn,
                     onTap: _login,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   const _OrDivider(),
                   const SizedBox(height: AppSpacing.lg),
                   _SocialButton.kakao(
+                    label: l.authContinueKakao,
                     onTap: _loading ? null : () => _social('kakao'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _SocialButton.google(
+                    label: l.authContinueGoogle,
                     onTap: _loading ? null : () => _social('google'),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -184,19 +194,23 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   // (seed/admin). Hide the entry when hitting the real API so
                   // it isn't a dead end. (Follow-up: trainer provisioning.)
                   if (signUpEnabled)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Wrap, not Row: 영어 문구("Don't have an account?" +
+                    // "Sign up")는 한국어보다 길어 좁은 폭에서 Row 가 넘쳤다.
+                    // 줄바꿈으로 흘려보내면 어느 언어에서도 잘리지 않는다. (#501)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: <Widget>[
-                        const Text(
-                          '계정이 없으신가요?',
-                          style: TextStyle(color: Color(0xFF64748B)),
+                        Text(
+                          l.authNoAccount,
+                          style: const TextStyle(color: Color(0xFF64748B)),
                         ),
                         TextButton(
                           onPressed: _loading ? null : _onSignUp,
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,
                           ),
-                          child: const Text('회원가입'),
+                          child: Text(l.authSignUp),
                         ),
                       ],
                     ),
@@ -206,7 +220,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                       ),
-                      child: const Text('로그인 없이 데모 둘러보기'),
+                      child: Text(l.authBrowseDemo),
                     ),
                   ),
                 ],
@@ -226,17 +240,17 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: <Widget>[
-        Expanded(child: Divider(color: Color(0x1A000000))),
+        const Expanded(child: Divider(color: Color(0x1A000000))),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
-            '또는',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            AppLocalizations.of(context).authOr,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
           ),
         ),
-        Expanded(child: Divider(color: Color(0x1A000000))),
+        const Expanded(child: Divider(color: Color(0x1A000000))),
       ],
     );
   }
@@ -255,16 +269,22 @@ class _SocialButton extends StatelessWidget {
     this.iconSize = 20,
   });
 
-  factory _SocialButton.kakao({required VoidCallback? onTap}) => _SocialButton(
-    label: '카카오로 시작하기',
+  factory _SocialButton.kakao({
+    required String label,
+    required VoidCallback? onTap,
+  }) => _SocialButton(
+    label: label,
     icon: Icons.chat_bubble_rounded,
     background: const Color(0xFFFEE500),
     foreground: const Color(0xFF191600),
     onTap: onTap,
   );
 
-  factory _SocialButton.google({required VoidCallback? onTap}) => _SocialButton(
-    label: '구글로 시작하기',
+  factory _SocialButton.google({
+    required String label,
+    required VoidCallback? onTap,
+  }) => _SocialButton(
+    label: label,
     icon: Icons.g_mobiledata,
     background: const Color(0xFFFFFFFF),
     foreground: const Color(0xFF262626),
