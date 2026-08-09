@@ -61,7 +61,15 @@ class NavDestination {
 /// 운영 / 코칭 groups with headings; the headings named the obvious and
 /// the extra gap made the five rows read as two lists instead of one.
 /// 사이드바 라벨 키. 값이 아니라 키인 이유는 [NavDestination.label] 참고.
-enum NavLabel { dashboard, clients, schedule, coaching, reports, consultations }
+enum NavLabel {
+  dashboard,
+  clients,
+  schedule,
+  coaching,
+  reports,
+  consultations,
+  notifications,
+}
 
 /// 라벨 키 → 현재 로케일의 문구.
 String navLabel(AppLocalizations l, NavLabel label) => switch (label) {
@@ -71,6 +79,7 @@ String navLabel(AppLocalizations l, NavLabel label) => switch (label) {
   NavLabel.coaching => l.navCoaching,
   NavLabel.reports => l.navReports,
   NavLabel.consultations => l.navConsultations,
+  NavLabel.notifications => l.navNotifications,
 };
 
 const List<NavDestination> navDestinations = <NavDestination>[
@@ -126,7 +135,7 @@ const NavDestination consultationsDestination = NavDestination(
 /// 알림함 — [consultationsDestination] 과 같은 이유로 [navDestinations] 밖에
 /// 둔다. 실 API 빌드에서만 보이고, 브랜치 인덱스를 사이드바가 직접 넘긴다. (#503)
 const NavDestination notificationsDestination = NavDestination(
-  label: '알림',
+  label: NavLabel.notifications,
   icon: Icons.notifications_none,
   activeIcon: Icons.notifications,
   route: AppRoutes.notifications,

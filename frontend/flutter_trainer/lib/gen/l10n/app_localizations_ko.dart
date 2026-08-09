@@ -1756,4 +1756,30 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appTitleSpaced => 'On - Care 트레이너';
+
+  @override
+  String get navNotifications => '알림';
+
+  @override
+  String get notifTitle => '알림';
+
+  @override
+  String get notifReadAll => '모두 읽음';
+
+  @override
+  String get notifEmpty => '아직 받은 알림이 없어요';
+
+  @override
+  String get notifLoadFailed => '알림을 불러오지 못했어요';
+
+  @override
+  String get notifAllRead => '모두 확인했어요';
+
+  @override
+  String get notifReadAllFailed => '읽음 처리에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String notifUnreadCount(int count) {
+    return '읽지 않은 알림 $count건';
+  }
 }

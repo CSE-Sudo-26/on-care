@@ -527,5 +527,13 @@
   "schedHourLabel": "{hour}시",
   "schedMinuteLabel": "{minute}분",
   "progDefaultReps": "10회",
-  "appTitleSpaced": "On - Care 트레이너"
+  "appTitleSpaced": "On - Care 트레이너",
+  "navNotifications": "알림",
+  "notifTitle": "알림",
+  "notifReadAll": "모두 읽음",
+  "notifEmpty": "아직 받은 알림이 없어요",
+  "notifLoadFailed": "알림을 불러오지 못했어요",
+  "notifAllRead": "모두 확인했어요",
+  "notifReadAllFailed": "읽음 처리에 실패했어요. 잠시 후 다시 시도해 주세요",
+  "notifUnreadCount": "읽지 않은 알림 {count}건"
 }
