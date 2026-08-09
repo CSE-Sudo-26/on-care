@@ -87,6 +87,7 @@ def test_get_diet_day_by_date_aggregates_only_current_user(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert len(body["entries"]) == 1
+    assert body["entries"][0]["photo_asset"] is None
     assert body["total_calories"] == 420
     assert body["total_sodium_mg"] == 350
     assert body["total_sugar_g"] == 7.5

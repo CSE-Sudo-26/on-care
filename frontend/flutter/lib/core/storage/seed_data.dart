@@ -32,10 +32,11 @@ import 'package:oncare/core/storage/app_database.dart';
 /// `WeeklyActivity` stacked-bar chart renders the 유산소 / 근력 /
 /// 스트레칭 breakdown the prototype shows.
 Future<void> seedIfEmpty(AppDatabase db) async {
-  final today = _fmtDate(DateTime.now());
-  final yesterday = _fmtDate(DateTime.now().subtract(const Duration(days: 1)));
-  final twoDaysAgo = _fmtDate(DateTime.now().subtract(const Duration(days: 2)));
-  final weekStart = _fmtDate(_mondayOfThisWeek(DateTime.now()));
+  final now = DateTime.now();
+  final today = _fmtDate(now);
+  final yesterday = _fmtDate(now.subtract(const Duration(days: 1)));
+  final twoDaysAgo = _fmtDate(now.subtract(const Duration(days: 2)));
+  final weekStart = _fmtDate(_mondayOfThisWeek(now));
 
   final seedDate = await db.readValue('seeded_v12');
   if (seedDate == today) {

@@ -461,6 +461,22 @@ class LocalApiInterceptor extends Interceptor {
 
   Future<Response<Object?>> _dietByDate(RequestOptions options) async {
     final date = options.path.split('/').last;
+    if (!_isDateString(date)) {
+      return Response<Object?>(
+        requestOptions: options,
+        statusCode: 422,
+        data: <String, Object?>{
+          'detail': <Map<String, Object?>>[
+            <String, Object?>{
+              'type': 'date_from_datetime_parsing',
+              'loc': <String>['path', 'date'],
+              'msg': 'Input should be a valid date',
+              'input': date,
+            },
+          ],
+        },
+      );
+    }
     return _dietForDate(options, date);
   }
 
@@ -478,7 +494,6 @@ class LocalApiInterceptor extends Interceptor {
     double totalCarbs = 0;
     double totalProtein = 0;
     double totalFat = 0;
-    final sodiumByFoodName = <String, int>{};
     final entriesJson = <Map<String, Object?>>[];
     for (final r in rows) {
       final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
@@ -489,18 +504,6 @@ class LocalApiInterceptor extends Interceptor {
       totalCarbs += macros.carbsG;
       totalProtein += macros.proteinG;
       totalFat += macros.fatG;
-      for (final food in foods) {
-        if (food is! Map) continue;
-        final name = (food['name'] as String? ?? '').trim();
-        final sodium = (food['sodium_mg'] as num?)?.toInt() ?? 0;
-        if (name.isNotEmpty && sodium > 0) {
-          sodiumByFoodName.update(
-            name,
-            (total) => total + sodium,
-            ifAbsent: () => sodium,
-          );
-        }
-      }
       entriesJson.add(<String, Object?>{
         'id': r.id,
         'meal_type': r.mealType,
@@ -515,13 +518,6 @@ class LocalApiInterceptor extends Interceptor {
         'photo_asset': _seedDietPhotoAssets[r.id],
       });
     }
-    final sodiumSources = sodiumByFoodName.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final sodiumSourceNames = sodiumSources
-        .take(2)
-        .map((source) => source.key)
-        .join('·');
-
     return _ok(options, <String, Object?>{
       'entries': entriesJson,
       'total_calories': totalCalories,
@@ -529,7 +525,7 @@ class LocalApiInterceptor extends Interceptor {
       'total_sugar_g': totalSugar,
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'ai_coach_message': totalSodium > 2000
-          ? '$sodiumSourceNames 섭취로 나트륨이 높아요. 다음 식사는 양념과 국물을 줄여 보세요.'
+          ? '오늘 나트륨 섭취가 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!'
           : rows.isEmpty
           ? '아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?'
           : '균형 잡힌 하루였어요. 내일도 이대로 가요!',
@@ -648,6 +644,12 @@ class LocalApiInterceptor extends Interceptor {
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+
+  bool _isDateString(String value) {
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) return false;
+    final parsed = DateTime.tryParse(value);
+    return parsed != null && _dateString(parsed) == value;
+  }
 
   // ---- Exercise ----
 

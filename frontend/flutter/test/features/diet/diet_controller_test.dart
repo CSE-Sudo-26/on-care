@@ -54,6 +54,26 @@ void main() {
     expect(second.totalCalories, 3);
     expect(repository.requestedDates, <DateTime>[firstDate, secondDate]);
   });
+
+  test(
+    'dietByDateProvider shares one key for times on the same date',
+    () async {
+      final repository = _DateRecordingDietRepository();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          dietRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final morning = dietByDateProvider(DateTime(2026, 8, 2, 8));
+      final evening = dietByDateProvider(DateTime(2026, 8, 2, 20));
+
+      await container.read(morning.future);
+      await container.read(evening.future);
+      expect(repository.requestedDates, <DateTime>[DateTime(2026, 8, 2)]);
+    },
+  );
 }
 
 class _DateRecordingDietRepository extends MockDietRepository {

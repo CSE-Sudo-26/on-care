@@ -57,12 +57,23 @@ void main() {
 
       expect(past.statusCode, 200);
       expect(past.data!['total_calories'], 420);
+      expect(past.data!['ai_coach_message'], '균형 잡힌 하루였어요. 내일도 이대로 가요!');
       expect((past.data!['entries']! as List<Object?>).length, 1);
       expect(empty.statusCode, 200);
       expect(empty.data!['entries'], isEmpty);
       expect(empty.data!['total_calories'], 0);
     },
   );
+
+  test('GET /diet/days/{date} rejects an invalid date like backend', () async {
+    final response = await dio.get<Map<String, Object?>>(
+      '/diet/days/not-a-date',
+      options: Options(validateStatus: (status) => status == 422),
+    );
+
+    expect(response.statusCode, 422);
+    expect(response.data!['detail'], isA<List<Object?>>());
+  });
 
   test(
     'POST /diet/analyze returns an analysis and persists an entry',

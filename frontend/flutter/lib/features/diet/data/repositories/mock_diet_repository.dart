@@ -255,7 +255,7 @@ class MockDietRepository implements DietRepository {
       );
     }
     if (daysAgo == 2) {
-      return _historicalDay(_twoDaysAgoEntries, '연어와 현미밥으로 탄단지 균형을 잘 맞춰어요.');
+      return _historicalDay(_twoDaysAgoEntries, '연어와 현미밥으로 탄단지 균형을 잘 맞췄어요.');
     }
 
     return const DietDay(
