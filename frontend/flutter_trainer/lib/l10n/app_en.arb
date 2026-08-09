@@ -1118,5 +1118,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "aiWithinTarget": " · within target",
+  "aiRecentRoutine": "Recent routine",
+  "aiTrainerNoteEditable": "Trainer's note · editable",
+  "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
+  "aiGenerateConditions": "Conditions",
+  "aiCompareCandidates": "Compare the candidates"
 }

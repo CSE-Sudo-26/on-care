@@ -1569,4 +1569,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count개 · $minutes분';
   }
+
+  @override
+  String get aiWithinTarget => ' · 적정';
+
+  @override
+  String get aiRecentRoutine => '최근 루틴';
+
+  @override
+  String get aiTrainerNoteEditable => '트레이너 메모 · 수정 가능';
+
+  @override
+  String get aiNotePlaceholderHint =>
+      '회색 제안 문구는 입력 전 참고용이며, 직접 입력한 메모만 저장·전송돼요.';
+
+  @override
+  String get aiGenerateConditions => '생성 조건';
+
+  @override
+  String get aiCompareCandidates => '맞춤 루틴 후보를 비교해 보세요';
 }

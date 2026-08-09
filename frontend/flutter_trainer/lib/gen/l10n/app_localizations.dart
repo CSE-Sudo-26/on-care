@@ -2917,6 +2917,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{goal} · {count} exercises · {minutes} min'**
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
+
+  /// No description provided for @aiWithinTarget.
+  ///
+  /// In en, this message translates to:
+  /// **' · within target'**
+  String get aiWithinTarget;
+
+  /// No description provided for @aiRecentRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent routine'**
+  String get aiRecentRoutine;
+
+  /// No description provided for @aiTrainerNoteEditable.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer\'s note · editable'**
+  String get aiTrainerNoteEditable;
+
+  /// No description provided for @aiNotePlaceholderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The grey suggestion is only a prompt — only what you type is saved and sent.'**
+  String get aiNotePlaceholderHint;
+
+  /// No description provided for @aiGenerateConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditions'**
+  String get aiGenerateConditions;
+
+  /// No description provided for @aiCompareCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare the candidates'**
+  String get aiCompareCandidates;
 }
 
 class _AppLocalizationsDelegate

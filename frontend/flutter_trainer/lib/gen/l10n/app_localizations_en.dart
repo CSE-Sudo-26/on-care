@@ -1610,4 +1610,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
     return '$goal · $count exercises · $minutes min';
   }
+
+  @override
+  String get aiWithinTarget => ' · within target';
+
+  @override
+  String get aiRecentRoutine => 'Recent routine';
+
+  @override
+  String get aiTrainerNoteEditable => 'Trainer\'s note · editable';
+
+  @override
+  String get aiNotePlaceholderHint =>
+      'The grey suggestion is only a prompt — only what you type is saved and sent.';
+
+  @override
+  String get aiGenerateConditions => 'Conditions';
+
+  @override
+  String get aiCompareCandidates => 'Compare the candidates';
 }

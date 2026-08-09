@@ -469,5 +469,11 @@
   "aiStepReview": "후보 검토",
   "aiStepDone": "추천 완료",
   "aiStepperLabel": "맞춤 루틴 생성 진행 단계",
-  "coachTemplateSummaryWithGoal": "{goal} · {count}개 · {minutes}분"
+  "coachTemplateSummaryWithGoal": "{goal} · {count}개 · {minutes}분",
+  "aiWithinTarget": " · 적정",
+  "aiRecentRoutine": "최근 루틴",
+  "aiTrainerNoteEditable": "트레이너 메모 · 수정 가능",
+  "aiNotePlaceholderHint": "회색 제안 문구는 입력 전 참고용이며, 직접 입력한 메모만 저장·전송돼요.",
+  "aiGenerateConditions": "생성 조건",
+  "aiCompareCandidates": "맞춤 루틴 후보를 비교해 보세요"
 }

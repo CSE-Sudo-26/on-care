@@ -211,7 +211,9 @@ void main() {
     expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
     expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
-    final optionHeights = <String>['A', 'B', '추천']
+    // 세 번째 후보의 key 는 선택 식별자다 — 화면 문구가 아니라서 로케일과
+    // 무관하게 'recommended' 로 고정돼 있다(#501).
+    final optionHeights = <String>['A', 'B', 'recommended']
         .map(
           (key) => tester
               .getSize(find.byKey(ValueKey<String>('routine-option-$key')))
