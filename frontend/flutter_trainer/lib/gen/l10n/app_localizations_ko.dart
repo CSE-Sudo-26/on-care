@@ -1039,4 +1039,209 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get slotCloseAction => '예약 닫기';
+
+  @override
+  String get myCareerInvalid => '경력은 0~80 사이의 연수로 입력해 주세요.';
+
+  @override
+  String get myProfileSaveFailed => '프로필을 저장하지 못했습니다.';
+
+  @override
+  String get myGymChangeFailed => '소속 헬스장 변경에 실패했습니다. 나머지 프로필 정보는 저장됐어요.';
+
+  @override
+  String get myTabProfile => '내 정보';
+
+  @override
+  String get myTabSettings => '설정';
+
+  @override
+  String get mySaving => '저장 중';
+
+  @override
+  String get myEditProfile => '프로필 수정';
+
+  @override
+  String get mySaved => '변경사항이 저장됐어요';
+
+  @override
+  String get myCertifications => '자격증 · 인증';
+
+  @override
+  String get myMonthStats => '이번 달 통계';
+
+  @override
+  String get myGym => '소속 헬스장';
+
+  @override
+  String get myNotifications => '알림';
+
+  @override
+  String get myNotifNewMessage => '새 메시지 알림';
+
+  @override
+  String get myNotifNewMessageHint => '고객이 메시지를 보내면 사이드바 뱃지로 알려드려요';
+
+  @override
+  String get myNotifSessionReminder => '수업 시작 전 알림';
+
+  @override
+  String get myNotifSessionReminderHint => '예정된 세션이 다가오면 대시보드에서 강조해요';
+
+  @override
+  String get myReminderLead => '알림 시점';
+
+  @override
+  String myMinutesBefore(int minutes) {
+    return '$minutes분 전';
+  }
+
+  @override
+  String get myAccount => '계정';
+
+  @override
+  String get myChangePassword => '비밀번호 변경';
+
+  @override
+  String get myChangePasswordHint => '현재 비밀번호를 확인한 뒤 교체해요';
+
+  @override
+  String get myChangePasswordDemo => '데모 모드에는 계정이 없어 변경할 수 없어요';
+
+  @override
+  String get myLoginAccount => '로그인 계정';
+
+  @override
+  String get myAppInfo => '앱 정보';
+
+  @override
+  String get myService => '서비스';
+
+  @override
+  String get myVersion => '버전';
+
+  @override
+  String get myContact => '문의';
+
+  @override
+  String get myPasswordChanged => '비밀번호를 변경했어요';
+
+  @override
+  String myCareerYears(String career) {
+    return '경력 $career';
+  }
+
+  @override
+  String get myFieldName => '이름 (계정 정보)';
+
+  @override
+  String get myFieldEmail => '이메일 (계정 정보)';
+
+  @override
+  String get myFieldPhone => '연락처';
+
+  @override
+  String get myFieldSpecialty => '전문 분야';
+
+  @override
+  String get myFieldCareer => '경력';
+
+  @override
+  String get myFieldIntro => '소개';
+
+  @override
+  String get myAddCertification => '자격증 추가...';
+
+  @override
+  String get myAdd => '추가';
+
+  @override
+  String get myStatClients => '담당 고객';
+
+  @override
+  String get myStatSessionsDone => '완료 세션';
+
+  @override
+  String get myStatRoutinesSent => '루틴 전송';
+
+  @override
+  String get myGymName => '헬스장 이름';
+
+  @override
+  String get myGymAddress => '주소';
+
+  @override
+  String get myGymHours => '운영 시간';
+
+  @override
+  String get myGymPhone => '연락처';
+
+  @override
+  String get myGymOpen => '영업 중';
+
+  @override
+  String get myGymListFailed => '헬스장 목록을 불러오지 못했습니다.';
+
+  @override
+  String get myNoGym => '소속 없음';
+
+  @override
+  String get mySignOut => '로그아웃';
+
+  @override
+  String get myPwCurrentRequired => '현재 비밀번호를 입력해 주세요';
+
+  @override
+  String myPwTooShort(int min) {
+    return '새 비밀번호는 $min자 이상이어야 해요';
+  }
+
+  @override
+  String get myPwMismatch => '새 비밀번호가 서로 달라요';
+
+  @override
+  String get myPwChangeFailed => '비밀번호를 변경할 수 없어요';
+
+  @override
+  String get myPwChangeRetry => '변경에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get myPwCurrent => '현재 비밀번호';
+
+  @override
+  String myPwNew(int min) {
+    return '새 비밀번호 ($min자 이상)';
+  }
+
+  @override
+  String get myPwConfirm => '새 비밀번호 확인';
+
+  @override
+  String get myPwChanging => '변경 중…';
+
+  @override
+  String get myPwChangeAction => '변경하기';
+
+  @override
+  String get myProfileEmpty => '프로필 응답이 비어 있습니다.';
+
+  @override
+  String get myInputInvalid => '입력값을 확인해 주세요.';
+
+  @override
+  String get myGymConflict => '현재 소속 상태와 충돌합니다.';
+
+  @override
+  String get myGymNotFound => '헬스장을 찾을 수 없습니다.';
+
+  @override
+  String get myPwDemoUnavailable => '데모 모드에서는 비밀번호를 변경할 수 없어요';
+
+  @override
+  String get mySettingsSaveFailed => '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String myYearsSuffix(int years) {
+    return '$years년';
+  }
 }

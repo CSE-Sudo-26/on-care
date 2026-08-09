@@ -744,5 +744,105 @@
       }
     }
   },
-  "slotCloseAction": "Close bookings"
+  "slotCloseAction": "Close bookings",
+  "myCareerInvalid": "Enter years of experience between 0 and 80.",
+  "myProfileSaveFailed": "Couldn't save your profile.",
+  "myGymChangeFailed": "Couldn't change your gym. The rest of your profile was saved.",
+  "myTabProfile": "My profile",
+  "myTabSettings": "Settings",
+  "mySaving": "Saving",
+  "myEditProfile": "Edit profile",
+  "mySaved": "Changes saved",
+  "myCertifications": "Certifications",
+  "myMonthStats": "This month",
+  "myGym": "My gym",
+  "myNotifications": "Notifications",
+  "myNotifNewMessage": "New message alerts",
+  "myNotifNewMessageHint": "A sidebar badge appears when a client messages you",
+  "myNotifSessionReminder": "Session reminders",
+  "myNotifSessionReminderHint": "Upcoming sessions are highlighted on the dashboard",
+  "myReminderLead": "Remind me",
+  "myMinutesBefore": "{minutes} min before",
+  "@myMinutesBefore": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "myAccount": "Account",
+  "myChangePassword": "Change password",
+  "myChangePasswordHint": "We'll confirm your current password first",
+  "myChangePasswordDemo": "Demo mode has no account, so this is unavailable",
+  "myLoginAccount": "Signed in as",
+  "myAppInfo": "About",
+  "myService": "Service",
+  "myVersion": "Version",
+  "myContact": "Contact",
+  "myPasswordChanged": "Password changed",
+  "myCareerYears": "{career} experience",
+  "@myCareerYears": {
+    "placeholders": {
+      "career": {
+        "type": "String"
+      }
+    }
+  },
+  "myFieldName": "Name (account)",
+  "myFieldEmail": "Email (account)",
+  "myFieldPhone": "Phone",
+  "myFieldSpecialty": "Specialty",
+  "myFieldCareer": "Experience",
+  "myFieldIntro": "About me",
+  "myAddCertification": "Add a certification...",
+  "myAdd": "Add",
+  "myStatClients": "Clients",
+  "myStatSessionsDone": "Sessions done",
+  "myStatRoutinesSent": "Routines sent",
+  "myGymName": "Gym name",
+  "myGymAddress": "Address",
+  "myGymHours": "Hours",
+  "myGymPhone": "Phone",
+  "myGymOpen": "Open now",
+  "myGymListFailed": "Couldn't load the gym list.",
+  "myNoGym": "No gym",
+  "mySignOut": "Sign out",
+  "myPwCurrentRequired": "Enter your current password",
+  "myPwTooShort": "The new password must be at least {min} characters",
+  "@myPwTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "myPwMismatch": "The new passwords don't match",
+  "myPwChangeFailed": "Couldn't change your password",
+  "myPwChangeRetry": "That didn't work. Please try again in a moment",
+  "myPwCurrent": "Current password",
+  "myPwNew": "New password ({min}+ characters)",
+  "@myPwNew": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "myPwConfirm": "Confirm new password",
+  "myPwChanging": "Changing…",
+  "myPwChangeAction": "Change",
+  "myProfileEmpty": "The profile response was empty.",
+  "myInputInvalid": "Please check your input.",
+  "myGymConflict": "That conflicts with your current gym.",
+  "myGymNotFound": "Gym not found.",
+  "myPwDemoUnavailable": "Password changes aren't available in demo mode",
+  "mySettingsSaveFailed": "Couldn't save your settings. Please try again in a moment",
+  "myYearsSuffix": "{years} years",
+  "@myYearsSuffix": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  }
 }

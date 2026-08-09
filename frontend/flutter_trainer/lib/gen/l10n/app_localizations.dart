@@ -1963,6 +1963,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close bookings'**
   String get slotCloseAction;
+
+  /// No description provided for @myCareerInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter years of experience between 0 and 80.'**
+  String get myCareerInvalid;
+
+  /// No description provided for @myProfileSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your profile.'**
+  String get myProfileSaveFailed;
+
+  /// No description provided for @myGymChangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change your gym. The rest of your profile was saved.'**
+  String get myGymChangeFailed;
+
+  /// No description provided for @myTabProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'My profile'**
+  String get myTabProfile;
+
+  /// No description provided for @myTabSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get myTabSettings;
+
+  /// No description provided for @mySaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving'**
+  String get mySaving;
+
+  /// No description provided for @myEditProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get myEditProfile;
+
+  /// No description provided for @mySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes saved'**
+  String get mySaved;
+
+  /// No description provided for @myCertifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Certifications'**
+  String get myCertifications;
+
+  /// No description provided for @myMonthStats.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get myMonthStats;
+
+  /// No description provided for @myGym.
+  ///
+  /// In en, this message translates to:
+  /// **'My gym'**
+  String get myGym;
+
+  /// No description provided for @myNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get myNotifications;
+
+  /// No description provided for @myNotifNewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'New message alerts'**
+  String get myNotifNewMessage;
+
+  /// No description provided for @myNotifNewMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A sidebar badge appears when a client messages you'**
+  String get myNotifNewMessageHint;
+
+  /// No description provided for @myNotifSessionReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Session reminders'**
+  String get myNotifSessionReminder;
+
+  /// No description provided for @myNotifSessionReminderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming sessions are highlighted on the dashboard'**
+  String get myNotifSessionReminderHint;
+
+  /// No description provided for @myReminderLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me'**
+  String get myReminderLead;
+
+  /// No description provided for @myMinutesBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min before'**
+  String myMinutesBefore(int minutes);
+
+  /// No description provided for @myAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get myAccount;
+
+  /// No description provided for @myChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get myChangePassword;
+
+  /// No description provided for @myChangePasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll confirm your current password first'**
+  String get myChangePasswordHint;
+
+  /// No description provided for @myChangePasswordDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo mode has no account, so this is unavailable'**
+  String get myChangePasswordDemo;
+
+  /// No description provided for @myLoginAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as'**
+  String get myLoginAccount;
+
+  /// No description provided for @myAppInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get myAppInfo;
+
+  /// No description provided for @myService.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get myService;
+
+  /// No description provided for @myVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get myVersion;
+
+  /// No description provided for @myContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get myContact;
+
+  /// No description provided for @myPasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get myPasswordChanged;
+
+  /// No description provided for @myCareerYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{career} experience'**
+  String myCareerYears(String career);
+
+  /// No description provided for @myFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (account)'**
+  String get myFieldName;
+
+  /// No description provided for @myFieldEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email (account)'**
+  String get myFieldEmail;
+
+  /// No description provided for @myFieldPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get myFieldPhone;
+
+  /// No description provided for @myFieldSpecialty.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialty'**
+  String get myFieldSpecialty;
+
+  /// No description provided for @myFieldCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience'**
+  String get myFieldCareer;
+
+  /// No description provided for @myFieldIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'About me'**
+  String get myFieldIntro;
+
+  /// No description provided for @myAddCertification.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a certification...'**
+  String get myAddCertification;
+
+  /// No description provided for @myAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get myAdd;
+
+  /// No description provided for @myStatClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients'**
+  String get myStatClients;
+
+  /// No description provided for @myStatSessionsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions done'**
+  String get myStatSessionsDone;
+
+  /// No description provided for @myStatRoutinesSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Routines sent'**
+  String get myStatRoutinesSent;
+
+  /// No description provided for @myGymName.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym name'**
+  String get myGymName;
+
+  /// No description provided for @myGymAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get myGymAddress;
+
+  /// No description provided for @myGymHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours'**
+  String get myGymHours;
+
+  /// No description provided for @myGymPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get myGymPhone;
+
+  /// No description provided for @myGymOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open now'**
+  String get myGymOpen;
+
+  /// No description provided for @myGymListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the gym list.'**
+  String get myGymListFailed;
+
+  /// No description provided for @myNoGym.
+  ///
+  /// In en, this message translates to:
+  /// **'No gym'**
+  String get myNoGym;
+
+  /// No description provided for @mySignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get mySignOut;
+
+  /// No description provided for @myPwCurrentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your current password'**
+  String get myPwCurrentRequired;
+
+  /// No description provided for @myPwTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'The new password must be at least {min} characters'**
+  String myPwTooShort(int min);
+
+  /// No description provided for @myPwMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The new passwords don\'t match'**
+  String get myPwMismatch;
+
+  /// No description provided for @myPwChangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change your password'**
+  String get myPwChangeFailed;
+
+  /// No description provided for @myPwChangeRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Please try again in a moment'**
+  String get myPwChangeRetry;
+
+  /// No description provided for @myPwCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get myPwCurrent;
+
+  /// No description provided for @myPwNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New password ({min}+ characters)'**
+  String myPwNew(int min);
+
+  /// No description provided for @myPwConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get myPwConfirm;
+
+  /// No description provided for @myPwChanging.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing…'**
+  String get myPwChanging;
+
+  /// No description provided for @myPwChangeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get myPwChangeAction;
+
+  /// No description provided for @myProfileEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The profile response was empty.'**
+  String get myProfileEmpty;
+
+  /// No description provided for @myInputInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your input.'**
+  String get myInputInvalid;
+
+  /// No description provided for @myGymConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'That conflicts with your current gym.'**
+  String get myGymConflict;
+
+  /// No description provided for @myGymNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym not found.'**
+  String get myGymNotFound;
+
+  /// No description provided for @myPwDemoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changes aren\'t available in demo mode'**
+  String get myPwDemoUnavailable;
+
+  /// No description provided for @mySettingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your settings. Please try again in a moment'**
+  String get mySettingsSaveFailed;
+
+  /// No description provided for @myYearsSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{years} years'**
+  String myYearsSuffix(int years);
 }
 
 class _AppLocalizationsDelegate

@@ -1062,4 +1062,217 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get slotCloseAction => 'Close bookings';
+
+  @override
+  String get myCareerInvalid => 'Enter years of experience between 0 and 80.';
+
+  @override
+  String get myProfileSaveFailed => 'Couldn\'t save your profile.';
+
+  @override
+  String get myGymChangeFailed =>
+      'Couldn\'t change your gym. The rest of your profile was saved.';
+
+  @override
+  String get myTabProfile => 'My profile';
+
+  @override
+  String get myTabSettings => 'Settings';
+
+  @override
+  String get mySaving => 'Saving';
+
+  @override
+  String get myEditProfile => 'Edit profile';
+
+  @override
+  String get mySaved => 'Changes saved';
+
+  @override
+  String get myCertifications => 'Certifications';
+
+  @override
+  String get myMonthStats => 'This month';
+
+  @override
+  String get myGym => 'My gym';
+
+  @override
+  String get myNotifications => 'Notifications';
+
+  @override
+  String get myNotifNewMessage => 'New message alerts';
+
+  @override
+  String get myNotifNewMessageHint =>
+      'A sidebar badge appears when a client messages you';
+
+  @override
+  String get myNotifSessionReminder => 'Session reminders';
+
+  @override
+  String get myNotifSessionReminderHint =>
+      'Upcoming sessions are highlighted on the dashboard';
+
+  @override
+  String get myReminderLead => 'Remind me';
+
+  @override
+  String myMinutesBefore(int minutes) {
+    return '$minutes min before';
+  }
+
+  @override
+  String get myAccount => 'Account';
+
+  @override
+  String get myChangePassword => 'Change password';
+
+  @override
+  String get myChangePasswordHint =>
+      'We\'ll confirm your current password first';
+
+  @override
+  String get myChangePasswordDemo =>
+      'Demo mode has no account, so this is unavailable';
+
+  @override
+  String get myLoginAccount => 'Signed in as';
+
+  @override
+  String get myAppInfo => 'About';
+
+  @override
+  String get myService => 'Service';
+
+  @override
+  String get myVersion => 'Version';
+
+  @override
+  String get myContact => 'Contact';
+
+  @override
+  String get myPasswordChanged => 'Password changed';
+
+  @override
+  String myCareerYears(String career) {
+    return '$career experience';
+  }
+
+  @override
+  String get myFieldName => 'Name (account)';
+
+  @override
+  String get myFieldEmail => 'Email (account)';
+
+  @override
+  String get myFieldPhone => 'Phone';
+
+  @override
+  String get myFieldSpecialty => 'Specialty';
+
+  @override
+  String get myFieldCareer => 'Experience';
+
+  @override
+  String get myFieldIntro => 'About me';
+
+  @override
+  String get myAddCertification => 'Add a certification...';
+
+  @override
+  String get myAdd => 'Add';
+
+  @override
+  String get myStatClients => 'Clients';
+
+  @override
+  String get myStatSessionsDone => 'Sessions done';
+
+  @override
+  String get myStatRoutinesSent => 'Routines sent';
+
+  @override
+  String get myGymName => 'Gym name';
+
+  @override
+  String get myGymAddress => 'Address';
+
+  @override
+  String get myGymHours => 'Hours';
+
+  @override
+  String get myGymPhone => 'Phone';
+
+  @override
+  String get myGymOpen => 'Open now';
+
+  @override
+  String get myGymListFailed => 'Couldn\'t load the gym list.';
+
+  @override
+  String get myNoGym => 'No gym';
+
+  @override
+  String get mySignOut => 'Sign out';
+
+  @override
+  String get myPwCurrentRequired => 'Enter your current password';
+
+  @override
+  String myPwTooShort(int min) {
+    return 'The new password must be at least $min characters';
+  }
+
+  @override
+  String get myPwMismatch => 'The new passwords don\'t match';
+
+  @override
+  String get myPwChangeFailed => 'Couldn\'t change your password';
+
+  @override
+  String get myPwChangeRetry =>
+      'That didn\'t work. Please try again in a moment';
+
+  @override
+  String get myPwCurrent => 'Current password';
+
+  @override
+  String myPwNew(int min) {
+    return 'New password ($min+ characters)';
+  }
+
+  @override
+  String get myPwConfirm => 'Confirm new password';
+
+  @override
+  String get myPwChanging => 'Changing…';
+
+  @override
+  String get myPwChangeAction => 'Change';
+
+  @override
+  String get myProfileEmpty => 'The profile response was empty.';
+
+  @override
+  String get myInputInvalid => 'Please check your input.';
+
+  @override
+  String get myGymConflict => 'That conflicts with your current gym.';
+
+  @override
+  String get myGymNotFound => 'Gym not found.';
+
+  @override
+  String get myPwDemoUnavailable =>
+      'Password changes aren\'t available in demo mode';
+
+  @override
+  String get mySettingsSaveFailed =>
+      'Couldn\'t save your settings. Please try again in a moment';
+
+  @override
+  String myYearsSuffix(int years) {
+    return '$years years';
+  }
 }
