@@ -1220,6 +1220,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load meals'**
   String get dietLoadFailed;
 
+  /// No description provided for @dietEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No meals logged yet'**
+  String get dietEmpty;
+
   /// No description provided for @dietTodaySummary.
   ///
   /// In en, this message translates to:

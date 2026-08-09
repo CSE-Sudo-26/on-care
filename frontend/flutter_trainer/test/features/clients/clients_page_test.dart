@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -29,29 +30,36 @@ void main() {
     });
     tearDown(() => db.close());
 
-    test('watchClients returns the 3 seeded clients in order', () async {
+    test('watchClients returns the seeded clients in sortOrder', () async {
       final clients = await DriftClientRepository(db).watchClients().first;
-      expect(clients.map((c) => c.name).toList(), <String>[
+      // Unprioritised order is the seeded order, so the first three are
+      // still the original roster the rest of these tests address.
+      expect(clients.take(3).map((c) => c.name).toList(), <String>[
         '김민수',
         '이지수',
         '박성호',
       ]);
+      expect(clients.length, 15);
     });
 
     test('sodiumOverBudget flags only clients above 2000mg', () async {
       final clients = await DriftClientRepository(db).watchClients().first;
-      expect(
-        clients.where((c) => c.sodiumOverBudget).map((c) => c.name).toSet(),
-        <String>{'김민수', '박성호'}, // 2100, 2400; 이지수 1800 is under
-      );
+      // The rule, not a name list — the roster is a fixture that grows.
+      for (final c in clients) {
+        expect(c.sodiumOverBudget, c.sodiumMg > 2000, reason: c.name);
+      }
+      // …and the fixture must keep exercising both sides of it.
+      expect(clients.where((c) => c.sodiumOverBudget), isNotEmpty);
+      expect(clients.where((c) => !c.sodiumOverBudget), isNotEmpty);
     });
 
     test('addClient appends a fresh profile after the seeded roster', () async {
       final repo = DriftClientRepository(db);
+      final seeded = (await repo.watchClients().first).length;
       await repo.addClient(name: '  최수진  ', goal: '체중 감량');
 
       final clients = await repo.watchClients().first;
-      expect(clients.length, 4);
+      expect(clients.length, seeded + 1);
       final added = clients.last; // large sortOrder appends
       expect(added.name, '최수진'); // trimmed
       expect(added.avatar, '최');
@@ -66,8 +74,9 @@ void main() {
       'addClient ignores an empty name and defaults an empty goal',
       () async {
         final repo = DriftClientRepository(db);
+        final seeded = (await repo.watchClients().first).length;
         expect(await repo.addClient(name: '   ', goal: '아무거나'), isFalse);
-        expect((await repo.watchClients().first).length, 3);
+        expect((await repo.watchClients().first).length, seeded);
 
         expect(await repo.addClient(name: '박도윤', goal: '  '), isTrue);
         final clients = await repo.watchClients().first;
@@ -77,18 +86,19 @@ void main() {
 
     test('addClient rejects a duplicate name', () async {
       final repo = DriftClientRepository(db);
+      final seeded = (await repo.watchClients().first).length;
 
       // Schedules resolve their client by NAME, so a second 김민수 could
       // receive the first one's chat/운동기록 (review PR 243).
       expect(await repo.addClient(name: '김민수', goal: '중복'), isFalse);
       expect(await repo.addClient(name: '  김민수  ', goal: '공백 차이'), isFalse);
       expect(await repo.addClient(name: '김민수 ', goal: '후행 공백'), isFalse);
-      expect((await repo.watchClients().first).length, 3); // nothing added
+      expect((await repo.watchClients().first).length, seeded); // nothing added
 
       // A genuinely new name still registers, and is then itself taken.
       expect(await repo.addClient(name: '최수진', goal: '체중 감량'), isTrue);
       expect(await repo.addClient(name: '최수진', goal: '또'), isFalse);
-      expect((await repo.watchClients().first).length, 4);
+      expect((await repo.watchClients().first).length, seeded + 1);
 
       expect(await repo.clientNameExists('김민수'), isTrue);
       expect(await repo.clientNameExists('없는사람'), isFalse);
@@ -163,7 +173,7 @@ void main() {
   });
 
   group('ClientsPage', () {
-    testWidgets('renders the 3 clients, AI summary count, and badge', (
+    testWidgets('renders the roster with its size and priority order', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -175,10 +185,10 @@ void main() {
       // The roster header states the size; the coaching signals
       // (나트륨 초과, 오늘 예약) now live on the 대시보드, not here.
       expect(find.text('고객'), findsWidgets);
-      expect(find.text('3명 · 활성 2명'), findsOneWidget);
+      expect(find.text('15명 · 활성 13명'), findsOneWidget);
 
-      // Priority order: sodium-over clients (김민수, 박성호) come first;
-      // 이지수 is last and lazily built, so scroll to reach her.
+      // Priority order: sodium-over clients come first, so a client who
+      // is under target is further down a now-long, lazily built list.
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('박성호'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('이지수'), 150);
@@ -194,12 +204,23 @@ void main() {
         at: AppRoutes.clients,
       );
 
-      // 이지수와 박성호가 각각 1건씩 답장을 기다린다. 김민수의 스레드는
-      // 이미 답장·읽음 처리된 상태로 시드된다.
-      expect(find.text('1'), findsNWidgets(2));
+      // Scoped to each card rather than counting '1' across the roster:
+      // several members are waiting on a reply now, and the list is long
+      // enough that what is built depends on scroll position.
+      Finder badgeOf(String name) => find.descendant(
+        of: find.ancestor(
+          of: find.text(name),
+          matching: find.byType(ClientCard),
+        ),
+        matching: find.text('1'),
+      );
 
-      // Open 박성호's chat, then come back — his badge cleared, 이지수's
-      // stays. The badge clears once the messages are on screen.
+      // 박성호 is waiting; 김민수's thread is seeded already answered.
+      expect(badgeOf('박성호'), findsOneWidget);
+      expect(badgeOf('김민수'), findsNothing);
+
+      // Open 박성호's chat, then come back — his badge cleared. The badge
+      // clears once the messages are on screen.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'chat'),
@@ -207,7 +228,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await settle(tester);
 
-      expect(find.text('1'), findsOneWidget);
+      expect(badgeOf('박성호'), findsNothing);
     });
 
     testWidgets('tapping a client card opens the detail screen', (
@@ -248,9 +269,20 @@ void main() {
       await settle(tester);
 
       // New client appended at the end of the list (0 data, no badge).
+      // Scoped to her own card: a seeded brand-new client carries the
+      // same "아직 대화가 없어요" placeholder.
       await tester.scrollUntilVisible(find.text('최수진'), 150);
       expect(find.text('최수진'), findsOneWidget);
-      expect(find.text('아직 대화가 없어요'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('최수진'),
+            matching: find.byType(ClientCard),
+          ),
+          matching: find.text('아직 대화가 없어요'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('registering a duplicate name is blocked with an error', (

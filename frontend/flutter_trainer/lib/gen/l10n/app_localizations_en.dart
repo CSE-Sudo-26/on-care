@@ -625,6 +625,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietLoadFailed => 'Couldn\'t load meals';
 
   @override
+  String get dietEmpty => 'No meals logged yet';
+
+  @override
   String get dietTodaySummary => 'Today\'s nutrition';
 
   @override

@@ -11,7 +11,9 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entr
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart' show weekdayLabels;
+import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
+    show weekdayLabels;
+import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
 /// The 식단 sub-tab: today's nutrition summary (칼로리/나트륨/당류),
 /// per-meal records, and a conditional AI comment.
@@ -44,12 +46,20 @@ class DietView extends ConsumerWidget {
             _SodiumTrendCard(client: client),
           ],
           const SizedBox(height: AppSpacing.md),
-          for (final meal in meals) ...<Widget>[
-            _MealCard(entry: meal),
-            const SizedBox(height: AppSpacing.sm),
+          // Nothing logged yet: say so, and withhold the verdict. The
+          // summary tiles read 0 either way, and `_AiComment` would call
+          // a blank day "균형이 잘 맞아요" — praise for a member who has
+          // not recorded a single meal.
+          if (meals.isEmpty)
+            EmptyHint(message: l.dietEmpty, icon: Icons.restaurant_outlined)
+          else ...<Widget>[
+            for (final meal in meals) ...<Widget>[
+              _MealCard(entry: meal),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.xs),
+            _AiComment(client: client),
           ],
-          const SizedBox(height: AppSpacing.xs),
-          _AiComment(client: client),
         ],
       ),
     );
