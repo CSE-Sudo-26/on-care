@@ -4,9 +4,9 @@ import 'package:oncare/features/account/domain/repositories/account_repository.d
 /// Not wired by default (the app uses [DioAccountRepository] → the drift-backed
 /// LocalApiInterceptor). Kept for unit tests / offline overrides.
 class MockAccountRepository implements AccountRepository {
-  MockAccountRepository();
+  MockAccountRepository({UserProfile profile = _demo}) : _profile = profile;
 
-  UserProfile _profile = const UserProfile(
+  static const UserProfile _demo = UserProfile(
     id: 'user-demo',
     name: '김민수',
     email: 'minsu@oncare.com',
@@ -18,7 +18,12 @@ class MockAccountRepository implements AccountRepository {
     dailyCarbsG: 275,
     dailyProteinG: 100,
     dailyFatG: 55,
+    weeklyWorkoutGoal: UserProfile.defaultWeeklyWorkoutGoal,
+    weeklyExerciseMinutesGoal: UserProfile.defaultWeeklyExerciseMinutesGoal,
+    weeklyBurnGoal: UserProfile.defaultWeeklyBurnGoal,
   );
+
+  UserProfile _profile;
 
   @override
   Future<UserProfile> fetchProfile() async => _profile;

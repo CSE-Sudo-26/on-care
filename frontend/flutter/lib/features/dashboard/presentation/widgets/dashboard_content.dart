@@ -20,6 +20,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -843,6 +844,7 @@ class _ExerciseCard extends ConsumerWidget {
     final int count = wk?.workoutCount ?? summary.exerciseCount;
     final double burned = (wk?.totalCalories ?? summary.exerciseCalories)
         .toDouble();
+    final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
     // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
     final int todayIdx = DateTime.now().weekday - 1;
@@ -882,7 +884,7 @@ class _ExerciseCard extends ConsumerWidget {
                       icon: Icons.timer_outlined,
                       label: l.homeExerciseActiveTime,
                       value: '$minutes',
-                      goal: '150',
+                      goal: '${goals.minutes}',
                       unit: l.unitMinutes,
                     ),
                     const SizedBox(height: 14),
@@ -890,19 +892,16 @@ class _ExerciseCard extends ConsumerWidget {
                       icon: Icons.local_fire_department_rounded,
                       label: l.homeExerciseBurned,
                       value: nf.format(burned),
-                      // 주간 소모 목표는 서버(exercise_burn_goal) 값을 쓴다.
-                      // 운동 탭 '이번 주 운동 요약'도 같은 값을 읽어 두 화면이
-                      // 항상 일치한다.
-                      goal: nf.format(summary.exerciseBurnGoal),
+                      goal: nf.format(goals.burnCalories),
                       unit: l.unitKcal,
                     ),
                     const SizedBox(height: 14),
                     _ExerciseStat(
                       icon: Icons.check_circle_outline_rounded,
                       label: l.homeExerciseDays,
-                      // 값 = 주간 운동한 날짜 수(workoutCount), 목표 = 주 3일 이상.
+                      // 값 = 주간 운동한 날짜 수(workoutCount).
                       value: '$count',
-                      goal: '3',
+                      goal: '${goals.workouts}',
                       unit: l.unitDays,
                     ),
                   ],

@@ -69,6 +69,37 @@ def test_update_me_duplicate_email_conflicts_409(client):
     assert r.status_code == 409
 
 
+def test_weekly_exercise_goals_are_saved_per_user(client):
+    token_a, _ = _register_and_login(client)
+    token_b, _ = _register_and_login(client)
+
+    updated = client.put(
+        "/v1/users/me/health-goals",
+        json={
+            "weekly_workout_goal": 5,
+            "weekly_exercise_minutes_goal": 240,
+            "weekly_burn_goal": 900,
+        },
+        headers=_auth(token_a),
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["weekly_workout_goal"] == 5
+    assert updated.json()["weekly_exercise_minutes_goal"] == 240
+    assert updated.json()["weekly_burn_goal"] == 900
+
+    profile_a = client.get("/v1/users/me/profile", headers=_auth(token_a))
+    assert profile_a.status_code == 200
+    assert profile_a.json()["weekly_workout_goal"] == 5
+    assert profile_a.json()["weekly_exercise_minutes_goal"] == 240
+    assert profile_a.json()["weekly_burn_goal"] == 900
+
+    profile_b = client.get("/v1/users/me/profile", headers=_auth(token_b))
+    assert profile_b.status_code == 200
+    assert profile_b.json()["weekly_workout_goal"] is None
+    assert profile_b.json()["weekly_exercise_minutes_goal"] is None
+    assert profile_b.json()["weekly_burn_goal"] is None
+
+
 def test_delete_me_removes_account(client):
     token, email = _register_and_login(client)
     r = client.delete("/v1/users/me", headers=_auth(token))

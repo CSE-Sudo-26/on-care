@@ -1174,9 +1174,9 @@ class LocalApiInterceptor extends Interceptor {
     'daily_carbs_g': 275,
     'daily_protein_g': 100,
     'daily_fat_g': 55,
-    'weekly_workout_goal': 7,
-    'weekly_exercise_minutes_goal': 150,
-    'weekly_burn_goal': 1500,
+    'weekly_workout_goal': null,
+    'weekly_exercise_minutes_goal': null,
+    'weekly_burn_goal': null,
     'onboarded': true,
   };
 

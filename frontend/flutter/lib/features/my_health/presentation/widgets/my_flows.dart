@@ -463,15 +463,15 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   );
   late final TextEditingController _workouts = _ctl(
     widget.initial.weeklyWorkoutGoal,
-    7,
+    UserProfile.defaultWeeklyWorkoutGoal,
   );
   late final TextEditingController _minutes = _ctl(
     widget.initial.weeklyExerciseMinutesGoal,
-    150,
+    UserProfile.defaultWeeklyExerciseMinutesGoal,
   );
   late final TextEditingController _burn = _ctl(
     widget.initial.weeklyBurnGoal,
-    1500,
+    UserProfile.defaultWeeklyBurnGoal,
   );
   bool _saving = false;
 
@@ -505,7 +505,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
-      await ref
+      final UserProfile updatedProfile = await ref
           .read(accountRepositoryProvider)
           .updateHealthGoals(
             dailyCalories: _val(_kcal),
@@ -519,7 +519,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
             weeklyBurnGoal: _val(_burn),
           );
       if (!mounted) return;
-      ref.invalidate(profileProvider);
+      ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
       ref.invalidate(dashboardSummaryProvider);
       navigator.pop();
       await Future<void>.delayed(const Duration(milliseconds: 400));

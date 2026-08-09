@@ -10,6 +10,19 @@ final accountRepositoryProvider = Provider<AccountRepository>(
   name: 'accountRepository',
 );
 
-final profileProvider = FutureProvider<UserProfile>((ref) {
-  return ref.watch(accountRepositoryProvider).fetchProfile();
-}, name: 'profile');
+class ProfileController extends AsyncNotifier<UserProfile> {
+  @override
+  Future<UserProfile> build() {
+    return ref.watch(accountRepositoryProvider).fetchProfile();
+  }
+
+  /// PUT 응답에 포함된 최신 프로필을 홈·식단·운동 화면에 즉시 공유한다.
+  void applyUpdatedProfile(UserProfile profile) {
+    state = AsyncData<UserProfile>(profile);
+  }
+}
+
+final profileProvider = AsyncNotifierProvider<ProfileController, UserProfile>(
+  ProfileController.new,
+  name: 'profile',
+);
