@@ -83,6 +83,11 @@ void main() {
       expect(navLabel(_en, NavLabel.coaching), _en.coachTitle);
     });
 
+    test('schedule navigation label matches the page title', () {
+      expect(navLabel(_ko, NavLabel.schedule), _ko.schedTitle);
+      expect(navLabel(_en, NavLabel.schedule), _en.schedTitle);
+    });
+
     testWidgets('unauthenticated boot lands on the login screen', (
       tester,
     ) async {

@@ -33,7 +33,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navClients => '고객';
 
   @override
-  String get navSchedule => '일정';
+  String get navSchedule => '스케줄';
 
   @override
   String get navCoaching => 'AI 코칭';
