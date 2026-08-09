@@ -253,7 +253,10 @@ def test_update_rejects_out_of_range_values(client, routine):
             headers=_h(token),
             json={"name": "   "},
         ).status_code
-        in (400, 422)
+        # 400 하나로 좁힌다 — `min_length=1` 은 공백을 통과시키고(스키마에
+        # strip 이 없다) 라우터의 strip() 검사가 400 을 내는 것이 확정적이다.
+        # 422 를 함께 허용하면 그 분기가 사라져도 테스트가 통과한다.
+        == 400
     )
 
 

@@ -734,6 +734,18 @@ class _RoutineActionsState extends ConsumerState<_RoutineActions> {
             minutes: result.minutes,
             reason: result.reason,
           );
+    } on StateError {
+      // 404 — 그 루틴이 서버에 이미 없다(다른 기기에서 먼저 지웠거나 담당이
+      // 풀렸다). 뒤처진 쪽은 화면이므로 목록을 다시 읽어 서버를 따라간다.
+      // 그대로 두면 없는 루틴이 남아 다시 눌러도 계속 실패한다.
+      if (mounted) {
+        setState(() => _busy = false);
+        ref.invalidate(assignedRoutinesProvider(widget.clientId));
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('이미 삭제된 루틴이에요')),
+      );
+      return;
     } catch (_) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(
@@ -777,6 +789,17 @@ class _RoutineActionsState extends ConsumerState<_RoutineActions> {
       await ref
           .read(trainerRoutineRepositoryProvider)
           .deleteRoutine(widget.clientId, widget.routine.id);
+    } on StateError {
+      // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 실패로만 알리고
+      // 끝내지 않고, 목록을 다시 읽어 그 줄을 화면에서 걷어낸다.
+      if (mounted) {
+        setState(() => _busy = false);
+        ref.invalidate(assignedRoutinesProvider(widget.clientId));
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('이미 삭제된 루틴이에요')),
+      );
+      return;
     } catch (_) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(
@@ -866,21 +889,27 @@ class _RoutineEditDialogState extends State<_RoutineEditDialog> {
   void _submit() {
     final name = _name.text.trim();
     final minutes = int.tryParse(_minutes.text.trim());
+    final reason = _reason.text.trim();
     if (name.isEmpty) {
       setState(() => _error = '루틴 이름을 입력해 주세요');
       return;
     }
-    // 서버 범위(0~600)와 같은 값으로 미리 거른다 — 422 를 받아 오는 것보다
-    // 그 자리에서 알려 주는 편이 낫다.
+    // 서버 제약(name 100자·minutes 0~600·reason 200자)과 같은 값으로 미리
+    // 거른다 — 422 를 받아 오면 "수정하지 못했어요"라는 애매한 문구만 남아,
+    // 무엇이 문제인지 트레이너가 알 수 없다.
+    if (name.length > 100) {
+      setState(() => _error = '루틴 이름은 100자 이내로 입력해 주세요');
+      return;
+    }
     if (minutes == null || minutes < 0 || minutes > 600) {
       setState(() => _error = '시간은 0~600분 사이로 입력해 주세요');
       return;
     }
-    Navigator.of(context).pop((
-      name: name,
-      minutes: minutes,
-      reason: _reason.text.trim(),
-    ));
+    if (reason.length > 200) {
+      setState(() => _error = '사유는 200자 이내로 입력해 주세요');
+      return;
+    }
+    Navigator.of(context).pop((name: name, minutes: minutes, reason: reason));
   }
 
   @override
