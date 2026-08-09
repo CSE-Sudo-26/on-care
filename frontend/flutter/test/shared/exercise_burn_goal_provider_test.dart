@@ -9,12 +9,12 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 
 class _TestProfileController extends ProfileController {
-  _TestProfileController(this.load);
+  _TestProfileController(this._load);
 
-  final Future<UserProfile> Function() load;
+  final Future<UserProfile> Function() _load;
 
   @override
-  Future<UserProfile> build() => load();
+  Future<UserProfile> build() => _load();
 }
 
 void main() {
