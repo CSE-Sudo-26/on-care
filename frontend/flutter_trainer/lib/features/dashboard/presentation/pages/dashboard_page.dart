@@ -18,6 +18,7 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 대시보드 — the console's home: what needs doing today.
 ///
@@ -31,21 +32,22 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
     final today = DateTime.now();
 
     return PageScaffold(
-      title: '대시보드',
-      subtitle: koreanDateLabel(today),
+      title: l.dashTitle,
+      subtitle: dateLabel(l, today),
       actions: <Widget>[
         ActionButton(
-          label: '일정 추가',
+          label: l.dashAddSchedule,
           icon: Icons.add,
           onPressed: () => context.go(AppRoutes.scheduleView('day')),
         ),
         ActionButton(
-          label: 'AI 루틴 만들기',
+          label: l.dashCreateAiRoutine,
           icon: Icons.auto_awesome,
           primary: true,
           onPressed: () => context.go(AppRoutes.coaching),
@@ -56,12 +58,12 @@ class DashboardPage extends ConsumerWidget {
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (e, _) => const Padding(
+        error: (e, _) => Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
           child: Center(
             child: Text(
-              '대시보드를 불러오지 못했어요',
-              style: TextStyle(color: AppColors.mutedForeground),
+              l.dashLoadFailed,
+              style: const TextStyle(color: AppColors.mutedForeground),
             ),
           ),
         ),
@@ -156,47 +158,48 @@ class _KpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final cards = <Widget>[
       StatCard(
-        label: '오늘 예약',
+        label: l.dashTodayReservations,
         // `null` means the source has no reservation data (real-API
         // mode) — showing "0건" there would be a lie, so show a dash.
         value: reservations?.toString() ?? '-',
-        unit: '건',
+        unit: l.dashUnitCount,
         icon: Icons.event_available_outlined,
-        hint: '스케줄에서 보기',
+        hint: l.dashSeeInSchedule,
         onTap: () => context.go(AppRoutes.scheduleView('day')),
       ),
       StatCard(
-        label: '담당 고객',
+        label: l.dashMyClients,
         value: '${summary.activeClients}',
-        unit: '명',
+        unit: l.dashUnitPeople,
         icon: Icons.groups_outlined,
         hint: summary.totalClients > summary.activeClients
-            ? '휴면 ${summary.totalClients - summary.activeClients}명'
-            : '전원 활성',
+            ? l.dashDormantClients(summary.totalClients - summary.activeClients)
+            : l.dashAllActive,
         onTap: () => context.go(AppRoutes.clients),
       ),
       StatCard(
-        label: '답장 필요',
+        label: l.dashNeedsReply,
         value: '${summary.unreadTotal}',
-        unit: '건',
+        unit: l.dashUnitCount,
         icon: Icons.mark_chat_unread_outlined,
         tone: summary.unreadTotal > 0 ? StatTone.info : StatTone.positive,
         hint: summary.unreadTotal > 0
-            ? '고객 ${summary.unreadClients}명 대기 중'
-            : '모두 답장했어요',
+            ? l.dashWaitingClients(summary.unreadClients)
+            : l.dashAllReplied,
         onTap: () => context.go(AppRoutes.clientsFiltered('unread')),
       ),
       StatCard(
-        label: '주의 고객',
+        label: l.dashAttentionClients,
         value: '${summary.healthAttentionCount}',
-        unit: '명',
+        unit: l.dashUnitPeople,
         icon: Icons.report_gmailerrorred_outlined,
         tone: summary.healthAttentionCount == 0
             ? StatTone.positive
             : StatTone.warn,
-        hint: summary.healthAttentionCount == 0 ? '이상 없음' : '나트륨·이행률 확인',
+        hint: summary.healthAttentionCount == 0 ? l.dashNoIssues : l.dashCheckSodiumCompletion,
         onTap: () => context.go(AppRoutes.clientsFiltered('attention')),
       ),
     ];
@@ -247,6 +250,7 @@ class _WeeklyCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // 평균도 지난 요일만으로 낸다. 아직 오지 않은 날을 0으로 함께 나누면
     // 주 초반에는 실제보다 낮은 이행률이 나온다.
     final elapsed = elapsedWeekdays(DateTime.now());
@@ -255,12 +259,12 @@ class _WeeklyCompletionCard extends StatelessWidget {
         ? null
         : (counted.reduce((a, b) => a + b) / counted.length).round();
     return SectionCard(
-      title: '주간 세션 이행률',
+      title: l.dashWeeklyCompletion,
       icon: Icons.bar_chart,
       trailing: average == null
           ? null
           : Text(
-              '평균 $average%',
+              l.dashAveragePercent(average),
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -268,13 +272,13 @@ class _WeeklyCompletionCard extends StatelessWidget {
               ),
             ),
       child: values.isEmpty
-          ? const EmptyHint(
-              message: '아직 이번 주 기록이 없어요',
+          ? EmptyHint(
+              message: l.dashNoRecordsThisWeek,
               icon: Icons.bar_chart_outlined,
             )
           : BarSeriesChart(
               values: values,
-              labels: weekdayLabels,
+              labels: weekdayLabels(l),
               maxValue: 100,
               showValues: true,
               valueSuffix: '%',

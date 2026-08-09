@@ -27,7 +27,7 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   }) async {
     await Future<void>.delayed(_loginDelay);
     if (email.trim().isEmpty || password.isEmpty) {
-      throw const AuthException('이메일과 비밀번호를 입력해 주세요');
+      throw const AuthException(AuthFailure.emptyCredentials);
     }
     return _demoTokens('token');
   }
@@ -41,7 +41,7 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   }) async {
     await Future<void>.delayed(_loginDelay);
     if (email.trim().isEmpty || password.isEmpty) {
-      throw const AuthException('이메일과 비밀번호를 입력해 주세요');
+      throw const AuthException(AuthFailure.emptyCredentials);
     }
     // 데모에는 코드를 검증할 백엔드가 없다. 화면이 기존과 똑같이 동작하도록
     // 코드는 보지 않고 통과시킨다.
@@ -55,7 +55,7 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   }) async {
     await Future<void>.delayed(_loginDelay);
     if (token.isEmpty) {
-      throw const AuthException('소셜 로그인 토큰이 없어요');
+      throw const AuthException(AuthFailure.noSocialToken);
     }
     return _demoTokens(provider);
   }
@@ -63,7 +63,7 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   @override
   Future<TrainerAuthTokens> refresh(String refreshToken) async {
     if (refreshToken.isEmpty) {
-      throw const AuthException('세션이 만료됐어요. 다시 로그인해 주세요.');
+      throw const AuthException(AuthFailure.sessionExpired);
     }
     return _demoTokens('token');
   }
@@ -71,7 +71,7 @@ class MockTrainerAuthRepository implements TrainerAuthRepository {
   @override
   Future<TrainerProfile> fetchProfile(String accessToken) async {
     if (accessToken.isEmpty) {
-      throw const AuthException('세션이 만료됐어요. 다시 로그인해 주세요.');
+      throw const AuthException(AuthFailure.sessionExpired);
     }
     return seedTrainerProfile;
   }

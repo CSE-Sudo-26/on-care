@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// Reads a client's AI-suggested routine from the local drift DB.
 class AiRoutineRepository {
@@ -75,7 +76,7 @@ class AiRoutineRepository {
                 (t) =>
                     t.date.equals(date) &
                     t.clientName.equals(clientName) &
-                    t.status.equals('예정'),
+                    t.status.equals(ScheduleStatus.upcoming),
               )
               ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
                 (t) => OrderingTerm(expression: t.time),
@@ -109,9 +110,9 @@ class AiRoutineRepository {
             date: date,
             time: '${hour.toString().padLeft(2, '0')}:00',
             clientName: Value(clientName),
-            type: const Value('1:1 PT'),
+            type: const Value(SessionType.personalTraining),
             durationMinutes: const Value(60),
-            status: '예정',
+            status: ScheduleStatus.upcoming,
             programJson: Value(jsonEncode(program)),
           ),
         );

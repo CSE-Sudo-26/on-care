@@ -423,7 +423,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
     refreshCalls++;
     if (!onRefreshEntered.isCompleted) onRefreshEntered.complete();
     if (refreshDelay > Duration.zero) await Future<void>.delayed(refreshDelay);
-    if (refreshThrows) throw const AuthException('refresh failed');
+    if (refreshThrows) throw const AuthException(AuthFailure.sessionExpired);
     return TrainerAuthTokens(
       access: 'rotated-access',
       refresh: refreshReturnsEmptyRefresh ? '' : 'rotated-refresh',
