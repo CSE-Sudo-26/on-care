@@ -11,6 +11,7 @@ import 'package:oncare/features/ai_coach/presentation/controllers/ai_coach_contr
 import 'package:oncare/features/ai_coach/presentation/controllers/chat_controller.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
@@ -84,7 +85,11 @@ void main() {
         isTrue,
       );
       expect(container.read(notificationControllerProvider).unreadCount, 0);
-      expect(await memberCoachBefore.fetchChat(), hasLength(2));
+      // 시드 15개 + 방금 보낸 1개. 개수를 상수로 적으면 시드가 늘 때마다
+      // 여기가 깨지므로, 시드 길이는 새 리포지토리에서 읽어 비교한다.
+      final int seedLength =
+          (await MockMemberCoachRepository().fetchChat()).length;
+      expect(await memberCoachBefore.fetchChat(), hasLength(seedLength + 1));
 
       container.read(sessionFeatureResetProvider)();
 
@@ -105,7 +110,7 @@ void main() {
         memberCoachRepositoryProvider,
       );
       expect(identical(memberCoachAfter, memberCoachBefore), isFalse);
-      expect(await memberCoachAfter.fetchChat(), hasLength(1));
+      expect(await memberCoachAfter.fetchChat(), hasLength(seedLength));
       expect(
         identical(container.read(dietRepositoryProvider), dietRepositoryBefore),
         isFalse,

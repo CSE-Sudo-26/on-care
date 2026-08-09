@@ -2462,6 +2462,60 @@ abstract class AppLocalizations {
   /// **'{done}/{total} done'**
   String coachProgressDone(int done, int total);
 
+  /// No description provided for @coachChatSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal trainer · Available'**
+  String get coachChatSubtitle;
+
+  /// No description provided for @coachChatBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get coachChatBack;
+
+  /// No description provided for @coachChatLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the conversation'**
+  String get coachChatLoadFailed;
+
+  /// No description provided for @coachChatSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send your message. Please try again'**
+  String get coachChatSendFailed;
+
+  /// No description provided for @coachChatInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message your trainer...'**
+  String get coachChatInputHint;
+
+  /// No description provided for @coachChatDemoAnalyzed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI analyzed your diet and exercise data'**
+  String get coachChatDemoAnalyzed;
+
+  /// No description provided for @coachChatDemoReportSent.
+  ///
+  /// In en, this message translates to:
+  /// **'A summary report was sent to {trainer}'**
+  String coachChatDemoReportSent(String trainer);
+
+  /// No description provided for @coachChatDemoRoutineReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'You received a routine based on AI analysis'**
+  String get coachChatDemoRoutineReceived;
+
+  /// No description provided for @coachChatDemoNotified.
+  ///
+  /// In en, this message translates to:
+  /// **'It was also delivered as a notification'**
+  String get coachChatDemoNotified;
+
   /// No description provided for @coachCtaChat.
   ///
   /// In en, this message translates to:

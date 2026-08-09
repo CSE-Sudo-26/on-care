@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v4']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v5']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,11 +26,13 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v4` (was `_v3`): the roster grew from three clients to
-/// fifteen. Without the bump, anyone who already opened the app today
-/// would keep the old three until the date rolled over — the same reason
-/// `_v2` existed (it backfilled `sodiumWeekJson` after that column was
-/// added, review PR 247).
+/// The flag is `_v5` (was `_v4`): 김민수's thread grew from five messages
+/// to fifteen so the member and trainer demos tell the same story (#543).
+/// `_v4` had bumped `_v3` when the roster grew from three clients to
+/// fifteen. Without a bump, anyone who already opened the app today would
+/// keep the old rows until the date rolled over — the same reason `_v2`
+/// existed (it backfilled `sodiumWeekJson` after that column was added,
+/// review PR 247).
 ///
 /// **User data is preserved.** Only rows whose `id` starts with `seed-`
 /// are wiped, so anything added at runtime (e.g. a trainer's chat reply,
@@ -44,7 +46,7 @@ part 'seed_clients.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v4') == today) return;
+  if (await db.readValue('trainer_seeded_v5') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -155,7 +157,11 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               // Anchored at the fixed ancient epoch (oldest first, a
               // minute apart) so any runtime reply — and any preserved
               // reply from a previous day — always sorts after the seed.
-              createdAt: chatEpoch.add(Duration(minutes: i)),
+              // dayIndex 는 여러 날에 걸친 스레드를 실제로 날짜가 다른
+              // 시각으로 만든다 — 라벨만 갈라 두면 화면이 하루로 묶는다.
+              createdAt: chatEpoch.add(
+                Duration(days: client.chat[i].dayIndex, minutes: i),
+              ),
             ),
         ]);
       });
@@ -205,7 +211,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v4', today);
+    await db.putValue('trainer_seeded_v5', today);
   });
 }
 
@@ -248,10 +254,17 @@ class _History {
 }
 
 class _Chat {
-  const _Chat(this.sender, this.text, this.timeLabel);
+  const _Chat(this.sender, this.text, this.timeLabel, {this.dayIndex = 0});
   final String sender; // trainer|client
   final String text;
   final String timeLabel;
+
+  /// 며칠째 대화인가 (0 = 스레드의 첫 날). 여러 날에 걸친 스레드에서만 쓴다.
+  ///
+  /// `timeLabel` 은 화면에 보일 문자열일 뿐이라 날짜 정보가 아니다. 전에는
+  /// 라벨만 '화/수' 로 갈라 놓고 `createdAt` 은 전부 몇 분 안에 몰려 있어서,
+  /// 날짜로 묶으려는 쪽(대화 중간의 AI 분석 안내)에서 하루로 보였다.
+  final int dayIndex;
 }
 
 class _Client {

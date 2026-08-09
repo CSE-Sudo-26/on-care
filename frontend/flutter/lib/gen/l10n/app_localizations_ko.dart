@@ -1292,6 +1292,35 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
+
+  @override
+  String get coachChatBack => '뒤로가기';
+
+  @override
+  String get coachChatLoadFailed => '대화를 불러오지 못했어요';
+
+  @override
+  String get coachChatSendFailed => '메시지 전송에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachChatInputHint => '트레이너에게 메시지 보내기...';
+
+  @override
+  String get coachChatDemoAnalyzed => 'AI가 내 식단·운동 데이터를 분석했어요';
+
+  @override
+  String coachChatDemoReportSent(String trainer) {
+    return '$trainer님께 요약 리포트가 전송됐어요';
+  }
+
+  @override
+  String get coachChatDemoRoutineReceived => 'AI 분석 기반 루틴을 받았어요';
+
+  @override
+  String get coachChatDemoNotified => '알림으로도 전달됐어요';
+
+  @override
   String get coachCtaChat => 'AI와 대화하기';
 
   @override
