@@ -3313,6 +3313,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} unread'**
   String notifUnreadCount(int count);
+
+  /// No description provided for @myDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get myDeleteAccount;
+
+  /// No description provided for @myDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get myDeleteAction;
+
+  /// No description provided for @myDeleteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your client links and bookings go with it'**
+  String get myDeleteHint;
+
+  /// No description provided for @myDeleteDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo mode has no account to delete'**
+  String get myDeleteDemo;
+
+  /// No description provided for @myDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get myDeleteTitle;
+
+  /// No description provided for @myDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your client links and bookings are removed and your clients are notified. This can\'t be undone.'**
+  String get myDeleteBody;
+
+  /// No description provided for @myDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete your account. Please try again in a moment'**
+  String get myDeleteFailed;
+
+  /// No description provided for @myDeleteConfirmPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your name ({name}) to continue'**
+  String myDeleteConfirmPrompt(String name);
 }
 
 class _AppLocalizationsDelegate

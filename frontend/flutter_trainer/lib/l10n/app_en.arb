@@ -1245,5 +1245,20 @@
         "type": "int"
       }
     }
+  },
+  "myDeleteAccount": "Delete account",
+  "myDeleteAction": "Delete",
+  "myDeleteHint": "Your client links and bookings go with it",
+  "myDeleteDemo": "Demo mode has no account to delete",
+  "myDeleteTitle": "Delete your account?",
+  "myDeleteBody": "Your client links and bookings are removed and your clients are notified. This can't be undone.",
+  "myDeleteFailed": "Couldn't delete your account. Please try again in a moment",
+  "myDeleteConfirmPrompt": "Type your name ({name}) to continue",
+  "@myDeleteConfirmPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

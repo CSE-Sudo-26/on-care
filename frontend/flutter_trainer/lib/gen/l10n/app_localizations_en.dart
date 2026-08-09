@@ -1832,4 +1832,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifUnreadCount(int count) {
     return '$count unread';
   }
+
+  @override
+  String get myDeleteAccount => 'Delete account';
+
+  @override
+  String get myDeleteAction => 'Delete';
+
+  @override
+  String get myDeleteHint => 'Your client links and bookings go with it';
+
+  @override
+  String get myDeleteDemo => 'Demo mode has no account to delete';
+
+  @override
+  String get myDeleteTitle => 'Delete your account?';
+
+  @override
+  String get myDeleteBody =>
+      'Your client links and bookings are removed and your clients are notified. This can\'t be undone.';
+
+  @override
+  String get myDeleteFailed =>
+      'Couldn\'t delete your account. Please try again in a moment';
+
+  @override
+  String myDeleteConfirmPrompt(String name) {
+    return 'Type your name ($name) to continue';
+  }
 }
