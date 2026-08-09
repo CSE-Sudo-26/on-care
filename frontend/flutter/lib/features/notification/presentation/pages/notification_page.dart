@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/atoms/app_badge.dart';
 import 'package:oncare/design_system/atoms/app_card.dart';
+import 'package:oncare/design_system/theme/app_theme.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/notification/domain/entities/alert_item.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
@@ -28,7 +29,7 @@ class NotificationPage extends ConsumerWidget {
     final state = ref.watch(notificationControllerProvider);
     final notifier = ref.read(notificationControllerProvider.notifier);
 
-    return Scaffold(
+    final Widget page = Scaffold(
       key: const Key('notificationPage'),
       appBar: AppBar(
         title: Text(l.pageNotificationTitle),
@@ -66,6 +67,9 @@ class NotificationPage extends ConsumerWidget {
             )
           : null,
     );
+    // The product currently has a light-only design. Keep this route on the
+    // shared light theme even when ThemeMode.system selects the dark theme.
+    return Theme(data: AppTheme.light(), child: page);
   }
 }
 
