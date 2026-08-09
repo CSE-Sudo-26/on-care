@@ -15,7 +15,12 @@ from app.models.models import (
     TrainerSchedule,
     User,
 )
-from app.schemas.reservation_api import ReservationOut, TrainerSlotOut
+from app.schemas.reservation_api import (
+    MyReservationOut,
+    ReservationOut,
+    TrainerSlotOut,
+)
+from app.services import notification_service
 
 SEOUL = ZoneInfo("Asia/Seoul")
 
@@ -162,21 +167,24 @@ def close_slot(db: Session, trainer_id: str, slot_id: str) -> TrainerSlotOut:
     return update_slot(db, trainer_id, slot_id, {"is_closed": True})
 
 
-def cancel_member_reservations_for_account_deletion(
-    db: Session, member_id: str
-) -> None:
-    """Cancel a member's bookings before deleting their account.
+class ReservationNotFound(Exception):
+    pass
 
-    The caller owns the transaction. Reservations and their slots are locked,
-    seats are restored, reservation rows are flushed first to satisfy the
-    restrictive schedule/member FKs, and generated schedules are then removed.
+
+class ReservationTooLate(Exception):
+    pass
+
+
+def _release(db: Session, reservations: list[TrainerReservation]) -> None:
+    """예약을 지우고 좌석과 생성된 일정을 되돌린다. **커밋하지 않는다.**
+
+    회원 탈퇴와 개별 취소가 같은 일을 한다 — 좌석 복구, 예약 삭제, 그 예약이
+    만든 트레이너 일정 제거. 두 곳에 따로 쓰면 한쪽만 고쳐지는 사고가 난다
+    (실제로 취소 기능이 없던 동안 이 로직은 탈퇴 경로에만 있었다). (#502)
+
+    잠금·flush 순서는 그대로다: 예약과 슬롯을 id 순으로 잠가 데드락을 피하고,
+    restrictive FK 때문에 예약 행을 먼저 flush 한 뒤 일정을 지운다.
     """
-    reservations = db.scalars(
-        select(TrainerReservation)
-        .where(TrainerReservation.member_id == member_id)
-        .order_by(TrainerReservation.id)
-        .with_for_update()
-    ).all()
     if not reservations:
         return
 
@@ -211,6 +219,22 @@ def cancel_member_reservations_for_account_deletion(
         if schedule is not None:
             db.delete(schedule)
     db.flush()
+
+
+def cancel_member_reservations_for_account_deletion(
+    db: Session, member_id: str
+) -> None:
+    """Cancel a member's bookings before deleting their account.
+
+    The caller owns the transaction.
+    """
+    reservations = db.scalars(
+        select(TrainerReservation)
+        .where(TrainerReservation.member_id == member_id)
+        .order_by(TrainerReservation.id)
+        .with_for_update()
+    ).all()
+    _release(db, list(reservations))
 
 
 def reserve(
@@ -295,3 +319,82 @@ def reserve(
         status=reservation.status,
         created_at=_aware(reservation.created_at),
     )
+
+
+def list_member_reservations(
+    db: Session, member_id: str, *, now: datetime | None = None
+) -> list[MyReservationOut]:
+    """회원의 예약 목록(예정된 것 먼저). 지난 예약도 함께 준다.
+
+    지난 것을 숨기지 않는 이유: 회원이 "내가 그 시간에 예약했었나" 를 확인하는
+    자리이기도 하다. 대신 `cancellable` 로 취소 가능 여부를 서버가 판단해 준다.
+    """
+    current = now or datetime.now(timezone.utc)
+    rows = db.execute(
+        select(TrainerReservation, TrainerReservationSlot)
+        .join(
+            TrainerReservationSlot,
+            TrainerReservationSlot.id == TrainerReservation.slot_id,
+        )
+        .where(TrainerReservation.member_id == member_id)
+        .order_by(TrainerReservationSlot.starts_at)
+    ).all()
+    return [
+        MyReservationOut(
+            id=reservation.id,
+            slot_id=slot.id,
+            trainer_id=slot.trainer_id,
+            starts_at=_aware(slot.starts_at),
+            cancellable=_aware(slot.starts_at) > current,
+        )
+        for reservation, slot in rows
+    ]
+
+
+def cancel(
+    db: Session, member_id: str, reservation_id: str, *, now: datetime | None = None
+) -> None:
+    """회원이 자기 예약을 취소한다. 좌석과 트레이너 일정이 함께 돌아간다.
+
+    - 없는 예약이거나 **남의 예약** → [ReservationNotFound]. 남의 것을 403 이 아니라
+      404 로 두는 이유는 상담 요청과 같다 — 존재 여부조차 드러내지 않는다.
+    - 이미 시작한 슬롯 → [ReservationTooLate]. 수업이 시작된 뒤의 취소는 자리를
+      비워 주는 게 아니라 기록을 지우는 일이라, 트레이너가 판단할 몫이다.
+    """
+    current = now or datetime.now(timezone.utc)
+    reservation = db.scalar(
+        select(TrainerReservation)
+        .where(
+            TrainerReservation.id == reservation_id,
+            TrainerReservation.member_id == member_id,
+        )
+        .with_for_update()
+    )
+    if reservation is None:
+        raise ReservationNotFound("예약을 찾을 수 없습니다.")
+
+    slot = db.get(TrainerReservationSlot, reservation.slot_id)
+    starts_at = _aware(slot.starts_at) if slot is not None else None
+    if starts_at is not None and starts_at <= current:
+        raise ReservationTooLate("이미 시작한 수업은 취소할 수 없습니다.")
+
+    member_name = db.scalar(select(User.name).where(User.id == member_id)) or ""
+    trainer_id = slot.trainer_id if slot is not None else None
+
+    _release(db, [reservation])
+
+    # 트레이너는 이 취소를 앱에서 다시 보지 않으면 알 수 없다 — 자기 일정에서
+    # 한 줄이 조용히 사라질 뿐이다. (#502, 인박스는 #503)
+    if trainer_id is not None:
+        local = starts_at.astimezone(SEOUL) if starts_at is not None else None
+        notification_service.queue_for_trainer(
+            db,
+            trainer_id=trainer_id,
+            title="예약이 취소되었습니다",
+            body=(
+                f"{member_name} 회원 · {local:%m월 %d일 %H:%M}"
+                if local is not None
+                else f"{member_name} 회원"
+            ),
+        )
+    db.commit()

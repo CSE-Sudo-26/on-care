@@ -156,3 +156,34 @@ def unread_count(db: Session, member_id: str) -> int:
         )
     ).all()
     return len(rows)
+
+
+def queue_for_trainer(
+    db: Session,
+    *,
+    trainer_id: str,
+    title: str,
+    body: str = "",
+    category: str = "system",
+) -> Notification:
+    """트레이너에게 남기는 알림. **커밋하지 않는다**([queue] 와 같은 이유).
+
+    회원용 [queue] 와 갈라 두는 이유는 수신 설정이다. `wants` 가 보는
+    `MemberNotificationSetting` 은 회원 계정의 설정이라, 트레이너에게 회원 기본값을
+    적용하는 꼴이 된다. 트레이너 설정은 `trainer_profiles.notify_*` 에 따로 있고
+    종류별 게이트는 인박스 작업에서 붙인다(#503).
+
+    `Notification.user_id` 는 일반 사용자 FK 이고 `GET /notifications` 는
+    `CurrentUser` 기준이라, 이 행은 트레이너가 로그인하면 그대로 읽힌다 —
+    스키마 변경이 필요 없다.
+    """
+    notification = Notification(
+        id=f"noti-{uuid.uuid4().hex[:12]}",
+        user_id=trainer_id,
+        title=title,
+        body=body,
+        category=category,
+        read=False,
+    )
+    db.add(notification)
+    return notification

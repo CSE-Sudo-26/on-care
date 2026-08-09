@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -15,6 +16,13 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 class _FailingGymRepository implements GymRepository {
   const _FailingGymRepository();
+
+  @override
+  Future<List<MyReservation>> fetchMyReservations() async =>
+      const <MyReservation>[];
+
+  @override
+  Future<void> cancelReservation(String reservationId) async {}
 
   @override
   Future<void> disconnectMyGym() async {}

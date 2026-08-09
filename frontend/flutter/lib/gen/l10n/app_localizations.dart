@@ -2857,6 +2857,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re connected with your trainer. You can start chatting now.'**
   String get exConsultAcceptedGuide;
+
+  /// No description provided for @exMyReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'My bookings'**
+  String get exMyReservations;
+
+  /// No description provided for @exCancelReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get exCancelReservation;
+
+  /// No description provided for @exCancelKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get exCancelKeep;
+
+  /// No description provided for @exCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this booking?'**
+  String get exCancelConfirmTitle;
+
+  /// No description provided for @exCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the booking. Please try again in a moment'**
+  String get exCancelFailed;
+
+  /// No description provided for @exReservationPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Past booking'**
+  String get exReservationPast;
+
+  /// No description provided for @exCancelConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The {when} booking is cancelled and the slot reopens.'**
+  String exCancelConfirmBody(String when);
+
+  /// No description provided for @exCancelDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled the {when} booking'**
+  String exCancelDone(String when);
 }
 
 class _AppLocalizationsDelegate

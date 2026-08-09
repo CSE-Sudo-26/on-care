@@ -1517,4 +1517,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exConsultAcceptedGuide =>
       'You\'re connected with your trainer. You can start chatting now.';
+
+  @override
+  String get exMyReservations => 'My bookings';
+
+  @override
+  String get exCancelReservation => 'Cancel booking';
+
+  @override
+  String get exCancelKeep => 'Keep';
+
+  @override
+  String get exCancelConfirmTitle => 'Cancel this booking?';
+
+  @override
+  String get exCancelFailed =>
+      'Couldn\'t cancel the booking. Please try again in a moment';
+
+  @override
+  String get exReservationPast => 'Past booking';
+
+  @override
+  String exCancelConfirmBody(String when) {
+    return 'The $when booking is cancelled and the slot reopens.';
+  }
+
+  @override
+  String exCancelDone(String when) {
+    return 'Cancelled the $when booking';
+  }
 }
