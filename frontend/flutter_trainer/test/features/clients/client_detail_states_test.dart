@@ -24,7 +24,11 @@ void main() {
     // the same i, so a length mismatch is a RangeError on tap (extra
     // label) or a tab with no way to reach it (extra section). They are
     // edited in different files, so the pairing needs a guard.
-    expect(clientSectionCount, AppRoutes.clientTabSections.length);
+    // 실제 라벨 목록의 길이까지 본다 — 상수만 비교하면 라벨이 하나 늘거나
+    // 빠져도 통과한다.
+    final labels = clientSectionLabels(_ko);
+    expect(labels, hasLength(clientSectionCount));
+    expect(labels, hasLength(AppRoutes.clientTabSections.length));
     // Every tabbed section must also be an addressable route, and the
     // chat must NOT be a tab — it's the header's message button.
     for (final tab in AppRoutes.clientTabSections) {

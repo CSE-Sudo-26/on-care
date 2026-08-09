@@ -28,8 +28,11 @@ List<String> weekdayNames(AppLocalizations l) => <String>[
 /// 어느 언어로 그리는지 명시하는 편이 읽기도 쉽다. (#501)
 String dateLabel(AppLocalizations l, DateTime d, {DateTime? relativeTo}) {
   final base = relativeTo ?? DateTime.now();
-  final today = DateTime(base.year, base.month, base.day);
-  final target = DateTime(d.year, d.month, d.day);
+  // 달력 날짜만 비교한다 — 로컬 자정끼리 빼면 서머타임이 시작하는 날은 두
+  // 자정 사이가 23시간이라 `inDays` 가 0 이 되고, 내일이 `오늘`로 그려진다.
+  // UTC 로 만들면 하루가 항상 24시간이라 날짜 차이만 남는다.
+  final today = DateTime.utc(base.year, base.month, base.day);
+  final target = DateTime.utc(d.year, d.month, d.day);
   final diff = target.difference(today).inDays;
   final prefix = switch (diff) {
     0 => l.dateToday,

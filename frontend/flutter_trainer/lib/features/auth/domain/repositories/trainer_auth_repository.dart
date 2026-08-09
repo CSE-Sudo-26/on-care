@@ -2,9 +2,6 @@ import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// Raised when a login attempt is rejected (empty credentials, invalid
-/// credentials, or a network failure). Carries a Korean, user-facing
-/// [message] ready to surface in a snackbar.
 /// 로그인·가입 실패의 **원인 코드**. 문구가 아니다.
 ///
 /// 리포지토리에는 컨텍스트가 없어 로케일을 알 수 없다. 여기서 한국어 문장을
@@ -23,13 +20,16 @@ enum AuthFailure {
   unknown,
 }
 
+/// 로그인·가입이 거부됐을 때 던진다. 사용자에게 보일 문구가 아니라
+/// [AuthFailure] 코드를 들고 나가며, 문구는 화면이 [authFailureText] 로 붙인다.
 class AuthException implements Exception {
   const AuthException(this.failure, {this.detail});
 
   /// 무엇이 잘못됐는가. 화면이 이 값으로 문구를 고른다.
   final AuthFailure failure;
 
-  /// 서버가 준 사유(있을 때). 서버 문구의 다국어는 별건이라 그대로 보여 준다.
+  /// 로그·디버깅용 상세(파서 메시지 등). **화면에 그리지 않는다** — 로케일도
+  /// 모르고 사용자가 읽을 문장도 아니다. [toString] 에만 실린다.
   final String? detail;
 
   @override
@@ -98,11 +98,12 @@ abstract class TrainerAuthRepository {
   Future<TrainerProfile> fetchProfile(String accessToken);
 }
 
-/// 실패 코드 → 현재 로케일의 문구. 서버가 준 사유가 있으면 그것을 우선한다
-/// (서버 문구의 다국어는 별건). (#501)
+/// 실패 코드 → 현재 로케일의 문구. (#501)
+///
+/// [AuthException.detail] 은 쓰지 않는다. 지금 그 자리에 들어오는 값은 서버가 준
+/// 사유가 아니라 토큰 파싱 실패의 [FormatException] 메시지뿐이라, 그대로 내보내면
+/// 로케일과 무관하게 파서 내부 문구가 사용자에게 보인다.
 String authFailureText(AppLocalizations l, AuthException e) {
-  final detail = e.detail;
-  if (detail != null && detail.trim().isNotEmpty) return detail;
   return switch (e.failure) {
     AuthFailure.invalidCredentials => l.authErrInvalidCredentials,
     AuthFailure.emailTaken => l.authErrEmailTaken,

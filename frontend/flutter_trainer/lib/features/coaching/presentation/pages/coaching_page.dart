@@ -1719,7 +1719,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        s.status,
+                        scheduleStatusLabel(l, s.status),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,

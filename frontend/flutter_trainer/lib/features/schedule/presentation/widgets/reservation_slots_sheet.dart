@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -186,8 +187,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map<String, dynamic> && data['detail'] is String) {
-        // 서버가 보낸 사유는 그대로 보여 준다 — 서버 문구의 다국어는 별건이다.
-        return data['detail'] as String;
+        // 서버가 보낸 사유는 한국어 화면에서만 그대로 쓴다. (#501)
+        return serverDetailOr(l, data['detail'] as String, l.slotActionFailed);
       }
     }
     if (error is StateError) {

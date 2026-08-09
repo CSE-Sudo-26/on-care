@@ -749,7 +749,11 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                 underline: const SizedBox.shrink(),
                 items: <DropdownMenuItem<String>>[
                   for (final t in _typeOptions)
-                    DropdownMenuItem<String>(value: t, child: Text(t)),
+                    // 값은 계약값 그대로, 보이는 문구만 로케일에서 가져온다.
+                    DropdownMenuItem<String>(
+                      value: t,
+                      child: Text(sessionTypeLabel(l, t)),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _type = v ?? _type),
               ),
@@ -1908,7 +1912,8 @@ class _StatusChip extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.pill),
       ),
       child: Text(
-        status,
+        // 색은 계약값(`status`)으로 고르고, 글자는 로케일 문구로 그린다.
+        scheduleStatusLabel(AppLocalizations.of(context), status),
         style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: fg),
       ),
     );

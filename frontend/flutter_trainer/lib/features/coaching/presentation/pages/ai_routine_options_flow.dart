@@ -140,8 +140,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _maxReachedStage = 1;
       });
     } catch (_) {
-      final AppLocalizations l = AppLocalizations.of(context);
       if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
       messenger.showSnackBar(
         SnackBar(content: Text(l.aiGenerateFailed)),
       );
@@ -825,7 +825,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                     borderRadius: BorderRadius.all(AppRadius.pill),
                   ),
                   child: Text(
-                    exercise.type,
+                    routineTypeLabel(l, exercise.type),
                     style: const TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w700,

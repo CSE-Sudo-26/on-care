@@ -100,11 +100,15 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
+      // 가입 화면은 요청 중에도 뒤로 가기가 열려 있다 — 떠난 뒤 실패가 돌아오면
+      // 해제된 context 로 로케일을 조회하게 된다.
+      if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
       messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).authErrSignUpFailed)),
       );

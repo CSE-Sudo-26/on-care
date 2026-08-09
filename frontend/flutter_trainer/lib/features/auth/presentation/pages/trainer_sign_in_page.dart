@@ -53,7 +53,10 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // 요청 중 화면을 떠났으면 여기서 끝낸다 — 아래 `AppLocalizations.of` 가
+      // 이미 해제된 context 를 조회하게 된다.
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).authErrSocialFailed)),
       );
@@ -79,11 +82,13 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
+      if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
       messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).authErrSignInFailed)),
       );

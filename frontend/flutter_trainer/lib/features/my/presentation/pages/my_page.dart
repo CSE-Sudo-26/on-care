@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -1435,10 +1436,14 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       // The server's own wording (현재 비밀번호가 일치하지 않습니다 …) is
       // more useful than anything generic we could substitute, and it is
       // always about the current password — that is the only value it
-      // verifies.
+      // verifies. 다만 그 문장은 한국어뿐이라 영어 화면에서는 기본 문구로
+      // 물러난다. (#501)
       if (mounted) {
         final AppLocalizations l = AppLocalizations.of(context);
-        _fail(_PasswordField.current, e.message ?? l.myPwChangeFailed);
+        _fail(
+          _PasswordField.current,
+          serverDetailOr(l, e.message, l.myPwChangeFailed),
+        );
       }
       return;
     } catch (_) {
