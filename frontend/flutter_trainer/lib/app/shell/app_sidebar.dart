@@ -11,6 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -73,6 +74,12 @@ class AppSidebar extends ConsumerWidget {
     final pendingConsultations = inbox
         ? ref.watch(consultationPendingCountProvider).valueOrNull
         : null;
+    // 알림함도 실 API 빌드에서만 — 데모에는 알림을 만드는 회원 백엔드가 없어
+    // 늘 비어 있는 행이 하나 더 생길 뿐이다. (#503)
+    final notificationInbox = ref.watch(notificationInboxEnabledProvider);
+    final unreadNotifications = notificationInbox
+        ? ref.watch(trainerUnreadNotificationsProvider).valueOrNull
+        : null;
 
     return Container(
       width: expanded ? AppLayout.sidebarWidth : AppLayout.sidebarRailWidth,
@@ -105,6 +112,7 @@ class AppSidebar extends ConsumerWidget {
                         // navDestinations and is rendered below with its
                         // count passed in directly.
                         NavBadge.pendingConsultations => null,
+                        NavBadge.unreadNotifications => null,
                         NavBadge.none => null,
                       },
                       onTap: () {
@@ -121,6 +129,18 @@ class AppSidebar extends ConsumerWidget {
                       badgeCount: pendingConsultations,
                       onTap: () {
                         onSelect(AppShell.consultationsBranchIndex);
+                        onNavigate?.call();
+                      },
+                    ),
+                  if (notificationInbox)
+                    _NavTile(
+                      destination: notificationsDestination,
+                      selected:
+                          currentIndex == AppShell.notificationsBranchIndex,
+                      expanded: expanded,
+                      badgeCount: unreadNotifications,
+                      onTap: () {
+                        onSelect(AppShell.notificationsBranchIndex);
                         onNavigate?.call();
                       },
                     ),

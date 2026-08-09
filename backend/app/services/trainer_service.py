@@ -361,8 +361,8 @@ def send_message(
     종류를 호출자가 정하는 이유: 주간 리포트도 이 함수로 나가므로, 여기서 판단하면
     일반 메시지와 구분할 수 없다.
 
-    회원이 보낸 메시지에는 알림을 만들지 않는다 — 트레이너 앱은 unread 배지를 따로
-    쓰고, 알림함은 회원 것이다.
+    회원이 보낸 메시지에는 **트레이너 알림**을 남긴다(#503). 사이드바 미읽음 배지는
+    지금 보고 있을 때만 눈에 들어오고, 지나가면 다시 볼 자리가 없었다.
     """
     msg = ChatMessage(
         id=f"chat-{uuid.uuid4().hex[:12]}",
@@ -373,6 +373,15 @@ def send_message(
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)
+    if sender == "member":
+        member_name = db.scalar(select(User.name).where(User.id == member_id))
+        notification_service.queue_for_trainer(
+            db,
+            trainer_id=trainer_id,
+            kind=notification_service.TRAINER_MESSAGE_KIND,
+            title=f"{member_name or '회원'} 회원의 메시지",
+            body=text,
+        )
     if notify is not None and sender == "trainer":
         trainer_name = db.scalar(select(User.name).where(User.id == trainer_id))
         notification_service.queue(

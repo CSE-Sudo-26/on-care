@@ -11,11 +11,16 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.models import MemberNotificationSetting, Notification
+from app.models.models import (
+    MemberNotificationSetting,
+    Notification,
+    TrainerProfile,
+)
 
 #: 알림 종류 → 회원 설정 키. 키는 사용자 앱이 이미 쓰던 것 그대로다
 #: (`my_flows.dart` 의 `_notifItems`) — 앱이 로컬에 저장하던 값을 서버로 옮기는
@@ -44,6 +49,21 @@ _CATEGORY: dict[str, str] = {
     DIET_LOG: "reminder",
     AI_COACHING: "system",
 }
+
+
+def time_ago(dt: datetime) -> str:
+    """알림 목록의 상대 시각 문구. 회원·트레이너 알림함이 함께 쓴다. (#503)"""
+    now = datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    sec = (now - dt).total_seconds()
+    if sec < 60:
+        return "방금 전"
+    if sec < 3600:
+        return f"{int(sec // 60)}분 전"
+    if sec < 86400:
+        return f"{int(sec // 3600)}시간 전"
+    return f"{int(sec // 86400)}일 전"
 
 
 def get_settings(db: Session, member_id: str) -> dict[str, bool]:
@@ -158,31 +178,65 @@ def unread_count(db: Session, member_id: str) -> int:
     return len(rows)
 
 
+#: 트레이너 알림의 종류. `Notification.category` 에 그대로 저장되고, 트레이너 앱이
+#: 이 값으로 어디로 이동할지 정한다. 회원 알림의 category 집합
+#: (reminder|health_check|achievement|system)과 겹치지 않게 둔다 — 한 컬럼을
+#: 공유하지만 읽는 화면이 다르다. (#503)
+TRAINER_MESSAGE_KIND = "message"
+TRAINER_CONSULTATION_KIND = "consultation"
+TRAINER_RESERVATION_KIND = "reservation"
+
+#: 종류별 트레이너 수신 설정 컬럼. 없으면 항상 보낸다 — 상담 요청·예약은 끄면
+#: 트레이너가 놓쳐도 되는 종류가 아니고, 설정 화면에도 그 스위치가 없다.
+_TRAINER_SETTING_COLUMN: dict[str, str] = {
+    TRAINER_MESSAGE_KIND: "notify_new_message",
+}
+
+
+def trainer_wants(db: Session, trainer_id: str, kind: str) -> bool:
+    """트레이너가 이 종류의 알림을 받기로 했는가.
+
+    회원용 [wants] 와 갈라 두는 이유는 설정이 있는 자리가 다르기 때문이다.
+    회원은 `member_notification_settings`, 트레이너는 `trainer_profiles.notify_*`.
+    한쪽 함수로 둘 다 보면 트레이너에게 회원 기본값이 적용된다.
+    """
+    column = _TRAINER_SETTING_COLUMN.get(kind)
+    if column is None:
+        return True
+    value = db.scalar(
+        select(getattr(TrainerProfile, column)).where(
+            TrainerProfile.trainer_id == trainer_id
+        )
+    )
+    # 프로필이 없으면(아직 안 만든 계정) 기본값은 '받는다'. 알림이 조용히
+    # 사라지는 쪽보다 오는 쪽이 낫다.
+    return True if value is None else bool(value)
+
+
 def queue_for_trainer(
     db: Session,
     *,
     trainer_id: str,
+    kind: str,
     title: str,
     body: str = "",
-    category: str = "system",
-) -> Notification:
-    """트레이너에게 남기는 알림. **커밋하지 않는다**([queue] 와 같은 이유).
+) -> Notification | None:
+    """트레이너에게 남기는 알림. 꺼져 있으면 None. **커밋하지 않는다**.
 
-    회원용 [queue] 와 갈라 두는 이유는 수신 설정이다. `wants` 가 보는
-    `MemberNotificationSetting` 은 회원 계정의 설정이라, 트레이너에게 회원 기본값을
-    적용하는 꼴이 된다. 트레이너 설정은 `trainer_profiles.notify_*` 에 따로 있고
-    종류별 게이트는 인박스 작업에서 붙인다(#503).
+    커밋하지 않는 이유는 [queue] 와 같다 — 호출부의 트랜잭션에 얹는다.
 
-    `Notification.user_id` 는 일반 사용자 FK 이고 `GET /notifications` 는
-    `CurrentUser` 기준이라, 이 행은 트레이너가 로그인하면 그대로 읽힌다 —
-    스키마 변경이 필요 없다.
+    `Notification.user_id` 는 일반 사용자 FK 라 트레이너 계정에도 그대로 달린다.
+    다만 읽는 경로는 회원용 `/notifications` 가 아니라 `/trainer/notifications` 다.
+    회원용은 `get_current_user` 가 트레이너를 403 으로 막는 **회원 전용** 경로다.
     """
+    if not trainer_wants(db, trainer_id, kind):
+        return None
     notification = Notification(
         id=f"noti-{uuid.uuid4().hex[:12]}",
         user_id=trainer_id,
         title=title,
         body=body,
-        category=category,
+        category=kind,
         read=False,
     )
     db.add(notification)
