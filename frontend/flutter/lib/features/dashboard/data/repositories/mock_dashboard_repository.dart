@@ -1,4 +1,5 @@
 import 'package:oncare/core/demo/demo_ai_advice.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -13,18 +14,21 @@ import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 ///
 /// 운동·일정·주간 점수는 아직 식단과 무관한 데모 값이라 그대로 둔다.
 class MockDashboardRepository implements DashboardRepository {
-  const MockDashboardRepository(this._diet);
+  const MockDashboardRepository(this._diet, {this.fetchProfile});
 
   final DietRepository _diet;
-
-  /// 데모 일일 목표치. 실 백엔드가 사용자별 목표를 주기 전까지의 고정값이다.
-  static const int _calorieGoal = 2000;
-  static const int _sodiumGoalMg = 2000;
-  static const double _sugarGoalG = 50;
+  final Future<UserProfile> Function()? fetchProfile;
 
   @override
   Future<DashboardSummary> fetchSummary() async {
     final DietDay today = await _diet.fetchToday();
+    final UserProfile? profile = await fetchProfile?.call();
+    final int calorieGoal =
+        profile?.effectiveDailyCalories ?? UserProfile.defaultDailyCalories;
+    final int sodiumGoal =
+        profile?.effectiveDailySodiumMg ?? UserProfile.defaultDailySodiumMg;
+    final int sugarGoal =
+        profile?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG;
     final DateTime now = DateTime.now();
     final DateTime monday = DateTime(
       now.year,
@@ -54,23 +58,23 @@ class MockDashboardRepository implements DashboardRepository {
         HealthIndicator(
           label: '칼로리',
           current: today.totalCalories,
-          max: _calorieGoal,
+          max: calorieGoal,
           unit: 'kcal',
-          overBudget: today.totalCalories > _calorieGoal,
+          overBudget: today.totalCalories > calorieGoal,
         ),
         HealthIndicator(
           label: '나트륨',
           current: today.totalSodiumMg,
-          max: _sodiumGoalMg,
+          max: sodiumGoal,
           unit: 'mg',
-          overBudget: today.totalSodiumMg > _sodiumGoalMg,
+          overBudget: today.totalSodiumMg > sodiumGoal,
         ),
         HealthIndicator(
           label: '당류',
           current: today.totalSugarG,
-          max: _sugarGoalG,
+          max: sugarGoal,
           unit: 'g',
-          overBudget: today.totalSugarG > _sugarGoalG,
+          overBudget: today.totalSugarG > sugarGoal,
         ),
       ],
       macros: today.macros,

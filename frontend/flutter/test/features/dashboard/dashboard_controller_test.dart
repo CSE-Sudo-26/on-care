@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -73,6 +76,37 @@ void main() {
     expect(s.macros.fatG, 72);
   });
 
+  test(
+    'MockDashboardRepository uses the same personal goals as diet',
+    () async {
+      const UserProfile profile = UserProfile(
+        id: 'member',
+        name: '회원',
+        email: 'member@example.com',
+        dailyCalories: 1800,
+        dailySodiumMg: 1500,
+        dailySugarG: 35,
+        dailyCarbsG: 220,
+        dailyProteinG: 120,
+        dailyFatG: 50,
+      );
+      final DashboardSummary summary = await MockDashboardRepository(
+        MockDietRepository(),
+        fetchProfile: () async => profile,
+      ).fetchSummary();
+      final indicators = <String, HealthIndicator>{
+        for (final indicator in summary.indicators) indicator.label: indicator,
+      };
+
+      expect(indicators['칼로리']!.max, profile.effectiveDailyCalories);
+      expect(indicators['나트륨']!.max, profile.effectiveDailySodiumMg);
+      expect(indicators['당류']!.max, profile.effectiveDailySugarG);
+      for (final indicator in indicators.values) {
+        expect(indicator.overBudget, indicator.current > indicator.max);
+      }
+    },
+  );
+
   // 홈이 영양 수치를 따로 들고 있다가 식단 탭과 어긋났다 — 홈 2,329mg·4끼 vs
   // 식단 3,428mg·3끼. 식단이 기준이므로 두 화면이 같은 값을 보는지 못박는다.
   test('홈 요약의 영양 수치는 식단 하루치와 일치한다', () async {
@@ -112,6 +146,7 @@ void main() {
     final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
         appConfigProvider.overrideWithValue(config),
+        accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
         dietRepositoryProvider.overrideWithValue(diet),
       ],
     );

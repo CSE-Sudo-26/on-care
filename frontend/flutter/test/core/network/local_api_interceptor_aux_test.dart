@@ -200,6 +200,13 @@ void main() {
   });
 
   test('PUT /users/me/health-goals persists weekly exercise goals', () async {
+    final initialProfile = await dio.get<Map<String, Object?>>(
+      '/users/me/profile',
+    );
+    expect(initialProfile.data!['weekly_workout_goal'], isNull);
+    expect(initialProfile.data!['weekly_exercise_minutes_goal'], isNull);
+    expect(initialProfile.data!['weekly_burn_goal'], isNull);
+
     final put = await dio.put<Map<String, Object?>>(
       '/users/me/health-goals',
       data: <String, Object?>{

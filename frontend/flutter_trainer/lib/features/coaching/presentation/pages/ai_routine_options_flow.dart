@@ -428,6 +428,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           RoutineMinutesSlider(
             key: const ValueKey<String>('generation-minutes'),
             minutes: _minutes,
+            label: l.routineFieldTotalMinutes,
             onChanged: (minutes) => setState(() => _minutes = minutes),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -633,6 +634,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _addExerciseForm()
         else
           OutlinedButton.icon(
+            key: const ValueKey<String>('show-add-exercise-form'),
             onPressed: () => setState(() => _showAddExercise = true),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.accent,
@@ -674,6 +676,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 ),
               ),
             ],
+          ),
+          SizedBox(
+            key: ValueKey<String>('routine-category-name-gap-$index'),
+            height: AppSpacing.md,
           ),
           TextFormField(
             key: ValueKey<String>(
@@ -739,6 +745,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             children: <Widget>[
               Expanded(
                 child: TextButton(
+                  key: const ValueKey<String>('hide-add-exercise-form'),
                   onPressed: () => setState(() => _showAddExercise = false),
                   child: Text(l.actionCancel),
                 ),

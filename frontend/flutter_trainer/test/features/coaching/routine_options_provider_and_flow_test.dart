@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
@@ -217,6 +218,17 @@ void main() {
       find.byKey(const ValueKey<String>('analysis-trainer-memo')),
     );
     expect(initialMemo.decoration?.hintStyle?.color, AppColors.mutedForeground);
+    final generationMinutes = find.byKey(
+      const ValueKey<String>('generation-minutes'),
+    );
+    expect(
+      find.descendant(of: generationMinutes, matching: find.text('총 운동시간')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: generationMinutes, matching: find.text('운동 시간')),
+      findsNothing,
+    );
     await tester.enterText(
       find.byKey(const ValueKey<String>('analysis-trainer-memo')),
       '무릎 충격 주의',
@@ -253,6 +265,36 @@ void main() {
     // Select B and edit its first exercise in the common inline editor.
     await tester.tap(find.byKey(const ValueKey<String>('routine-option-B')));
     await tester.pumpAndSettle();
+    final categoryNameGap = tester.widget<SizedBox>(
+      find.byKey(const ValueKey<String>('routine-category-name-gap-0')),
+    );
+    expect(categoryNameGap.height, AppSpacing.md);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('routine-minutes-0')),
+        matching: find.text('운동 시간'),
+      ),
+      findsOneWidget,
+    );
+
+    final showAddExerciseForm = find.byKey(
+      const ValueKey<String>('show-add-exercise-form'),
+    );
+    await tester.ensureVisible(showAddExerciseForm);
+    await tester.tap(showAddExerciseForm);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('new-exercise-minutes')),
+        matching: find.text('운동 시간'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hide-add-exercise-form')),
+    );
+    await tester.pumpAndSettle();
+
     await tester.enterText(find.byType(TextFormField).first, '인터벌 걷기');
     final minutesSlider = find.descendant(
       of: find.byKey(const ValueKey<String>('routine-minutes-0')),

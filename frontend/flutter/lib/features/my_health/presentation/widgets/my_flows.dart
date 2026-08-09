@@ -10,6 +10,7 @@ import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/my_health/domain/support_links.dart';
 import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -50,7 +51,8 @@ void _showTopNotification(
       ],
     ),
   );
-  Timer(const Duration(seconds: 3), controller.close);
+  final dismissTimer = Timer(const Duration(seconds: 3), controller.close);
+  unawaited(controller.closed.whenComplete(dismissTimer.cancel));
 }
 
 Widget _shell(
@@ -437,25 +439,28 @@ class _GoalsForm extends ConsumerStatefulWidget {
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
   late final TextEditingController _kcal = _ctl(
     widget.initial.dailyCalories,
-    2000,
+    UserProfile.defaultDailyCalories,
   );
   late final TextEditingController _sodium = _ctl(
     widget.initial.dailySodiumMg,
-    2000,
+    UserProfile.defaultDailySodiumMg,
   );
   late final TextEditingController _sugar = _ctl(
     widget.initial.dailySugarG,
-    50,
+    UserProfile.defaultDailySugarG,
   );
   late final TextEditingController _carbs = _ctl(
     widget.initial.dailyCarbsG,
-    275,
+    UserProfile.defaultDailyCarbsG,
   );
   late final TextEditingController _protein = _ctl(
     widget.initial.dailyProteinG,
-    100,
+    UserProfile.defaultDailyProteinG,
   );
-  late final TextEditingController _fat = _ctl(widget.initial.dailyFatG, 55);
+  late final TextEditingController _fat = _ctl(
+    widget.initial.dailyFatG,
+    UserProfile.defaultDailyFatG,
+  );
   late final TextEditingController _workouts = _ctl(
     widget.initial.weeklyWorkoutGoal,
     UserProfile.defaultWeeklyWorkoutGoal,
@@ -515,6 +520,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           );
       if (!mounted) return;
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
+      ref.invalidate(dashboardSummaryProvider);
       navigator.pop();
       await Future<void>.delayed(const Duration(milliseconds: 400));
       if (!messenger.mounted) return;

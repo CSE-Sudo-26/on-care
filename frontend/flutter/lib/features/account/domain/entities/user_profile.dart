@@ -1,6 +1,13 @@
 /// GET /users/me/profile — the consolidated profile the settings modals
 /// edit (내 프로필 + 건강 목표).
 class UserProfile {
+  static const int defaultDailyCalories = 2000;
+  static const int defaultDailySodiumMg = 2000;
+  static const int defaultDailySugarG = 50;
+  static const int defaultDailyCarbsG = 275;
+  static const int defaultDailyProteinG = 100;
+  static const int defaultDailyFatG = 55;
+
   const UserProfile({
     required this.id,
     required this.name,
@@ -31,6 +38,13 @@ class UserProfile {
   final int? dailyCarbsG;
   final int? dailyProteinG;
   final int? dailyFatG;
+
+  int get effectiveDailyCalories => dailyCalories ?? defaultDailyCalories;
+  int get effectiveDailySodiumMg => dailySodiumMg ?? defaultDailySodiumMg;
+  int get effectiveDailySugarG => dailySugarG ?? defaultDailySugarG;
+  int get effectiveDailyCarbsG => dailyCarbsG ?? defaultDailyCarbsG;
+  int get effectiveDailyProteinG => dailyProteinG ?? defaultDailyProteinG;
+  int get effectiveDailyFatG => dailyFatG ?? defaultDailyFatG;
 
   // 주간 운동 목표.
   final int? weeklyWorkoutGoal; // 횟수
