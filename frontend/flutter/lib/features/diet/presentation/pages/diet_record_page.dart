@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
@@ -136,6 +138,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final AsyncValue<DietDay> diet = atToday
         ? ref.watch(dietTodayProvider)
         : ref.watch(dietByDateProvider(_selected));
+    final UserProfile? profile = ref.watch(profileProvider).asData?.value;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -188,7 +191,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       ? const _EmptyDay()
                       : Column(
                           children: <Widget>[
-                            NutritionSummary(day: day),
+                            NutritionSummary(day: day, profile: profile),
                             const SizedBox(height: 20),
                             _AiFeedback(message: day.aiCoachMessage),
                             const SizedBox(height: 20),
@@ -401,20 +404,26 @@ class _DayCell extends StatelessWidget {
 // ──────────────────────────────────────────────────── nutrition summary ──
 
 class NutritionSummary extends StatelessWidget {
-  const NutritionSummary({required this.day, super.key});
+  const NutritionSummary({required this.day, this.profile, super.key});
 
   final DietDay day;
-
-  static const double _calorieGoal = 2000;
-  static const double _sodiumGoal = 2000;
-  static const double _sugarGoal = 50;
-  static const double _carbsGoal = 275;
-  static const double _proteinGoal = 100;
-  static const double _fatGoal = 55;
+  final UserProfile? profile;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final int calorieGoal =
+        profile?.effectiveDailyCalories ?? UserProfile.defaultDailyCalories;
+    final int sodiumGoal =
+        profile?.effectiveDailySodiumMg ?? UserProfile.defaultDailySodiumMg;
+    final int sugarGoal =
+        profile?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG;
+    final int carbsGoal =
+        profile?.effectiveDailyCarbsG ?? UserProfile.defaultDailyCarbsG;
+    final int proteinGoal =
+        profile?.effectiveDailyProteinG ?? UserProfile.defaultDailyProteinG;
+    final int fatGoal =
+        profile?.effectiveDailyFatG ?? UserProfile.defaultDailyFatG;
     // Sum straight from the foods so the summary always equals the meal cards;
     // fall back to the server day totals when the per-food sum is 0 (real-server
     // payloads carry nutrition only at the day/entry level).
@@ -440,50 +449,50 @@ class NutritionSummary extends StatelessWidget {
       _NutritionSummaryItem(
         label: l.dietCalories,
         value: _formatInt(kcal),
-        goal: _formatInt(_calorieGoal.toInt()),
+        goal: _formatInt(calorieGoal),
         unit: l.unitKcal,
-        ratio: _nutritionRatio(kcal, _calorieGoal),
-        isOverGoal: kcal > _calorieGoal,
+        ratio: _nutritionRatio(kcal, calorieGoal),
+        isOverGoal: kcal > calorieGoal,
       ),
       _NutritionSummaryItem(
         label: l.dietSodium,
         value: _formatInt(sodium),
-        goal: _formatInt(_sodiumGoal.toInt()),
+        goal: _formatInt(sodiumGoal),
         unit: l.dietUnitMg,
-        ratio: _nutritionRatio(sodium, _sodiumGoal),
-        isOverGoal: sodium > _sodiumGoal,
+        ratio: _nutritionRatio(sodium, sodiumGoal),
+        isOverGoal: sodium > sodiumGoal,
       ),
       _NutritionSummaryItem(
         label: l.dietSugar,
         value: _formatG(sugar),
-        goal: _formatG(_sugarGoal),
+        goal: _formatG(sugarGoal.toDouble()),
         unit: l.dietUnitG,
-        ratio: _nutritionRatio(sugar, _sugarGoal),
-        isOverGoal: sugar > _sugarGoal,
+        ratio: _nutritionRatio(sugar, sugarGoal),
+        isOverGoal: sugar > sugarGoal,
       ),
       _NutritionSummaryItem(
         label: l.homeMacroProtein,
         value: _grams(day.macros.proteinG),
-        goal: _formatG(_proteinGoal),
+        goal: _formatG(proteinGoal.toDouble()),
         unit: l.dietUnitG,
-        ratio: _nutritionRatio(day.macros.proteinG, _proteinGoal),
-        isOverGoal: day.macros.proteinG > _proteinGoal,
+        ratio: _nutritionRatio(day.macros.proteinG, proteinGoal),
+        isOverGoal: day.macros.proteinG > proteinGoal,
       ),
       _NutritionSummaryItem(
         label: l.homeMacroFat,
         value: _grams(day.macros.fatG),
-        goal: _formatG(_fatGoal),
+        goal: _formatG(fatGoal.toDouble()),
         unit: l.dietUnitG,
-        ratio: _nutritionRatio(day.macros.fatG, _fatGoal),
-        isOverGoal: day.macros.fatG > _fatGoal,
+        ratio: _nutritionRatio(day.macros.fatG, fatGoal),
+        isOverGoal: day.macros.fatG > fatGoal,
       ),
       _NutritionSummaryItem(
         label: l.homeMacroCarbs,
         value: _grams(day.macros.carbsG),
-        goal: _formatG(_carbsGoal),
+        goal: _formatG(carbsGoal.toDouble()),
         unit: l.dietUnitG,
-        ratio: _nutritionRatio(day.macros.carbsG, _carbsGoal),
-        isOverGoal: day.macros.carbsG > _carbsGoal,
+        ratio: _nutritionRatio(day.macros.carbsG, carbsGoal),
+        isOverGoal: day.macros.carbsG > carbsGoal,
       ),
     ];
     return Padding(
@@ -502,7 +511,7 @@ class NutritionSummary extends StatelessWidget {
           const SizedBox(height: 10),
           _NutritionSummaryCard(
             calories: items[0],
-            calorieDifference: _formatInt((kcal - _calorieGoal).abs().round()),
+            calorieDifference: _formatInt((kcal - calorieGoal).abs()),
             carbs: items[5],
             protein: items[3],
             fat: items[4],
@@ -510,9 +519,9 @@ class NutritionSummary extends StatelessWidget {
           const SizedBox(height: 12),
           _NutritionStatusCards(
             sodium: items[1],
-            sodiumDifference: _formatInt((sodium - _sodiumGoal).abs().round()),
+            sodiumDifference: _formatInt((sodium - sodiumGoal).abs()),
             sugar: items[2],
-            sugarDifference: _formatG((sugar - _sugarGoal).abs()),
+            sugarDifference: _formatG((sugar - sugarGoal).abs()),
           ),
         ],
       ),

@@ -229,6 +229,39 @@ void main() {
   });
 
   test(
+    'health goal update changes dashboard targets and over-budget state',
+    () async {
+      await dio.put<Object?>(
+        '/users/me/health-goals',
+        data: <String, Object?>{
+          'daily_calories': 1800,
+          'daily_sodium_mg': 1500,
+          'daily_sugar_g': 35,
+          'daily_carbs_g': 220,
+          'daily_protein_g': 120,
+          'daily_fat_g': 50,
+        },
+      );
+
+      final response = await dio.get<Map<String, Object?>>(
+        '/dashboard/summary',
+      );
+      final indicators = (response.data!['indicators']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      final byLabel = <String, Map<String, Object?>>{
+        for (final indicator in indicators)
+          indicator['label']! as String: indicator,
+      };
+      expect(byLabel['칼로리']!['max'], 1800);
+      expect(byLabel['나트륨']!['max'], 1500);
+      expect(byLabel['당류']!['max'], 35);
+      expect(byLabel['칼로리']!['over_budget'], isFalse);
+      expect(byLabel['나트륨']!['over_budget'], isTrue);
+      expect(byLabel['당류']!['over_budget'], isTrue);
+    },
+  );
+
+  test(
     'sodium_warning handles one source name with a final consonant',
     () async {
       await (db.delete(db.dietEntries)).go();

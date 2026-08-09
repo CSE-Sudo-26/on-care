@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -68,6 +70,97 @@ Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
 }
 
 void main() {
+  test('mock account keeps updated health goals', () async {
+    final MockAccountRepository repository = MockAccountRepository();
+
+    await repository.updateHealthGoals(
+      dailyCalories: 1800,
+      dailySodiumMg: 1500,
+      dailySugarG: 35,
+      dailyCarbsG: 220,
+      dailyProteinG: 120,
+      dailyFatG: 50,
+    );
+
+    final UserProfile profile = await repository.fetchProfile();
+    expect(profile.effectiveDailyCalories, 1800);
+    expect(profile.effectiveDailySodiumMg, 1500);
+    expect(profile.effectiveDailySugarG, 35);
+    expect(profile.effectiveDailyCarbsG, 220);
+    expect(profile.effectiveDailyProteinG, 120);
+    expect(profile.effectiveDailyFatG, 50);
+  });
+
+  test('health goal fallback is applied independently per field', () {
+    const UserProfile profile = UserProfile(
+      id: 'member',
+      name: '회원',
+      email: 'member@example.com',
+      dailyCalories: 1800,
+      dailySodiumMg: 1500,
+      dailySugarG: 35,
+      dailyCarbsG: 220,
+      dailyProteinG: 120,
+      dailyFatG: 50,
+    );
+    expect(profile.effectiveDailyCalories, 1800);
+    expect(profile.effectiveDailySodiumMg, 1500);
+    expect(profile.effectiveDailySugarG, 35);
+    expect(profile.effectiveDailyCarbsG, 220);
+    expect(profile.effectiveDailyProteinG, 120);
+    expect(profile.effectiveDailyFatG, 50);
+
+    const UserProfile partial = UserProfile(
+      id: 'member',
+      name: '회원',
+      email: 'member@example.com',
+      dailyCalories: 1800,
+    );
+    expect(partial.effectiveDailyCalories, 1800);
+    expect(partial.effectiveDailySodiumMg, 2000);
+    expect(partial.effectiveDailySugarG, 50);
+    expect(partial.effectiveDailyCarbsG, 275);
+    expect(partial.effectiveDailyProteinG, 100);
+    expect(partial.effectiveDailyFatG, 55);
+  });
+
+  testWidgets('nutrition summary uses all personal health goals', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final DietDay day =
+        await tester.runAsync(() => MockDietRepository().fetchToday())
+            as DietDay;
+    const UserProfile profile = UserProfile(
+      id: 'member',
+      name: '회원',
+      email: 'member@example.com',
+      dailyCalories: 1800,
+      dailySodiumMg: 1500,
+      dailySugarG: 35,
+      dailyCarbsG: 220,
+      dailyProteinG: 120,
+      dailyFatG: 50,
+    );
+
+    await tester.pumpWidget(
+      _app(
+        Scaffold(
+          body: NutritionSummary(day: day, profile: profile),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1,800 kcal'), findsOneWidget);
+    expect(find.textContaining('/ 220g'), findsOneWidget);
+    expect(find.textContaining('/ 120g'), findsOneWidget);
+    expect(find.textContaining('/ 50g'), findsOneWidget);
+    expect(find.textContaining('/ 1,500mg'), findsOneWidget);
+    expect(find.textContaining('/ 35g'), findsOneWidget);
+  });
+
   testWidgets(
     'nutrition summary highlights progress and status on a small screen',
     (tester) async {

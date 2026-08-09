@@ -92,6 +92,12 @@ def test_build_sodium_warning(
     assert _build_sodium_warning(total_sodium_mg, source_names) == expected
 
 
+def test_build_sodium_warning_uses_personal_goal():
+    assert _build_sodium_warning(1600, [], 1500) == (
+        "오늘 나트륨이 1600mg 으로 권장량(1500mg)을 넘었어요."
+    )
+
+
 def test_rank_sodium_sources_combines_duplicate_food_names():
     foods_json_values = [
         json.dumps([
@@ -186,3 +192,71 @@ def test_dashboard_summary_includes_macros_and_sodium_sources(client, db_session
     # 소모 목표 필드(기본값) + 지난주 대비 변화량은 정수
     assert body["exercise_burn_goal"] == 500
     assert isinstance(body["week_score_delta"], int)
+
+
+def test_dashboard_summary_uses_personal_nutrition_goals(client, db_session):
+    from app.db.init_db import DEMO_USER_ID
+    from app.models.models import User
+
+    user = db_session.get(User, DEMO_USER_ID)
+    profile = user.health_profile
+    original = (
+        profile.daily_calories,
+        profile.daily_sodium_mg,
+        profile.daily_sugar_g,
+    )
+    try:
+        profile.daily_calories = 1800
+        profile.daily_sodium_mg = 1500
+        profile.daily_sugar_g = 35
+        db_session.commit()
+        response = client.get("/v1/dashboard/summary")
+    finally:
+        (
+            profile.daily_calories,
+            profile.daily_sodium_mg,
+            profile.daily_sugar_g,
+        ) = original
+        db_session.commit()
+
+    assert response.status_code == 200
+    indicators = {item["label"]: item for item in response.json()["indicators"]}
+    assert indicators["칼로리"]["max"] == 1800
+    assert indicators["나트륨"]["max"] == 1500
+    assert indicators["당류"]["max"] == 35
+    for indicator in indicators.values():
+        assert indicator["over_budget"] == (
+            indicator["current"] > indicator["max"]
+        )
+
+
+def test_dashboard_summary_falls_back_per_missing_goal(client, db_session):
+    from app.db.init_db import DEMO_USER_ID
+    from app.models.models import User
+
+    user = db_session.get(User, DEMO_USER_ID)
+    profile = user.health_profile
+    original = (
+        profile.daily_calories,
+        profile.daily_sodium_mg,
+        profile.daily_sugar_g,
+    )
+    try:
+        profile.daily_calories = 1800
+        profile.daily_sodium_mg = None
+        profile.daily_sugar_g = 35
+        db_session.commit()
+        response = client.get("/v1/dashboard/summary")
+    finally:
+        (
+            profile.daily_calories,
+            profile.daily_sodium_mg,
+            profile.daily_sugar_g,
+        ) = original
+        db_session.commit()
+
+    assert response.status_code == 200
+    indicators = {item["label"]: item for item in response.json()["indicators"]}
+    assert indicators["칼로리"]["max"] == 1800
+    assert indicators["나트륨"]["max"] == 2000
+    assert indicators["당류"]["max"] == 35

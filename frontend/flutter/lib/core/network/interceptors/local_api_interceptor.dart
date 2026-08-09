@@ -294,6 +294,12 @@ class LocalApiInterceptor extends Interceptor {
 
   Future<Response<Object?>> _dashboardSummary(RequestOptions options) async {
     final today = _todayDateString();
+    final profile = await _mergedProfile();
+    final int calorieGoal =
+        (profile['daily_calories'] as num?)?.toInt() ?? 2000;
+    final int sodiumGoal =
+        (profile['daily_sodium_mg'] as num?)?.toInt() ?? 2000;
+    final int sugarGoal = (profile['daily_sugar_g'] as num?)?.toInt() ?? 50;
 
     // Diet aggregates.
     final dietRows = await (_db.select(
@@ -370,7 +376,9 @@ class LocalApiInterceptor extends Interceptor {
 
     // Heuristic "week score": stretch diet+exercise into a 0..100 band
     // so the card always renders something even on an empty database.
-    final calRatio = (totalCalories / 2000.0).clamp(0.0, 1.0);
+    final calRatio = calorieGoal > 0
+        ? (totalCalories / calorieGoal).clamp(0.0, 1.0)
+        : 0.0;
     final exRatio = (exerciseMinutes / 60.0).clamp(0.0, 1.0);
     final score = (50 + calRatio * 25 + exRatio * 25).round();
     final now = DateTime.now();
@@ -404,21 +412,23 @@ class LocalApiInterceptor extends Interceptor {
         <String, Object?>{
           'label': '칼로리',
           'current': totalCalories,
-          'max': 2000,
+          'max': calorieGoal,
           'unit': 'kcal',
+          'over_budget': totalCalories > calorieGoal,
         },
         <String, Object?>{
           'label': '나트륨',
           'current': totalSodium,
-          'max': 2000,
+          'max': sodiumGoal,
           'unit': 'mg',
-          'over_budget': totalSodium > 2000,
+          'over_budget': totalSodium > sodiumGoal,
         },
         <String, Object?>{
           'label': '당류',
           'current': totalSugar,
-          'max': 50,
+          'max': sugarGoal,
           'unit': 'g',
+          'over_budget': totalSugar > sugarGoal,
         },
       ],
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
@@ -442,10 +452,10 @@ class LocalApiInterceptor extends Interceptor {
       // 동적으로 만든다. 서버가 만드는 문장과 같은 성격이라 번역본이 없다.
       'sodium_warning': hasSeededAdvice
           ? null
-          : totalSodium > 2000
+          : totalSodium > sodiumGoal
           ? sodiumSourceNames.isNotEmpty
                 ? '$sodiumSourceNames 섭취로 나트륨이 높아요.'
-                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(2000mg)을 넘었어요.'
+                : '오늘 나트륨이 ${totalSodium}mg 으로 권장량(${sodiumGoal}mg)을 넘었어요.'
           : null,
       'exercise_feedback': exerciseMinutes >= 60
           ? '이번 주 운동 목표를 달성했어요! 마무리 스트레칭도 잊지 마세요.'
