@@ -2,6 +2,7 @@
 식단 라우터 — 프론트 계약 정렬(얇은 라우터).
 
   GET  /diet/days/today          -> 오늘 식단 집계(나트륨·당류·macros + 코칭 메시지)
+  GET  /diet/days/{date}         -> 지정 날짜 식단 집계
   GET  /diet/recommendations     -> 홈 AI 추천 식단(카탈로그에서 개인화 선택)
   POST /diet/analyze             -> 사진 → 인식 → diet_entries 저장
   POST /diet/analyze?engine=yolo -> 엔진 강제(비교실험)
@@ -13,6 +14,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date as Date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -44,6 +46,15 @@ def diet_today(
     db: Annotated[Session, Depends(get_db)],
 ) -> DietTodayResponse:
     return diet_service.build_today(db, current_user.id)
+
+
+@router.get("/diet/days/{date}", response_model=DietTodayResponse)
+def diet_by_date(
+    date: Date,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> DietTodayResponse:
+    return diet_service.build_day(db, current_user.id, date.isoformat())
 
 
 @router.get("/diet/recommendations", response_model=DietRecommendationsResponse)

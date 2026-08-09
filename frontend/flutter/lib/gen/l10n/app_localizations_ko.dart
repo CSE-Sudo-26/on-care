@@ -497,7 +497,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String otherDateEmpty(Object section) {
-    return '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 $section을 확인해 주세요.';
+    return '선택한 날짜에 기록된 $section이 없어요.';
   }
 
   @override
@@ -661,6 +661,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exTypeOtherChip => '기타';
+
+  @override
+  String get exSourceTrainerPt => '트레이너 PT';
 
   @override
   String get exLevelLight => '가벼움';

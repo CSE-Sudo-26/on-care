@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A [ChatRepository] standing in for the real API: `watchThread` returns
 /// a longer thread on its SECOND call (simulating the backend now
@@ -79,7 +80,10 @@ void main() {
             ),
             chatRepositoryProvider.overrideWithValue(fake),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatView(
                 clientId: 'm1',

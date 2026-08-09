@@ -6,6 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 담당 회원에 대해 AI 에게 묻는 시트를 연다. (#497)
 Future<void> showClientCoachSheet(
@@ -22,7 +23,7 @@ Future<void> showClientCoachSheet(
 /// AI 코칭 상담 — 이 회원에 대해 묻고, 근거와 함께 답을 받는다.
 ///
 /// 탭이 아니라 시트인 이유: 트레이너가 상시로 보는 화면이 아니라 판단이 필요할
-/// 때 한 번 여는 도구다. 대상이 '이 회원'이라 고객 상세에서 연다.
+/// 때 한 번 여는 도구다. 대상이 l.coachSheetThisClient이라 고객 상세에서 연다.
 ///
 /// 대화를 이어 가지 않는다 — 서버 엔드포인트가 무상태이고, 회원 앱의 대화
 /// 저장(#274)과는 별개 도메인이다. 한 번에 한 질문으로 충분하다.
@@ -68,8 +69,17 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
       });
     } on AppError catch (e) {
       if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
       setState(() {
-        _error = e.message ?? 'AI 코칭을 불러오지 못했어요';
+        // 서버가 준 사유가 있으면 그대로(서버 문구의 다국어는 별건), 없으면
+        // 오류 종류에 맞는 문구를 화면이 붙인다. (#501)
+        _error =
+            e.message ??
+            switch (e) {
+              NotFoundError() => l.coachNotMyClient,
+              ValidationError() => l.coachDemoUnavailable,
+              _ => l.coachAskFailed,
+            };
         _asking = false;
       });
     }
@@ -77,9 +87,10 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text('${widget.clientName} 코칭 상담'),
+      title: Text(l.coachSheetTitle(widget.clientName)),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -87,8 +98,8 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
-                '이 회원의 식단·운동 기록을 근거로 답해요.',
+              Text(
+                l.coachSheetSubtitle,
                 style: TextStyle(
                   fontSize: 12.5,
                   color: AppColors.mutedForeground,
@@ -101,8 +112,8 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                 maxLength: 1000,
                 enabled: !_asking,
                 onSubmitted: (_) => _ask(),
-                decoration: const InputDecoration(
-                  hintText: '예) 나트륨이 계속 높은데 어떤 식단을 권할까요?',
+                decoration: InputDecoration(
+                  hintText: l.coachSheetHint,
                   filled: true,
                   fillColor: AppColors.inputBackground,
                 ),
@@ -120,8 +131,8 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                 _Note(tone: AppColors.primary, text: _answer!.reply),
                 if (_answer!.sources.isNotEmpty) ...<Widget>[
                   const SizedBox(height: AppSpacing.sm),
-                  const Text(
-                    '근거',
+                  Text(
+                    l.coachSheetSources,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -146,10 +157,10 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
       actions: <Widget>[
         TextButton(
           onPressed: _asking ? null : () => Navigator.of(context).pop(),
-          child: const Text('닫기'),
+          child: Text(l.actionClose),
         ),
         ActionButton(
-          label: _answer == null ? '물어보기' : '다시 묻기',
+          label: _answer == null ? l.coachSheetAsk : l.coachSheetAskAgain,
           primary: true,
           onPressed: _asking ? null : _ask,
         ),

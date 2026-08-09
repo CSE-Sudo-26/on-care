@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Clients who need the trainer today, with the reason spelled out.
 ///
@@ -35,19 +36,20 @@ class AttentionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final shown = entries.take(maxRows).toList();
     return SectionCard(
-      title: '확인 필요 고객',
+      title: l.dashAttentionTitle,
       icon: Icons.priority_high,
       trailing: entries.length > maxRows
           ? CardLink(
-              label: '+${entries.length - maxRows}명',
+              label: l.dashMoreCount(entries.length - maxRows),
               onTap: () => context.go(AppRoutes.clientsFiltered('attention')),
             )
           : null,
       child: shown.isEmpty
-          ? const EmptyHint(
-              message: '지금 챙길 고객이 없어요',
+          ? EmptyHint(
+              message: l.dashNoAttention,
               icon: Icons.check_circle_outline,
             )
           : Column(

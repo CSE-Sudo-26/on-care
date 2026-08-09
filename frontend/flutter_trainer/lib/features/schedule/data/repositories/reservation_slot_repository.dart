@@ -77,18 +77,27 @@ class DioReservationSlotRepository implements ReservationSlotRepository {
   }
 }
 
+/// 목 리포지토리가 던지는 검증 코드. **문구가 아니다** — 리포지토리는 로케일을
+/// 모르므로 화면이 이 코드로 자기 언어의 문구를 고른다. (#501)
+class SlotErrorCodes {
+  static const String capacityRange = 'capacity_range';
+  static const String futureOnly = 'future_only';
+  static const String notFound = 'not_found';
+  static const String capacityBelowBooked = 'capacity_below_booked';
+}
+
 class MockReservationSlotRepository implements ReservationSlotRepository {
   final List<ReservationSlot> _slots = <ReservationSlot>[];
 
   void _validateCapacity(int capacity) {
     if (capacity < 1 || capacity > 100) {
-      throw StateError('정원은 1명 이상 100명 이하이어야 합니다.');
+      throw StateError('capacity_range');
     }
   }
 
   void _validateFuture(DateTime startsAt) {
     if (!startsAt.isAfter(DateTime.now())) {
-      throw StateError('현재보다 이후 시간만 예약 슬롯으로 설정할 수 있습니다.');
+      throw StateError('future_only');
     }
   }
 
@@ -124,13 +133,13 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
     int? capacity,
   }) async {
     final index = _slots.indexWhere((slot) => slot.id == id);
-    if (index < 0) throw StateError('예약 슬롯을 찾을 수 없습니다.');
+    if (index < 0) throw StateError('not_found');
     final old = _slots[index];
     final nextCapacity = capacity ?? old.capacity;
     _validateCapacity(nextCapacity);
     if (startsAt != null) _validateFuture(startsAt);
     if (nextCapacity < old.booked) {
-      throw StateError('이미 예약된 인원보다 정원을 줄일 수 없습니다.');
+      throw StateError('capacity_below_booked');
     }
     final updated = ReservationSlot(
       id: old.id,
@@ -146,7 +155,7 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   @override
   Future<ReservationSlot> close(String id) async {
     final index = _slots.indexWhere((slot) => slot.id == id);
-    if (index < 0) throw StateError('예약 슬롯을 찾을 수 없습니다.');
+    if (index < 0) throw StateError('not_found');
     final old = _slots[index];
     final closed = ReservationSlot(
       id: old.id,

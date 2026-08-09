@@ -82,12 +82,11 @@ def coach_message(total_sodium_mg: int, has_entries: bool) -> str:
     return "균형 잡힌 하루였어요. 내일도 이대로 가요!"
 
 
-def build_today(db: Session, user_id: str) -> DietTodayResponse:
-    """오늘 식단 집계(칼로리·나트륨·당류·macros + 코칭 메시지)."""
-    today = today_str()
+def build_day(db: Session, user_id: str, date: str) -> DietTodayResponse:
+    """지정 날짜 식단 집계(칼로리·나트륨·당류·macros + 코칭 메시지)."""
     rows = db.scalars(
         select(DietEntry)
-        .where(DietEntry.user_id == user_id, DietEntry.date == today)
+        .where(DietEntry.user_id == user_id, DietEntry.date == date)
         .order_by(DietEntry.created_at.asc())
     ).all()
 
@@ -110,6 +109,11 @@ def build_today(db: Session, user_id: str) -> DietTodayResponse:
         macros=calculate_macros(total_carbs, total_protein, total_fat),
         ai_coach_message=coach_message(total_na, bool(rows)),
     )
+
+
+def build_today(db: Session, user_id: str) -> DietTodayResponse:
+    """오늘 식단 집계. 기존 today 엔드포인트의 동작을 유지한다."""
+    return build_day(db, user_id, today_str())
 
 
 def find_by_idempotency(db: Session, user_id: str, key: str) -> DietEntry | None:

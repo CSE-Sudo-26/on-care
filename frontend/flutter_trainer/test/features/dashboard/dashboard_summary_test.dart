@@ -6,6 +6,10 @@ import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 import '../../helpers/client_factory.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 문구 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// The dashboard's aggregation rules. These decide what the trainer is
 /// told to do first, so they're worth pinning down without a widget.
@@ -178,7 +182,7 @@ void main() {
         clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
         unread: const <String, int>{'a': 1},
       );
-      expect(AiSummaryCard.messageFor(summary), contains('답장'));
+      expect(AiSummaryCard.messageFor(_ko, summary), contains('답장'));
     });
 
     test('mentions the sodium count when nobody is waiting', () {
@@ -186,12 +190,12 @@ void main() {
         clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(summary), contains('나트륨'));
+      expect(AiSummaryCard.messageFor(_ko, summary), contains('나트륨'));
     });
 
     test('an empty roster gets an onboarding line, not a stat', () {
       expect(
-        AiSummaryCard.messageFor(DashboardSummary.empty),
+        AiSummaryCard.messageFor(_ko, DashboardSummary.empty),
         contains('담당 고객이 없어요'),
       );
     });
@@ -201,7 +205,7 @@ void main() {
         clients: <TrainerClient>[makeClient(id: 'a')],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(summary), contains('목표 범위 안'));
+      expect(AiSummaryCard.messageFor(_ko, summary), contains('목표 범위 안'));
     });
   });
 }

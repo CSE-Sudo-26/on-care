@@ -1001,7 +1001,7 @@ abstract class AppLocalizations {
   /// No description provided for @otherDateEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Records for the selected date aren\'t available yet.\nPlease check your {section} records on today\'s date.'**
+  /// **'No {section} records for the selected date.'**
   String otherDateEmpty(Object section);
 
   /// No description provided for @dietTagSodium.
@@ -1315,6 +1315,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get exTypeOtherChip;
+
+  /// Badge on an exercise record the trainer created by completing a PT session. Read-only for the member.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer PT'**
+  String get exSourceTrainerPt;
 
   /// No description provided for @exLevelLight.
   ///
