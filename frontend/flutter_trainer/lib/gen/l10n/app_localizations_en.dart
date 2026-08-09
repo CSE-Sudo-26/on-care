@@ -36,7 +36,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSchedule => 'Schedule';
 
   @override
-  String get navCoaching => 'Coaching';
+  String get navCoaching => 'AI coaching';
 
   @override
   String get navReports => 'Reports';
@@ -1302,6 +1302,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routineFieldMinutes => 'Duration';
+
+  @override
+  String get routineFieldTotalMinutes => 'Total workout time';
 
   @override
   String get routineFieldIntensity => 'Intensity';

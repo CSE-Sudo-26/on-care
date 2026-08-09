@@ -5,12 +5,14 @@ import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_en.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 
 import '../../helpers/pump_app.dart';
 
 /// 라벨 기대값은 로케일을 명시해 읽는다 — 기본 로케일이 바뀌어도 의도가 남는다.
 final AppLocalizationsKo _ko = AppLocalizationsKo();
+final AppLocalizationsEn _en = AppLocalizationsEn();
 
 void main() {
   group('sessionRedirect', () {
@@ -76,6 +78,11 @@ void main() {
   });
 
   group('app shell', () {
+    test('AI coaching navigation label matches the page title', () {
+      expect(navLabel(_ko, NavLabel.coaching), _ko.coachTitle);
+      expect(navLabel(_en, NavLabel.coaching), _en.coachTitle);
+    });
+
     testWidgets('unauthenticated boot lands on the login screen', (
       tester,
     ) async {
