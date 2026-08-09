@@ -16,6 +16,7 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_fo
 import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 
 /// Conversation-style AI routine builder.
 ///
@@ -448,9 +449,11 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _AssistantLabel(text: l.aiCompareCandidates),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '${options.analysis.goal} · 완료율 '
-          '${options.analysis.avgCompletionRate}% 기준'
-          '${options.generatedBy == 'rule' ? l.aiBasisRuleBased : ''}',
+          l.aiBasisGoalCompletion(
+                options.analysis.goal,
+                options.analysis.avgCompletionRate,
+              ) +
+              (options.generatedBy == 'rule' ? l.aiBasisRuleBased : ''),
           style: const TextStyle(
             fontSize: 10.5,
             color: AppColors.mutedForeground,
@@ -571,7 +574,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '총 $total분 · 강도 ${choice.intensity}',
+                l.aiTotalAndIntensity(total, choice.intensity),
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -583,8 +586,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text(
-                    '· ${exercise.name} · ${exercise.minutes}분 '
-                    '(${exercise.type})',
+                    '${l.aiBulletExercise(exercise.name, exercise.minutes)}'
+                    '(${routineTypeLabel(l, exercise.type)})',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.foreground,

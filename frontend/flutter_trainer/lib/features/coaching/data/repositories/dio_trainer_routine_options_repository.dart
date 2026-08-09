@@ -32,7 +32,8 @@ class DioTrainerRoutineOptionsRepository
       );
       final data = res.data;
       if (data == null) {
-        throw const ServerError(message: 'routine-options 응답이 비어 있어요.');
+        // 문구는 화면이 붙인다 — 리포지토리는 로케일을 모른다. (#501)
+        throw const ServerError();
       }
       return routineOptionsFromJson(data);
     } on DioException catch (e) {

@@ -767,7 +767,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         for (final h in _hourOptions)
                           DropdownMenuItem<int>(
                             value: h,
-                            child: Text('${h.toString().padLeft(2, '0')}시'),
+                            child: Text(l.schedHourLabel(h.toString().padLeft(2, '0'))),
                           ),
                       ],
                       onChanged: (v) => setState(() => _hour = v ?? _hour),
@@ -783,7 +783,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         for (final m in _minuteOptions)
                           DropdownMenuItem<int>(
                             value: m,
-                            child: Text('${m.toString().padLeft(2, '0')}분'),
+                            child: Text(l.schedMinuteLabel(m.toString().padLeft(2, '0'))),
                           ),
                       ],
                       onChanged: (v) => setState(() => _minute = v ?? _minute),
@@ -800,7 +800,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                 underline: const SizedBox.shrink(),
                 items: <DropdownMenuItem<int>>[
                   for (final d in _durationOptions)
-                    DropdownMenuItem<int>(value: d, child: Text('$d분')),
+                    DropdownMenuItem<int>(value: d, child: Text(l.minutesShort(d))),
                 ],
                 onChanged: (v) => setState(() => _duration = v ?? _duration),
               ),
@@ -933,7 +933,8 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
   }
 
   void _addItem() {
-    setState(() => _items.add(_ProgramDraft.empty()));
+    final AppLocalizations l = AppLocalizations.of(context);
+    setState(() => _items.add(_ProgramDraft.empty(l)));
   }
 
   void _removeItem(int index) {
@@ -1084,8 +1085,10 @@ class _ProgramDraft {
     weight: item.weight == '-' ? '' : item.weight,
   );
 
-  factory _ProgramDraft.empty() =>
-      _ProgramDraft(name: '', sets: '3', reps: '10회', weight: '');
+  /// 새 운동 행의 기본값. reps 는 트레이너가 바로 고쳐 쓰는 입력값이라
+  /// 트레이너의 로케일을 따른다.
+  factory _ProgramDraft.empty(AppLocalizations l) =>
+      _ProgramDraft(name: '', sets: '3', reps: l.progDefaultReps, weight: '');
 
   final TextEditingController name;
   final TextEditingController sets;

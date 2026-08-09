@@ -1774,4 +1774,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrNotTrainer => 'Please sign in with a trainer account.';
+
+  @override
+  String aiBasisGoalCompletion(String goal, int rate) {
+    return '$goal · based on $rate% completion';
+  }
+
+  @override
+  String aiTotalAndIntensity(int total, String intensity) {
+    return '$total min total · $intensity';
+  }
+
+  @override
+  String aiBulletExercise(String name, int minutes) {
+    return '· $name · $minutes min ';
+  }
+
+  @override
+  String schedHourLabel(String hour) {
+    return '$hour:00';
+  }
+
+  @override
+  String schedMinuteLabel(String minute) {
+    return '$minute min';
+  }
+
+  @override
+  String get progDefaultReps => '10 reps';
+
+  @override
+  String get appTitleSpaced => 'On - Care Trainer';
 }

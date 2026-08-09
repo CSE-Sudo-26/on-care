@@ -3223,6 +3223,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please sign in with a trainer account.'**
   String get authErrNotTrainer;
+
+  /// No description provided for @aiBasisGoalCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'{goal} · based on {rate}% completion'**
+  String aiBasisGoalCompletion(String goal, int rate);
+
+  /// No description provided for @aiTotalAndIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} min total · {intensity}'**
+  String aiTotalAndIntensity(int total, String intensity);
+
+  /// No description provided for @aiBulletExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'· {name} · {minutes} min '**
+  String aiBulletExercise(String name, int minutes);
+
+  /// No description provided for @schedHourLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{hour}:00'**
+  String schedHourLabel(String hour);
+
+  /// No description provided for @schedMinuteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{minute} min'**
+  String schedMinuteLabel(String minute);
+
+  /// No description provided for @progDefaultReps.
+  ///
+  /// In en, this message translates to:
+  /// **'10 reps'**
+  String get progDefaultReps;
+
+  /// Login screen wordmark with the spaced hyphen used in the visual design.
+  ///
+  /// In en, this message translates to:
+  /// **'On - Care Trainer'**
+  String get appTitleSpaced;
 }
 
 class _AppLocalizationsDelegate

@@ -92,7 +92,7 @@ class RoutineMinutesSlider extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '$minutes분',
+              l.minutesShort(minutes),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,

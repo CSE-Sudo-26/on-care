@@ -123,7 +123,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'On - Care 트레이너',
+                    l.appTitleSpaced,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -189,8 +189,12 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   // (seed/admin). Hide the entry when hitting the real API so
                   // it isn't a dead end. (Follow-up: trainer provisioning.)
                   if (signUpEnabled)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Wrap, not Row: 영어 문구("Don't have an account?" +
+                    // "Sign up")는 한국어보다 길어 좁은 폭에서 Row 가 넘쳤다.
+                    // 줄바꿈으로 흘려보내면 어느 언어에서도 잘리지 않는다. (#501)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: <Widget>[
                         Text(
                           l.authNoAccount,

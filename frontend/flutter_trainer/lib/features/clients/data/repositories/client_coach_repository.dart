@@ -96,7 +96,8 @@ class DioClientCoachRepository implements ClientCoachRepository {
       // 404 는 '남의 고객'이다 — 서버가 존재조차 드러내지 않는다. 트레이너에게는
       // 담당이 아니라는 사실이 필요한 정보다.
       if (status == 404) {
-        throw const NotFoundError(message: '담당 고객이 아니에요');
+        // 문구는 화면이 붙인다 — 리포지토리는 로케일을 모른다. (#501)
+        throw const NotFoundError();
       }
       if (status == 400 || status == 422) {
         throw ValidationError(message: _detail(e));

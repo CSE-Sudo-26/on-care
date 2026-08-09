@@ -1176,5 +1176,59 @@
   "slotFutureOnly": "Booking slots can only be set for future times.",
   "slotNotFound": "Booking slot not found.",
   "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
-  "authErrNotTrainer": "Please sign in with a trainer account."
+  "authErrNotTrainer": "Please sign in with a trainer account.",
+  "aiBasisGoalCompletion": "{goal} · based on {rate}% completion",
+  "@aiBasisGoalCompletion": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "aiTotalAndIntensity": "{total} min total · {intensity}",
+  "@aiTotalAndIntensity": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "aiBulletExercise": "· {name} · {minutes} min ",
+  "@aiBulletExercise": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "schedHourLabel": "{hour}:00",
+  "@schedHourLabel": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "schedMinuteLabel": "{minute} min",
+  "@schedMinuteLabel": {
+    "placeholders": {
+      "minute": {
+        "type": "String"
+      }
+    }
+  },
+  "progDefaultReps": "10 reps",
+  "appTitleSpaced": "On - Care Trainer",
+  "@appTitleSpaced": {
+    "description": "Login screen wordmark with the spaced hyphen used in the visual design."
+  }
 }

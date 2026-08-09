@@ -222,8 +222,11 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                         onTap: _register,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Row 가 아니라 Wrap — 영어 문구가 길어 좁은 폭에서
+                      // 넘친다(로그인 화면과 같은 이유). (#501)
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: <Widget>[
                           Text(
                             l.authHasAccount,

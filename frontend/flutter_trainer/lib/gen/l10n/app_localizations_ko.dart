@@ -1725,4 +1725,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authErrNotTrainer => '트레이너 계정으로 로그인해 주세요.';
+
+  @override
+  String aiBasisGoalCompletion(String goal, int rate) {
+    return '$goal · 완료율 $rate% 기준';
+  }
+
+  @override
+  String aiTotalAndIntensity(int total, String intensity) {
+    return '총 $total분 · 강도 $intensity';
+  }
+
+  @override
+  String aiBulletExercise(String name, int minutes) {
+    return '· $name · $minutes분 ';
+  }
+
+  @override
+  String schedHourLabel(String hour) {
+    return '$hour시';
+  }
+
+  @override
+  String schedMinuteLabel(String minute) {
+    return '$minute분';
+  }
+
+  @override
+  String get progDefaultReps => '10회';
+
+  @override
+  String get appTitleSpaced => 'On - Care 트레이너';
 }

@@ -69,9 +69,17 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
       });
     } on AppError catch (e) {
       if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
       setState(() {
-        final AppLocalizations l = AppLocalizations.of(context);
-        _error = e.message ?? l.coachSheetLoadFailed;
+        // 서버가 준 사유가 있으면 그대로(서버 문구의 다국어는 별건), 없으면
+        // 오류 종류에 맞는 문구를 화면이 붙인다. (#501)
+        _error =
+            e.message ??
+            switch (e) {
+              NotFoundError() => l.coachNotMyClient,
+              ValidationError() => l.coachDemoUnavailable,
+              _ => l.coachAskFailed,
+            };
         _asking = false;
       });
     }
