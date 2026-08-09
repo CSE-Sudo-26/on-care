@@ -335,7 +335,17 @@ def _seed_schedule(db: Session, valid: set[str]) -> None:
 
 
 def _seed_chat(db: Session, member_id: str) -> None:
-    """트레이너↔회원 채팅 스레드(멱등, 결정론적 id). 최근 시각으로 정렬되게 시드."""
+    """트레이너↔회원 채팅 스레드(멱등, 결정론적 id). 최근 시각으로 정렬되게 시드.
+
+    **이미 있는 시드 행은 건너뛰지 않고 현재 대화로 덮어쓴다.** 건너뛰면, 전에
+    시드된 DB(공유 Neon 포함)가 옛 본문을 그대로 들고 새로 늘어난 메시지만
+    덧붙여 앞뒤가 다른 스레드가 된다 — 실제로 이 스레드는 다섯 개에서 열여덟
+    개로 바뀌면서 앞 다섯 개의 본문도 전부 달라졌다(리뷰 지적). 대화가 줄어든
+    경우를 위해 남는 시드 행도 지운다.
+
+    회원이 앱에서 직접 보낸 메시지는 `chat-` 로 시작하는 다른 id 라 건드리지
+    않는다 — 지우는 대상은 `seed-chat-{member_id}-` 접두사뿐이다.
+    """
     thread = _CHAT.get(member_id)
     if not thread:
         return
@@ -344,18 +354,36 @@ def _seed_chat(db: Session, member_id: str) -> None:
     # days_ago 가 뒤로 갈수록 작아지므로 시각은 계속 증가한다 — 스레드 정렬은
     # (created_at, id) 이라 이 단조성이 대화 순서를 보장한다.
     base = datetime.now(timezone.utc) - timedelta(hours=2)
+    keep: set[str] = set()
     for i, (sender, text, days_ago) in enumerate(thread):
         cid = f"seed-chat-{member_id}-{i}"
-        if db.get(models.ChatMessage, cid) is not None:
+        keep.add(cid)
+        created_at = base - timedelta(days=days_ago) + timedelta(minutes=i * 2)
+        sender_out = "member" if sender == "client" else "trainer"
+        row = db.get(models.ChatMessage, cid)
+        if row is None:
+            db.add(models.ChatMessage(
+                id=cid,
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                sender=sender_out,
+                body=text,
+                created_at=created_at,
+            ))
             continue
-        db.add(models.ChatMessage(
-            id=cid,
-            trainer_id=TRAINER_ID,
-            member_id=member_id,
-            sender="member" if sender == "client" else "trainer",
-            body=text,
-            created_at=base - timedelta(days=days_ago) + timedelta(minutes=i * 2),
-        ))
+        row.sender = sender_out
+        row.body = text
+        row.created_at = created_at
+
+    stale = db.scalars(
+        select(models.ChatMessage).where(
+            models.ChatMessage.member_id == member_id,
+            models.ChatMessage.id.like(f"seed-chat-{member_id}-%"),
+        )
+    ).all()
+    for row in stale:
+        if row.id not in keep:
+            db.delete(row)
     _safe_commit(db)
 
 

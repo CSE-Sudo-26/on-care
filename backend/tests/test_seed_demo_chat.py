@@ -59,15 +59,17 @@ def test_demo_thread_matches_the_app_seeds(client, db_session):
     assert [(r.sender, r.body) for r in rows] == _EXPECTED
 
 
-def test_demo_thread_spans_several_days(client, db_session):
-    """3일치 대화가 30분짜리 수다로 뭉치지 않는다.
+def test_demo_thread_spans_three_days(client, db_session):
+    """사흘치 대화가 30분짜리 수다로 뭉치지 않는다.
 
-    시각을 전부 같은 시간대에 몰아넣으면, 배정 첫 인사와 오늘 PT 피드백이
-    같은 오후에 오간 것처럼 읽힌다.
+    시각을 전부 같은 시간대에 몰아넣으면 사흘 대화가 같은 오후에 오간 것처럼
+    읽히고, 화면이 날짜로 묶는 자리(하루치 AI 분석 안내)도 하나로 뭉친다.
+    '며칠에 걸쳤나(span)' 가 아니라 **서로 다른 날이 몇 개인가**를 본다 —
+    대화한 날이 달력에서 연속일 필요는 없다.
     """
     rows = _seeded_thread(db_session)
-    span = rows[-1].created_at - rows[0].created_at
-    assert span.days >= 4, f"대화가 {span} 안에 몰려 있습니다."
+    days = {r.created_at.date() for r in rows}
+    assert len(days) == 3, f"대화한 날이 {len(days)}일입니다: {sorted(days)}"
 
 
 def test_demo_thread_is_chronological(client, db_session):
@@ -76,3 +78,34 @@ def test_demo_thread_is_chronological(client, db_session):
     times = [r.created_at for r in rows]
     assert times == sorted(times)
     assert len(set(times)) == len(times), "같은 시각의 메시지가 있어 순서가 흔들립니다."
+
+
+def test_reseeding_overwrites_an_older_thread(client, db_session):
+    """이미 시드된 DB 도 현재 대화로 갱신된다.
+
+    전에는 id 가 있으면 건너뛰어서, 다섯 개짜리 옛 스레드를 가진 DB 가 앞
+    다섯 개는 옛 본문 그대로 두고 뒤에 새 메시지만 덧붙였다 — 앞뒤가 다른
+    스레드가 된다. 공유 DB 는 이미 옛 시드를 갖고 있어 실제로 겪는 경로다.
+    """
+    from app.db.seed_member_data import _seed_chat
+    from app.models.models import ChatMessage
+
+    first = _seeded_thread(db_session)[0]
+    first.body = "옛 시드 본문"
+    stray_id = f"seed-chat-{_MEMBER_ID}-999"
+    db_session.add(ChatMessage(
+        id=stray_id,
+        trainer_id=first.trainer_id,
+        member_id=_MEMBER_ID,
+        sender="trainer",
+        body="이제 없는 메시지",
+        created_at=first.created_at,
+    ))
+    db_session.commit()
+
+    _seed_chat(db_session, _MEMBER_ID)
+    db_session.expire_all()
+
+    rows = _seeded_thread(db_session)
+    assert [(r.sender, r.body) for r in rows] == _EXPECTED
+    assert db_session.get(ChatMessage, stray_id) is None
