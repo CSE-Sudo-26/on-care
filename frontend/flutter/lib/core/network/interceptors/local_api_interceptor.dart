@@ -14,7 +14,6 @@ const Map<String, String> _seedDietPhotoAssets = <String, String>{
       'assets/images/breakfast-scrambled-egg-strawberry.jpg',
   'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
   'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
-  'seed-diet-dinner': 'assets/images/diet-tofu-salad.jpg',
   'seed-diet-yesterday-breakfast':
       'assets/images/diet-oatmeal-banana.jpeg',
   'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',

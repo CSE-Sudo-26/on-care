@@ -42,7 +42,7 @@ void main() {
       final exercise = await db.select(db.exerciseSessions).get();
 
       expect(diet, isNotEmpty);
-      expect(diet.where((r) => r.date == today).length, 4);
+      expect(diet.where((r) => r.date == today).length, 3);
       expect(diet.where((r) => r.date == _daysAgoString(1)).length, 3);
       expect(diet.where((r) => r.date == _daysAgoString(2)).length, 3);
       expect(diet.where((r) => r.date == _daysAgoString(3)), isEmpty);
@@ -56,11 +56,9 @@ void main() {
         '연어구이',
         '현미밥',
       ]);
-      for (final date in <String>[
-        today,
-        _daysAgoString(1),
-        _daysAgoString(2),
-      ]) {
+      // 지난 이틀은 하루가 끝난 기록이라 저녁까지 있고, 오늘은 저녁을 비워 둔다
+      // — 데모에서 사진으로 저녁을 기록하는 흐름을 위해서다 (#548).
+      for (final date in <String>[_daysAgoString(1), _daysAgoString(2)]) {
         final mealTypes = diet
             .where((row) => row.date == date)
             .map((row) => row.mealType)
@@ -70,6 +68,13 @@ void main() {
           containsAll(<String>['breakfast', 'lunch', 'dinner']),
         );
       }
+      expect(
+        diet
+            .where((row) => row.date == today)
+            .map((row) => row.mealType)
+            .toSet(),
+        <String>{'breakfast', 'lunch', 'snack'},
+      );
       expect(diet.where((row) => row.mealType == 'snack').length, 1);
       // Schedule seeds a couple of events on today (for the dashboard's
       // "오늘의 일정") plus a few spread across the current month (for the
@@ -93,7 +98,7 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v12'), today);
+      expect(await db.readValue('seeded_v13'), today);
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
@@ -116,15 +121,17 @@ void main() {
           .where((entry) => entry.date == _todayString())
           .toList();
 
-      expect(diet.length, 4);
+      // 오늘은 아침·점심·간식 셋뿐이다 — 저녁은 데모 시연을 위해 비워 둔다 (#548).
+      expect(diet.length, 3);
+      expect(diet.every((entry) => entry.mealType != 'dinner'), isTrue);
       expect(
         diet.fold<int>(0, (sum, entry) => sum + entry.totalCalories),
-        1517,
+        1067,
       );
-      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 4008);
+      expect(diet.fold<int>(0, (sum, entry) => sum + entry.sodiumMg), 3428);
       expect(
         diet.fold<double>(0, (sum, entry) => sum + entry.sugarG),
-        closeTo(24.8, 0.001),
+        closeTo(17.8, 0.001),
       );
 
       for (final entry in allDiet) {
@@ -157,15 +164,15 @@ void main() {
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v12', '2020-01-01');
+      await db.putValue('seeded_v13', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final today = _todayString();
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
-      expect(diet.where((r) => r.date == today).length, 4);
-      expect(await db.readValue('seeded_v12'), today);
+      expect(diet.where((r) => r.date == today).length, 3);
+      expect(await db.readValue('seeded_v13'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -192,7 +199,7 @@ void main() {
 
       // Legacy flag cleared, current flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v12'), _todayString());
+      expect(await db.readValue('seeded_v13'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -202,7 +209,7 @@ void main() {
         isFalse,
         reason: 'stale v2 seed rows must be wiped during migration',
       );
-      expect(diet.where((r) => r.date == _todayString()).length, 4);
+      expect(diet.where((r) => r.date == _todayString()).length, 3);
     });
 
     test('user-added (non-seed) rows survive a re-seed', () async {
@@ -222,7 +229,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v12', '2020-01-01');
+      await db.putValue('seeded_v13', '2020-01-01');
       await seedIfEmpty(db);
 
       final diet = await db.select(db.dietEntries).get();

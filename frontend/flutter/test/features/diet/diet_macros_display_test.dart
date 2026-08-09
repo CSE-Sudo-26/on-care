@@ -188,14 +188,14 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.textContaining('1,517'), findsOneWidget);
+      expect(find.textContaining('1,067'), findsOneWidget);
       expect(find.textContaining('2,000 kcal'), findsOneWidget);
-      expect(find.textContaining('4,008'), findsOneWidget);
-      expect(find.textContaining('24.8'), findsOneWidget);
+      expect(find.textContaining('3,428'), findsOneWidget);
+      expect(find.textContaining('17.8'), findsOneWidget);
       expect(find.text('목표 초과'), findsOneWidget);
       expect(find.text('정상'), findsOneWidget);
-      expect(find.text('목표보다 2,008mg 많아요'), findsOneWidget);
-      expect(find.text('목표까지 25.2g 남았어요'), findsOneWidget);
+      expect(find.text('목표보다 1,428mg 많아요'), findsOneWidget);
+      expect(find.text('목표까지 32.2g 남았어요'), findsOneWidget);
       expect(
         find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
         findsOneWidget,
@@ -275,13 +275,13 @@ void main() {
     // 오늘 4끼 합계 = 탄140·단79·지72g.
     expect(find.text('탄수화물'), findsOneWidget);
     expect(find.textContaining('탄수화물 45%'), findsNothing);
-    expect(find.textContaining('140 / 275g'), findsOneWidget);
+    expect(find.textContaining('120 / 275g'), findsOneWidget);
     expect(find.text('단백질'), findsOneWidget);
     expect(find.textContaining('단백질 17%'), findsNothing);
-    expect(find.textContaining('79 / 100g'), findsOneWidget); // 단백질 79g
+    expect(find.textContaining('45 / 100g'), findsOneWidget); // 단백질 45g
     expect(find.text('지방'), findsOneWidget);
     expect(find.textContaining('지방 38%'), findsNothing);
-    expect(find.textContaining('72 / 55g'), findsOneWidget); // 지방 72g
+    expect(find.textContaining('45 / 55g'), findsOneWidget); // 지방 45g
     void expectMacroProgressColor(String label, Color expectedColor) {
       final Finder progress = find.byKey(
         Key('nutrition-macro-progress-$label'),

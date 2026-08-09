@@ -71,9 +71,9 @@ void main() {
     expect(sodium.overBudget, isTrue);
     expect(sodium.progress, 1.0); // clamped
     // 매크로는 식단 저장소가 준 값 그대로다.
-    expect(s.macros.carbsG, 140);
-    expect(s.macros.proteinG, 79);
-    expect(s.macros.fatG, 72);
+    expect(s.macros.carbsG, 120);
+    expect(s.macros.proteinG, 45);
+    expect(s.macros.fatG, 45);
   });
 
   test(
@@ -159,7 +159,7 @@ void main() {
     final DashboardSummary before = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(before.dietEntries, 4);
+    expect(before.dietEntries, 3);
 
     final DietDay day = await diet.fetchToday();
     await diet.deleteEntry(
@@ -171,7 +171,7 @@ void main() {
     final DashboardSummary after = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(after.dietEntries, 3);
+    expect(after.dietEntries, 2);
   });
 
   // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
@@ -191,8 +191,8 @@ void main() {
         .firstWhere((HealthIndicator h) => h.label == '나트륨')
         .current;
 
-    expect(before.dietEntries, 4);
-    expect(after.dietEntries, 3);
+    expect(before.dietEntries, 3);
+    expect(after.dietEntries, 2);
     // 짬뽕(3,200mg)이 빠지면 목표 아래로 내려온다.
     expect(sodium(after), lessThan(sodium(before)));
     expect(

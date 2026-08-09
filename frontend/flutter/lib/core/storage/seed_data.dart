@@ -7,7 +7,7 @@ import 'package:oncare/core/storage/app_database.dart';
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v12']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v13']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -38,7 +38,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   final twoDaysAgo = _fmtDate(now.subtract(const Duration(days: 2)));
   final weekStart = _fmtDate(_mondayOfThisWeek(now));
 
-  final seedDate = await db.readValue('seeded_v12');
+  final seedDate = await db.readValue('seeded_v13');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -73,6 +73,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   await db.deleteValue('seeded_v9');
   await db.deleteValue('seeded_v10');
   await db.deleteValue('seeded_v11');
+  await db.deleteValue('seeded_v12');
   // Also clear the curated KV advice so re-seed state is fully reset: this
   // version re-writes it below, but if a later seed drops or renames the key
   // an existing install would otherwise keep the stale text forever.
@@ -160,26 +161,6 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 100,
           sodiumMg: const Value(7),
           sugarG: const Value(3.0),
-        ),
-        DietEntriesCompanion.insert(
-          id: 'seed-diet-dinner',
-          date: today,
-          mealType: 'dinner',
-          timeLabel: '18:40',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '두부 샐러드',
-              'calories': 450,
-              'sodium_mg': 580,
-              'sugar_g': 7,
-              'carbs_g': 20.0,
-              'protein_g': 34.0,
-              'fat_g': 27.0,
-            },
-          ]),
-          totalCalories: 450,
-          sodiumMg: const Value(580),
-          sugarG: const Value(7.0),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-yesterday-breakfast',
@@ -577,7 +558,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // 노출한다.
   await db.putValue('dashboard_ai_advice', kDailyCombinedAdviceKey);
 
-  await db.putValue('seeded_v12', today);
+  await db.putValue('seeded_v13', today);
 }
 
 String _fmtDate(DateTime d) =>

@@ -5,6 +5,9 @@
 /// 수 없다 — 실제로 칼로리 축이 1,000·1,500·2,000·2,500 네 개일 때 그렇게 겹쳤다.
 /// 여기서는 "겹치지 않는다"를 좌표로 못박는다. 눈금을 다시 늘리면 이 테스트가
 /// 먼저 깨진다.
+///
+/// 세 지표 모두 맨 아래 눈금은 0 이어야 한다 — 한 카드에서 탭으로 바뀌는데
+/// 축의 바닥이 지표마다 다르면 같은 그래프를 다른 기준으로 읽게 된다 (#548).
 library;
 
 import 'package:flutter/material.dart';
@@ -119,13 +122,30 @@ void main() {
     ]..sort((a, b) => a.rect.top.compareTo(b.rect.top));
   }
 
-  testWidgets('칼로리 축은 1,500·2,500 두 눈금만 그린다', (WidgetTester tester) async {
+  testWidgets('칼로리 축은 0 기준선 위에 1,500·2,500 두 눈금만 그린다', (
+    WidgetTester tester,
+  ) async {
     await pumpHome(tester);
 
     expect(
       <String>[for (final label in axisLabels(tester)) label.text],
-      <String>['2,500', '1,500'],
+      <String>['2,500', '1,500', '0'],
     );
+  });
+
+  testWidgets('세 지표 모두 맨 아래 눈금이 0 이다 (#548)', (WidgetTester tester) async {
+    await pumpHome(tester);
+
+    for (final String tab in <String>['칼로리', '나트륨', '당류']) {
+      await tester.tap(find.text(tab).first);
+      await tester.pumpAndSettle();
+
+      expect(
+        axisLabels(tester).last.text,
+        '0',
+        reason: '$tab 축의 맨 아래 눈금이 0 이 아니다',
+      );
+    }
   });
 
   testWidgets('지표를 바꿔도 축 라벨끼리 겹치지 않는다', (WidgetTester tester) async {
