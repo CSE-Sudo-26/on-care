@@ -25,6 +25,29 @@ class MockDashboardRepository implements DashboardRepository {
   @override
   Future<DashboardSummary> fetchSummary() async {
     final DietDay today = await _diet.fetchToday();
+    final DateTime now = DateTime.now();
+    final DateTime monday = DateTime(
+      now.year,
+      now.month,
+      now.day - (now.weekday - 1),
+    );
+    final List<NutritionDay> nutritionWeek = <NutritionDay>[];
+    for (var index = 0; index < 7; index++) {
+      final DateTime date = monday.add(Duration(days: index));
+      final bool isToday =
+          date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day;
+      final DietDay day = isToday ? today : await _diet.fetchByDate(date);
+      nutritionWeek.add(
+        NutritionDay(
+          label: _weekdayLabels[index],
+          calories: day.totalCalories,
+          sodiumMg: day.totalSodiumMg,
+          sugarG: day.totalSugarG,
+        ),
+      );
+    }
 
     return DashboardSummary(
       indicators: <HealthIndicator>[
@@ -58,6 +81,7 @@ class MockDashboardRepository implements DashboardRepository {
       // 데모 주간 소모 목표. 화면이 하드코딩하던 값을 목 데이터로 옮겨,
       // 홈·운동 탭이 같은 소스(exerciseBurnGoal)를 읽어도 데모 수치는 그대로.
       exerciseBurnGoal: 1500,
+      nutritionWeek: nutritionWeek,
       todaySchedule: const <ScheduleItem>[
         ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),
         ScheduleItem(time: '18:00', title: '헬스장 운동', emoji: '💪'),
@@ -74,3 +98,5 @@ class MockDashboardRepository implements DashboardRepository {
     );
   }
 }
+
+const List<String> _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];

@@ -501,7 +501,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String otherDateEmpty(Object section) {
-    return 'Records for the selected date aren\'t available yet.\nPlease check your $section records on today\'s date.';
+    return 'No $section records for the selected date.';
   }
 
   @override

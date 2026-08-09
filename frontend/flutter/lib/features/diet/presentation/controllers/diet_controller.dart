@@ -24,6 +24,13 @@ final dietTodayProvider = FutureProvider<DietDay>((ref) {
   return ref.watch(dietRepositoryProvider).fetchToday();
 }, name: 'dietToday');
 
+final dietByDateProvider = FutureProvider.family<DietDay, DateTime>((
+  ref,
+  date,
+) {
+  return ref.watch(dietRepositoryProvider).fetchByDate(date);
+}, name: 'dietByDate');
+
 /// 홈 "AI 추천 식단" — GET /diet/recommendations.
 ///
 /// 홈 진입을 막지 않는 게 요구사항이라, 소비하는 쪽은 이 provider 가 값을 내기

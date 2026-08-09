@@ -7,6 +7,8 @@ import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 abstract class DietRepository {
   Future<DietDay> fetchToday();
 
+  Future<DietDay> fetchByDate(DateTime date);
+
   /// GET /diet/recommendations — 홈 "AI 추천 식단".
   ///
   /// 서버가 최근 식단·건강 목표를 근거로 카탈로그에서 고른 결과다. 실패해도

@@ -35,6 +35,105 @@ def test_macro_percentages_use_449_and_always_sum_correctly():
     assert zero.carbs_pct + zero.protein_pct + zero.fat_pct == 0
 
 
+def test_get_diet_day_by_date_aggregates_only_current_user(client, db_session):
+    from app.db.init_db import DEMO_USER_ID
+    from app.models.models import DietEntry, User
+
+    date = "2001-02-03"
+    suffix = uuid.uuid4().hex[:12]
+    other_user_id = f"diet-date-owner-{suffix}"
+    db_session.execute(
+        delete(DietEntry).where(
+            DietEntry.user_id == DEMO_USER_ID,
+            DietEntry.date == date,
+        )
+    )
+    db_session.add(
+        User(
+            id=other_user_id,
+            email=f"{other_user_id}@example.com",
+            name="Other User",
+            hashed_password="",
+        )
+    )
+    db_session.add_all(
+        [
+            DietEntry(
+                id=f"diet-date-current-{suffix}",
+                user_id=DEMO_USER_ID,
+                date=date,
+                meal_type="lunch",
+                total_calories=420,
+                carbs_g=40,
+                protein_g=20,
+                fat_g=10,
+                sodium_mg=350,
+                sugar_g=7.5,
+            ),
+            DietEntry(
+                id=f"diet-date-other-{suffix}",
+                user_id=other_user_id,
+                date=date,
+                meal_type="dinner",
+                total_calories=999,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get(f"/v1/diet/days/{date}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["entries"]) == 1
+    assert body["total_calories"] == 420
+    assert body["total_sodium_mg"] == 350
+    assert body["total_sugar_g"] == 7.5
+    assert body["macros"] == {
+        "carbs_g": 40.0,
+        "protein_g": 20.0,
+        "fat_g": 10.0,
+        "carbs_pct": 49,
+        "protein_pct": 24,
+        "fat_pct": 27,
+    }
+
+
+@pytest.mark.parametrize("date", ["1999-01-01", "2999-01-01"])
+def test_get_diet_day_by_date_returns_empty_day(client, date):
+    response = client.get(f"/v1/diet/days/{date}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["entries"] == []
+    assert body["total_calories"] == 0
+    assert body["total_sodium_mg"] == 0
+    assert body["total_sugar_g"] == 0
+    assert body["macros"] == {
+        "carbs_g": 0.0,
+        "protein_g": 0.0,
+        "fat_g": 0.0,
+        "carbs_pct": 0,
+        "protein_pct": 0,
+        "fat_pct": 0,
+    }
+
+
+def test_get_diet_day_by_date_rejects_invalid_date(client):
+    assert client.get("/v1/diet/days/not-a-date").status_code == 422
+
+
+def test_today_endpoint_matches_date_endpoint(client):
+    from app.services.diet_service import today_str
+
+    today = client.get("/v1/diet/days/today")
+    by_date = client.get(f"/v1/diet/days/{today_str()}")
+
+    assert today.status_code == 200
+    assert by_date.status_code == 200
+    assert today.json() == by_date.json()
+
+
 @pytest.mark.parametrize("field", ["carbs_g", "protein_g", "fat_g"])
 @pytest.mark.parametrize("value", [-0.1, math.nan, math.inf, -math.inf])
 def test_recognized_food_rejects_invalid_macros(field, value):

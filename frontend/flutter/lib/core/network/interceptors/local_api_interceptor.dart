@@ -9,6 +9,24 @@ import 'package:logger/logger.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
 
+const Map<String, String> _seedDietPhotoAssets = <String, String>{
+  'seed-diet-breakfast':
+      'assets/images/breakfast-scrambled-egg-strawberry.jpg',
+  'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
+  'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
+  'seed-diet-dinner': 'assets/images/diet-tofu-salad.jpg',
+  'seed-diet-yesterday-breakfast':
+      'assets/images/diet-oatmeal-banana.jpeg',
+  'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',
+  'seed-diet-yesterday-dinner': 'assets/images/diet-doenjang-rice.jpeg',
+  'seed-diet-two-days-ago-breakfast':
+      'assets/images/diet-greek-yogurt-nuts.jpeg',
+  'seed-diet-two-days-ago-lunch':
+      'assets/images/diet-vegetable-bibimbap.jpg',
+  'seed-diet-two-days-ago-dinner':
+      'assets/images/diet-salmon-brown-rice.jpeg',
+};
+
 /// A drift-backed dummy backend. Intercepts dio requests and serves
 /// them out of the local SQLite database so the app can run as a
 /// "local backend" before the real FastAPI server exists.
@@ -118,6 +136,9 @@ class LocalApiInterceptor extends Interceptor {
   /// Resolve a handler for path-param routes (id in the URL). Returns null
   /// if none matches so [_safeHandle] falls through to the real network.
   _Handler? _paramRoute(String method, String path) {
+    if (method == 'GET' && path.startsWith('/diet/days/')) {
+      return _dietByDate;
+    }
     if (method == 'DELETE' && path.startsWith('/diet/entries/')) {
       return _dietDelete;
     }
@@ -352,6 +373,31 @@ class LocalApiInterceptor extends Interceptor {
     final calRatio = (totalCalories / 2000.0).clamp(0.0, 1.0);
     final exRatio = (exerciseMinutes / 60.0).clamp(0.0, 1.0);
     final score = (50 + calRatio * 25 + exRatio * 25).round();
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final nutritionByDate = <String, Map<String, num>>{
+      for (var index = 0; index < 7; index++)
+        _dateString(monday.add(Duration(days: index))): <String, num>{
+          'calories': 0,
+          'sodium_mg': 0,
+          'sugar_g': 0.0,
+        },
+    };
+    final allDietRows = await _db.select(_db.dietEntries).get();
+    for (final row in allDietRows) {
+      final totals = nutritionByDate[row.date];
+      if (totals == null) continue;
+      totals['calories'] = totals['calories']! + row.totalCalories;
+      totals['sodium_mg'] = totals['sodium_mg']! + row.sodiumMg;
+      totals['sugar_g'] = totals['sugar_g']! + row.sugarG;
+    }
+    final nutritionWeek = <Map<String, Object?>>[
+      for (var index = 0; index < 7; index++)
+        <String, Object?>{
+          'label': _weekdayLabels[index],
+          ...nutritionByDate[_dateString(monday.add(Duration(days: index)))]!,
+        },
+    ];
 
     return _ok(options, <String, Object?>{
       'indicators': <Map<String, Object?>>[
@@ -382,6 +428,8 @@ class LocalApiInterceptor extends Interceptor {
       // 운동 횟수 = 운동한 '일수'(활성 일수). 운동 화면의 workoutCount 와 정의를
       // 맞춰, 하루에 여러 세션을 기록해도 1회로 센다(세션 행 수가 아니라 distinct 요일).
       'exercise_count': exerciseRows.map((r) => r.dayLabel).toSet().length,
+      'nutrition_week': nutritionWeek,
+      'nutrition_week_prev': <Object?>[],
       'today_schedule': schedJson,
       'week_score': score,
       // Delta is a static demo number for now — full week-over-week
@@ -408,10 +456,21 @@ class LocalApiInterceptor extends Interceptor {
   // ---- Diet ----
 
   Future<Response<Object?>> _dietToday(RequestOptions options) async {
-    final today = _todayDateString();
+    return _dietForDate(options, _todayDateString());
+  }
+
+  Future<Response<Object?>> _dietByDate(RequestOptions options) async {
+    final date = options.path.split('/').last;
+    return _dietForDate(options, date);
+  }
+
+  Future<Response<Object?>> _dietForDate(
+    RequestOptions options,
+    String date,
+  ) async {
     final rows = await (_db.select(
       _db.dietEntries,
-    )..where((t) => t.date.equals(today))).get();
+    )..where((t) => t.date.equals(date))).get();
 
     int totalCalories = 0;
     int totalSodium = 0;
@@ -419,6 +478,7 @@ class LocalApiInterceptor extends Interceptor {
     double totalCarbs = 0;
     double totalProtein = 0;
     double totalFat = 0;
+    final sodiumByFoodName = <String, int>{};
     final entriesJson = <Map<String, Object?>>[];
     for (final r in rows) {
       final foods = (jsonDecode(r.foodsJson) as List<Object?>).cast<Object?>();
@@ -429,6 +489,18 @@ class LocalApiInterceptor extends Interceptor {
       totalCarbs += macros.carbsG;
       totalProtein += macros.proteinG;
       totalFat += macros.fatG;
+      for (final food in foods) {
+        if (food is! Map) continue;
+        final name = (food['name'] as String? ?? '').trim();
+        final sodium = (food['sodium_mg'] as num?)?.toInt() ?? 0;
+        if (name.isNotEmpty && sodium > 0) {
+          sodiumByFoodName.update(
+            name,
+            (total) => total + sodium,
+            ifAbsent: () => sodium,
+          );
+        }
+      }
       entriesJson.add(<String, Object?>{
         'id': r.id,
         'meal_type': r.mealType,
@@ -440,8 +512,15 @@ class LocalApiInterceptor extends Interceptor {
         'fat_g': macros.fatG,
         'sodium_mg': r.sodiumMg,
         'sugar_g': r.sugarG,
+        'photo_asset': _seedDietPhotoAssets[r.id],
       });
     }
+    final sodiumSources = sodiumByFoodName.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final sodiumSourceNames = sodiumSources
+        .take(2)
+        .map((source) => source.key)
+        .join('·');
 
     return _ok(options, <String, Object?>{
       'entries': entriesJson,
@@ -450,7 +529,9 @@ class LocalApiInterceptor extends Interceptor {
       'total_sugar_g': totalSugar,
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
       'ai_coach_message': totalSodium > 2000
-          ? '오늘 나트륨 섭취량이 권장량을 초과했어요. 점심의 김치찌개와 배추김치가 가장 큰 영향을 주었어요.'
+          ? '$sodiumSourceNames 섭취로 나트륨이 높아요. 다음 식사는 양념과 국물을 줄여 보세요.'
+          : rows.isEmpty
+          ? '아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?'
           : '균형 잡힌 하루였어요. 내일도 이대로 가요!',
     });
   }
@@ -560,11 +641,13 @@ class LocalApiInterceptor extends Interceptor {
   }
 
   String _todayDateString() {
-    final now = DateTime.now();
-    return '${now.year.toString().padLeft(4, '0')}-'
-        '${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
+    return _dateString(DateTime.now());
   }
+
+  String _dateString(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   // ---- Exercise ----
 

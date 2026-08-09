@@ -48,6 +48,10 @@ class _RecordingDietRepository implements DietRepository {
   Future<void> deleteEntry(String id) async {}
 
   @override
+  Future<DietDay> fetchByDate(DateTime date) async =>
+      throw UnimplementedError();
+
+  @override
   Future<DietDay> fetchToday() async => throw UnimplementedError();
 
   @override

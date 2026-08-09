@@ -41,6 +41,15 @@ void main() {
     exerciseMinutes: 45,
     exerciseCalories: 520,
     exerciseCount: 4,
+    nutritionWeek: <NutritionDay>[
+      NutritionDay(label: '월', calories: 1100, sodiumMg: 110, sugarG: 11),
+      NutritionDay(label: '화', calories: 1200, sodiumMg: 120, sugarG: 12),
+      NutritionDay(label: '수', calories: 1300, sodiumMg: 130, sugarG: 13),
+      NutritionDay(label: '목', calories: 1400, sodiumMg: 140, sugarG: 14),
+      NutritionDay(label: '금', calories: 1500, sodiumMg: 150, sugarG: 15),
+      NutritionDay(label: '토', calories: 1600, sodiumMg: 160, sugarG: 16),
+      NutritionDay(label: '일', calories: 1700, sodiumMg: 170, sugarG: 17),
+    ],
     todaySchedule: <ScheduleItem>[
       ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),
     ],
@@ -103,6 +112,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TrainerChatPage), findsOneWidget);
+  });
+
+  testWidgets('weekly nutrition chart uses DashboardSummary history', (
+    WidgetTester tester,
+  ) async {
+    await pumpDashboard(tester, load: () async => liveSummary);
+    await tester.pumpAndSettle();
+
+    final chart = find.byKey(
+      const ValueKey<String>('dashboard-nutrition-chart'),
+    );
+    final paints = tester.widgetList<CustomPaint>(
+      find.descendant(of: chart, matching: find.byType(CustomPaint)),
+    );
+    final CustomPaint trendPaint = paints.firstWhere(
+      (paint) => paint.painter.runtimeType.toString() == '_TrendChartPainter',
+    );
+    final dynamic trendPainter = trendPaint.painter;
+
+    expect(trendPainter.cur, <double>[
+      1100,
+      1200,
+      1300,
+      1400,
+      1500,
+      1600,
+      1700,
+    ]);
   });
 
   testWidgets('home uses the shared tab header and notification style', (

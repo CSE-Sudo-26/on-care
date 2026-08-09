@@ -1001,7 +1001,7 @@ abstract class AppLocalizations {
   /// No description provided for @otherDateEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Records for the selected date aren\'t available yet.\nPlease check your {section} records on today\'s date.'**
+  /// **'No {section} records for the selected date.'**
   String otherDateEmpty(Object section);
 
   /// No description provided for @dietTagSodium.

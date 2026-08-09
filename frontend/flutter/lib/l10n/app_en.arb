@@ -268,7 +268,7 @@
   "dietEmptyLog": "No meals logged yet.\nAdd your first meal with a photo!",
   "dietPhotoAnalysis": "Photo Analysis",
   "dietLoadError": "Couldn't load your diet.",
-  "otherDateEmpty": "Records for the selected date aren't available yet.\nPlease check your {section} records on today's date.",
+  "otherDateEmpty": "No {section} records for the selected date.",
   "dietTagSodium": "Sodium {mg}mg",
   "@dietTagSodium": {
     "placeholders": {
