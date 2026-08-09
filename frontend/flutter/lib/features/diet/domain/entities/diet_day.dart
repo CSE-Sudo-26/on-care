@@ -85,6 +85,7 @@ class DietEntry {
     proteinG: (json['protein_g'] as num?)?.toDouble() ?? 0,
     fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
     aiComment: (json['ai_comment'] as String?) ?? '',
+    photoAsset: json['photo_asset'] as String?,
   );
 }
 

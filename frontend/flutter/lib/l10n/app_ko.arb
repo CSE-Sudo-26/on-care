@@ -172,7 +172,7 @@
   "dietEmptyLog": "아직 기록된 식단이 없어요.\n사진으로 첫 끼니를 추가해 보세요!",
   "dietPhotoAnalysis": "사진 분석",
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
-  "otherDateEmpty": "선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 {section}을 확인해 주세요.",
+  "otherDateEmpty": "선택한 날짜에 기록된 {section}이 없어요.",
   "dietTagSodium": "나트륨 {mg}mg",
   "dietTagSugar": "당류 {g}g",
   "dietMealBreakfast": "아침",

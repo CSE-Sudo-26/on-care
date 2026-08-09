@@ -1140,9 +1140,8 @@ class _NutData {
 /// so the shown language never becomes an internal key.
 enum _NutTabKind { calories, sodium, sugar }
 
-/// The API currently exposes today's totals, but not six days of history.
-/// These historical points remain presentation-only demo data; [_nutritionFor]
-/// replaces the final point with the live summary value.
+/// Older dashboard responses can omit weekly nutrition history. Keep the
+/// original demo series only as a backward-compatible fallback.
 const Map<_NutTabKind, _NutData>
 _demoNutritionHistory = <_NutTabKind, _NutData>{
   _NutTabKind.calories: _NutData(
@@ -1178,17 +1177,29 @@ Map<_NutTabKind, _NutData> _nutritionFor(DashboardSummary summary) {
     _NutTabKind.sodium: summary.sodiumIndicator,
     _NutTabKind.sugar: summary.sugarIndicator,
   };
-  // 오늘 라이브 값은 '마지막(일) 고정'이 아니라 실제 오늘 요일 자리에 넣는다.
+  final List<NutritionDay>? week = summary.nutritionWeek.length == 7
+      ? summary.nutritionWeek
+      : null;
+  // 구버전 응답은 데모 이력을 쓰되, 오늘 값만 실제 요일 자리에 넣는다.
   final int todayIdx = _todayIndex();
   return <_NutTabKind, _NutData>{
     for (final entry in _demoNutritionHistory.entries)
       entry.key: _NutData(
-        cur: <double>[
-          for (int i = 0; i < entry.value.cur.length; i++)
-            i == todayIdx
-                ? liveValues[entry.key]!.current.toDouble()
-                : entry.value.cur[i],
-        ],
+        cur: week != null
+            ? <double>[
+                for (final day in week)
+                  switch (entry.key) {
+                    _NutTabKind.calories => day.calories.toDouble(),
+                    _NutTabKind.sodium => day.sodiumMg.toDouble(),
+                    _NutTabKind.sugar => day.sugarG,
+                  },
+              ]
+            : <double>[
+                for (int i = 0; i < entry.value.cur.length; i++)
+                  i == todayIdx
+                      ? liveValues[entry.key]!.current.toDouble()
+                      : entry.value.cur[i],
+              ],
         unit: entry.value.unit,
         goal: liveValues[entry.key]!.max.toDouble(),
         ticks: entry.value.ticks,

@@ -67,10 +67,10 @@ void main() {
     );
     expect(sodium.overBudget, isTrue);
     expect(sodium.progress, 1.0); // clamped
-    // 매크로는 식단 저장소가 준 값 그대로다(탄120·단45·지45 = 45/17/38%).
-    expect(s.macros.carbsG, 120);
-    expect(s.macros.proteinG, 45);
-    expect(s.macros.fatG, 45);
+    // 매크로는 식단 저장소가 준 값 그대로다.
+    expect(s.macros.carbsG, 140);
+    expect(s.macros.proteinG, 79);
+    expect(s.macros.fatG, 72);
   });
 
   // 홈이 영양 수치를 따로 들고 있다가 식단 탭과 어긋났다 — 홈 2,329mg·4끼 vs
@@ -82,8 +82,9 @@ void main() {
       diet,
     ).fetchSummary();
 
-    num indicator(String label) =>
-        s.indicators.firstWhere((HealthIndicator h) => h.label == label).current;
+    num indicator(String label) => s.indicators
+        .firstWhere((HealthIndicator h) => h.label == label)
+        .current;
 
     expect(indicator('칼로리'), today.totalCalories);
     expect(indicator('나트륨'), today.totalSodiumMg);
@@ -92,6 +93,10 @@ void main() {
     expect(s.macros.carbsG, today.macros.carbsG);
     expect(s.macros.proteinG, today.macros.proteinG);
     expect(s.macros.fatG, today.macros.fatG);
+    final NutritionDay todayTrend = s.nutritionWeek[DateTime.now().weekday - 1];
+    expect(todayTrend.calories, today.totalCalories);
+    expect(todayTrend.sodiumMg, today.totalSodiumMg);
+    expect(todayTrend.sugarG, today.totalSugarG);
   });
 
   // 저장소끼리 값이 맞아도, 홈 요약 provider 가 다시 읽지 않으면 화면은 옛
@@ -119,7 +124,7 @@ void main() {
     final DashboardSummary before = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(before.dietEntries, 3);
+    expect(before.dietEntries, 4);
 
     final DietDay day = await diet.fetchToday();
     await diet.deleteEntry(
@@ -131,7 +136,7 @@ void main() {
     final DashboardSummary after = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(after.dietEntries, 2);
+    expect(after.dietEntries, 3);
   });
 
   // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
@@ -151,8 +156,8 @@ void main() {
         .firstWhere((HealthIndicator h) => h.label == '나트륨')
         .current;
 
-    expect(before.dietEntries, 3);
-    expect(after.dietEntries, 2);
+    expect(before.dietEntries, 4);
+    expect(after.dietEntries, 3);
     // 짬뽕(3,200mg)이 빠지면 목표 아래로 내려온다.
     expect(sodium(after), lessThan(sodium(before)));
     expect(
@@ -202,63 +207,66 @@ void main() {
     expect(legacy.isEmpty, isTrue);
   });
 
-  test('DashboardSummary parses nutrition_week + burn goal, defaults older', () {
-    final parsed = DashboardSummary.fromJson(<String, Object?>{
-      'indicators': <Object?>[],
-      'diet_entries': 0,
-      'exercise_minutes': 0,
-      'exercise_burn_goal': 700,
-      'nutrition_week': <Object?>[
-        <String, Object?>{
-          'label': '월',
-          'calories': 1650,
-          'sodium_mg': 1600,
-          'sugar_g': 30,
-        },
-        <String, Object?>{
-          'label': '화',
-          'calories': 2100,
-          'sodium_mg': 1900,
-          'sugar_g': 48,
-        },
-      ],
-      'nutrition_week_prev': <Object?>[
-        <String, Object?>{
-          'label': '월',
-          'calories': 1820,
-          'sodium_mg': 1900,
-          'sugar_g': 35,
-        },
-      ],
-      'today_schedule': <Object?>[],
-      'week_score': 70,
-      'week_score_delta': -5,
-      'sodium_warning': null,
-      'exercise_feedback': null,
-    });
-    expect(parsed.exerciseBurnGoal, 700);
-    expect(parsed.nutritionWeek.length, 2);
-    expect(parsed.nutritionWeek.first.label, '월');
-    expect(parsed.nutritionWeek.first.calories, 1650);
-    expect(parsed.nutritionWeek.first.sodiumMg, 1600);
-    expect(parsed.nutritionWeekPrev.length, 1);
-    expect(parsed.weekScoreDelta, -5);
+  test(
+    'DashboardSummary parses nutrition_week + burn goal, defaults older',
+    () {
+      final parsed = DashboardSummary.fromJson(<String, Object?>{
+        'indicators': <Object?>[],
+        'diet_entries': 0,
+        'exercise_minutes': 0,
+        'exercise_burn_goal': 700,
+        'nutrition_week': <Object?>[
+          <String, Object?>{
+            'label': '월',
+            'calories': 1650,
+            'sodium_mg': 1600,
+            'sugar_g': 30,
+          },
+          <String, Object?>{
+            'label': '화',
+            'calories': 2100,
+            'sodium_mg': 1900,
+            'sugar_g': 48,
+          },
+        ],
+        'nutrition_week_prev': <Object?>[
+          <String, Object?>{
+            'label': '월',
+            'calories': 1820,
+            'sodium_mg': 1900,
+            'sugar_g': 35,
+          },
+        ],
+        'today_schedule': <Object?>[],
+        'week_score': 70,
+        'week_score_delta': -5,
+        'sodium_warning': null,
+        'exercise_feedback': null,
+      });
+      expect(parsed.exerciseBurnGoal, 700);
+      expect(parsed.nutritionWeek.length, 2);
+      expect(parsed.nutritionWeek.first.label, '월');
+      expect(parsed.nutritionWeek.first.calories, 1650);
+      expect(parsed.nutritionWeek.first.sodiumMg, 1600);
+      expect(parsed.nutritionWeekPrev.length, 1);
+      expect(parsed.weekScoreDelta, -5);
 
-    // 구버전 응답: 새 필드가 없으면 기본값(빈 주간·소모목표 500)으로 폴백.
-    final legacy = DashboardSummary.fromJson(<String, Object?>{
-      'indicators': <Object?>[],
-      'diet_entries': 0,
-      'exercise_minutes': 0,
-      'today_schedule': <Object?>[],
-      'week_score': 50,
-      'week_score_delta': 0,
-      'sodium_warning': null,
-      'exercise_feedback': null,
-    });
-    expect(legacy.exerciseBurnGoal, 500);
-    expect(legacy.nutritionWeek, isEmpty);
-    expect(legacy.nutritionWeekPrev, isEmpty);
-  });
+      // 구버전 응답: 새 필드가 없으면 기본값(빈 주간·소모목표 500)으로 폴백.
+      final legacy = DashboardSummary.fromJson(<String, Object?>{
+        'indicators': <Object?>[],
+        'diet_entries': 0,
+        'exercise_minutes': 0,
+        'today_schedule': <Object?>[],
+        'week_score': 50,
+        'week_score_delta': 0,
+        'sodium_warning': null,
+        'exercise_feedback': null,
+      });
+      expect(legacy.exerciseBurnGoal, 500);
+      expect(legacy.nutritionWeek, isEmpty);
+      expect(legacy.nutritionWeekPrev, isEmpty);
+    },
+  );
 
   test('isEmpty stays false when only past weekdays have diet records', () {
     Map<String, Object?> base(List<Object?> week) => <String, Object?>{

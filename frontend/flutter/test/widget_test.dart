@@ -431,22 +431,19 @@ void main() {
     expect(ko.exTypeCardio, '유산소');
   });
 
-  test('식단·운동 빈 상태가 한 문구를 공유한다 (#297)', () {
+  test('식단·운동 날짜별 빈 상태가 로케일을 따른다 (#297)', () {
     final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
     final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
 
-    // 두 탭이 같은 키를 쓰고 섹션 이름만 갈아끼운다 — 문구가 갈라지지 않게.
-    expect(ko.otherDateEmpty(ko.pageDietTitle), contains('식단을 확인해'));
-    expect(ko.otherDateEmpty(ko.pageExerciseTitle), contains('운동을 확인해'));
-    expect(en.otherDateEmpty(en.pageDietTitle), contains('your Diet records'));
+    expect(ko.otherDateEmpty(ko.pageDietTitle), '선택한 날짜에 기록된 식단이 없어요.');
+    expect(ko.otherDateEmpty(ko.pageExerciseTitle), '선택한 날짜에 기록된 운동이 없어요.');
+    expect(
+      en.otherDateEmpty(en.pageDietTitle),
+      'No Diet records for the selected date.',
+    );
     expect(
       en.otherDateEmpty(en.pageExerciseTitle),
-      contains('your Exercise records'),
-    );
-    // 앞 문장은 두 탭이 완전히 동일해야 한다(중복 문구 재분기 방지).
-    expect(
-      ko.otherDateEmpty(ko.pageDietTitle).split('\n').first,
-      ko.otherDateEmpty(ko.pageExerciseTitle).split('\n').first,
+      'No Exercise records for the selected date.',
     );
     expect(
       RegExp('[가-힣]').hasMatch(en.otherDateEmpty(en.pageDietTitle)),
