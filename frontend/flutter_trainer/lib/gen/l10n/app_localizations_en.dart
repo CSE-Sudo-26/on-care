@@ -1275,4 +1275,339 @@ class AppLocalizationsEn extends AppLocalizations {
   String myYearsSuffix(int years) {
     return '$years years';
   }
+
+  @override
+  String get routineTypeWalking => 'Walking';
+
+  @override
+  String get routineTypeCardio => 'Cardio';
+
+  @override
+  String get routineTypeStrength => 'Strength';
+
+  @override
+  String get routineTypeYoga => 'Yoga';
+
+  @override
+  String get routineTypeStretching => 'Stretching';
+
+  @override
+  String get routineTypeOther => 'Other';
+
+  @override
+  String get routineFieldType => 'Exercise type';
+
+  @override
+  String get routineFieldMinutes => 'Duration';
+
+  @override
+  String get routineFieldIntensity => 'Intensity';
+
+  @override
+  String get intensityLight => 'Light';
+
+  @override
+  String get intensityModerate => 'Moderate';
+
+  @override
+  String get intensityHigh => 'High';
+
+  @override
+  String get coachTitle => 'AI coaching';
+
+  @override
+  String get coachSubtitle => 'Routines built from diet and health data';
+
+  @override
+  String get coachSendDone => 'Sent';
+
+  @override
+  String get coachSendNoResponse =>
+      'No response came back. Check the client\'s received routines before sending again';
+
+  @override
+  String get coachSendFailed => 'Couldn\'t send. Please try again';
+
+  @override
+  String get coachCustomRoutine => 'AI custom routine';
+
+  @override
+  String get coachNeedOneExercise => 'Add at least one exercise';
+
+  @override
+  String get coachScheduleFailed =>
+      'Couldn\'t add it to the schedule. Please try again';
+
+  @override
+  String get coachNoClients => 'No clients yet';
+
+  @override
+  String get coachTodayDiet => 'Today\'s meals';
+
+  @override
+  String get coachRecommended => 'AI suggestions';
+
+  @override
+  String get coachBackToList => 'Back to suggestions';
+
+  @override
+  String get coachReviewed => 'AI-generated, reviewed by you';
+
+  @override
+  String get coachTrainerAdded => 'Added by trainer';
+
+  @override
+  String get coachClientNotified => 'The client app was notified';
+
+  @override
+  String coachRegisteredOn(String date) {
+    return 'Added to the $date schedule';
+  }
+
+  @override
+  String coachRegisterOn(String date) {
+    return 'Add to the $date PT schedule';
+  }
+
+  @override
+  String get labelTomorrow => 'Tomorrow';
+
+  @override
+  String coachFindInSchedule(String date) {
+    return 'You\'ll find it in the Schedule tab as the $date session\'s program';
+  }
+
+  @override
+  String get coachVerdictSodium =>
+      'AI: sodium over target → favour more cardio';
+
+  @override
+  String get coachVerdictBalanced =>
+      'AI: meals well balanced → keep a strength-led routine';
+
+  @override
+  String get coachRequestCustom => 'Ask AI for a custom routine';
+
+  @override
+  String coachRequestBlurb(String name) {
+    return 'We\'ll analyse $name\'s data, draft a recovery and a push option, and let you compare and edit them here.';
+  }
+
+  @override
+  String get coachTapToEdit => 'Tap to edit';
+
+  @override
+  String get coachAddExerciseManually => '+ Add an exercise';
+
+  @override
+  String get coachExerciseNameHint => 'Exercise (e.g. leg press, 3 sets)';
+
+  @override
+  String coachSentToClient(String name) {
+    return 'Sent to $name';
+  }
+
+  @override
+  String coachReviewAndSend(String name) {
+    return 'Reviewed · send to $name';
+  }
+
+  @override
+  String get coachTemplates => 'Program templates';
+
+  @override
+  String coachTemplateSummary(int count, int minutes) {
+    return '$count exercises · $minutes min';
+  }
+
+  @override
+  String get coachSentHistory => 'Sent history';
+
+  @override
+  String get coachHistoryFailed => 'Couldn\'t load history';
+
+  @override
+  String get coachHistoryEmpty => 'You haven\'t sent any programs yet';
+
+  @override
+  String get coachHomework => 'Homework';
+
+  @override
+  String coachRoutineSummary(String name, int minutes) {
+    return '$name · $minutes min';
+  }
+
+  @override
+  String get coachTrainer => 'Trainer';
+
+  @override
+  String coachSessionExercises(String type, int count) {
+    return '$type · $count exercises';
+  }
+
+  @override
+  String get aiReasonSodium =>
+      'Sodium is over target today, so lean into low-intensity cardio.';
+
+  @override
+  String get aiReasonBalanced =>
+      'Today\'s meals are balanced, so the current intensity is fine to keep.';
+
+  @override
+  String aiReasonGoal(String goal, String last) {
+    return 'Based on the $goal goal and recent $last activity.';
+  }
+
+  @override
+  String get aiTagRecommended => 'Suggested';
+
+  @override
+  String get aiTagExisting => 'Existing suggestion';
+
+  @override
+  String get aiTagCustom => 'Custom';
+
+  @override
+  String get aiExistingBlurb =>
+      'The existing suggestion, based on their recent meals and workouts.';
+
+  @override
+  String get aiOptionRecovery => 'Recovery';
+
+  @override
+  String get aiOptionPush => 'Push';
+
+  @override
+  String get aiOptionExisting => 'Existing';
+
+  @override
+  String get aiGenerateFailed =>
+      'AI generation failed. Please try again in a moment';
+
+  @override
+  String get aiExerciseNameRequired => 'Enter an exercise name';
+
+  @override
+  String get aiKeepOneExercise => 'Keep at least one exercise';
+
+  @override
+  String aiRoutineSent(String name) {
+    return 'Routine sent to $name';
+  }
+
+  @override
+  String aiExerciseWithMinutes(String name, int minutes) {
+    return '$name · $minutes min';
+  }
+
+  @override
+  String aiCustomRoutineNamed(String option) {
+    return 'AI custom routine ($option)';
+  }
+
+  @override
+  String get aiAnalysing => 'AI is analysing…';
+
+  @override
+  String get aiGenerateCandidates => 'Generate candidates';
+
+  @override
+  String get aiReviewDone => 'Reviewed';
+
+  @override
+  String aiRoutineFor(String name) {
+    return 'AI routine · $name';
+  }
+
+  @override
+  String get aiAnalysedData => 'Analysed this client\'s data';
+
+  @override
+  String get aiGoal => 'Goal';
+
+  @override
+  String get aiTodaySodium => 'Sodium today';
+
+  @override
+  String get aiOverTarget => ' · over target';
+
+  @override
+  String aiBasisCompletion(String goal, int rate) {
+    return '$goal · based on $rate% completion';
+  }
+
+  @override
+  String get aiBasisRuleBased => ' · rule-based';
+
+  @override
+  String aiTotalMinutesIntensity(int total, String intensity) {
+    return '$total min total · $intensity intensity';
+  }
+
+  @override
+  String aiExerciseBullet(String name, int minutes) {
+    return '· $name · $minutes min ';
+  }
+
+  @override
+  String aiEditOption(String option) {
+    return 'Edit $option';
+  }
+
+  @override
+  String get aiEditBlurb =>
+      'Edit names, durations and structure just like the existing suggestion.';
+
+  @override
+  String get aiAddExerciseManually => 'Add an exercise';
+
+  @override
+  String get aiExerciseNameExample => 'e.g. leg press, 3 sets';
+
+  @override
+  String get aiRegister => 'Add';
+
+  @override
+  String get aiNoteForClient => 'A note to send with it';
+
+  @override
+  String aiReviewedSuggestion(String option) {
+    return 'Reviewed · AI suggestion ($option)';
+  }
+
+  @override
+  String get aiEditsApplied =>
+      'Your choice and edits are now in the final suggestion list.';
+
+  @override
+  String aiGoToChat(String name) {
+    return 'Open chat with $name';
+  }
+
+  @override
+  String get aiSending => 'Sending…';
+
+  @override
+  String get aiSendToClient => 'Send to client';
+
+  @override
+  String get aiGoToChatHint =>
+      'Use the button below to jump into their chat and explain it.';
+
+  @override
+  String get aiStepConditions => 'Set up';
+
+  @override
+  String get aiStepReview => 'Review';
+
+  @override
+  String get aiStepDone => 'Done';
+
+  @override
+  String get aiStepperLabel => 'Custom routine progress';
+
+  @override
+  String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
+    return '$goal · $count exercises · $minutes min';
+  }
 }

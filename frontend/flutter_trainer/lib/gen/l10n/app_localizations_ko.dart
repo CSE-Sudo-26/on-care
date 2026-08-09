@@ -1244,4 +1244,329 @@ class AppLocalizationsKo extends AppLocalizations {
   String myYearsSuffix(int years) {
     return '$years년';
   }
+
+  @override
+  String get routineTypeWalking => '걷기';
+
+  @override
+  String get routineTypeCardio => '유산소';
+
+  @override
+  String get routineTypeStrength => '근력';
+
+  @override
+  String get routineTypeYoga => '요가';
+
+  @override
+  String get routineTypeStretching => '스트레칭';
+
+  @override
+  String get routineTypeOther => '기타';
+
+  @override
+  String get routineFieldType => '운동 유형';
+
+  @override
+  String get routineFieldMinutes => '운동 시간';
+
+  @override
+  String get routineFieldIntensity => '운동 강도';
+
+  @override
+  String get intensityLight => '가벼움';
+
+  @override
+  String get intensityModerate => '보통';
+
+  @override
+  String get intensityHigh => '높음';
+
+  @override
+  String get coachTitle => 'AI 코칭';
+
+  @override
+  String get coachSubtitle => '식단 · 건강 데이터 기반 루틴 생성';
+
+  @override
+  String get coachSendDone => '전송 완료';
+
+  @override
+  String get coachSendNoResponse =>
+      '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요';
+
+  @override
+  String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachCustomRoutine => 'AI 맞춤 루틴';
+
+  @override
+  String get coachNeedOneExercise => '운동을 하나 이상 추가해 주세요';
+
+  @override
+  String get coachScheduleFailed => '스케줄 등록에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachNoClients => '등록된 고객이 없어요';
+
+  @override
+  String get coachTodayDiet => '오늘 식단 요약';
+
+  @override
+  String get coachRecommended => 'AI 추천 루틴';
+
+  @override
+  String get coachBackToList => '추천 목록으로';
+
+  @override
+  String get coachReviewed => 'AI 생성 후 트레이너 검토 완료';
+
+  @override
+  String get coachTrainerAdded => '트레이너 추가';
+
+  @override
+  String get coachClientNotified => '고객 앱에 알림이 전송됐어요';
+
+  @override
+  String coachRegisteredOn(String date) {
+    return '$date 스케줄에 등록됨';
+  }
+
+  @override
+  String coachRegisterOn(String date) {
+    return '$date PT 스케줄에 등록';
+  }
+
+  @override
+  String get labelTomorrow => '내일';
+
+  @override
+  String coachFindInSchedule(String date) {
+    return '스케줄 탭에서 $date 세션의 프로그램으로 확인할 수 있어요';
+  }
+
+  @override
+  String get coachVerdictSodium => 'AI 판단: 나트륨 초과 → 유산소 강화 권장';
+
+  @override
+  String get coachVerdictBalanced => 'AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지';
+
+  @override
+  String get coachRequestCustom => 'AI에게 맞춤 루틴 요청하기';
+
+  @override
+  String coachRequestBlurb(String name) {
+    return '$name님의 데이터를 분석해 회복형·강화형 후보를 만들고 이 화면에서 비교·수정할 수 있어요.';
+  }
+
+  @override
+  String get coachTapToEdit => '탭하여 수정';
+
+  @override
+  String get coachAddExerciseManually => '＋ 운동 직접 추가';
+
+  @override
+  String get coachExerciseNameHint => '운동 이름 (예: 레그프레스 3세트)';
+
+  @override
+  String coachSentToClient(String name) {
+    return '$name님에게 전송 완료!';
+  }
+
+  @override
+  String coachReviewAndSend(String name) {
+    return '검토 완료 · $name님에게 전송';
+  }
+
+  @override
+  String get coachTemplates => '프로그램 템플릿';
+
+  @override
+  String coachTemplateSummary(int count, int minutes) {
+    return '$count개 · $minutes분';
+  }
+
+  @override
+  String get coachSentHistory => '전송 이력';
+
+  @override
+  String get coachHistoryFailed => '이력을 불러오지 못했어요';
+
+  @override
+  String get coachHistoryEmpty => '아직 보낸 프로그램이 없어요';
+
+  @override
+  String get coachHomework => '숙제';
+
+  @override
+  String coachRoutineSummary(String name, int minutes) {
+    return '$name · $minutes분';
+  }
+
+  @override
+  String get coachTrainer => '트레이너';
+
+  @override
+  String coachSessionExercises(String type, int count) {
+    return '$type · 운동 $count개';
+  }
+
+  @override
+  String get aiReasonSodium => '오늘 나트륨이 목표를 초과해 저강도 유산소 비중을 높이는 것이 좋아요.';
+
+  @override
+  String get aiReasonBalanced => '오늘 식단 균형이 안정적이라 기존 운동 강도를 유지해도 좋아요.';
+
+  @override
+  String aiReasonGoal(String goal, String last) {
+    return '$goal 목표와 최근 $last 기록을 고려했어요.';
+  }
+
+  @override
+  String get aiTagRecommended => '추천';
+
+  @override
+  String get aiTagExisting => '기존 AI 추천';
+
+  @override
+  String get aiTagCustom => '맞춤';
+
+  @override
+  String get aiExistingBlurb => '고객의 최근 식단과 운동 기록을 반영한 기존 추천이에요.';
+
+  @override
+  String get aiOptionRecovery => '회복안';
+
+  @override
+  String get aiOptionPush => '강화안';
+
+  @override
+  String get aiOptionExisting => '기존안';
+
+  @override
+  String get aiGenerateFailed => 'AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get aiExerciseNameRequired => '운동 이름을 입력해 주세요';
+
+  @override
+  String get aiKeepOneExercise => '운동을 하나 이상 남겨 주세요';
+
+  @override
+  String aiRoutineSent(String name) {
+    return '$name님에게 루틴을 전송했어요';
+  }
+
+  @override
+  String aiExerciseWithMinutes(String name, int minutes) {
+    return '$name $minutes분';
+  }
+
+  @override
+  String aiCustomRoutineNamed(String option) {
+    return 'AI 맞춤 루틴 ($option)';
+  }
+
+  @override
+  String get aiAnalysing => 'AI가 분석 중…';
+
+  @override
+  String get aiGenerateCandidates => '맞춤 루틴 후보 생성';
+
+  @override
+  String get aiReviewDone => '검토 완료';
+
+  @override
+  String aiRoutineFor(String name) {
+    return 'AI 루틴 · $name';
+  }
+
+  @override
+  String get aiAnalysedData => '고객 데이터를 분석했어요';
+
+  @override
+  String get aiGoal => '목표';
+
+  @override
+  String get aiTodaySodium => '오늘 나트륨';
+
+  @override
+  String get aiOverTarget => ' · 목표 초과';
+
+  @override
+  String aiBasisCompletion(String goal, int rate) {
+    return '$goal · 완료율 $rate% 기준';
+  }
+
+  @override
+  String get aiBasisRuleBased => ' · 규칙 기반 생성';
+
+  @override
+  String aiTotalMinutesIntensity(int total, String intensity) {
+    return '총 $total분 · 강도 $intensity';
+  }
+
+  @override
+  String aiExerciseBullet(String name, int minutes) {
+    return '· $name · $minutes분 ';
+  }
+
+  @override
+  String aiEditOption(String option) {
+    return '$option 수정';
+  }
+
+  @override
+  String get aiEditBlurb => '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.';
+
+  @override
+  String get aiAddExerciseManually => '운동 직접 등록';
+
+  @override
+  String get aiExerciseNameExample => '예: 레그프레스 3세트';
+
+  @override
+  String get aiRegister => '등록';
+
+  @override
+  String get aiNoteForClient => '고객에게 함께 전달할 내용';
+
+  @override
+  String aiReviewedSuggestion(String option) {
+    return '검토 완료 · AI 추천 루틴 ($option)';
+  }
+
+  @override
+  String get aiEditsApplied => '선택하고 수정한 내용이 최종 추천 목록에 반영됐어요.';
+
+  @override
+  String aiGoToChat(String name) {
+    return '$name님 채팅으로 이동';
+  }
+
+  @override
+  String get aiSending => '전송 중…';
+
+  @override
+  String get aiSendToClient => '고객에게 전송';
+
+  @override
+  String get aiGoToChatHint => '아래 버튼에서 고객 채팅으로 이동해 바로 안내할 수 있어요.';
+
+  @override
+  String get aiStepConditions => '조건 설정';
+
+  @override
+  String get aiStepReview => '후보 검토';
+
+  @override
+  String get aiStepDone => '추천 완료';
+
+  @override
+  String get aiStepperLabel => '맞춤 루틴 생성 진행 단계';
+
+  @override
+  String coachTemplateSummaryWithGoal(String goal, int count, int minutes) {
+    return '$goal · $count개 · $minutes분';
+  }
 }

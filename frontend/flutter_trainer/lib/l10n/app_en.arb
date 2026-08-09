@@ -844,5 +844,279 @@
         "type": "int"
       }
     }
+  },
+  "routineTypeWalking": "Walking",
+  "@routineTypeWalking": {
+    "description": "Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes."
+  },
+  "routineTypeCardio": "Cardio",
+  "routineTypeStrength": "Strength",
+  "routineTypeYoga": "Yoga",
+  "routineTypeStretching": "Stretching",
+  "routineTypeOther": "Other",
+  "routineFieldType": "Exercise type",
+  "routineFieldMinutes": "Duration",
+  "routineFieldIntensity": "Intensity",
+  "intensityLight": "Light",
+  "intensityModerate": "Moderate",
+  "intensityHigh": "High",
+  "coachTitle": "AI coaching",
+  "coachSubtitle": "Routines built from diet and health data",
+  "coachSendDone": "Sent",
+  "coachSendNoResponse": "No response came back. Check the client's received routines before sending again",
+  "coachSendFailed": "Couldn't send. Please try again",
+  "coachCustomRoutine": "AI custom routine",
+  "coachNeedOneExercise": "Add at least one exercise",
+  "coachScheduleFailed": "Couldn't add it to the schedule. Please try again",
+  "coachNoClients": "No clients yet",
+  "coachTodayDiet": "Today's meals",
+  "coachRecommended": "AI suggestions",
+  "coachBackToList": "Back to suggestions",
+  "coachReviewed": "AI-generated, reviewed by you",
+  "coachTrainerAdded": "Added by trainer",
+  "coachClientNotified": "The client app was notified",
+  "coachRegisteredOn": "Added to the {date} schedule",
+  "@coachRegisteredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "coachRegisterOn": "Add to the {date} PT schedule",
+  "@coachRegisterOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "labelTomorrow": "Tomorrow",
+  "coachFindInSchedule": "You'll find it in the Schedule tab as the {date} session's program",
+  "@coachFindInSchedule": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "coachVerdictSodium": "AI: sodium over target → favour more cardio",
+  "coachVerdictBalanced": "AI: meals well balanced → keep a strength-led routine",
+  "coachRequestCustom": "Ask AI for a custom routine",
+  "coachRequestBlurb": "We'll analyse {name}'s data, draft a recovery and a push option, and let you compare and edit them here.",
+  "@coachRequestBlurb": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachTapToEdit": "Tap to edit",
+  "coachAddExerciseManually": "+ Add an exercise",
+  "coachExerciseNameHint": "Exercise (e.g. leg press, 3 sets)",
+  "coachSentToClient": "Sent to {name}",
+  "@coachSentToClient": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachReviewAndSend": "Reviewed · send to {name}",
+  "@coachReviewAndSend": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachTemplates": "Program templates",
+  "coachTemplateSummary": "{count} exercises · {minutes} min",
+  "@coachTemplateSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachSentHistory": "Sent history",
+  "coachHistoryFailed": "Couldn't load history",
+  "coachHistoryEmpty": "You haven't sent any programs yet",
+  "coachHomework": "Homework",
+  "coachRoutineSummary": "{name} · {minutes} min",
+  "@coachRoutineSummary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachTrainer": "Trainer",
+  "coachSessionExercises": "{type} · {count} exercises",
+  "@coachSessionExercises": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiReasonSodium": "Sodium is over target today, so lean into low-intensity cardio.",
+  "aiReasonBalanced": "Today's meals are balanced, so the current intensity is fine to keep.",
+  "aiReasonGoal": "Based on the {goal} goal and recent {last} activity.",
+  "@aiReasonGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTagRecommended": "Suggested",
+  "aiTagExisting": "Existing suggestion",
+  "aiTagCustom": "Custom",
+  "aiExistingBlurb": "The existing suggestion, based on their recent meals and workouts.",
+  "aiOptionRecovery": "Recovery",
+  "aiOptionPush": "Push",
+  "aiOptionExisting": "Existing",
+  "aiGenerateFailed": "AI generation failed. Please try again in a moment",
+  "aiExerciseNameRequired": "Enter an exercise name",
+  "aiKeepOneExercise": "Keep at least one exercise",
+  "aiRoutineSent": "Routine sent to {name}",
+  "@aiRoutineSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiExerciseWithMinutes": "{name} · {minutes} min",
+  "@aiExerciseWithMinutes": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "aiCustomRoutineNamed": "AI custom routine ({option})",
+  "@aiCustomRoutineNamed": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysing": "AI is analysing…",
+  "aiGenerateCandidates": "Generate candidates",
+  "aiReviewDone": "Reviewed",
+  "aiRoutineFor": "AI routine · {name}",
+  "@aiRoutineFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysedData": "Analysed this client's data",
+  "aiGoal": "Goal",
+  "aiTodaySodium": "Sodium today",
+  "aiOverTarget": " · over target",
+  "aiBasisCompletion": "{goal} · based on {rate}% completion",
+  "@aiBasisCompletion": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "aiBasisRuleBased": " · rule-based",
+  "aiTotalMinutesIntensity": "{total} min total · {intensity} intensity",
+  "@aiTotalMinutesIntensity": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "aiExerciseBullet": "· {name} · {minutes} min ",
+  "@aiExerciseBullet": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "aiEditOption": "Edit {option}",
+  "@aiEditOption": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEditBlurb": "Edit names, durations and structure just like the existing suggestion.",
+  "aiAddExerciseManually": "Add an exercise",
+  "aiExerciseNameExample": "e.g. leg press, 3 sets",
+  "aiRegister": "Add",
+  "aiNoteForClient": "A note to send with it",
+  "aiReviewedSuggestion": "Reviewed · AI suggestion ({option})",
+  "@aiReviewedSuggestion": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEditsApplied": "Your choice and edits are now in the final suggestion list.",
+  "aiGoToChat": "Open chat with {name}",
+  "@aiGoToChat": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiSending": "Sending…",
+  "aiSendToClient": "Send to client",
+  "aiGoToChatHint": "Use the button below to jump into their chat and explain it.",
+  "aiStepConditions": "Set up",
+  "aiStepReview": "Review",
+  "aiStepDone": "Done",
+  "aiStepperLabel": "Custom routine progress",
+  "coachTemplateSummaryWithGoal": "{goal} · {count} exercises · {minutes} min",
+  "@coachTemplateSummaryWithGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
   }
 }

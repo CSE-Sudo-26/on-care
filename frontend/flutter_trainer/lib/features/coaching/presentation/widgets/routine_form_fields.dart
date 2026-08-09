@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 
-/// Category order and labels mirror the member app's exercise-add sheet.
-const List<String> kRoutineCategoryLabels = <String>[
-  '걷기',
-  '유산소',
-  '근력',
-  '요가',
-  '스트레칭',
-  '기타',
-];
+/// Category order mirrors the member app's exercise-add sheet.
+///
+/// 여기 담긴 것은 **계약값**이다(서버 `RoutineType` Literal). 화면 문구는
+/// `routineTypeLabel(l, value)` 로 따로 가져온다 — 번역하면 서버가 422 를
+/// 돌려준다. (#501)
+const List<String> kRoutineCategoryLabels = kRoutineTypes;
 
 /// Button-style category picker matching the member exercise-add sheet.
 class RoutineCategoryChips extends StatelessWidget {
@@ -29,12 +28,13 @@ class RoutineCategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final selected = kRoutineCategoryLabels.contains(value) ? value : '기타';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          '운동 유형',
+        Text(
+          l.routineFieldType,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
@@ -48,8 +48,10 @@ class RoutineCategoryChips extends StatelessWidget {
           children: <Widget>[
             for (final category in kRoutineCategoryLabels)
               _ChoiceButton(
+                // key 는 계약값으로 — 로케일이 바뀌어도 위젯 identity 는 같아야
+                // 하고, 기존 테스트도 이 키를 쓴다.
                 key: ValueKey<String>('$keyPrefix-$category'),
-                label: category,
+                label: routineTypeLabel(l, category),
                 selected: selected == category,
                 onTap: () => onChanged(category),
               ),
@@ -73,14 +75,15 @@ class RoutineMinutesSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final value = minutes.clamp(5, 120).toDouble();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Text(
-              '운동 시간',
+            Text(
+              l.routineFieldMinutes,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -123,19 +126,22 @@ class RoutineIntensityChips extends StatelessWidget {
   final String value;
   final ValueChanged<String> onChanged;
 
-  static const List<(String, String)> _choices = <(String, String)>[
-    ('가벼움', 'low'),
-    ('보통', 'moderate'),
-    ('높음', 'high'),
-  ];
+  /// (라벨 키, 계약값). 저장되는 것은 뒤쪽 값이다 — 라벨만 로케일을 따른다.
+  static List<(String, String)> _choices(AppLocalizations l) =>
+      <(String, String)>[
+        (l.intensityLight, 'low'),
+        (l.intensityModerate, 'moderate'),
+        (l.intensityHigh, 'high'),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
-          '운동 강도',
+        Text(
+          l.routineFieldIntensity,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
@@ -145,19 +151,23 @@ class RoutineIntensityChips extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
-            for (var index = 0; index < _choices.length; index++) ...<Widget>[
-              Expanded(
-                child: _ChoiceButton(
-                  key: ValueKey<String>(
-                    'routine-intensity-${_choices[index].$2}',
-                  ),
-                  label: _choices[index].$1,
-                  selected: value == _choices[index].$2,
-                  centered: true,
-                  onTap: () => onChanged(_choices[index].$2),
-                ),
+            for (var index = 0; index < _choices(l).length; index++) ...<Widget>[
+              Builder(
+                builder: (BuildContext context) {
+                  final (String label, String wire) = _choices(l)[index];
+                  return Expanded(
+                    child: _ChoiceButton(
+                      // key 는 계약값으로 — 로케일이 바뀌어도 identity 는 같다.
+                      key: ValueKey<String>('routine-intensity-$wire'),
+                      label: label,
+                      selected: value == wire,
+                      centered: true,
+                      onTap: () => onChanged(wire),
+                    ),
+                  );
+                },
               ),
-              if (index < _choices.length - 1)
+              if (index < _choices(l).length - 1)
                 const SizedBox(width: AppSpacing.sm),
             ],
           ],

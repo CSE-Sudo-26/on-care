@@ -2353,6 +2353,570 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{years} years'**
   String myYearsSuffix(int years);
+
+  /// Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get routineTypeWalking;
+
+  /// No description provided for @routineTypeCardio.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardio'**
+  String get routineTypeCardio;
+
+  /// No description provided for @routineTypeStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get routineTypeStrength;
+
+  /// No description provided for @routineTypeYoga.
+  ///
+  /// In en, this message translates to:
+  /// **'Yoga'**
+  String get routineTypeYoga;
+
+  /// No description provided for @routineTypeStretching.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretching'**
+  String get routineTypeStretching;
+
+  /// No description provided for @routineTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get routineTypeOther;
+
+  /// No description provided for @routineFieldType.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise type'**
+  String get routineFieldType;
+
+  /// No description provided for @routineFieldMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get routineFieldMinutes;
+
+  /// No description provided for @routineFieldIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Intensity'**
+  String get routineFieldIntensity;
+
+  /// No description provided for @intensityLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get intensityLight;
+
+  /// No description provided for @intensityModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get intensityModerate;
+
+  /// No description provided for @intensityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get intensityHigh;
+
+  /// No description provided for @coachTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI coaching'**
+  String get coachTitle;
+
+  /// No description provided for @coachSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Routines built from diet and health data'**
+  String get coachSubtitle;
+
+  /// No description provided for @coachSendDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get coachSendDone;
+
+  /// No description provided for @coachSendNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'No response came back. Check the client\'s received routines before sending again'**
+  String get coachSendNoResponse;
+
+  /// No description provided for @coachSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send. Please try again'**
+  String get coachSendFailed;
+
+  /// No description provided for @coachCustomRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'AI custom routine'**
+  String get coachCustomRoutine;
+
+  /// No description provided for @coachNeedOneExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one exercise'**
+  String get coachNeedOneExercise;
+
+  /// No description provided for @coachScheduleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add it to the schedule. Please try again'**
+  String get coachScheduleFailed;
+
+  /// No description provided for @coachNoClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients yet'**
+  String get coachNoClients;
+
+  /// No description provided for @coachTodayDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s meals'**
+  String get coachTodayDiet;
+
+  /// No description provided for @coachRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'AI suggestions'**
+  String get coachRecommended;
+
+  /// No description provided for @coachBackToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to suggestions'**
+  String get coachBackToList;
+
+  /// No description provided for @coachReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-generated, reviewed by you'**
+  String get coachReviewed;
+
+  /// No description provided for @coachTrainerAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added by trainer'**
+  String get coachTrainerAdded;
+
+  /// No description provided for @coachClientNotified.
+  ///
+  /// In en, this message translates to:
+  /// **'The client app was notified'**
+  String get coachClientNotified;
+
+  /// No description provided for @coachRegisteredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the {date} schedule'**
+  String coachRegisteredOn(String date);
+
+  /// No description provided for @coachRegisterOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to the {date} PT schedule'**
+  String coachRegisterOn(String date);
+
+  /// No description provided for @labelTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get labelTomorrow;
+
+  /// No description provided for @coachFindInSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll find it in the Schedule tab as the {date} session\'s program'**
+  String coachFindInSchedule(String date);
+
+  /// No description provided for @coachVerdictSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'AI: sodium over target → favour more cardio'**
+  String get coachVerdictSodium;
+
+  /// No description provided for @coachVerdictBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'AI: meals well balanced → keep a strength-led routine'**
+  String get coachVerdictBalanced;
+
+  /// No description provided for @coachRequestCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask AI for a custom routine'**
+  String get coachRequestCustom;
+
+  /// No description provided for @coachRequestBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll analyse {name}\'s data, draft a recovery and a push option, and let you compare and edit them here.'**
+  String coachRequestBlurb(String name);
+
+  /// No description provided for @coachTapToEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to edit'**
+  String get coachTapToEdit;
+
+  /// No description provided for @coachAddExerciseManually.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Add an exercise'**
+  String get coachAddExerciseManually;
+
+  /// No description provided for @coachExerciseNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise (e.g. leg press, 3 sets)'**
+  String get coachExerciseNameHint;
+
+  /// No description provided for @coachSentToClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to {name}'**
+  String coachSentToClient(String name);
+
+  /// No description provided for @coachReviewAndSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed · send to {name}'**
+  String coachReviewAndSend(String name);
+
+  /// No description provided for @coachTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Program templates'**
+  String get coachTemplates;
+
+  /// No description provided for @coachTemplateSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} exercises · {minutes} min'**
+  String coachTemplateSummary(int count, int minutes);
+
+  /// No description provided for @coachSentHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent history'**
+  String get coachSentHistory;
+
+  /// No description provided for @coachHistoryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load history'**
+  String get coachHistoryFailed;
+
+  /// No description provided for @coachHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t sent any programs yet'**
+  String get coachHistoryEmpty;
+
+  /// No description provided for @coachHomework.
+  ///
+  /// In en, this message translates to:
+  /// **'Homework'**
+  String get coachHomework;
+
+  /// No description provided for @coachRoutineSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {minutes} min'**
+  String coachRoutineSummary(String name, int minutes);
+
+  /// No description provided for @coachTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer'**
+  String get coachTrainer;
+
+  /// No description provided for @coachSessionExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · {count} exercises'**
+  String coachSessionExercises(String type, int count);
+
+  /// No description provided for @aiReasonSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium is over target today, so lean into low-intensity cardio.'**
+  String get aiReasonSodium;
+
+  /// No description provided for @aiReasonBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s meals are balanced, so the current intensity is fine to keep.'**
+  String get aiReasonBalanced;
+
+  /// No description provided for @aiReasonGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on the {goal} goal and recent {last} activity.'**
+  String aiReasonGoal(String goal, String last);
+
+  /// No description provided for @aiTagRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested'**
+  String get aiTagRecommended;
+
+  /// No description provided for @aiTagExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing suggestion'**
+  String get aiTagExisting;
+
+  /// No description provided for @aiTagCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get aiTagCustom;
+
+  /// No description provided for @aiExistingBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'The existing suggestion, based on their recent meals and workouts.'**
+  String get aiExistingBlurb;
+
+  /// No description provided for @aiOptionRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery'**
+  String get aiOptionRecovery;
+
+  /// No description provided for @aiOptionPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Push'**
+  String get aiOptionPush;
+
+  /// No description provided for @aiOptionExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing'**
+  String get aiOptionExisting;
+
+  /// No description provided for @aiGenerateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI generation failed. Please try again in a moment'**
+  String get aiGenerateFailed;
+
+  /// No description provided for @aiExerciseNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exercise name'**
+  String get aiExerciseNameRequired;
+
+  /// No description provided for @aiKeepOneExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one exercise'**
+  String get aiKeepOneExercise;
+
+  /// No description provided for @aiRoutineSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Routine sent to {name}'**
+  String aiRoutineSent(String name);
+
+  /// No description provided for @aiExerciseWithMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {minutes} min'**
+  String aiExerciseWithMinutes(String name, int minutes);
+
+  /// No description provided for @aiCustomRoutineNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI custom routine ({option})'**
+  String aiCustomRoutineNamed(String option);
+
+  /// No description provided for @aiAnalysing.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is analysing…'**
+  String get aiAnalysing;
+
+  /// No description provided for @aiGenerateCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate candidates'**
+  String get aiGenerateCandidates;
+
+  /// No description provided for @aiReviewDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed'**
+  String get aiReviewDone;
+
+  /// No description provided for @aiRoutineFor.
+  ///
+  /// In en, this message translates to:
+  /// **'AI routine · {name}'**
+  String aiRoutineFor(String name);
+
+  /// No description provided for @aiAnalysedData.
+  ///
+  /// In en, this message translates to:
+  /// **'Analysed this client\'s data'**
+  String get aiAnalysedData;
+
+  /// No description provided for @aiGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get aiGoal;
+
+  /// No description provided for @aiTodaySodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium today'**
+  String get aiTodaySodium;
+
+  /// No description provided for @aiOverTarget.
+  ///
+  /// In en, this message translates to:
+  /// **' · over target'**
+  String get aiOverTarget;
+
+  /// No description provided for @aiBasisCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'{goal} · based on {rate}% completion'**
+  String aiBasisCompletion(String goal, int rate);
+
+  /// No description provided for @aiBasisRuleBased.
+  ///
+  /// In en, this message translates to:
+  /// **' · rule-based'**
+  String get aiBasisRuleBased;
+
+  /// No description provided for @aiTotalMinutesIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} min total · {intensity} intensity'**
+  String aiTotalMinutesIntensity(int total, String intensity);
+
+  /// No description provided for @aiExerciseBullet.
+  ///
+  /// In en, this message translates to:
+  /// **'· {name} · {minutes} min '**
+  String aiExerciseBullet(String name, int minutes);
+
+  /// No description provided for @aiEditOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {option}'**
+  String aiEditOption(String option);
+
+  /// No description provided for @aiEditBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit names, durations and structure just like the existing suggestion.'**
+  String get aiEditBlurb;
+
+  /// No description provided for @aiAddExerciseManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an exercise'**
+  String get aiAddExerciseManually;
+
+  /// No description provided for @aiExerciseNameExample.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. leg press, 3 sets'**
+  String get aiExerciseNameExample;
+
+  /// No description provided for @aiRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get aiRegister;
+
+  /// No description provided for @aiNoteForClient.
+  ///
+  /// In en, this message translates to:
+  /// **'A note to send with it'**
+  String get aiNoteForClient;
+
+  /// No description provided for @aiReviewedSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed · AI suggestion ({option})'**
+  String aiReviewedSuggestion(String option);
+
+  /// No description provided for @aiEditsApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Your choice and edits are now in the final suggestion list.'**
+  String get aiEditsApplied;
+
+  /// No description provided for @aiGoToChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Open chat with {name}'**
+  String aiGoToChat(String name);
+
+  /// No description provided for @aiSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get aiSending;
+
+  /// No description provided for @aiSendToClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to client'**
+  String get aiSendToClient;
+
+  /// No description provided for @aiGoToChatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the button below to jump into their chat and explain it.'**
+  String get aiGoToChatHint;
+
+  /// No description provided for @aiStepConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up'**
+  String get aiStepConditions;
+
+  /// No description provided for @aiStepReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get aiStepReview;
+
+  /// No description provided for @aiStepDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get aiStepDone;
+
+  /// No description provided for @aiStepperLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom routine progress'**
+  String get aiStepperLabel;
+
+  /// No description provided for @coachTemplateSummaryWithGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{goal} · {count} exercises · {minutes} min'**
+  String coachTemplateSummaryWithGoal(String goal, int count, int minutes);
 }
 
 class _AppLocalizationsDelegate
