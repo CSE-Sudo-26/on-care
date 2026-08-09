@@ -14,6 +14,10 @@ import 'package:oncare_trainer/features/notifications/data/repositories/notifica
 import 'package:oncare_trainer/features/notifications/domain/entities/trainer_notification.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 라벨 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 TrainerNotification _notification({
   String id = 'noti-1',
@@ -78,7 +82,7 @@ void main() {
     await withWideSurface(tester, () async {
       await pumpTrainerApp(tester, token: 'demo-token');
 
-      expect(find.text(notificationsDestination.label), findsNothing);
+      expect(find.text(navLabel(_ko, notificationsDestination.label)), findsNothing);
     });
   });
 
@@ -94,7 +98,7 @@ void main() {
         ],
       );
 
-      expect(find.text(notificationsDestination.label), findsOneWidget);
+      expect(find.text(navLabel(_ko, notificationsDestination.label)), findsOneWidget);
     });
   });
 

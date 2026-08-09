@@ -1805,4 +1805,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appTitleSpaced => 'On - Care Trainer';
+
+  @override
+  String get navNotifications => 'Notifications';
+
+  @override
+  String get notifTitle => 'Notifications';
+
+  @override
+  String get notifReadAll => 'Mark all read';
+
+  @override
+  String get notifEmpty => 'No notifications yet';
+
+  @override
+  String get notifLoadFailed => 'Couldn\'t load notifications';
+
+  @override
+  String get notifAllRead => 'All caught up';
+
+  @override
+  String get notifReadAllFailed =>
+      'Couldn\'t mark them read. Please try again in a moment';
+
+  @override
+  String notifUnreadCount(int count) {
+    return '$count unread';
+  }
 }

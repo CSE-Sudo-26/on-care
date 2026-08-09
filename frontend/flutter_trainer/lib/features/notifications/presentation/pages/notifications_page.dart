@@ -9,9 +9,10 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
 import 'package:oncare_trainer/features/notifications/domain/entities/trainer_notification.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
+import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 /// 알림함 — 트레이너가 놓친 변화를 나중에 확인하는 자리. (#503)
 ///
@@ -59,12 +60,12 @@ class NotificationsPage extends ConsumerWidget {
 
   Future<void> _readAll(BuildContext context, WidgetRef ref) async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    // messenger 와 같이 await 전에 잡아 둔다.
+    final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref.read(trainerNotificationRepositoryProvider).markAllRead();
     } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('읽음 처리에 실패했어요. 잠시 후 다시 시도해 주세요')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.notifReadAllFailed)));
       return;
     }
     ref
@@ -74,18 +75,19 @@ class NotificationsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final notifications = ref.watch(trainerNotificationsProvider);
     final unread = ref.watch(trainerUnreadNotificationsProvider).valueOrNull;
 
     return PageScaffold(
-      title: '알림',
+      title: l.notifTitle,
       subtitle: unread == null
           ? null
-          : (unread > 0 ? '읽지 않은 알림 $unread건' : '모두 확인했어요'),
+          : (unread > 0 ? l.notifUnreadCount(unread) : l.notifAllRead),
       actions: <Widget>[
         if (unread != null && unread > 0)
           ActionButton(
-            label: '모두 읽음',
+            label: l.notifReadAll,
             icon: Icons.done_all,
             onPressed: () => _readAll(context, ref),
           ),
@@ -100,16 +102,16 @@ class NotificationsPage extends ConsumerWidget {
           child: EmptyHint(
             message:
                 (error is AppError ? error.message : null) ??
-                '알림을 불러오지 못했어요',
+                l.notifLoadFailed,
             icon: Icons.error_outline,
           ),
         ),
         data: (rows) {
           if (rows.isEmpty) {
-            return const Padding(
+            return Padding(
               padding: EdgeInsets.only(top: AppSpacing.xxl),
               child: EmptyHint(
-                message: '아직 받은 알림이 없어요',
+                message: l.notifEmpty,
                 icon: Icons.notifications_none,
               ),
             );

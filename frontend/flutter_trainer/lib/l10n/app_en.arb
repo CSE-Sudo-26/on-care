@@ -1230,5 +1230,20 @@
   "appTitleSpaced": "On - Care Trainer",
   "@appTitleSpaced": {
     "description": "Login screen wordmark with the spaced hyphen used in the visual design."
+  },
+  "navNotifications": "Notifications",
+  "notifTitle": "Notifications",
+  "notifReadAll": "Mark all read",
+  "notifEmpty": "No notifications yet",
+  "notifLoadFailed": "Couldn't load notifications",
+  "notifAllRead": "All caught up",
+  "notifReadAllFailed": "Couldn't mark them read. Please try again in a moment",
+  "notifUnreadCount": "{count} unread",
+  "@notifUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
