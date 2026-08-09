@@ -78,9 +78,6 @@ class MockDashboardRepository implements DashboardRepository {
       exerciseMinutes: 45,
       exerciseCalories: 520,
       exerciseCount: 4,
-      // 데모 주간 소모 목표. 화면이 하드코딩하던 값을 목 데이터로 옮겨,
-      // 홈·운동 탭이 같은 소스(exerciseBurnGoal)를 읽어도 데모 수치는 그대로.
-      exerciseBurnGoal: 1500,
       nutritionWeek: nutritionWeek,
       todaySchedule: const <ScheduleItem>[
         ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),

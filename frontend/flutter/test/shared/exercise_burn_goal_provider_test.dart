@@ -3,105 +3,121 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 
-void main() {
-  DashboardSummary summaryWithGoal(int goal) => DashboardSummary(
-    indicators: const <HealthIndicator>[],
-    macros: const DietMacros.zero(),
-    dietEntries: 0,
-    exerciseMinutes: 0,
-    exerciseBurnGoal: goal,
-    todaySchedule: const <ScheduleItem>[],
-    weekScore: 0,
-    weekScoreDelta: 0,
-    sodiumWarning: null,
-  );
+class _TestProfileController extends ProfileController {
+  _TestProfileController(this.load);
 
-  ProviderContainer containerWith(
-    Future<DashboardSummary> Function() load,
-  ) {
-    final container = ProviderContainer(
+  final Future<UserProfile> Function() load;
+
+  @override
+  Future<UserProfile> build() => load();
+}
+
+void main() {
+  UserProfile profile({int? workouts, int? minutes, int? burnCalories}) =>
+      UserProfile(
+        id: 'member',
+        name: '테스트',
+        email: 'member@example.com',
+        weeklyWorkoutGoal: workouts,
+        weeklyExerciseMinutesGoal: minutes,
+        weeklyBurnGoal: burnCalories,
+      );
+
+  ProviderContainer containerWith(Future<UserProfile> Function() load) {
+    final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
-        dashboardSummaryProvider.overrideWith((ref) => load()),
+        profileProvider.overrideWith(() => _TestProfileController(load)),
       ],
     );
     addTearDown(container.dispose);
     return container;
   }
 
-  test('요약이 내려준 목표치를 그대로 노출한다', () async {
-    final container = containerWith(() async => summaryWithGoal(800));
-    await container.read(dashboardSummaryProvider.future);
+  test('프로필의 운동 목표 3종을 함께 노출한다', () async {
+    final ProviderContainer container = containerWith(
+      () async => profile(workouts: 5, minutes: 240, burnCalories: 900),
+    );
+    await container.read(profileProvider.future);
 
-    expect(container.read(exerciseBurnGoalProvider), 800);
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: 5,
+      minutes: 240,
+      burnCalories: 900,
+    ));
+    expect(container.read(exerciseBurnGoalProvider), 900);
   });
 
-  test('로딩 중에는 엔티티 기본값으로 버틴다', () {
-    // 목표치 하나 때문에 운동 화면이 로딩 상태로 빠지면 안 된다.
-    final container = containerWith(() => Completer<DashboardSummary>().future);
-
-    expect(
-      container.read(exerciseBurnGoalProvider),
-      DashboardSummary.defaultExerciseBurnGoal,
+  test('null 필드는 각각 기본값으로 폴백한다', () async {
+    final ProviderContainer container = containerWith(
+      () async => profile(workouts: 4, burnCalories: 800),
     );
+    await container.read(profileProvider.future);
+
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: 4,
+      minutes: UserProfile.defaultWeeklyExerciseMinutesGoal,
+      burnCalories: 800,
+    ));
   });
 
-  test('요약 조회가 실패해도 엔티티 기본값으로 버틴다', () async {
-    final container = containerWith(
-      () => Future<DashboardSummary>.error(StateError('boom')),
-    );
-    await expectLater(
-      container.read(dashboardSummaryProvider.future),
-      throwsStateError,
+  test('프로필 로딩 중에는 세 기본값으로 버틴다', () {
+    final ProviderContainer container = containerWith(
+      () => Completer<UserProfile>().future,
     );
 
-    expect(
-      container.read(exerciseBurnGoalProvider),
-      DashboardSummary.defaultExerciseBurnGoal,
-    );
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: UserProfile.defaultWeeklyWorkoutGoal,
+      minutes: UserProfile.defaultWeeklyExerciseMinutesGoal,
+      burnCalories: UserProfile.defaultWeeklyBurnGoal,
+    ));
   });
 
-  test('요약이 갱신되면 목표치도 따라 바뀐다', () async {
-    // 한 번 읽고 마는 스냅샷이 아니라 요약을 계속 구독하는지 확인한다.
-    int goal = 800;
-    final container = containerWith(() async => summaryWithGoal(goal));
-    await container.read(dashboardSummaryProvider.future);
-    expect(container.read(exerciseBurnGoalProvider), 800);
+  test('프로필 조회가 실패해도 세 기본값으로 버틴다', () async {
+    final ProviderContainer container = containerWith(
+      () => Future<UserProfile>.error(StateError('boom')),
+    );
+    await expectLater(container.read(profileProvider.future), throwsStateError);
 
-    goal = 650;
-    await container.refresh(dashboardSummaryProvider.future);
-
-    expect(container.read(exerciseBurnGoalProvider), 650);
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: UserProfile.defaultWeeklyWorkoutGoal,
+      minutes: UserProfile.defaultWeeklyExerciseMinutesGoal,
+      burnCalories: UserProfile.defaultWeeklyBurnGoal,
+    ));
   });
 
-  test('구독이 끊기면 대시보드 요약도 함께 해제된다 (autoDispose 전파)', () async {
-    // dashboardSummaryProvider 는 FutureProvider.autoDispose 다. 항상 살아있는
-    // Provider 가 이것을 watch 하면 영구히 붙잡아 요약이 갱신되지 않는다.
-    int loads = 0;
-    final container = ProviderContainer(
+  test('mock 저장 응답을 반영하면 운동 목표도 즉시 바뀐다', () async {
+    final MockAccountRepository repository = MockAccountRepository();
+    final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
-        dashboardSummaryProvider.overrideWith((ref) async {
-          loads++;
-          return summaryWithGoal(800);
-        }),
+        accountRepositoryProvider.overrideWithValue(repository),
       ],
     );
     addTearDown(container.dispose);
+    await container.read(profileProvider.future);
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: 3,
+      minutes: 150,
+      burnCalories: 500,
+    ));
 
-    final sub = container.listen(exerciseBurnGoalProvider, (_, _) {});
-    await container.read(dashboardSummaryProvider.future);
-    expect(loads, 1);
+    final UserProfile updatedProfile = await repository.updateHealthGoals(
+      weeklyWorkoutGoal: 5,
+      weeklyExerciseMinutesGoal: 240,
+      weeklyBurnGoal: 900,
+    );
+    container
+        .read(profileProvider.notifier)
+        .applyUpdatedProfile(updatedProfile);
 
-    sub.close();
-    await Future<void>.delayed(Duration.zero);
-
-    // 해제됐다면 다시 읽을 때 로더가 한 번 더 돈다.
-    container.listen(exerciseBurnGoalProvider, (_, _) {});
-    await container.read(dashboardSummaryProvider.future);
-    expect(loads, 2, reason: '요약이 해제되지 않고 계속 캐시돼 있다');
+    expect(container.read(exerciseGoalsProvider), (
+      workouts: 5,
+      minutes: 240,
+      burnCalories: 900,
+    ));
   });
 }

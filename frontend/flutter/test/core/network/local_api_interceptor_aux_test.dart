@@ -199,6 +199,23 @@ void main() {
     expect(me.data!['name'], '이순신');
   });
 
+  test('PUT /users/me/health-goals persists weekly exercise goals', () async {
+    final put = await dio.put<Map<String, Object?>>(
+      '/users/me/health-goals',
+      data: <String, Object?>{
+        'weekly_workout_goal': 5,
+        'weekly_exercise_minutes_goal': 240,
+        'weekly_burn_goal': 900,
+      },
+    );
+    expect(put.statusCode, 200);
+
+    final profile = await dio.get<Map<String, Object?>>('/users/me/profile');
+    expect(profile.data!['weekly_workout_goal'], 5);
+    expect(profile.data!['weekly_exercise_minutes_goal'], 240);
+    expect(profile.data!['weekly_burn_goal'], 900);
+  });
+
   test('POST /auth/login issues a token for non-empty credentials', () async {
     final res = await dio.post<Map<String, Object?>>(
       '/auth/login',

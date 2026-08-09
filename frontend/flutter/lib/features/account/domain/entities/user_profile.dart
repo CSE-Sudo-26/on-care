@@ -37,6 +37,16 @@ class UserProfile {
   final int? weeklyExerciseMinutesGoal; // 분
   final int? weeklyBurnGoal; // kcal
 
+  static const int defaultWeeklyWorkoutGoal = 3;
+  static const int defaultWeeklyExerciseMinutesGoal = 150;
+  static const int defaultWeeklyBurnGoal = 500;
+
+  int get effectiveWeeklyWorkoutGoal =>
+      weeklyWorkoutGoal ?? defaultWeeklyWorkoutGoal;
+  int get effectiveWeeklyExerciseMinutesGoal =>
+      weeklyExerciseMinutesGoal ?? defaultWeeklyExerciseMinutesGoal;
+  int get effectiveWeeklyBurnGoal => weeklyBurnGoal ?? defaultWeeklyBurnGoal;
+
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
     id: (json['id'] as String?) ?? '',
     name: (json['name'] as String?) ?? '',
