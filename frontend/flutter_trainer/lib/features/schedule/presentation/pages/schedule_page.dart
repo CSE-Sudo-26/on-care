@@ -18,6 +18,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// 스케줄 tab — the trainer's calendar, in two views.
 ///
@@ -577,7 +578,7 @@ class _SessionSheet extends ConsumerStatefulWidget {
 }
 
 class _SessionSheetState extends ConsumerState<_SessionSheet> {
-  static const List<String> _types = <String>['1:1 PT', '상담'];
+  static const List<String> _types = SessionType.all;
   static const List<int> _durations = <int>[30, 45, 60, 90];
 
   late String _client;
@@ -1874,7 +1875,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final done = status == '완료';
+    final done = status == ScheduleStatus.done;
     final Color fg = done
         ? (sent ? AppColors.success : AppColors.disabledForeground)
         : AppColors.accent;

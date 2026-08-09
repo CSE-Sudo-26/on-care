@@ -6,8 +6,12 @@ import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 
 import '../../helpers/pump_app.dart';
+
+/// 라벨 기대값은 로케일을 명시해 읽는다 — 기본 로케일이 바뀌어도 의도가 남는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 ConsultationRequest _request({
   String id = 'consult-1',
@@ -168,9 +172,9 @@ void main() {
     await withWideSurface(tester, () async {
       await pumpTrainerApp(tester, token: 'demo-token');
 
-      expect(find.text(consultationsDestination.label), findsNothing);
+      expect(find.text(navLabel(_ko, consultationsDestination.label)), findsNothing);
       for (final destination in navDestinations) {
-        expect(find.text(destination.label), findsWidgets);
+        expect(find.text(navLabel(_ko, destination.label)), findsWidgets);
       }
     });
   });
@@ -187,7 +191,7 @@ void main() {
         ],
       );
 
-      expect(find.text(consultationsDestination.label), findsOneWidget);
+      expect(find.text(navLabel(_ko, consultationsDestination.label)), findsOneWidget);
     });
   });
 }

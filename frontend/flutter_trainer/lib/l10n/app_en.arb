@@ -1,0 +1,60 @@
+{
+  "@@locale": "en",
+  "appTitle": "On-Care Trainer",
+  "@appTitle": {
+    "description": "Trainer app title shown in the OS task switcher and browser tab."
+  },
+  "scheduleStatusUpcoming": "Upcoming",
+  "@scheduleStatusUpcoming": {
+    "description": "Display label for a scheduled session. The stored value stays Korean — see ScheduleStatus."
+  },
+  "scheduleStatusDone": "Done",
+  "@scheduleStatusDone": {
+    "description": "Display label for a completed session."
+  },
+  "scheduleStatusGap": "Open",
+  "@scheduleStatusGap": {
+    "description": "Display label for an empty slot in the trainer's day."
+  },
+  "sessionTypePersonalTraining": "1:1 PT",
+  "@sessionTypePersonalTraining": {
+    "description": "Display label for a personal training session."
+  },
+  "sessionTypeConsultation": "Consultation",
+  "@sessionTypeConsultation": {
+    "description": "Display label for a consultation session."
+  },
+  "navDashboard": "Dashboard",
+  "navClients": "Clients",
+  "navSchedule": "Schedule",
+  "navCoaching": "Coaching",
+  "navReports": "Reports",
+  "navConsultations": "Requests",
+  "navMy": "My page",
+  "actionSave": "Save",
+  "actionCancel": "Cancel",
+  "actionEdit": "Edit",
+  "actionDelete": "Delete",
+  "actionClose": "Close",
+  "actionConfirm": "Confirm",
+  "actionSend": "Send",
+  "actionRetry": "Retry",
+  "actionChange": "Change",
+  "appWordmarkTrainer": "Trainer",
+  "@appWordmarkTrainer": {
+    "description": "Second word of the sidebar wordmark, rendered in the navy primary next to 'On-Care'."
+  },
+  "appAvatarFallback": "T",
+  "@appAvatarFallback": {
+    "description": "Single-character avatar shown when the trainer has no name yet. Keep it one character."
+  },
+  "sidebarMyTooltip": "{name} · My page",
+  "@sidebarMyTooltip": {
+    "description": "Tooltip on the collapsed sidebar's profile avatar.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
+}
