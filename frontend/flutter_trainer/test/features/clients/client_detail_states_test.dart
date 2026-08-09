@@ -7,11 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart'
-    show clientSectionLabels;
+    show clientSectionCount, clientSectionLabels;
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 라벨 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// Loading / error / not-found handling for the client detail body.
 void main() {
@@ -20,7 +24,7 @@ void main() {
     // the same i, so a length mismatch is a RangeError on tap (extra
     // label) or a tab with no way to reach it (extra section). They are
     // edited in different files, so the pairing needs a guard.
-    expect(clientSectionLabels.length, AppRoutes.clientTabSections.length);
+    expect(clientSectionCount, AppRoutes.clientTabSections.length);
     // Every tabbed section must also be an addressable route, and the
     // chat must NOT be a tab — it's the header's message button.
     for (final tab in AppRoutes.clientTabSections) {
@@ -186,7 +190,7 @@ void main() {
 
     // 채팅 is not a content tab — it is the row's trailing segment.
     expect(find.text('채팅'), findsOneWidget);
-    expect(clientSectionLabels, isNot(contains('채팅')));
+    expect(clientSectionLabels(_ko), isNot(contains('채팅')));
 
     final button = find.byKey(const ValueKey<String>('client-chat-button'));
     expect(button, findsOneWidget);
@@ -215,7 +219,7 @@ void main() {
       tester.getSemantics(button).flagsCollection.isSelected,
       Tristate.isTrue,
     );
-    for (final String label in clientSectionLabels) {
+    for (final String label in clientSectionLabels(_ko)) {
       expect(
         tester.getSemantics(find.text(label)).flagsCollection.isSelected,
         Tristate.isFalse,

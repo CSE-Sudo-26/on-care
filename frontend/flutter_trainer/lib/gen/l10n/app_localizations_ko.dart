@@ -302,4 +302,164 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get weekdaySun => '일';
+
+  @override
+  String get clientsLoadFailed => '고객 정보를 불러오지 못했어요';
+
+  @override
+  String clientsCountSummary(int total, int active) {
+    return '$total명 · 활성 $active명';
+  }
+
+  @override
+  String get clientsNew => '신규 고객';
+
+  @override
+  String get clientsTitle => '고객';
+
+  @override
+  String get clientsPickHint => '왼쪽에서 고객을 선택하면\n대화·식단·운동 기록이 여기에 열려요';
+
+  @override
+  String get clientsEmpty => '아직 담당 고객이 없어요';
+
+  @override
+  String clientsEmptyForFilter(String filter) {
+    return '$filter에 해당하는 고객이 없어요';
+  }
+
+  @override
+  String clientsFilterSummary(String filter, int shown, int total) {
+    return '$filter · $shown/$total명';
+  }
+
+  @override
+  String get clientsSeeAll => '전체 보기';
+
+  @override
+  String get clientsNameRequired => '이름을 입력해 주세요';
+
+  @override
+  String get clientsAddFailed => '등록에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
+
+  @override
+  String get clientsAddTitle => '신규 고객 등록';
+
+  @override
+  String get clientsNameLabel => '고객 이름';
+
+  @override
+  String get clientsGoalLabel => '목표 (예: 체중 감량 · 근력 향상)';
+
+  @override
+  String get clientsAddAction => '등록하기';
+
+  @override
+  String get clientTabDiet => '식단';
+
+  @override
+  String get clientTabWorkout => '운동';
+
+  @override
+  String get clientNotFound => '고객을 찾을 수 없어요';
+
+  @override
+  String get clientBackToList => '고객 목록으로';
+
+  @override
+  String get clientList => '고객 목록';
+
+  @override
+  String get metricCalories => '칼로리';
+
+  @override
+  String get metricSodium => '나트륨';
+
+  @override
+  String get metricSugar => '당류';
+
+  @override
+  String get clientWeeklyReport => '주간 리포트';
+
+  @override
+  String get clientAskAi => 'AI에게 묻기';
+
+  @override
+  String get clientActive => '활성';
+
+  @override
+  String get clientDormant => '휴면';
+
+  @override
+  String get clientClosePanel => '패널 닫기';
+
+  @override
+  String get clientChat => '채팅';
+
+  @override
+  String clientChatWithUnread(String name, int count) {
+    return '$name님과 채팅, 안 읽은 메시지 $count개';
+  }
+
+  @override
+  String clientChatWith(String name) {
+    return '$name님과 채팅';
+  }
+
+  @override
+  String get chatTooLong => '메시지가 너무 길어요 (최대 2000자)';
+
+  @override
+  String get chatSendFailed => '메시지 전송에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get chatLoadFailed => '대화를 불러오지 못했어요';
+
+  @override
+  String chatDemoAnalyzed(String name) {
+    return 'AI가 $name님의 식단·운동 데이터를 분석했어요';
+  }
+
+  @override
+  String get chatDemoReportSent => '트레이너님께 요약 리포트가 전송됐어요';
+
+  @override
+  String chatDemoRoutineSent(String name) {
+    return 'AI 분석 기반 루틴이 $name님에게 전송됐어요';
+  }
+
+  @override
+  String get chatDemoNotified => '고객 앱에 알림이 전달됐어요';
+
+  @override
+  String get chatInputHint => '메시지 입력...';
+
+  @override
+  String get coachSheetThisClient => '이 회원';
+
+  @override
+  String get coachSheetLoadFailed => 'AI 코칭을 불러오지 못했어요';
+
+  @override
+  String coachSheetTitle(String name) {
+    return '$name 코칭 상담';
+  }
+
+  @override
+  String get coachSheetSubtitle => '이 회원의 식단·운동 기록을 근거로 답해요.';
+
+  @override
+  String get coachSheetHint => '예) 나트륨이 계속 높은데 어떤 식단을 권할까요?';
+
+  @override
+  String get coachSheetSources => '근거';
+
+  @override
+  String get coachSheetAsk => '물어보기';
+
+  @override
+  String get coachSheetAskAgain => '다시 묻기';
 }

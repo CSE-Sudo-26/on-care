@@ -309,4 +309,167 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weekdaySun => 'Sun';
+
+  @override
+  String get clientsLoadFailed => 'Couldn\'t load client data';
+
+  @override
+  String clientsCountSummary(int total, int active) {
+    return '$total clients · $active active';
+  }
+
+  @override
+  String get clientsNew => 'New client';
+
+  @override
+  String get clientsTitle => 'Clients';
+
+  @override
+  String get clientsPickHint =>
+      'Pick a client on the left to open\ntheir chat, meals and workouts here';
+
+  @override
+  String get clientsEmpty => 'No clients yet';
+
+  @override
+  String clientsEmptyForFilter(String filter) {
+    return 'No clients match $filter';
+  }
+
+  @override
+  String clientsFilterSummary(String filter, int shown, int total) {
+    return '$filter · $shown/$total';
+  }
+
+  @override
+  String get clientsSeeAll => 'See all';
+
+  @override
+  String get clientsNameRequired => 'Enter a name';
+
+  @override
+  String get clientsAddFailed => 'Couldn\'t add the client. Please try again';
+
+  @override
+  String get clientsDuplicateName => 'A client with that name already exists';
+
+  @override
+  String get clientsAddTitle => 'Add a client';
+
+  @override
+  String get clientsNameLabel => 'Client name';
+
+  @override
+  String get clientsGoalLabel => 'Goal (e.g. weight loss · strength)';
+
+  @override
+  String get clientsAddAction => 'Add';
+
+  @override
+  String get clientTabDiet => 'Meals';
+
+  @override
+  String get clientTabWorkout => 'Workouts';
+
+  @override
+  String get clientNotFound => 'Client not found';
+
+  @override
+  String get clientBackToList => 'Back to clients';
+
+  @override
+  String get clientList => 'Client list';
+
+  @override
+  String get metricCalories => 'Calories';
+
+  @override
+  String get metricSodium => 'Sodium';
+
+  @override
+  String get metricSugar => 'Sugar';
+
+  @override
+  String get clientWeeklyReport => 'Weekly report';
+
+  @override
+  String get clientAskAi => 'Ask AI';
+
+  @override
+  String get clientActive => 'Active';
+
+  @override
+  String get clientDormant => 'Dormant';
+
+  @override
+  String get clientClosePanel => 'Close panel';
+
+  @override
+  String get clientChat => 'Chat';
+
+  @override
+  String clientChatWithUnread(String name, int count) {
+    return 'Chat with $name, $count unread';
+  }
+
+  @override
+  String clientChatWith(String name) {
+    return 'Chat with $name';
+  }
+
+  @override
+  String get chatTooLong => 'Message is too long (2000 characters max)';
+
+  @override
+  String get chatSendFailed => 'Couldn\'t send the message. Please try again';
+
+  @override
+  String get chatLoadFailed => 'Couldn\'t load the conversation';
+
+  @override
+  String chatDemoAnalyzed(String name) {
+    return 'AI analysed $name\'s meals and workouts';
+  }
+
+  @override
+  String get chatDemoReportSent => 'A summary report was sent to you';
+
+  @override
+  String chatDemoRoutineSent(String name) {
+    return 'An AI-built routine was sent to $name';
+  }
+
+  @override
+  String get chatDemoNotified => 'The client app was notified';
+
+  @override
+  String get chatInputHint => 'Type a message...';
+
+  @override
+  String get coachSheetThisClient => 'this client';
+
+  @override
+  String get coachSheetLoadFailed => 'Couldn\'t load AI coaching';
+
+  @override
+  String coachSheetTitle(String name) {
+    return 'Coaching for $name';
+  }
+
+  @override
+  String get coachSheetSubtitle =>
+      'Answers are grounded in this client\'s meals and workouts.';
+
+  @override
+  String get coachSheetHint =>
+      'e.g. Sodium keeps running high — what meals should I suggest?';
+
+  @override
+  String get coachSheetSources => 'Sources';
+
+  @override
+  String get coachSheetAsk => 'Ask';
+
+  @override
+  String get coachSheetAskAgain => 'Ask again';
 }

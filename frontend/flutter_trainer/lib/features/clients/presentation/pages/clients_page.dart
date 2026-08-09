@@ -16,6 +16,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 고객 — the roster and, beside it, the selected client's detail.
 ///
@@ -52,6 +53,7 @@ class ClientsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // Priority ordering: sodium-over clients first, then recent chat.
     final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
@@ -75,8 +77,8 @@ class ClientsPage extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Text(
-                '고객 정보를 불러오지 못했어요',
+              Text(
+                l.clientsLoadFailed,
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -84,13 +86,14 @@ class ClientsPage extends ConsumerWidget {
               // with a dead page — re-subscribing is one tap.
               TextButton(
                 onPressed: () => ref.invalidate(clientsProvider),
-                child: const Text('다시 시도'),
+                child: Text(l.actionRetry),
               ),
             ],
           ),
         ),
       ),
       data: (all) {
+        final AppLocalizations l = AppLocalizations.of(context);
         final list = applyClientFilter(all, activeFilter, unread: unread);
         // An id that isn't on the roster (deleted client, stale link) is
         // NOT collapsed away: the detail view says "고객을 찾을 수 없어요"
@@ -99,11 +102,11 @@ class ClientsPage extends ConsumerWidget {
         final selected = selectedId;
 
         return _Frame(
-          subtitle: '${all.length}명 · 활성 ${all.where((c) => c.active).length}명',
+          subtitle: l.clientsCountSummary(all.length, all.where((c) => c.active).length),
           actions: <Widget>[
             if (canManageRoster)
               ActionButton(
-                label: '신규 고객',
+                label: l.clientsNew,
                 icon: Icons.person_add_alt,
                 primary: true,
                 onPressed: () => _openAddClientSheet(context),
@@ -185,8 +188,9 @@ class _Frame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return PageScaffold(
-      title: '고객',
+      title: l.clientsTitle,
       subtitle: subtitle,
       actions: actions,
       scrollable: false,
@@ -202,7 +206,8 @@ class _NoSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -213,7 +218,7 @@ class _NoSelection extends StatelessWidget {
           ),
           SizedBox(height: AppSpacing.md),
           Text(
-            '왼쪽에서 고객을 선택하면\n대화·식단·운동 기록이 여기에 열려요',
+            l.clientsPickHint,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,
@@ -249,6 +254,7 @@ class _RosterList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -269,8 +275,8 @@ class _RosterList extends StatelessWidget {
         if (clients.isEmpty)
           EmptyHint(
             message: filter == ClientFilter.all
-                ? '아직 담당 고객이 없어요'
-                : '${filter.label}에 해당하는 고객이 없어요',
+                ? l.clientsEmpty
+                : l.clientsEmptyForFilter(filter.label),
             icon: Icons.people_outline,
           )
         else
@@ -305,6 +311,7 @@ class _FilterBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -324,7 +331,7 @@ class _FilterBanner extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              '${filter.label} · $shown/$total명',
+              l.clientsFilterSummary(filter.label, shown, total),
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -335,10 +342,10 @@ class _FilterBanner extends StatelessWidget {
           InkWell(
             onTap: onClear,
             borderRadius: const BorderRadius.all(AppRadius.sm),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Text(
-                '전체 보기',
+                l.clientsSeeAll,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -385,8 +392,11 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
   Future<void> _save() async {
     if (_saving) return;
     final name = _name.text.trim();
+    // await 전에 잡아 둔다 — 뒤 실패 경로에서 context 를 다시 만지면 async gap
+    // 을 건너 쓰게 된다(navigator 를 미리 잡아 두는 것과 같은 이유).
+    final AppLocalizations l = AppLocalizations.of(context);
     if (name.isEmpty) {
-      setState(() => _nameError = '이름을 입력해 주세요');
+      setState(() => _nameError = l.clientsNameRequired);
       return;
     }
     setState(() {
@@ -403,16 +413,17 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
       // An unexpected DB failure must not leave the sheet silently stuck —
       // surface it inline like the duplicate case. `finally` clears the
       // saving flag on every path (CodeRabbit review).
-      if (mounted) setState(() => _nameError = '등록에 실패했어요. 다시 시도해 주세요');
+      if (mounted) setState(() => _nameError = l.clientsAddFailed);
       return;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
     if (!mounted) return;
     if (!added) {
+      final AppLocalizations l = AppLocalizations.of(context);
       // Duplicate name — schedules resolve their client by name, so
       // allowing it would misattribute chat/운동기록 (review PR 243).
-      setState(() => _nameError = '이미 같은 이름의 고객이 있어요');
+      setState(() => _nameError = l.clientsDuplicateName);
       return;
     }
     navigator.pop();
@@ -420,6 +431,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -431,8 +443,8 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '신규 고객 등록',
+          Text(
+            l.clientsAddTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -443,7 +455,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
           TextField(
             controller: _name,
             decoration: InputDecoration(
-              hintText: '고객 이름',
+              hintText: l.clientsNameLabel,
               hintStyle: const TextStyle(color: AppColors.subtleForeground),
               isDense: true,
               filled: true,
@@ -464,8 +476,8 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _goal,
-            decoration: const InputDecoration(
-              hintText: '목표 (예: 체중 감량 · 근력 향상)',
+            decoration: InputDecoration(
+              hintText: l.clientsGoalLabel,
               hintStyle: TextStyle(color: AppColors.subtleForeground),
               isDense: true,
               filled: true,
@@ -489,8 +501,8 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
               child: Container(
                 height: 44,
                 alignment: Alignment.center,
-                child: const Text(
-                  '등록하기',
+                child: Text(
+                  l.clientsAddAction,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

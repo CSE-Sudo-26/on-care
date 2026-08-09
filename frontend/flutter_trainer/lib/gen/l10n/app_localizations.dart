@@ -649,6 +649,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sun'**
   String get weekdaySun;
+
+  /// No description provided for @clientsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load client data'**
+  String get clientsLoadFailed;
+
+  /// No description provided for @clientsCountSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} clients · {active} active'**
+  String clientsCountSummary(int total, int active);
+
+  /// No description provided for @clientsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New client'**
+  String get clientsNew;
+
+  /// No description provided for @clientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients'**
+  String get clientsTitle;
+
+  /// No description provided for @clientsPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a client on the left to open\ntheir chat, meals and workouts here'**
+  String get clientsPickHint;
+
+  /// No description provided for @clientsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients yet'**
+  String get clientsEmpty;
+
+  /// No description provided for @clientsEmptyForFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients match {filter}'**
+  String clientsEmptyForFilter(String filter);
+
+  /// No description provided for @clientsFilterSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{filter} · {shown}/{total}'**
+  String clientsFilterSummary(String filter, int shown, int total);
+
+  /// No description provided for @clientsSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get clientsSeeAll;
+
+  /// No description provided for @clientsNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get clientsNameRequired;
+
+  /// No description provided for @clientsAddFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add the client. Please try again'**
+  String get clientsAddFailed;
+
+  /// No description provided for @clientsDuplicateName.
+  ///
+  /// In en, this message translates to:
+  /// **'A client with that name already exists'**
+  String get clientsDuplicateName;
+
+  /// No description provided for @clientsAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a client'**
+  String get clientsAddTitle;
+
+  /// No description provided for @clientsNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Client name'**
+  String get clientsNameLabel;
+
+  /// No description provided for @clientsGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal (e.g. weight loss · strength)'**
+  String get clientsGoalLabel;
+
+  /// No description provided for @clientsAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get clientsAddAction;
+
+  /// No description provided for @clientTabDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals'**
+  String get clientTabDiet;
+
+  /// No description provided for @clientTabWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts'**
+  String get clientTabWorkout;
+
+  /// No description provided for @clientNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Client not found'**
+  String get clientNotFound;
+
+  /// No description provided for @clientBackToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to clients'**
+  String get clientBackToList;
+
+  /// No description provided for @clientList.
+  ///
+  /// In en, this message translates to:
+  /// **'Client list'**
+  String get clientList;
+
+  /// No description provided for @metricCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get metricCalories;
+
+  /// No description provided for @metricSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium'**
+  String get metricSodium;
+
+  /// No description provided for @metricSugar.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar'**
+  String get metricSugar;
+
+  /// No description provided for @clientWeeklyReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report'**
+  String get clientWeeklyReport;
+
+  /// No description provided for @clientAskAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask AI'**
+  String get clientAskAi;
+
+  /// No description provided for @clientActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get clientActive;
+
+  /// No description provided for @clientDormant.
+  ///
+  /// In en, this message translates to:
+  /// **'Dormant'**
+  String get clientDormant;
+
+  /// No description provided for @clientClosePanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close panel'**
+  String get clientClosePanel;
+
+  /// No description provided for @clientChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get clientChat;
+
+  /// No description provided for @clientChatWithUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with {name}, {count} unread'**
+  String clientChatWithUnread(String name, int count);
+
+  /// No description provided for @clientChatWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with {name}'**
+  String clientChatWith(String name);
+
+  /// No description provided for @chatTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Message is too long (2000 characters max)'**
+  String get chatTooLong;
+
+  /// No description provided for @chatSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the message. Please try again'**
+  String get chatSendFailed;
+
+  /// No description provided for @chatLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the conversation'**
+  String get chatLoadFailed;
+
+  /// No description provided for @chatDemoAnalyzed.
+  ///
+  /// In en, this message translates to:
+  /// **'AI analysed {name}\'s meals and workouts'**
+  String chatDemoAnalyzed(String name);
+
+  /// No description provided for @chatDemoReportSent.
+  ///
+  /// In en, this message translates to:
+  /// **'A summary report was sent to you'**
+  String get chatDemoReportSent;
+
+  /// No description provided for @chatDemoRoutineSent.
+  ///
+  /// In en, this message translates to:
+  /// **'An AI-built routine was sent to {name}'**
+  String chatDemoRoutineSent(String name);
+
+  /// No description provided for @chatDemoNotified.
+  ///
+  /// In en, this message translates to:
+  /// **'The client app was notified'**
+  String get chatDemoNotified;
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get chatInputHint;
+
+  /// No description provided for @coachSheetThisClient.
+  ///
+  /// In en, this message translates to:
+  /// **'this client'**
+  String get coachSheetThisClient;
+
+  /// No description provided for @coachSheetLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load AI coaching'**
+  String get coachSheetLoadFailed;
+
+  /// No description provided for @coachSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coaching for {name}'**
+  String coachSheetTitle(String name);
+
+  /// No description provided for @coachSheetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers are grounded in this client\'s meals and workouts.'**
+  String get coachSheetSubtitle;
+
+  /// No description provided for @coachSheetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Sodium keeps running high — what meals should I suggest?'**
+  String get coachSheetHint;
+
+  /// No description provided for @coachSheetSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get coachSheetSources;
+
+  /// No description provided for @coachSheetAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get coachSheetAsk;
+
+  /// No description provided for @coachSheetAskAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask again'**
+  String get coachSheetAskAgain;
 }
 
 class _AppLocalizationsDelegate

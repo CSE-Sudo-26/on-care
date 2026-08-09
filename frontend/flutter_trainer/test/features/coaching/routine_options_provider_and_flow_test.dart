@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routin
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -166,6 +167,9 @@ void main() {
           trainerRoutineRepositoryProvider.overrideWithValue(assigned),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
             client: _client,
             recommendedExercises: <RoutineExercise>[
@@ -299,6 +303,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
             home: AiRoutineOptionsFlow(
               client: _client,
               recommendedExercises: <RoutineExercise>[
@@ -340,6 +347,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
             client: _client,
             recommendedExercises: <RoutineExercise>[

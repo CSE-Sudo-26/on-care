@@ -191,5 +191,121 @@
   },
   "@dashUnitPeople": {
     "description": "Unit after a person count. Korean uses the counter 명; English omits it. Intentionally empty."
-  }
+  },
+  "clientsLoadFailed": "Couldn't load client data",
+  "clientsCountSummary": "{total} clients · {active} active",
+  "@clientsCountSummary": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsNew": "New client",
+  "clientsTitle": "Clients",
+  "clientsPickHint": "Pick a client on the left to open\ntheir chat, meals and workouts here",
+  "clientsEmpty": "No clients yet",
+  "clientsEmptyForFilter": "No clients match {filter}",
+  "@clientsEmptyForFilter": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "clientsFilterSummary": "{filter} · {shown}/{total}",
+  "@clientsFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      },
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsSeeAll": "See all",
+  "clientsNameRequired": "Enter a name",
+  "clientsAddFailed": "Couldn't add the client. Please try again",
+  "clientsDuplicateName": "A client with that name already exists",
+  "clientsAddTitle": "Add a client",
+  "clientsNameLabel": "Client name",
+  "clientsGoalLabel": "Goal (e.g. weight loss · strength)",
+  "clientsAddAction": "Add",
+  "clientTabDiet": "Meals",
+  "clientTabWorkout": "Workouts",
+  "clientNotFound": "Client not found",
+  "clientBackToList": "Back to clients",
+  "clientList": "Client list",
+  "metricCalories": "Calories",
+  "metricSodium": "Sodium",
+  "metricSugar": "Sugar",
+  "clientWeeklyReport": "Weekly report",
+  "clientAskAi": "Ask AI",
+  "clientActive": "Active",
+  "clientDormant": "Dormant",
+  "clientClosePanel": "Close panel",
+  "clientChat": "Chat",
+  "clientChatWithUnread": "Chat with {name}, {count} unread",
+  "@clientChatWithUnread": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientChatWith": "Chat with {name}",
+  "@clientChatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTooLong": "Message is too long (2000 characters max)",
+  "chatSendFailed": "Couldn't send the message. Please try again",
+  "chatLoadFailed": "Couldn't load the conversation",
+  "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
+  "@chatDemoAnalyzed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatDemoReportSent": "A summary report was sent to you",
+  "chatDemoRoutineSent": "An AI-built routine was sent to {name}",
+  "@chatDemoRoutineSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatDemoNotified": "The client app was notified",
+  "chatInputHint": "Type a message...",
+  "coachSheetThisClient": "this client",
+  "coachSheetLoadFailed": "Couldn't load AI coaching",
+  "coachSheetTitle": "Coaching for {name}",
+  "@coachSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachSheetSubtitle": "Answers are grounded in this client's meals and workouts.",
+  "coachSheetHint": "e.g. Sodium keeps running high — what meals should I suggest?",
+  "coachSheetSources": "Sources",
+  "coachSheetAsk": "Ask",
+  "coachSheetAskAgain": "Ask again"
 }
