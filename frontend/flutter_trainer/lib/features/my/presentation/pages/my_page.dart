@@ -35,11 +35,14 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 ///
 ///  * **내 정보** — profile, certifications, this month's stats, gym.
 ///    Edits persist through `PUT /v1/trainer/me` and the gym affiliation
-///    endpoints; mock mode follows the same repository contract.
-///  * **설정** — notifications, account, app info, 로그아웃. Most rows
-///    are placeholders today; they are shown (disabled, with a reason)
-///    rather than hidden so the shape of the screen doesn't change when
-///    the endpoints arrive.
+///    endpoints; mock mode follows the same repository contract (#477, #452).
+///    이름·이메일 입력은 비활성이다 — 값이 없어서가 아니라 **계정 소관**이라
+///    여기서 바꾸지 않는다.
+///  * **설정** — 알림 수신 설정은 `GET/PUT /v1/trainer/me/settings`(#379),
+///    비밀번호 변경은 `POST /v1/trainer/me/password` 로 서버에 저장된다.
+///    비밀번호 변경만 **데모에서 비활성**이고(바꿀 계정이 없다) 그 사유를 함께
+///    보여 준다 — 미구현이 아니라 그 빌드에서만 막히는 것이다.
+///    앱 정보(서비스·버전·문의)는 표시 전용이다.
 ///
 /// The Figma mock's "역할 전환" section is intentionally omitted — the
 /// trainer and member apps use fully separate accounts (CLAUDE.local.md).
