@@ -45,9 +45,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navConsultations => '상담 요청';
 
   @override
-  String get navNotifications => '알림';
-
-  @override
   String get navMy => '내 정보';
 
   @override
@@ -1759,4 +1756,57 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appTitleSpaced => 'On - Care 트레이너';
+
+  @override
+  String get navNotifications => '알림';
+
+  @override
+  String get notifTitle => '알림';
+
+  @override
+  String get notifReadAll => '모두 읽음';
+
+  @override
+  String get notifEmpty => '아직 받은 알림이 없어요';
+
+  @override
+  String get notifLoadFailed => '알림을 불러오지 못했어요';
+
+  @override
+  String get notifAllRead => '모두 확인했어요';
+
+  @override
+  String get notifReadAllFailed => '읽음 처리에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String notifUnreadCount(int count) {
+    return '읽지 않은 알림 $count건';
+  }
+
+  @override
+  String get myDeleteAccount => '계정 탈퇴';
+
+  @override
+  String get myDeleteAction => '탈퇴';
+
+  @override
+  String get myDeleteHint => '담당 회원 연결과 예약이 함께 사라져요';
+
+  @override
+  String get myDeleteDemo => '데모 모드에는 지울 계정이 없어요';
+
+  @override
+  String get myDeleteTitle => '계정을 탈퇴할까요?';
+
+  @override
+  String get myDeleteBody =>
+      '담당 회원 연결과 예약이 사라지고, 회원에게 알림이 전달돼요. 이 작업은 되돌릴 수 없어요.';
+
+  @override
+  String get myDeleteFailed => '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String myDeleteConfirmPrompt(String name) {
+    return '계속하려면 이름($name)을 입력해 주세요';
+  }
 }

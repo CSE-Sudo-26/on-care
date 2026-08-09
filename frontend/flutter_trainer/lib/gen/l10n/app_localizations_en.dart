@@ -45,9 +45,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navConsultations => 'Requests';
 
   @override
-  String get navNotifications => 'Notifications';
-
-  @override
   String get navMy => 'My page';
 
   @override
@@ -1808,4 +1805,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appTitleSpaced => 'On - Care Trainer';
+
+  @override
+  String get navNotifications => 'Notifications';
+
+  @override
+  String get notifTitle => 'Notifications';
+
+  @override
+  String get notifReadAll => 'Mark all read';
+
+  @override
+  String get notifEmpty => 'No notifications yet';
+
+  @override
+  String get notifLoadFailed => 'Couldn\'t load notifications';
+
+  @override
+  String get notifAllRead => 'All caught up';
+
+  @override
+  String get notifReadAllFailed =>
+      'Couldn\'t mark them read. Please try again in a moment';
+
+  @override
+  String notifUnreadCount(int count) {
+    return '$count unread';
+  }
+
+  @override
+  String get myDeleteAccount => 'Delete account';
+
+  @override
+  String get myDeleteAction => 'Delete';
+
+  @override
+  String get myDeleteHint => 'Your client links and bookings go with it';
+
+  @override
+  String get myDeleteDemo => 'Demo mode has no account to delete';
+
+  @override
+  String get myDeleteTitle => 'Delete your account?';
+
+  @override
+  String get myDeleteBody =>
+      'Your client links and bookings are removed and your clients are notified. This can\'t be undone.';
+
+  @override
+  String get myDeleteFailed =>
+      'Couldn\'t delete your account. Please try again in a moment';
+
+  @override
+  String myDeleteConfirmPrompt(String name) {
+    return 'Type your name ($name) to continue';
+  }
 }

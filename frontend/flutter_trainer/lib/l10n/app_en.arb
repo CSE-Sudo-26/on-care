@@ -30,7 +30,6 @@
   "navCoaching": "Coaching",
   "navReports": "Reports",
   "navConsultations": "Requests",
-  "navNotifications": "Notifications",
   "navMy": "My page",
   "actionSave": "Save",
   "actionCancel": "Cancel",
@@ -1231,5 +1230,35 @@
   "appTitleSpaced": "On - Care Trainer",
   "@appTitleSpaced": {
     "description": "Login screen wordmark with the spaced hyphen used in the visual design."
+  },
+  "navNotifications": "Notifications",
+  "notifTitle": "Notifications",
+  "notifReadAll": "Mark all read",
+  "notifEmpty": "No notifications yet",
+  "notifLoadFailed": "Couldn't load notifications",
+  "notifAllRead": "All caught up",
+  "notifReadAllFailed": "Couldn't mark them read. Please try again in a moment",
+  "notifUnreadCount": "{count} unread",
+  "@notifUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myDeleteAccount": "Delete account",
+  "myDeleteAction": "Delete",
+  "myDeleteHint": "Your client links and bookings go with it",
+  "myDeleteDemo": "Demo mode has no account to delete",
+  "myDeleteTitle": "Delete your account?",
+  "myDeleteBody": "Your client links and bookings are removed and your clients are notified. This can't be undone.",
+  "myDeleteFailed": "Couldn't delete your account. Please try again in a moment",
+  "myDeleteConfirmPrompt": "Type your name ({name}) to continue",
+  "@myDeleteConfirmPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
