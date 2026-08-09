@@ -497,7 +497,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String otherDateEmpty(Object section) {
-    return '선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 $section을 확인해 주세요.';
+    return '선택한 날짜에 기록된 $section이 없어요.';
   }
 
   @override
@@ -661,6 +661,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exTypeOtherChip => '기타';
+
+  @override
+  String get exSourceTrainerPt => '트레이너 PT';
 
   @override
   String get exLevelLight => '가벼움';
@@ -1487,4 +1490,32 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exConsultAcceptedGuide => '담당 트레이너와 연결되었어요. 이제 채팅으로 상담할 수 있어요.';
+
+  @override
+  String get exMyReservations => '내 예약';
+
+  @override
+  String get exCancelReservation => '예약 취소';
+
+  @override
+  String get exCancelKeep => '유지';
+
+  @override
+  String get exCancelConfirmTitle => '예약을 취소할까요?';
+
+  @override
+  String get exCancelFailed => '예약을 취소하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get exReservationPast => '지난 예약';
+
+  @override
+  String exCancelConfirmBody(String when) {
+    return '$when 예약이 취소되고 그 자리가 다시 열려요.';
+  }
+
+  @override
+  String exCancelDone(String when) {
+    return '$when 예약을 취소했어요';
+  }
 }

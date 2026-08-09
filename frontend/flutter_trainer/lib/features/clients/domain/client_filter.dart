@@ -1,5 +1,6 @@
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Roster filters reachable from the URL (`/clients?f=unread`).
 ///
@@ -9,22 +10,26 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 /// a shared link must keep showing it.
 enum ClientFilter {
   /// Everyone on the roster.
-  all('all', '전체'),
+  all('all'),
 
   /// Clients with unanswered messages.
-  unread('unread', '답장 필요'),
+  unread('unread'),
 
   /// Clients with a health [ClientAlert] raised (나트륨 초과 · 이행률
   /// 저조). Unanswered messages are [unread], not 주의.
-  attention('attention', '주의 고객');
+  attention('attention');
 
-  const ClientFilter(this.query, this.label);
+  const ClientFilter(this.query);
 
-  /// Value used in the `f` query parameter.
+  /// Value used in the `f` query parameter. **URL 계약이라 번역하지 않는다.**
   final String query;
 
-  /// Chip label.
-  final String label;
+  /// Chip label in the current locale. (#501)
+  String label(AppLocalizations l) => switch (this) {
+    ClientFilter.all => l.filterAll,
+    ClientFilter.unread => l.dashNeedsReply,
+    ClientFilter.attention => l.dashAttentionClients,
+  };
 }
 
 /// Parses the `f` query parameter; anything unrecognised (including

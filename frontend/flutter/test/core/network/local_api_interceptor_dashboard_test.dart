@@ -183,6 +183,13 @@ void main() {
       expect(body['exercise_minutes'], 45);
       expect(body['exercise_calories'], 320);
       expect(body['exercise_count'], 1);
+      final nutritionWeek = (body['nutrition_week']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      expect(nutritionWeek, hasLength(7));
+      final todayTrend = nutritionWeek[DateTime.now().weekday - 1];
+      expect(todayTrend['calories'], 1420);
+      expect(todayTrend['sodium_mg'], 2100);
+      expect(todayTrend['sugar_g'], 45.0);
 
       // Schedule.
       final schedule = (body['today_schedule']! as List<Object?>)

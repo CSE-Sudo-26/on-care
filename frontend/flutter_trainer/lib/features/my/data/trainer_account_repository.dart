@@ -49,7 +49,9 @@ class MockTrainerAccountRepository implements TrainerAccountRepository {
     required String currentPassword,
     required String newPassword,
   }) async {
-    throw const ValidationError(message: '데모 모드에서는 비밀번호를 변경할 수 없어요');
+    // 문구는 화면이 붙인다 — 리포지토리에는 컨텍스트가 없어 로케일을 알 수
+    // 없고, message 가 비면 호출부가 자기 로케일의 기본 문구로 채운다. (#501)
+    throw const ValidationError();
   }
 
   @override
@@ -98,7 +100,8 @@ class DioTrainerAccountRepository implements TrainerAccountRepository {
       // 않습니다."), which is exactly what the trainer needs to read.
       final status = e.response?.statusCode;
       if (status == 400 || status == 422) {
-        throw ValidationError(message: _detail(e) ?? '비밀번호를 변경할 수 없어요');
+        // 서버가 준 사유가 있으면 그대로, 없으면 화면이 기본 문구를 붙인다.
+        throw ValidationError(message: _detail(e));
       }
       throw AppError.fromDio(e);
     }

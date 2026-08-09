@@ -16,13 +16,13 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
-from app.models.models import TrainerClient, TrainerProfile
+from app.models.models import Notification, TrainerClient, TrainerProfile
 from app.schemas.consultation_api import (
     ConsultationDecision,
     ConsultationStatusFilter,
@@ -34,7 +34,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut, RoutineOptionsRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
-    TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
+    TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
 from app.services import (
@@ -46,6 +46,10 @@ from app.services import (
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
+
+#: 알림함이 한 번에 내려주는 최대 건수. 회원 이력과 같은 이유로 상한을 둔다 —
+#: 오래된 알림 무제한 로드를 막는다.
+_NOTIFICATION_LIMIT = 100
 
 # 계약 형식은 정확히 YYYY-MM-DD. date.fromisoformat 는 3.11+ 에서 basic ISO·주 날짜도 받으므로
 # 정규식으로 먼저 좁힌 뒤 달력 유효성을 확인한다(schedule 라우트와 동일 규약).
@@ -656,3 +660,84 @@ def trainer_reject_consultation(
 ) -> TrainerConsultationOut:
     """상담을 거절한다. 사유는 회원 알림 본문에 그대로 실린다."""
     return _decide(consultation_service.reject, db, trainer.id, consultation_id, payload)
+
+
+# ---- 알림함 (#503) ----
+#
+# 회원용 `/notifications` 를 재사용할 수 없다 — `get_current_user` 가 트레이너
+# 계정을 403 으로 막는 **회원 전용** 경로다(역할 분리). 저장되는 행은 같은
+# `notifications` 테이블이고 `user_id` 가 일반 사용자 FK라 스키마 변경은 없다.
+
+def _notification_out(row: Notification) -> TrainerNotificationOut:
+    return TrainerNotificationOut(
+        id=row.id,
+        title=row.title,
+        body=row.body,
+        category=row.category,
+        read=row.read,
+        created_at=row.created_at,
+        time_ago=notification_service.time_ago(row.created_at),
+    )
+
+
+@router.get("/trainer/notifications", response_model=list[TrainerNotificationOut])
+def trainer_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerNotificationOut]:
+    """트레이너가 받은 알림(최신순)."""
+    rows = db.scalars(
+        select(Notification)
+        .where(Notification.user_id == trainer.id)
+        .order_by(Notification.created_at.desc())
+        .limit(_NOTIFICATION_LIMIT)
+    ).all()
+    return [_notification_out(row) for row in rows]
+
+
+@router.get("/trainer/notifications/unread-count", response_model=dict)
+def trainer_unread_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """사이드바 배지가 읽는 값."""
+    count = db.scalar(
+        select(func.count())
+        .select_from(Notification)
+        .where(Notification.user_id == trainer.id, Notification.read.is_(False))
+    )
+    return {"unread": int(count or 0)}
+
+
+@router.post("/trainer/notifications/read-all")
+def trainer_read_all_notifications(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    marked = db.execute(
+        update(Notification)
+        .where(Notification.user_id == trainer.id, Notification.read.is_(False))
+        .values(read=True)
+    ).rowcount
+    db.commit()
+    return {"marked_read": int(marked or 0)}
+
+
+@router.post("/trainer/notifications/{notification_id}/read")
+def trainer_read_notification(
+    notification_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    row = db.scalar(
+        select(Notification).where(
+            Notification.id == notification_id,
+            # 남의 알림은 존재조차 드러내지 않는다.
+            Notification.user_id == trainer.id,
+        )
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="알림을 찾을 수 없습니다.")
+    row.read = True
+    db.commit()
+    return {"id": row.id, "read": True}

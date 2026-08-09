@@ -1,6 +1,11 @@
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Valid routine types accepted by the backend (`RoutineType` literal).
+///
+/// **번역하지 않는다.** 이 값은 화면 문구가 아니라 서버로 나가는 계약값이다 —
+/// 영어 로케일에서 `type: 'Strength'` 를 보내면 백엔드 Literal 검증에 걸려 422 가
+/// 난다. 화면에 보일 문구는 [routineTypeLabel] 로 따로 가져온다. (#501)
 const List<String> kRoutineTypes = <String>[
   '걷기',
   '유산소',
@@ -11,6 +16,18 @@ const List<String> kRoutineTypes = <String>[
 ];
 
 /// `RoutineOut` JSON → [AssignedRoutine].
+/// 저장된 계약값 → 화면 문구.
+String routineTypeLabel(AppLocalizations l, String type) => switch (type) {
+  '걷기' => l.routineTypeWalking,
+  '유산소' => l.routineTypeCardio,
+  '근력' => l.routineTypeStrength,
+  '요가' => l.routineTypeYoga,
+  '스트레칭' => l.routineTypeStretching,
+  '기타' => l.routineTypeOther,
+  // 서버가 새 유형을 추가했는데 앱이 모르는 경우 — 원문을 그대로 보여 준다.
+  _ => type,
+};
+
 AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
   return AssignedRoutine(
     id: _str(json['id']),

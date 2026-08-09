@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 트레이너 회원가입 화면 — 사용자 앱 회원가입과 동일한 디자인. 이름/이메일/
 /// 비밀번호와 **헬스장 초대 코드**로 계정을 만들고, 성공 시 자동 로그인해 고객
@@ -66,23 +67,23 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
     final inviteCode = _inviteCode.text.trim();
     if (email.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('이메일과 비밀번호를 입력해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrEmptyCredentials)),
       );
       return;
     }
     if (password.length < 8) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('비밀번호는 8자 이상이어야 해요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrPasswordTooShort)),
       );
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(const SnackBar(content: Text('비밀번호가 일치하지 않아요')));
+      messenger.showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).authErrPasswordMismatch)));
       return;
     }
     if (requiresInviteCode && inviteCode.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('헬스장에서 받은 초대 코드를 입력해 주세요')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrInviteCodeRequired)),
       );
       return;
     }
@@ -99,18 +100,24 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       if (!mounted) return;
       context.go(AppRoutes.dashboard);
     } on AuthException catch (e) {
-      if (mounted) setState(() => _loading = false);
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      // 가입 화면은 요청 중에도 뒤로 가기가 열려 있다 — 떠난 뒤 실패가 돌아오면
+      // 해제된 context 로 로케일을 조회하게 된다.
+      if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _loading = false);
+      messenger.showSnackBar(SnackBar(content: Text(authFailureText(l, e))));
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.')),
+        SnackBar(content: Text(AppLocalizations.of(context).authErrSignUpFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     // 데모 가입 화면은 지금과 동일해야 한다 — 코드 입력을 그리지 않는다.
     final showInviteCode = !ref.watch(appConfigProvider).useMockApi;
@@ -140,7 +147,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       Text(
-                        '회원가입',
+                        l.authSignUp,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -149,7 +156,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'On-Care 계정을 만들어 고객 관리를 시작하세요',
+                        l.authSignUpSubtitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: const Color(0xFF64748B),
@@ -159,20 +166,20 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
 
                       AuthField(
                         controller: _name,
-                        hint: '이름',
+                        hint: l.authName,
                         icon: Icons.person_outline,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _email,
-                        hint: '이메일',
+                        hint: l.authEmail,
                         icon: Icons.mail_outline,
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _password,
-                        hint: '비밀번호 (8자 이상)',
+                        hint: l.authPasswordHint,
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         trailing: IconButton(
@@ -187,7 +194,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _passwordConfirm,
-                        hint: '비밀번호 확인',
+                        hint: l.authPasswordConfirm,
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         // 데모에서는 이 필드가 마지막이라 제출 액션이 여기 붙는다.
@@ -197,15 +204,15 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                         const SizedBox(height: AppSpacing.md),
                         AuthField(
                           controller: _inviteCode,
-                          hint: '헬스장 초대 코드',
+                          hint: l.authInviteCode,
                           icon: Icons.confirmation_number_outlined,
                           textCapitalization: TextCapitalization.characters,
                           onSubmitted: (_) => _register(),
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        const Text(
-                          '소속 헬스장에서 발급받은 코드를 입력해 주세요.',
-                          style: TextStyle(
+                        Text(
+                          l.authInviteCodeHelp,
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF64748B),
                           ),
@@ -215,23 +222,26 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
 
                       AuthGradientButton(
                         loading: _loading,
-                        label: '가입하고 시작하기',
+                        label: l.authSignUpAndStart,
                         onTap: _register,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Row 가 아니라 Wrap — 영어 문구가 길어 좁은 폭에서
+                      // 넘친다(로그인 화면과 같은 이유). (#501)
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: <Widget>[
-                          const Text(
-                            '이미 계정이 있으신가요?',
-                            style: TextStyle(color: Color(0xFF64748B)),
+                          Text(
+                            l.authHasAccount,
+                            style: const TextStyle(color: Color(0xFF64748B)),
                           ),
                           TextButton(
                             onPressed: _backToSignIn,
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.primary,
                             ),
-                            child: const Text('로그인'),
+                            child: Text(l.authSignIn),
                           ),
                         ],
                       ),

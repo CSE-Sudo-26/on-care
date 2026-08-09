@@ -7,6 +7,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_request.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/presentation/controllers/consultation_request_controller.dart';
@@ -633,6 +634,9 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
   /// 두 번 누르면 좌석이 두 번 빠진다 — 그래서 진행 중에는 버튼을 잠근다.
   String? _reserving;
 
+  /// 취소 요청이 오가는 동안 잡고 있는 예약 id. 예약과 같은 이유로 잠근다.
+  String? _cancelling;
+
   /// 로케일에 맞는 "8월 8일 오후 7:00" 형태. 고정 문자열이 아니라 실제 시각을
   /// 쓰므로 날이 바뀌어도 어긋나지 않는다.
   String _when(BuildContext context, AppLocalizations l, DateTime at) {
@@ -659,11 +663,56 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     setState(() => _reserving = null);
     // 잔여 자리를 다시 읽어, 방금 잡은 자리가 목록에도 반영되게 한다.
     ref.invalidate(trainerSlotsProvider(widget.trainer.id));
+    // 방금 잡은 예약이 '내 예약'에도 나타나야 취소가 걸린다. (#502)
+    ref.invalidate(myReservationsProvider);
     messenger.showSnackBar(
       SnackBar(
         content: Text(l.exReserveConfirmedSlotGym(label, widget.gym.name)),
       ),
     );
+  }
+
+  /// 예약 취소. 확인을 받고, 성공하면 잔여 자리와 내 예약을 함께 다시 읽는다.
+  ///
+  /// 되돌릴 수 없는 동작이라 확인을 한 번 받는다 — 취소하면 그 자리는 곧바로
+  /// 다른 회원이 잡을 수 있다. (#502)
+  Future<void> _cancel(AppLocalizations l, MyReservation reservation) async {
+    if (_reserving != null || _cancelling != null) return;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final String label = _when(context, l, reservation.startsAt);
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(l.exCancelConfirmTitle),
+        content: Text(l.exCancelConfirmBody(label)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.exCancelKeep),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l.exCancelReservation),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _cancelling = reservation.id);
+    try {
+      await ref.read(gymRepositoryProvider).cancelReservation(reservation.id);
+    } catch (_) {
+      if (mounted) setState(() => _cancelling = null);
+      messenger.showSnackBar(SnackBar(content: Text(l.exCancelFailed)));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _cancelling = null);
+    // 좌석이 돌아왔으므로 슬롯도 함께 다시 읽는다.
+    ref.invalidate(trainerSlotsProvider(widget.trainer.id));
+    ref.invalidate(myReservationsProvider);
+    messenger.showSnackBar(SnackBar(content: Text(l.exCancelDone(label))));
   }
 
   @override
@@ -672,7 +721,13 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
     final AsyncValue<List<TrainerSlot>> slotsAsync = ref.watch(
       trainerSlotsProvider(widget.trainer.id),
     );
-    final bool busy = _reserving != null;
+    // 이 트레이너에 대한 내 예약만 추린다 — 패널이 한 트레이너의 자리를 다룬다.
+    final List<MyReservation> mine =
+        (ref.watch(myReservationsProvider).valueOrNull ??
+                const <MyReservation>[])
+            .where((MyReservation r) => r.trainerId == widget.trainer.id)
+            .toList();
+    final bool busy = _reserving != null || _cancelling != null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -707,6 +762,16 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
               color: AppColors.mutedForeground,
             ),
           ),
+          if (mine.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            _MyReservations(
+              reservations: mine,
+              label: (DateTime at) => _when(context, l, at),
+              cancelling: _cancelling,
+              disabled: busy,
+              onCancel: (MyReservation r) => _cancel(l, r),
+            ),
+          ],
           const SizedBox(height: 10),
           slotsAsync.when(
             loading: () => const Padding(
@@ -1456,4 +1521,107 @@ BoxDecoration _cardDecoration() {
     border: Border.all(color: FigmaColors.hairline),
     boxShadow: kCardShadow,
   );
+}
+
+/// 이 트레이너에 대한 **내 예약** 목록과 취소 버튼. (#502)
+///
+/// 예약 패널 안에 두는 이유: 자리를 잡은 곳과 무르는 곳이 같아야 회원이 찾는다.
+/// 별도 '예약 내역' 화면을 만들면 한 번 보고 다시 안 여는 자리가 하나 더 생긴다.
+class _MyReservations extends StatelessWidget {
+  const _MyReservations({
+    required this.reservations,
+    required this.label,
+    required this.cancelling,
+    required this.disabled,
+    required this.onCancel,
+  });
+
+  final List<MyReservation> reservations;
+  final String Function(DateTime) label;
+
+  /// 취소 요청이 오가는 예약 id(있다면).
+  final String? cancelling;
+  final bool disabled;
+  final ValueChanged<MyReservation> onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: FigmaColors.primaryA(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.exMyReservations,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.primary,
+            ),
+          ),
+          for (final MyReservation r in reservations) ...<Widget>[
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    label(r.startsAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                ),
+                // 취소 가능 여부는 서버 판단(`cancellable`)을 따른다. 지난 예약은
+                // 버튼 대신 그 사실을 적어 둔다 — 눌러도 실패할 버튼을 남기면
+                // 회원은 앱이 고장 난 것으로 읽는다.
+                if (!r.cancellable)
+                  Text(
+                    l.exReservationPast,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
+                  )
+                else if (cancelling == r.id)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  TextButton(
+                    key: ValueKey<String>('cancel-reservation-${r.id}'),
+                    onPressed: disabled ? null : () => onCancel(r),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.destructive,
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text(
+                      l.exCancelReservation,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

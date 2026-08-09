@@ -1,5 +1,6 @@
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Monday of the week containing [day], stripped to a date.
 DateTime weekStartOf(DateTime day) {
@@ -55,9 +56,11 @@ class WeeklyReport {
   /// Sunday of the reported week.
   DateTime get weekEnd => weekStart.add(const Duration(days: 6));
 
-  /// `M월 D일 – M월 D일`.
-  String get rangeLabel =>
-      '${weekStart.month}월 ${weekStart.day}일 – ${weekEnd.month}월 ${weekEnd.day}일';
+  /// `M월 D일 – M월 D일` / `M/D – M/D`, in the current locale.
+  String rangeLabel(AppLocalizations l) => l.dateRange(
+    l.dateMonthDay(weekStart.month, weekStart.day),
+    l.dateMonthDay(weekEnd.month, weekEnd.day),
+  );
 
   /// Session attendance as a percentage; null when nothing was booked.
   int? get attendanceRate => sessionsBooked == 0
@@ -120,16 +123,15 @@ WeeklyReport buildWeeklyReport({
 /// Plain text on purpose: it lands in the same thread the member already
 /// reads, so it must look like something their trainer wrote, not a
 /// system dump.
-String reportMessage(WeeklyReport report) {
+String reportMessage(AppLocalizations l, WeeklyReport report) {
   final lines = <String>[
-    '📊 ${report.rangeLabel} 주간 리포트',
-    'PT 세션 ${report.sessionsDone}/${report.sessionsBooked}회 완료',
-    if (report.completionAvg != null) '운동 이행률 평균 ${report.completionAvg}%',
+    l.reportBodyTitle(report.rangeLabel(l)),
+    l.reportBodySessions(report.sessionsDone, report.sessionsBooked),
+    if (report.completionAvg != null)
+      l.reportBodyCompletion(report.completionAvg!),
     if (report.sodiumAvg != null)
-      '나트륨 평균 ${report.sodiumAvg}mg · 목표 초과 ${report.sodiumOverDays}일',
-    report.isGoodWeek
-        ? '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 유지해요!'
-        : '다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요.',
+      l.reportBodySodium(report.sodiumAvg!, report.sodiumOverDays ?? 0),
+    report.isGoodWeek ? l.reportBodyPraise : l.reportBodyEncourage,
   ];
   return lines.join('\n');
 }

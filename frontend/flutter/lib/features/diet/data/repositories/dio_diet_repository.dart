@@ -28,6 +28,19 @@ class DioDietRepository implements DietRepository {
   }
 
   @override
+  Future<DietDay> fetchByDate(DateTime date) async {
+    final res = await _dio.get<Map<String, Object?>>(
+      '/diet/days/${_formatDate(date)}',
+    );
+    return DietDay.fromJson(res.data!);
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  @override
   Future<MealRecommendations> fetchRecommendations() async {
     final res = await _dio.get<Map<String, Object?>>('/diet/recommendations');
     return MealRecommendations.fromJson(res.data!);

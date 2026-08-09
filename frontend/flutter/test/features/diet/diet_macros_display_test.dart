@@ -22,6 +22,51 @@ Widget _app(Widget home, {List<Override> overrides = const <Override>[]}) {
   );
 }
 
+class _PastDateDietRepository extends MockDietRepository {
+  _PastDateDietRepository({this.fail = false});
+
+  final bool fail;
+
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async {
+    if (fail) throw StateError('date lookup failed');
+    return const DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'past-meal',
+          mealType: MealType.lunch,
+          timeLabel: '12:00',
+          foods: <FoodItem>[FoodItem(name: '과거 식사', calories: 420)],
+          totalCalories: 420,
+          sodiumMg: 350,
+          sugarG: 7.5,
+          carbsG: 40,
+          proteinG: 20,
+          fatG: 10,
+        ),
+      ],
+      totalCalories: 420,
+      totalSodiumMg: 350,
+      totalSugarG: 7.5,
+      macros: DietMacros(
+        carbsPct: 49,
+        proteinPct: 24,
+        fatPct: 27,
+        carbsG: 40,
+        proteinG: 20,
+        fatG: 10,
+      ),
+      aiCoachMessage: '선택한 날짜의 피드백',
+    );
+  }
+}
+
+Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
+  final selectedDate = DateTime.now().subtract(Duration(days: days));
+  await tester.tap(find.text('${selectedDate.day}'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets(
     'nutrition summary highlights progress and status on a small screen',
@@ -50,14 +95,14 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.textContaining('1,067'), findsOneWidget);
+      expect(find.textContaining('1,517'), findsOneWidget);
       expect(find.textContaining('2,000 kcal'), findsOneWidget);
-      expect(find.textContaining('3,428'), findsOneWidget);
-      expect(find.textContaining('17.8'), findsOneWidget);
+      expect(find.textContaining('4,008'), findsOneWidget);
+      expect(find.textContaining('24.8'), findsOneWidget);
       expect(find.text('목표 초과'), findsOneWidget);
       expect(find.text('정상'), findsOneWidget);
-      expect(find.text('목표보다 1,428mg 많아요'), findsOneWidget);
-      expect(find.text('목표까지 32.2g 남았어요'), findsOneWidget);
+      expect(find.text('목표보다 2,008mg 많아요'), findsOneWidget);
+      expect(find.text('목표까지 25.2g 남았어요'), findsOneWidget);
       expect(
         find.byKey(const Key('nutrition-status-vertical-progress-나트륨')),
         findsOneWidget,
@@ -134,16 +179,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 오늘 3끼 합계 = 탄120·단45·지45g.
+    // 오늘 4끼 합계 = 탄140·단79·지72g.
     expect(find.text('탄수화물'), findsOneWidget);
     expect(find.textContaining('탄수화물 45%'), findsNothing);
-    expect(find.textContaining('120 / 275g'), findsOneWidget);
+    expect(find.textContaining('140 / 275g'), findsOneWidget);
     expect(find.text('단백질'), findsOneWidget);
     expect(find.textContaining('단백질 17%'), findsNothing);
-    expect(find.textContaining('45 / 100g'), findsOneWidget); // 단백질 45g
+    expect(find.textContaining('79 / 100g'), findsOneWidget); // 단백질 79g
     expect(find.text('지방'), findsOneWidget);
     expect(find.textContaining('지방 38%'), findsNothing);
-    expect(find.textContaining('45 / 55g'), findsOneWidget); // 지방 45g
+    expect(find.textContaining('72 / 55g'), findsOneWidget); // 지방 72g
     void expectMacroProgressColor(String label, Color expectedColor) {
       final Finder progress = find.byKey(
         Key('nutrition-macro-progress-$label'),
@@ -169,6 +214,107 @@ void main() {
       lessThan(tester.getTopLeft(find.text('지방')).dx),
     );
     expect(find.text('짬뽕'), findsOneWidget);
+  });
+
+  testWidgets('selecting a past date shows that date records', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        const DietRecordPage(),
+        overrides: <Override>[
+          dietRepositoryProvider.overrideWithValue(_PastDateDietRepository()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectDaysAgo(tester);
+
+    expect(find.text('과거 식사'), findsOneWidget);
+    expect(find.text('선택한 날짜의 피드백'), findsOneWidget);
+    expect(find.textContaining('420'), findsWidgets);
+  });
+
+  testWidgets('seeded past meals use their registered photos', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        const DietRecordPage(),
+        overrides: <Override>[
+          dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectDaysAgo(tester);
+
+    final assets = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((image) => image.image)
+        .whereType<AssetImage>()
+        .map((image) => image.assetName);
+    expect(
+      assets,
+      containsAll(<String>[
+        'assets/images/diet-oatmeal-banana.jpeg',
+        'assets/images/diet-chicken-salad.jpg',
+        'assets/images/diet-doenjang-rice.jpeg',
+      ]),
+    );
+  });
+
+  testWidgets('a past date without records shows the empty state', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        const DietRecordPage(),
+        overrides: <Override>[
+          dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectDaysAgo(tester, 3);
+
+    expect(find.textContaining('선택한 날짜에 기록된 식단'), findsOneWidget);
+    expect(
+      find.text(
+        AppLocalizations.of(
+          tester.element(find.byType(DietRecordPage)),
+        ).dietLoadError,
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('a date lookup error is not shown as an empty state', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        const DietRecordPage(),
+        overrides: <Override>[
+          dietRepositoryProvider.overrideWithValue(
+            _PastDateDietRepository(fail: true),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectDaysAgo(tester);
+
+    expect(find.text('식단 정보를 불러오지 못했어요.'), findsOneWidget);
+    expect(find.textContaining('선택한 날짜에 기록된 식단'), findsNothing);
   });
 
   testWidgets('diet detail shows meal and food macro values', (tester) async {

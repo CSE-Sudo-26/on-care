@@ -9,6 +9,7 @@ import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The 채팅 sub-tab: an AI-received system banner, the message thread
 /// (trainer right / client left), and an input bar that appends a
@@ -64,9 +65,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final text = _input.text;
     if (text.trim().isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+    // messenger 와 같은 이유로 await 전에 잡아 둔다 — 뒤에서 context 를 다시
+    // 만지면 async gap 을 건너 쓰게 된다.
+    final AppLocalizations l = AppLocalizations.of(context);
     if (text.trim().length > _maxMessageLength) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('메시지가 너무 길어요 (최대 2000자)')),
+        SnackBar(content: Text(l.chatTooLong)),
       );
       return;
     }
@@ -81,7 +85,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
       if (!mounted) return;
       // Keep the draft in the input and tell the user it didn't go out.
       messenger.showSnackBar(
-        const SnackBar(content: Text('메시지 전송에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.chatSendFailed)),
       );
       return;
     } finally {
@@ -118,6 +122,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final messages = ref.watch(chatThreadProvider(widget.clientId));
     final showDemoBanners = ref.watch(appConfigProvider).useMockApi;
 
@@ -126,9 +131,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
         Expanded(
           child: messages.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => const Center(
+            error: (e, _) => Center(
               child: Text(
-                '대화를 불러오지 못했어요',
+                l.chatLoadFailed,
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
             ),
@@ -189,6 +194,7 @@ class _SystemBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -204,13 +210,13 @@ class _SystemBanner extends StatelessWidget {
           children: <Widget>[
             IconLabel(
               icon: Icons.auto_awesome,
-              label: 'AI가 $clientName님의 식단·운동 데이터를 분석했어요',
+              label: l.chatDemoAnalyzed(clientName),
               color: AppColors.accent,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 2),
-            const Text(
-              '트레이너님께 요약 리포트가 전송됐어요',
+            Text(
+              l.chatDemoReportSent,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 9.5,
@@ -234,6 +240,7 @@ class _SentBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -249,13 +256,13 @@ class _SentBanner extends StatelessWidget {
           children: <Widget>[
             IconLabel(
               icon: Icons.check_circle_outline,
-              label: 'AI 분석 기반 루틴이 $clientName님에게 전송됐어요',
+              label: l.chatDemoRoutineSent(clientName),
               color: AppColors.success,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 2),
-            const Text(
-              '고객 앱에 알림이 전달됐어요',
+            Text(
+              l.chatDemoNotified,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 9.5,
@@ -356,6 +363,7 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -376,7 +384,7 @@ class _InputBar extends StatelessWidget {
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => onSend(),
               decoration: InputDecoration(
-                hintText: '메시지 입력...',
+                hintText: l.chatInputHint,
                 filled: true,
                 fillColor: AppColors.accentSurface,
                 isDense: true,

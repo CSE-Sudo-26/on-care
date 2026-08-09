@@ -12,6 +12,8 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 
 /// 상담 요청 — the inbox where a member becomes a client.
 ///
@@ -31,18 +33,19 @@ class ConsultationsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final filter = ref.watch(consultationFilterProvider);
     final requests = ref.watch(consultationsProvider);
     final pending = ref.watch(consultationPendingCountProvider).valueOrNull;
 
     return PageScaffold(
-      title: '상담 요청',
+      title: l.consultTitle,
       subtitle: pending == null
           ? null
-          : (pending > 0 ? '대기 중 $pending건' : '대기 중인 요청이 없어요'),
+          : (pending > 0 ? l.consultPendingCount(pending) : l.consultNoPending),
       actions: <Widget>[
         ActionButton(
-          label: filter == 'pending' ? '전체 보기' : '대기 중만',
+          label: filter == 'pending' ? l.consultShowAll : l.consultShowPending,
           icon: Icons.filter_list,
           onPressed: () => ref
               .read(consultationFilterProvider.notifier)
@@ -56,10 +59,10 @@ class ConsultationsPage extends ConsumerWidget {
         ),
         error: (error, _) => _InboxMessage(
           icon: Icons.error_outline,
-          title: '상담 요청을 불러오지 못했어요',
-          detail: (error is AppError ? error.message : null) ?? '잠시 후 다시 시도해 주세요',
+          title: l.consultLoadFailed,
+          detail: (error is AppError ? error.message : null) ?? l.consultRetryLater,
           action: ActionButton(
-            label: '다시 시도',
+            label: l.actionRetry,
             onPressed: () => ref.invalidate(consultationsProvider),
           ),
         ),
@@ -67,9 +70,9 @@ class ConsultationsPage extends ConsumerWidget {
             ? _InboxMessage(
                 icon: Icons.inbox_outlined,
                 title: filter == 'pending'
-                    ? '대기 중인 상담 요청이 없어요'
-                    : '상담 요청 이력이 없어요',
-                detail: '회원이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요',
+                    ? l.consultEmptyPending
+                    : l.consultEmptyHistory,
+                detail: l.consultEmptyHint,
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,6 +107,8 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
   Future<void> _run(Future<void> Function() action, String success) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    // messenger 와 같이 await 전에 잡아 둔다.
+    final String failureText = AppLocalizations.of(context).consultActionFailed;
     try {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(success)));
@@ -117,7 +122,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
       messenger.showSnackBar(
-        SnackBar(content: Text(e.message ?? '상담을 처리하지 못했어요')),
+        SnackBar(content: Text(e.message ?? failureText)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -126,10 +131,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
 
   Future<void> _accept() => _run(
     () => acceptConsultation(ref, widget.request.id),
-    '${widget.request.memberName} 회원을 담당 고객으로 등록했어요',
+    AppLocalizations.of(context).consultApproved(widget.request.memberName),
   );
 
   Future<void> _reject() async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final note = await showDialog<String?>(
       context: context,
       builder: (_) => const _RejectDialog(),
@@ -137,18 +143,21 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     if (note == null) return;
     await _run(
       () => rejectConsultation(ref, widget.request.id, note: note),
-      '상담 요청을 반려했어요',
+      l.consultRejected,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final request = widget.request;
     return SectionCard(
-      title: request.memberName,
+      // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
+      // 로케일을 모른다. (#501)
+      title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
       trailing: request.viaGym
-          ? const _Tag(label: '헬스장 문의', tone: AppColors.brandOrange)
-          : const _Tag(label: '트레이너 지정', tone: AppColors.primary),
+          ? _Tag(label: l.consultTargetGym, tone: AppColors.brandOrange)
+          : _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -165,21 +174,21 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    _Field(label: '운동 목표', value: request.goalLabel),
+                    _Field(label: l.consultExerciseGoal, value: label(exerciseGoalLabels(l), request.goalCode)),
                     _Field(
-                      label: '건강관리 목적',
+                      label: l.consultHealthPurpose,
                       value: request.purposeDetail == null
-                          ? request.purposeLabel
-                          : '${request.purposeLabel} · ${request.purposeDetail}',
+                          ? label(healthPurposeLabels(l), request.purposeCode)
+                          : '${label(healthPurposeLabels(l), request.purposeCode)} · ${request.purposeDetail}',
                     ),
                     _Field(
-                      label: '희망 일시',
+                      label: l.consultPreferredTime,
                       value:
-                          '${koreanDateLabel(request.preferredDate)} '
-                          '${request.preferredTimeLabel}',
+                          '${dateLabel(l, request.preferredDate)} '
+                          '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
                     ),
                     if (request.gymName != null)
-                      _Field(label: '문의 헬스장', value: request.gymName!),
+                      _Field(label: l.consultGym, value: request.gymName!),
                   ],
                 ),
               ),
@@ -199,13 +208,13 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
                 ActionButton(
-                  label: '거절',
+                  label: l.consultReject,
                   tone: AppColors.destructive,
                   onPressed: _busy ? null : _reject,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 ActionButton(
-                  label: '승인',
+                  label: l.consultApprove,
                   primary: true,
                   onPressed: _busy ? null : _accept,
                 ),
@@ -239,15 +248,16 @@ class _RejectDialogState extends State<_RejectDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
       backgroundColor: AppColors.card,
-      title: const Text('상담 요청 반려'),
+      title: Text(l.consultRejectTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '입력한 사유는 회원에게 알림으로 전달돼요.',
+          Text(
+            l.consultRejectNotice,
             style: TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -255,8 +265,8 @@ class _RejectDialogState extends State<_RejectDialog> {
             controller: _controller,
             maxLength: 500,
             maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: '예) 이번 달은 정원이 찼어요',
+            decoration: InputDecoration(
+              hintText: l.consultRejectHint,
               filled: true,
               fillColor: AppColors.inputBackground,
             ),
@@ -266,13 +276,13 @@ class _RejectDialogState extends State<_RejectDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text(l.actionCancel),
         ),
         TextButton(
           // Returns '' rather than null when left blank: null is the
           // cancel signal, and an empty note is a valid "no reason given".
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('반려하기'),
+          child: Text(l.consultRejectAction),
         ),
       ],
     );
@@ -287,6 +297,7 @@ class _DecisionSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final accepted = request.status == 'accepted';
     return Row(
       children: <Widget>[
@@ -299,8 +310,10 @@ class _DecisionSummary extends StatelessWidget {
         Expanded(
           child: Text(
             accepted
-                ? '담당 고객으로 등록됨'
-                : '반려됨${request.decisionNote == null ? '' : ' · ${request.decisionNote}'}',
+                ? l.consultStatusApproved
+                : (request.decisionNote == null
+                      ? l.consultStatusRejected
+                      : l.consultStatusRejectedWithNote(request.decisionNote!)),
             style: const TextStyle(
               fontSize: 12.5,
               color: AppColors.mutedForeground,

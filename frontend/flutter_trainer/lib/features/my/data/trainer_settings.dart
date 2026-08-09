@@ -55,7 +55,8 @@ class TrainerSettingsController extends StateNotifier<TrainerSettings> {
   final TrainerSettingsRepository _repository;
 
   /// Set when the last write failed; the UI shows it once and clears it.
-  String? lastError;
+  /// 마지막 저장이 실패했는가. 문구는 화면이 붙인다. (#501)
+  bool lastError = false;
 
   Future<void> _load() async {
     try {
@@ -83,17 +84,19 @@ class TrainerSettingsController extends StateNotifier<TrainerSettings> {
   Future<void> _apply(TrainerSettings next) async {
     final previous = state;
     state = next;
-    lastError = null;
+    lastError = false;
     try {
       state = await _repository.save(next);
     } catch (_) {
       state = previous;
-      lastError = '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+      // 문구가 아니라 '실패했다'는 사실만 남긴다 — 컨트롤러는 로케일을
+      // 모르고, 화면이 자기 언어로 문구를 붙인다. (#501)
+      lastError = true;
     }
   }
 
   /// Clears [lastError] once the UI has shown it.
-  void clearError() => lastError = null;
+  void clearError() => lastError = false;
 }
 
 /// The trainer's notification settings.

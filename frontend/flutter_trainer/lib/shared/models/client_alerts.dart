@@ -1,4 +1,5 @@
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Weekly completion below this (%) counts as a client who needs the
 /// trainer to step in.
@@ -12,22 +13,24 @@ const int lowCompletionThreshold = 60;
 /// list can never disagree.
 enum ClientAlert {
   /// Today's sodium is over the daily target.
-  sodiumOver('나트륨 초과'),
+  sodiumOver,
 
   /// This week's routine completion is low.
-  lowCompletion('이행률 저조'),
+  lowCompletion,
 
   /// The member sent messages the trainer hasn't answered.
   ///
   /// Last on purpose: a client's badge is their first alert, and while a
   /// waiting message is urgent, it is also the one the 답장 필요 counter
   /// already shows. Putting it first hid every sodium overshoot behind it.
-  unanswered('답장 대기');
+  unanswered;
 
-  const ClientAlert(this.label);
-
-  /// Badge text shown next to the client's name.
-  final String label;
+  /// Badge text shown next to the client's name, in the current locale. (#501)
+  String label(AppLocalizations l) => switch (this) {
+    ClientAlert.sodiumOver => l.alertSodiumOver,
+    ClientAlert.lowCompletion => l.alertLowCompletion,
+    ClientAlert.unanswered => l.alertAwaitingReply,
+  };
 
   /// Whether this is a signal from the member's own health data.
   ///

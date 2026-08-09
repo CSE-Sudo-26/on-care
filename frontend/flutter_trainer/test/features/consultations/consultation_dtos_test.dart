@@ -1,6 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 라벨 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 Map<String, Object?> _json({
   Object? memberName = '김민수',
@@ -37,10 +41,10 @@ void main() {
     expect(request.id, 'consult-1');
     expect(request.memberId, 'user-1');
     expect(request.memberName, '김민수');
-    expect(request.goalLabel, '체중 감량');
-    expect(request.purposeLabel, '만성질환 관리');
+    expect(request.goalCode, 'weight_loss');
+    expect(request.purposeCode, 'chronic');
     expect(request.preferredDate, DateTime(2026, 8, 12));
-    expect(request.preferredTimeLabel, '저녁');
+    expect(request.preferredTimeCode, 'evening');
     expect(request.isPending, isTrue);
   });
 
@@ -54,17 +58,21 @@ void main() {
     expect(request.purposeDetail, '혈압 관리');
   });
 
-  test('an unknown enum code falls back to the raw code, not a blank', () {
+  test('an unknown enum code survives to the UI, not a blank', () {
     final request = consultationRequestFromJson(_json(goal: 'sports_rehab'));
 
-    // A backend that adds a goal should still show something actionable.
-    expect(request.goalLabel, 'sports_rehab');
+    // 엔티티는 코드를 그대로 들고, 라벨 변환은 화면에서 한다. 모르는 코드는
+    // 원문으로 떨어져 트레이너가 읽을 무언가가 남는다. (#501)
+    expect(request.goalCode, 'sports_rehab');
+    expect(label(exerciseGoalLabels(_ko), request.goalCode), 'sports_rehab');
   });
 
-  test('a missing member name gets a placeholder', () {
+  test('a missing member name comes through empty, not as Korean text', () {
     final request = consultationRequestFromJson(_json(memberName: null));
 
-    expect(request.memberName, '알 수 없는 회원');
+    // 대체 문구('알 수 없는 회원')는 화면이 자기 로케일로 붙인다 — DTO 가
+    // 한국어를 박아 두면 영어 로케일에서 그 문구만 한국어로 남는다. (#501)
+    expect(request.memberName, isEmpty);
   });
 
   test('an unparseable date does not throw', () {
