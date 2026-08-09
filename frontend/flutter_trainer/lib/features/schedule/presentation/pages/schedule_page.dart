@@ -19,6 +19,7 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 스케줄 tab — the trainer's calendar, in two views.
 ///
@@ -243,6 +244,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final schedule = ref.watch(scheduleForDateProvider(_selectedYmd));
     // Keep the client stream live so the booking sheet and the chat
     // shortcut have data even when this tab is the first one opened.
@@ -253,7 +255,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
     return PageScaffold(
       title: '스케줄',
-      subtitle: koreanDateLabel(_selectedDay),
+      subtitle: dateLabel(l, _selectedDay),
       actions: <Widget>[
         if (showToday)
           ActionButton(
@@ -1300,6 +1302,7 @@ class _DayColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final isToday = ymd(day) == today;
     final weekend = day.weekday >= DateTime.saturday;
 
@@ -1322,7 +1325,7 @@ class _DayColumn extends StatelessWidget {
               child: Column(
                 children: <Widget>[
                   Text(
-                    koreanWeekdays[day.weekday - 1],
+                    weekdayNames(l)[day.weekday - 1],
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,

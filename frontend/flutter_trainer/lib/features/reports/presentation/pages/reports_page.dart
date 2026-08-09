@@ -81,8 +81,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   Future<void> _send(WeeklyReport report) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final id = report.client.id;
     if (_sending != null || _sent.contains(id)) return;
+    // messenger 와 마찬가지로 l 도 위에서 await 전에 잡아 뒀다.
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = id);
     try {
@@ -91,13 +93,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           .send(
             clientId: id,
             weekStart: report.weekStart,
-            message: reportMessage(report),
+            message: reportMessage(l, report),
           );
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = null);
       messenger.showSnackBar(
-        const SnackBar(content: Text('리포트 전송에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.reportsSendFailed)),
       );
       return;
     }
@@ -107,12 +109,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _sent.add(id);
     });
     messenger.showSnackBar(
-      SnackBar(content: Text('${report.client.name}님에게 리포트를 보냈어요')),
+      SnackBar(content: Text(l.reportsSent(report.client.name))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final clientsAsync = ref.watch(clientsProvider);
     final range = (
       from: ymd(_weekStart),
@@ -121,16 +124,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final weekSessions = ref.watch(scheduleRangeProvider(range));
 
     return PageScaffold(
-      title: '리포트',
-      subtitle: '${_weekStart.month}월 ${_weekStart.day}일 주차 · 운영 지표와 고객 리포트',
+      title: l.reportsTitle,
+      subtitle: l.reportsSubtitle(l.dateMonthDay(_weekStart.month, _weekStart.day)),
       actions: <Widget>[
         ActionButton(
-          label: '이전 주',
+          label: l.reportsPrevWeek,
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
         ActionButton(
-          label: '다음 주',
+          label: l.reportsNextWeek,
           icon: Icons.chevron_right,
           onPressed: () => _shiftWeek(1),
         ),
@@ -140,21 +143,21 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (e, _) => const Padding(
+        error: (e, _) => Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
           child: Center(
             child: Text(
-              '리포트를 불러오지 못했어요',
+              l.reportsLoadFailed,
               style: TextStyle(color: AppColors.mutedForeground),
             ),
           ),
         ),
         data: (clients) {
           if (clients.isEmpty) {
-            return const Padding(
+            return Padding(
               padding: EdgeInsets.only(top: AppSpacing.xxxl),
               child: EmptyHint(
-                message: '담당 고객이 없어 리포트를 만들 수 없어요',
+                message: l.reportsNoClients,
                 icon: Icons.insights_outlined,
               ),
             );
@@ -198,18 +201,18 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     )),
                   );
                   final report = reportAsync.when(
-                    loading: () => const SectionCard(
-                      title: '주간 리포트',
+                    loading: () => SectionCard(
+                      title: l.reportsWeekly,
                       icon: Icons.description_outlined,
                       child: Padding(
                         padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
                         child: Center(child: CircularProgressIndicator()),
                       ),
                     ),
-                    error: (e, _) => const SectionCard(
-                      title: '주간 리포트',
+                    error: (e, _) => SectionCard(
+                      title: l.reportsWeekly,
                       icon: Icons.description_outlined,
-                      child: EmptyHint(message: '리포트를 불러오지 못했어요'),
+                      child: EmptyHint(message: l.reportsLoadFailed),
                     ),
                     data: (data) => _ClientReport(
                       report: data,
@@ -240,10 +243,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 },
               ),
               if (weekSessions.hasError)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: AppSpacing.md),
                   child: Text(
-                    '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요',
+                    l.reportsScheduleWarning,
                     style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.warning,
@@ -273,32 +276,33 @@ class _TrainerStats extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final AppLocalizations l = AppLocalizations.of(context);
         final cards = <Widget>[
           StatCard(
-            label: '이번 주 세션',
+            label: l.reportsSessionsThisWeek,
             value: value(stats.sessionsBooked),
-            unit: '회',
+            unit: l.unitTimes,
             icon: Icons.event_note_outlined,
           ),
           StatCard(
-            label: '완료',
+            label: l.legendDone,
             value: value(stats.sessionsDone),
-            unit: '회',
+            unit: l.unitTimes,
             icon: Icons.check_circle_outline,
             tone: StatTone.positive,
-            hint: rate == null || loading ? null : '완료율 $rate%',
+            hint: rate == null || loading ? null : l.reportsCompletionRate(rate),
           ),
           StatCard(
-            label: '프로그램 준비',
+            label: l.reportsProgramReady,
             value: value(stats.programsSent),
-            unit: '건',
+            unit: l.dashUnitCount,
             icon: Icons.assignment_outlined,
-            hint: '루틴이 붙은 세션',
+            hint: l.reportsSessionsWithRoutine,
           ),
           StatCard(
-            label: '활성 고객',
+            label: l.reportsActiveClients,
             value: '${stats.activeClients}',
-            unit: '명',
+            unit: l.dashUnitPeople,
             icon: Icons.groups_outlined,
           ),
         ];
@@ -357,8 +361,9 @@ class _ClientPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return SectionCard(
-      title: '고객 선택',
+      title: l.reportsPickClient,
       icon: Icons.people_outline,
       dense: true,
       child: Column(
@@ -433,12 +438,13 @@ class _ClientReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final client = report.client;
     return SectionCard(
-      title: '${client.name}님 주간 리포트',
+      title: l.reportsClientWeekly(client.name),
       icon: Icons.description_outlined,
       trailing: Text(
-        report.rangeLabel,
+        report.rangeLabel(l),
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -451,12 +457,12 @@ class _ClientReport extends StatelessWidget {
           Row(
             children: <Widget>[
               _Figure(
-                label: 'PT 세션',
+                label: l.reportsPtSessions,
                 value: '${report.sessionsDone}/${report.sessionsBooked}',
-                unit: '회',
+                unit: l.unitTimes,
               ),
               _Figure(
-                label: '운동 이행률',
+                label: l.reportsCompletionAvg,
                 value: report.completionAvg == null
                     ? '-'
                     : '${report.completionAvg}',
@@ -467,12 +473,12 @@ class _ClientReport extends StatelessWidget {
                 ),
               ),
               _Figure(
-                label: '나트륨 초과',
+                label: l.reportsSodiumOver,
                 // "-" for a past week: the roster only aggregates the
                 // current one, so anything else would be this week's
                 // number under last week's dates.
                 value: report.sodiumOverDays?.toString() ?? '-',
-                unit: '일',
+                unit: l.unitDays,
                 tone: _verdictTone(
                   report.sodiumOverDays,
                   (v) => v > 2 ? AppColors.overTarget : AppColors.success,
@@ -481,8 +487,8 @@ class _ClientReport extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          const Text(
-            '요일별 운동 이행률',
+          Text(
+            l.reportsCompletionByDay,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -493,7 +499,7 @@ class _ClientReport extends StatelessWidget {
           if (!report.isCurrentWeek)
             // 요일별 시리즈는 이번 주 것뿐이다. 지난 주 제목 아래 이번 주
             // 막대를 그리면 트레이너가 그대로 고객에게 보낸다.
-            const EmptyHint(message: '지난 주 요일별 기록은 아직 없어요')
+            EmptyHint(message: l.reportsNoLastWeekDaily)
           else if (client.weekCompletion.length == weekdayCount)
             BarSeriesChart(
               values: client.weekCompletion,
@@ -505,10 +511,10 @@ class _ClientReport extends StatelessWidget {
               pendingFromIndex: elapsedWeekdays(DateTime.now()),
             )
           else
-            const EmptyHint(message: '이번 주 운동 기록이 없어요'),
+            EmptyHint(message: l.reportsNoWorkoutsThisWeek),
           const SizedBox(height: AppSpacing.lg),
-          const Text(
-            '나트륨 추이',
+          Text(
+            l.reportsSodiumTrend,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -526,7 +532,7 @@ class _ClientReport extends StatelessWidget {
             // `sodiumWeek` is this week's series, same as the weekday
             // chart above — drawing it under a past week's dates would
             // put today's numbers in a report the trainer can send.
-            const EmptyHint(message: '지난 주 나트륨 추이는 아직 없어요'),
+            EmptyHint(message: l.reportsNoLastWeekSodium),
           const SizedBox(height: AppSpacing.lg),
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -535,7 +541,7 @@ class _ClientReport extends StatelessWidget {
               borderRadius: BorderRadius.all(AppRadius.md),
             ),
             child: Text(
-              reportMessage(report),
+              reportMessage(l, report),
               style: const TextStyle(
                 fontSize: 12,
                 height: 1.6,
@@ -548,7 +554,7 @@ class _ClientReport extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: ActionButton(
-              label: sent ? '전송됨' : (sending ? '전송 중…' : '고객에게 전송'),
+              label: sent ? l.reportsSendStateSent : (sending ? l.reportsSendStateSending : l.reportsSendAction),
               icon: sent ? Icons.check : Icons.send_outlined,
               primary: true,
               onPressed: sent || sending ? null : () => onSend(report),

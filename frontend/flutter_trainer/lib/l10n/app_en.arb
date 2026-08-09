@@ -441,5 +441,153 @@
         "type": "String"
       }
     }
-  }
+  },
+  "dateToday": "Today",
+  "dateTomorrow": "Tomorrow",
+  "dateYesterday": "Yesterday",
+  "dateMonthDayWeekday": "{month}/{day} ({weekday})",
+  "@dateMonthDayWeekday": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      },
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "datePrefixed": "{prefix} · {date}",
+  "@datePrefixed": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dateMonthDay": "{month}/{day}",
+  "@dateMonthDay": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "dateRange": "{start} – {end}",
+  "@dateRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsTitle": "Reports",
+  "reportsSubtitle": "Week of {week} · operating metrics and client reports",
+  "@reportsSubtitle": {
+    "placeholders": {
+      "week": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPrevWeek": "Previous week",
+  "reportsNextWeek": "Next week",
+  "reportsLoadFailed": "Couldn't load reports",
+  "reportsNoClients": "No clients yet, so there's nothing to report on",
+  "reportsWeekly": "Weekly report",
+  "reportsSendFailed": "Couldn't send the report. Please try again",
+  "reportsSent": "Report sent to {name}",
+  "@reportsSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsScheduleWarning": "This week's schedule didn't load, so session counts may be missing",
+  "reportsSessionsThisWeek": "Sessions this week",
+  "unitTimes": "",
+  "unitDays": "d",
+  "reportsCompletionRate": "{rate}% completed",
+  "@reportsCompletionRate": {
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsProgramReady": "Programs ready",
+  "reportsSessionsWithRoutine": "Sessions with a routine",
+  "reportsActiveClients": "Active clients",
+  "reportsPickClient": "Pick a client",
+  "reportsClientWeekly": "{name}'s weekly report",
+  "@reportsClientWeekly": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPtSessions": "PT sessions",
+  "reportsCompletionAvg": "Workout completion",
+  "reportsSodiumOver": "Sodium over target",
+  "reportsCompletionByDay": "Completion by day",
+  "reportsNoLastWeekDaily": "No daily records for last week yet",
+  "reportsNoWorkoutsThisWeek": "No workouts logged this week",
+  "reportsSodiumTrend": "Sodium trend",
+  "reportsNoLastWeekSodium": "No sodium trend for last week yet",
+  "reportsSendStateSent": "Sent",
+  "reportsSendStateSending": "Sending…",
+  "reportsSendAction": "Send to client",
+  "reportBodyTitle": "📊 Weekly report · {range}",
+  "@reportBodyTitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "reportBodySessions": "PT sessions: {done}/{booked} completed",
+  "@reportBodySessions": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "booked": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodyCompletion": "Average workout completion: {avg}%",
+  "@reportBodyCompletion": {
+    "placeholders": {
+      "avg": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodySodium": "Average sodium: {avg}mg · over target on {days} days",
+  "@reportBodySodium": {
+    "placeholders": {
+      "avg": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodyPraise": "Great week — let's keep this pace next week!",
+  "reportBodyEncourage": "Let's tighten things up next week. I'll adjust your routine."
 }

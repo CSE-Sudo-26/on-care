@@ -1285,6 +1285,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Declined · {note}'**
   String consultStatusRejectedWithNote(String note);
+
+  /// No description provided for @dateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get dateToday;
+
+  /// No description provided for @dateTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get dateTomorrow;
+
+  /// No description provided for @dateYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get dateYesterday;
+
+  /// No description provided for @dateMonthDayWeekday.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{day} ({weekday})'**
+  String dateMonthDayWeekday(int month, int day, String weekday);
+
+  /// No description provided for @datePrefixed.
+  ///
+  /// In en, this message translates to:
+  /// **'{prefix} · {date}'**
+  String datePrefixed(String prefix, String date);
+
+  /// No description provided for @dateMonthDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{day}'**
+  String dateMonthDay(int month, int day);
+
+  /// No description provided for @dateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} – {end}'**
+  String dateRange(String start, String end);
+
+  /// No description provided for @reportsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reportsTitle;
+
+  /// No description provided for @reportsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Week of {week} · operating metrics and client reports'**
+  String reportsSubtitle(String week);
+
+  /// No description provided for @reportsPrevWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get reportsPrevWeek;
+
+  /// No description provided for @reportsNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get reportsNextWeek;
+
+  /// No description provided for @reportsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load reports'**
+  String get reportsLoadFailed;
+
+  /// No description provided for @reportsNoClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients yet, so there\'s nothing to report on'**
+  String get reportsNoClients;
+
+  /// No description provided for @reportsWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly report'**
+  String get reportsWeekly;
+
+  /// No description provided for @reportsSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the report. Please try again'**
+  String get reportsSendFailed;
+
+  /// No description provided for @reportsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Report sent to {name}'**
+  String reportsSent(String name);
+
+  /// No description provided for @reportsScheduleWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s schedule didn\'t load, so session counts may be missing'**
+  String get reportsScheduleWarning;
+
+  /// No description provided for @reportsSessionsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions this week'**
+  String get reportsSessionsThisWeek;
+
+  /// No description provided for @unitTimes.
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get unitTimes;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In en, this message translates to:
+  /// **'d'**
+  String get unitDays;
+
+  /// No description provided for @reportsCompletionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}% completed'**
+  String reportsCompletionRate(int rate);
+
+  /// No description provided for @reportsProgramReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Programs ready'**
+  String get reportsProgramReady;
+
+  /// No description provided for @reportsSessionsWithRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions with a routine'**
+  String get reportsSessionsWithRoutine;
+
+  /// No description provided for @reportsActiveClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Active clients'**
+  String get reportsActiveClients;
+
+  /// No description provided for @reportsPickClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a client'**
+  String get reportsPickClient;
+
+  /// No description provided for @reportsClientWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s weekly report'**
+  String reportsClientWeekly(String name);
+
+  /// No description provided for @reportsPtSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions'**
+  String get reportsPtSessions;
+
+  /// No description provided for @reportsCompletionAvg.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout completion'**
+  String get reportsCompletionAvg;
+
+  /// No description provided for @reportsSodiumOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over target'**
+  String get reportsSodiumOver;
+
+  /// No description provided for @reportsCompletionByDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion by day'**
+  String get reportsCompletionByDay;
+
+  /// No description provided for @reportsNoLastWeekDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'No daily records for last week yet'**
+  String get reportsNoLastWeekDaily;
+
+  /// No description provided for @reportsNoWorkoutsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No workouts logged this week'**
+  String get reportsNoWorkoutsThisWeek;
+
+  /// No description provided for @reportsSodiumTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium trend'**
+  String get reportsSodiumTrend;
+
+  /// No description provided for @reportsNoLastWeekSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'No sodium trend for last week yet'**
+  String get reportsNoLastWeekSodium;
+
+  /// No description provided for @reportsSendStateSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get reportsSendStateSent;
+
+  /// No description provided for @reportsSendStateSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get reportsSendStateSending;
+
+  /// No description provided for @reportsSendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to client'**
+  String get reportsSendAction;
+
+  /// No description provided for @reportBodyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'📊 Weekly report · {range}'**
+  String reportBodyTitle(String range);
+
+  /// No description provided for @reportBodySessions.
+  ///
+  /// In en, this message translates to:
+  /// **'PT sessions: {done}/{booked} completed'**
+  String reportBodySessions(int done, int booked);
+
+  /// No description provided for @reportBodyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Average workout completion: {avg}%'**
+  String reportBodyCompletion(int avg);
+
+  /// No description provided for @reportBodySodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Average sodium: {avg}mg · over target on {days} days'**
+  String reportBodySodium(int avg, int days);
+
+  /// No description provided for @reportBodyPraise.
+  ///
+  /// In en, this message translates to:
+  /// **'Great week — let\'s keep this pace next week!'**
+  String get reportBodyPraise;
+
+  /// No description provided for @reportBodyEncourage.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s tighten things up next week. I\'ll adjust your routine.'**
+  String get reportBodyEncourage;
 }
 
 class _AppLocalizationsDelegate

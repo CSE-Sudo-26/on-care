@@ -181,7 +181,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                     _Field(
                       label: l.consultPreferredTime,
                       value:
-                          '${koreanDateLabel(request.preferredDate)} '
+                          '${dateLabel(l, request.preferredDate)} '
                           '${request.preferredTimeLabel}',
                     ),
                     if (request.gymName != null)

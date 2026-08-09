@@ -656,4 +656,157 @@ class AppLocalizationsKo extends AppLocalizations {
   String consultStatusRejectedWithNote(String note) {
     return '반려됨 · $note';
   }
+
+  @override
+  String get dateToday => '오늘';
+
+  @override
+  String get dateTomorrow => '내일';
+
+  @override
+  String get dateYesterday => '어제';
+
+  @override
+  String dateMonthDayWeekday(int month, int day, String weekday) {
+    return '$month월 $day일 ($weekday)';
+  }
+
+  @override
+  String datePrefixed(String prefix, String date) {
+    return '$prefix · $date';
+  }
+
+  @override
+  String dateMonthDay(int month, int day) {
+    return '$month월 $day일';
+  }
+
+  @override
+  String dateRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get reportsTitle => '리포트';
+
+  @override
+  String reportsSubtitle(String week) {
+    return '$week 주차 · 운영 지표와 고객 리포트';
+  }
+
+  @override
+  String get reportsPrevWeek => '이전 주';
+
+  @override
+  String get reportsNextWeek => '다음 주';
+
+  @override
+  String get reportsLoadFailed => '리포트를 불러오지 못했어요';
+
+  @override
+  String get reportsNoClients => '담당 고객이 없어 리포트를 만들 수 없어요';
+
+  @override
+  String get reportsWeekly => '주간 리포트';
+
+  @override
+  String get reportsSendFailed => '리포트 전송에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String reportsSent(String name) {
+    return '$name님에게 리포트를 보냈어요';
+  }
+
+  @override
+  String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
+
+  @override
+  String get reportsSessionsThisWeek => '이번 주 세션';
+
+  @override
+  String get unitTimes => '회';
+
+  @override
+  String get unitDays => '일';
+
+  @override
+  String reportsCompletionRate(int rate) {
+    return '완료율 $rate%';
+  }
+
+  @override
+  String get reportsProgramReady => '프로그램 준비';
+
+  @override
+  String get reportsSessionsWithRoutine => '루틴이 붙은 세션';
+
+  @override
+  String get reportsActiveClients => '활성 고객';
+
+  @override
+  String get reportsPickClient => '고객 선택';
+
+  @override
+  String reportsClientWeekly(String name) {
+    return '$name님 주간 리포트';
+  }
+
+  @override
+  String get reportsPtSessions => 'PT 세션';
+
+  @override
+  String get reportsCompletionAvg => '운동 이행률';
+
+  @override
+  String get reportsSodiumOver => '나트륨 초과';
+
+  @override
+  String get reportsCompletionByDay => '요일별 운동 이행률';
+
+  @override
+  String get reportsNoLastWeekDaily => '지난 주 요일별 기록은 아직 없어요';
+
+  @override
+  String get reportsNoWorkoutsThisWeek => '이번 주 운동 기록이 없어요';
+
+  @override
+  String get reportsSodiumTrend => '나트륨 추이';
+
+  @override
+  String get reportsNoLastWeekSodium => '지난 주 나트륨 추이는 아직 없어요';
+
+  @override
+  String get reportsSendStateSent => '전송됨';
+
+  @override
+  String get reportsSendStateSending => '전송 중…';
+
+  @override
+  String get reportsSendAction => '고객에게 전송';
+
+  @override
+  String reportBodyTitle(String range) {
+    return '📊 $range 주간 리포트';
+  }
+
+  @override
+  String reportBodySessions(int done, int booked) {
+    return 'PT 세션 $done/$booked회 완료';
+  }
+
+  @override
+  String reportBodyCompletion(int avg) {
+    return '운동 이행률 평균 $avg%';
+  }
+
+  @override
+  String reportBodySodium(int avg, int days) {
+    return '나트륨 평균 ${avg}mg · 목표 초과 $days일';
+  }
+
+  @override
+  String get reportBodyPraise => '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 유지해요!';
+
+  @override
+  String get reportBodyEncourage => '다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요.';
 }

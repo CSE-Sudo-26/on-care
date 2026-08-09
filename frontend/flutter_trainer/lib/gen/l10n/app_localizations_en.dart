@@ -669,4 +669,161 @@ class AppLocalizationsEn extends AppLocalizations {
   String consultStatusRejectedWithNote(String note) {
     return 'Declined · $note';
   }
+
+  @override
+  String get dateToday => 'Today';
+
+  @override
+  String get dateTomorrow => 'Tomorrow';
+
+  @override
+  String get dateYesterday => 'Yesterday';
+
+  @override
+  String dateMonthDayWeekday(int month, int day, String weekday) {
+    return '$month/$day ($weekday)';
+  }
+
+  @override
+  String datePrefixed(String prefix, String date) {
+    return '$prefix · $date';
+  }
+
+  @override
+  String dateMonthDay(int month, int day) {
+    return '$month/$day';
+  }
+
+  @override
+  String dateRange(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String get reportsTitle => 'Reports';
+
+  @override
+  String reportsSubtitle(String week) {
+    return 'Week of $week · operating metrics and client reports';
+  }
+
+  @override
+  String get reportsPrevWeek => 'Previous week';
+
+  @override
+  String get reportsNextWeek => 'Next week';
+
+  @override
+  String get reportsLoadFailed => 'Couldn\'t load reports';
+
+  @override
+  String get reportsNoClients =>
+      'No clients yet, so there\'s nothing to report on';
+
+  @override
+  String get reportsWeekly => 'Weekly report';
+
+  @override
+  String get reportsSendFailed => 'Couldn\'t send the report. Please try again';
+
+  @override
+  String reportsSent(String name) {
+    return 'Report sent to $name';
+  }
+
+  @override
+  String get reportsScheduleWarning =>
+      'This week\'s schedule didn\'t load, so session counts may be missing';
+
+  @override
+  String get reportsSessionsThisWeek => 'Sessions this week';
+
+  @override
+  String get unitTimes => '';
+
+  @override
+  String get unitDays => 'd';
+
+  @override
+  String reportsCompletionRate(int rate) {
+    return '$rate% completed';
+  }
+
+  @override
+  String get reportsProgramReady => 'Programs ready';
+
+  @override
+  String get reportsSessionsWithRoutine => 'Sessions with a routine';
+
+  @override
+  String get reportsActiveClients => 'Active clients';
+
+  @override
+  String get reportsPickClient => 'Pick a client';
+
+  @override
+  String reportsClientWeekly(String name) {
+    return '$name\'s weekly report';
+  }
+
+  @override
+  String get reportsPtSessions => 'PT sessions';
+
+  @override
+  String get reportsCompletionAvg => 'Workout completion';
+
+  @override
+  String get reportsSodiumOver => 'Sodium over target';
+
+  @override
+  String get reportsCompletionByDay => 'Completion by day';
+
+  @override
+  String get reportsNoLastWeekDaily => 'No daily records for last week yet';
+
+  @override
+  String get reportsNoWorkoutsThisWeek => 'No workouts logged this week';
+
+  @override
+  String get reportsSodiumTrend => 'Sodium trend';
+
+  @override
+  String get reportsNoLastWeekSodium => 'No sodium trend for last week yet';
+
+  @override
+  String get reportsSendStateSent => 'Sent';
+
+  @override
+  String get reportsSendStateSending => 'Sending…';
+
+  @override
+  String get reportsSendAction => 'Send to client';
+
+  @override
+  String reportBodyTitle(String range) {
+    return '📊 Weekly report · $range';
+  }
+
+  @override
+  String reportBodySessions(int done, int booked) {
+    return 'PT sessions: $done/$booked completed';
+  }
+
+  @override
+  String reportBodyCompletion(int avg) {
+    return 'Average workout completion: $avg%';
+  }
+
+  @override
+  String reportBodySodium(int avg, int days) {
+    return 'Average sodium: ${avg}mg · over target on $days days';
+  }
+
+  @override
+  String get reportBodyPraise =>
+      'Great week — let\'s keep this pace next week!';
+
+  @override
+  String get reportBodyEncourage =>
+      'Let\'s tighten things up next week. I\'ll adjust your routine.';
 }

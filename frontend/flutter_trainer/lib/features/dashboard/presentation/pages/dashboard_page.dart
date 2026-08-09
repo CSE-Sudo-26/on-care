@@ -39,7 +39,7 @@ class DashboardPage extends ConsumerWidget {
 
     return PageScaffold(
       title: l.dashTitle,
-      subtitle: koreanDateLabel(today),
+      subtitle: dateLabel(l, today),
       actions: <Widget>[
         ActionButton(
           label: l.dashAddSchedule,
