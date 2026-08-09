@@ -47,10 +47,10 @@ void main() {
     expect(find.text('답장 필요'), findsOneWidget);
     expect(find.text('주의 고객'), findsOneWidget);
 
-    // 2 of 3 clients active. 이지수·박성호 are waiting on a reply;
-    // 김민수's thread is seeded already answered.
-    expect(find.text('휴면 1명'), findsOneWidget);
-    expect(find.text('고객 2명 대기 중'), findsOneWidget);
+    // 13 of the 15 seeded clients are active; 박성호 and 문가영 are the
+    // two 휴면 fixtures. Six threads are waiting on a reply.
+    expect(find.text('휴면 2명'), findsOneWidget);
+    expect(find.text('고객 6명 대기 중'), findsOneWidget);
   });
 
   testWidgets('주의 고객 counts health signals, not the reply backlog', (
@@ -58,14 +58,15 @@ void main() {
   ) async {
     await openDashboard(tester);
 
-    // All three seeded clients are waiting on a reply, but only 김민수
-    // (2100mg) and 박성호 (2400mg) are over the sodium target. 답장 대기
-    // still shows in the list; it just isn't 주의. If the two ever merge
-    // again the card reads 3 and stops meaning anything.
+    // Six threads are waiting on a reply, but 주의 counts only health
+    // signals: 8 clients over the sodium target plus 문가영, who is under
+    // it and flagged for 이행률 alone — nine. 답장 대기 still shows in the
+    // list; it just isn't 주의. If the two ever merge again the card
+    // would read higher and stop meaning anything.
     final attention = tester.widget<StatCard>(
       find.ancestor(of: find.text('주의 고객'), matching: find.byType(StatCard)),
     );
-    expect(attention.value, '2');
+    expect(attention.value, '9');
     expect(find.text('나트륨·이행률 확인'), findsOneWidget);
   });
 
@@ -93,12 +94,17 @@ void main() {
     await openDashboard(tester);
 
     expect(find.text('확인 필요 고객'), findsOneWidget);
-    // All three seeded clients are waiting on a reply, but 김민수(2100mg)
-    // and 박성호(2400mg) are also over the sodium target — and the badge
-    // is the client's first alert, so theirs must be the health one.
-    // 이지수 is within target, so their row stays 답장 대기.
-    expect(find.text('나트륨 초과'), findsNWidgets(2));
-    expect(find.text('답장 대기'), findsOneWidget);
+    // Ten clients carry an alert of some kind — note this list is wider
+    // than the 주의 고객 count above it, which is health signals only and
+    // reads 9. The card shows five, so the overflow link into the
+    // filtered roster is finally reachable; with the old three-client
+    // roster it could never appear.
+    expect(find.text('+5명'), findsOneWidget);
+
+    // The badge is a client's FIRST alert, and health reasons sort ahead
+    // of 답장 대기, so every visible row leads with a health one.
+    expect(find.text('나트륨 초과'), findsWidgets);
+    expect(find.text('답장 대기'), findsNothing);
 
     await tester.tap(find.text('나트륨 초과').first);
     await settle(tester);

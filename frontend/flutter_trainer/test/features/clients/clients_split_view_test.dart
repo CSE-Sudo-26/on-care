@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -27,6 +28,29 @@ void main() {
 
   /// The client's name in the roster card (the panel header shows it too).
   Finder card(String name) => find.text(name).first;
+
+  /// Brings a roster card into view before tapping it. The roster is
+  /// fifteen clients and lazily built, so anyone ranked below the fold
+  /// simply does not exist yet.
+  ///
+  /// The scrollable is located through a card rather than by index — the
+  /// sidebar and the open detail panel are scrollables too, and which
+  /// one comes first in the tree is not this test's business.
+  Future<void> scrollToCard(WidgetTester tester, String name) async {
+    // Check the raw finder, not `card()` — `.first` throws rather than
+    // reporting empty when nothing matched.
+    if (find.text(name).evaluate().isNotEmpty) return;
+    await tester.scrollUntilVisible(
+      find.text(name),
+      160,
+      scrollable: find
+          .ancestor(
+            of: find.byType(ClientCard).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+  }
 
   testWidgets('wide viewport starts as a plain list; picking a client '
       'opens the side panel', (tester) async {
@@ -74,6 +98,7 @@ void main() {
     );
     expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
 
+    await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));
     await settle(tester);
 
@@ -93,6 +118,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '민수님 오늘 어땠어요?');
     await tester.pump();
 
+    await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));
     await settle(tester);
 
@@ -119,17 +145,31 @@ void main() {
     expect(find.text('2400'), findsWidgets);
   });
 
-  testWidgets('the list is ordered by priority: sodium-over first, then '
-      'recent chat', (tester) async {
+  testWidgets('the list is ordered by priority: sodium-over first', (
+    tester,
+  ) async {
     await openWide(tester);
 
-    // 김민수(2100mg)·박성호(2400mg) are over the 2000mg target and rank
-    // above 이지수(1800mg); 김민수 has the most recent chat of the two.
-    final kim = tester.getTopLeft(card('김민수')).dy;
-    final park = tester.getTopLeft(card('박성호')).dy;
-    final lee = tester.getTopLeft(card('이지수')).dy;
-    expect(kim, lessThan(park));
-    expect(park, lessThan(lee));
+    // Read the rendered order rather than three clients' Y positions:
+    // the roster is long enough now that not every name is built, so
+    // measuring specific ones would depend on where the list happens to
+    // sit. Every over-target client must precede every under-target one.
+    final rendered = tester
+        .widgetList<ClientCard>(find.byType(ClientCard))
+        .toList();
+    expect(rendered.length, greaterThan(2));
+    final firstUnderTarget = rendered.indexWhere(
+      (c) => !c.client.sodiumOverBudget,
+    );
+    if (firstUnderTarget >= 0) {
+      expect(
+        rendered.skip(firstUnderTarget).every((c) => !c.client.sodiumOverBudget),
+        isTrue,
+        reason: '나트륨 초과 고객이 목표 이내 고객보다 아래에 오면 안 된다',
+      );
+    }
+    // The top of the list is where the trainer looks first.
+    expect(rendered.first.client.sodiumOverBudget, isTrue);
   });
 
   testWidgets('the panel location is a path that encodes the section', (

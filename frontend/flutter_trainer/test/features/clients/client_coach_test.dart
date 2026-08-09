@@ -139,13 +139,9 @@ void main() {
 
       await expectLater(
         repo.ask(memberId: 'm1', message: 'q'),
-        throwsA(
-          isA<NotFoundError>().having(
-            (e) => e.message,
-            'message',
-            contains('담당 고객'),
-          ),
-        ),
+        // 404 를 NotFoundError 로 옮기는 것까지가 리포지토리의 일이다.
+        // 문구는 화면이 자기 로케일로 붙이므로 여기서는 타입만 본다. (#501)
+        throwsA(isA<NotFoundError>()),
       );
     });
 

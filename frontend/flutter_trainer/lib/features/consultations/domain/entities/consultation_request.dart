@@ -10,10 +10,10 @@ class ConsultationRequest {
     required this.id,
     required this.memberId,
     required this.memberName,
-    required this.goalLabel,
-    required this.purposeLabel,
+    required this.goalCode,
+    required this.purposeCode,
     required this.preferredDate,
-    required this.preferredTimeLabel,
+    required this.preferredTimeCode,
     required this.status,
     this.message,
     this.purposeDetail,
@@ -32,10 +32,12 @@ class ConsultationRequest {
   final String memberName;
 
   /// 운동 목표, already localized (체중 감량 …).
-  final String goalLabel;
+  /// 서버 enum 코드('weight_loss' …). 화면 문구는 [exerciseGoalLabels] 로 만든다.
+  final String goalCode;
 
   /// 건강관리 목적, already localized (만성질환 관리 …).
-  final String purposeLabel;
+  /// 서버 enum 코드('chronic' …). 화면 문구는 [healthPurposeLabels] 로 만든다.
+  final String purposeCode;
 
   /// Free-text detail the member added to 건강관리 목적, if any.
   final String? purposeDetail;
@@ -44,7 +46,8 @@ class ConsultationRequest {
   final DateTime preferredDate;
 
   /// 희망 시간대, already localized (저녁 …).
-  final String preferredTimeLabel;
+  /// 서버 enum 코드('morning' …). 화면 문구는 [preferredTimeLabels] 로 만든다.
+  final String preferredTimeCode;
 
   /// The member's own note to the trainer.
   final String? message;

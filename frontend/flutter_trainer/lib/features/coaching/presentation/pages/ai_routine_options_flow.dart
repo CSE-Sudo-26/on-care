@@ -15,6 +15,8 @@ import 'package:oncare_trainer/features/coaching/domain/entities/routine_options
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 
 /// Conversation-style AI routine builder.
 ///
@@ -70,16 +72,16 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     super.dispose();
   }
 
-  String get _analysisSuggestion {
+  String _analysisSuggestion(AppLocalizations l) {
     final client = widget.client;
     final sodium = client.sodiumOverBudget
-        ? '오늘 나트륨이 목표를 초과해 저강도 유산소 비중을 높이는 것이 좋아요.'
-        : '오늘 식단 균형이 안정적이라 기존 운동 강도를 유지해도 좋아요.';
-    return '${client.goal} 목표와 최근 ${client.lastRoutine} 기록을 고려했어요. '
+        ? l.aiReasonSodium
+        : l.aiReasonBalanced;
+    return '${l.aiReasonGoal(client.goal, client.lastRoutine)} '
         '$sodium';
   }
 
-  List<_RoutineChoice> get _choices {
+  List<_RoutineChoice> _choicesOf(AppLocalizations l) {
     final options = _options;
     if (options == null) return const <_RoutineChoice>[];
     return <_RoutineChoice>[
@@ -87,24 +89,29 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _RoutineChoice.fromPlan(options.planB),
       if (widget.recommendedExercises.isNotEmpty)
         _RoutineChoice(
-          key: '추천',
-          label: '기존 AI 추천',
-          intensity: '맞춤',
+          // key 는 화면 문구가 아니라 선택 식별자다('A'/'B' 와 같은 층).
+          // 번역하면 _selectedKey 비교가 로케일마다 달라져 선택이 깨진다. (#501)
+          key: _recommendedKey,
+          label: l.aiTagExisting,
+          intensity: l.aiTagCustom,
           exercises: widget.recommendedExercises,
           reason: widget.recommendedReason.isEmpty
-              ? '고객의 최근 식단과 운동 기록을 반영한 기존 추천이에요.'
+              ? l.aiExistingBlurb
               : widget.recommendedReason,
         ),
     ];
   }
 
-  _RoutineChoice get _selectedChoice =>
-      _choices.firstWhere((choice) => choice.key == _selectedKey);
+  /// 기존 추천 후보의 선택 식별자. 'A'/'B' 와 같은 층의 값이라 번역하지 않는다.
+  static const String _recommendedKey = 'recommended';
 
-  String _optionDisplayName(String key) => switch (key) {
-    'A' => '회복안',
-    'B' => '강화안',
-    _ => '기존안',
+  _RoutineChoice _selectedChoiceOf(AppLocalizations l) =>
+      _choicesOf(l).firstWhere((choice) => choice.key == _selectedKey);
+
+  String _optionDisplayName(AppLocalizations l, String key) => switch (key) {
+    'A' => l.aiOptionRecovery,
+    'B' => l.aiOptionPush,
+    _ => l.aiOptionExisting,
   };
 
   Future<void> _generate() async {
@@ -134,8 +141,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       });
     } catch (_) {
       if (!mounted) return;
+      final AppLocalizations l = AppLocalizations.of(context);
       messenger.showSnackBar(
-        const SnackBar(content: Text('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.aiGenerateFailed)),
       );
     } finally {
       if (mounted) setState(() => _generating = false);
@@ -154,9 +162,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   void _addExercise() {
     final name = _newExerciseName.text.trim();
     if (name.isEmpty) {
+      final AppLocalizations l = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('운동 이름을 입력해 주세요')));
+      ).showSnackBar(SnackBar(content: Text(l.aiExerciseNameRequired)));
       return;
     }
     setState(() {
@@ -176,9 +185,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   void _completeReview() {
     if (_edited.isEmpty) {
+      final AppLocalizations l = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('운동을 하나 이상 남겨 주세요')));
+      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
       return;
     }
     setState(() {
@@ -199,15 +209,17 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   Future<void> _send() async {
     if (_sending || _sent) return;
+    // messenger 와 l 은 await 전에 잡아 둔다 — 실패 경로가 await 뒤에 있다.
+    final AppLocalizations l = AppLocalizations.of(context);
     if (_edited.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('운동을 하나 이상 남겨 주세요')));
+      ).showSnackBar(SnackBar(content: Text(l.aiKeepOneExercise)));
       return;
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    final routine = _composeRoutine();
+    final routine = _composeRoutine(l);
 
     setState(() => _sending = true);
     try {
@@ -233,8 +245,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         SnackBar(
           content: Text(
             ambiguousOutcome
-                ? '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'
-                : '전송에 실패했어요. 다시 시도해 주세요',
+                ? l.coachSendNoResponse
+                : l.coachSendFailed,
           ),
         ),
       );
@@ -247,11 +259,16 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       _sent = true;
     });
     messenger.showSnackBar(
-      SnackBar(content: Text('${widget.client.name}님에게 루틴을 전송했어요')),
+      SnackBar(content: Text(l.aiRoutineSent(widget.client.name))),
     );
   }
 
-  AssignedRoutine _composeRoutine() {
+  /// 트레이너가 보낼 루틴을 조립한다.
+  ///
+  /// `name`·`reason` 은 트레이너가 만들어 회원에게 보내는 **본문**이라 트레이너의
+  /// 로케일을 따른다(채팅·메모와 같은 층). 반면 `type` 은 서버가 Literal 로
+  /// 검증하는 계약값이라 번역하지 않는다. (#501)
+  AssignedRoutine _composeRoutine(AppLocalizations l) {
     final total = _edited.fold<int>(0, (sum, item) => sum + item.minutes);
     final typeCounts = <String, int>{};
     for (final exercise in _edited) {
@@ -262,18 +279,18 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       (best, entry) => best == null || entry.value > best.value ? entry : best,
     );
     final exerciseSummary = _edited
-        .map((exercise) => '${exercise.name} ${exercise.minutes}분')
+        .map((exercise) => l.aiExerciseWithMinutes(exercise.name, exercise.minutes))
         .join(', ');
     final memo = _trainerMemo.text.trim();
-    final context = memo.isEmpty ? _selectedChoice.reason : memo;
-    final optionName = _optionDisplayName(_selectedKey);
+    final rationale = memo.isEmpty ? _selectedChoiceOf(l).reason : memo;
+    final optionName = _optionDisplayName(l, _selectedKey);
 
     return AssignedRoutine(
       id: '',
-      name: 'AI 맞춤 루틴 ($optionName)',
+      name: l.aiCustomRoutineNamed(optionName),
       minutes: total,
       type: primaryType?.key ?? '근력',
-      reason: '$exerciseSummary · $context',
+      reason: '$exerciseSummary · $rationale',
       source: 'ai',
     );
   }
@@ -291,6 +308,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final content = <Widget>[
       _ProgressStepper(
         stage: _stage,
@@ -305,7 +323,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: AppSpacing.lg),
         _primaryButton(
           key: const ValueKey<String>('generate-routine-options'),
-          label: _generating ? 'AI가 분석 중…' : '맞춤 루틴 후보 생성',
+          label: _generating ? l.aiAnalysing : l.aiGenerateCandidates,
           icon: Icons.auto_awesome,
           busy: _generating,
           onTap: _generate,
@@ -319,7 +337,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: AppSpacing.xl),
         _primaryButton(
           key: const ValueKey<String>('complete-routine-review'),
-          label: '검토 완료',
+          label: l.aiReviewDone,
           icon: Icons.fact_check_outlined,
           onTap: _completeReview,
         ),
@@ -348,7 +366,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.foreground,
-        title: Text('AI 루틴 · ${widget.client.name}'),
+        title: Text(l.aiRoutineFor(widget.client.name)),
       ),
       body: SafeArea(
         child: ListView(
@@ -360,37 +378,38 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _assistantAnalysis() {
+    final AppLocalizations l = AppLocalizations.of(context);
     final client = widget.client;
     return _surfaceCard(
       accent: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _AssistantLabel(text: '고객 데이터를 분석했어요'),
+          _AssistantLabel(text: l.aiAnalysedData),
           const SizedBox(height: AppSpacing.md),
-          _analysisRow('목표', client.goal),
+          _analysisRow(l.aiGoal, client.goal),
           _analysisRow(
-            '오늘 나트륨',
+            l.aiTodaySodium,
             '${client.sodiumMg}mg'
-                '${client.sodiumOverBudget ? ' · 목표 초과' : ' · 적정'}',
+                '${client.sodiumOverBudget ? l.aiOverTarget : l.aiWithinTarget}',
             warn: client.sodiumOverBudget,
           ),
-          _analysisRow('최근 루틴', client.lastRoutine),
+          _analysisRow(l.aiRecentRoutine, client.lastRoutine),
           const SizedBox(height: AppSpacing.md),
           LabeledField(
-            label: '트레이너 메모 · 수정 가능',
+            label: l.aiTrainerNoteEditable,
             child: TextField(
               key: const ValueKey<String>('analysis-trainer-memo'),
               controller: _trainerMemo,
               minLines: 2,
               maxLines: 4,
               style: const TextStyle(color: AppColors.foreground),
-              decoration: _inputDecoration(hintText: _analysisSuggestion),
+              decoration: _inputDecoration(hintText: _analysisSuggestion(l)),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          const Text(
-            '회색 제안 문구는 입력 전 참고용이며, 직접 입력한 메모만 저장·전송돼요.',
+          Text(
+            l.aiNotePlaceholderHint,
             style: TextStyle(fontSize: 9.5, color: AppColors.mutedForeground),
           ),
         ],
@@ -399,15 +418,17 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _directionControls() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _surfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text('생성 조건', style: _sectionTitleStyle),
+          Text(l.aiGenerateConditions, style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.md),
           RoutineMinutesSlider(
             key: const ValueKey<String>('generation-minutes'),
             minutes: _minutes,
+            label: l.routineFieldTotalMinutes,
             onChanged: (minutes) => setState(() => _minutes = minutes),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -421,16 +442,19 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _generatedOptions() {
+    final AppLocalizations l = AppLocalizations.of(context);
     final options = _options!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const _AssistantLabel(text: '맞춤 루틴 후보를 비교해 보세요'),
+        _AssistantLabel(text: l.aiCompareCandidates),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '${options.analysis.goal} · 완료율 '
-          '${options.analysis.avgCompletionRate}% 기준'
-          '${options.generatedBy == 'rule' ? ' · 규칙 기반 생성' : ''}',
+          l.aiBasisGoalCompletion(
+                options.analysis.goal,
+                options.analysis.avgCompletionRate,
+              ) +
+              (options.generatedBy == 'rule' ? l.aiBasisRuleBased : ''),
           style: const TextStyle(
             fontSize: 10.5,
             color: AppColors.mutedForeground,
@@ -446,8 +470,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             // for — a fixed 286px rail always clipped the third card.
             const double minCardWidth = 220;
             final needed =
-                _choices.length * minCardWidth +
-                (_choices.length - 1) * AppSpacing.md;
+                _choicesOf(l).length * minCardWidth +
+                (_choicesOf(l).length - 1) * AppSpacing.md;
             if (constraints.maxWidth >= needed) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -455,9 +479,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      for (final choice in _choices) ...<Widget>[
+                      for (final choice in _choicesOf(l)) ...<Widget>[
                         Expanded(child: _optionCard(choice)),
-                        if (choice != _choices.last)
+                        if (choice != _choicesOf(l).last)
                           const SizedBox(width: AppSpacing.md),
                       ],
                     ],
@@ -481,9 +505,9 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      for (final choice in _choices) ...<Widget>[
+                      for (final choice in _choicesOf(l)) ...<Widget>[
                         SizedBox(width: 286, child: _optionCard(choice)),
-                        if (choice != _choices.last)
+                        if (choice != _choicesOf(l).last)
                           const SizedBox(width: AppSpacing.md),
                       ],
                     ],
@@ -498,12 +522,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _optionCard(_RoutineChoice choice) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final selected = choice.key == _selectedKey;
     final total = choice.exercises.fold<int>(
       0,
       (sum, exercise) => sum + exercise.minutes,
     );
-    final optionName = _optionDisplayName(choice.key);
+    final optionName = _optionDisplayName(l, choice.key);
     return Material(
       color: AppColors.card,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -550,7 +575,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '총 $total분 · 강도 ${choice.intensity}',
+                l.aiTotalAndIntensity(total, choice.intensity),
                 style: const TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -562,8 +587,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text(
-                    '· ${exercise.name} · ${exercise.minutes}분 '
-                    '(${exercise.type})',
+                    '${l.aiBulletExercise(exercise.name, exercise.minutes)}'
+                    '(${routineTypeLabel(l, exercise.type)})',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.foreground,
@@ -589,14 +614,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _routineEditor() {
-    final optionName = _optionDisplayName(_selectedKey);
+    final AppLocalizations l = AppLocalizations.of(context);
+    final optionName = _optionDisplayName(l, _selectedKey);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text('$optionName 수정', style: _sectionTitleStyle),
+        Text(l.aiEditOption(optionName), style: _sectionTitleStyle),
         const SizedBox(height: 3),
-        const Text(
-          '기존 AI 추천과 같은 방식으로 운동명·시간·구성을 수정할 수 있어요.',
+        Text(
+          l.aiEditBlurb,
           style: TextStyle(fontSize: 10, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -608,19 +634,21 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _addExerciseForm()
         else
           OutlinedButton.icon(
+            key: const ValueKey<String>('show-add-exercise-form'),
             onPressed: () => setState(() => _showAddExercise = true),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.accent,
               side: const BorderSide(color: AppColors.accent),
             ),
             icon: const Icon(Icons.add, size: 17),
-            label: const Text('운동 직접 등록'),
+            label: Text(l.aiAddExerciseManually),
           ),
       ],
     );
   }
 
   Widget _exerciseEditor(int index) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final exercise = _edited[index];
     return _surfaceCard(
       child: Column(
@@ -638,7 +666,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 ),
               ),
               IconButton(
-                tooltip: '운동 삭제',
+                tooltip: l.progDeleteExercise,
                 visualDensity: VisualDensity.compact,
                 onPressed: () => setState(() => _edited.removeAt(index)),
                 icon: const Icon(
@@ -648,6 +676,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 ),
               ),
             ],
+          ),
+          SizedBox(
+            key: ValueKey<String>('routine-category-name-gap-$index'),
+            height: AppSpacing.md,
           ),
           TextFormField(
             key: ValueKey<String>(
@@ -662,7 +694,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             onChanged: (name) {
               _edited[index] = _edited[index].copyWith(name: name);
             },
-            decoration: _inputDecoration(hintText: '운동 이름'),
+            decoration: _inputDecoration(hintText: l.progExerciseName),
           ),
           const SizedBox(height: AppSpacing.sm),
           RoutineMinutesSlider(
@@ -678,19 +710,20 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _addExerciseForm() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _surfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text('운동 직접 등록', style: _sectionTitleStyle),
+          Text(l.aiAddExerciseManually, style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.md),
           LabeledField(
-            label: '운동 이름',
+            label: l.progExerciseName,
             child: TextField(
               key: const ValueKey<String>('new-exercise-name'),
               controller: _newExerciseName,
               style: const TextStyle(color: AppColors.foreground),
-              decoration: _inputDecoration(hintText: '예: 레그프레스 3세트'),
+              decoration: _inputDecoration(hintText: l.aiExerciseNameExample),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -712,15 +745,16 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             children: <Widget>[
               Expanded(
                 child: TextButton(
+                  key: const ValueKey<String>('hide-add-exercise-form'),
                   onPressed: () => setState(() => _showAddExercise = false),
-                  child: const Text('취소'),
+                  child: Text(l.actionCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: FilledButton(
                   onPressed: _addExercise,
-                  child: const Text('등록'),
+                  child: Text(l.aiRegister),
                 ),
               ),
             ],
@@ -731,21 +765,22 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _trainerMemoField() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _surfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text('트레이너 메모', style: _sectionTitleStyle),
+          Text(l.schedNote, style: _sectionTitleStyle),
           const SizedBox(height: AppSpacing.sm),
           LabeledField(
-            label: '고객에게 함께 전달할 내용',
+            label: l.aiNoteForClient,
             child: TextField(
               key: const ValueKey<String>('final-trainer-memo'),
               controller: _trainerMemo,
               minLines: 2,
               maxLines: 4,
               style: const TextStyle(color: AppColors.foreground),
-              decoration: _inputDecoration(hintText: _analysisSuggestion),
+              decoration: _inputDecoration(hintText: _analysisSuggestion(l)),
             ),
           ),
         ],
@@ -754,7 +789,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _reviewedRoutineList() {
-    final optionName = _optionDisplayName(_selectedKey);
+    final AppLocalizations l = AppLocalizations.of(context);
+    final optionName = _optionDisplayName(l, _selectedKey);
     final memo = _trainerMemo.text.trim();
     return Column(
       key: const ValueKey<String>('reviewed-routine-list'),
@@ -770,15 +806,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                '검토 완료 · AI 추천 루틴 ($optionName)',
+                l.aiReviewedSuggestion(optionName),
                 style: _sectionTitleStyle,
               ),
             ),
           ],
         ),
         const SizedBox(height: 3),
-        const Text(
-          '선택하고 수정한 내용이 최종 추천 목록에 반영됐어요.',
+        Text(
+          l.aiEditsApplied,
           style: TextStyle(fontSize: 10, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -796,7 +832,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                     borderRadius: BorderRadius.all(AppRadius.pill),
                   ),
                   child: Text(
-                    exercise.type,
+                    routineTypeLabel(l, exercise.type),
                     style: const TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w700,
@@ -816,7 +852,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   ),
                 ),
                 Text(
-                  '${exercise.minutes}분',
+                  l.minutesShort(exercise.minutes),
                   style: const TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
@@ -843,8 +879,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Text(
-                        '트레이너 메모',
+                      Text(
+                        l.schedNote,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -871,6 +907,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   }
 
   Widget _reviewActions() {
+    final AppLocalizations l = AppLocalizations.of(context);
     if (_sent) {
       return SizedBox(
         height: 48,
@@ -878,7 +915,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           key: const ValueKey<String>('open-client-chat'),
           onPressed: _openClientChat,
           icon: const Icon(Icons.chat_bubble_outline, size: 17),
-          label: Text('${widget.client.name}님 채팅으로 이동'),
+          label: Text(l.aiGoToChat(widget.client.name)),
         ),
       );
     }
@@ -896,12 +933,13 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 ),
               )
             : const Icon(Icons.send_rounded, size: 17),
-        label: Text(_sending ? '전송 중…' : '고객에게 전송'),
+        label: Text(_sending ? l.aiSending : l.aiSendToClient),
       ),
     );
   }
 
   Widget _sentConfirmation() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       key: const ValueKey<String>('routine-sent-confirmation'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -919,7 +957,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${widget.client.name}님에게 루틴을 전송했어요',
+            l.aiRoutineSent(widget.client.name),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 13,
@@ -928,8 +966,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            '아래 버튼에서 고객 채팅으로 이동해 바로 안내할 수 있어요.',
+          Text(
+            l.aiGoToChatHint,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
           ),
@@ -1060,16 +1098,19 @@ class _ProgressStepper extends StatelessWidget {
   final int maxReachedStage;
   final ValueChanged<int> onStageTap;
 
-  static const List<(String, String)> _steps = <(String, String)>[
-    ('1', '조건 설정'),
-    ('2', '후보 검토'),
-    ('3', '추천 완료'),
-  ];
+  /// (번호, 라벨). 라벨이 로케일을 따르므로 const 로 둘 수 없다. (#501)
+  static List<(String, String)> _steps(AppLocalizations l) =>
+      <(String, String)>[
+        ('1', l.aiStepConditions),
+        ('2', l.aiStepReview),
+        ('3', l.aiStepDone),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Semantics(
-      label: '맞춤 루틴 생성 진행 단계',
+      label: l.aiStepperLabel,
       child: Stack(
         children: <Widget>[
           Positioned(
@@ -1103,7 +1144,7 @@ class _ProgressStepper extends StatelessWidget {
           ),
           Row(
             children: <Widget>[
-              for (var index = 0; index < _steps.length; index++)
+              for (var index = 0; index < _steps(l).length; index++)
                 Expanded(
                   child: Column(
                     children: <Widget>[
@@ -1142,7 +1183,7 @@ class _ProgressStepper extends StatelessWidget {
                                       color: AppColors.accentForeground,
                                     )
                                   : Text(
-                                      _steps[index].$1,
+                                      _steps(l)[index].$1,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
@@ -1157,7 +1198,7 @@ class _ProgressStepper extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        _steps[index].$2,
+                        _steps(l)[index].$2,
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: index == stage

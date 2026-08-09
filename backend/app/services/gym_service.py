@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models.models import GymProfile, MemberGym, Place, TrainerProfile, User
 from app.schemas.gym_api import GymOut, TrainerOut
+from app.services import trainer_recommendation
 
 
 def _haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> int:
@@ -142,7 +143,9 @@ def unlink_member_gym(db: Session, member_id: str) -> bool:
     return True
 
 
-def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:
+def _to_trainer(
+    user: User, profile: TrainerProfile, *, generated_reason: str = ""
+) -> TrainerOut:
     try:
         certs = json.loads(profile.certifications_json or "[]")
     except json.JSONDecodeError:
@@ -152,7 +155,9 @@ def _to_trainer(user: User, profile: TrainerProfile) -> TrainerOut:
         gym_id=profile.gym_id,
         name=user.name,
         role=profile.specialty or None,
-        reason=profile.recommend_reason or None,
+        # 사람이 쓴 사유가 우선. 생성 문구는 그 자리가 비었을 때만 채운다 — 운영자가
+        # 적어 둔 문구가 자동 생성으로 덮이면 큐레이션이 무의미해진다. (#500)
+        reason=profile.recommend_reason or generated_reason or None,
         # 앱은 "7년" 문자열을 그대로 렌더한다. 0 이면 표시할 게 없으므로 None.
         career=f"{profile.career_years}년" if profile.career_years else None,
         intro=profile.intro or None,
@@ -199,10 +204,37 @@ def list_trainers(db: Session, *, gym_id: str | None = None) -> list[TrainerOut]
     return [_to_trainer(user, profile) for user, profile in db.execute(query)]
 
 
-def list_recommended_trainers(db: Session) -> list[TrainerOut]:
-    """추천 사유가 붙은 트레이너만. 사유가 비면 레일에 올리지 않는다."""
-    query = _trainer_query().where(TrainerProfile.recommend_reason != "")
-    return [_to_trainer(user, profile) for user, profile in db.execute(query)]
+def list_recommended_trainers(
+    db: Session, member_id: str | None = None
+) -> list[TrainerOut]:
+    """홈·운동 탭의 추천 레일.
+
+    `member_id` 가 있고 그 회원에게 쓸 신호가 있으면 **회원별로** 줄 세운다
+    (`trainer_recommendation`). 신호가 없으면 — 온보딩 전이거나 만성질환·상담
+    이력·내 헬스장이 모두 없는 회원 — 기존 동작 그대로, 운영자가 사유를 적어 둔
+    트레이너만 원래 순서로 돌려준다.
+
+    점수를 쓸 때 후보는 `큐레이션된 트레이너 ∪ 점수가 붙은 트레이너` 다. 큐레이션
+    목록만 재정렬하면 회원에게 맞는 트레이너가 사유가 없다는 이유만으로 영영
+    레일에 못 오르고, 반대로 점수만 쓰면 운영자가 올린 트레이너가 빠진다.
+
+    사유 문구는 **사람이 쓴 것이 우선**이다(`recommend_reason`). 생성 문구는 그
+    자리가 비었을 때만 채운다.
+    """
+    curated_only = _trainer_query().where(TrainerProfile.recommend_reason != "")
+    if member_id is None:
+        return [_to_trainer(user, profile) for user, profile in db.execute(curated_only)]
+
+    candidates = [(user, profile) for user, profile in db.execute(_trainer_query())]
+    ranked = trainer_recommendation.rank(db, member_id, candidates)
+    if not ranked:  # 신호 없음 → 기존 동작
+        return [_to_trainer(user, profile) for user, profile in db.execute(curated_only)]
+
+    return [
+        _to_trainer(user, profile, generated_reason=scored.reason)
+        for user, profile, scored in ranked
+        if profile.recommend_reason or scored.reason
+    ]
 
 
 def get_trainer(db: Session, trainer_id: str) -> TrainerOut | None:

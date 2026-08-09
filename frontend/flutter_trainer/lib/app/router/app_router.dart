@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/coaching/presentation/pages/coaching_pag
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare_trainer/features/my/presentation/pages/my_page.dart';
+import 'package:oncare_trainer/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
 import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_page.dart';
 
@@ -150,6 +151,15 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: AppRoutes.consultations,
                 builder: (context, state) => const ConsultationsPage(),
+              ),
+            ],
+          ),
+          // 알림함도 같은 이유로 맨 뒤에 붙인다. (#503)
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.notifications,
+                builder: (context, state) => const NotificationsPage(),
               ),
             ],
           ),

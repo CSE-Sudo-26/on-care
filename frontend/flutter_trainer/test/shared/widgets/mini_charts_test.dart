@@ -3,11 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 void main() {
   Future<void> pumpChart(WidgetTester tester, {int? pendingFromIndex}) {
     return tester.pumpWidget(
       MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: BarSeriesChart(
             values: const <int>[100, 80, 60, 40, 20, 10, 5],
@@ -55,6 +59,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: BarSeriesChart(
               // Fri/Sat/Sun are over the threshold in the source data but

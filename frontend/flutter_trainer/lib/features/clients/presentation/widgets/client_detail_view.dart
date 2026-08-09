@@ -14,26 +14,33 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/workout_vie
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
-import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Labels for [AppRoutes.clientTabSections], in the same order.
-const List<String> clientSectionLabels = <String>['식단', '운동'];
+///
+/// 함수인 이유: const 리스트로 두면 생성 시점에 로케일을 알 수 없다. 개수는
+/// 라우트 개수와 맞아야 하므로 [clientSectionCount] 로 따로 센다. (#501)
+List<String> clientSectionLabels(AppLocalizations l) => <String>[
+  l.clientTabDiet,
+  l.clientTabWorkout,
+];
+
+/// 탭 개수 — 라우트(`AppRoutes.clientTabSections`)와 맞물리는 값이라
+/// 로케일과 무관하다.
+const int clientSectionCount = 2;
 
 /// The client detail body — a header that answers "how is this person
 /// doing right now?" plus the 식단/운동 sub-tabs.
 ///
-/// The header carries what used to be the 개요 tab: the alert badges and
-/// today's calorie/sodium/sugar numbers. Those are the questions the
-/// trainer has on *every* tab, so paying a tab for them meant the answer
-/// was missing exactly when they were reading the chat or the diet. The
-/// two trends 개요 also drew (주간 이행률, 나트륨 추이) now live only where
-/// they belong — 운동, 식단, and the 리포트 tab that renders the same
-/// charts for the week.
+/// The header carries only the alert badges from the former 개요 tab. Detailed
+/// nutrition values live in 식단 and workout trends live in 운동, avoiding a
+/// duplicate summary while keeping actionable signals such as 나트륨 초과
+/// visible from every section.
 ///
 /// Chat rides at the end of the sub-tab row rather than being a third equal
 /// tab: 식단 and 운동 are things you *read* about this person, chatting is
@@ -90,6 +97,7 @@ class ClientDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // Distinguish loading / error / loaded instead of flattening them
     // into an empty list (an unknown id used to render a nameless
     // "고객" chat and never-ending 식단/운동 spinners — codex review).
@@ -106,7 +114,7 @@ class ClientDetailView extends ConsumerWidget {
     return clientsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _StatusView(
-        message: '고객 정보를 불러오지 못했어요',
+        message: l.clientsLoadFailed,
         showBack: showBack,
         // Re-subscribes the stream for a fresh attempt.
         onRetry: () => ref.invalidate(clientsProvider),
@@ -116,7 +124,7 @@ class ClientDetailView extends ConsumerWidget {
         if (match.isEmpty) {
           // Stale deep link / removed client.
           return _StatusView(
-            message: '고객을 찾을 수 없어요',
+            message: l.clientNotFound,
             showBack: showBack,
             onRetry: null,
           );
@@ -188,6 +196,7 @@ class _StatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -202,11 +211,11 @@ class _StatusView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           if (onRetry != null)
-            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+            TextButton(onPressed: onRetry, child: Text(l.actionRetry)),
           if (showBack)
             TextButton(
               onPressed: () => context.go(AppRoutes.clients),
-              child: const Text('고객 목록으로'),
+              child: Text(l.clientBackToList),
             ),
         ],
       ),
@@ -214,9 +223,9 @@ class _StatusView extends StatelessWidget {
   }
 }
 
-/// Identity, why this client is flagged, today's numbers, and the two
-/// things the trainer most often does next — above the tabs, so all of it
-/// stays on screen no matter which tab is open.
+/// Identity, why this client is flagged, and the two things the trainer most
+/// often does next — above the tabs, so actionable context stays visible no
+/// matter which tab is open without duplicating the tab-specific summaries.
 class _Header extends ConsumerWidget {
   const _Header({
     required this.client,
@@ -239,6 +248,7 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -265,36 +275,9 @@ class _Header extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
-              MetricTile(
-                label: '칼로리',
-                value: client.calories,
-                unit: 'kcal',
-                color: AppColors.foreground,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              MetricTile(
-                label: '나트륨',
-                value: client.sodiumMg,
-                unit: 'mg',
-                color: AppColors.foreground,
-                warn: client.sodiumOverBudget,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              MetricTile(
-                label: '당류',
-                value: client.sugarG,
-                unit: 'g',
-                color: AppColors.foreground,
-                warn: client.sugarG > sugarTargetG,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
               Expanded(
                 child: ActionButton(
-                  label: 'AI 루틴 만들기',
+                  label: l.dashCreateAiRoutine,
                   icon: Icons.auto_awesome,
                   primary: true,
                   onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
@@ -303,7 +286,7 @@ class _Header extends ConsumerWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: ActionButton(
-                  label: '주간 리포트',
+                  label: l.clientWeeklyReport,
                   icon: Icons.insights_outlined,
                   onPressed: () => context.go(AppRoutes.reportFor(client.id)),
                 ),
@@ -316,7 +299,7 @@ class _Header extends ConsumerWidget {
           if (ref.watch(clientCoachEnabledProvider)) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             ActionButton(
-              label: 'AI에게 묻기',
+              label: l.clientAskAi,
               icon: Icons.psychology_outlined,
               onPressed: () => showClientCoachSheet(
                 context,
@@ -331,13 +314,14 @@ class _Header extends ConsumerWidget {
   }
 
   Widget _identityRow(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Row(
       children: <Widget>[
         if (showBack)
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, size: 18),
             color: AppColors.accent,
-            tooltip: '고객 목록',
+            tooltip: l.clientList,
             onPressed: () => context.go(AppRoutes.clients),
           ),
         ClientAvatar(label: client.avatar, size: 36),
@@ -384,7 +368,9 @@ class _Header extends ConsumerWidget {
                           vertical: 3,
                         ),
                         child: StatusDotLabel(
-                          label: client.active ? '활성' : '휴면',
+                          label: client.active
+                              ? l.clientActive
+                              : l.clientDormant,
                           filled: client.active,
                           color: client.active
                               ? AppColors.success
@@ -411,7 +397,7 @@ class _Header extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.close, size: 18),
             color: AppColors.subtleForeground,
-            tooltip: '패널 닫기',
+            tooltip: l.clientClosePanel,
             onPressed: onClose,
           ),
       ],
@@ -445,6 +431,7 @@ class _ChatSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final Color fg = selected
         ? AppColors.accentForeground
         : AppColors.subtleForeground;
@@ -454,15 +441,15 @@ class _ChatSegment extends StatelessWidget {
       // Same exclusive group as the content tabs — a screen reader reads all
       // three as one set of destinations, which is what they now are.
       inMutuallyExclusiveGroup: true,
-      // The visible parts ('채팅' + the bare count) would otherwise be
+      // The visible parts (l.clientChat + the bare count) would otherwise be
       // announced after this label, reading as "…채팅, 안 읽은 메시지
       // 1개, 채팅, 1". One node, one sentence — so the tap action has to
       // ride along here too, since the InkWell's own node is excluded.
       excludeSemantics: true,
       onTap: onTap,
       label: unread > 0
-          ? '$clientName님과 채팅, 안 읽은 메시지 $unread개'
-          : '$clientName님과 채팅',
+          ? l.clientChatWithUnread(clientName, unread)
+          : l.clientChatWith(clientName),
       child: Material(
         color: selected ? AppColors.accent : AppColors.inputBackground,
         borderRadius: const BorderRadius.all(AppRadius.md),
@@ -480,7 +467,7 @@ class _ChatSegment extends StatelessWidget {
                 Icon(Icons.send_rounded, size: 15, color: fg),
                 const SizedBox(width: 5),
                 Text(
-                  '채팅',
+                  l.clientChat,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -554,17 +541,19 @@ class _SubTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
+      key: const ValueKey<String>('client-detail-sub-tabs'),
       color: AppColors.card,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        0,
+        AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.md,
       ),
       child: Row(
         children: <Widget>[
-          for (var i = 0; i < clientSectionLabels.length; i++) ...<Widget>[
+          for (var i = 0; i < clientSectionCount; i++) ...<Widget>[
             Expanded(
               // InkWell (over a Material) instead of GestureDetector so the
               // sub-tabs are keyboard-focusable and activate on Enter/Space
@@ -590,7 +579,7 @@ class _SubTabs extends StatelessWidget {
                         height: 32,
                         alignment: Alignment.center,
                         child: Text(
-                          clientSectionLabels[i],
+                          clientSectionLabels(l)[i],
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -605,7 +594,7 @@ class _SubTabs extends StatelessWidget {
                 ),
               ),
             ),
-            if (i < clientSectionLabels.length - 1)
+            if (i < clientSectionCount - 1)
               const SizedBox(width: AppSpacing.xs),
           ],
           // Sets chat apart from the content tabs without leaving the row.

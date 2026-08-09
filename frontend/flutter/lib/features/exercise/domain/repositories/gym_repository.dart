@@ -1,4 +1,5 @@
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 
@@ -44,4 +45,13 @@ abstract class GymRepository {
   /// Throws [StateError] when the slot is unknown or already booked out, so a
   /// stale screen cannot silently overbook.
   Future<void> reserve(String slotId);
+
+  /// 내가 잡아 둔 예약들. 예약 패널이 '내 자리'를 표시하고 취소를 걸 근거다. (#502)
+  Future<List<MyReservation>> fetchMyReservations();
+
+  /// 예약 취소. 좌석과 트레이너 일정이 함께 돌아간다.
+  ///
+  /// 이미 시작한 수업이거나 남의 예약이면 [StateError] — 예약 실패와 같은 규칙으로,
+  /// 목과 실서버가 같은 예외를 낸다.
+  Future<void> cancelReservation(String reservationId);
 }

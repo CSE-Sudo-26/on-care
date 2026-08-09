@@ -6,6 +6,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A client row on the 고객 관리 list: avatar + active dot, name, goal,
 /// last message, and a quick-metric footer (칼로리 / 나트륨 / 마지막 루틴).
@@ -34,6 +35,7 @@ class ClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return DecoratedBox(
       // 사용자 앱과 동일한 kCardShadow(소프트 블루)로 통일.
       decoration: const BoxDecoration(
@@ -162,13 +164,13 @@ class ClientCard extends StatelessWidget {
                 ),
                 Row(
                   children: <Widget>[
-                    _Metric(label: '칼로리', value: '${client.calories}kcal'),
+                    _Metric(label: l.metricCalories, value: '${client.calories}kcal'),
                     _Metric(
-                      label: '나트륨',
+                      label: l.metricSodium,
                       value: '${client.sodiumMg}mg',
                       warn: client.sodiumOverBudget,
                     ),
-                    _Metric(label: '마지막 루틴', value: client.lastRoutine),
+                    _Metric(label: l.clientLastRoutine, value: client.lastRoutine),
                   ],
                 ),
               ],

@@ -20,6 +20,22 @@ abstract interface class TrainerRoutineRepository {
 
   /// The member's currently assigned routines (newest first).
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId);
+
+  /// 배정한 루틴을 고친다(PUT). 보낸 필드만 바뀐다. (#504)
+  ///
+  /// 없는 루틴·남의 배정은 [StateError] — 배정 실패와 같은 규칙으로, 목과
+  /// 실서버가 같은 예외를 낸다.
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  });
+
+  /// 배정한 루틴을 철회한다(DELETE). 회원 앱에서도 사라진다. (#504)
+  Future<void> deleteRoutine(String memberId, String routineId);
 }
 
 /// Demo no-op: the mock/demo build has no member backend to deliver to, so
@@ -34,6 +50,22 @@ class MockTrainerRoutineRepository implements TrainerRoutineRepository {
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>
       Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[]);
+
+  // 데모에는 배정 목록이 없으므로 고칠 것도 없다. 조용히 성공하면 화면이
+  // '고쳤다'고 말하게 되므로, 배정과 달리 없는 것을 지적한다.
+  @override
+  Future<void> updateRoutine(
+    String memberId,
+    String routineId, {
+    String? name,
+    int? minutes,
+    String? type,
+    String? reason,
+  }) async => throw StateError('routine not found: $routineId');
+
+  @override
+  Future<void> deleteRoutine(String memberId, String routineId) async =>
+      throw StateError('routine not found: $routineId');
 }
 
 /// Selects the real Dio-backed routine repository against the FastAPI

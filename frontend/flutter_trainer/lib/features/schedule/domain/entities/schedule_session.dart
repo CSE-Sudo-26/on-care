@@ -1,3 +1,5 @@
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+
 /// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
 class ProgramItem {
   /// Creates a program item.
@@ -73,13 +75,13 @@ class ScheduleSession {
   final List<ProgramItem> program;
 
   /// Whether this is an empty ("빈 시간") slot.
-  bool get isGap => status == '공백';
+  bool get isGap => status == ScheduleStatus.gap;
 
   /// Whether the session is done.
-  bool get isDone => status == '완료';
+  bool get isDone => status == ScheduleStatus.done;
 
   /// Whether the session is still upcoming (예정).
-  bool get isUpcoming => status == '예정';
+  bool get isUpcoming => status == ScheduleStatus.upcoming;
 
   /// Whether the card can expand. Every booked session opens: 완료 shows
   /// the finished program, 예정 shows the plan (or a no-plan hint), and

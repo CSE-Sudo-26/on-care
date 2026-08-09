@@ -13,6 +13,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Delays every insert so tests can act while a send is in flight.
 class _SlowChatRepository extends DriftChatRepository {
@@ -292,7 +293,10 @@ void main() {
               _StaticLiveChatRepository(),
             ),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatView(
                 clientId: 'user-demo',
@@ -338,8 +342,15 @@ void main() {
       await tester.drag(find.byType(ListView), const Offset(0, 600));
       await tester.pump();
       expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
-      // A seeded client reply is present.
-      expect(find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅'), findsOneWidget);
+      // The 8px gap above the section row intentionally leaves the thread
+      // a little less viewport height. Scroll to the early reply instead of
+      // assuming the banner and reply are both built in the same frame.
+      final reply = find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅');
+      for (var i = 0; i < 3 && reply.evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView), const Offset(0, -100));
+        await tester.pump();
+      }
+      expect(reply, findsOneWidget);
     });
 
     testWidgets('sending a message appends it to the thread', (tester) async {

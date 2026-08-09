@@ -1316,6 +1316,12 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get exTypeOtherChip;
 
+  /// Badge on an exercise record the trainer created by completing a PT session. Read-only for the member.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer PT'**
+  String get exSourceTrainerPt;
+
   /// No description provided for @exLevelLight.
   ///
   /// In en, this message translates to:
@@ -2851,6 +2857,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'re connected with your trainer. You can start chatting now.'**
   String get exConsultAcceptedGuide;
+
+  /// No description provided for @exMyReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'My bookings'**
+  String get exMyReservations;
+
+  /// No description provided for @exCancelReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get exCancelReservation;
+
+  /// No description provided for @exCancelKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get exCancelKeep;
+
+  /// No description provided for @exCancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this booking?'**
+  String get exCancelConfirmTitle;
+
+  /// No description provided for @exCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the booking. Please try again in a moment'**
+  String get exCancelFailed;
+
+  /// No description provided for @exReservationPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Past booking'**
+  String get exReservationPast;
+
+  /// No description provided for @exCancelConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The {when} booking is cancelled and the slot reopens.'**
+  String exCancelConfirmBody(String when);
+
+  /// No description provided for @exCancelDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled the {when} booking'**
+  String exCancelDone(String when);
+
+  /// No description provided for @mySupportOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the link. Please try again in a moment'**
+  String get mySupportOpenFailed;
+
+  /// Shown under the FAQ / 1:1 inquiry rows so it is clear the tap leaves the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens the KakaoTalk channel'**
+  String get mySupportExternalHint;
 }
 
 class _AppLocalizationsDelegate

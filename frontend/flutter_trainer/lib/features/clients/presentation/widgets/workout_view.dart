@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays;
+    show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -19,6 +19,8 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// 운동 — the whole prescription→execution loop for one client, in the
 /// order the trainer reasons about it.
@@ -38,6 +40,7 @@ class WorkoutView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final history = ref.watch(clientHistoryProvider(client.id));
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
     final sessions = ref.watch(
@@ -57,8 +60,8 @@ class WorkoutView extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         _WeekCompletionCard(week: client.weekCompletion),
         const SizedBox(height: AppSpacing.lg),
-        const Text(
-          '운동 기록',
+        Text(
+          l.workoutRecords,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
@@ -73,13 +76,13 @@ class WorkoutView extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           ],
-          error: (e, _) => const <Widget>[
-            EmptyHint(message: '운동 기록을 불러오지 못했어요'),
+          error: (e, _) => <Widget>[
+            EmptyHint(message: l.workoutLoadFailed),
           ],
           data: (entries) => <Widget>[
             if (entries.isEmpty)
-              const EmptyHint(
-                message: '아직 운동 기록이 없어요',
+              EmptyHint(
+                message: l.workoutEmpty,
                 icon: Icons.fitness_center_outlined,
               ),
             for (final entry in entries) ...<Widget>[
@@ -96,20 +99,21 @@ class WorkoutView extends ConsumerWidget {
 /// 배정된 루틴 — what the member sees in their own app (server-side, real
 /// API only). Empty in demo mode, where the mock repository has no member
 /// backend to deliver to; the history below carries the story there.
-class _AssignedRoutinesCard extends StatelessWidget {
+class _AssignedRoutinesCard extends ConsumerWidget {
   const _AssignedRoutinesCard({required this.clientId, required this.assigned});
 
   final String clientId;
   final AsyncValue<List<AssignedRoutine>> assigned;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return SectionCard(
-      title: '배정된 루틴',
+      title: l.routinesAssigned,
       icon: Icons.assignment_turned_in_outlined,
       dense: true,
       trailing: CardLink(
-        label: '새 루틴',
+        label: l.routineNew,
         onTap: () => context.go(AppRoutes.coachingFor(clientId)),
       ),
       child: assigned.when(
@@ -117,10 +121,10 @@ class _AssignedRoutinesCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '루틴을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.routinesLoadFailed),
         data: (routines) => routines.isEmpty
-            ? const EmptyHint(
-                message: '아직 이 고객에게 배정된 루틴이 없어요',
+            ? EmptyHint(
+                message: l.routinesEmpty,
                 icon: Icons.assignment_outlined,
               )
             : Column(
@@ -164,12 +168,19 @@ class _AssignedRoutinesCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${routine.minutes}분',
+                            l.minutesShort(routine.minutes),
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
+                          ),
+                          // 배정 뒤 정정·철회. 전에는 잘못 넣어도 고칠 수 없어
+                          // 새 루틴을 하나 더 배정했고, 회원 앱에는 둘 다
+                          // 그대로 보였다. (#504)
+                          _RoutineActions(
+                            clientId: clientId,
+                            routine: routine,
                           ),
                         ],
                       ),
@@ -195,9 +206,10 @@ class _SessionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final today = ymd(DateTime.now());
     return SectionCard(
-      title: 'PT 프로그램 이력',
+      title: l.ptProgramHistory,
       icon: Icons.event_note_outlined,
       dense: true,
       child: sessions.when(
@@ -205,10 +217,10 @@ class _SessionsCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '일정을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.scheduleLoadFailed),
         data: (list) => list.isEmpty
-            ? const EmptyHint(
-                message: '등록된 PT 세션이 없어요',
+            ? EmptyHint(
+                message: l.ptSessionsEmpty,
                 icon: Icons.event_busy_outlined,
               )
             : Column(
@@ -230,6 +242,7 @@ class _SessionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final date = DateTime.tryParse(session.date);
     final label = date == null ? session.date : '${date.month}/${date.day}';
     final exercises = session.program.map((p) => p.name).join(' · ');
@@ -242,7 +255,7 @@ class _SessionRow extends StatelessWidget {
           SizedBox(
             width: 46,
             child: Text(
-              session.date == today ? '오늘' : label,
+              session.date == today ? l.labelToday : label,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -257,7 +270,7 @@ class _SessionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '${session.type} · ${session.durationMinutes}분',
+                  l.sessionTypeAndDuration(sessionTypeLabel(l, session.type), session.durationMinutes),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -265,7 +278,7 @@ class _SessionRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  exercises.isEmpty ? '등록된 프로그램 없음' : exercises,
+                  exercises.isEmpty ? l.programNone : exercises,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -282,7 +295,7 @@ class _SessionRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            session.status,
+            scheduleStatusLabel(l, session.status),
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
@@ -346,10 +359,12 @@ class _WeekCompletionCard extends StatelessWidget {
 
   final List<int> week;
 
-  static const List<String> _days = <String>['월', '화', '수', '목', '금', '토', '일'];
+  /// 요일 라벨은 로케일을 따르므로 const 로 둘 수 없다. (#501)
+  static List<String> _days(AppLocalizations l) => weekdayLabels(l);
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // 아직 오지 않은 요일은 평균에서도 막대에서도 뺀다 — 0으로 세면
     // 주 초반일수록 실제보다 낮은 완료율이 나온다.
     final elapsed = elapsedWeekdays(DateTime.now());
@@ -371,9 +386,9 @@ class _WeekCompletionCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '이번 주 완료율',
+                  l.weekCompletionRate,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -398,7 +413,7 @@ class _WeekCompletionCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                for (var i = 0; i < week.length && i < _days.length; i++) ...[
+                for (var i = 0; i < week.length && i < weekdayCount; i++) ...[
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -416,7 +431,7 @@ class _WeekCompletionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _days[i],
+                          _days(l)[i],
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
@@ -436,11 +451,11 @@ class _WeekCompletionCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
-              const _LegendDot(color: AppColors.success, label: '완료'),
+              _LegendDot(color: AppColors.success, label: l.legendDone),
               const SizedBox(width: AppSpacing.md),
-              const _LegendDot(color: AppColors.warning, label: '부분'),
+              _LegendDot(color: AppColors.warning, label: l.legendPartial),
               const SizedBox(width: AppSpacing.md),
-              _LegendDot(color: AppColors.borderStrong, label: '미완료'),
+              _LegendDot(color: AppColors.borderStrong, label: l.legendMissed),
             ],
           ),
         ],
@@ -487,6 +502,7 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -531,7 +547,7 @@ class _HistoryCard extends StatelessWidget {
           if (entry.clientFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _NoteBox(
-              title: '고객 피드백',
+              title: l.clientFeedback,
               body: entry.clientFeedback,
               color: AppColors.accent,
             ),
@@ -539,7 +555,7 @@ class _HistoryCard extends StatelessWidget {
           if (entry.trainerNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
             _NoteBox(
-              title: '트레이너 메모',
+              title: l.trainerNote,
               body: entry.trainerNote,
               color: AppColors.warning,
             ),
@@ -686,6 +702,287 @@ class _NoteBox extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 배정된 루틴 한 줄의 수정·삭제. (#504)
+///
+/// 목록 안에 두는 이유: 잘못 배정한 것을 발견하는 자리가 곧 고치는 자리여야
+/// 한다. 별도 편집 화면으로 보내면 어느 루틴을 고치는 중인지 다시 확인해야 한다.
+class _RoutineActions extends ConsumerStatefulWidget {
+  const _RoutineActions({required this.clientId, required this.routine});
+
+  final String clientId;
+  final AssignedRoutine routine;
+
+  @override
+  ConsumerState<_RoutineActions> createState() => _RoutineActionsState();
+}
+
+class _RoutineActionsState extends ConsumerState<_RoutineActions> {
+  /// 요청이 오가는 동안 잠근다 — 삭제를 두 번 누르면 두 번째는 404 다.
+  bool _busy = false;
+
+  Future<void> _edit() async {
+    // messenger 와 함께 await 전에 잡아 둔다 — 실패 경로가 await 뒤에 있다.
+    final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
+    final result = await showDialog<({String name, int minutes, String reason})>(
+      context: context,
+      builder: (_) => _RoutineEditDialog(routine: widget.routine),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .updateRoutine(
+            widget.clientId,
+            widget.routine.id,
+            name: result.name,
+            minutes: result.minutes,
+            reason: result.reason,
+          );
+    } on StateError {
+      // 404 — 그 루틴이 서버에 이미 없다(다른 기기에서 먼저 지웠거나 담당이
+      // 풀렸다). 뒤처진 쪽은 화면이므로 목록을 다시 읽어 서버를 따라간다.
+      // 그대로 두면 없는 루틴이 남아 다시 눌러도 계속 실패한다.
+      if (mounted) {
+        setState(() => _busy = false);
+        ref.invalidate(assignedRoutinesProvider(widget.clientId));
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.routineAlreadyGone)),
+      );
+      return;
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.routineUpdateFailed)),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    messenger.showSnackBar(SnackBar(content: Text(l.routineUpdated)));
+  }
+
+  Future<void> _delete() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    // 되돌릴 수 없는 동작이라 확인을 받는다 — 회원 앱에서도 곧바로 사라진다.
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.routineDeleteTitle),
+        content: Text(l.routineDeleteBody(widget.routine.name)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l.actionDelete,
+              style: TextStyle(color: AppColors.destructive),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(trainerRoutineRepositoryProvider)
+          .deleteRoutine(widget.clientId, widget.routine.id);
+    } on StateError {
+      // 404 — 이미 없는 것을 지우려 했다. 목적은 이뤄진 셈이라 실패로만 알리고
+      // 끝내지 않고, 목록을 다시 읽어 그 줄을 화면에서 걷어낸다.
+      if (mounted) {
+        setState(() => _busy = false);
+        ref.invalidate(assignedRoutinesProvider(widget.clientId));
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.routineAlreadyGone)),
+      );
+      return;
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.routineDeleteFailed)),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ref.invalidate(assignedRoutinesProvider(widget.clientId));
+    messenger.showSnackBar(SnackBar(content: Text(l.routineDeleted)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    if (_busy) {
+      return const Padding(
+        padding: EdgeInsets.only(left: AppSpacing.sm),
+        child: SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          key: ValueKey<String>('routine-edit-${widget.routine.id}'),
+          onPressed: _edit,
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          color: AppColors.mutedForeground,
+          tooltip: l.routineEdit,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+        ),
+        IconButton(
+          key: ValueKey<String>('routine-delete-${widget.routine.id}'),
+          onPressed: _delete,
+          icon: const Icon(Icons.delete_outline, size: 16),
+          color: AppColors.destructive,
+          tooltip: l.routineDelete,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+}
+
+/// 루틴 수정 다이얼로그. 이름·시간·사유만 다룬다.
+///
+/// 종류(type)를 빼 둔 이유: 그 값은 서버가 Literal 로 검증하는 계약값이고,
+/// 종류를 바꾸는 것은 사실상 다른 루틴을 주는 일이라 새로 배정하는 편이 맞다.
+class _RoutineEditDialog extends StatefulWidget {
+  const _RoutineEditDialog({required this.routine});
+
+  final AssignedRoutine routine;
+
+  @override
+  State<_RoutineEditDialog> createState() => _RoutineEditDialogState();
+}
+
+class _RoutineEditDialogState extends State<_RoutineEditDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.routine.name,
+  );
+  late final TextEditingController _minutes = TextEditingController(
+    text: widget.routine.minutes.toString(),
+  );
+  late final TextEditingController _reason = TextEditingController(
+    text: widget.routine.reason,
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _minutes.dispose();
+    _reason.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    final minutes = int.tryParse(_minutes.text.trim());
+    final reason = _reason.text.trim();
+    if (name.isEmpty) {
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _error = l.routineNameRequired);
+      return;
+    }
+    // 서버 제약(name 100자·minutes 0~600·reason 200자)과 같은 값으로 미리
+    // 거른다 — 422 를 받아 오면 "수정하지 못했어요"라는 애매한 문구만 남아,
+    // 무엇이 문제인지 트레이너가 알 수 없다.
+    //
+    // 세는 단위도 서버와 맞춘다. Pydantic 의 max_length 는 파이썬 문자(코드
+    // 포인트) 수인데 Dart 의 String.length 는 UTF-16 코드 유닛 수라, 이모지가
+    // 들어가면 서버가 받아 줄 값을 화면이 먼저 막는다. runes 로 센다.
+    if (name.runes.length > 100) {
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _error = l.routineNameTooLong);
+      return;
+    }
+    if (minutes == null || minutes < 0 || minutes > 600) {
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _error = l.routineMinutesRange);
+      return;
+    }
+    if (reason.runes.length > 200) {
+      final AppLocalizations l = AppLocalizations.of(context);
+      setState(() => _error = l.routineReasonTooLong);
+      return;
+    }
+    Navigator.of(context).pop((name: name, minutes: minutes, reason: reason));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.routineEdit),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          TextField(
+            key: const ValueKey<String>('routine-edit-name'),
+            controller: _name,
+            decoration: InputDecoration(labelText: l.routineFieldName),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey<String>('routine-edit-minutes'),
+            controller: _minutes,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: l.routineFieldMinutesLabel),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey<String>('routine-edit-reason'),
+            controller: _reason,
+            decoration: InputDecoration(labelText: l.routineFieldReason),
+          ),
+          if (_error != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _error!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.destructive,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionCancel),
+        ),
+        TextButton(
+          key: const ValueKey<String>('routine-edit-save'),
+          onPressed: _submit,
+          child: Text(l.actionSave),
+        ),
+      ],
     );
   }
 }

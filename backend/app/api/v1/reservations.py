@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import RequireMember, RequireTrainer
 from app.db.session import get_db
 from app.schemas.reservation_api import (
+    MyReservationOut,
     ReservationCreate,
     ReservationOut,
     TrainerSlotCreate,
@@ -60,6 +61,35 @@ def create_reservation(
         return reservation_service.reserve(db, member, payload.slot_id)
     except ReservationError as exc:
         raise _slot_error(exc) from exc
+
+
+@router.get("/reservations/me", response_model=list[MyReservationOut])
+def my_reservations(
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[MyReservationOut]:
+    """회원의 예약 목록. 앱이 '내가 잡은 자리'를 표시하고 취소를 걸 자리다. (#502)
+
+    `/reservations/{id}` 보다 먼저 선언해야 "me" 가 id 로 잡히지 않는다.
+    """
+    return reservation_service.list_member_reservations(db, member.id)
+
+
+@router.delete("/reservations/{reservation_id}", status_code=200)
+def cancel_reservation(
+    reservation_id: str,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """회원이 자기 예약을 취소한다. 좌석과 트레이너 일정이 함께 돌아간다. (#502)"""
+    try:
+        reservation_service.cancel(db, member.id, reservation_id)
+    except reservation_service.ReservationNotFound as exc:
+        # 남의 예약도 여기로 온다 — 존재조차 드러내지 않는다.
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except reservation_service.ReservationTooLate as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"status": "cancelled"}
 
 
 @router.get("/trainer/reservation-slots", response_model=list[TrainerSlotOut])

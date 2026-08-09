@@ -11,9 +11,11 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The console's left navigation column.
 ///
@@ -73,6 +75,12 @@ class AppSidebar extends ConsumerWidget {
     final pendingConsultations = inbox
         ? ref.watch(consultationPendingCountProvider).valueOrNull
         : null;
+    // 알림함도 실 API 빌드에서만 — 데모에는 알림을 만드는 회원 백엔드가 없어
+    // 늘 비어 있는 행이 하나 더 생길 뿐이다. (#503)
+    final notificationInbox = ref.watch(notificationInboxEnabledProvider);
+    final unreadNotifications = notificationInbox
+        ? ref.watch(trainerUnreadNotificationsProvider).valueOrNull
+        : null;
 
     return Container(
       width: expanded ? AppLayout.sidebarWidth : AppLayout.sidebarRailWidth,
@@ -105,6 +113,7 @@ class AppSidebar extends ConsumerWidget {
                         // navDestinations and is rendered below with its
                         // count passed in directly.
                         NavBadge.pendingConsultations => null,
+                        NavBadge.unreadNotifications => null,
                         NavBadge.none => null,
                       },
                       onTap: () {
@@ -121,6 +130,18 @@ class AppSidebar extends ConsumerWidget {
                       badgeCount: pendingConsultations,
                       onTap: () {
                         onSelect(AppShell.consultationsBranchIndex);
+                        onNavigate?.call();
+                      },
+                    ),
+                  if (notificationInbox)
+                    _NavTile(
+                      destination: notificationsDestination,
+                      selected:
+                          currentIndex == AppShell.notificationsBranchIndex,
+                      expanded: expanded,
+                      badgeCount: unreadNotifications,
+                      onTap: () {
+                        onSelect(AppShell.notificationsBranchIndex);
                         onNavigate?.call();
                       },
                     ),
@@ -182,17 +203,17 @@ class _Brand extends StatelessWidget {
               children: <Widget>[
                 logo,
                 const SizedBox(width: AppSpacing.sm),
-                const Expanded(
+                Expanded(
                   child: Text.rich(
                     TextSpan(
                       children: <InlineSpan>[
-                        TextSpan(
+                        const TextSpan(
                           text: 'On-Care ',
                           style: TextStyle(color: AppColors.foreground),
                         ),
                         TextSpan(
-                          text: '트레이너',
-                          style: TextStyle(color: AppColors.primary),
+                          text: AppLocalizations.of(context).appWordmarkTrainer,
+                          style: const TextStyle(color: AppColors.primary),
                         ),
                       ],
                       style: TextStyle(
@@ -205,7 +226,7 @@ class _Brand extends StatelessWidget {
                 ),
               ],
             )
-          : Tooltip(message: 'On-Care 트레이너', child: logo),
+          : Tooltip(message: AppLocalizations.of(context).appTitle, child: logo),
     );
   }
 }
@@ -230,6 +251,7 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = navLabel(AppLocalizations.of(context), destination.label);
     final color = selected ? AppColors.primary : AppColors.mutedForeground;
     final icon = Icon(
       selected ? destination.activeIcon : destination.icon,
@@ -248,7 +270,7 @@ class _NavTile extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    destination.label,
+                    label,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.5,
@@ -302,7 +324,7 @@ class _NavTile extends StatelessWidget {
               ),
               child: expanded
                   ? row
-                  : Tooltip(message: destination.label, child: row),
+                  : Tooltip(message: label, child: row),
             ),
           ),
         ),
@@ -373,7 +395,9 @@ class _ProfileFooter extends StatelessWidget {
         color: AppColors.accentSurface,
       ),
       child: Text(
-        name.isEmpty ? '트' : String.fromCharCode(name.runes.first),
+        name.isEmpty
+            ? AppLocalizations.of(context).appAvatarFallback
+            : String.fromCharCode(name.runes.first),
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w800,
@@ -435,7 +459,10 @@ class _ProfileFooter extends StatelessWidget {
                       ),
                     ],
                   )
-                : Tooltip(message: '$name · 내 정보', child: avatar),
+                : Tooltip(
+                  message: AppLocalizations.of(context).sidebarMyTooltip(name),
+                  child: avatar,
+                ),
           ),
         ),
       ),

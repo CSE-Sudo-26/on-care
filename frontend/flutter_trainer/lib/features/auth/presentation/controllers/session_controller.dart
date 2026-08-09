@@ -205,7 +205,7 @@ class SessionController extends StateNotifier<SessionState> {
     } catch (e) {
       await _expire();
       if (e is AuthException) rethrow;
-      throw const AuthException('로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');
+      throw const AuthException(AuthFailure.unknown);
     }
   }
 
