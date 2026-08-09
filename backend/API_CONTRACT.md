@@ -131,6 +131,21 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
   카테고리로 태깅한다(공급자 간 의미 일치, 빈 category 없음).
 - **검증**: `lat`(-90~90)·`lng`(-180~180)·`category`(허용값)는 위반 시 **422**.
 
+### 예약 (회원 ↔ 트레이너 슬롯)
+
+| Method | Path | 응답 |
+|---|---|---|
+| GET | `/trainers/{trainer_id}/slots` | `[{ id, trainer_id, starts_at, capacity, remaining, is_closed }]` |
+| POST | `/reservations` | 입력 `{ slot_id }` → `{ id, slot_id, schedule_id, status, created_at }` |
+| GET | `/reservations/me` | `[{ id, slot_id, trainer_id, starts_at, cancellable }]` — 내 예약 |
+| DELETE | `/reservations/{id}` | 취소 → `{ status: "cancelled" }` |
+
+- **예약은 트레이너 일정을 만듭니다.** 확정 시 `trainer_schedule` 에 `1:1 PT` 세션이 생기고, 취소하면 그 일정과 좌석이 함께 돌아갑니다. 회원 탈퇴 경로와 **같은 함수**(`reservation_service._release`)를 씁니다. (#502)
+- **취소 마감**: 슬롯 시작 시각까지. 이미 시작한 수업은 **409** — 자리를 비우는 게 아니라 기록을 지우는 일이라 트레이너가 판단할 몫입니다.
+- **남의 예약·없는 예약은 404** 로 같습니다. 존재 여부조차 드러내지 않습니다(상담 요청과 같은 규칙).
+- `cancellable` 은 **서버 판단**입니다. 앱이 자기 시계로 다시 계산하면 시각이 어긋난 기기에서 버튼은 눌리는데 서버가 409 를 주는 상태가 됩니다.
+- 취소는 트레이너에게 알림 행을 남깁니다(`notifications`). 트레이너가 그 행을 **읽는 경로는 아직 없습니다** — `/notifications` 는 회원 전용이라 트레이너는 403 입니다(#503).
+
 ### 트레이너 도메인 / 회원측 코치 미러
 
 트레이너 앱 백엔드(`/v1/trainer/*`)와 회원측 "내 담당 코치" 미러(`/v1/me/coach/*`),
