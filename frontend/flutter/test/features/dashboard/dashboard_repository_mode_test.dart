@@ -4,6 +4,8 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/data/repositories/dio_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -24,6 +26,7 @@ void main() {
           ),
           // Dio 저장소 경로는 dioProvider → appLogger 를 타므로 조용한 로거로 오버라이드.
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
+          accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
         ],
       );
       addTearDown(container.dispose);
@@ -51,6 +54,7 @@ void main() {
         overrides: <Override>[
           appConfigProvider.overrideWithValue(AppConfig.fromEnvironment()),
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
+          accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
         ],
       );
       addTearDown(container.dispose);

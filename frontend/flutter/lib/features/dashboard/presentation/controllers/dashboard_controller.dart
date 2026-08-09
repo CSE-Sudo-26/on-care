@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/data/repositories/dio_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
@@ -21,7 +22,11 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
     // 한 번 걸어 두면 새 CRUD 자리가 생겨도 따라온다 — 자리마다 invalidate 를
     // 흩뿌리면 다음 자리에서 또 빠진다(CodeRabbit 리뷰).
     ref.watch(dietTodayProvider);
-    return MockDashboardRepository(ref.watch(dietRepositoryProvider));
+    final accountRepository = ref.watch(accountRepositoryProvider);
+    return MockDashboardRepository(
+      ref.watch(dietRepositoryProvider),
+      fetchProfile: accountRepository.fetchProfile,
+    );
   }
   return DioDashboardRepository(ref.watch(dioProvider));
 }, name: 'dashboardRepository');
