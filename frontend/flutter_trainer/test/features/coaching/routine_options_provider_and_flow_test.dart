@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routin
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -194,6 +195,9 @@ void main() {
           trainerRoutineRepositoryProvider.overrideWithValue(assigned),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
             client: _client,
             recommendedExercises: <RoutineExercise>[
@@ -235,7 +239,9 @@ void main() {
     expect(find.textContaining('회복안 · 회복·지속 중심'), findsOneWidget);
     expect(find.textContaining('강화안 · 강도·운동량 중심'), findsOneWidget);
     expect(find.textContaining('기존안 · 기존 AI 추천'), findsOneWidget);
-    final optionHeights = <String>['A', 'B', '추천']
+    // 세 번째 후보의 key 는 선택 식별자다 — 화면 문구가 아니라서 로케일과
+    // 무관하게 'recommended' 로 고정돼 있다(#501).
+    final optionHeights = <String>['A', 'B', 'recommended']
         .map(
           (key) => tester
               .getSize(find.byKey(ValueKey<String>('routine-option-$key')))
@@ -327,6 +333,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
             home: AiRoutineOptionsFlow(
               client: _client,
               recommendedExercises: <RoutineExercise>[
@@ -368,6 +377,9 @@ void main() {
           ),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
             client: _client,
             recommendedExercises: <RoutineExercise>[

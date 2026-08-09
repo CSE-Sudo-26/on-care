@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The colour that carries [alert]'s meaning.
 ///
@@ -52,7 +53,7 @@ class AlertBadge extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Text(
-            alert.label,
+            alert.label(AppLocalizations.of(context)),
             style: TextStyle(
               fontSize: showIcon ? 11 : 10,
               fontWeight: FontWeight.w800,

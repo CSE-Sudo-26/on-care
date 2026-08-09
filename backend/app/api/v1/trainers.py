@@ -33,11 +33,14 @@ def list_recommended_trainers(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> list[TrainerOut]:
-    """추천 사유가 붙은 트레이너만 — 홈·운동 탭의 추천 레일.
+    """홈·운동 탭의 추천 레일 — 회원의 목표·거리에 맞춰 줄 세운다. (#500)
+
+    신호가 없는 회원(온보딩 전 등)은 운영자가 사유를 적어 둔 트레이너만 기존
+    순서로 받는다.
 
     `/trainers/{trainer_id}` 보다 먼저 선언해야 "recommended" 가 id 로 잡히지 않는다.
     """
-    return gym_service.list_recommended_trainers(db)
+    return gym_service.list_recommended_trainers(db, current_user.id)
 
 
 @router.get("/trainers/{trainer_id}", response_model=TrainerOut)

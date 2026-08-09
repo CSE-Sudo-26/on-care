@@ -157,4 +157,39 @@ void main() {
     });
     expect(week.sessions.first.intensity, ExerciseIntensity.high);
   });
+
+  group('ExerciseSession.source (#499)', () {
+    ExerciseSession parse(Map<String, Object?> extra) =>
+        ExerciseSession.fromJson(<String, Object?>{
+          'id': 'ex-1',
+          'day_label': '월',
+          'type': 'strength',
+          'minutes': 60,
+          'calories': 360,
+          ...extra,
+        });
+
+    test('trainer_pt 기록은 회원이 고칠 수 없다', () {
+      final s = parse(<String, Object?>{'source': 'trainer_pt'});
+      expect(s.source, ExerciseSource.trainerPt);
+      expect(s.isEditable, isFalse);
+    });
+
+    test('회원이 남긴 기록은 그대로 편집 가능하다', () {
+      final s = parse(<String, Object?>{'source': 'member'});
+      expect(s.source, ExerciseSource.member);
+      expect(s.isEditable, isTrue);
+    });
+
+    test('필드가 없거나 모르는 값이면 회원 기록으로 본다', () {
+      // 이 필드를 모르는 예전 응답과 데모/목 경로에서 기록이 통째로
+      // 잠기면 안 된다 — 안전한 쪽은 '편집 가능'이다.
+      expect(parse(<String, Object?>{}).isEditable, isTrue);
+      expect(
+        parse(<String, Object?>{'source': 'something-new'}).isEditable,
+        isTrue,
+      );
+    });
+  });
+
 }

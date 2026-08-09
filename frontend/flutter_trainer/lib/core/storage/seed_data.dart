@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
@@ -512,9 +513,9 @@ const List<_Slot> _schedule = <_Slot>[
   _Slot(
     time: '10:00',
     clientName: '김민수',
-    type: '1:1 PT',
+    type: SessionType.personalTraining,
     durationMinutes: 60,
-    status: '완료',
+    status: ScheduleStatus.done,
     note: '무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.',
     program: <Map<String, Object?>>[
       <String, Object?>{
@@ -546,9 +547,9 @@ const List<_Slot> _schedule = <_Slot>[
   _Slot(
     time: '12:00',
     clientName: '이지수',
-    type: '1:1 PT',
+    type: SessionType.personalTraining,
     durationMinutes: 50,
-    status: '완료',
+    status: ScheduleStatus.done,
     note: '데드리프트 자세 안정적. 다음 세션 60kg 도전.',
     program: <Map<String, Object?>>[
       <String, Object?>{
@@ -577,16 +578,16 @@ const List<_Slot> _schedule = <_Slot>[
     clientName: '',
     type: '',
     durationMinutes: 0,
-    status: '공백',
+    status: ScheduleStatus.gap,
     note: '',
     program: <Map<String, Object?>>[],
   ),
   _Slot(
     time: '15:00',
     clientName: '박성호',
-    type: '1:1 PT',
+    type: SessionType.personalTraining,
     durationMinutes: 60,
-    status: '예정',
+    status: ScheduleStatus.upcoming,
     note: '',
     program: <Map<String, Object?>>[
       <String, Object?>{
@@ -612,9 +613,9 @@ const List<_Slot> _schedule = <_Slot>[
   _Slot(
     time: '17:00',
     clientName: '신규 고객',
-    type: '상담',
+    type: SessionType.consultation,
     durationMinutes: 30,
-    status: '예정',
+    status: ScheduleStatus.upcoming,
     note: '',
     program: <Map<String, Object?>>[],
   ),
@@ -623,7 +624,7 @@ const List<_Slot> _schedule = <_Slot>[
     clientName: '',
     type: '',
     durationMinutes: 0,
-    status: '공백',
+    status: ScheduleStatus.gap,
     note: '',
     program: <Map<String, Object?>>[],
   ),

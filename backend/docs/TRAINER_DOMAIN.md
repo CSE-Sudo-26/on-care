@@ -92,6 +92,7 @@
 | GET | `/trainer/clients` | 고객 로스터(회원 실데이터 집계) |
 | GET | `/trainer/clients/{member_id}/diet?date=` | 해당 회원의 실제 식단 기록 |
 | GET | `/trainer/clients/{member_id}/history` | 해당 회원 운동 기록(최신순) |
+| DELETE | `/trainer/me` | 트레이너 탈퇴 — 담당 회원에게 알린 뒤 계정과 딸린 데이터 삭제 (#505) |
 | GET | `/trainer/clients/{member_id}/routines` | 배정 루틴 |
 | POST | `/trainer/clients/{member_id}/routines` | 루틴 배정 |
 | PUT | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 부분 수정(이름·시간·종류·사유) |
@@ -223,3 +224,26 @@ chain이다. `0020`의 `down_revision`은 `0019_trainer_noti_settings`다.
 배포는 이 순서를 따라 `alembic upgrade head`를 실행하며, CI에서
 `alembic heads`가 하나인지 먼저 검증한다. 이미 별도 migration head를 적용한 DB는
 `down_revision`을 임의로 바꾸지 말고 배포 문서의 merge revision 절차를 따른다.
+
+
+## 트레이너 탈퇴 (#505)
+
+회원 탈퇴(`DELETE /users/me`)와 대칭인 `DELETE /trainer/me`.
+
+**담당 회원이 남아 있어도 막지 않는다.** 막으면 담당이 있는 트레이너는 계정을 영영
+지울 수 없고, 그만두는 사람에게 "회원을 먼저 다 정리하라"고 요구하는 것은 현실적이지
+않다. 대신 회원이 모르게 사라지지 않도록 알림을 남긴다 — 회원 앱의 '내 담당 코치'가
+어느 날 조용히 비어 있으면 앱이 고장 난 것으로 읽힌다.
+
+**삭제 순서가 중요하다.** `trainer_reservations` 는 회원·슬롯·일정을 모두
+**RESTRICT** 로 참조한다. 슬롯과 일정은 트레이너 삭제 시 CASCADE 로 지워지므로,
+예약 행을 먼저 치우지 않으면 그 CASCADE 가 FK 에서 막힌다.
+
+| 데이터 | 처리 |
+|---|---|
+| 예약(`trainer_reservations`) | 먼저 삭제(좌석 복구 불필요 — 슬롯도 함께 사라진다) |
+| 프로필·담당 링크·채팅·루틴·일정·슬롯·이력·알림 | `users.id` CASCADE |
+| 상담 요청의 `trainer_id`·`decided_by` | SET NULL — 요청 이력은 남는다 |
+| 회원↔헬스장 링크(`member_gyms`) | 그대로 — 트레이너와 별개다(#444) |
+
+알림은 담당 회원과 **예약만 있는 회원** 모두에게 간다(문구는 다르다).

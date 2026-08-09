@@ -16,15 +16,16 @@ from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app.models.models import (
-    ChatMessage, DietEntry, GymProfile, Place, RoutineHistory, TrainerClient,
-    TrainerProfile, TrainerReservation, TrainerRoutine, TrainerSchedule, User,
+    ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
+    TrainerClient, TrainerProfile, TrainerReservation, TrainerReservationSlot,
+    TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
     TrainerNotificationSettings, WeeklyReportOut,
 )
-from app.services import notification_service
+from app.services import exercise_service, notification_service
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
 # '초과 N일'이 앱 화면의 경고와 어긋나면 안 된다.
@@ -361,8 +362,8 @@ def send_message(
     종류를 호출자가 정하는 이유: 주간 리포트도 이 함수로 나가므로, 여기서 판단하면
     일반 메시지와 구분할 수 없다.
 
-    회원이 보낸 메시지에는 알림을 만들지 않는다 — 트레이너 앱은 unread 배지를 따로
-    쓰고, 알림함은 회원 것이다.
+    회원이 보낸 메시지에는 **트레이너 알림**을 남긴다(#503). 사이드바 미읽음 배지는
+    지금 보고 있을 때만 눈에 들어오고, 지나가면 다시 볼 자리가 없었다.
     """
     msg = ChatMessage(
         id=f"chat-{uuid.uuid4().hex[:12]}",
@@ -373,6 +374,15 @@ def send_message(
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)
+    if sender == "member":
+        member_name = db.scalar(select(User.name).where(User.id == member_id))
+        notification_service.queue_for_trainer(
+            db,
+            trainer_id=trainer_id,
+            kind=notification_service.TRAINER_MESSAGE_KIND,
+            title=f"{member_name or '회원'} 회원의 메시지",
+            body=text,
+        )
     if notify is not None and sender == "trainer":
         trainer_name = db.scalar(select(User.name).where(User.id == trainer_id))
         notification_service.queue(
@@ -430,6 +440,70 @@ def unread_counts_for_trainer(db: Session, trainer_id: str) -> dict[str, int]:
 
 
 # ---- 루틴 배정 (트레이너/AI → 회원, 양쪽에서 보이는 공유 데이터) ----
+
+def delete_trainer_account(db: Session, trainer: User) -> None:
+    """트레이너 탈퇴. 담당 회원에게 알린 뒤 계정을 지운다. (#505)
+
+    **담당 회원이 남아 있어도 막지 않는다.** 막으면 담당이 있는 트레이너는 계정을
+    영영 지울 수 없고, 그만두는 사람에게 "회원을 먼저 다 정리하라" 고 요구하는 것은
+    현실적이지 않다. 대신 회원이 모르게 사라지지 않도록 알림을 남긴다 — 회원 앱의
+    '내 담당 코치'가 어느 날 조용히 비어 있으면 앱이 고장 난 것으로 읽힌다.
+
+    삭제 순서가 중요하다. `trainer_reservations` 는 회원·슬롯·일정을 모두
+    **RESTRICT** 로 참조한다. 슬롯과 일정은 트레이너 삭제 시 CASCADE 로 지워지므로,
+    예약 행을 먼저 치우지 않으면 그 CASCADE 가 FK 에서 막힌다.
+
+    나머지(프로필·채팅·루틴·일정·슬롯·이력·알림)는 `users.id` CASCADE 가 처리한다.
+    상담 요청의 `trainer_id`·`decided_by` 는 SET NULL 이라 요청 이력은 남는다.
+    """
+    member_ids = list(
+        db.scalars(
+            select(TrainerClient.member_id).where(
+                TrainerClient.trainer_id == trainer.id
+            )
+        ).all()
+    )
+
+    # 이 트레이너의 슬롯에 걸린 예약을 먼저 치운다. 좌석을 되돌릴 필요는 없다 —
+    # 슬롯 자체가 함께 사라진다.
+    reservations = db.scalars(
+        select(TrainerReservation)
+        .join(
+            TrainerReservationSlot,
+            TrainerReservationSlot.id == TrainerReservation.slot_id,
+        )
+        .where(TrainerReservationSlot.trainer_id == trainer.id)
+        .order_by(TrainerReservation.id)
+        .with_for_update()
+    ).all()
+    booked_member_ids = {row.member_id for row in reservations}
+    for reservation in reservations:
+        db.delete(reservation)
+    # RESTRICT 자식을 먼저 비운 뒤에야 트레이너 삭제의 CASCADE 가 성립한다.
+    db.flush()
+
+    trainer_name = trainer.name or "트레이너"
+    for member_id in member_ids:
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.TRAINER_MESSAGE,
+            title="담당 트레이너 연결이 해제되었어요",
+            body=f"{trainer_name} 트레이너가 서비스를 떠났습니다. 새 트레이너를 찾아보세요.",
+        )
+    # 예약만 있고 담당은 아닌 회원에게도 알린다 — 잡아 둔 수업이 사라진다.
+    for member_id in booked_member_ids - set(member_ids):
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.TRAINER_MESSAGE,
+            title="예약한 수업이 취소되었어요",
+            body=f"{trainer_name} 트레이너가 서비스를 떠나 예약이 취소되었습니다.",
+        )
+
+    db.delete(trainer)
+    db.commit()
+
 
 def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순)."""
@@ -768,27 +842,84 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
         raise ScheduleConflict(
             "예약으로 생성된 일정은 일반 일정 화면에서 삭제할 수 없습니다."
         )
-    # 완료 세션은 완료 시 파생된 운동기록(sched-hist-{id})을 갖는다. 세션을 지우면 그
-    # 파생 기록도 함께 지워 고아 레코드가 회원 이력에 남지 않게 한다(완료 시 적재의 역연산).
+    # 완료 세션은 완료 시 파생된 기록을 갖는다 — 트레이너 이력(sched-hist-{id})과
+    # 회원 운동 기록(sched-ex-{id}) 두 개다. 세션을 지우면 둘 다 함께 지워 고아
+    # 레코드가 남지 않게 한다(완료 시 적재의 역연산). 회원 쪽을 빠뜨리면 회원의
+    # 주간 집계에만 지워진 PT 가 계속 잡힌다.
     if s.status == "완료":
         hist = db.get(RoutineHistory, f"sched-hist-{s.id}")
         if hist is not None:
             db.delete(hist)
+        derived = db.get(ExerciseSession, _derived_exercise_id(s.id))
+        if derived is not None:
+            db.delete(derived)
     db.delete(s)
     db.commit()
     return True
 
 
+#: PT 완료가 파생시키는 회원 운동 기록의 종류. `TrainerSchedule.type` 은 화면용
+#: 한국어 라벨('1:1 PT'|'상담')이고 `ExerciseSession.type` 은 계약 값이라 매핑이
+#: 필요하다. 여기 없는 종류는 **운동이 아니므로 기록을 만들지 않는다** — 상담
+#: 한 시간이 회원 주간 운동량으로 잡히면 집계가 거짓이 된다.
+_SESSION_EXERCISE_TYPE = {"1:1 PT": "strength"}
+
+#: PT 는 트레이너가 붙어서 끌고 가는 시간이라 수기 입력의 '보통'보다 낮게 볼
+#: 이유가 없다. 강도를 따로 입력받는 자리가 트레이너 앱에 없으므로 기본값을 쓴다.
+_PT_INTENSITY = "moderate"
+
+
+def _derived_exercise_id(session_id: str) -> str:
+    """PT 완료가 파생시킨 운동 기록의 id — 슬롯 기준 결정론적.
+
+    `sched-hist-{id}` 와 같은 이유다. 동시 완료나 재호출에도 같은 id 가 나와
+    중복 행이 생기지 않는다.
+    """
+    return f"sched-ex-{session_id}"
+
+
+def _add_member_exercise_log(
+    db: Session, s: TrainerSchedule
+) -> ExerciseSession | None:
+    """완료된 PT 세션을 회원 쪽 운동 기록으로 적재. 대상이 아니면 None.
+
+    `RoutineHistory` 는 트레이너 화면 전용이라(`/trainer/clients/{id}/history`)
+    회원 앱에서는 읽지 않는다. 회원의 운동 탭·홈 대시보드 주간 집계는 전부
+    `ExerciseSession` 에서 나오므로, 두 곳 모두에 남겨야 회원이 받은 PT 가
+    자기 기록에 잡힌다. (#499)
+    """
+    ex_type = _SESSION_EXERCISE_TYPE.get(s.type)
+    if s.member_id is None or ex_type is None or s.duration_minutes <= 0:
+        return None
+    row = ExerciseSession(
+        id=_derived_exercise_id(s.id),
+        user_id=s.member_id,
+        # 주차·요일은 완료 시점이 아니라 **세션 날짜** 기준이다. 지난 주 세션을
+        # 오늘 완료 처리해도 그 주의 집계로 들어가야 한다.
+        week_start=exercise_service.monday_of_str(s.date),
+        day_label=exercise_service.weekday_label_of(s.date),
+        type=ex_type,
+        minutes=s.duration_minutes,
+        calories=exercise_service.estimate_calories(
+            ex_type, s.duration_minutes, _PT_INTENSITY
+        ),
+        intensity=_PT_INTENSITY,
+        source="trainer_pt",
+    )
+    db.add(row)
+    return row
+
+
 def complete_session(
     db: Session, trainer_id: str, session_id: str, note: str
 ) -> ScheduleSessionOut | None:
-    """예정→완료. 매칭된 회원이 있으면 운동기록(RoutineHistory)으로 적재해
-    '예약→수업→기록' 루프를 닫는다.
+    """예정→완료. 매칭된 회원이 있으면 트레이너 쪽 기록(RoutineHistory)과 회원 쪽
+    기록(ExerciseSession)으로 함께 적재해 '예약→수업→기록' 루프를 닫는다.
 
     - 소유 슬롯 아님 → None(404).
     - 공백/미래 일정 → ScheduleError(400).
     - 이미 완료 → 그대로 반환(멱등, 중복 기록 없음).
-    기록 id 는 슬롯 기준 결정론적(sched-hist-{id})이라 동시/재호출에도 중복되지 않는다.
+    두 기록 모두 id 가 슬롯 기준 결정론적이라 동시/재호출에도 중복되지 않는다.
     """
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
@@ -831,6 +962,7 @@ def complete_session(
             exercises_json=json.dumps(exercises, ensure_ascii=False),
             trainer_note=note,
         ))
+        _add_member_exercise_log(db, s)
     db.commit()
     db.refresh(s)
     return _schedule_out(s)

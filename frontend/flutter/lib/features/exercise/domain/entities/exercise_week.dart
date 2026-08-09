@@ -35,6 +35,22 @@ ExerciseIntensity _exerciseIntensityFromString(String? s) =>
       orElse: () => ExerciseIntensity.moderate,
     );
 
+/// 이 기록을 누가 만들었는가.
+///
+/// [ExerciseSource.trainerPt] 는 트레이너가 PT 세션을 완료 처리해 서버가 파생시킨
+/// 기록이다(#499). 근거가 트레이너에게 있어 회원이 고칠 수 없고, 서버도 수정·삭제를
+/// 409 로 거절한다 — 화면에서 편집 동작을 감추는 것은 그 규칙을 앞당겨 보여주는 것뿐이다.
+enum ExerciseSource { member, trainerPt }
+
+/// 서버 계약값(`member`|`trainer_pt`) → [ExerciseSource].
+///
+/// 모르는 값과 누락은 [ExerciseSource.member] 로 떨어뜨린다. 이 필드를 모르는
+/// 예전 응답(그리고 데모/목 경로)에서 기록이 통째로 잠기면 안 된다.
+ExerciseSource _exerciseSourceFromString(String? s) => switch (s) {
+  'trainer_pt' => ExerciseSource.trainerPt,
+  _ => ExerciseSource.member,
+};
+
 class ExerciseSession {
   const ExerciseSession({
     this.id,
@@ -46,6 +62,7 @@ class ExerciseSession {
     this.dateLabel,
     this.timeLabel,
     this.items = const <String>[],
+    this.source = ExerciseSource.member,
   });
 
   final String? id;
@@ -70,6 +87,12 @@ class ExerciseSession {
   /// Optional; empty for the legacy mock rows.
   final List<String> items;
 
+  /// 기록의 출처. 기본값은 회원이 직접 남긴 것.
+  final ExerciseSource source;
+
+  /// 회원이 이 기록을 고칠 수 있는가. 트레이너가 완료 처리한 PT 기록은 불가.
+  bool get isEditable => source == ExerciseSource.member;
+
   factory ExerciseSession.fromJson(Map<String, Object?> json) =>
       ExerciseSession(
         id: json['id'] as String?,
@@ -83,6 +106,7 @@ class ExerciseSession {
         items: ((json['items'] as List<Object?>?) ?? const <Object?>[])
             .cast<String>()
             .toList(),
+        source: _exerciseSourceFromString(json['source'] as String?),
       );
 }
 

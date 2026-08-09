@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A compact labelled bar series (주간 이행률, 세션 수 …).
 ///
@@ -217,11 +218,12 @@ class Sparkline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (values.length < 2) {
+      final AppLocalizations l = AppLocalizations.of(context);
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text(
-            '데이터가 아직 부족해요',
+            l.chartNotEnoughData,
             style: TextStyle(fontSize: 11, color: AppColors.subtleForeground),
           ),
         ),

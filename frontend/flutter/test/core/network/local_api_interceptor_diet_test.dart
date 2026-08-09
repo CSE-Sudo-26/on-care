@@ -25,6 +25,57 @@ void main() {
   });
 
   test(
+    'GET /diet/days/{date} returns only that date or an empty day',
+    () async {
+      await db
+          .into(db.dietEntries)
+          .insert(
+            DietEntriesCompanion.insert(
+              id: 'diet-past',
+              date: '2026-08-03',
+              mealType: 'lunch',
+              timeLabel: '12:00',
+              foodsJson: jsonEncode(<Map<String, Object?>>[
+                <String, Object?>{
+                  'name': '과거 식사',
+                  'calories': 420,
+                  'carbs_g': 40.0,
+                  'protein_g': 20.0,
+                  'fat_g': 10.0,
+                },
+              ]),
+              totalCalories: 420,
+              sodiumMg: const Value(350),
+              sugarG: const Value(7.5),
+            ),
+          );
+
+      final past = await dio.get<Map<String, Object?>>('/diet/days/2026-08-03');
+      final empty = await dio.get<Map<String, Object?>>(
+        '/diet/days/2026-08-02',
+      );
+
+      expect(past.statusCode, 200);
+      expect(past.data!['total_calories'], 420);
+      expect(past.data!['ai_coach_message'], '균형 잡힌 하루였어요. 내일도 이대로 가요!');
+      expect((past.data!['entries']! as List<Object?>).length, 1);
+      expect(empty.statusCode, 200);
+      expect(empty.data!['entries'], isEmpty);
+      expect(empty.data!['total_calories'], 0);
+    },
+  );
+
+  test('GET /diet/days/{date} rejects an invalid date like backend', () async {
+    final response = await dio.get<Map<String, Object?>>(
+      '/diet/days/not-a-date',
+      options: Options(validateStatus: (status) => status == 422),
+    );
+
+    expect(response.statusCode, 422);
+    expect(response.data!['detail'], isA<List<Object?>>());
+  });
+
+  test(
     'POST /diet/analyze returns an analysis and persists an entry',
     () async {
       final form = FormData.fromMap(<String, Object?>{

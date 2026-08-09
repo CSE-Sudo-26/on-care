@@ -1,0 +1,1287 @@
+{
+  "@@locale": "en",
+  "appTitle": "On-Care Trainer",
+  "@appTitle": {
+    "description": "Trainer app title shown in the OS task switcher and browser tab."
+  },
+  "scheduleStatusUpcoming": "Upcoming",
+  "@scheduleStatusUpcoming": {
+    "description": "Display label for a scheduled session. The stored value stays Korean — see ScheduleStatus."
+  },
+  "scheduleStatusDone": "Done",
+  "@scheduleStatusDone": {
+    "description": "Display label for a completed session."
+  },
+  "scheduleStatusGap": "Open",
+  "@scheduleStatusGap": {
+    "description": "Display label for an empty slot in the trainer's day."
+  },
+  "sessionTypePersonalTraining": "1:1 PT",
+  "@sessionTypePersonalTraining": {
+    "description": "Display label for a personal training session."
+  },
+  "sessionTypeConsultation": "Consultation",
+  "@sessionTypeConsultation": {
+    "description": "Display label for a consultation session."
+  },
+  "navDashboard": "Dashboard",
+  "navClients": "Clients",
+  "navSchedule": "Schedule",
+  "navCoaching": "Coaching",
+  "navReports": "Reports",
+  "navConsultations": "Requests",
+  "navMy": "My page",
+  "actionSave": "Save",
+  "actionCancel": "Cancel",
+  "actionEdit": "Edit",
+  "actionDelete": "Delete",
+  "actionClose": "Close",
+  "actionConfirm": "Confirm",
+  "actionSend": "Send",
+  "actionRetry": "Retry",
+  "actionChange": "Change",
+  "appWordmarkTrainer": "Trainer",
+  "@appWordmarkTrainer": {
+    "description": "Second word of the sidebar wordmark, rendered in the navy primary next to 'On-Care'."
+  },
+  "appAvatarFallback": "T",
+  "@appAvatarFallback": {
+    "description": "Single-character avatar shown when the trainer has no name yet. Keep it one character."
+  },
+  "sidebarMyTooltip": "{name} · My page",
+  "@sidebarMyTooltip": {
+    "description": "Tooltip on the collapsed sidebar's profile avatar.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authTagline": "The trainer-only app for managing your clients",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authSignIn": "Sign in",
+  "authNoAccount": "Don't have an account?",
+  "authSignUp": "Sign up",
+  "authBrowseDemo": "Explore the demo without signing in",
+  "authOr": "or",
+  "authContinueKakao": "Continue with Kakao",
+  "authContinueGoogle": "Continue with Google",
+  "authSignUpSubtitle": "Create an On-Care account and start managing clients",
+  "authName": "Name",
+  "authPasswordHint": "Password (8+ characters)",
+  "authPasswordConfirm": "Confirm password",
+  "authInviteCode": "Gym invite code",
+  "authInviteCodeHelp": "Enter the code issued by the gym you work at.",
+  "authSignUpAndStart": "Sign up and start",
+  "authHasAccount": "Already have an account?",
+  "authErrEmptyCredentials": "Enter your email and password",
+  "authErrSocialFailed": "Social sign-in failed. Please try again in a moment.",
+  "authErrSignInFailed": "Sign-in failed. Please try again in a moment.",
+  "authErrPasswordTooShort": "Password must be at least 8 characters",
+  "authErrPasswordMismatch": "Passwords don't match",
+  "authErrInviteCodeRequired": "Enter the invite code you received from your gym",
+  "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
+  "dashTitle": "Dashboard",
+  "dashAddSchedule": "Add session",
+  "dashCreateAiRoutine": "Create AI routine",
+  "dashLoadFailed": "Couldn't load the dashboard",
+  "dashTodayReservations": "Today's bookings",
+  "dashUnitCount": "",
+  "dashUnitPeople": "",
+  "dashSeeInSchedule": "View in schedule",
+  "dashMyClients": "My clients",
+  "dashDormantClients": "{count} dormant",
+  "@dashDormantClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAllActive": "All active",
+  "dashNeedsReply": "Awaiting reply",
+  "dashWaitingClients": "{count} waiting",
+  "@dashWaitingClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAllReplied": "All replied",
+  "dashAttentionClients": "Needs attention",
+  "dashNoIssues": "No issues",
+  "dashCheckSodiumCompletion": "Check sodium & completion",
+  "dashWeeklyCompletion": "Weekly session completion",
+  "dashAveragePercent": "Avg {percent}%",
+  "@dashAveragePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "dashNoRecordsThisWeek": "No records this week yet",
+  "dashAiSummaryTitle": "AI coaching summary",
+  "dashToday": "Today",
+  "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
+  "dashAiUnread": "{count} clients are waiting for a reply. Check their chats first, then adjust today's routines.",
+  "@dashAiUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiSodium": "{over} of your {total} clients went over their sodium target this week. Suggest a low-sodium diet and cardio-led routines.",
+  "@dashAiSodium": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "over": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiLowCompletion": "{count} clients are below {threshold}% weekly completion. Ease the intensity and rebuild the habit.",
+  "@dashAiLowCompletion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "threshold": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
+  "@dashAiAllOnTrack": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAttentionTitle": "Clients to check",
+  "dashMoreCount": "+{count}",
+  "@dashMoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashNoAttention": "No one needs attention right now",
+  "dashTodaySchedule": "Today's schedule",
+  "dashSeeAll": "See all",
+  "dashScheduleLoadFailed": "Couldn't load the schedule",
+  "dashNoScheduleToday": "Nothing scheduled today",
+  "dashEmptySlot": "Open slot",
+  "weekdayMon": "Mon",
+  "weekdayTue": "Tue",
+  "weekdayWed": "Wed",
+  "weekdayThu": "Thu",
+  "weekdayFri": "Fri",
+  "weekdaySat": "Sat",
+  "weekdaySun": "Sun",
+  "@dashUnitCount": {
+    "description": "Unit after a booking count. Korean uses the counter 건; English omits it because the tile label already says what is being counted. Intentionally empty."
+  },
+  "@dashUnitPeople": {
+    "description": "Unit after a person count. Korean uses the counter 명; English omits it. Intentionally empty."
+  },
+  "clientsLoadFailed": "Couldn't load client data",
+  "clientsCountSummary": "{total} clients · {active} active",
+  "@clientsCountSummary": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsNew": "New client",
+  "clientsTitle": "Clients",
+  "clientsPickHint": "Pick a client on the left to open\ntheir chat, meals and workouts here",
+  "clientsEmpty": "No clients yet",
+  "clientsEmptyForFilter": "No clients match {filter}",
+  "@clientsEmptyForFilter": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      }
+    }
+  },
+  "clientsFilterSummary": "{filter} · {shown}/{total}",
+  "@clientsFilterSummary": {
+    "placeholders": {
+      "filter": {
+        "type": "String"
+      },
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientsSeeAll": "See all",
+  "clientsNameRequired": "Enter a name",
+  "clientsAddFailed": "Couldn't add the client. Please try again",
+  "clientsDuplicateName": "A client with that name already exists",
+  "clientsAddTitle": "Add a client",
+  "clientsNameLabel": "Client name",
+  "clientsGoalLabel": "Goal (e.g. weight loss · strength)",
+  "clientsAddAction": "Add",
+  "clientTabDiet": "Meals",
+  "clientTabWorkout": "Workouts",
+  "clientNotFound": "Client not found",
+  "clientBackToList": "Back to clients",
+  "clientList": "Client list",
+  "metricCalories": "Calories",
+  "metricSodium": "Sodium",
+  "metricSugar": "Sugar",
+  "clientWeeklyReport": "Weekly report",
+  "clientAskAi": "Ask AI",
+  "clientActive": "Active",
+  "clientDormant": "Dormant",
+  "clientClosePanel": "Close panel",
+  "clientChat": "Chat",
+  "clientChatWithUnread": "Chat with {name}, {count} unread",
+  "@clientChatWithUnread": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientChatWith": "Chat with {name}",
+  "@clientChatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTooLong": "Message is too long (2000 characters max)",
+  "chatSendFailed": "Couldn't send the message. Please try again",
+  "chatLoadFailed": "Couldn't load the conversation",
+  "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
+  "@chatDemoAnalyzed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatDemoReportSent": "A summary report was sent to you",
+  "chatDemoRoutineSent": "An AI-built routine was sent to {name}",
+  "@chatDemoRoutineSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatDemoNotified": "The client app was notified",
+  "chatInputHint": "Type a message...",
+  "coachSheetThisClient": "this client",
+  "coachSheetLoadFailed": "Couldn't load AI coaching",
+  "coachSheetTitle": "Coaching for {name}",
+  "@coachSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachSheetSubtitle": "Answers are grounded in this client's meals and workouts.",
+  "coachSheetHint": "e.g. Sodium keeps running high — what meals should I suggest?",
+  "coachSheetSources": "Sources",
+  "coachSheetAsk": "Ask",
+  "coachSheetAskAgain": "Ask again",
+  "consultTitle": "Consultation requests",
+  "consultPendingCount": "{count} pending",
+  "@consultPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "consultNoPending": "No pending requests",
+  "consultShowAll": "All",
+  "consultShowPending": "Pending only",
+  "consultLoadFailed": "Couldn't load consultation requests",
+  "consultRetryLater": "Please try again in a moment",
+  "consultEmptyPending": "No pending consultation requests",
+  "consultEmptyHistory": "No consultation history",
+  "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
+  "consultActionFailed": "Couldn't process the request",
+  "consultApproved": "{name} is now one of your clients",
+  "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultRejected": "Request declined",
+  "consultTargetGym": "Gym enquiry",
+  "consultTargetTrainer": "Direct request",
+  "consultExerciseGoal": "Training goal",
+  "consultHealthPurpose": "Health purpose",
+  "consultPreferredTime": "Preferred time",
+  "consultGym": "Gym",
+  "consultReject": "Decline",
+  "consultApprove": "Approve",
+  "consultRejectTitle": "Decline request",
+  "consultRejectNotice": "The reason you write is sent to the member as a notification.",
+  "consultRejectHint": "e.g. We're fully booked this month",
+  "consultRejectAction": "Decline",
+  "consultStatusApproved": "Added as a client",
+  "workoutRecords": "Workout log",
+  "workoutLoadFailed": "Couldn't load the workout log",
+  "workoutEmpty": "No workouts logged yet",
+  "routinesAssigned": "Assigned routines",
+  "routineNew": "New routine",
+  "routinesLoadFailed": "Couldn't load routines",
+  "routinesEmpty": "No routines assigned to this client yet",
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "ptProgramHistory": "PT program history",
+  "scheduleLoadFailed": "Couldn't load the schedule",
+  "ptSessionsEmpty": "No PT sessions yet",
+  "labelToday": "Today",
+  "sessionTypeAndDuration": "{type} · {minutes} min",
+  "@sessionTypeAndDuration": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "programNone": "No program recorded",
+  "weekCompletionRate": "This week's completion",
+  "legendDone": "Done",
+  "legendPartial": "Partial",
+  "legendMissed": "Missed",
+  "clientFeedback": "Client feedback",
+  "trainerNote": "Trainer's note",
+  "dietLoadFailed": "Couldn't load meals",
+  "dietTodaySummary": "Today's nutrition",
+  "dietSodiumTrend": "Sodium over the last 7 days",
+  "dietAverageMg": "Avg {value}mg",
+  "@dietAverageMg": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumOverDays": "Over the {target}mg target on {days} of the last 7 days.",
+  "@dietSodiumOverDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumAllWithin": "Under the {target}mg target every day this week. Nice!",
+  "@dietSodiumAllWithin": {
+    "placeholders": {
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumValue": "Sodium {value}mg",
+  "@dietSodiumValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "dietAiAnalysis": "AI analysis",
+  "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
+  "@dietAiOverSodium": {
+    "placeholders": {
+      "over": {
+        "type": "int"
+      }
+    }
+  },
+  "dietAiBalanced": "Today's meals are well balanced. Keep the current routine.",
+  "consultStatusRejected": "Declined",
+  "consultStatusRejectedWithNote": "Declined · {note}",
+  "@consultStatusRejectedWithNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "dateToday": "Today",
+  "dateTomorrow": "Tomorrow",
+  "dateYesterday": "Yesterday",
+  "dateMonthDayWeekday": "{month}/{day} ({weekday})",
+  "@dateMonthDayWeekday": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      },
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "datePrefixed": "{prefix} · {date}",
+  "@datePrefixed": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dateMonthDay": "{month}/{day}",
+  "@dateMonthDay": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "dateRange": "{start} – {end}",
+  "@dateRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsTitle": "Reports",
+  "reportsSubtitle": "Week of {week} · operating metrics and client reports",
+  "@reportsSubtitle": {
+    "placeholders": {
+      "week": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPrevWeek": "Previous week",
+  "reportsNextWeek": "Next week",
+  "reportsLoadFailed": "Couldn't load reports",
+  "reportsNoClients": "No clients yet, so there's nothing to report on",
+  "reportsWeekly": "Weekly report",
+  "reportsSendFailed": "Couldn't send the report. Please try again",
+  "reportsSent": "Report sent to {name}",
+  "@reportsSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsScheduleWarning": "This week's schedule didn't load, so session counts may be missing",
+  "reportsSessionsThisWeek": "Sessions this week",
+  "unitTimes": "",
+  "unitDays": "d",
+  "reportsCompletionRate": "{rate}% completed",
+  "@reportsCompletionRate": {
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsProgramReady": "Programs ready",
+  "reportsSessionsWithRoutine": "Sessions with a routine",
+  "reportsActiveClients": "Active clients",
+  "reportsPickClient": "Pick a client",
+  "reportsClientWeekly": "{name}'s weekly report",
+  "@reportsClientWeekly": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsPtSessions": "PT sessions",
+  "reportsCompletionAvg": "Workout completion",
+  "reportsSodiumOver": "Sodium over target",
+  "reportsCompletionByDay": "Completion by day",
+  "reportsNoLastWeekDaily": "No daily records for last week yet",
+  "reportsNoWorkoutsThisWeek": "No workouts logged this week",
+  "reportsSodiumTrend": "Sodium trend",
+  "reportsNoLastWeekSodium": "No sodium trend for last week yet",
+  "reportsSendStateSent": "Sent",
+  "reportsSendStateSending": "Sending…",
+  "reportsSendAction": "Send to client",
+  "reportBodyTitle": "📊 Weekly report · {range}",
+  "@reportBodyTitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "reportBodySessions": "PT sessions: {done}/{booked} completed",
+  "@reportBodySessions": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "booked": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodyCompletion": "Average workout completion: {avg}%",
+  "@reportBodyCompletion": {
+    "placeholders": {
+      "avg": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodySodium": "Average sodium: {avg}mg · over target on {days} days",
+  "@reportBodySodium": {
+    "placeholders": {
+      "avg": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reportBodyPraise": "Great week — let's keep this pace next week!",
+  "reportBodyEncourage": "Let's tighten things up next week. I'll adjust your routine.",
+  "schedTitle": "Schedule",
+  "schedSent": "Sent",
+  "schedDeleteTitle": "Delete session",
+  "schedDeleteConfirm": "Delete the {time} session with {name}?",
+  "@schedDeleteConfirm": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedDeleteFailed": "Couldn't delete the session. Please try again",
+  "schedCompleteFailed": "Couldn't mark it complete. Please try again",
+  "schedViewDay": "Day",
+  "schedViewWeek": "Week",
+  "schedSlots": "Booking slots",
+  "schedNewSession": "New session",
+  "schedLoadFailed": "Couldn't load the schedule",
+  "schedEmptyDay": "Nothing scheduled for this day.\nAdd a session below.",
+  "schedCompleteTitle": "Mark session complete",
+  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
+  "@schedCompleteBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedNoteOptional": "Trainer's note (optional)",
+  "schedCompleteAction": "Mark complete",
+  "schedNewClient": "New client",
+  "schedSaveFailed": "Couldn't save the session. Please try again",
+  "schedAddTitle": "Add a session",
+  "schedEditTitle": "Edit session",
+  "schedFieldClient": "Client",
+  "schedFieldType": "Type",
+  "schedFieldTime": "Time",
+  "schedHourSuffix": ":00",
+  "schedMinuteSuffix": "min",
+  "schedFieldDuration": "Duration",
+  "schedNote": "Trainer's note",
+  "schedNoteHint": "Anything to prepare, or notes about this client",
+  "schedAddAction": "Add",
+  "schedSaveAction": "Save",
+  "progInvalid": "Check the exercise name and set count",
+  "progSaveFailed": "Couldn't save the program. Please try again",
+  "progEditTitle": "Edit program",
+  "progAddExercise": "Add exercise",
+  "progNoteHint": "Notes to follow while running this program",
+  "progSaving": "Saving...",
+  "progSaveAction": "Save program",
+  "progExerciseName": "Exercise",
+  "progDeleteExercise": "Remove exercise",
+  "progSets": "Sets",
+  "progReps": "Reps/time",
+  "progWeight": "Weight",
+  "progOptional": "Optional",
+  "progSetsByReps": "{sets} × {reps}",
+  "@progSetsByReps": {
+    "placeholders": {
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "String"
+      }
+    }
+  },
+  "progEmpty": "No program planned yet",
+  "progEmptyHint": "Build one in the AI routine tab, or agree on it over chat first.",
+  "schedEmptySlotShort": "Empty",
+  "schedSentToClient": "Sent to the client app",
+  "schedSentTo": "Sent to {name}",
+  "@schedSentTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedSentProgramTo": "Sent {name} the PT program for {date}",
+  "@schedSentProgramTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
+  "slotPastTime": "Booking slots can only be opened for future times.",
+  "slotOpened": "Booking slot opened.",
+  "slotEditTitle": "Edit booking slot",
+  "slotStartTime": "Start time",
+  "slotCapacity": "Capacity",
+  "slotBookedNow": "{count} booked",
+  "@slotBookedNow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "slotUpdated": "Booking slot updated.",
+  "slotCloseTitle": "Close booking slot",
+  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
+  "@slotCloseBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "slotClosed": "New bookings closed.",
+  "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
+  "slotManageTitle": "Manage booking slots",
+  "slotIntro": "Open times for members to book on {date}.",
+  "@slotIntro": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "slotOpenAction": "Open",
+  "slotReload": "Reload",
+  "slotEmpty": "No booking slots open on this day.",
+  "slotClosedSummary": "Closed · {booked} booked",
+  "@slotClosedSummary": {
+    "placeholders": {
+      "booked": {
+        "type": "int"
+      }
+    }
+  },
+  "slotOpenSummary": "{booked} booked · {remaining} left",
+  "@slotOpenSummary": {
+    "placeholders": {
+      "booked": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "slotCloseAction": "Close bookings",
+  "myCareerInvalid": "Enter years of experience between 0 and 80.",
+  "myProfileSaveFailed": "Couldn't save your profile.",
+  "myGymChangeFailed": "Couldn't change your gym. The rest of your profile was saved.",
+  "myTabProfile": "My profile",
+  "myTabSettings": "Settings",
+  "mySaving": "Saving",
+  "myEditProfile": "Edit profile",
+  "mySaved": "Changes saved",
+  "myCertifications": "Certifications",
+  "myMonthStats": "This month",
+  "myGym": "My gym",
+  "myNotifications": "Notifications",
+  "myNotifNewMessage": "New message alerts",
+  "myNotifNewMessageHint": "A sidebar badge appears when a client messages you",
+  "myNotifSessionReminder": "Session reminders",
+  "myNotifSessionReminderHint": "Upcoming sessions are highlighted on the dashboard",
+  "myReminderLead": "Remind me",
+  "myMinutesBefore": "{minutes} min before",
+  "@myMinutesBefore": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "myAccount": "Account",
+  "myChangePassword": "Change password",
+  "myChangePasswordHint": "We'll confirm your current password first",
+  "myChangePasswordDemo": "Demo mode has no account, so this is unavailable",
+  "myLoginAccount": "Signed in as",
+  "myAppInfo": "About",
+  "myService": "Service",
+  "myVersion": "Version",
+  "myContact": "Contact",
+  "myPasswordChanged": "Password changed",
+  "myCareerYears": "{career} experience",
+  "@myCareerYears": {
+    "placeholders": {
+      "career": {
+        "type": "String"
+      }
+    }
+  },
+  "myFieldName": "Name (account)",
+  "myFieldEmail": "Email (account)",
+  "myFieldPhone": "Phone",
+  "myFieldSpecialty": "Specialty",
+  "myFieldCareer": "Experience",
+  "myFieldIntro": "About me",
+  "myAddCertification": "Add a certification...",
+  "myAdd": "Add",
+  "myStatClients": "Clients",
+  "myStatSessionsDone": "Sessions done",
+  "myStatRoutinesSent": "Routines sent",
+  "myGymName": "Gym name",
+  "myGymAddress": "Address",
+  "myGymHours": "Hours",
+  "myGymPhone": "Phone",
+  "myGymOpen": "Open now",
+  "myGymListFailed": "Couldn't load the gym list.",
+  "myNoGym": "No gym",
+  "mySignOut": "Sign out",
+  "myPwCurrentRequired": "Enter your current password",
+  "myPwTooShort": "The new password must be at least {min} characters",
+  "@myPwTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "myPwMismatch": "The new passwords don't match",
+  "myPwChangeFailed": "Couldn't change your password",
+  "myPwChangeRetry": "That didn't work. Please try again in a moment",
+  "myPwCurrent": "Current password",
+  "myPwNew": "New password ({min}+ characters)",
+  "@myPwNew": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "myPwConfirm": "Confirm new password",
+  "myPwChanging": "Changing…",
+  "myPwChangeAction": "Change",
+  "myProfileEmpty": "The profile response was empty.",
+  "myInputInvalid": "Please check your input.",
+  "myGymConflict": "That conflicts with your current gym.",
+  "myGymNotFound": "Gym not found.",
+  "myPwDemoUnavailable": "Password changes aren't available in demo mode",
+  "mySettingsSaveFailed": "Couldn't save your settings. Please try again in a moment",
+  "myYearsSuffix": "{years} years",
+  "@myYearsSuffix": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "routineTypeWalking": "Walking",
+  "@routineTypeWalking": {
+    "description": "Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes."
+  },
+  "routineTypeCardio": "Cardio",
+  "routineTypeStrength": "Strength",
+  "routineTypeYoga": "Yoga",
+  "routineTypeStretching": "Stretching",
+  "routineTypeOther": "Other",
+  "routineFieldType": "Exercise type",
+  "routineFieldMinutes": "Duration",
+  "routineFieldIntensity": "Intensity",
+  "intensityLight": "Light",
+  "intensityModerate": "Moderate",
+  "intensityHigh": "High",
+  "coachTitle": "AI coaching",
+  "coachSubtitle": "Routines built from diet and health data",
+  "coachSendDone": "Sent",
+  "coachSendNoResponse": "No response came back. Check the client's received routines before sending again",
+  "coachSendFailed": "Couldn't send. Please try again",
+  "coachCustomRoutine": "AI custom routine",
+  "coachNeedOneExercise": "Add at least one exercise",
+  "coachScheduleFailed": "Couldn't add it to the schedule. Please try again",
+  "coachNoClients": "No clients yet",
+  "coachTodayDiet": "Today's meals",
+  "coachRecommended": "AI suggestions",
+  "coachBackToList": "Back to suggestions",
+  "coachReviewed": "AI-generated, reviewed by you",
+  "coachTrainerAdded": "Added by trainer",
+  "coachClientNotified": "The client app was notified",
+  "coachRegisteredOn": "Added to the {date} schedule",
+  "@coachRegisteredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "coachRegisterOn": "Add to the {date} PT schedule",
+  "@coachRegisterOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "labelTomorrow": "Tomorrow",
+  "coachFindInSchedule": "You'll find it in the Schedule tab as the {date} session's program",
+  "@coachFindInSchedule": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "coachVerdictSodium": "AI: sodium over target → favour more cardio",
+  "coachVerdictBalanced": "AI: meals well balanced → keep a strength-led routine",
+  "coachRequestCustom": "Ask AI for a custom routine",
+  "coachRequestBlurb": "We'll analyse {name}'s data, draft a recovery and a push option, and let you compare and edit them here.",
+  "@coachRequestBlurb": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachTapToEdit": "Tap to edit",
+  "coachAddExerciseManually": "+ Add an exercise",
+  "coachExerciseNameHint": "Exercise (e.g. leg press, 3 sets)",
+  "coachSentToClient": "Sent to {name}",
+  "@coachSentToClient": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachReviewAndSend": "Reviewed · send to {name}",
+  "@coachReviewAndSend": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachTemplates": "Program templates",
+  "coachTemplateSummary": "{count} exercises · {minutes} min",
+  "@coachTemplateSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachSentHistory": "Sent history",
+  "coachHistoryFailed": "Couldn't load history",
+  "coachHistoryEmpty": "You haven't sent any programs yet",
+  "coachHomework": "Homework",
+  "coachRoutineSummary": "{name} · {minutes} min",
+  "@coachRoutineSummary": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachTrainer": "Trainer",
+  "coachSessionExercises": "{type} · {count} exercises",
+  "@coachSessionExercises": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiReasonSodium": "Sodium is over target today, so lean into low-intensity cardio.",
+  "aiReasonBalanced": "Today's meals are balanced, so the current intensity is fine to keep.",
+  "aiReasonGoal": "Based on the {goal} goal and recent {last} activity.",
+  "@aiReasonGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTagRecommended": "Suggested",
+  "aiTagExisting": "Existing suggestion",
+  "aiTagCustom": "Custom",
+  "aiExistingBlurb": "The existing suggestion, based on their recent meals and workouts.",
+  "aiOptionRecovery": "Recovery",
+  "aiOptionPush": "Push",
+  "aiOptionExisting": "Existing",
+  "aiGenerateFailed": "AI generation failed. Please try again in a moment",
+  "aiExerciseNameRequired": "Enter an exercise name",
+  "aiKeepOneExercise": "Keep at least one exercise",
+  "aiRoutineSent": "Routine sent to {name}",
+  "@aiRoutineSent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiExerciseWithMinutes": "{name} · {minutes} min",
+  "@aiExerciseWithMinutes": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "aiCustomRoutineNamed": "AI custom routine ({option})",
+  "@aiCustomRoutineNamed": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysing": "AI is analysing…",
+  "aiGenerateCandidates": "Generate candidates",
+  "aiReviewDone": "Reviewed",
+  "aiRoutineFor": "AI routine · {name}",
+  "@aiRoutineFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysedData": "Analysed this client's data",
+  "aiGoal": "Goal",
+  "aiTodaySodium": "Sodium today",
+  "aiOverTarget": " · over target",
+  "aiBasisCompletion": "{goal} · based on {rate}% completion",
+  "@aiBasisCompletion": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "aiBasisRuleBased": " · rule-based",
+  "aiTotalMinutesIntensity": "{total} min total · {intensity} intensity",
+  "@aiTotalMinutesIntensity": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "aiExerciseBullet": "· {name} · {minutes} min ",
+  "@aiExerciseBullet": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "aiEditOption": "Edit {option}",
+  "@aiEditOption": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEditBlurb": "Edit names, durations and structure just like the existing suggestion.",
+  "aiAddExerciseManually": "Add an exercise",
+  "aiExerciseNameExample": "e.g. leg press, 3 sets",
+  "aiRegister": "Add",
+  "aiNoteForClient": "A note to send with it",
+  "aiReviewedSuggestion": "Reviewed · AI suggestion ({option})",
+  "@aiReviewedSuggestion": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEditsApplied": "Your choice and edits are now in the final suggestion list.",
+  "aiGoToChat": "Open chat with {name}",
+  "@aiGoToChat": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiSending": "Sending…",
+  "aiSendToClient": "Send to client",
+  "aiGoToChatHint": "Use the button below to jump into their chat and explain it.",
+  "aiStepConditions": "Set up",
+  "aiStepReview": "Review",
+  "aiStepDone": "Done",
+  "aiStepperLabel": "Custom routine progress",
+  "coachTemplateSummaryWithGoal": "{goal} · {count} exercises · {minutes} min",
+  "@coachTemplateSummaryWithGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "aiWithinTarget": " · within target",
+  "aiRecentRoutine": "Recent routine",
+  "aiTrainerNoteEditable": "Trainer's note · editable",
+  "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
+  "aiGenerateConditions": "Conditions",
+  "aiCompareCandidates": "Compare the candidates",
+  "goalWeightLoss": "Weight loss",
+  "goalStrength": "Strength",
+  "goalFitness": "Fitness",
+  "goalPosture": "Posture",
+  "goalHealth": "General health",
+  "goalOther": "Other",
+  "purposeWeight": "Weight management",
+  "purposeChronic": "Chronic condition",
+  "purposeRehab": "Rehabilitation",
+  "purposeGeneral": "General wellbeing",
+  "purposeNone": "None",
+  "purposeOther": "Other",
+  "slotMorning": "Morning",
+  "slotAfternoon": "Afternoon",
+  "slotEvening": "Evening",
+  "slotFlexible": "Flexible",
+  "unknownMember": "Unknown member",
+  "filterAll": "All",
+  "alertSodiumOver": "Sodium over",
+  "alertLowCompletion": "Low completion",
+  "alertAwaitingReply": "Awaiting reply",
+  "clientLastRoutine": "Last routine",
+  "metricOverBy": "{unit} over",
+  "@metricOverBy": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "clientNoGoal": "No goal set",
+  "clientNoChat": "No messages yet",
+  "chatJustNow": "Just now",
+  "chartNotEnoughData": "Not enough data yet",
+  "reportEmptyResponse": "The report response was empty",
+  "authErrInvalidCredentials": "That email or password isn't right.",
+  "authErrEmailTaken": "That email is already registered.",
+  "authErrInviteCodeInvalid": "That invite code isn't valid. Please check with your gym.",
+  "authErrSessionExpired": "Your session expired. Please sign in again.",
+  "authErrNoSocialToken": "No social sign-in token",
+  "authErrNetwork": "Please check your network connection.",
+  "authErrGeneric": "Something went wrong signing in. Please try again in a moment.",
+  "authErrEmptyResponse": "The response was empty.",
+  "coachDemoUnavailable": "AI coaching isn't available in demo mode",
+  "coachNotMyClient": "That isn't one of your clients",
+  "coachAskFailed": "Couldn't send your question",
+  "consultDemoUnavailable": "Consultation actions aren't available in demo mode",
+  "slotCapacityRange": "Capacity must be between 1 and 100.",
+  "slotFutureOnly": "Booking slots can only be set for future times.",
+  "slotNotFound": "Booking slot not found.",
+  "slotCapacityBelowBooked": "Capacity can't be lower than the number already booked.",
+  "authErrNotTrainer": "Please sign in with a trainer account.",
+  "aiBasisGoalCompletion": "{goal} · based on {rate}% completion",
+  "@aiBasisGoalCompletion": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "aiTotalAndIntensity": "{total} min total · {intensity}",
+  "@aiTotalAndIntensity": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "aiBulletExercise": "· {name} · {minutes} min ",
+  "@aiBulletExercise": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "schedHourLabel": "{hour}:00",
+  "@schedHourLabel": {
+    "placeholders": {
+      "hour": {
+        "type": "String"
+      }
+    }
+  },
+  "schedMinuteLabel": "{minute} min",
+  "@schedMinuteLabel": {
+    "placeholders": {
+      "minute": {
+        "type": "String"
+      }
+    }
+  },
+  "progDefaultReps": "10 reps",
+  "appTitleSpaced": "On - Care Trainer",
+  "@appTitleSpaced": {
+    "description": "Login screen wordmark with the spaced hyphen used in the visual design."
+  },
+  "navNotifications": "Notifications",
+  "notifTitle": "Notifications",
+  "notifReadAll": "Mark all read",
+  "notifEmpty": "No notifications yet",
+  "notifLoadFailed": "Couldn't load notifications",
+  "notifAllRead": "All caught up",
+  "notifReadAllFailed": "Couldn't mark them read. Please try again in a moment",
+  "notifUnreadCount": "{count} unread",
+  "@notifUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myDeleteAccount": "Delete account",
+  "myDeleteAction": "Delete",
+  "myDeleteHint": "Your client links and bookings go with it",
+  "myDeleteDemo": "Demo mode has no account to delete",
+  "myDeleteTitle": "Delete your account?",
+  "myDeleteBody": "Your client links and bookings are removed and your clients are notified. This can't be undone.",
+  "myDeleteFailed": "Couldn't delete your account. Please try again in a moment",
+  "myDeleteConfirmPrompt": "Type your name ({name}) to continue",
+  "@myDeleteConfirmPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "routineAlreadyGone": "That routine is already gone",
+  "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
+  "routineUpdated": "Routine updated",
+  "routineDeleteTitle": "Delete this routine?",
+  "routineDeleteFailed": "Couldn't delete the routine. Please try again in a moment",
+  "routineDeleted": "Routine deleted",
+  "routineEdit": "Edit routine",
+  "routineDelete": "Delete routine",
+  "routineNameRequired": "Enter a routine name",
+  "routineNameTooLong": "Keep the name to 100 characters or fewer",
+  "routineMinutesRange": "Duration must be between 0 and 600 minutes",
+  "routineReasonTooLong": "Keep the reason to 200 characters or fewer",
+  "routineFieldName": "Routine name",
+  "routineFieldMinutesLabel": "Duration (min)",
+  "routineFieldReason": "Reason (optional)",
+  "routineDeleteBody": "{name} disappears from the client's app too.",
+  "@routineDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
+}

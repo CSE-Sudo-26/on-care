@@ -40,18 +40,8 @@ def _action_for(category: str) -> NotificationAction | None:
     return _ACTION_BY_CATEGORY.get(category)
 
 
-def _time_ago(dt: datetime) -> str:
-    now = datetime.now(timezone.utc)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    sec = (now - dt).total_seconds()
-    if sec < 60:
-        return "방금 전"
-    if sec < 3600:
-        return f"{int(sec // 60)}분 전"
-    if sec < 86400:
-        return f"{int(sec // 3600)}시간 전"
-    return f"{int(sec // 86400)}일 전"
+#: 회원·트레이너 알림함이 같은 문구를 써야 해서 서비스로 옮겼다. (#503)
+_time_ago = notification_service.time_ago
 
 
 @router.get("/notifications", response_model=list[NotificationOut])

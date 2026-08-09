@@ -136,7 +136,16 @@
   "homeMealReasonFiber": "식이섬유가 풍부해요",
   "homeMealTagHighFiber": "고식이섬유",
   "homeRecBasisSodium": "최근 {days}일 평균 나트륨 {sodium}mg",
-  "@homeRecBasisSodium": {"placeholders": {"days": {"type": "int"}, "sodium": {"type": "String"}}},
+  "@homeRecBasisSodium": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "sodium": {
+        "type": "String"
+      }
+    }
+  },
   "homeRecBasisOverLimit": "권장 초과",
   "homeRecMealsTitle": "이번 주 AI 추천 식단",
   "homeViewAll": "전체 보기",
@@ -172,7 +181,7 @@
   "dietEmptyLog": "아직 기록된 식단이 없어요.\n사진으로 첫 끼니를 추가해 보세요!",
   "dietPhotoAnalysis": "사진 분석",
   "dietLoadError": "식단 정보를 불러오지 못했어요.",
-  "otherDateEmpty": "선택한 날짜의 기록은 아직 볼 수 없어요.\n오늘 날짜에서 {section}을 확인해 주세요.",
+  "otherDateEmpty": "선택한 날짜에 기록된 {section}이 없어요.",
   "dietTagSodium": "나트륨 {mg}mg",
   "dietTagSugar": "당류 {g}g",
   "dietMealBreakfast": "아침",
@@ -225,6 +234,7 @@
   "exTypeStretching": "스트레칭",
   "exTypeOther": "운동",
   "exTypeOtherChip": "기타",
+  "exSourceTrainerPt": "트레이너 PT",
   "exLevelLight": "가벼움",
   "exLevelModerate": "보통",
   "exLevelHigh": "높음",
@@ -339,14 +349,20 @@
   "exSlotWhen": "{date} {time}",
   "@exSlotWhen": {
     "placeholders": {
-      "date": { "type": "String" },
-      "time": { "type": "String" }
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "exSlotRemaining": "잔여 {count}자리",
   "@exSlotRemaining": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "exSlotFull": "예약 마감",
@@ -377,7 +393,9 @@
   "myPointsBalance": "보유 {points}P",
   "@myPointsBalance": {
     "placeholders": {
-      "points": {"type": "int"}
+      "points": {
+        "type": "int"
+      }
     }
   },
   "myPointsBenefitsSubtitle": "포인트로 받을 수 있는 혜택",
@@ -400,19 +418,31 @@
   "myGymDisconnectWithTrainerConfirm": "{gym} 연결을 삭제하시겠습니까?\n담당 트레이너 {trainer} 연결도 함께 해제됩니다.",
   "@myGymDisconnectWithTrainerConfirm": {
     "placeholders": {
-      "gym": {"type": "String"},
-      "trainer": {"type": "String"}
+      "gym": {
+        "type": "String"
+      },
+      "trainer": {
+        "type": "String"
+      }
     }
   },
   "myGymDisconnectConfirm": "{gym} 연결을 삭제하시겠습니까?",
   "@myGymDisconnectConfirm": {
-    "placeholders": {"gym": {"type": "String"}}
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
   },
   "myTrainerDisconnectConfirm": "담당 트레이너 {trainer} 연결을 삭제하시겠습니까?\n{gym} 헬스장 연결은 유지됩니다.",
   "@myTrainerDisconnectConfirm": {
     "placeholders": {
-      "trainer": {"type": "String"},
-      "gym": {"type": "String"}
+      "trainer": {
+        "type": "String"
+      },
+      "gym": {
+        "type": "String"
+      }
     }
   },
   "myGymDisconnectTooltip": "헬스장 연결 삭제",
@@ -519,5 +549,13 @@
   "exConsultStatusSection": "상담 요청 현황",
   "exConsultRejectedReasonLabel": "거절 사유",
   "exConsultRejectedNoReason": "사유를 남기지 않았어요. 다른 트레이너에게 상담을 요청해 보세요.",
-  "exConsultAcceptedGuide": "담당 트레이너와 연결되었어요. 이제 채팅으로 상담할 수 있어요."
+  "exConsultAcceptedGuide": "담당 트레이너와 연결되었어요. 이제 채팅으로 상담할 수 있어요.",
+  "exMyReservations": "내 예약",
+  "exCancelReservation": "예약 취소",
+  "exCancelKeep": "유지",
+  "exCancelConfirmTitle": "예약을 취소할까요?",
+  "exCancelFailed": "예약을 취소하지 못했어요. 잠시 후 다시 시도해 주세요",
+  "exReservationPast": "지난 예약",
+  "exCancelConfirmBody": "{when} 예약이 취소되고 그 자리가 다시 열려요.",
+  "exCancelDone": "{when} 예약을 취소했어요"
 }

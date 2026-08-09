@@ -27,6 +27,8 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// A trainer-added exercise (kept in-memory like the mock).
 class _CustomExercise {
@@ -144,13 +146,15 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     if (program.isEmpty) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    // messenger 와 같이 await 전에 잡아 둔다.
+    final AppLocalizations l = AppLocalizations.of(context);
     final total = items
         .where((i) => !_removed.contains(i.id))
         .fold<int>(0, (sum, i) => sum + (_minuteEdits[i.id] ?? i.minutes));
     final custom = _custom.fold<int>(0, (sum, c) => sum + c.minutes);
 
     // Capture who this send is for: the trainer can switch clients while
-    // it saves, and the '전송 완료' flash + edit-reset timer must land on
+    // it saves, and the 전송 완료 flash + edit-reset timer must land on
     // the starting client, not whoever is on screen when it resolves
     // (review PR 239).
     final sentFor = client.id;
@@ -178,8 +182,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         SnackBar(
           content: Text(
             ambiguousOutcome
-                ? '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'
-                : '전송에 실패했어요. 다시 시도해 주세요',
+                ? l.coachSendNoResponse
+                : l.coachSendFailed,
           ),
         ),
       );
@@ -212,20 +216,21 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// The composed routine (edited AI items minus removed, plus custom)
   /// in the schedule programJson shape.
   List<Map<String, Object?>> _composeProgram(List<AiRoutineItem> items) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return <Map<String, Object?>>[
       for (final item in items)
         if (!_removed.contains(item.id))
           <String, Object?>{
             'name': _nameEdits[item.id] ?? item.name,
             'sets': 1,
-            'reps': '${_minuteEdits[item.id] ?? item.minutes}분',
+            'reps': l.minutesShort(_minuteEdits[item.id] ?? item.minutes),
             'weight': '-',
           },
       for (final c in _custom)
         <String, Object?>{
           'name': c.name,
           'sets': 1,
-          'reps': '${c.minutes}분',
+          'reps': l.minutesShort(c.minutes),
           'weight': '-',
         },
     ];
@@ -237,6 +242,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// all-custom-exercises path is directly unit-testable — review) and the
   /// reason lists the exercise names.
   AssignedRoutine _summaryRoutine(List<AiRoutineItem> items, int totalMinutes) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final active = items.where((i) => !_removed.contains(i.id)).toList();
     final result = summaryTypeAndSource(
       aiItemTypes: <String>[for (final i in active) _typeEdits[i.id] ?? i.type],
@@ -248,7 +254,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     ];
     return AssignedRoutine(
       id: '',
-      name: 'AI 맞춤 루틴',
+      name: l.coachCustomRoutine,
       minutes: totalMinutes,
       type: result.type,
       reason: names.join(', '),
@@ -274,10 +280,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final messenger = ScaffoldMessenger.of(context);
     final program = _composeProgram(items);
     if (program.isEmpty) {
+      final AppLocalizations l = AppLocalizations.of(context);
       // Every exercise was removed — tell the trainer instead of a
       // silent no-op (review PR 220).
       messenger.showSnackBar(
-        const SnackBar(content: Text('운동을 하나 이상 추가해 주세요')),
+        SnackBar(content: Text(l.coachNeedOneExercise)),
       );
       return;
     }
@@ -303,8 +310,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       }
       // Only surface the error if that client is still on screen.
       if (_isStillSelected(registeredFor)) {
+        final AppLocalizations l = AppLocalizations.of(context);
         messenger.showSnackBar(
-          const SnackBar(content: Text('스케줄 등록에 실패했어요. 다시 시도해 주세요')),
+          SnackBar(content: Text(l.coachScheduleFailed)),
         );
       }
       return;
@@ -324,26 +332,27 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final clientsAsync = ref.watch(clientsProvider);
 
     return PageScaffold(
-      title: 'AI 코칭',
-      subtitle: '식단 · 건강 데이터 기반 루틴 생성',
+      title: l.coachTitle,
+      subtitle: l.coachSubtitle,
       scrollable: false,
       contentPadding: EdgeInsets.zero,
       child: clientsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(
+        error: (e, _) => Center(
           child: Text(
-            '고객 정보를 불러오지 못했어요',
+            l.clientsLoadFailed,
             style: TextStyle(color: AppColors.mutedForeground),
           ),
         ),
         data: (clients) {
           if (clients.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                '등록된 고객이 없어요',
+                l.coachNoClients,
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
             );
@@ -367,7 +376,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     // Single column: context, then the editor, then the
                     // library. The editor is the task — pushing it below
                     // the templates would bury it.
-                    ..._contextChildren(clients, selected),
+                    ..._contextChildren(l, clients, selected),
                     const SizedBox(height: AppSpacing.lg),
                     ..._editorChildren(selected),
                     const SizedBox(height: AppSpacing.lg),
@@ -390,7 +399,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         AppSpacing.xxl,
                       ),
                       children: <Widget>[
-                        ..._contextChildren(clients, selected),
+                        ..._contextChildren(l, clients, selected),
                         const SizedBox(height: AppSpacing.lg),
                         ..._libraryChildren(selected),
                       ],
@@ -423,11 +432,12 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// Who the routine is for, and what their day looks like — the
   /// context the editor is read against.
   List<Widget> _contextChildren(
+    AppLocalizations l,
     List<TrainerClient> clients,
     TrainerClient client,
   ) {
     return <Widget>[
-      _sectionLabel('고객 선택'),
+      _sectionLabel(l.reportsPickClient),
       const SizedBox(height: AppSpacing.sm),
       // Horizontal scroll instead of one cramped Row — stays usable as
       // the roster grows past the seeded three (codex review).
@@ -450,7 +460,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         ),
       ),
       const SizedBox(height: AppSpacing.lg),
-      _sectionLabel('오늘 식단 요약'),
+      _sectionLabel(l.coachTodayDiet),
       const SizedBox(height: AppSpacing.sm),
       _DietSummaryCard(client: client),
     ];
@@ -485,6 +495,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
   /// The routine editor column (right column on wide).
   List<Widget> _editorChildren(TrainerClient client) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final routineAsync = ref.watch(
       aiRoutineProvider((id: client.id, name: client.name)),
     );
@@ -492,13 +503,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return <Widget>[
       Row(
         children: <Widget>[
-          _sectionLabel('AI 추천 루틴'),
+          _sectionLabel(l.coachRecommended),
           if (_showOptionsFlow) ...<Widget>[
             const Spacer(),
             TextButton.icon(
               onPressed: () => setState(() => _showOptionsFlow = false),
               icon: const Icon(Icons.close, size: 16),
-              label: const Text('추천 목록으로'),
+              label: Text(l.coachBackToList),
             ),
           ],
         ],
@@ -509,8 +520,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           padding: EdgeInsets.all(AppSpacing.xl),
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (e, _) => const Text(
-          '루틴을 불러오지 못했어요',
+        error: (e, _) => Text(
+          l.routinesLoadFailed,
           style: TextStyle(color: AppColors.mutedForeground),
         ),
         data: (items) => _showOptionsFlow
@@ -539,7 +550,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                           name: exercises[index].name,
                           minutes: exercises[index].minutes,
                           type: exercises[index].type,
-                          reason: 'AI 생성 후 트레이너 검토 완료',
+                          reason: l.coachReviewed,
                         ),
                     ];
                   });
@@ -584,7 +595,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                       name: _custom[i].name,
                       minutes: _custom[i].minutes,
                       type: _custom[i].type,
-                      reason: '트레이너 추가',
+                      reason: l.coachTrainerAdded,
                       isCustom: true,
                       editingName: _editingNameId == 'custom-$i',
                       onNameTap: () =>
@@ -651,10 +662,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     ),
                   ),
                   if (_sent)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(top: AppSpacing.sm),
                       child: Text(
-                        '고객 앱에 알림이 전송됐어요',
+                        l.coachClientNotified,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10.5,
@@ -694,8 +705,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         ? Icons.check_rounded
                         : Icons.calendar_today_outlined,
                     label: _registered
-                        ? '${_dateChipLabel(_registerOffset)} 스케줄에 등록됨'
-                        : '${_dateChipLabel(_registerOffset)} PT 스케줄에 등록',
+                        ? l.coachRegisteredOn(_dateChipLabel(l, _registerOffset))
+                        : l.coachRegisterOn(_dateChipLabel(l, _registerOffset)),
                     onTap: () => _registerToSchedule(
                       client,
                       _generatedRecommendations[client.id] ?? items,
@@ -705,11 +716,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: Text(
-                        // Match the button's day label — '오늘'/'내일'/'M/D' —
-                        // so a future-day registration isn't described as '오늘'
+                        // Match the button's day label — 오늘/내일/'M/D' — so a
+                        // future-day registration isn't described as 오늘
                         // (CodeRabbit review).
-                        '스케줄 탭에서 ${_dateChipLabel(_registerOffset)} '
-                        '세션의 프로그램으로 확인할 수 있어요',
+                        l.coachFindInSchedule(_dateChipLabel(l, _registerOffset)),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 10.5,
@@ -811,6 +821,7 @@ class _DietSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final over = client.sodiumOverBudget;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -826,14 +837,14 @@ class _DietSummaryCard extends StatelessWidget {
           Row(
             children: <Widget>[
               MetricTile(
-                label: '칼로리',
+                label: l.metricCalories,
                 value: client.calories,
                 unit: 'kcal',
                 color: AppColors.accentDark,
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
-                label: '나트륨',
+                label: l.metricSodium,
                 value: client.sodiumMg,
                 unit: 'mg',
                 color: AppColors.accentDark,
@@ -841,7 +852,7 @@ class _DietSummaryCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               MetricTile(
-                label: '당류',
+                label: l.metricSugar,
                 value: client.sugarG,
                 unit: 'g',
                 color: AppColors.accentDark,
@@ -862,8 +873,8 @@ class _DietSummaryCard extends StatelessWidget {
             child: IconLabel(
               icon: Icons.auto_awesome,
               label: over
-                  ? 'AI 판단: 나트륨 초과 → 유산소 강화 권장'
-                  : 'AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지',
+                  ? l.coachVerdictSodium
+                  : l.coachVerdictBalanced,
               color: AppColors.accent,
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -888,6 +899,7 @@ class _AiAssistantPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: AppColors.accentSurface,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -916,8 +928,8 @@ class _AiAssistantPrompt extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      'AI에게 맞춤 루틴 요청하기',
+                    Text(
+                      l.coachRequestCustom,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -926,8 +938,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$clientName님의 데이터를 분석해 회복형·강화형 후보를 만들고 '
-                      '이 화면에서 비교·수정할 수 있어요.',
+                      l.coachRequestBlurb(clientName),
                       style: const TextStyle(
                         fontSize: 10.5,
                         height: 1.35,
@@ -979,6 +990,7 @@ class _RoutineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     const accent = AppColors.accent;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1035,8 +1047,8 @@ class _RoutineCard extends StatelessWidget {
                               ),
                             ),
                             if (!isCustom)
-                              const Text(
-                                '탭하여 수정',
+                              Text(
+                                l.coachTapToEdit,
                                 style: TextStyle(
                                   fontSize: 8.5,
                                   color: AppColors.disabledForeground,
@@ -1102,7 +1114,7 @@ class _RoutineCard extends StatelessWidget {
             )
           else
             Text(
-              '$minutes분',
+              l.minutesShort(minutes),
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -1181,6 +1193,7 @@ class _AddExerciseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: AppColors.accentSurface,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -1194,8 +1207,8 @@ class _AddExerciseButton extends StatelessWidget {
             borderRadius: const BorderRadius.all(AppRadius.card),
             border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
           ),
-          child: const Text(
-            '＋ 운동 직접 추가',
+          child: Text(
+            l.coachAddExerciseManually,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -1232,6 +1245,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -1243,8 +1257,8 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '운동 추가',
+          Text(
+            l.progAddExercise,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -1256,7 +1270,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
             key: const ValueKey<String>('custom-exercise-name'),
             controller: _name,
             decoration: InputDecoration(
-              hintText: '운동 이름 (예: 레그프레스 3세트)',
+              hintText: l.coachExerciseNameHint,
               hintStyle: const TextStyle(color: AppColors.mutedForeground),
               isDense: true,
               filled: true,
@@ -1290,7 +1304,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
             children: <Widget>[
               Expanded(
                 child: _FormButton(
-                  label: '취소',
+                  label: l.actionCancel,
                   background: AppColors.inputBackground,
                   foreground: AppColors.subtleForeground,
                   onTap: widget.onCancel,
@@ -1299,7 +1313,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _FormButton(
-                  label: '추가하기',
+                  label: l.schedAddAction,
                   background: AppColors.accent,
                   foreground: AppColors.accentForeground,
                   onTap: () {
@@ -1356,9 +1370,9 @@ class _FormButton extends StatelessWidget {
 }
 
 /// Label for a register-day offset (오늘/내일/M/D).
-String _dateChipLabel(int offset) {
-  if (offset == 0) return '오늘';
-  if (offset == 1) return '내일';
+String _dateChipLabel(AppLocalizations l, int offset) {
+  if (offset == 0) return l.labelToday;
+  if (offset == 1) return l.labelTomorrow;
   final d = DateTime.now().add(Duration(days: offset));
   return '${d.month}/${d.day}';
 }
@@ -1389,7 +1403,7 @@ class _DateChip extends StatelessWidget {
           borderRadius: const BorderRadius.all(AppRadius.pill),
         ),
         child: Text(
-          _dateChipLabel(offset),
+          _dateChipLabel(AppLocalizations.of(context), offset),
           style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
@@ -1472,6 +1486,7 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Material(
       color: sent ? AppColors.success : AppColors.primary,
       borderRadius: const BorderRadius.all(AppRadius.card),
@@ -1483,7 +1498,7 @@ class _SendButton extends StatelessWidget {
           alignment: Alignment.center,
           child: IconLabel(
             icon: sent ? Icons.check_circle : Icons.send_outlined,
-            label: sent ? '$clientName님에게 전송 완료!' : '검토 완료 · $clientName님에게 전송',
+            label: sent ? l.coachSentToClient(clientName) : l.coachReviewAndSend(clientName),
             color: AppColors.primaryForeground,
             fontSize: 14,
           ),
@@ -1505,8 +1520,9 @@ class _TemplateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return SectionCard(
-      title: '프로그램 템플릿',
+      title: l.coachTemplates,
       icon: Icons.dashboard_customize_outlined,
       dense: true,
       child: Column(
@@ -1542,9 +1558,11 @@ class _TemplateCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '${template.goal} · '
-                                '${template.exercises.length}개 · '
-                                '${template.totalMinutes}분',
+                                l.coachTemplateSummaryWithGoal(
+                                  template.goal,
+                                  template.exercises.length,
+                                  template.totalMinutes,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -1586,6 +1604,7 @@ class _SendHistoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final sessions = ref.watch(
       clientSessionsProvider((id: client.id, name: client.name)),
     );
@@ -1597,7 +1616,7 @@ class _SendHistoryCard extends ConsumerWidget {
     final today = ymd(DateTime.now());
 
     return SectionCard(
-      title: '전송 이력',
+      title: l.coachSentHistory,
       icon: Icons.history,
       dense: true,
       child: sessions.when(
@@ -1605,7 +1624,7 @@ class _SendHistoryCard extends ConsumerWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '이력을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.coachHistoryFailed),
         data: (list) {
           final withProgram = list
               .where((s) => s.program.isNotEmpty)
@@ -1613,8 +1632,8 @@ class _SendHistoryCard extends ConsumerWidget {
               .toList();
           final routines = assigned.valueOrNull ?? const <AssignedRoutine>[];
           if (withProgram.isEmpty && routines.isEmpty) {
-            return const EmptyHint(
-              message: '아직 보낸 프로그램이 없어요',
+            return EmptyHint(
+              message: l.coachHistoryEmpty,
               icon: Icons.outbox_outlined,
             );
           }
@@ -1625,10 +1644,10 @@ class _SendHistoryCard extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: <Widget>[
-                      const SizedBox(
+                      SizedBox(
                         width: 46,
                         child: Text(
-                          '숙제',
+                          l.coachHomework,
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
@@ -1638,7 +1657,7 @@ class _SendHistoryCard extends ConsumerWidget {
                       ),
                       Expanded(
                         child: Text(
-                          '${routine.name} · ${routine.minutes}분',
+                          l.coachRoutineSummary(routine.name, routine.minutes),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1656,8 +1675,8 @@ class _SendHistoryCard extends ConsumerWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             )
-                          : const Text(
-                              '트레이너',
+                          : Text(
+                              l.coachTrainer,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -1676,7 +1695,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         width: 46,
                         child: Text(
                           s.date == today
-                              ? '오늘'
+                              ? l.labelToday
                               : s.date.substring(5).replaceAll('-', '/'),
                           style: TextStyle(
                             fontSize: 10.5,
@@ -1689,7 +1708,7 @@ class _SendHistoryCard extends ConsumerWidget {
                       ),
                       Expanded(
                         child: Text(
-                          '${s.type} · 운동 ${s.program.length}개',
+                          l.coachSessionExercises(sessionTypeLabel(l, s.type), s.program.length),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -1700,7 +1719,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        s.status,
+                        scheduleStatusLabel(l, s.status),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,

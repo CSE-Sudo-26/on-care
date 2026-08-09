@@ -6,6 +6,10 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 import '../../helpers/client_factory.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
+
+/// 문구 기대값은 로케일을 명시해 읽는다.
+final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 ScheduleSession session({
   required String date,
@@ -145,7 +149,7 @@ void main() {
         today: wednesday,
       );
 
-      final message = reportMessage(report);
+      final message = reportMessage(_ko, report);
       expect(message, isNot(contains('이행률')));
       expect(message, isNot(contains('나트륨')));
     });
@@ -193,7 +197,7 @@ void main() {
         weekStart: wednesday,
       );
 
-      final message = reportMessage(report);
+      final message = reportMessage(_ko, report);
       expect(message, contains('주간 리포트'));
       expect(message, contains('PT 세션 1/1회 완료'));
       expect(message, contains('이번 주 정말 잘하셨어요'));
@@ -210,7 +214,7 @@ void main() {
         today: wednesday,
       );
 
-      final message = reportMessage(report);
+      final message = reportMessage(_ko, report);
       expect(message, isNot(contains('이행률')));
       expect(message, isNot(contains('나트륨')));
     });

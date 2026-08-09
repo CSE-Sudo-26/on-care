@@ -198,6 +198,12 @@ class ExerciseSession(Base):
     intensity: Mapped[str] = mapped_column(
         String(20), default="moderate", server_default="moderate"
     )
+    #: 이 기록을 누가 만들었나. member=회원이 직접 남김, trainer_pt=트레이너가 PT
+    #: 세션을 완료 처리해 파생된 기록. 파생 기록은 근거가 트레이너에게 있어 회원이
+    #: 고칠 수 없고(#499), 화면에서도 수기 기록과 구분해 보여준다.
+    source: Mapped[str] = mapped_column(
+        String(20), default="member", server_default="member"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -28,7 +28,7 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
         data: <String, Object?>{'username': email, 'password': password},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       ),
-      on401: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      on401: AuthFailure.invalidCredentials,
     );
   }
 
@@ -53,12 +53,12 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 409) {
-        throw const AuthException('이미 가입된 이메일입니다.');
+        throw const AuthException(AuthFailure.emailTaken);
       }
       if (e.response?.statusCode == 422) {
         // 서버는 없는·만료된·이미 쓰인 코드를 구분하지 않는다. 어느 경우든
         // 트레이너가 할 일은 헬스장에 코드를 다시 받는 것이라 결론이 같다.
-        throw const AuthException('사용할 수 없는 초대 코드예요. 헬스장에 확인해 주세요.');
+        throw const AuthException(AuthFailure.inviteCodeInvalid);
       }
       throw _asAuth(e);
     }
@@ -76,7 +76,7 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
         '/auth/social/$provider',
         data: <String, Object?>{'token': token},
       ),
-      on401: '소셜 로그인에 실패했어요. 다시 시도해 주세요.',
+      on401: AuthFailure.unknown,
     );
   }
 
@@ -87,7 +87,7 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
         '/auth/refresh',
         data: <String, Object?>{'refresh_token': refreshToken},
       ),
-      on401: '세션이 만료됐어요. 다시 로그인해 주세요.',
+      on401: AuthFailure.sessionExpired,
     );
   }
 
@@ -102,7 +102,8 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
       );
       final data = res.data;
       if (data == null) {
-        throw const ServerError(message: '프로필 응답이 비어 있어요.');
+        // 문구는 화면이 붙인다. (#501)
+        throw const ServerError();
       }
       return trainerProfileFromJson(data);
     } on DioException catch (e) {
@@ -125,18 +126,18 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
   /// Runs a token-issuing call and parses `{ access_token, refresh_token }`.
   Future<TrainerAuthTokens> _tokenCall(
     Future<Response<Map<String, Object?>>> Function() call, {
-    required String on401,
+    required AuthFailure on401,
   }) async {
     try {
       final res = await call();
       final data = res.data;
-      if (data == null) throw const AuthException('로그인 응답이 비어 있어요.');
+      if (data == null) throw const AuthException(AuthFailure.emptyResponse);
       return TrainerAuthTokens.fromJson(data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw AuthException(on401);
       throw _asAuth(e);
     } on FormatException catch (e) {
-      throw AuthException(e.message);
+      throw AuthException(AuthFailure.emptyResponse, detail: e.message);
     }
   }
 
@@ -144,9 +145,9 @@ class DioTrainerAuthRepository implements TrainerAuthRepository {
   AuthException _asAuth(DioException e) {
     final err = AppError.fromDio(e);
     if (err is NetworkError) {
-      return const AuthException('네트워크 연결을 확인해 주세요.');
+      return const AuthException(AuthFailure.network);
     }
-    return const AuthException('로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.');
+    return const AuthException(AuthFailure.unknown);
   }
 }
 

@@ -4,7 +4,7 @@
 GET /diet/days/today 응답:
   { entries[], total_calories, total_sodium_mg, total_sugar_g, macros, ai_coach_message }
 entries[]: { id, meal_type, time_label, foods[], total_calories, carbs_g, protein_g,
-             fat_g, sodium_mg, sugar_g }
+             fat_g, sodium_mg, sugar_g, photo_asset? }
 """
 from __future__ import annotations
 
@@ -63,6 +63,9 @@ class DietEntryOut(BaseModel):
     fat_g: float
     sodium_mg: int
     sugar_g: float
+    # Local/demo seeds may point at a bundled Flutter asset. Real API entries
+    # do not own a client asset path, so they return null.
+    photo_asset: str | None = None
 
 
 class DietEntryUpdate(PartialUpdate):
