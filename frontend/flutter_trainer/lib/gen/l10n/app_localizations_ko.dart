@@ -613,6 +613,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietLoadFailed => '식단을 불러오지 못했어요';
 
   @override
+  String get dietEmpty => '아직 기록된 식단이 없어요';
+
+  @override
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override

@@ -1,0 +1,813 @@
+part of 'seed_data.dart';
+
+/// The demo roster: fifteen members whose numbers actually move.
+///
+/// A demo roster is a fixture for the *charts*, not just the list. Three
+/// clients with mild, similar weeks left most of the console's states
+/// unreachable by clicking around: nothing was ever empty, nothing ever
+/// collapsed, no sparkline ever spiked, and the 확인 필요 고객 card never
+/// had to say "+N명". So these are built as a spread across the states
+/// the UI can render, not as fifteen plausible-looking averages.
+///
+/// The thresholds they are aimed at (see `client_alerts.dart`):
+///  * `sodiumMg > 2000` → 나트륨 초과;
+///  * mean of the **non-zero** `weekCompletion` days `< 60` → 이행률 저조
+///    (zero days are "no record", so a client who logged one good day is
+///    not failing — that asymmetry is easy to get wrong by eye, and half
+///    of these exist to pin it down);
+///  * `sugarG > 50` → the 당류 tile warns;
+///  * `threadHandled: false` → 답장 대기.
+///
+/// Coverage this is meant to guarantee, by client:
+///  1  김민수    나트륨 초과, 톱니형 이행률
+///  2  이지수    무알림 (주말만 미기록)
+///  3  박성호    나트륨 초과 + 휴면, 기록 거의 없음
+///  4  정하윤    V자 — 무너졌다 회복, 나트륨 급락 후 반등
+///  5  최우진    완벽 — 알림 0, 7일 100% (대조군)
+///  6  강서연    주말 붕괴 — 평일 완벽, 주말 나트륨 폭등 + 당류 초과
+///  7  임도현    신규 — 식단·기록·추이 전부 비어 있음 (빈 상태 검증)
+///  8  오세라    급성 악화 — 나트륨 우상향, 이행률 우하향, 답장 대기
+///  9  배준혁    야근형 — 이행률 저조 + 나트륨 들쭉날쭉 + 답장 대기
+///  10 신유나    회복 중 — 나트륨 우하향, 이행률 우상향
+///  11 한지호    정체기 — 목표선 위아래로 진동 (경계값)
+///  12 문가영    휴면 — 주 3일치만 기록되고 끊김 (짧은 스파크라인)
+///  13 류태경    극단 — 0↔100, 1200↔3200 지그재그 (최대 진폭)
+///  14 백서진    운동은 완벽한데 나트륨만 계속 초과
+///  15 노은채    단 하루만 기록 (단일 포인트 스파크라인)
+const List<_Client> _clients = <_Client>[
+  _Client(
+    id: 1,
+    name: '김민수',
+    avatar: '김',
+    goal: '혈압 관리 · 체중 감량',
+    lastMessage: '오늘 식단 전송됐어요',
+    lastTime: '방금',
+    threadHandled: true,
+    active: true,
+    calories: 1420,
+    sodiumMg: 2100,
+    sugarG: 45,
+    lastRoutine: '오늘',
+    weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
+    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 2100],
+    diet: <_Meal>[
+      _Meal('아침', '오트밀, 바나나', 315, 380),
+      _Meal('점심', '닭가슴살 샐러드, 현미밥', 620, 890),
+      _Meal('저녁', '두부찌개, 잡곡밥', 485, 830),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
+      _Routine('하체 스트레칭', 15, '스트레칭', '혈액순환 개선'),
+      _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'PT 세션 · 트레이너 지도',
+        completionRate: 100,
+        exercises: <String>['레그프레스 3세트', '레그컬 3세트', '하체 스트레칭'],
+        clientFeedback: '무릎이 좀 당겼지만 트레이너님 덕분에 잘 마쳤어요 😊',
+        trainerNote: '무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.',
+      ),
+      _History(
+        dateLabel: '7/10',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 67,
+        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '스트레칭 ✗ (생략)'],
+        clientFeedback: '스트레칭은 시간이 없어서 못 했어요',
+        trainerNote: '',
+      ),
+      _History(
+        dateLabel: '7/8',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '하체 스트레칭 15분 ✓'],
+        clientFeedback: '오늘은 다 했어요! 뿌듯해요 💪',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat(
+        'trainer',
+        '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?',
+        '18:10',
+      ),
+      _Chat('client', '찌개 먹을 때 국물을 많이 마셨나봐요 😅', '18:13'),
+      _Chat('trainer', '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?', '18:14'),
+      _Chat('client', '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16'),
+      _Chat(
+        'trainer',
+        '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
+        '18:18',
+      ),
+    ],
+  ),
+  _Client(
+    id: 2,
+    name: '이지수',
+    avatar: '이',
+    goal: '체력 강화 · 다이어트',
+    lastMessage: '루틴 받았어요, 감사합니다!',
+    lastTime: '1시간 전',
+    active: true,
+    calories: 1680,
+    sodiumMg: 1800,
+    sugarG: 38,
+    lastRoutine: '어제',
+    weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
+    sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
+    diet: <_Meal>[
+      _Meal('아침', '그릭요거트, 과일', 280, 200),
+      _Meal('점심', '현미밥, 불고기, 나물', 750, 980),
+      _Meal('저녁', '연어 샐러드', 650, 620),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('인터벌 런닝', 25, '유산소', '체지방 연소 효율↑'),
+      _Routine('스쿼트 3세트', 15, '근력', '하체 근력 강화'),
+      _Routine('플랭크', 10, '근력', '코어 안정화'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['인터벌 런닝 25분 ✓', '스쿼트 3세트 ✓', '플랭크 10분 ✓'],
+        clientFeedback: '런닝이 힘들었는데 다 했어요! 숨이 많이 찼어요',
+        trainerNote: '심폐지구력 향상 중. 다음 주 런닝 강도 소폭 올릴 예정.',
+      ),
+      _History(
+        dateLabel: '7/9',
+        label: 'PT 세션 · 트레이너 지도',
+        completionRate: 100,
+        exercises: <String>['데드리프트 3세트', '런지 3세트', '코어 서킷'],
+        clientFeedback: '데드리프트 자세 교정 도움 많이 됐어요!',
+        trainerNote: '',
+      ),
+      _History(
+        dateLabel: '7/7',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 67,
+        exercises: <String>['런닝 25분 ✓', '스쿼트 ✓', '플랭크 ✗ (피로)'],
+        clientFeedback: '마지막 플랭크는 너무 지쳐서 못 했어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat(
+        'trainer',
+        '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?',
+        '20:05',
+      ),
+      _Chat('client', '생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨', '20:08'),
+      _Chat(
+        'trainer',
+        '심폐 지구력 올라가는 과정이에요 💪 AI 분석 보니까 당류는 목표 안에 있고, 루틴 다음 주부터 근력 비중 늘려볼게요. 식단도 AI 추천 참고해서 업데이트해 드릴게요',
+        '20:10',
+      ),
+    ],
+  ),
+  _Client(
+    id: 3,
+    name: '박성호',
+    avatar: '박',
+    goal: '근력 향상',
+    lastMessage: '이번 주 운동 못했어요...',
+    lastTime: '3일 전',
+    active: false,
+    calories: 2100,
+    sodiumMg: 2400,
+    sugarG: 55,
+    lastRoutine: '5일 전',
+    weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
+    sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
+    diet: <_Meal>[
+      _Meal('아침', '계란 3개, 토스트', 480, 520),
+      _Meal('점심', '짜장면', 890, 1200),
+      _Meal('저녁', '삼겹살, 쌈채소', 730, 680),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('벤치프레스 4세트', 20, '근력', '상체 근력 목표'),
+      _Routine('데드리프트 3세트', 15, '근력', '전신 근력 향상'),
+      _Routine('유산소 쿨다운', 10, '유산소', '나트륨 배출 지원'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/7',
+        label: 'PT 세션 · 트레이너 지도',
+        completionRate: 100,
+        exercises: <String>['벤치프레스 4세트', '인클라인 덤벨 3세트', '트라이셉스 딥'],
+        clientFeedback: '가슴이 많이 타는 느낌이었어요. 좋았어요!',
+        trainerNote: '벤치 중량 62.5kg → 65kg 도전 가능. 다음 PT 때 시도 예정.',
+      ),
+      _History(
+        dateLabel: '7/5',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 33,
+        exercises: <String>['벤치프레스 ✓', '데드리프트 ✗', '유산소 ✗'],
+        clientFeedback: '회사 일이 생겨서 벤치만 하고 나왔어요',
+        trainerNote: '',
+      ),
+      _History(
+        dateLabel: '7/3',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 0,
+        exercises: <String>['벤치프레스 ✗', '데드리프트 ✗', '유산소 ✗'],
+        clientFeedback: '못 갔어요 😓',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '성호님, 이번 주 운동 기록이 AI 쪽에서 안 잡히는데 몸은 괜찮으세요?', '월 09:00'),
+      _Chat('client', '이번 주 일이 너무 많아서 못 갔어요 😓', '월 09:03'),
+      _Chat(
+        'trainer',
+        '이해해요! 대신 AI 식단 분석 보니까 나트륨이 좀 높더라고요. 주말에 30분 걷기라도 하면 도움 돼요. AI가 그에 맞는 루틴 다시 짜줬으니까 앱에서 확인해보세요 🙂',
+        '월 09:07',
+      ),
+    ],
+  ),
+
+  // --- V자 회복: 무너졌다가 되돌아온 주 -------------------------------
+  _Client(
+    id: 4,
+    name: '정하윤',
+    avatar: '정',
+    goal: '산후 체력 회복',
+    lastMessage: '이번 주부터 다시 시작했어요!',
+    lastTime: '2시간 전',
+    threadHandled: true,
+    active: true,
+    calories: 1520,
+    sodiumMg: 1650,
+    sugarG: 32,
+    lastRoutine: '오늘',
+    // 주 중반에 완전히 끊겼다가 후반에 되돌아온다 — 막대가 V를 그린다.
+    weekCompletion: <int>[100, 25, 0, 0, 50, 100, 100],
+    // 나트륨도 같이 급락했다 반등: 외식이 끊긴 구간이 그대로 보인다.
+    sodiumWeek: <int>[2900, 2600, 1500, 1250, 1400, 1900, 1650],
+    diet: <_Meal>[
+      _Meal('아침', '통밀토스트, 아보카도', 340, 290),
+      _Meal('점심', '닭가슴살 도시락', 520, 640),
+      _Meal('저녁', '채소 스프, 두부, 현미밥', 660, 720),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('저강도 걷기', 25, '유산소', '회복기 심박 관리'),
+      _Routine('골반 안정화', 15, '스트레칭', '산후 코어 재활'),
+      _Routine('밴드 로우', 12, '근력', '상체 자세 교정'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['걷기 25분 ✓', '골반 안정화 15분 ✓', '밴드 로우 12분 ✓'],
+        clientFeedback: '컨디션 돌아온 게 느껴져요. 다 했습니다!',
+        trainerNote: '2주 공백 후 복귀 성공. 다음 주부터 강도 10% 상향.',
+      ),
+      _History(
+        dateLabel: '7/9',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 50,
+        exercises: <String>['걷기 25분 ✓', '골반 안정화 ✗ (아이 컨디션)'],
+        clientFeedback: '아이가 아파서 절반만 했어요',
+        trainerNote: '',
+      ),
+      _History(
+        dateLabel: '7/6',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 0,
+        exercises: <String>['걷기 ✗', '골반 안정화 ✗', '밴드 로우 ✗'],
+        clientFeedback: '한 주 통째로 쉬었어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '하윤님, 지난주 공백 뒤에 오늘 세 개 다 채우셨네요 👏', '14:20'),
+      _Chat('client', '몸이 다시 붙는 느낌이에요. 나트륨도 신경 썼어요!', '14:26'),
+      _Chat('trainer', '추이 보니 확실히 내려왔어요. 이 페이스로 한 주만 더 가보죠 🙂', '14:31'),
+    ],
+  ),
+
+  // --- 대조군: 알림이 하나도 없는 고객 --------------------------------
+  _Client(
+    id: 5,
+    name: '최우진',
+    avatar: '최',
+    goal: '마라톤 완주 준비',
+    lastMessage: '내일 장거리 뜁니다',
+    lastTime: '어제',
+    threadHandled: true,
+    active: true,
+    calories: 1750,
+    sodiumMg: 1180,
+    sugarG: 22,
+    lastRoutine: '오늘',
+    weekCompletion: <int>[100, 100, 100, 100, 100, 100, 100],
+    // 거의 평평한 스파크라인 — 목표선 근처에서 흔들리는 다른 고객과 대비된다.
+    sodiumWeek: <int>[1300, 1250, 1100, 1200, 1150, 1090, 1180],
+    diet: <_Meal>[
+      _Meal('아침', '오트밀, 블루베리', 360, 150),
+      _Meal('점심', '현미밥, 흰살생선, 나물', 640, 520),
+      _Meal('저녁', '닭가슴살, 고구마', 750, 510),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('LSD 러닝', 45, '유산소', '유산소 기반 다지기'),
+      _Routine('힙 힌지 드릴', 12, '근력', '러닝 이코노미 개선'),
+      _Routine('종아리 스트레칭', 10, '스트레칭', '부상 예방'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['LSD 러닝 45분 ✓', '힙 힌지 12분 ✓', '스트레칭 10분 ✓'],
+        clientFeedback: '페이스 안정적이었어요',
+        trainerNote: '7일 연속 100%. 과훈련 신호 없는지 다음 주 확인.',
+      ),
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['인터벌 8세트 ✓', '코어 서킷 ✓', '스트레칭 ✓'],
+        clientFeedback: '인터벌 끝나고 다리가 후들거렸어요 😅',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '우진님, 이번 주 7일 전부 100% 나왔어요. 무리는 없으세요?', '21:00'),
+      _Chat('client', '아직은 괜찮아요! 주말 장거리만 잘 넘기면 될 것 같아요', '21:04'),
+      _Chat('trainer', '좋아요. 대신 수요일은 회복 루틴으로 잡아둘게요 🙂', '21:06'),
+    ],
+  ),
+
+  // --- 주말 붕괴형: 평일과 주말이 완전히 다른 사람 ---------------------
+  _Client(
+    id: 6,
+    name: '강서연',
+    avatar: '강',
+    goal: '체지방 감량',
+    lastMessage: '주말엔 약속이 많아서요 😅',
+    lastTime: '5시간 전',
+    threadHandled: true,
+    active: true,
+    calories: 2260,
+    sodiumMg: 2750,
+    sugarG: 68,
+    lastRoutine: '금요일',
+    // 평일 완벽, 주말 0 — 막대가 절벽처럼 끊긴다.
+    weekCompletion: <int>[100, 100, 100, 100, 100, 0, 0],
+    // 같은 주말에 나트륨이 두 배로 뛴다.
+    sodiumWeek: <int>[1400, 1350, 1500, 1420, 1380, 3100, 2750],
+    diet: <_Meal>[
+      _Meal('아침', '거름', 0, 0),
+      _Meal('점심', '마라탕', 980, 1850),
+      _Meal('저녁', '치킨, 맥주', 1280, 900),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('주말 회복 걷기', 30, '유산소', '주말 나트륨 배출'),
+      _Routine('전신 서킷', 20, '근력', '평일 루틴 유지'),
+      _Routine('상체 스트레칭', 10, '스트레칭', '피로 해소'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 0,
+        exercises: <String>['걷기 ✗', '전신 서킷 ✗', '스트레칭 ✗'],
+        clientFeedback: '주말은 약속이 계속 있었어요 😅',
+        trainerNote: '평일 100% / 주말 0% 패턴 5주째. 주말용 15분 루틴으로 분리 검토.',
+      ),
+      _History(
+        dateLabel: '7/9',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['전신 서킷 20분 ✓', '걷기 30분 ✓', '스트레칭 10분 ✓'],
+        clientFeedback: '평일엔 루틴대로 잘 되고 있어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '서연님, 평일은 완벽한데 주말에 나트륨이 3100까지 올라갔어요', '16:40'),
+      _Chat('client', '주말엔 약속이 많아서요 😅 마라탕이 문제였나봐요', '16:45'),
+      _Chat(
+        'trainer',
+        '주말만 따로 15분짜리 가벼운 루틴으로 잡아드릴게요. 안 하는 것보다 훨씬 나아요 🙂',
+        '16:48',
+      ),
+    ],
+  ),
+
+  // --- 신규: 아직 아무 데이터도 없는 고객 (빈 상태 검증) ----------------
+  _Client(
+    id: 7,
+    name: '임도현',
+    avatar: '임',
+    goal: '목표 설정 전',
+    lastMessage: '아직 대화가 없어요',
+    lastTime: '-',
+    threadHandled: true,
+    active: true,
+    calories: 0,
+    sodiumMg: 0,
+    sugarG: 0,
+    lastRoutine: '-',
+    // 기록이 하나도 없다. `isLowCompletion` 이 0 만 있는 주를 실패로 세지
+    // 않는다는 규칙이 여기서 눈으로 확인된다 — 배지가 뜨면 안 된다.
+    weekCompletion: <int>[0, 0, 0, 0, 0, 0, 0],
+    sodiumWeek: <int>[],
+    diet: <_Meal>[],
+    aiRoutine: <_Routine>[
+      _Routine('체력 측정 걷기', 20, '유산소', '기초 체력 파악'),
+      _Routine('맨몸 스쿼트', 10, '근력', '하체 기준선 측정'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '가동범위 확인'),
+    ],
+    history: <_History>[],
+    chat: <_Chat>[],
+  ),
+
+  // --- 급성 악화: 모든 지표가 같은 방향으로 나빠진다 --------------------
+  _Client(
+    id: 8,
+    name: '오세라',
+    avatar: '오',
+    goal: '고혈압 관리',
+    lastMessage: '요즘 너무 바빠서 못 하고 있어요',
+    lastTime: '어제',
+    active: true,
+    calories: 2480,
+    sodiumMg: 3250,
+    sugarG: 82,
+    lastRoutine: '6일 전',
+    // 이행률은 계단식으로 떨어지고…
+    weekCompletion: <int>[80, 60, 40, 33, 20, 0, 0],
+    // …나트륨은 같은 기간 계속 올라간다. 두 그래프가 정확히 반대로 간다.
+    sodiumWeek: <int>[1900, 2150, 2400, 2650, 2900, 3050, 3250],
+    diet: <_Meal>[
+      _Meal('아침', '편의점 삼각김밥 2개', 420, 780),
+      _Meal('점심', '부대찌개, 공기밥', 920, 1650),
+      _Meal('저녁', '족발, 소주', 1140, 820),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('저강도 걷기', 20, '유산소', '혈압 우선 안정'),
+      _Routine('호흡 이완', 10, '스트레칭', '교감신경 완화'),
+      _Routine('의자 스쿼트', 8, '근력', '최소 부하로 재시작'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/8',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 20,
+        exercises: <String>['걷기 ✓ (10분만)', '호흡 이완 ✗', '의자 스쿼트 ✗'],
+        clientFeedback: '10분 걷다가 회사에서 전화 와서 끊었어요',
+        trainerNote: '나트륨 3000 돌파 + 이행률 20%. 이번 주 안에 전화 상담 필요.',
+      ),
+      _History(
+        dateLabel: '7/6',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 33,
+        exercises: <String>['걷기 ✓', '호흡 이완 ✗', '의자 스쿼트 ✗'],
+        clientFeedback: '피곤해서 걷기만 했어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '세라님, 나트륨이 6일 연속 올라서 3250까지 왔어요. 혈압은 재보셨어요?', '09:10'),
+      _Chat('client', '요즘 너무 바빠서 못 하고 있어요', '09:34'),
+      _Chat('client', '주말엔 꼭 재볼게요...', '09:35'),
+    ],
+  ),
+
+  // --- 야근형: 이행률이 낮고 나트륨이 널뛴다 ---------------------------
+  _Client(
+    id: 9,
+    name: '배준혁',
+    avatar: '배',
+    goal: '수면 · 컨디션 개선',
+    lastMessage: '오늘도 야근이라 못 갈 것 같아요',
+    lastTime: '30분 전',
+    active: true,
+    calories: 2050,
+    sodiumMg: 2280,
+    sugarG: 47,
+    lastRoutine: '4일 전',
+    // 0 이 아닌 날 평균 36% — 이행률 저조 배지가 뜨는 쪽.
+    weekCompletion: <int>[50, 0, 33, 0, 25, 0, 0],
+    // 야근 여부에 따라 위아래로 튄다.
+    sodiumWeek: <int>[2100, 2600, 1800, 2900, 2200, 1600, 2280],
+    diet: <_Meal>[
+      _Meal('아침', '커피만', 20, 10),
+      _Meal('점심', '김치찌개, 공기밥', 780, 1420),
+      _Meal('저녁', '야근 도시락, 편의점 야식', 1250, 850),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('퇴근 후 걷기', 15, '유산소', '짧게라도 유지'),
+      _Routine('목·어깨 스트레칭', 10, '스트레칭', '장시간 착석 보완'),
+      _Routine('플랭크', 5, '근력', '최소 코어 유지'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/10',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 25,
+        exercises: <String>['목·어깨 스트레칭 ✓', '걷기 ✗', '플랭크 ✗'],
+        clientFeedback: '자기 전에 스트레칭만 겨우 했어요',
+        trainerNote: '15분 루틴도 못 채우는 주가 반복. 5분 버전으로 낮춰볼 것.',
+      ),
+      _History(
+        dateLabel: '7/8',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 33,
+        exercises: <String>['걷기 15분 ✓', '스트레칭 ✗', '플랭크 ✗'],
+        clientFeedback: '',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '준혁님, 이번 주도 야근이 이어지네요. 5분짜리로 줄여볼까요?', '19:50'),
+      _Chat('client', '오늘도 야근이라 못 갈 것 같아요', '20:12'),
+    ],
+  ),
+
+  // --- 회복 중: 나쁜 데서 좋은 쪽으로 -----------------------------------
+  _Client(
+    id: 10,
+    name: '신유나',
+    avatar: '신',
+    goal: '재활 후 복귀',
+    lastMessage: '이번 주는 다 지켰어요 :)',
+    lastTime: '3시간 전',
+    threadHandled: true,
+    active: true,
+    calories: 1590,
+    sodiumMg: 1720,
+    sugarG: 35,
+    lastRoutine: '오늘',
+    // 주 초반 공백 → 후반 완주. 우상향 계단.
+    weekCompletion: <int>[0, 0, 33, 67, 100, 100, 100],
+    // 나트륨은 반대로 꾸준히 내려온다.
+    sodiumWeek: <int>[2800, 2500, 2200, 1950, 1800, 1750, 1720],
+    diet: <_Meal>[
+      _Meal('아침', '두유, 삶은 계란', 260, 240),
+      _Meal('점심', '비빔밥 (고추장 절반)', 680, 780),
+      _Meal('저녁', '샐러드, 닭가슴살, 현미밥', 650, 700),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('실내 자전거', 20, '유산소', '무릎 부담 없는 유산소'),
+      _Routine('레그 익스텐션', 12, '근력', '대퇴사두 재건'),
+      _Routine('무릎 가동범위', 10, '스트레칭', '재활 프로토콜'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['실내 자전거 20분 ✓', '레그 익스텐션 12분 ✓', '가동범위 10분 ✓'],
+        clientFeedback: '무릎 통증 없이 다 했어요!',
+        trainerNote: '3주 연속 개선. 다음 주 러닝머신 걷기 추가 검토.',
+      ),
+      _History(
+        dateLabel: '7/10',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 67,
+        exercises: <String>['실내 자전거 ✓', '레그 익스텐션 ✓', '가동범위 ✗'],
+        clientFeedback: '마지막에 시간이 부족했어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '유나님, 나트륨 추이가 2800에서 1700까지 내려왔어요 👏', '13:15'),
+      _Chat('client', '이번 주는 다 지켰어요 :)', '13:22'),
+      _Chat('trainer', '무릎 상태 괜찮으면 다음 주에 걷기 조금 얹어볼게요', '13:25'),
+    ],
+  ),
+
+  // --- 정체기: 목표선 위아래로만 진동 (경계값) -------------------------
+  _Client(
+    id: 11,
+    name: '한지호',
+    avatar: '한',
+    goal: '현 체중 유지',
+    lastMessage: '똑같은 것 같아요',
+    lastTime: '어제',
+    threadHandled: true,
+    active: true,
+    calories: 1880,
+    sodiumMg: 2010,
+    sugarG: 50,
+    lastRoutine: '어제',
+    // 매일 같은 값 — 완전히 평평한 막대.
+    weekCompletion: <int>[67, 67, 67, 67, 67, 67, 67],
+    // 목표선(2000) 바로 위아래에서만 흔들린다. 경계 판정 확인용.
+    sodiumWeek: <int>[1990, 2010, 1995, 2005, 1998, 2015, 2010],
+    diet: <_Meal>[
+      _Meal('아침', '시리얼, 우유', 380, 320),
+      _Meal('점심', '백반 정식', 720, 980),
+      _Meal('저녁', '된장찌개, 공기밥', 780, 710),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('트레드밀 경사 걷기', 25, '유산소', '정체 구간 자극 변화'),
+      _Routine('풀업 어시스트', 12, '근력', '상체 자극 전환'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '회복'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 67,
+        exercises: <String>['경사 걷기 ✓', '풀업 어시스트 ✓', '스트레칭 ✗'],
+        clientFeedback: '늘 하던 만큼 했어요',
+        trainerNote: '7주째 같은 이행률·같은 나트륨. 자극 변화 필요.',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '지호님, 몇 주째 수치가 거의 안 움직여요. 루틴을 좀 바꿔볼까요?', '22:00'),
+      _Chat('client', '똑같은 것 같아요', '22:11'),
+      _Chat('trainer', '다음 주는 경사·중량 쪽으로 자극을 바꿔서 보내드릴게요 🙂', '22:14'),
+    ],
+  ),
+
+  // --- 휴면: 주 중반에 기록이 끊겼다 (짧은 스파크라인) ------------------
+  _Client(
+    id: 12,
+    name: '문가영',
+    avatar: '문',
+    goal: '체력 회복',
+    lastMessage: '당분간 쉬려고요',
+    lastTime: '3주 전',
+    active: false,
+    calories: 770,
+    sodiumMg: 1030,
+    sugarG: 29,
+    lastRoutine: '3주 전',
+    // 0 이 아닌 날이 하나(33%)뿐 — 이행률 저조로 잡힌다.
+    weekCompletion: <int>[33, 0, 0, 0, 0, 0, 0],
+    // 3일치만 남기고 끊긴다. 7개 미만 스파크라인 렌더링 확인용.
+    sodiumWeek: <int>[2100, 1950, 1030],
+    diet: <_Meal>[
+      _Meal('아침', '토스트, 커피', 290, 310),
+      _Meal('점심', '샌드위치', 480, 720),
+      _Meal('저녁', '기록 없음', 0, 0),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('가벼운 걷기', 20, '유산소', '복귀 준비'),
+      _Routine('전신 스트레칭', 15, '스트레칭', '휴식기 유연성 유지'),
+      _Routine('맨몸 스쿼트', 8, '근력', '최소 근력 유지'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '6/21',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 33,
+        exercises: <String>['걷기 20분 ✓', '스트레칭 ✗', '스쿼트 ✗'],
+        clientFeedback: '당분간 쉬려고요',
+        trainerNote: '3주째 기록 없음. 휴면 전환. 복귀 의사 확인 필요.',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '가영님, 3주째 기록이 없어서요. 복귀 계획 있으실까요?', '6/21 10:00'),
+      _Chat('client', '당분간 쉬려고요', '6/21 12:40'),
+    ],
+  ),
+
+  // --- 극단 변동: 최대 진폭 --------------------------------------------
+  _Client(
+    id: 13,
+    name: '류태경',
+    avatar: '류',
+    goal: '벌크업',
+    lastMessage: '오늘은 제대로 했습니다',
+    lastTime: '1시간 전',
+    active: true,
+    calories: 3120,
+    sodiumMg: 3100,
+    sugarG: 91,
+    lastRoutine: '오늘',
+    // 하루 걸러 전부 또는 전무 — 막대가 톱니로 꽂힌다.
+    weekCompletion: <int>[100, 0, 100, 0, 100, 0, 0],
+    // 1200 ↔ 3200. 스파크라인 최대 진폭 케이스.
+    sodiumWeek: <int>[1200, 3100, 1350, 2950, 1100, 3200, 3100],
+    diet: <_Meal>[
+      _Meal('아침', '계란 5개, 오트밀', 720, 480),
+      _Meal('점심', '치킨마요 덮밥 곱빼기', 1180, 1640),
+      _Meal('저녁', '프로틴, 고구마, 야식 라면', 1220, 980),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('스쿼트 5세트', 25, '근력', '하체 볼륨 확보'),
+      _Routine('벤치프레스 5세트', 25, '근력', '상체 볼륨 확보'),
+      _Routine('유산소 쿨다운', 10, '유산소', '나트륨 배출'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'PT 세션 · 트레이너 지도',
+        completionRate: 100,
+        exercises: <String>['스쿼트 5세트', '벤치프레스 5세트', '유산소 쿨다운'],
+        clientFeedback: '오늘은 제대로 했습니다',
+        trainerNote: '하는 날과 안 하는 날 편차가 큼. 주 4회 고정 스케줄 제안.',
+      ),
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 0,
+        exercises: <String>['스쿼트 ✗', '벤치프레스 ✗', '쿨다운 ✗'],
+        clientFeedback: '어제는 아예 못 갔어요',
+        trainerNote: '',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '태경님, 하는 날은 100%인데 격일로 완전히 비네요', '11:20'),
+      _Chat('client', '오늘은 제대로 했습니다', '11:48'),
+      _Chat('client', '근데 식단은 자신이 없네요 😅', '11:49'),
+    ],
+  ),
+
+  // --- 운동은 완벽, 나트륨만 계속 초과 ---------------------------------
+  _Client(
+    id: 14,
+    name: '백서진',
+    avatar: '백',
+    goal: '식습관 개선',
+    lastMessage: '국물을 못 끊겠어요',
+    lastTime: '어제',
+    threadHandled: true,
+    active: true,
+    calories: 1920,
+    sodiumMg: 2680,
+    sugarG: 44,
+    lastRoutine: '오늘',
+    // 운동은 흠잡을 데가 없다.
+    weekCompletion: <int>[100, 100, 100, 100, 100, 100, 100],
+    // 그런데 나트륨은 7일 내내 목표선 위 — 높은 자리에서 평평하다.
+    sodiumWeek: <int>[2400, 2550, 2700, 2600, 2800, 2650, 2680],
+    diet: <_Meal>[
+      _Meal('아침', '북엇국, 공기밥', 520, 1120),
+      _Meal('점심', '칼국수', 880, 1260),
+      _Meal('저녁', '닭가슴살 샐러드', 520, 300),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('러닝머신', 30, '유산소', '나트륨 배출 지원'),
+      _Routine('전신 근력 서킷', 25, '근력', '현 루틴 유지'),
+      _Routine('스트레칭', 10, '스트레칭', '회복'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/12 (오늘)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['러닝머신 30분 ✓', '근력 서킷 25분 ✓', '스트레칭 10분 ✓'],
+        clientFeedback: '운동은 빠짐없이 하고 있어요',
+        trainerNote: '이행률 100%인데 나트륨 7일 연속 초과. 식단 상담으로 전환.',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '서진님, 운동은 7일 다 채우셨어요. 다만 나트륨이 계속 2500 위예요', '20:30'),
+      _Chat('client', '국물을 못 끊겠어요', '20:41'),
+      _Chat('trainer', '국물만 절반 남기셔도 400~500은 빠져요. 그것부터 해보죠 🙂', '20:44'),
+    ],
+  ),
+
+  // --- 단 하루만 기록 (단일 포인트 스파크라인) --------------------------
+  _Client(
+    id: 15,
+    name: '노은채',
+    avatar: '노',
+    goal: '운동 습관 만들기',
+    lastMessage: '첫 운동 했어요!',
+    lastTime: '어제',
+    threadHandled: true,
+    active: true,
+    calories: 1280,
+    sodiumMg: 1450,
+    sugarG: 18,
+    lastRoutine: '어제',
+    // 하루만 100%. 0 인 날은 세지 않으므로 평균 100 — 배지가 뜨면 안 된다.
+    weekCompletion: <int>[100, 0, 0, 0, 0, 0, 0],
+    // 측정값이 하나뿐인 스파크라인.
+    sodiumWeek: <int>[1450],
+    diet: <_Meal>[
+      _Meal('아침', '바나나, 우유', 220, 130),
+      _Meal('점심', '샐러드 볼', 430, 610),
+      _Meal('저녁', '두부 스테이크, 잡곡밥', 630, 710),
+    ],
+    aiRoutine: <_Routine>[
+      _Routine('걷기', 20, '유산소', '습관 형성 우선'),
+      _Routine('맨몸 스쿼트', 8, '근력', '부담 없는 시작'),
+      _Routine('전신 스트레칭', 10, '스트레칭', '운동 후 회복'),
+    ],
+    history: <_History>[
+      _History(
+        dateLabel: '7/11 (어제)',
+        label: 'AI 루틴 · 자율 운동',
+        completionRate: 100,
+        exercises: <String>['걷기 20분 ✓', '맨몸 스쿼트 8분 ✓', '스트레칭 10분 ✓'],
+        clientFeedback: '첫 운동 했어요! 생각보다 할 만했어요',
+        trainerNote: '첫 기록. 다음 주까지 주 3회 유지가 목표.',
+      ),
+    ],
+    chat: <_Chat>[
+      _Chat('trainer', '은채님, 첫 루틴 완주 축하해요 🎉', '18:00'),
+      _Chat('client', '첫 운동 했어요!', '18:05'),
+      _Chat('trainer', '이번 주는 3번만 채워보죠. 무리 안 하는 게 더 중요해요 🙂', '18:07'),
+    ],
+  ),
+];

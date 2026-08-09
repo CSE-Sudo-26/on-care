@@ -25,28 +25,109 @@ void main() {
   });
 
   group('seedIfEmpty', () {
-    test('first run seeds 3 clients with their related data', () async {
+    test('first run seeds the roster with its related data', () async {
       await seedIfEmpty(db);
 
       final clients = await db.select(db.trainerClients).get();
-      expect(clients.length, 3);
-      expect(clients.map((c) => c.name).toSet(), <String>{'김민수', '이지수', '박성호'});
+      expect(clients.length, 15);
+      expect(
+        clients.map((c) => c.name).toSet().length,
+        15,
+        reason: '이름이 겹치면 addClient 의 중복 검사와 스케줄 폴백이 어긋난다',
+      );
 
-      // Each client has 3 meals, 3 AI routines, 3 history entries, chat.
-      final diet = await db.select(db.clientDietEntries).get();
-      final routines = await db.select(db.clientAiRoutines).get();
-      final history = await db.select(db.clientRoutineHistory).get();
-      final chat = await db.select(db.clientChatMessages).get();
-      expect(diet.length, 9);
-      expect(routines.length, 9);
-      expect(history.length, 9);
-      expect(chat, isNotEmpty);
+      // Every client must be coachable and chartable, whatever else their
+      // fixture is demonstrating: the 코칭 탭 reads the routine list and
+      // the completion bars index all seven days.
+      for (final c in clients) {
+        final routines = await (db.select(
+          db.clientAiRoutines,
+        )..where((t) => t.clientId.equals(c.id))).get();
+        expect(routines, isNotEmpty, reason: '${c.name}: AI 루틴이 없으면 코칭 탭이 빈다');
+        expect(
+          (jsonDecode(c.weekCompletionJson) as List<Object?>).length,
+          7,
+          reason: '${c.name}: 완료율 막대는 7일을 인덱싱한다',
+        );
+      }
 
-      // weekCompletion is stored as a 7-length JSON array.
-      final minsu = clients.firstWhere((c) => c.name == '김민수');
-      expect((jsonDecode(minsu.weekCompletionJson) as List<Object?>).length, 7);
+      expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
+      expect(await db.readValue('trainer_seeded_v4'), _todayString());
+    });
 
-      expect(await db.readValue('trainer_seeded_v3'), _todayString());
+    // The roster is a fixture for the *charts*, not just the list — its
+    // whole point is that every state the console can render is reachable
+    // by clicking around the demo. Assert that spread directly, so
+    // flattening the data back out to fifteen similar weeks fails here
+    // rather than silently making half the UI unreachable.
+    test('the roster covers the states the console has to render', () async {
+      await seedIfEmpty(db);
+      final clients = await db.select(db.trainerClients).get();
+
+      List<int> sodiumWeek(TrainerClientRow c) =>
+          (jsonDecode(c.sodiumWeekJson) as List<Object?>)
+              .map((e) => (e! as num).toInt())
+              .toList();
+      List<int> week(TrainerClientRow c) =>
+          (jsonDecode(c.weekCompletionJson) as List<Object?>)
+              .map((e) => e! as int)
+              .toList();
+      bool low(TrainerClientRow c) {
+        final recorded = week(c).where((d) => d > 0).toList();
+        if (recorded.isEmpty) return false;
+        return recorded.reduce((a, b) => a + b) / recorded.length < 60;
+      }
+
+      // Sparkline shapes: a full week, a partial week, a single point, and
+      // nothing at all must all exist — each takes a different path.
+      expect(clients.where((c) => sodiumWeek(c).length == 7), isNotEmpty);
+      expect(
+        clients.where((c) {
+          final n = sodiumWeek(c).length;
+          return n > 1 && n < 7;
+        }),
+        isNotEmpty,
+        reason: '7일 미만 추이 (기록이 끊긴 고객)',
+      );
+      expect(clients.where((c) => sodiumWeek(c).length == 1), isNotEmpty);
+      expect(clients.where((c) => sodiumWeek(c).isEmpty), isNotEmpty);
+
+      // Alert combinations, including the two that are easy to lose.
+      expect(
+        clients.where((c) => c.sodiumMg > 2000 && !low(c)),
+        isNotEmpty,
+        reason: '나트륨만 초과',
+      );
+      expect(
+        clients.where((c) => c.sodiumMg <= 2000 && low(c)),
+        isNotEmpty,
+        reason: '이행률만 저조',
+      );
+      expect(
+        clients.where((c) => c.sodiumMg > 2000 && low(c)),
+        isNotEmpty,
+        reason: '복합 — 확인 필요 목록 맨 위에 오는 케이스',
+      );
+      expect(
+        clients.where((c) => c.sodiumMg <= 2000 && !low(c) && c.sugarG <= 50),
+        isNotEmpty,
+        reason: '무알림 대조군이 없으면 배지가 항상 켜진 화면만 보게 된다',
+      );
+      expect(clients.where((c) => c.sugarG > 50), isNotEmpty, reason: '당류 경고');
+      expect(clients.where((c) => !c.active), isNotEmpty, reason: '휴면');
+
+      // A brand-new client: no meals, no history. `isLowCompletion` must
+      // NOT flag an all-zero week, or day one reads as failure.
+      final blank = clients.where((c) => sodiumWeek(c).isEmpty).first;
+      expect(low(blank), isFalse);
+      final meals = await (db.select(
+        db.clientDietEntries,
+      )..where((t) => t.clientId.equals(blank.id))).get();
+      final history = await (db.select(
+        db.clientRoutineHistory,
+      )..where((t) => t.clientId.equals(blank.id))).get();
+      expect(meals, isEmpty, reason: '식단 빈 상태 렌더링 경로');
+      expect(history, isEmpty, reason: '운동 기록 빈 상태 렌더링 경로');
     });
 
     test('schedule seeds onto today (never empty on a later day)', () async {
@@ -76,13 +157,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v3', '2020-01-01');
+      await db.putValue('trainer_seeded_v4', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v3'), _todayString());
+      expect(await db.readValue('trainer_seeded_v4'), _todayString());
     });
 
     test(
@@ -151,7 +232,7 @@ void main() {
     });
 
     test(
-      'a same-day v1→v2 upgrade re-seeds to backfill sodium trends',
+      'a same-day upgrade under an older flag re-seeds exactly once',
       () async {
         final today = _todayString();
 
@@ -191,7 +272,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v3'), today);
+        expect(await db.readValue('trainer_seeded_v4'), today);
       },
     );
 
@@ -213,7 +294,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v3', '2020-01-01');
+      await db.putValue('trainer_seeded_v4', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

@@ -386,6 +386,7 @@
   "clientFeedback": "Client feedback",
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
+  "dietEmpty": "No meals logged yet",
   "dietTodaySummary": "Today's nutrition",
   "dietSodiumTrend": "Sodium over the last 7 days",
   "dietAverageMg": "Avg {value}mg",

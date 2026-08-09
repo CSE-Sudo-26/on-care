@@ -83,7 +83,7 @@ void main() {
       expect(find.text('생활스포츠지도사 2급'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('담당 고객'), 150);
-      expect(find.text('3'), findsOneWidget); // live client count
+      expect(find.text('15'), findsOneWidget); // live client count
       expect(find.text('완료 세션'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('온케어짐 신촌점'), 150);

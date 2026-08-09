@@ -6,9 +6,14 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
+// The roster itself is bulky enough to drown the seeding logic, so it
+// lives next door. `part` keeps the `_Client` family private to this
+// library rather than making the shapes public just to split a file.
+part 'seed_clients.dart';
+
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v3']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v4']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -21,24 +26,25 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v2` (was `_v1`): the schema-v2 migration adds
-/// `sodiumWeekJson` with an empty default, so a client who upgrades and
-/// re-opens the SAME day would keep blank sodium trends until the date
-/// rolled over (`_v1` flag already == today ⇒ re-seed skipped). Bumping
-/// the key forces exactly one re-seed on upgrade, backfilling the seed
-/// clients' real weekly sodium while runtime rows are preserved (245→247,
-/// review PR 247).
+/// The flag is `_v4` (was `_v3`): the roster grew from three clients to
+/// fifteen. Without the bump, anyone who already opened the app today
+/// would keep the old three until the date rolled over — the same reason
+/// `_v2` existed (it backfilled `sodiumWeekJson` after that column was
+/// added, review PR 247).
 ///
 /// **User data is preserved.** Only rows whose `id` starts with `seed-`
 /// are wiped, so anything added at runtime (e.g. a trainer's chat reply,
 /// which gets a non-`seed-` id) survives re-seeding.
 ///
-/// Source data mirrors the On-Care Figma trainer mock
-/// (`TRAINER_CLIENTS` / `TRAINER_SCHEDULE`).
+/// The schedule mirrors the On-Care Figma trainer mock
+/// (`TRAINER_SCHEDULE`); the roster started there and was extended into
+/// the spread documented in `seed_clients.dart`. Note the schedule stays
+/// at six slots on purpose: fifteen clients on the books does not mean
+/// fifteen sessions in one day.
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v3') == today) return;
+  if (await db.readValue('trainer_seeded_v4') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -199,7 +205,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v3', today);
+    await db.putValue('trainer_seeded_v4', today);
   });
 }
 
@@ -314,200 +320,6 @@ class _Slot {
   final String note;
   final List<Map<String, Object?>> program; // {name,sets,reps,weight}
 }
-
-const List<_Client> _clients = <_Client>[
-  _Client(
-    id: 1,
-    name: '김민수',
-    avatar: '김',
-    goal: '혈압 관리 · 체중 감량',
-    lastMessage: '오늘 식단 전송됐어요',
-    lastTime: '방금',
-    threadHandled: true,
-    active: true,
-    calories: 1420,
-    sodiumMg: 2100,
-    sugarG: 45,
-    lastRoutine: '오늘',
-    weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
-    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 2100],
-    diet: <_Meal>[
-      _Meal('아침', '오트밀, 바나나', 315, 380),
-      _Meal('점심', '닭가슴살 샐러드, 현미밥', 620, 890),
-      _Meal('저녁', '두부찌개, 잡곡밥', 485, 830),
-    ],
-    aiRoutine: <_Routine>[
-      _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
-      _Routine('하체 스트레칭', 15, '스트레칭', '혈액순환 개선'),
-      _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
-    ],
-    history: <_History>[
-      _History(
-        dateLabel: '7/12 (오늘)',
-        label: 'PT 세션 · 트레이너 지도',
-        completionRate: 100,
-        exercises: <String>['레그프레스 3세트', '레그컬 3세트', '하체 스트레칭'],
-        clientFeedback: '무릎이 좀 당겼지만 트레이너님 덕분에 잘 마쳤어요 😊',
-        trainerNote: '무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.',
-      ),
-      _History(
-        dateLabel: '7/10',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 67,
-        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '스트레칭 ✗ (생략)'],
-        clientFeedback: '스트레칭은 시간이 없어서 못 했어요',
-        trainerNote: '',
-      ),
-      _History(
-        dateLabel: '7/8',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 100,
-        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '하체 스트레칭 15분 ✓'],
-        clientFeedback: '오늘은 다 했어요! 뿌듯해요 💪',
-        trainerNote: '',
-      ),
-    ],
-    chat: <_Chat>[
-      _Chat(
-        'trainer',
-        '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?',
-        '18:10',
-      ),
-      _Chat('client', '찌개 먹을 때 국물을 많이 마셨나봐요 😅', '18:13'),
-      _Chat('trainer', '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?', '18:14'),
-      _Chat('client', '무릎이 가볍게 당기긴 했는데 괜찮아요', '18:16'),
-      _Chat(
-        'trainer',
-        '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
-        '18:18',
-      ),
-    ],
-  ),
-  _Client(
-    id: 2,
-    name: '이지수',
-    avatar: '이',
-    goal: '체력 강화 · 다이어트',
-    lastMessage: '루틴 받았어요, 감사합니다!',
-    lastTime: '1시간 전',
-    active: true,
-    calories: 1680,
-    sodiumMg: 1800,
-    sugarG: 38,
-    lastRoutine: '어제',
-    weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
-    sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
-    diet: <_Meal>[
-      _Meal('아침', '그릭요거트, 과일', 280, 200),
-      _Meal('점심', '현미밥, 불고기, 나물', 750, 980),
-      _Meal('저녁', '연어 샐러드', 650, 620),
-    ],
-    aiRoutine: <_Routine>[
-      _Routine('인터벌 런닝', 25, '유산소', '체지방 연소 효율↑'),
-      _Routine('스쿼트 3세트', 15, '근력', '하체 근력 강화'),
-      _Routine('플랭크', 10, '근력', '코어 안정화'),
-    ],
-    history: <_History>[
-      _History(
-        dateLabel: '7/11 (어제)',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 100,
-        exercises: <String>['인터벌 런닝 25분 ✓', '스쿼트 3세트 ✓', '플랭크 10분 ✓'],
-        clientFeedback: '런닝이 힘들었는데 다 했어요! 숨이 많이 찼어요',
-        trainerNote: '심폐지구력 향상 중. 다음 주 런닝 강도 소폭 올릴 예정.',
-      ),
-      _History(
-        dateLabel: '7/9',
-        label: 'PT 세션 · 트레이너 지도',
-        completionRate: 100,
-        exercises: <String>['데드리프트 3세트', '런지 3세트', '코어 서킷'],
-        clientFeedback: '데드리프트 자세 교정 도움 많이 됐어요!',
-        trainerNote: '',
-      ),
-      _History(
-        dateLabel: '7/7',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 67,
-        exercises: <String>['런닝 25분 ✓', '스쿼트 ✓', '플랭크 ✗ (피로)'],
-        clientFeedback: '마지막 플랭크는 너무 지쳐서 못 했어요',
-        trainerNote: '',
-      ),
-    ],
-    chat: <_Chat>[
-      _Chat(
-        'trainer',
-        '지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?',
-        '20:05',
-      ),
-      _Chat('client', '생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨', '20:08'),
-      _Chat(
-        'trainer',
-        '심폐 지구력 올라가는 과정이에요 💪 AI 분석 보니까 당류는 목표 안에 있고, 루틴 다음 주부터 근력 비중 늘려볼게요. 식단도 AI 추천 참고해서 업데이트해 드릴게요',
-        '20:10',
-      ),
-    ],
-  ),
-  _Client(
-    id: 3,
-    name: '박성호',
-    avatar: '박',
-    goal: '근력 향상',
-    lastMessage: '이번 주 운동 못했어요...',
-    lastTime: '3일 전',
-    active: false,
-    calories: 2100,
-    sodiumMg: 2400,
-    sugarG: 55,
-    lastRoutine: '5일 전',
-    weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
-    sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
-    diet: <_Meal>[
-      _Meal('아침', '계란 3개, 토스트', 480, 520),
-      _Meal('점심', '짜장면', 890, 1200),
-      _Meal('저녁', '삼겹살, 쌈채소', 730, 680),
-    ],
-    aiRoutine: <_Routine>[
-      _Routine('벤치프레스 4세트', 20, '근력', '상체 근력 목표'),
-      _Routine('데드리프트 3세트', 15, '근력', '전신 근력 향상'),
-      _Routine('유산소 쿨다운', 10, '유산소', '나트륨 배출 지원'),
-    ],
-    history: <_History>[
-      _History(
-        dateLabel: '7/7',
-        label: 'PT 세션 · 트레이너 지도',
-        completionRate: 100,
-        exercises: <String>['벤치프레스 4세트', '인클라인 덤벨 3세트', '트라이셉스 딥'],
-        clientFeedback: '가슴이 많이 타는 느낌이었어요. 좋았어요!',
-        trainerNote: '벤치 중량 62.5kg → 65kg 도전 가능. 다음 PT 때 시도 예정.',
-      ),
-      _History(
-        dateLabel: '7/5',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 33,
-        exercises: <String>['벤치프레스 ✓', '데드리프트 ✗', '유산소 ✗'],
-        clientFeedback: '회사 일이 생겨서 벤치만 하고 나왔어요',
-        trainerNote: '',
-      ),
-      _History(
-        dateLabel: '7/3',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 0,
-        exercises: <String>['벤치프레스 ✗', '데드리프트 ✗', '유산소 ✗'],
-        clientFeedback: '못 갔어요 😓',
-        trainerNote: '',
-      ),
-    ],
-    chat: <_Chat>[
-      _Chat('trainer', '성호님, 이번 주 운동 기록이 AI 쪽에서 안 잡히는데 몸은 괜찮으세요?', '월 09:00'),
-      _Chat('client', '이번 주 일이 너무 많아서 못 갔어요 😓', '월 09:03'),
-      _Chat(
-        'trainer',
-        '이해해요! 대신 AI 식단 분석 보니까 나트륨이 좀 높더라고요. 주말에 30분 걷기라도 하면 도움 돼요. AI가 그에 맞는 루틴 다시 짜줬으니까 앱에서 확인해보세요 🙂',
-        '월 09:07',
-      ),
-    ],
-  ),
-];
 
 const List<_Slot> _schedule = <_Slot>[
   _Slot(

@@ -187,6 +187,7 @@
   "clientFeedback": "고객 피드백",
   "trainerNote": "트레이너 메모",
   "dietLoadFailed": "식단을 불러오지 못했어요",
+  "dietEmpty": "아직 기록된 식단이 없어요",
   "dietTodaySummary": "오늘 영양 요약",
   "dietSodiumTrend": "최근 7일 나트륨 추이",
   "dietAverageMg": "평균 {value}mg",
