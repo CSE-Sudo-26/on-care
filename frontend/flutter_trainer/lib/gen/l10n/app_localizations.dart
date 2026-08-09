@@ -155,7 +155,7 @@ abstract class AppLocalizations {
   /// No description provided for @navCoaching.
   ///
   /// In en, this message translates to:
-  /// **'Coaching'**
+  /// **'AI coaching'**
   String get navCoaching;
 
   /// No description provided for @navReports.
@@ -2407,6 +2407,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Duration'**
   String get routineFieldMinutes;
+
+  /// No description provided for @routineFieldTotalMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Total workout time'**
+  String get routineFieldTotalMinutes;
 
   /// No description provided for @routineFieldIntensity.
   ///
