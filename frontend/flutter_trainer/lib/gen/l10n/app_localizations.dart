@@ -247,6 +247,408 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} · My page'**
   String sidebarMyTooltip(String name);
+
+  /// No description provided for @authTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'The trainer-only app for managing your clients'**
+  String get authTagline;
+
+  /// No description provided for @authEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get authEmail;
+
+  /// No description provided for @authPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPassword;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authSignIn;
+
+  /// No description provided for @authNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account?'**
+  String get authNoAccount;
+
+  /// No description provided for @authSignUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get authSignUp;
+
+  /// No description provided for @authBrowseDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the demo without signing in'**
+  String get authBrowseDemo;
+
+  /// No description provided for @authOr.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get authOr;
+
+  /// No description provided for @authContinueKakao.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Kakao'**
+  String get authContinueKakao;
+
+  /// No description provided for @authContinueGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get authContinueGoogle;
+
+  /// No description provided for @authSignUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an On-Care account and start managing clients'**
+  String get authSignUpSubtitle;
+
+  /// No description provided for @authName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get authName;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Password (8+ characters)'**
+  String get authPasswordHint;
+
+  /// No description provided for @authPasswordConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get authPasswordConfirm;
+
+  /// No description provided for @authInviteCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym invite code'**
+  String get authInviteCode;
+
+  /// No description provided for @authInviteCodeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code issued by the gym you work at.'**
+  String get authInviteCodeHelp;
+
+  /// No description provided for @authSignUpAndStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up and start'**
+  String get authSignUpAndStart;
+
+  /// No description provided for @authHasAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get authHasAccount;
+
+  /// No description provided for @authErrEmptyCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email and password'**
+  String get authErrEmptyCredentials;
+
+  /// No description provided for @authErrSocialFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Social sign-in failed. Please try again in a moment.'**
+  String get authErrSocialFailed;
+
+  /// No description provided for @authErrSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Please try again in a moment.'**
+  String get authErrSignInFailed;
+
+  /// No description provided for @authErrPasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get authErrPasswordTooShort;
+
+  /// No description provided for @authErrPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords don\'t match'**
+  String get authErrPasswordMismatch;
+
+  /// No description provided for @authErrInviteCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the invite code you received from your gym'**
+  String get authErrInviteCodeRequired;
+
+  /// No description provided for @authErrSignUpFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-up failed. Please try again in a moment.'**
+  String get authErrSignUpFailed;
+
+  /// No description provided for @dashTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashTitle;
+
+  /// No description provided for @dashAddSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add session'**
+  String get dashAddSchedule;
+
+  /// No description provided for @dashCreateAiRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Create AI routine'**
+  String get dashCreateAiRoutine;
+
+  /// No description provided for @dashLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the dashboard'**
+  String get dashLoadFailed;
+
+  /// No description provided for @dashTodayReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s bookings'**
+  String get dashTodayReservations;
+
+  /// Unit after a booking count. Korean uses the counter 건; English omits it because the tile label already says what is being counted. Intentionally empty.
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get dashUnitCount;
+
+  /// Unit after a person count. Korean uses the counter 명; English omits it. Intentionally empty.
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get dashUnitPeople;
+
+  /// No description provided for @dashSeeInSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'View in schedule'**
+  String get dashSeeInSchedule;
+
+  /// No description provided for @dashMyClients.
+  ///
+  /// In en, this message translates to:
+  /// **'My clients'**
+  String get dashMyClients;
+
+  /// No description provided for @dashDormantClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} dormant'**
+  String dashDormantClients(int count);
+
+  /// No description provided for @dashAllActive.
+  ///
+  /// In en, this message translates to:
+  /// **'All active'**
+  String get dashAllActive;
+
+  /// No description provided for @dashNeedsReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting reply'**
+  String get dashNeedsReply;
+
+  /// No description provided for @dashWaitingClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} waiting'**
+  String dashWaitingClients(int count);
+
+  /// No description provided for @dashAllReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'All replied'**
+  String get dashAllReplied;
+
+  /// No description provided for @dashAttentionClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get dashAttentionClients;
+
+  /// No description provided for @dashNoIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'No issues'**
+  String get dashNoIssues;
+
+  /// No description provided for @dashCheckSodiumCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Check sodium & completion'**
+  String get dashCheckSodiumCompletion;
+
+  /// No description provided for @dashWeeklyCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly session completion'**
+  String get dashWeeklyCompletion;
+
+  /// No description provided for @dashAveragePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg {percent}%'**
+  String dashAveragePercent(int percent);
+
+  /// No description provided for @dashNoRecordsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No records this week yet'**
+  String get dashNoRecordsThisWeek;
+
+  /// No description provided for @dashAiSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI coaching summary'**
+  String get dashAiSummaryTitle;
+
+  /// No description provided for @dashToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get dashToday;
+
+  /// No description provided for @dashAiNoClients.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients yet. Once you add one, I\'ll gather their diet and workout data and point out what to coach.'**
+  String get dashAiNoClients;
+
+  /// No description provided for @dashAiUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients are waiting for a reply. Check their chats first, then adjust today\'s routines.'**
+  String dashAiUnread(int count);
+
+  /// No description provided for @dashAiSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'{over} of your {total} clients went over their sodium target this week. Suggest a low-sodium diet and cardio-led routines.'**
+  String dashAiSodium(int total, int over);
+
+  /// No description provided for @dashAiLowCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} clients are below {threshold}% weekly completion. Ease the intensity and rebuild the habit.'**
+  String dashAiLowCompletion(int count, int threshold);
+
+  /// No description provided for @dashAiAllOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'All {total} clients are within target. Hold this intensity and raise next week\'s goal.'**
+  String dashAiAllOnTrack(int total);
+
+  /// No description provided for @dashAttentionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients to check'**
+  String get dashAttentionTitle;
+
+  /// No description provided for @dashMoreCount.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String dashMoreCount(int count);
+
+  /// No description provided for @dashNoAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'No one needs attention right now'**
+  String get dashNoAttention;
+
+  /// No description provided for @dashTodaySchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s schedule'**
+  String get dashTodaySchedule;
+
+  /// No description provided for @dashSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get dashSeeAll;
+
+  /// No description provided for @dashScheduleLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the schedule'**
+  String get dashScheduleLoadFailed;
+
+  /// No description provided for @dashNoScheduleToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing scheduled today'**
+  String get dashNoScheduleToday;
+
+  /// No description provided for @dashEmptySlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Open slot'**
+  String get dashEmptySlot;
+
+  /// No description provided for @weekdayMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get weekdayMon;
+
+  /// No description provided for @weekdayTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get weekdayTue;
+
+  /// No description provided for @weekdayWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get weekdayWed;
+
+  /// No description provided for @weekdayThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get weekdayThu;
+
+  /// No description provided for @weekdayFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get weekdayFri;
+
+  /// No description provided for @weekdaySat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get weekdaySat;
+
+  /// No description provided for @weekdaySun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get weekdaySun;
 }
 
 class _AppLocalizationsDelegate

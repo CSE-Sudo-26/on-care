@@ -9,6 +9,8 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// Today's timeline, condensed for the dashboard: time, status dot,
 /// who + what, and the status word. Gaps are shown (a trainer's free
@@ -19,13 +21,14 @@ class TodayTimelineCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final schedule = ref.watch(todayScheduleProvider);
 
     return SectionCard(
-      title: '오늘의 일정',
+      title: l.dashTodaySchedule,
       icon: Icons.today_outlined,
       trailing: CardLink(
-        label: '전체 보기',
+        label: l.dashSeeAll,
         onTap: () => context.go(AppRoutes.scheduleView('day')),
       ),
       child: schedule.when(
@@ -33,11 +36,11 @@ class TodayTimelineCard extends ConsumerWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '일정을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.dashScheduleLoadFailed),
         data: (sessions) {
           if (sessions.isEmpty) {
-            return const EmptyHint(
-              message: '오늘 등록된 일정이 없어요',
+            return EmptyHint(
+              message: l.dashNoScheduleToday,
               icon: Icons.event_busy_outlined,
             );
           }
@@ -70,6 +73,7 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final muted = session.isGap;
     return InkWell(
       onTap: onTap,
@@ -102,7 +106,7 @@ class _Row extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  muted ? '빈 시간' : '${session.clientName} · ${session.type}',
+                  muted ? l.dashEmptySlot : '${session.clientName} · ${session.type}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -116,7 +120,8 @@ class _Row extends StatelessWidget {
               ),
               if (!muted)
                 Text(
-                  session.status,
+                  // 저장된 계약값이 아니라 표시 문구를 그린다. (#501)
+                  scheduleStatusLabel(l, session.status),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

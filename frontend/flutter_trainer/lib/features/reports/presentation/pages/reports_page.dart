@@ -9,7 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays, weekdayLabels;
+    show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -21,6 +21,7 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 리포트 — the week, from two angles.
 ///
@@ -493,10 +494,10 @@ class _ClientReport extends StatelessWidget {
             // 요일별 시리즈는 이번 주 것뿐이다. 지난 주 제목 아래 이번 주
             // 막대를 그리면 트레이너가 그대로 고객에게 보낸다.
             const EmptyHint(message: '지난 주 요일별 기록은 아직 없어요')
-          else if (client.weekCompletion.length == weekdayLabels.length)
+          else if (client.weekCompletion.length == weekdayCount)
             BarSeriesChart(
               values: client.weekCompletion,
-              labels: weekdayLabels,
+              labels: weekdayLabels(AppLocalizations.of(context)),
               maxValue: 100,
               height: 80,
               showValues: true,

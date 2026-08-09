@@ -56,5 +56,140 @@
         "type": "String"
       }
     }
+  },
+  "authTagline": "The trainer-only app for managing your clients",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authSignIn": "Sign in",
+  "authNoAccount": "Don't have an account?",
+  "authSignUp": "Sign up",
+  "authBrowseDemo": "Explore the demo without signing in",
+  "authOr": "or",
+  "authContinueKakao": "Continue with Kakao",
+  "authContinueGoogle": "Continue with Google",
+  "authSignUpSubtitle": "Create an On-Care account and start managing clients",
+  "authName": "Name",
+  "authPasswordHint": "Password (8+ characters)",
+  "authPasswordConfirm": "Confirm password",
+  "authInviteCode": "Gym invite code",
+  "authInviteCodeHelp": "Enter the code issued by the gym you work at.",
+  "authSignUpAndStart": "Sign up and start",
+  "authHasAccount": "Already have an account?",
+  "authErrEmptyCredentials": "Enter your email and password",
+  "authErrSocialFailed": "Social sign-in failed. Please try again in a moment.",
+  "authErrSignInFailed": "Sign-in failed. Please try again in a moment.",
+  "authErrPasswordTooShort": "Password must be at least 8 characters",
+  "authErrPasswordMismatch": "Passwords don't match",
+  "authErrInviteCodeRequired": "Enter the invite code you received from your gym",
+  "authErrSignUpFailed": "Sign-up failed. Please try again in a moment.",
+  "dashTitle": "Dashboard",
+  "dashAddSchedule": "Add session",
+  "dashCreateAiRoutine": "Create AI routine",
+  "dashLoadFailed": "Couldn't load the dashboard",
+  "dashTodayReservations": "Today's bookings",
+  "dashUnitCount": "",
+  "dashUnitPeople": "",
+  "dashSeeInSchedule": "View in schedule",
+  "dashMyClients": "My clients",
+  "dashDormantClients": "{count} dormant",
+  "@dashDormantClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAllActive": "All active",
+  "dashNeedsReply": "Awaiting reply",
+  "dashWaitingClients": "{count} waiting",
+  "@dashWaitingClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAllReplied": "All replied",
+  "dashAttentionClients": "Needs attention",
+  "dashNoIssues": "No issues",
+  "dashCheckSodiumCompletion": "Check sodium & completion",
+  "dashWeeklyCompletion": "Weekly session completion",
+  "dashAveragePercent": "Avg {percent}%",
+  "@dashAveragePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "dashNoRecordsThisWeek": "No records this week yet",
+  "dashAiSummaryTitle": "AI coaching summary",
+  "dashToday": "Today",
+  "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
+  "dashAiUnread": "{count} clients are waiting for a reply. Check their chats first, then adjust today's routines.",
+  "@dashAiUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiSodium": "{over} of your {total} clients went over their sodium target this week. Suggest a low-sodium diet and cardio-led routines.",
+  "@dashAiSodium": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "over": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiLowCompletion": "{count} clients are below {threshold}% weekly completion. Ease the intensity and rebuild the habit.",
+  "@dashAiLowCompletion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "threshold": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
+  "@dashAiAllOnTrack": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dashAttentionTitle": "Clients to check",
+  "dashMoreCount": "+{count}",
+  "@dashMoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashNoAttention": "No one needs attention right now",
+  "dashTodaySchedule": "Today's schedule",
+  "dashSeeAll": "See all",
+  "dashScheduleLoadFailed": "Couldn't load the schedule",
+  "dashNoScheduleToday": "Nothing scheduled today",
+  "dashEmptySlot": "Open slot",
+  "weekdayMon": "Mon",
+  "weekdayTue": "Tue",
+  "weekdayWed": "Wed",
+  "weekdayThu": "Thu",
+  "weekdayFri": "Fri",
+  "weekdaySat": "Sat",
+  "weekdaySun": "Sun",
+  "@dashUnitCount": {
+    "description": "Unit after a booking count. Korean uses the counter 건; English omits it because the tile label already says what is being counted. Intentionally empty."
+  },
+  "@dashUnitPeople": {
+    "description": "Unit after a person count. Korean uses the counter 명; English omits it. Intentionally empty."
   }
 }
