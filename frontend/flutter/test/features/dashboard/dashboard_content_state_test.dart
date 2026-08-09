@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -65,6 +66,7 @@ void main() {
     required Future<DashboardSummary> Function() load,
     Size size = const Size(800, 1600),
     Locale locale = const Locale('ko'),
+    List<Override> extraOverrides = const <Override>[],
     UserProfile profile = const UserProfile(
       id: 'member',
       name: '테스트',
@@ -83,6 +85,7 @@ void main() {
           memberCoachRepositoryProvider.overrideWithValue(
             MockMemberCoachRepository(),
           ),
+          ...extraOverrides,
         ],
         child: MaterialApp(
           locale: locale,
@@ -105,7 +108,22 @@ void main() {
   testWidgets('home header opens the assigned trainer chat', (
     WidgetTester tester,
   ) async {
-    await pumpDashboard(tester, load: () async => liveSummary);
+    await pumpDashboard(
+      tester,
+      load: () async => liveSummary,
+      // 채팅 화면이 데모 안내 배너 노출을 이 설정으로 가른다. 기본값이 없는
+      // provider 라, 채팅을 실제로 여는 이 테스트에서만 넣어 준다 — 공통
+      // 헬퍼에 넣으면 데모 저장소들이 함께 살아나 다른 테스트의 전제가 바뀐다.
+      extraOverrides: <Override>[
+        appConfigProvider.overrideWithValue(
+          const AppConfig(
+            environment: Environment.dev,
+            apiBaseUrl: 'http://localhost',
+            useMockApi: true,
+          ),
+        ),
+      ],
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('trainerChatHeaderButton')), findsOneWidget);

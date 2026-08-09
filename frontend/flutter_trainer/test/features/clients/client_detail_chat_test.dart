@@ -15,6 +15,23 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import '../../helpers/pump_app.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
+/// 대화 목록을 [finder] 가 나올 때까지 [step] 만큼씩 끈다.
+///
+/// `ListView` 는 보이는 만큼만 만들기 때문에, 스크롤 밖 메시지는 트리에 아예
+/// 없다. 고정된 픽셀 수로 한 번 끄는 방식은 스레드 길이가 바뀌면 곧바로
+/// 깨진다 — 실제로 대화가 3일치로 늘자 그렇게 깨졌다. (#543)
+Future<void> dragUntil(
+  WidgetTester tester,
+  Finder finder,
+  double step, {
+  int maxDrags = 40,
+}) async {
+  for (int i = 0; i < maxDrags && finder.evaluate().isEmpty; i++) {
+    await tester.drag(find.byType(ListView), Offset(0, step));
+    await tester.pump();
+  }
+}
+
 /// Delays every insert so tests can act while a send is in flight.
 class _SlowChatRepository extends DriftChatRepository {
   const _SlowChatRepository(super.db);
@@ -88,9 +105,10 @@ void main() {
           db,
         ).watchThread('seed-client-1').first;
         expect(thread, isNotEmpty);
-        // Seeded 김민수 thread opens with the trainer's sodium question.
+        // 시드 스레드는 닷새 전 트레이너의 이행률 질문으로 시작한다. 본문·순서 전체는
+        // test/core/storage/demo_chat_thread_test.dart 가 고정한다.
         expect(thread.first.sender, ChatSender.trainer);
-        expect(thread.first.body, contains('AI 식단 분석'));
+        expect(thread.first.body, contains('지난주 기록 정리해 봤는데'));
         // Sorted ascending by createdAt.
         for (var i = 1; i < thread.length; i++) {
           expect(
@@ -337,19 +355,15 @@ void main() {
         findsOneWidget,
       );
 
-      // The thread auto-scrolls to the newest message; drag back up so
-      // the lazily-built top of the thread (banner + early replies) exists.
-      await tester.drag(find.byType(ListView), const Offset(0, 600));
-      await tester.pump();
+      // 스레드는 최신 메시지로 자동 스크롤된다. 위쪽(배너·초기 대화)은 아직
+      // 만들어지지 않았으므로 나올 때까지 끌어올린다 — 3일치로 길어져서
+      // 고정된 한 번의 드래그로는 닿지 않는다.
+      await dragUntil(tester, find.textContaining('AI가 김민수님의'), 300);
       expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
-      // The 8px gap above the section row intentionally leaves the thread
-      // a little less viewport height. Scroll to the early reply instead of
-      // assuming the banner and reply are both built in the same frame.
+      // 같은 이유로 오늘 대화도 한 프레임에 같이 존재하지 않는다. 다시 내려서
+      // 찾는다.
       final reply = find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅');
-      for (var i = 0; i < 3 && reply.evaluate().isEmpty; i++) {
-        await tester.drag(find.byType(ListView), const Offset(0, -100));
-        await tester.pump();
-      }
+      await dragUntil(tester, reply, -300);
       expect(reply, findsOneWidget);
     });
 

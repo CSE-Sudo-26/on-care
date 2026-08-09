@@ -69,9 +69,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
     // 만지면 async gap 을 건너 쓰게 된다.
     final AppLocalizations l = AppLocalizations.of(context);
     if (text.trim().length > _maxMessageLength) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.chatTooLong)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.chatTooLong)));
       return;
     }
     setState(() => _sending = true);
@@ -84,9 +82,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
       // user left would otherwise touch a disposed messenger.
       if (!mounted) return;
       // Keep the draft in the input and tell the user it didn't go out.
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.chatSendFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.chatSendFailed)));
       return;
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -108,6 +104,59 @@ class _ChatViewState extends ConsumerState<ChatView> {
       ref.invalidate(unreadCountsProvider);
     }
   }
+
+  /// 데모 안내 배너를 **하루 단위로** 끼워 넣은 목록을 만든다.
+  ///
+  /// 배너가 스레드 맨 앞·맨 뒤에 하나씩만 있으면, 여러 날에 걸친 스레드에서
+  /// "분석은 이 대화가 시작되기 전에 딱 한 번 있었다"로 읽힌다. 실제로는 매일
+  /// 그날 데이터를 분석해 그 대화가 시작되고, 조정한 루틴을 보내며 끝난다 —
+  /// 그래서 날이 바뀌는 자리마다 앞뒤로 붙인다. (#543)
+  ///
+  /// 하루짜리 스레드(시드 고객 대부분)에서는 위 하나·아래 하나가 되어 이전과
+  /// 똑같이 보인다.
+  ///
+  /// 날짜 판정은 `createdAt` 으로 한다. `timeLabel` 은 화면에 보일 문자열일
+  /// 뿐이라 거기서 날짜를 파내면 표시 문구가 곧 로직이 된다. 시드 메시지에
+  /// 대해서만 자르는 이유도 같다 — 방금 보낸 답장은 오늘 날짜라, 그대로 두면
+  /// 내 말풍선 앞에 "분석했어요" 가 끼어든다.
+  List<Widget> _withDemoBanners(List<ClientChatMessage> list) {
+    final List<Widget> out = <Widget>[];
+    for (int i = 0; i < list.length; i++) {
+      final ClientChatMessage m = list[i];
+      final bool newDay =
+          m.id.startsWith('seed-') &&
+          (i == 0 || !_sameDay(list[i - 1].createdAt, m.createdAt));
+      if (newDay) {
+        if (i > 0) {
+          out
+            ..add(
+              _SentBanner(
+                key: ValueKey<String>('sent-before-${m.id}'),
+                clientName: widget.clientName,
+              ),
+            )
+            ..add(const SizedBox(height: AppSpacing.md));
+        }
+        out
+          ..add(
+            _SystemBanner(
+              key: ValueKey<String>('analyzed-before-${m.id}'),
+              clientName: widget.clientName,
+            ),
+          )
+          ..add(const SizedBox(height: AppSpacing.md));
+      }
+      out
+        ..add(_Bubble(message: m, avatar: widget.clientAvatar))
+        ..add(const SizedBox(height: AppSpacing.md));
+    }
+    // 대화가 없으면 배너만 남는다 — 분석한 것도 보낸 것도 없으므로 그리지 않는다.
+    if (list.isNotEmpty) out.add(_SentBanner(clientName: widget.clientName));
+    return out;
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -165,18 +214,14 @@ class _ChatViewState extends ConsumerState<ChatView> {
               return ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                children: <Widget>[
-                  if (showDemoBanners) ...<Widget>[
-                    _SystemBanner(clientName: widget.clientName),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  for (final m in list) ...<Widget>[
-                    _Bubble(message: m, avatar: widget.clientAvatar),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  if (showDemoBanners)
-                    _SentBanner(clientName: widget.clientName),
-                ],
+                children: showDemoBanners
+                    ? _withDemoBanners(list)
+                    : <Widget>[
+                        for (final m in list) ...<Widget>[
+                          _Bubble(message: m, avatar: widget.clientAvatar),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                      ],
               );
             },
           ),
@@ -188,7 +233,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
 }
 
 class _SystemBanner extends StatelessWidget {
-  const _SystemBanner({required this.clientName});
+  const _SystemBanner({required this.clientName, super.key});
 
   final String clientName;
 
@@ -234,7 +279,7 @@ class _SystemBanner extends StatelessWidget {
 /// The "루틴 전송됨" system banner at the end of the seeded thread (mock:
 /// the green centered notice under the last message).
 class _SentBanner extends StatelessWidget {
-  const _SentBanner({required this.clientName});
+  const _SentBanner({required this.clientName, super.key});
 
   final String clientName;
 

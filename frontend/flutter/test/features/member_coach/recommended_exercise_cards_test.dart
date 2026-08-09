@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -12,6 +13,7 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 const MemberCoach _trainer = MemberCoach(
   trainerId: 'trainer-1',
@@ -79,6 +81,22 @@ class _ReadTrackingMemberCoachRepository extends MockMemberCoachRepository {
     _read = true;
   }
 }
+
+/// 데모(목업) 설정 — 채팅 화면이 `appConfigProvider` 를 읽어 안내 배너 노출을
+/// 가른다. 이 provider 는 기본값 없이 던지므로 테스트마다 넣어 줘야 한다.
+const AppConfig _demoConfig = AppConfig(
+  environment: Environment.dev,
+  apiBaseUrl: 'http://localhost',
+  useMockApi: true,
+);
+
+/// 채팅 화면 문구는 l10n 에서 온다 — 델리게이트 없이 띄우면 빌드가 실패한다.
+Widget _chatApp(Widget home) => MaterialApp(
+  locale: const Locale('ko'),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: home,
+);
 
 void main() {
   Future<void> pumpRecommendationCards(
@@ -204,8 +222,12 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           memberCoachRepositoryProvider.overrideWithValue(repository),
+          appConfigProvider.overrideWithValue(_demoConfig),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (BuildContext context) => Scaffold(
               floatingActionButton: const FloatingActionButton(
@@ -232,20 +254,29 @@ void main() {
     expect(find.byKey(const Key('underlyingFloatingButton')), findsNothing);
     expect(find.text('김트레이너'), findsOneWidget);
     expect(find.text('담당 트레이너 · 상담 가능'), findsOneWidget);
-    expect(find.text('김트레이너 · 13:20'), findsNothing);
-    expect(find.text('13:20'), findsOneWidget);
+    // 말풍선 검사는 **마지막** 트레이너 메시지로 한다. 대화가 3일치로 늘면서
+    // 화면은 맨 아래에서 열리므로, 첫 메시지는 뷰포트 밖이라 좌표를 잴 수 없다.
+    expect(find.text('김트레이너 · 18:18'), findsNothing);
+    expect(find.text('18:18'), findsOneWidget);
     final Finder trainerBubble = find.byKey(
-      const Key('coach-message-bubble-seed-m1'),
+      const Key('coach-message-bubble-seed-m18'),
     );
     final Finder trainerAvatar = find.byKey(
-      const Key('coach-message-avatar-seed-m1'),
+      const Key('coach-message-avatar-seed-m18'),
     );
     final Finder trainerTime = find.byKey(
-      const Key('coach-message-time-seed-m1'),
+      const Key('coach-message-time-seed-m18'),
+    );
+    // 본문은 그 말풍선 **안에서** 찾는다. '확인했어요' 로 화면 전체를 뒤지면
+    // 첫날 메시지까지 걸려, 그 메시지가 뷰포트에 들어오는 순간 다중 일치로
+    // 깨진다 (리뷰 지적).
+    final Finder trainerBody = find.descendant(
+      of: trainerBubble,
+      matching: find.byType(Text),
     );
     expect(
       tester.getTopLeft(trainerTime).dy,
-      greaterThan(tester.getBottomLeft(find.textContaining('오늘 점심')).dy),
+      greaterThan(tester.getBottomLeft(trainerBody).dy),
     );
     expect(
       tester.getBottomLeft(trainerAvatar).dy,
@@ -301,13 +332,14 @@ void main() {
           memberCoachRepositoryProvider.overrideWithValue(
             _ReadFailingMemberCoachRepository(),
           ),
+          appConfigProvider.overrideWithValue(_demoConfig),
         ],
-        child: const MaterialApp(home: TrainerChatPage(trainerName: '김트레이너')),
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('오늘 점심'), findsOneWidget);
+    expect(find.textContaining('확인했어요'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -318,8 +350,12 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           memberCoachRepositoryProvider.overrideWithValue(repository),
+          appConfigProvider.overrideWithValue(_demoConfig),
         ],
         child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Consumer(
             builder: (BuildContext context, WidgetRef ref, Widget? child) {
               ref.watch(coachUnreadProvider);
@@ -352,8 +388,9 @@ void main() {
           memberCoachRepositoryProvider.overrideWithValue(
             _SendFailingMemberCoachRepository(),
           ),
+          appConfigProvider.overrideWithValue(_demoConfig),
         ],
-        child: const MaterialApp(home: TrainerChatPage(trainerName: '김트레이너')),
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
       ),
     );
     await tester.pumpAndSettle();

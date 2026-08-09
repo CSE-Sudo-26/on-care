@@ -742,6 +742,22 @@
       }
     }
   },
+  "coachChatSubtitle": "Personal trainer · Available",
+  "coachChatBack": "Back",
+  "coachChatLoadFailed": "Couldn't load the conversation",
+  "coachChatSendFailed": "Couldn't send your message. Please try again",
+  "coachChatInputHint": "Message your trainer...",
+  "coachChatDemoAnalyzed": "AI analyzed your diet and exercise data",
+  "coachChatDemoReportSent": "A summary report was sent to {trainer}",
+  "@coachChatDemoReportSent": {
+    "placeholders": {
+      "trainer": {
+        "type": "String"
+      }
+    }
+  },
+  "coachChatDemoRoutineReceived": "You received a routine based on AI analysis",
+  "coachChatDemoNotified": "It was also delivered as a notification",
   "coachCtaChat": "Chat with AI",
   "navAddRecordTitle": "Add a record",
   "navAddRecordSubtitle": "Choose diet or exercise",

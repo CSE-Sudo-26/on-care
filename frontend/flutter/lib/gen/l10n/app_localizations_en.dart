@@ -1309,6 +1309,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get coachChatSubtitle => 'Personal trainer · Available';
+
+  @override
+  String get coachChatBack => 'Back';
+
+  @override
+  String get coachChatLoadFailed => 'Couldn\'t load the conversation';
+
+  @override
+  String get coachChatSendFailed =>
+      'Couldn\'t send your message. Please try again';
+
+  @override
+  String get coachChatInputHint => 'Message your trainer...';
+
+  @override
+  String get coachChatDemoAnalyzed => 'AI analyzed your diet and exercise data';
+
+  @override
+  String coachChatDemoReportSent(String trainer) {
+    return 'A summary report was sent to $trainer';
+  }
+
+  @override
+  String get coachChatDemoRoutineReceived =>
+      'You received a routine based on AI analysis';
+
+  @override
+  String get coachChatDemoNotified => 'It was also delivered as a notification';
+
+  @override
   String get coachCtaChat => 'Chat with AI';
 
   @override
