@@ -2905,6 +2905,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancelled the {when} booking'**
   String exCancelDone(String when);
+
+  /// No description provided for @mySupportOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the link. Please try again in a moment'**
+  String get mySupportOpenFailed;
+
+  /// Shown under the FAQ / 1:1 inquiry rows so it is clear the tap leaves the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens the KakaoTalk channel'**
+  String get mySupportExternalHint;
 }
 
 class _AppLocalizationsDelegate

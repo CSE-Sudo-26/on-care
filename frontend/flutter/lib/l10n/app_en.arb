@@ -829,5 +829,10 @@
         "type": "String"
       }
     }
+  },
+  "mySupportOpenFailed": "Couldn't open the link. Please try again in a moment",
+  "mySupportExternalHint": "Opens the KakaoTalk channel",
+  "@mySupportExternalHint": {
+    "description": "Shown under the FAQ / 1:1 inquiry rows so it is clear the tap leaves the app."
   }
 }

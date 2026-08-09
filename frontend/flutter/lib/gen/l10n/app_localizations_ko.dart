@@ -1518,4 +1518,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String exCancelDone(String when) {
     return '$when 예약을 취소했어요';
   }
+
+  @override
+  String get mySupportOpenFailed => '링크를 열지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get mySupportExternalHint => '카카오톡 채널로 연결돼요';
 }

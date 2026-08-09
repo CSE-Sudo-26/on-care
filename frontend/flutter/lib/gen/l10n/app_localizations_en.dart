@@ -1546,4 +1546,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String exCancelDone(String when) {
     return 'Cancelled the $when booking';
   }
+
+  @override
+  String get mySupportOpenFailed =>
+      'Couldn\'t open the link. Please try again in a moment';
+
+  @override
+  String get mySupportExternalHint => 'Opens the KakaoTalk channel';
 }
