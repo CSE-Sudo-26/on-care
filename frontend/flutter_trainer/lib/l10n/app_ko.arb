@@ -543,5 +543,21 @@
   "myDeleteTitle": "계정을 탈퇴할까요?",
   "myDeleteBody": "담당 회원 연결과 예약이 사라지고, 회원에게 알림이 전달돼요. 이 작업은 되돌릴 수 없어요.",
   "myDeleteFailed": "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요",
-  "myDeleteConfirmPrompt": "계속하려면 이름({name})을 입력해 주세요"
+  "myDeleteConfirmPrompt": "계속하려면 이름({name})을 입력해 주세요",
+  "routineAlreadyGone": "이미 삭제된 루틴이에요",
+  "routineUpdateFailed": "루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요",
+  "routineUpdated": "루틴을 수정했어요",
+  "routineDeleteTitle": "루틴을 삭제할까요?",
+  "routineDeleteFailed": "루틴을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요",
+  "routineDeleted": "루틴을 삭제했어요",
+  "routineEdit": "루틴 수정",
+  "routineDelete": "루틴 삭제",
+  "routineNameRequired": "루틴 이름을 입력해 주세요",
+  "routineNameTooLong": "루틴 이름은 100자 이내로 입력해 주세요",
+  "routineMinutesRange": "시간은 0~600분 사이로 입력해 주세요",
+  "routineReasonTooLong": "사유는 200자 이내로 입력해 주세요",
+  "routineFieldName": "루틴 이름",
+  "routineFieldMinutesLabel": "시간(분)",
+  "routineFieldReason": "사유 (선택)",
+  "routineDeleteBody": "{name} 배정이 회원 앱에서도 사라져요."
 }

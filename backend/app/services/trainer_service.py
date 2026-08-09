@@ -521,6 +521,73 @@ def build_routines(db: Session, member_id: str, trainer_id: str) -> list[Routine
     ]
 
 
+class RoutineNotFound(Exception):
+    """루틴이 없거나 이 트레이너·회원의 것이 아니다."""
+
+
+def _owned_routine(
+    db: Session, trainer_id: str, member_id: str, routine_id: str
+) -> TrainerRoutine:
+    """이 트레이너가 이 회원에게 배정한 루틴. 아니면 [RoutineNotFound]. (#504)
+
+    trainer_id 까지 조건에 넣는 이유: 한 회원이 여러 트레이너를 거쳐 왔을 수 있고,
+    그때 남의 배정을 고칠 수 있으면 안 된다. 없는 것과 남의 것을 구분하지 않는
+    것도 의도다 — 라우터가 둘 다 404 로 돌려 존재 여부를 드러내지 않는다.
+    """
+    routine = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == routine_id,
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    if routine is None:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
+    return routine
+
+
+def update_routine(
+    db: Session, trainer_id: str, member_id: str, routine_id: str,
+    fields: dict,
+) -> RoutineOut:
+    """배정한 루틴을 고친다. 보낸 필드만 반영한다. (#504)
+
+    **알림을 보내지 않는다.** 배정 알림이 오간 뒤 정정 알림까지 겹치면 회원
+    알림함이 같은 루틴으로 채워진다. 회원 앱은 목록을 다시 읽을 때 고쳐진 값을
+    본다.
+
+    `sort_order` 는 건드리지 않는다 — 순서 변경은 별도 기능이고(범위 밖),
+    수정하다 순서가 밀리면 회원이 보는 목록이 이유 없이 흔들린다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    for field in ("name", "minutes", "type", "reason"):
+        if field in fields:
+            setattr(routine, field, fields[field])
+    db.commit()
+    db.refresh(routine)
+    return RoutineOut(
+        id=routine.id, name=routine.name, minutes=routine.minutes,
+        type=routine.type, reason=routine.reason, source=routine.source,
+    )
+
+
+def delete_routine(
+    db: Session, trainer_id: str, member_id: str, routine_id: str
+) -> None:
+    """배정한 루틴을 철회한다. 회원 앱에서도 사라진다. (#504)
+
+    남은 루틴의 `sort_order` 는 다시 매기지 않는다. 정렬은 값의 크기 순서만
+    쓰므로 중간이 비어도 순서가 유지되고, 다시 매기면 그 회원의 모든 루틴 행을
+    건드려 동시에 배정 중인 요청과 부딪힌다.
+
+    지난 기록(`routine_history`)은 건드리지 않는다 — 이미 수행한 운동의 이력이지
+    배정의 일부가 아니다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    db.delete(routine)
+    db.commit()
+
+
 def assign_routine(
     db: Session, trainer_id: str, member_id: str,
     name: str, minutes: int, type_: str, reason: str, source: str,

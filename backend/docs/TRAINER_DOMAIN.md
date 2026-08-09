@@ -95,6 +95,8 @@
 | DELETE | `/trainer/me` | 트레이너 탈퇴 — 담당 회원에게 알린 뒤 계정과 딸린 데이터 삭제 (#505) |
 | GET | `/trainer/clients/{member_id}/routines` | 배정 루틴 |
 | POST | `/trainer/clients/{member_id}/routines` | 루틴 배정 |
+| PUT | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 부분 수정(이름·시간·종류·사유) |
+| DELETE | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 철회 |
 | GET | `/trainer/clients/{member_id}/chat?before=&before_id=` | 채팅 스레드(커서 페이지네이션) |
 | POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 |
 | POST | `/trainer/clients/{member_id}/chat/read` | 읽음 처리 |

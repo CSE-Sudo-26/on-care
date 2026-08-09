@@ -1809,4 +1809,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String myDeleteConfirmPrompt(String name) {
     return '계속하려면 이름($name)을 입력해 주세요';
   }
+
+  @override
+  String get routineAlreadyGone => '이미 삭제된 루틴이에요';
+
+  @override
+  String get routineUpdateFailed => '루틴을 수정하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get routineUpdated => '루틴을 수정했어요';
+
+  @override
+  String get routineDeleteTitle => '루틴을 삭제할까요?';
+
+  @override
+  String get routineDeleteFailed => '루틴을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get routineDeleted => '루틴을 삭제했어요';
+
+  @override
+  String get routineEdit => '루틴 수정';
+
+  @override
+  String get routineDelete => '루틴 삭제';
+
+  @override
+  String get routineNameRequired => '루틴 이름을 입력해 주세요';
+
+  @override
+  String get routineNameTooLong => '루틴 이름은 100자 이내로 입력해 주세요';
+
+  @override
+  String get routineMinutesRange => '시간은 0~600분 사이로 입력해 주세요';
+
+  @override
+  String get routineReasonTooLong => '사유는 200자 이내로 입력해 주세요';
+
+  @override
+  String get routineFieldName => '루틴 이름';
+
+  @override
+  String get routineFieldMinutesLabel => '시간(분)';
+
+  @override
+  String get routineFieldReason => '사유 (선택)';
+
+  @override
+  String routineDeleteBody(String name) {
+    return '$name 배정이 회원 앱에서도 사라져요.';
+  }
 }

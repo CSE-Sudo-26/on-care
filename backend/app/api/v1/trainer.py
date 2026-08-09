@@ -31,7 +31,7 @@ from app.schemas.consultation_api import (
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
-    RoutineOptionsOut, RoutineOptionsRequest,
+    RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
@@ -370,6 +370,54 @@ def trainer_assign_routine(
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
     )
+
+
+@router.put(
+    "/trainer/clients/{member_id}/routines/{routine_id}",
+    response_model=RoutineOut,
+)
+def trainer_update_routine(
+    member_id: str,
+    routine_id: str,
+    payload: RoutineUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """배정한 루틴 수정(부분). 이름·시간·종류·사유만 바뀐다. (#504)
+
+    남의 배정과 없는 루틴은 똑같이 404 다 — 존재 여부를 드러내지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        # 빈 PUT 을 성공으로 처리하면 클라이언트가 저장됐다고 오해한다.
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    if "name" in fields and not fields["name"].strip():
+        raise HTTPException(status_code=400, detail="루틴 이름이 필요합니다.")
+    if "name" in fields:
+        fields["name"] = fields["name"].strip()
+    try:
+        return trainer_service.update_routine(
+            db, trainer.id, member_id, routine_id, fields
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/clients/{member_id}/routines/{routine_id}")
+def trainer_delete_routine(
+    member_id: str,
+    routine_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """배정한 루틴 철회. 회원 앱에서도 사라진다. (#504)"""
+    _require_client(db, trainer.id, member_id)
+    try:
+        trainer_service.delete_routine(db, trainer.id, member_id, routine_id)
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
 
 
 @router.post(

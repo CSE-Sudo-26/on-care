@@ -3361,6 +3361,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type your name ({name}) to continue'**
   String myDeleteConfirmPrompt(String name);
+
+  /// No description provided for @routineAlreadyGone.
+  ///
+  /// In en, this message translates to:
+  /// **'That routine is already gone'**
+  String get routineAlreadyGone;
+
+  /// No description provided for @routineUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the routine. Please try again in a moment'**
+  String get routineUpdateFailed;
+
+  /// No description provided for @routineUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Routine updated'**
+  String get routineUpdated;
+
+  /// No description provided for @routineDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this routine?'**
+  String get routineDeleteTitle;
+
+  /// No description provided for @routineDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the routine. Please try again in a moment'**
+  String get routineDeleteFailed;
+
+  /// No description provided for @routineDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Routine deleted'**
+  String get routineDeleted;
+
+  /// No description provided for @routineEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit routine'**
+  String get routineEdit;
+
+  /// No description provided for @routineDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete routine'**
+  String get routineDelete;
+
+  /// No description provided for @routineNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a routine name'**
+  String get routineNameRequired;
+
+  /// No description provided for @routineNameTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the name to 100 characters or fewer'**
+  String get routineNameTooLong;
+
+  /// No description provided for @routineMinutesRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration must be between 0 and 600 minutes'**
+  String get routineMinutesRange;
+
+  /// No description provided for @routineReasonTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the reason to 200 characters or fewer'**
+  String get routineReasonTooLong;
+
+  /// No description provided for @routineFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Routine name'**
+  String get routineFieldName;
+
+  /// No description provided for @routineFieldMinutesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (min)'**
+  String get routineFieldMinutesLabel;
+
+  /// No description provided for @routineFieldReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get routineFieldReason;
+
+  /// No description provided for @routineDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} disappears from the client\'s app too.'**
+  String routineDeleteBody(String name);
 }
 
 class _AppLocalizationsDelegate

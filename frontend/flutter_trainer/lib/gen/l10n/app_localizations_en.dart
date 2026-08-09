@@ -1860,4 +1860,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String myDeleteConfirmPrompt(String name) {
     return 'Type your name ($name) to continue';
   }
+
+  @override
+  String get routineAlreadyGone => 'That routine is already gone';
+
+  @override
+  String get routineUpdateFailed =>
+      'Couldn\'t update the routine. Please try again in a moment';
+
+  @override
+  String get routineUpdated => 'Routine updated';
+
+  @override
+  String get routineDeleteTitle => 'Delete this routine?';
+
+  @override
+  String get routineDeleteFailed =>
+      'Couldn\'t delete the routine. Please try again in a moment';
+
+  @override
+  String get routineDeleted => 'Routine deleted';
+
+  @override
+  String get routineEdit => 'Edit routine';
+
+  @override
+  String get routineDelete => 'Delete routine';
+
+  @override
+  String get routineNameRequired => 'Enter a routine name';
+
+  @override
+  String get routineNameTooLong => 'Keep the name to 100 characters or fewer';
+
+  @override
+  String get routineMinutesRange =>
+      'Duration must be between 0 and 600 minutes';
+
+  @override
+  String get routineReasonTooLong =>
+      'Keep the reason to 200 characters or fewer';
+
+  @override
+  String get routineFieldName => 'Routine name';
+
+  @override
+  String get routineFieldMinutesLabel => 'Duration (min)';
+
+  @override
+  String get routineFieldReason => 'Reason (optional)';
+
+  @override
+  String routineDeleteBody(String name) {
+    return '$name disappears from the client\'s app too.';
+  }
 }

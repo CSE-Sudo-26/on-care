@@ -1260,5 +1260,28 @@
         "type": "String"
       }
     }
+  },
+  "routineAlreadyGone": "That routine is already gone",
+  "routineUpdateFailed": "Couldn't update the routine. Please try again in a moment",
+  "routineUpdated": "Routine updated",
+  "routineDeleteTitle": "Delete this routine?",
+  "routineDeleteFailed": "Couldn't delete the routine. Please try again in a moment",
+  "routineDeleted": "Routine deleted",
+  "routineEdit": "Edit routine",
+  "routineDelete": "Delete routine",
+  "routineNameRequired": "Enter a routine name",
+  "routineNameTooLong": "Keep the name to 100 characters or fewer",
+  "routineMinutesRange": "Duration must be between 0 and 600 minutes",
+  "routineReasonTooLong": "Keep the reason to 200 characters or fewer",
+  "routineFieldName": "Routine name",
+  "routineFieldMinutesLabel": "Duration (min)",
+  "routineFieldReason": "Reason (optional)",
+  "routineDeleteBody": "{name} disappears from the client's app too.",
+  "@routineDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
