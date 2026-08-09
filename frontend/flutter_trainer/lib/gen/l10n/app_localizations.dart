@@ -3265,6 +3265,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On - Care Trainer'**
   String get appTitleSpaced;
+
+  /// No description provided for @navNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get navNotifications;
+
+  /// No description provided for @notifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifTitle;
+
+  /// No description provided for @notifReadAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get notifReadAll;
+
+  /// No description provided for @notifEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get notifEmpty;
+
+  /// No description provided for @notifLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load notifications'**
+  String get notifLoadFailed;
+
+  /// No description provided for @notifAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get notifAllRead;
+
+  /// No description provided for @notifReadAllFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark them read. Please try again in a moment'**
+  String get notifReadAllFailed;
+
+  /// No description provided for @notifUnreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String notifUnreadCount(int count);
 }
 
 class _AppLocalizationsDelegate
