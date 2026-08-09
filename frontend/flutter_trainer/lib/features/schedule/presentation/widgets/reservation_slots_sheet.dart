@@ -7,6 +7,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
   const ReservationSlotsSheet({super.key, required this.selectedDay});
@@ -43,14 +44,17 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
   );
 
   Future<void> _create() async {
+    // await 전에 한 번만 잡아 둔다 — 뒤에서 context 를 다시 만지면 async gap 을
+    // 건너 쓰게 된다.
+    final AppLocalizations l = AppLocalizations.of(context);
     final capacity = int.tryParse(_capacity.text);
     if (capacity == null || capacity < 1 || capacity > 100) {
-      _showMessage('정원은 1명 이상 100명 이하로 입력해 주세요.');
+      _showMessage(l.slotCapacityInvalid);
       return;
     }
     final startsAt = _startsAt(_time);
     if (!startsAt.isAfter(DateTime.now())) {
-      _showMessage('현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.');
+      _showMessage(l.slotPastTime);
       return;
     }
     setState(() => _saving = true);
@@ -59,28 +63,29 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
           .read(reservationSlotRepositoryProvider)
           .create(startsAt: startsAt, capacity: capacity);
       ref.invalidate(reservationSlotsProvider);
-      _showMessage('예약 슬롯을 열었습니다.');
+      _showMessage(l.slotOpened);
     } catch (error) {
-      _showMessage(_errorMessage(error));
+      _showMessage(_errorMessage(l, error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _edit(ReservationSlot slot) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     var time = TimeOfDay.fromDateTime(slot.startsAt);
     final controller = TextEditingController(text: '${slot.capacity}');
     final changed = await showDialog<(TimeOfDay, int)?>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('예약 슬롯 수정'),
+          title: Text(l.slotEditTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('시작 시간'),
+                title: Text(l.slotStartTime),
                 trailing: Text(time.format(context)),
                 onTap: () async {
                   final picked = await showTimePicker(
@@ -94,8 +99,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 controller: controller,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: '정원',
-                  helperText: '현재 예약 ${slot.booked}명',
+                  labelText: l.slotCapacity,
+                  helperText: l.slotBookedNow(slot.booked),
                 ),
               ),
             ],
@@ -103,7 +108,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
+              child: Text(l.actionCancel),
             ),
             FilledButton(
               onPressed: () {
@@ -116,7 +121,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                 }
                 Navigator.pop(dialogContext, (time, capacity));
               },
-              child: const Text('저장'),
+              child: Text(l.actionSave),
             ),
           ],
         ),
@@ -134,29 +139,30 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             capacity: changed.$2,
           );
       ref.invalidate(reservationSlotsProvider);
-      _showMessage('예약 슬롯을 수정했습니다.');
+      _showMessage(l.slotUpdated);
     } catch (error) {
-      _showMessage(_errorMessage(error));
+      _showMessage(_errorMessage(l, error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _close(ReservationSlot slot) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('예약 슬롯 닫기'),
-        content: Text('이미 예약된 ${slot.booked}건의 일정은 유지되고, 신규 예약만 중단됩니다.'),
+        title: Text(l.slotCloseTitle),
+        content: Text(l.slotCloseBody(slot.booked)),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: Text(l.actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              '닫기',
+            child: Text(
+              l.actionClose,
               style: TextStyle(color: AppColors.destructive),
             ),
           ),
@@ -168,23 +174,24 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
     try {
       await ref.read(reservationSlotRepositoryProvider).close(slot.id);
       ref.invalidate(reservationSlotsProvider);
-      _showMessage('신규 예약을 닫았습니다.');
+      _showMessage(l.slotClosed);
     } catch (error) {
-      _showMessage(_errorMessage(error));
+      _showMessage(_errorMessage(l, error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  String _errorMessage(Object error) {
+  String _errorMessage(AppLocalizations l, Object error) {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map<String, dynamic> && data['detail'] is String) {
+        // 서버가 보낸 사유는 그대로 보여 준다 — 서버 문구의 다국어는 별건이다.
         return data['detail'] as String;
       }
     }
     if (error is StateError) return error.message.toString();
-    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    return l.slotActionFailed;
   }
 
   void _showMessage(String message) {
@@ -196,6 +203,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final slots = ref.watch(reservationSlotsProvider);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return SafeArea(
@@ -213,9 +221,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '예약 슬롯 관리',
+                      l.slotManageTitle,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -223,7 +231,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                     ),
                   ),
                   IconButton(
-                    tooltip: '닫기',
+                    tooltip: l.actionClose,
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
@@ -231,7 +239,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '${widget.selectedDay.month}월 ${widget.selectedDay.day}일에 회원이 예약할 시간을 엽니다.',
+                l.slotIntro(l.dateMonthDay(widget.selectedDay.month, widget.selectedDay.day)),
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -261,9 +269,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       controller: _capacity,
                       enabled: !_saving,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '정원',
-                        suffixText: '명',
+                      decoration: InputDecoration(
+                        labelText: l.slotCapacity,
+                        suffixText: l.dashUnitPeople,
                       ),
                     ),
                   ),
@@ -271,7 +279,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   FilledButton.icon(
                     onPressed: _saving ? null : _create,
                     icon: const Icon(Icons.add),
-                    label: const Text('열기'),
+                    label: Text(l.slotOpenAction),
                   ),
                 ],
               ),
@@ -286,7 +294,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                     child: FilledButton.tonalIcon(
                       onPressed: () => ref.invalidate(reservationSlotsProvider),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('다시 불러오기'),
+                      label: Text(l.slotReload),
                     ),
                   ),
                   data: (allSlots) {
@@ -296,9 +304,9 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                         )
                         .toList();
                     if (daySlots.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
-                          '이 날짜에 열린 예약 슬롯이 없습니다.',
+                          l.slotEmpty,
                           style: TextStyle(color: AppColors.mutedForeground),
                         ),
                       );
@@ -336,8 +344,8 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                               Expanded(
                                 child: Text(
                                   slot.isClosed
-                                      ? '예약 닫힘 · 예약 ${slot.booked}명'
-                                      : '예약 ${slot.booked}명 · 잔여 ${slot.remaining}명',
+                                      ? l.slotClosedSummary(slot.booked)
+                                      : l.slotOpenSummary(slot.booked, slot.remaining),
                                   style: TextStyle(
                                     color: slot.isClosed
                                         ? AppColors.subtleForeground
@@ -347,12 +355,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                               ),
                               if (!slot.isClosed) ...<Widget>[
                                 IconButton(
-                                  tooltip: '수정',
+                                  tooltip: l.actionEdit,
                                   onPressed: _saving ? null : () => _edit(slot),
                                   icon: const Icon(Icons.edit_outlined),
                                 ),
                                 IconButton(
-                                  tooltip: '예약 닫기',
+                                  tooltip: l.slotCloseAction,
                                   onPressed: _saving
                                       ? null
                                       : () => _close(slot),

@@ -826,4 +826,240 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reportBodyEncourage =>
       'Let\'s tighten things up next week. I\'ll adjust your routine.';
+
+  @override
+  String get schedTitle => 'Schedule';
+
+  @override
+  String get schedSent => 'Sent';
+
+  @override
+  String get schedDeleteTitle => 'Delete session';
+
+  @override
+  String schedDeleteConfirm(String time, String name) {
+    return 'Delete the $time session with $name?';
+  }
+
+  @override
+  String get schedDeleteFailed =>
+      'Couldn\'t delete the session. Please try again';
+
+  @override
+  String get schedCompleteFailed =>
+      'Couldn\'t mark it complete. Please try again';
+
+  @override
+  String get schedViewDay => 'Day';
+
+  @override
+  String get schedViewWeek => 'Week';
+
+  @override
+  String get schedSlots => 'Booking slots';
+
+  @override
+  String get schedNewSession => 'New session';
+
+  @override
+  String get schedLoadFailed => 'Couldn\'t load the schedule';
+
+  @override
+  String get schedEmptyDay =>
+      'Nothing scheduled for this day.\nAdd a session below.';
+
+  @override
+  String get schedCompleteTitle => 'Mark session complete';
+
+  @override
+  String schedCompleteBody(String time, String name) {
+    return 'This marks the $time session with $name complete and logs it to their workout history.';
+  }
+
+  @override
+  String get schedNoteOptional => 'Trainer\'s note (optional)';
+
+  @override
+  String get schedCompleteAction => 'Mark complete';
+
+  @override
+  String get schedNewClient => 'New client';
+
+  @override
+  String get schedSaveFailed => 'Couldn\'t save the session. Please try again';
+
+  @override
+  String get schedAddTitle => 'Add a session';
+
+  @override
+  String get schedEditTitle => 'Edit session';
+
+  @override
+  String get schedFieldClient => 'Client';
+
+  @override
+  String get schedFieldType => 'Type';
+
+  @override
+  String get schedFieldTime => 'Time';
+
+  @override
+  String get schedHourSuffix => ':00';
+
+  @override
+  String get schedMinuteSuffix => 'min';
+
+  @override
+  String get schedFieldDuration => 'Duration';
+
+  @override
+  String get schedNote => 'Trainer\'s note';
+
+  @override
+  String get schedNoteHint => 'Anything to prepare, or notes about this client';
+
+  @override
+  String get schedAddAction => 'Add';
+
+  @override
+  String get schedSaveAction => 'Save';
+
+  @override
+  String get progInvalid => 'Check the exercise name and set count';
+
+  @override
+  String get progSaveFailed => 'Couldn\'t save the program. Please try again';
+
+  @override
+  String get progEditTitle => 'Edit program';
+
+  @override
+  String get progAddExercise => 'Add exercise';
+
+  @override
+  String get progNoteHint => 'Notes to follow while running this program';
+
+  @override
+  String get progSaving => 'Saving...';
+
+  @override
+  String get progSaveAction => 'Save program';
+
+  @override
+  String get progExerciseName => 'Exercise';
+
+  @override
+  String get progDeleteExercise => 'Remove exercise';
+
+  @override
+  String get progSets => 'Sets';
+
+  @override
+  String get progReps => 'Reps/time';
+
+  @override
+  String get progWeight => 'Weight';
+
+  @override
+  String get progOptional => 'Optional';
+
+  @override
+  String progSetsByReps(int sets, String reps) {
+    return '$sets × $reps';
+  }
+
+  @override
+  String get progEmpty => 'No program planned yet';
+
+  @override
+  String get progEmptyHint =>
+      'Build one in the AI routine tab, or agree on it over chat first.';
+
+  @override
+  String get schedEmptySlotShort => 'Empty';
+
+  @override
+  String get schedSentToClient => 'Sent to the client app';
+
+  @override
+  String schedSentTo(String name) {
+    return 'Sent to $name';
+  }
+
+  @override
+  String schedSentProgramTo(String name, String date) {
+    return 'Sent $name the PT program for $date';
+  }
+
+  @override
+  String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
+
+  @override
+  String get slotPastTime =>
+      'Booking slots can only be opened for future times.';
+
+  @override
+  String get slotOpened => 'Booking slot opened.';
+
+  @override
+  String get slotEditTitle => 'Edit booking slot';
+
+  @override
+  String get slotStartTime => 'Start time';
+
+  @override
+  String get slotCapacity => 'Capacity';
+
+  @override
+  String slotBookedNow(int count) {
+    return '$count booked';
+  }
+
+  @override
+  String get slotUpdated => 'Booking slot updated.';
+
+  @override
+  String get slotCloseTitle => 'Close booking slot';
+
+  @override
+  String slotCloseBody(int count) {
+    return 'The $count existing bookings stay; only new bookings stop.';
+  }
+
+  @override
+  String get slotClosed => 'New bookings closed.';
+
+  @override
+  String get slotActionFailed =>
+      'Couldn\'t complete the request. Please try again in a moment.';
+
+  @override
+  String get slotManageTitle => 'Manage booking slots';
+
+  @override
+  String slotIntro(String date) {
+    return 'Open times for members to book on $date.';
+  }
+
+  @override
+  String get slotOpenAction => 'Open';
+
+  @override
+  String get slotReload => 'Reload';
+
+  @override
+  String get slotEmpty => 'No booking slots open on this day.';
+
+  @override
+  String slotClosedSummary(int booked) {
+    return 'Closed · $booked booked';
+  }
+
+  @override
+  String slotOpenSummary(int booked, int remaining) {
+    return '$booked booked · $remaining left';
+  }
+
+  @override
+  String get slotCloseAction => 'Close bookings';
 }

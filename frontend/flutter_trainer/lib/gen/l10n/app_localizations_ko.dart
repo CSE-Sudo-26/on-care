@@ -809,4 +809,234 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportBodyEncourage => '다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요.';
+
+  @override
+  String get schedTitle => '스케줄';
+
+  @override
+  String get schedSent => '전송됨';
+
+  @override
+  String get schedDeleteTitle => '일정 삭제';
+
+  @override
+  String schedDeleteConfirm(String time, String name) {
+    return '$time $name님 세션을 삭제할까요?';
+  }
+
+  @override
+  String get schedDeleteFailed => '일정 삭제에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedCompleteFailed => '완료 처리에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedViewDay => '일';
+
+  @override
+  String get schedViewWeek => '주';
+
+  @override
+  String get schedSlots => '예약 슬롯';
+
+  @override
+  String get schedNewSession => '새 일정';
+
+  @override
+  String get schedLoadFailed => '스케줄을 불러오지 못했어요';
+
+  @override
+  String get schedEmptyDay => '이 날짜에는 일정이 없어요.\n아래에서 새 일정을 추가해 보세요.';
+
+  @override
+  String get schedCompleteTitle => '세션 완료 처리';
+
+  @override
+  String schedCompleteBody(String time, String name) {
+    return '$time $name님 세션을 완료로 표시하고 운동기록에 남길게요.';
+  }
+
+  @override
+  String get schedNoteOptional => '트레이너 메모 (선택)';
+
+  @override
+  String get schedCompleteAction => '완료 처리';
+
+  @override
+  String get schedNewClient => '신규 고객';
+
+  @override
+  String get schedSaveFailed => '일정 저장에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get schedAddTitle => '새 일정 추가';
+
+  @override
+  String get schedEditTitle => '일정 수정';
+
+  @override
+  String get schedFieldClient => '고객';
+
+  @override
+  String get schedFieldType => '유형';
+
+  @override
+  String get schedFieldTime => '시간';
+
+  @override
+  String get schedHourSuffix => '시';
+
+  @override
+  String get schedMinuteSuffix => '분';
+
+  @override
+  String get schedFieldDuration => '소요 시간';
+
+  @override
+  String get schedNote => '트레이너 메모';
+
+  @override
+  String get schedNoteHint => '수업 준비사항이나 고객 특이사항을 입력하세요';
+
+  @override
+  String get schedAddAction => '추가하기';
+
+  @override
+  String get schedSaveAction => '저장하기';
+
+  @override
+  String get progInvalid => '운동 이름과 세트 수를 확인해 주세요';
+
+  @override
+  String get progSaveFailed => '프로그램 저장에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get progEditTitle => '프로그램 수정';
+
+  @override
+  String get progAddExercise => '운동 추가';
+
+  @override
+  String get progNoteHint => '프로그램 진행 시 참고할 내용을 입력하세요';
+
+  @override
+  String get progSaving => '저장 중...';
+
+  @override
+  String get progSaveAction => '프로그램 저장';
+
+  @override
+  String get progExerciseName => '운동 이름';
+
+  @override
+  String get progDeleteExercise => '운동 삭제';
+
+  @override
+  String get progSets => '세트';
+
+  @override
+  String get progReps => '횟수/시간';
+
+  @override
+  String get progWeight => '중량';
+
+  @override
+  String get progOptional => '선택';
+
+  @override
+  String progSetsByReps(int sets, String reps) {
+    return '$sets세트 × $reps';
+  }
+
+  @override
+  String get progEmpty => '아직 계획된 프로그램이 없어요';
+
+  @override
+  String get progEmptyHint => 'AI 루틴 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.';
+
+  @override
+  String get schedEmptySlotShort => '비어 있음';
+
+  @override
+  String get schedSentToClient => '고객 앱으로 전송 완료!';
+
+  @override
+  String schedSentTo(String name) {
+    return '$name님에게 전송됨';
+  }
+
+  @override
+  String schedSentProgramTo(String name, String date) {
+    return '$name님에게 $date PT 프로그램 전송';
+  }
+
+  @override
+  String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
+
+  @override
+  String get slotPastTime => '현재보다 이후 시간만 예약 슬롯으로 만들 수 있어요.';
+
+  @override
+  String get slotOpened => '예약 슬롯을 열었습니다.';
+
+  @override
+  String get slotEditTitle => '예약 슬롯 수정';
+
+  @override
+  String get slotStartTime => '시작 시간';
+
+  @override
+  String get slotCapacity => '정원';
+
+  @override
+  String slotBookedNow(int count) {
+    return '현재 예약 $count명';
+  }
+
+  @override
+  String get slotUpdated => '예약 슬롯을 수정했습니다.';
+
+  @override
+  String get slotCloseTitle => '예약 슬롯 닫기';
+
+  @override
+  String slotCloseBody(int count) {
+    return '이미 예약된 $count건의 일정은 유지되고, 신규 예약만 중단됩니다.';
+  }
+
+  @override
+  String get slotClosed => '신규 예약을 닫았습니다.';
+
+  @override
+  String get slotActionFailed => '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get slotManageTitle => '예약 슬롯 관리';
+
+  @override
+  String slotIntro(String date) {
+    return '$date에 회원이 예약할 시간을 엽니다.';
+  }
+
+  @override
+  String get slotOpenAction => '열기';
+
+  @override
+  String get slotReload => '다시 불러오기';
+
+  @override
+  String get slotEmpty => '이 날짜에 열린 예약 슬롯이 없습니다.';
+
+  @override
+  String slotClosedSummary(int booked) {
+    return '예약 닫힘 · 예약 $booked명';
+  }
+
+  @override
+  String slotOpenSummary(int booked, int remaining) {
+    return '예약 $booked명 · 잔여 $remaining명';
+  }
+
+  @override
+  String get slotCloseAction => '예약 닫기';
 }

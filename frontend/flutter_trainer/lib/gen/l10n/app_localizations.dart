@@ -1543,6 +1543,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let\'s tighten things up next week. I\'ll adjust your routine.'**
   String get reportBodyEncourage;
+
+  /// No description provided for @schedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get schedTitle;
+
+  /// No description provided for @schedSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get schedSent;
+
+  /// No description provided for @schedDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete session'**
+  String get schedDeleteTitle;
+
+  /// No description provided for @schedDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the {time} session with {name}?'**
+  String schedDeleteConfirm(String time, String name);
+
+  /// No description provided for @schedDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the session. Please try again'**
+  String get schedDeleteFailed;
+
+  /// No description provided for @schedCompleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark it complete. Please try again'**
+  String get schedCompleteFailed;
+
+  /// No description provided for @schedViewDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get schedViewDay;
+
+  /// No description provided for @schedViewWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get schedViewWeek;
+
+  /// No description provided for @schedSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slots'**
+  String get schedSlots;
+
+  /// No description provided for @schedNewSession.
+  ///
+  /// In en, this message translates to:
+  /// **'New session'**
+  String get schedNewSession;
+
+  /// No description provided for @schedLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the schedule'**
+  String get schedLoadFailed;
+
+  /// No description provided for @schedEmptyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing scheduled for this day.\nAdd a session below.'**
+  String get schedEmptyDay;
+
+  /// No description provided for @schedCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark session complete'**
+  String get schedCompleteTitle;
+
+  /// No description provided for @schedCompleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This marks the {time} session with {name} complete and logs it to their workout history.'**
+  String schedCompleteBody(String time, String name);
+
+  /// No description provided for @schedNoteOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer\'s note (optional)'**
+  String get schedNoteOptional;
+
+  /// No description provided for @schedCompleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark complete'**
+  String get schedCompleteAction;
+
+  /// No description provided for @schedNewClient.
+  ///
+  /// In en, this message translates to:
+  /// **'New client'**
+  String get schedNewClient;
+
+  /// No description provided for @schedSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the session. Please try again'**
+  String get schedSaveFailed;
+
+  /// No description provided for @schedAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a session'**
+  String get schedAddTitle;
+
+  /// No description provided for @schedEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit session'**
+  String get schedEditTitle;
+
+  /// No description provided for @schedFieldClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get schedFieldClient;
+
+  /// No description provided for @schedFieldType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get schedFieldType;
+
+  /// No description provided for @schedFieldTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get schedFieldTime;
+
+  /// No description provided for @schedHourSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **':00'**
+  String get schedHourSuffix;
+
+  /// No description provided for @schedMinuteSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get schedMinuteSuffix;
+
+  /// No description provided for @schedFieldDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get schedFieldDuration;
+
+  /// No description provided for @schedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer\'s note'**
+  String get schedNote;
+
+  /// No description provided for @schedNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything to prepare, or notes about this client'**
+  String get schedNoteHint;
+
+  /// No description provided for @schedAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get schedAddAction;
+
+  /// No description provided for @schedSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get schedSaveAction;
+
+  /// No description provided for @progInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the exercise name and set count'**
+  String get progInvalid;
+
+  /// No description provided for @progSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the program. Please try again'**
+  String get progSaveFailed;
+
+  /// No description provided for @progEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit program'**
+  String get progEditTitle;
+
+  /// No description provided for @progAddExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exercise'**
+  String get progAddExercise;
+
+  /// No description provided for @progNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes to follow while running this program'**
+  String get progNoteHint;
+
+  /// No description provided for @progSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get progSaving;
+
+  /// No description provided for @progSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save program'**
+  String get progSaveAction;
+
+  /// No description provided for @progExerciseName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get progExerciseName;
+
+  /// No description provided for @progDeleteExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove exercise'**
+  String get progDeleteExercise;
+
+  /// No description provided for @progSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get progSets;
+
+  /// No description provided for @progReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps/time'**
+  String get progReps;
+
+  /// No description provided for @progWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get progWeight;
+
+  /// No description provided for @progOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get progOptional;
+
+  /// No description provided for @progSetsByReps.
+  ///
+  /// In en, this message translates to:
+  /// **'{sets} × {reps}'**
+  String progSetsByReps(int sets, String reps);
+
+  /// No description provided for @progEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No program planned yet'**
+  String get progEmpty;
+
+  /// No description provided for @progEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Build one in the AI routine tab, or agree on it over chat first.'**
+  String get progEmptyHint;
+
+  /// No description provided for @schedEmptySlotShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get schedEmptySlotShort;
+
+  /// No description provided for @schedSentToClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the client app'**
+  String get schedSentToClient;
+
+  /// No description provided for @schedSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to {name}'**
+  String schedSentTo(String name);
+
+  /// No description provided for @schedSentProgramTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {name} the PT program for {date}'**
+  String schedSentProgramTo(String name, String date);
+
+  /// No description provided for @slotCapacityInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity must be between 1 and 100.'**
+  String get slotCapacityInvalid;
+
+  /// No description provided for @slotPastTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slots can only be opened for future times.'**
+  String get slotPastTime;
+
+  /// No description provided for @slotOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slot opened.'**
+  String get slotOpened;
+
+  /// No description provided for @slotEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit booking slot'**
+  String get slotEditTitle;
+
+  /// No description provided for @slotStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get slotStartTime;
+
+  /// No description provided for @slotCapacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get slotCapacity;
+
+  /// No description provided for @slotBookedNow.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} booked'**
+  String slotBookedNow(int count);
+
+  /// No description provided for @slotUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking slot updated.'**
+  String get slotUpdated;
+
+  /// No description provided for @slotCloseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Close booking slot'**
+  String get slotCloseTitle;
+
+  /// No description provided for @slotCloseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The {count} existing bookings stay; only new bookings stop.'**
+  String slotCloseBody(int count);
+
+  /// No description provided for @slotClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'New bookings closed.'**
+  String get slotClosed;
+
+  /// No description provided for @slotActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete the request. Please try again in a moment.'**
+  String get slotActionFailed;
+
+  /// No description provided for @slotManageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage booking slots'**
+  String get slotManageTitle;
+
+  /// No description provided for @slotIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Open times for members to book on {date}.'**
+  String slotIntro(String date);
+
+  /// No description provided for @slotOpenAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get slotOpenAction;
+
+  /// No description provided for @slotReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get slotReload;
+
+  /// No description provided for @slotEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No booking slots open on this day.'**
+  String get slotEmpty;
+
+  /// No description provided for @slotClosedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed · {booked} booked'**
+  String slotClosedSummary(int booked);
+
+  /// No description provided for @slotOpenSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{booked} booked · {remaining} left'**
+  String slotOpenSummary(int booked, int remaining);
+
+  /// No description provided for @slotCloseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Close bookings'**
+  String get slotCloseAction;
 }
 
 class _AppLocalizationsDelegate

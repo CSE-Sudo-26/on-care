@@ -105,7 +105,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   String? _editingScheduleId;
   String? _editingProgramId;
   // 단일 플래시: 연속 전송 시 직전 카드의 확인 플래시는 새 플래시로
-  // 대체된다(의도된 단순화 — 전송 결과는 '전송됨' 칩으로 남는다).
+  // 대체된다(의도된 단순화 — 전송 결과는 l.schedSent 칩으로 남는다).
   String? _flash;
   Timer? _flashTimer;
 
@@ -166,24 +166,25 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   Future<void> _confirmDelete(ScheduleSession s) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text('일정 삭제', style: TextStyle(fontSize: 16)),
+        title: Text(l.schedDeleteTitle, style: TextStyle(fontSize: 16)),
         content: Text(
-          '${s.time} ${s.clientName}님 세션을 삭제할까요?',
+          l.schedDeleteConfirm(s.time, s.clientName),
           style: const TextStyle(fontSize: 13),
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
+            child: Text(l.actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              '삭제',
+            child: Text(
+              l.actionDelete,
               style: TextStyle(color: AppColors.destructive),
             ),
           ),
@@ -197,7 +198,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('일정 삭제에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.schedDeleteFailed)),
       );
     }
   }
@@ -212,6 +213,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
     if (note == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
           .read(scheduleRepositoryProvider)
@@ -221,7 +223,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // the session stays 예정 and the trainer is told (review PR 237).
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('완료 처리에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.schedCompleteFailed)),
       );
     }
   }
@@ -254,12 +256,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
 
     return PageScaffold(
-      title: '스케줄',
+      title: l.schedTitle,
       subtitle: dateLabel(l, _selectedDay),
       actions: <Widget>[
         if (showToday)
           ActionButton(
-            label: '오늘',
+            label: l.labelToday,
             icon: Icons.today_outlined,
             onPressed: () {
               setState(() => _weekAnchor = defaultAnchor);
@@ -267,7 +269,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             },
           ),
         SegmentedSwitch(
-          labels: const <String>['일', '주'],
+          labels: <String>[l.schedViewDay, l.schedViewWeek],
           selected: _weekView ? 1 : 0,
           onChanged: (i) {
             setState(() => _weekView = i == 1);
@@ -280,12 +282,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           },
         ),
         ActionButton(
-          label: '예약 슬롯',
+          label: l.schedSlots,
           icon: Icons.event_available_outlined,
           onPressed: () => _openReservationSlotsSheet(),
         ),
         ActionButton(
-          label: '새 일정',
+          label: l.schedNewSession,
           icon: Icons.add,
           primary: true,
           onPressed: () => _openSessionSheet(),
@@ -304,6 +306,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// 주 — a seven-column grid of the week's sessions. One range query
   /// backs it, so switching weeks doesn't fan out into seven streams.
   Widget _buildWeekGrid() {
+    final AppLocalizations l = AppLocalizations.of(context);
     final start = _dateOnly(_weekAnchor);
     final end = start.add(const Duration(days: 6));
     final range = (from: ymd(start), to: ymd(end));
@@ -322,9 +325,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         Expanded(
           child: week.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => const Center(
+            error: (e, _) => Center(
               child: Text(
-                '스케줄을 불러오지 못했어요',
+                l.schedLoadFailed,
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
             ),
@@ -374,6 +377,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   /// The scrollable timeline for the selected day.
   Widget _buildTimeline(AsyncValue<List<ScheduleSession>> schedule) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
@@ -389,12 +393,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               child: Center(child: CircularProgressIndicator()),
             ),
           ],
-          error: (e, _) => const <Widget>[
+          error: (e, _) => <Widget>[
             Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
               child: Center(
                 child: Text(
-                  '스케줄을 불러오지 못했어요',
+                  l.schedLoadFailed,
                   style: TextStyle(color: AppColors.mutedForeground),
                 ),
               ),
@@ -408,6 +412,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   /// The empty-state box or the session rows for [sessions].
   List<Widget> _timelineChildren(List<ScheduleSession> sessions) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // 완료 is offered only for 예정 sessions that aren't dated in the
     // future — you can't complete a class that hasn't happened yet. The
     // repository enforces the same rule (review PR 245).
@@ -415,8 +420,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final clients = ref.read(clientsProvider).valueOrNull ?? const [];
     final today = _dateOnly(DateTime.now());
     final dateLabel = _selectedDay == today
-        ? '오늘'
-        : '${_selectedDay.month}월 ${_selectedDay.day}일';
+        ? l.labelToday
+        : l.dateMonthDay(_selectedDay.month, _selectedDay.day);
     return <Widget>[
       if (sessions.isEmpty)
         Container(
@@ -429,8 +434,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             borderRadius: const BorderRadius.all(AppRadius.card),
             border: Border.all(color: AppColors.borderStrong),
           ),
-          child: const Text(
-            '이 날짜에는 일정이 없어요.\n아래에서 새 일정을 추가해 보세요.',
+          child: Text(
+            l.schedEmptyDay,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -512,10 +517,11 @@ class _CompleteDialogState extends State<_CompleteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final s = widget.session;
     return AlertDialog(
       backgroundColor: AppColors.card,
-      title: const Text('세션 완료 처리', style: TextStyle(fontSize: 16)),
+      title: Text(l.schedCompleteTitle, style: TextStyle(fontSize: 16)),
       content: SizedBox(
         width: 320,
         child: Column(
@@ -523,15 +529,14 @@ class _CompleteDialogState extends State<_CompleteDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              '${s.time} ${s.clientName}님 세션을 완료로 표시하고 '
-              '운동기록에 남길게요.',
+              l.schedCompleteBody(s.time, s.clientName),
               style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _memo,
-              decoration: const InputDecoration(
-                hintText: '트레이너 메모 (선택)',
+              decoration: InputDecoration(
+                hintText: l.schedNoteOptional,
                 isDense: true,
               ),
             ),
@@ -541,11 +546,11 @@ class _CompleteDialogState extends State<_CompleteDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text(l.actionCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_memo.text.trim()),
-          child: const Text('완료 처리'),
+          child: Text(l.schedCompleteAction),
         ),
       ],
     );
@@ -593,7 +598,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
 
   // Option lists always CONTAIN the edited session's own values. Falling
   // back to a default instead would silently rewrite the session on an
-  // otherwise no-op save — e.g. a 상담 booked for '신규 고객' (not a
+  // otherwise no-op save — e.g. a 상담 booked for l.schedNewClient (not a
   // registered client) would be reassigned to the first client, and a
   // 50-minute session would become 60 (review PR 218).
   late List<String> _clientOptions;
@@ -651,6 +656,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     final repo = ref.read(scheduleRepositoryProvider);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     try {
       final e = widget.existing;
       if (e == null) {
@@ -677,7 +683,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
       // lost (review PR 218).
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('일정 저장에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.schedSaveFailed)),
       );
       return;
     }
@@ -692,6 +698,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       decoration: widget.inline
           ? BoxDecoration(
@@ -713,7 +720,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              widget.existing == null ? '새 일정 추가' : '일정 수정',
+              widget.existing == null ? l.schedAddTitle : l.schedEditTitle,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -722,7 +729,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
             _sheetField(
-              label: '고객',
+              label: l.schedFieldClient,
               child: DropdownButton<String>(
                 value: _client,
                 isExpanded: true,
@@ -735,7 +742,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
               ),
             ),
             _sheetField(
-              label: '유형',
+              label: l.schedFieldType,
               child: DropdownButton<String>(
                 value: _type,
                 isExpanded: true,
@@ -748,7 +755,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
               ),
             ),
             _sheetField(
-              label: '시간',
+              label: l.schedFieldTime,
               child: Row(
                 children: <Widget>[
                   Expanded(
@@ -786,7 +793,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
               ),
             ),
             _sheetField(
-              label: '소요 시간',
+              label: l.schedFieldDuration,
               child: DropdownButton<int>(
                 value: _duration,
                 isExpanded: true,
@@ -800,15 +807,15 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             ),
             if (widget.existing == null)
               _sheetField(
-                label: '트레이너 메모',
+                label: l.schedNote,
                 stacked: true,
                 child: TextField(
                   key: const ValueKey<String>('schedule-trainer-note'),
                   controller: _note,
                   minLines: 2,
                   maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: '수업 준비사항이나 고객 특이사항을 입력하세요',
+                  decoration: InputDecoration(
+                    hintText: l.schedNoteHint,
                     hintStyle: TextStyle(color: AppColors.mutedForeground),
                     isDense: true,
                   ),
@@ -821,7 +828,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _saving ? null : widget.onCancel,
-                      child: const Text('취소'),
+                      child: Text(l.actionCancel),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -837,7 +844,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         height: 44,
                         alignment: Alignment.center,
                         child: Text(
-                          widget.existing == null ? '추가하기' : '저장하기',
+                          widget.existing == null ? l.schedAddAction : l.schedSaveAction,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -935,6 +942,8 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
 
   Future<void> _save() async {
     if (_saving) return;
+    // await 전에 잡아 둔다 — 실패 경로가 await 뒤에도 있다.
+    final AppLocalizations l = AppLocalizations.of(context);
     final program = <ProgramItem>[];
     for (final item in _items) {
       final name = item.name.text.trim();
@@ -942,7 +951,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
       if (name.isEmpty || sets == null || sets < 1 || sets > 100) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('운동 이름과 세트 수를 확인해 주세요')));
+        ).showSnackBar(SnackBar(content: Text(l.progInvalid)));
         return;
       }
       program.add(
@@ -970,7 +979,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
       if (mounted) setState(() => _saving = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('프로그램 저장에 실패했어요. 다시 시도해 주세요')),
+        SnackBar(content: Text(l.progSaveFailed)),
       );
       return;
     }
@@ -981,6 +990,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -991,8 +1001,8 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '프로그램 수정',
+          Text(
+            l.progEditTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -1011,11 +1021,11 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
           OutlinedButton.icon(
             onPressed: _saving ? null : _addItem,
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('운동 추가'),
+            label: Text(l.progAddExercise),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
-            '트레이너 메모',
+          Text(
+            l.schedNote,
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -1024,8 +1034,8 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
             controller: _note,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: '프로그램 진행 시 참고할 내용을 입력하세요',
+            decoration: InputDecoration(
+              hintText: l.progNoteHint,
               hintStyle: TextStyle(color: AppColors.mutedForeground),
               border: OutlineInputBorder(),
               isDense: true,
@@ -1037,7 +1047,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _saving ? null : widget.onCancel,
-                  child: const Text('취소'),
+                  child: Text(l.actionCancel),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -1045,7 +1055,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
                 child: FilledButton(
                   key: const ValueKey<String>('save-program'),
                   onPressed: _saving ? null : _save,
-                  child: Text(_saving ? '저장 중...' : '프로그램 저장'),
+                  child: Text(_saving ? l.progSaving : l.progSaveAction),
                 ),
               ),
             ],
@@ -1103,6 +1113,7 @@ class _ProgramDraftFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -1118,14 +1129,14 @@ class _ProgramDraftFields extends StatelessWidget {
                 child: TextField(
                   key: ValueKey<String>('program-name-$index'),
                   controller: draft.name,
-                  decoration: const InputDecoration(
-                    labelText: '운동 이름',
+                  decoration: InputDecoration(
+                    labelText: l.progExerciseName,
                     isDense: true,
                   ),
                 ),
               ),
               IconButton(
-                tooltip: '운동 삭제',
+                tooltip: l.progDeleteExercise,
                 onPressed: onRemove,
                 icon: const Icon(
                   Icons.close,
@@ -1143,8 +1154,8 @@ class _ProgramDraftFields extends StatelessWidget {
                   key: ValueKey<String>('program-sets-$index'),
                   controller: draft.sets,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: '세트',
+                  decoration: InputDecoration(
+                    labelText: l.progSets,
                     isDense: true,
                   ),
                 ),
@@ -1154,8 +1165,8 @@ class _ProgramDraftFields extends StatelessWidget {
                 child: TextField(
                   key: ValueKey<String>('program-reps-$index'),
                   controller: draft.reps,
-                  decoration: const InputDecoration(
-                    labelText: '횟수/시간',
+                  decoration: InputDecoration(
+                    labelText: l.progReps,
                     isDense: true,
                   ),
                 ),
@@ -1165,9 +1176,9 @@ class _ProgramDraftFields extends StatelessWidget {
                 child: TextField(
                   key: ValueKey<String>('program-weight-$index'),
                   controller: draft.weight,
-                  decoration: const InputDecoration(
-                    labelText: '중량',
-                    hintText: '선택',
+                  decoration: InputDecoration(
+                    labelText: l.progWeight,
+                    hintText: l.progOptional,
                     isDense: true,
                   ),
                 ),
@@ -1196,6 +1207,7 @@ class _WeekNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
@@ -1208,7 +1220,7 @@ class _WeekNav extends StatelessWidget {
           _ChevronButton(icon: Icons.chevron_left, onTap: () => onShift(-1)),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            '${start.month}월 ${start.day}일 – ${end.month}월 ${end.day}일',
+            l.dateRange(l.dateMonthDay(start.month, start.day), l.dateMonthDay(end.month, end.day)),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -1352,7 +1364,7 @@ class _DayColumn extends StatelessWidget {
             child: sessions.isEmpty
                 ? Center(
                     child: Text(
-                      '비어 있음',
+                      l.schedEmptySlotShort,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
@@ -1455,21 +1467,15 @@ class _ScheduleWeekStrip extends StatelessWidget {
   /// `-1` = previous week, `+1` = next week.
   final ValueChanged<int> onShiftWeek;
 
-  static const List<String> _weekdayShort = <String>[
-    '월',
-    '화',
-    '수',
-    '목',
-    '금',
-    '토',
-    '일',
-  ];
+  /// 요일 라벨은 로케일을 따르므로 const 로 둘 수 없다. (#501)
+  static List<String> _weekdayShort(AppLocalizations l) => weekdayNames(l);
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final today = DateTime.now();
     final week = <DateTime>[
       for (var i = 0; i < 7; i++) weekAnchor.add(Duration(days: i)),
@@ -1484,7 +1490,7 @@ class _ScheduleWeekStrip extends StatelessWidget {
           Expanded(
             child: _DayCell(
               date: d,
-              label: _weekdayShort[d.weekday - 1],
+              label: _weekdayShort(l)[d.weekday - 1],
               selected: _isSameDay(d, selectedDay),
               isToday: _isSameDay(d, today),
               hasDot: bookedDates.contains(ymd(d)),
@@ -1680,6 +1686,7 @@ class _GapSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       height: 44,
       alignment: Alignment.center,
@@ -1687,8 +1694,8 @@ class _GapSlot extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.lg),
         border: Border.all(color: AppColors.borderStrong),
       ),
-      child: const Text(
-        '빈 시간',
+      child: Text(
+        l.dashEmptySlot,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
@@ -1734,6 +1741,7 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final s = session;
     return Container(
       decoration: BoxDecoration(
@@ -1782,7 +1790,7 @@ class _SessionCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${s.type} · ${s.durationMinutes}분',
+                          l.sessionTypeAndDuration(sessionTypeLabel(l, s.type), s.durationMinutes),
                           style: const TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w500,
@@ -1912,7 +1920,8 @@ class _ProgramRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final detail = StringBuffer('${item.sets}세트 × ${item.reps}');
+    final AppLocalizations l = AppLocalizations.of(context);
+    final detail = StringBuffer(l.progSetsByReps(item.sets, item.reps));
     if (item.weight != '-') detail.write(' · ${item.weight}');
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1978,6 +1987,7 @@ class _NoPlanBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -1988,11 +1998,11 @@ class _NoPlanBox extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border.all(color: AppColors.borderStrong),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            '아직 계획된 프로그램이 없어요',
+            l.progEmpty,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -2001,7 +2011,7 @@ class _NoPlanBox extends StatelessWidget {
           ),
           SizedBox(height: 2),
           Text(
-            'AI 루틴 탭에서 프로그램을 만들어 보내거나, 채팅으로 미리 조율해 보세요.',
+            l.progEmptyHint,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w500,
@@ -2032,35 +2042,36 @@ class _ManageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
       children: <Widget>[
         if (onComplete != null)
           _ActionChip(
-            // Keyed: '완료' is also a status word elsewhere on this row,
+            // Keyed: l.legendDone is also a status word elsewhere on this row,
             // so text alone no longer identifies the action.
             key: const ValueKey<String>('session-complete-chip'),
             icon: Icons.check,
-            label: '완료',
+            label: l.legendDone,
             color: AppColors.success,
             onTap: onComplete!,
           ),
         _ActionChip(
-          label: '일정 수정',
+          label: l.schedEditTitle,
           color: AppColors.accent,
           onTap: onEditSchedule,
         ),
         _ActionChip(
-          label: '프로그램 수정',
+          label: l.progEditTitle,
           color: AppColors.secondary,
           onTap: onEditProgram,
         ),
-        _ActionChip(label: '삭제', color: AppColors.destructive, onTap: onDelete),
+        _ActionChip(label: l.actionDelete, color: AppColors.destructive, onTap: onDelete),
         _ActionChip(
           key: const ValueKey<String>('session-chat-chip'),
           icon: Icons.chat_bubble_outline,
-          label: '채팅',
+          label: l.clientChat,
           color: AppColors.accent,
           onTap: onChat,
         ),
@@ -2075,13 +2086,14 @@ class _SentBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Icon(Icons.check, size: 11, color: AppColors.success),
         SizedBox(width: 2),
         Text(
-          '전송됨',
+          l.schedSent,
           style: TextStyle(
             fontSize: 9.5,
             fontWeight: FontWeight.w700,
@@ -2155,6 +2167,7 @@ class _NoteBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -2173,8 +2186,8 @@ class _NoteBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
-            '트레이너 메모',
+          Text(
+            l.schedNote,
             style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w700,
@@ -2213,11 +2226,12 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final String label = flashing
-        ? '고객 앱으로 전송 완료!'
+        ? l.schedSentToClient
         : sent
-        ? '$clientName님에게 전송됨'
-        : '$clientName님에게 $dateLabel PT 프로그램 전송';
+        ? l.schedSentTo(clientName)
+        : l.schedSentProgramTo(clientName, dateLabel);
     final fg = sent ? AppColors.success : AppColors.primaryForeground;
     return Material(
       color: sent

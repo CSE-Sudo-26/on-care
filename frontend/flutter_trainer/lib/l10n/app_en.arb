@@ -589,5 +589,160 @@
     }
   },
   "reportBodyPraise": "Great week — let's keep this pace next week!",
-  "reportBodyEncourage": "Let's tighten things up next week. I'll adjust your routine."
+  "reportBodyEncourage": "Let's tighten things up next week. I'll adjust your routine.",
+  "schedTitle": "Schedule",
+  "schedSent": "Sent",
+  "schedDeleteTitle": "Delete session",
+  "schedDeleteConfirm": "Delete the {time} session with {name}?",
+  "@schedDeleteConfirm": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedDeleteFailed": "Couldn't delete the session. Please try again",
+  "schedCompleteFailed": "Couldn't mark it complete. Please try again",
+  "schedViewDay": "Day",
+  "schedViewWeek": "Week",
+  "schedSlots": "Booking slots",
+  "schedNewSession": "New session",
+  "schedLoadFailed": "Couldn't load the schedule",
+  "schedEmptyDay": "Nothing scheduled for this day.\nAdd a session below.",
+  "schedCompleteTitle": "Mark session complete",
+  "schedCompleteBody": "This marks the {time} session with {name} complete and logs it to their workout history.",
+  "@schedCompleteBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedNoteOptional": "Trainer's note (optional)",
+  "schedCompleteAction": "Mark complete",
+  "schedNewClient": "New client",
+  "schedSaveFailed": "Couldn't save the session. Please try again",
+  "schedAddTitle": "Add a session",
+  "schedEditTitle": "Edit session",
+  "schedFieldClient": "Client",
+  "schedFieldType": "Type",
+  "schedFieldTime": "Time",
+  "schedHourSuffix": ":00",
+  "schedMinuteSuffix": "min",
+  "schedFieldDuration": "Duration",
+  "schedNote": "Trainer's note",
+  "schedNoteHint": "Anything to prepare, or notes about this client",
+  "schedAddAction": "Add",
+  "schedSaveAction": "Save",
+  "progInvalid": "Check the exercise name and set count",
+  "progSaveFailed": "Couldn't save the program. Please try again",
+  "progEditTitle": "Edit program",
+  "progAddExercise": "Add exercise",
+  "progNoteHint": "Notes to follow while running this program",
+  "progSaving": "Saving...",
+  "progSaveAction": "Save program",
+  "progExerciseName": "Exercise",
+  "progDeleteExercise": "Remove exercise",
+  "progSets": "Sets",
+  "progReps": "Reps/time",
+  "progWeight": "Weight",
+  "progOptional": "Optional",
+  "progSetsByReps": "{sets} × {reps}",
+  "@progSetsByReps": {
+    "placeholders": {
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "String"
+      }
+    }
+  },
+  "progEmpty": "No program planned yet",
+  "progEmptyHint": "Build one in the AI routine tab, or agree on it over chat first.",
+  "schedEmptySlotShort": "Empty",
+  "schedSentToClient": "Sent to the client app",
+  "schedSentTo": "Sent to {name}",
+  "@schedSentTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "schedSentProgramTo": "Sent {name} the PT program for {date}",
+  "@schedSentProgramTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "slotCapacityInvalid": "Capacity must be between 1 and 100.",
+  "slotPastTime": "Booking slots can only be opened for future times.",
+  "slotOpened": "Booking slot opened.",
+  "slotEditTitle": "Edit booking slot",
+  "slotStartTime": "Start time",
+  "slotCapacity": "Capacity",
+  "slotBookedNow": "{count} booked",
+  "@slotBookedNow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "slotUpdated": "Booking slot updated.",
+  "slotCloseTitle": "Close booking slot",
+  "slotCloseBody": "The {count} existing bookings stay; only new bookings stop.",
+  "@slotCloseBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "slotClosed": "New bookings closed.",
+  "slotActionFailed": "Couldn't complete the request. Please try again in a moment.",
+  "slotManageTitle": "Manage booking slots",
+  "slotIntro": "Open times for members to book on {date}.",
+  "@slotIntro": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "slotOpenAction": "Open",
+  "slotReload": "Reload",
+  "slotEmpty": "No booking slots open on this day.",
+  "slotClosedSummary": "Closed · {booked} booked",
+  "@slotClosedSummary": {
+    "placeholders": {
+      "booked": {
+        "type": "int"
+      }
+    }
+  },
+  "slotOpenSummary": "{booked} booked · {remaining} left",
+  "@slotOpenSummary": {
+    "placeholders": {
+      "booked": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "slotCloseAction": "Close bookings"
 }
