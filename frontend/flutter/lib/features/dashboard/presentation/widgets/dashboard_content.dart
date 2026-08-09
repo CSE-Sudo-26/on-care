@@ -1149,7 +1149,11 @@ _demoNutritionHistory = <_NutTabKind, _NutData>{
     cur: <double>[1650, 2100, 1480, 1720, 1390, 1860, 967],
     unit: 'kcal',
     goal: 2000,
-    ticks: <double>[1000, 1500, 2000, 2500],
+    // 눈금 2개. 라벨 칸은 16px 인데 네 개(1000·1500·2000·2500)를 68px 축에
+    // 값 비례로 놓으면 칸 간격이 16px 을 밑돌아 아래쪽 라벨끼리 겹쳐 숫자를
+    // 읽을 수 없었다. 목표선은 따로 그리지 않으므로(상단 '목표 N' 라벨과
+    // 데이터 포인트 상태색으로만 표현) 2000 을 빼도 잃는 정보가 없다.
+    ticks: <double>[1500, 2500],
     color: FigmaColors.primary,
     warn: false,
   ),
@@ -1761,10 +1765,15 @@ class _RecMealCard extends StatelessWidget {
                       meal.reason,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      // 카드 폭이 130px 고정이라 12.5px 로는 "나트륨 조절에
+                      // 좋아요" 가 한 줄에 못 들어가 두 줄이 되고, 카드 높이가
+                      // 158px 로 고정이라 그 둘째 줄이 잘렸다. 가독성
+                      // 개선(3299f996)에서 키운 값을 이 카드만 되돌린다 —
+                      // 제목이 진한 14px 이라 부제는 작은 회색이어야 위계도 산다.
                       style: const TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.foreground,
+                        color: FigmaColors.textMuted,
                         height: 1.4,
                       ),
                     ),
