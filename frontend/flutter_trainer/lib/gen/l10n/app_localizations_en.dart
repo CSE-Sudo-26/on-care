@@ -1629,4 +1629,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiCompareCandidates => 'Compare the candidates';
+
+  @override
+  String get goalWeightLoss => 'Weight loss';
+
+  @override
+  String get goalStrength => 'Strength';
+
+  @override
+  String get goalFitness => 'Fitness';
+
+  @override
+  String get goalPosture => 'Posture';
+
+  @override
+  String get goalHealth => 'General health';
+
+  @override
+  String get goalOther => 'Other';
+
+  @override
+  String get purposeWeight => 'Weight management';
+
+  @override
+  String get purposeChronic => 'Chronic condition';
+
+  @override
+  String get purposeRehab => 'Rehabilitation';
+
+  @override
+  String get purposeGeneral => 'General wellbeing';
+
+  @override
+  String get purposeNone => 'None';
+
+  @override
+  String get purposeOther => 'Other';
+
+  @override
+  String get slotMorning => 'Morning';
+
+  @override
+  String get slotAfternoon => 'Afternoon';
+
+  @override
+  String get slotEvening => 'Evening';
+
+  @override
+  String get slotFlexible => 'Flexible';
+
+  @override
+  String get unknownMember => 'Unknown member';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get alertSodiumOver => 'Sodium over';
+
+  @override
+  String get alertLowCompletion => 'Low completion';
+
+  @override
+  String get alertAwaitingReply => 'Awaiting reply';
+
+  @override
+  String get clientLastRoutine => 'Last routine';
+
+  @override
+  String metricOverBy(String unit) {
+    return '$unit over';
+  }
+
+  @override
+  String get clientNoGoal => 'No goal set';
+
+  @override
+  String get clientNoChat => 'No messages yet';
 }

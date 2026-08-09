@@ -2953,6 +2953,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Compare the candidates'**
   String get aiCompareCandidates;
+
+  /// No description provided for @goalWeightLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight loss'**
+  String get goalWeightLoss;
+
+  /// No description provided for @goalStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get goalStrength;
+
+  /// No description provided for @goalFitness.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness'**
+  String get goalFitness;
+
+  /// No description provided for @goalPosture.
+  ///
+  /// In en, this message translates to:
+  /// **'Posture'**
+  String get goalPosture;
+
+  /// No description provided for @goalHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'General health'**
+  String get goalHealth;
+
+  /// No description provided for @goalOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get goalOther;
+
+  /// No description provided for @purposeWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight management'**
+  String get purposeWeight;
+
+  /// No description provided for @purposeChronic.
+  ///
+  /// In en, this message translates to:
+  /// **'Chronic condition'**
+  String get purposeChronic;
+
+  /// No description provided for @purposeRehab.
+  ///
+  /// In en, this message translates to:
+  /// **'Rehabilitation'**
+  String get purposeRehab;
+
+  /// No description provided for @purposeGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General wellbeing'**
+  String get purposeGeneral;
+
+  /// No description provided for @purposeNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get purposeNone;
+
+  /// No description provided for @purposeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get purposeOther;
+
+  /// No description provided for @slotMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning'**
+  String get slotMorning;
+
+  /// No description provided for @slotAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon'**
+  String get slotAfternoon;
+
+  /// No description provided for @slotEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening'**
+  String get slotEvening;
+
+  /// No description provided for @slotFlexible.
+  ///
+  /// In en, this message translates to:
+  /// **'Flexible'**
+  String get slotFlexible;
+
+  /// No description provided for @unknownMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown member'**
+  String get unknownMember;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @alertSodiumOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over'**
+  String get alertSodiumOver;
+
+  /// No description provided for @alertLowCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Low completion'**
+  String get alertLowCompletion;
+
+  /// No description provided for @alertAwaitingReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting reply'**
+  String get alertAwaitingReply;
+
+  /// No description provided for @clientLastRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Last routine'**
+  String get clientLastRoutine;
+
+  /// No description provided for @metricOverBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} over'**
+  String metricOverBy(String unit);
+
+  /// No description provided for @clientNoGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'No goal set'**
+  String get clientNoGoal;
+
+  /// No description provided for @clientNoChat.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get clientNoChat;
 }
 
 class _AppLocalizationsDelegate

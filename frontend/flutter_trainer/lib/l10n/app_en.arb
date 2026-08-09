@@ -1124,5 +1124,37 @@
   "aiTrainerNoteEditable": "Trainer's note · editable",
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
   "aiGenerateConditions": "Conditions",
-  "aiCompareCandidates": "Compare the candidates"
+  "aiCompareCandidates": "Compare the candidates",
+  "goalWeightLoss": "Weight loss",
+  "goalStrength": "Strength",
+  "goalFitness": "Fitness",
+  "goalPosture": "Posture",
+  "goalHealth": "General health",
+  "goalOther": "Other",
+  "purposeWeight": "Weight management",
+  "purposeChronic": "Chronic condition",
+  "purposeRehab": "Rehabilitation",
+  "purposeGeneral": "General wellbeing",
+  "purposeNone": "None",
+  "purposeOther": "Other",
+  "slotMorning": "Morning",
+  "slotAfternoon": "Afternoon",
+  "slotEvening": "Evening",
+  "slotFlexible": "Flexible",
+  "unknownMember": "Unknown member",
+  "filterAll": "All",
+  "alertSodiumOver": "Sodium over",
+  "alertLowCompletion": "Low completion",
+  "alertAwaitingReply": "Awaiting reply",
+  "clientLastRoutine": "Last routine",
+  "metricOverBy": "{unit} over",
+  "@metricOverBy": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "clientNoGoal": "No goal set",
+  "clientNoChat": "No messages yet"
 }

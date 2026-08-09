@@ -13,6 +13,7 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 
 /// 상담 요청 — the inbox where a member becomes a client.
 ///
@@ -151,7 +152,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     final AppLocalizations l = AppLocalizations.of(context);
     final request = widget.request;
     return SectionCard(
-      title: request.memberName,
+      // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
+      // 로케일을 모른다. (#501)
+      title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
       trailing: request.viaGym
           ? _Tag(label: l.consultTargetGym, tone: AppColors.brandOrange)
           : _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
@@ -171,18 +174,18 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    _Field(label: l.consultExerciseGoal, value: request.goalLabel),
+                    _Field(label: l.consultExerciseGoal, value: label(exerciseGoalLabels(l), request.goalCode)),
                     _Field(
                       label: l.consultHealthPurpose,
                       value: request.purposeDetail == null
-                          ? request.purposeLabel
-                          : '${request.purposeLabel} · ${request.purposeDetail}',
+                          ? label(healthPurposeLabels(l), request.purposeCode)
+                          : '${label(healthPurposeLabels(l), request.purposeCode)} · ${request.purposeDetail}',
                     ),
                     _Field(
                       label: l.consultPreferredTime,
                       value:
                           '${dateLabel(l, request.preferredDate)} '
-                          '${request.preferredTimeLabel}',
+                          '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
                     ),
                     if (request.gymName != null)
                       _Field(label: l.consultGym, value: request.gymName!),

@@ -1588,4 +1588,81 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiCompareCandidates => '맞춤 루틴 후보를 비교해 보세요';
+
+  @override
+  String get goalWeightLoss => '체중 감량';
+
+  @override
+  String get goalStrength => '근력 향상';
+
+  @override
+  String get goalFitness => '체력 증진';
+
+  @override
+  String get goalPosture => '자세 교정';
+
+  @override
+  String get goalHealth => '건강 관리';
+
+  @override
+  String get goalOther => '기타';
+
+  @override
+  String get purposeWeight => '체중 관리';
+
+  @override
+  String get purposeChronic => '만성질환 관리';
+
+  @override
+  String get purposeRehab => '재활';
+
+  @override
+  String get purposeGeneral => '전반적 건강';
+
+  @override
+  String get purposeNone => '해당 없음';
+
+  @override
+  String get purposeOther => '기타';
+
+  @override
+  String get slotMorning => '오전';
+
+  @override
+  String get slotAfternoon => '오후';
+
+  @override
+  String get slotEvening => '저녁';
+
+  @override
+  String get slotFlexible => '조율 가능';
+
+  @override
+  String get unknownMember => '알 수 없는 회원';
+
+  @override
+  String get filterAll => '전체';
+
+  @override
+  String get alertSodiumOver => '나트륨 초과';
+
+  @override
+  String get alertLowCompletion => '이행률 저조';
+
+  @override
+  String get alertAwaitingReply => '답장 대기';
+
+  @override
+  String get clientLastRoutine => '마지막 루틴';
+
+  @override
+  String metricOverBy(String unit) {
+    return '$unit 초과';
+  }
+
+  @override
+  String get clientNoGoal => '목표 설정 전';
+
+  @override
+  String get clientNoChat => '아직 대화가 없어요';
 }

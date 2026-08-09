@@ -276,7 +276,7 @@ class _RosterList extends StatelessWidget {
           EmptyHint(
             message: filter == ClientFilter.all
                 ? l.clientsEmpty
-                : l.clientsEmptyForFilter(filter.label),
+                : l.clientsEmptyForFilter(filter.label(l)),
             icon: Icons.people_outline,
           )
         else
@@ -331,7 +331,7 @@ class _FilterBanner extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              l.clientsFilterSummary(filter.label, shown, total),
+              l.clientsFilterSummary(filter.label(l), shown, total),
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
