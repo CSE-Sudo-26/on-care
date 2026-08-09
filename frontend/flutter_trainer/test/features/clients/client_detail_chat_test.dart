@@ -13,6 +13,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Delays every insert so tests can act while a send is in flight.
 class _SlowChatRepository extends DriftChatRepository {
@@ -292,7 +293,10 @@ void main() {
               _StaticLiveChatRepository(),
             ),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatView(
                 clientId: 'user-demo',

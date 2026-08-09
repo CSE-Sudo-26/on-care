@@ -378,6 +378,23 @@ class TrainerPasswordChange(BaseModel):
 REMINDER_LEAD_OPTIONS: tuple[int, ...] = (10, 30, 60)
 
 
+class TrainerNotificationOut(BaseModel):
+    """트레이너 알림함 항목. (#503)
+
+    `category` 는 회원 알림의 집합(reminder|health_check|achievement|system)이 아니라
+    트레이너 전용 값이다 — `message`|`consultation`|`reservation`. 한 테이블을
+    공유하지만 읽는 화면과 이동할 곳이 다르다.
+    """
+
+    id: str
+    title: str
+    body: str
+    category: str
+    read: bool
+    created_at: _datetime
+    time_ago: str
+
+
 class TrainerNotificationSettings(BaseModel):
     """트레이너 알림 수신 설정."""
     notify_new_message: bool

@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// Identifies a client for [ScheduleRepository.watchClientSessions].
 ///
@@ -116,7 +117,7 @@ class DriftScheduleRepository implements ScheduleRepository {
     final t = _db.trainerScheduleEntries;
     final query = _db.selectOnly(t, distinct: true)
       ..addColumns(<Expression<Object>>[t.date])
-      ..where(t.status.equals('공백').not());
+      ..where(t.status.equals(ScheduleStatus.gap).not());
     return query
         .map((row) => row.read(t.date)!)
         .watch()
@@ -166,7 +167,7 @@ class DriftScheduleRepository implements ScheduleRepository {
                     t.clientName.lower().trim().equals(
                       client.name.trim().toLowerCase(),
                     ))) &
-            t.status.equals('공백').not(),
+            t.status.equals(ScheduleStatus.gap).not(),
       )
       ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
         (t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc),
@@ -198,7 +199,7 @@ class DriftScheduleRepository implements ScheduleRepository {
             clientName: Value(clientName),
             type: Value(type),
             durationMinutes: Value(durationMinutes),
-            status: '예정',
+            status: ScheduleStatus.upcoming,
             programJson: const Value('[]'),
             note: Value(note),
           ),
@@ -288,7 +289,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       final session = await (_db.select(
         table,
       )..where((t) => t.id.equals(id))).getSingleOrNull();
-      if (session == null || session.status != '예정') return;
+      if (session == null || session.status != ScheduleStatus.upcoming) return;
       // `YYYY-MM-DD` sorts lexicographically, so a plain compare works.
       if (session.date.compareTo(today) > 0) return;
 
@@ -297,9 +298,9 @@ class DriftScheduleRepository implements ScheduleRepository {
       final changed =
           await (_db.update(
             table,
-          )..where((t) => t.id.equals(id) & t.status.equals('예정'))).write(
+          )..where((t) => t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming))).write(
             TrainerScheduleEntriesCompanion(
-              status: const Value('완료'),
+              status: const Value(ScheduleStatus.done),
               // An empty memo must not wipe an existing note.
               note: note.isEmpty ? const Value.absent() : Value(note),
             ),

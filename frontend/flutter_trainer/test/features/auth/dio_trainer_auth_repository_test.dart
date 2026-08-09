@@ -68,9 +68,9 @@ void main() {
         repo.login(email: 'e@x.com', password: 'bad'),
         throwsA(
           isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            contains('올바르지 않습니다'),
+            (e) => e.failure,
+            'failure',
+            AuthFailure.invalidCredentials,
           ),
         ),
       );
@@ -94,9 +94,9 @@ void main() {
         repo.login(email: 'e@x.com', password: 'pw'),
         throwsA(
           isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            contains('네트워크'),
+            (e) => e.failure,
+            'failure',
+            AuthFailure.network,
           ),
         ),
       );
@@ -126,9 +126,9 @@ void main() {
         ),
         throwsA(
           isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            contains('이미 가입'),
+            (e) => e.failure,
+            'failure',
+            AuthFailure.emailTaken,
           ),
         ),
       );
@@ -154,9 +154,9 @@ void main() {
         ),
         throwsA(
           isA<AuthException>().having(
-            (e) => e.message,
-            'message',
-            contains('초대 코드'),
+            (e) => e.failure,
+            'failure',
+            AuthFailure.inviteCodeInvalid,
           ),
         ),
       );

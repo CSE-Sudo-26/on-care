@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/gym_search_area.dart';
+import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 import 'package:oncare/features/exercise/domain/repositories/gym_repository.dart';
@@ -139,6 +140,28 @@ class DioGymRepository implements GymRepository {
   @override
   Future<List<TrainerSlot>> fetchSlots(String trainerId) =>
       _list('/trainers/$trainerId/slots', _slot);
+
+  @override
+  Future<List<MyReservation>> fetchMyReservations() =>
+      _list('/reservations/me', MyReservation.fromJson);
+
+  @override
+  Future<void> cancelReservation(String reservationId) async {
+    try {
+      await _dio.delete<void>('/reservations/$reservationId');
+    } on DioException catch (e) {
+      // 예약과 같은 규칙: 없음(남의 것 포함)·이미 시작함을 StateError 로 옮겨
+      // 목과 실서버가 같은 예외를 내게 한다.
+      final int? code = e.response?.statusCode;
+      if (code == 404) {
+        throw StateError('reservation not found: $reservationId');
+      }
+      if (code == 409) {
+        throw StateError('reservation no longer cancellable: $reservationId');
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<void> reserve(String slotId) async {

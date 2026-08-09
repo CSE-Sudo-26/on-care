@@ -193,7 +193,16 @@
   "homeMealReasonFiber": "Rich in dietary fiber",
   "homeMealTagHighFiber": "High fiber",
   "homeRecBasisSodium": "{days}-day avg sodium {sodium}mg",
-  "@homeRecBasisSodium": {"placeholders": {"days": {"type": "int"}, "sodium": {"type": "String"}}},
+  "@homeRecBasisSodium": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "sodium": {
+        "type": "String"
+      }
+    }
+  },
   "homeRecBasisOverLimit": "over the daily limit",
   "homeRecMealsTitle": "This week's AI meal picks",
   "homeViewAll": "View all",
@@ -342,6 +351,10 @@
   "exTypeStretching": "Stretching",
   "exTypeOther": "Exercise",
   "exTypeOtherChip": "Other",
+  "exSourceTrainerPt": "Trainer PT",
+  "@exSourceTrainerPt": {
+    "description": "Badge on an exercise record the trainer created by completing a PT session. Read-only for the member."
+  },
   "exLevelLight": "Light",
   "exLevelModerate": "Moderate",
   "exLevelHigh": "High",
@@ -553,14 +566,20 @@
   "exSlotWhen": "{date} {time}",
   "@exSlotWhen": {
     "placeholders": {
-      "date": { "type": "String" },
-      "time": { "type": "String" }
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "exSlotRemaining": "{count} left",
   "@exSlotRemaining": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "exSlotFull": "Fully booked",
@@ -615,7 +634,9 @@
   "myPointsBalance": "Balance: {points}P",
   "@myPointsBalance": {
     "placeholders": {
-      "points": {"type": "int"}
+      "points": {
+        "type": "int"
+      }
     }
   },
   "myPointsBenefitsSubtitle": "Benefits available with points",
@@ -638,19 +659,31 @@
   "myGymDisconnectWithTrainerConfirm": "Disconnect {gym}?\nYour trainer link with {trainer} will also be removed.",
   "@myGymDisconnectWithTrainerConfirm": {
     "placeholders": {
-      "gym": {"type": "String"},
-      "trainer": {"type": "String"}
+      "gym": {
+        "type": "String"
+      },
+      "trainer": {
+        "type": "String"
+      }
     }
   },
   "myGymDisconnectConfirm": "Disconnect {gym}?",
   "@myGymDisconnectConfirm": {
-    "placeholders": {"gym": {"type": "String"}}
+    "placeholders": {
+      "gym": {
+        "type": "String"
+      }
+    }
   },
   "myTrainerDisconnectConfirm": "Disconnect trainer {trainer}?\nYour connection to {gym} will remain.",
   "@myTrainerDisconnectConfirm": {
     "placeholders": {
-      "trainer": {"type": "String"},
-      "gym": {"type": "String"}
+      "trainer": {
+        "type": "String"
+      },
+      "gym": {
+        "type": "String"
+      }
     }
   },
   "myGymDisconnectTooltip": "Disconnect gym",
@@ -774,5 +807,27 @@
   "exConsultStatusSection": "Consultation Request Status",
   "exConsultRejectedReasonLabel": "Reason for decline",
   "exConsultRejectedNoReason": "No reason was given. Try requesting a consultation with another trainer.",
-  "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now."
+  "exConsultAcceptedGuide": "You're connected with your trainer. You can start chatting now.",
+  "exMyReservations": "My bookings",
+  "exCancelReservation": "Cancel booking",
+  "exCancelKeep": "Keep",
+  "exCancelConfirmTitle": "Cancel this booking?",
+  "exCancelFailed": "Couldn't cancel the booking. Please try again in a moment",
+  "exReservationPast": "Past booking",
+  "exCancelConfirmBody": "The {when} booking is cancelled and the slot reopens.",
+  "@exCancelConfirmBody": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "exCancelDone": "Cancelled the {when} booking",
+  "@exCancelDone": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  }
 }

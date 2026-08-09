@@ -43,6 +43,12 @@ class AppRoutes {
   /// The route itself is always registered so a deep link still resolves.
   static const String consultations = '/consultations';
 
+  /// 알림함 — 놓친 변화를 나중에 확인하는 자리. (#503)
+  ///
+  /// 상담 요청과 같은 이유로 nav 행은 실 API 빌드에서만 보인다(데모에는 알림을
+  /// 만드는 회원 백엔드가 없다). 라우트 자체는 항상 등록해 딥링크가 살아 있다.
+  static const String notifications = '/notifications';
+
   // --- Client detail ---
 
   /// Every addressable sub-section of a client's detail panel.

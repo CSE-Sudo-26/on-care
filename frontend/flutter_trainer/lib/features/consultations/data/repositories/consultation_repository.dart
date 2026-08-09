@@ -57,11 +57,11 @@ class DemoConsultationRepository implements ConsultationRepository {
 
   @override
   Future<void> accept(String id) async =>
-      throw const ValidationError(message: '데모 모드에서는 상담을 처리할 수 없어요');
+      throw const ValidationError();
 
   @override
   Future<void> reject(String id, {String? note}) async =>
-      throw const ValidationError(message: '데모 모드에서는 상담을 처리할 수 없어요');
+      throw const ValidationError();
 }
 
 /// Real backend: `/trainer/consultations`.
@@ -124,7 +124,7 @@ class DioConsultationRepository implements ConsultationRepository {
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       if (status == 409 || status == 400 || status == 422) {
-        throw ValidationError(message: _detail(e) ?? '상담을 처리할 수 없어요');
+        throw ValidationError(message: _detail(e));
       }
       throw AppError.fromDio(e);
     }

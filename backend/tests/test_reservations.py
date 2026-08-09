@@ -5,6 +5,7 @@ from unittest.mock import Mock, call
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.models import (
@@ -424,3 +425,226 @@ def test_member_cannot_book_an_unassigned_trainer_slot(
             synchronize_session=False
         )
         db_session.commit()
+
+
+# ---- 회원 예약 취소 (#502) ----
+
+def _register_member(client) -> str:
+    """새 회원을 만들고 토큰을 준다. 시드 회원은 다른 테스트와 상태를 공유한다."""
+    email = f"cancel-{uuid4().hex[:8]}@oncare.com"
+    client.post(
+        "/v1/auth/register", json={"email": email, "password": "pw!", "name": "u"}
+    )
+    return client.post(
+        "/v1/auth/login", data={"username": email, "password": "pw!"}
+    ).json()["access_token"]
+
+
+def test_member_cancels_and_the_seat_comes_back(client, db_session, created_slots):
+    """취소하면 좌석이 돌아오고 트레이너 일정에서도 사라진다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+    reservation_id = booked.json()["id"]
+    schedule_id = booked.json()["schedule_id"]
+
+    after_booking = client.get(
+        "/v1/trainers/trainer-demo/slots", headers=_headers(member_token)
+    ).json()
+    assert next(r for r in after_booking if r["id"] == slot["id"])["remaining"] == 1
+
+    cancelled = client.delete(
+        f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    after_cancel = client.get(
+        "/v1/trainers/trainer-demo/slots", headers=_headers(member_token)
+    ).json()
+    assert next(r for r in after_cancel if r["id"] == slot["id"])["remaining"] == 2
+
+    db_session.expire_all()
+    assert db_session.get(TrainerReservation, reservation_id) is None
+    # 예약이 만든 트레이너 일정도 함께 사라진다 — 남으면 트레이너 하루에
+    # 오지 않을 회원이 계속 잡혀 있다.
+    assert db_session.get(TrainerSchedule, schedule_id) is None
+
+
+def test_cancelling_frees_the_slot_for_a_new_booking(client, created_slots):
+    """취소한 자리는 다시 예약할 수 있다 — 유니크 제약에 걸리지 않는다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+
+    first = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    client.delete(
+        f"/v1/reservations/{first.json()['id']}", headers=_headers(member_token)
+    )
+
+    again = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert again.status_code == 201, again.text
+    client.delete(
+        f"/v1/reservations/{again.json()['id']}", headers=_headers(member_token)
+    )
+
+
+def test_cancelling_someone_elses_reservation_is_404(client, created_slots):
+    """남의 예약은 존재조차 드러내지 않는다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    other_token = _register_member(client)
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    reservation_id = booked.json()["id"]
+
+    stolen = client.delete(
+        f"/v1/reservations/{reservation_id}", headers=_headers(other_token)
+    )
+    assert stolen.status_code == 404
+
+    # 원래 주인은 여전히 취소할 수 있다.
+    assert (
+        client.delete(
+            f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+        ).status_code
+        == 200
+    )
+
+
+def test_cancelling_twice_is_404(client, created_slots):
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    reservation_id = booked.json()["id"]
+
+    assert (
+        client.delete(
+            f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.delete(
+            f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+        ).status_code
+        == 404
+    )
+
+
+def test_cancelling_a_started_session_is_rejected(client, db_session, created_slots):
+    """이미 시작한 수업은 취소할 수 없다 — 자리를 비우는 게 아니라 기록을 지우는 일이다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    reservation_id = booked.json()["id"]
+
+    # 슬롯 시각을 과거로 옮겨 '이미 시작한' 상태를 만든다.
+    row = db_session.get(TrainerReservationSlot, slot["id"])
+    row.starts_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+    db_session.commit()
+
+    late = client.delete(
+        f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+    )
+    assert late.status_code == 409, late.text
+
+    db_session.expire_all()
+    assert db_session.get(TrainerReservation, reservation_id) is not None
+
+
+def test_my_reservations_lists_bookings_with_cancellable_flag(client, created_slots):
+    """앱이 '내 예약'과 취소 가능 여부를 서버 판단으로 받는다."""
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    reservation_id = booked.json()["id"]
+
+    mine = client.get("/v1/reservations/me", headers=_headers(member_token))
+    assert mine.status_code == 200, mine.text
+    row = next(r for r in mine.json() if r["id"] == reservation_id)
+    assert row["slot_id"] == slot["id"]
+    assert row["trainer_id"] == "trainer-demo"
+    assert row["cancellable"] is True
+
+    # 남의 예약은 보이지 않는다.
+    other = client.get("/v1/reservations/me", headers=_headers(_register_member(client)))
+    assert all(r["id"] != reservation_id for r in other.json())
+
+    client.delete(
+        f"/v1/reservations/{reservation_id}", headers=_headers(member_token)
+    )
+
+
+def test_cancel_leaves_a_notification_row_for_the_trainer(
+    client, db_session, created_slots
+):
+    """트레이너는 일정에서 한 줄이 사라지는 것만으로는 취소를 알 수 없다.
+
+    DB 행으로 확인하는 이유: `GET /notifications` 는 `get_current_user` 가 트레이너
+    계정을 403 으로 막는 **회원 전용** 경로다(역할 분리). 트레이너가 이 행을 읽는
+    경로는 인박스 작업에서 만든다(#503). 여기서는 취소가 알림을 남기는 것까지가
+    범위다.
+    """
+    from app.models.models import Notification
+
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots)
+
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    before = db_session.scalars(
+        select(Notification).where(Notification.user_id == "trainer-demo")
+    ).all()
+
+    client.delete(
+        f"/v1/reservations/{booked.json()['id']}", headers=_headers(member_token)
+    )
+
+    db_session.expire_all()
+    after = db_session.scalars(
+        select(Notification).where(Notification.user_id == "trainer-demo")
+    ).all()
+    assert len(after) == len(before) + 1
+    assert any("취소" in row.title for row in after)

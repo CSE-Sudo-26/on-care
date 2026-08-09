@@ -63,6 +63,34 @@ On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업
 고객의 **해당 섹션**으로 바로 들어가야 하기 때문이다(답장 대기 → `/chat`,
 나트륨 초과 → `/diet`). 새로고침·뒤로가기·링크 공유가 모두 같은 화면을 복원한다.
 
+## 다국어 (ko / en)
+
+사용자 앱과 같은 `gen-l10n` 파이프라인입니다 — arb 는 `lib/l10n`, 생성물은
+`lib/gen/l10n`, 설정은 `l10n.yaml`. 기기 로케일을 따르고, 위젯 테스트는
+`pumpTrainerApp(locale: …)` 로 언어를 명시합니다.
+
+**번역하지 않는 값이 있습니다.** 화면 문구처럼 보이지만 실제로는 DB·서버로 나가는
+계약값입니다. 번역하면 저장된 행이 쿼리에 걸리지 않거나 서버가 422 를 돌려줍니다.
+
+| 값 | 어디에 | 표시 문구는 |
+|---|---|---|
+| `예정`·`완료`·`공백` | `TrainerSchedule.status` | `scheduleStatusLabel(l, …)` |
+| `1:1 PT`·`상담` | `TrainerSchedule.type` | `sessionTypeLabel(l, …)` |
+| `걷기`·`유산소`·`근력`·`요가`·`스트레칭`·`기타` | 서버 `RoutineType` Literal | `routineTypeLabel(l, …)` |
+| `A`·`B`·`recommended` | AI 루틴 후보 선택 식별자 | `_optionDisplayName(l, …)` |
+| `all`·`unread`·`attention` | `ClientFilter.query` (URL) | `ClientFilter.label(l)` |
+
+**한국어로 남는 데이터도 있습니다.** 앱이 쓴 문구가 아니라 콘텐츠라서입니다 —
+데모 시드(가상 회원 이름·채팅·메모), 데모 트레이너 프로필, 프로그램 템플릿과 목 AI
+루틴 본문. 실계정에서는 그 사람이 입력한 값이 그대로 그려지는 자리입니다.
+
+리포지토리 계층은 문구 대신 **오류 코드**(`AuthFailure`, `SlotErrorCodes`)나 타입을
+던지고, 화면이 자기 로케일의 문구를 붙입니다. 컨텍스트가 없는 곳에서 한국어 문장을
+들고 있으면 영어 로케일에서 그 문장만 한국어로 남기 때문입니다.
+
+`test/l10n/english_locale_test.dart` 가 영어로 화면을 띄워 한글이 남지 않았는지
+확인합니다.
+
 ## 빌드 / 실행
 
 ```bash
