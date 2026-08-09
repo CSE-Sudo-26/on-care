@@ -937,6 +937,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ask again'**
   String get coachSheetAskAgain;
+
+  /// No description provided for @consultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultation requests'**
+  String get consultTitle;
+
+  /// No description provided for @consultPendingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pending'**
+  String consultPendingCount(int count);
+
+  /// No description provided for @consultNoPending.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending requests'**
+  String get consultNoPending;
+
+  /// No description provided for @consultShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get consultShowAll;
+
+  /// No description provided for @consultShowPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending only'**
+  String get consultShowPending;
+
+  /// No description provided for @consultLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load consultation requests'**
+  String get consultLoadFailed;
+
+  /// No description provided for @consultRetryLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again in a moment'**
+  String get consultRetryLater;
+
+  /// No description provided for @consultEmptyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending consultation requests'**
+  String get consultEmptyPending;
+
+  /// No description provided for @consultEmptyHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No consultation history'**
+  String get consultEmptyHistory;
+
+  /// No description provided for @consultEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests appear here when a member asks for a consultation with your gym or with you'**
+  String get consultEmptyHint;
+
+  /// No description provided for @consultActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t process the request'**
+  String get consultActionFailed;
+
+  /// No description provided for @consultApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is now one of your clients'**
+  String consultApproved(String name);
+
+  /// No description provided for @consultRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Request declined'**
+  String get consultRejected;
+
+  /// No description provided for @consultTargetGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym enquiry'**
+  String get consultTargetGym;
+
+  /// No description provided for @consultTargetTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct request'**
+  String get consultTargetTrainer;
+
+  /// No description provided for @consultExerciseGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Training goal'**
+  String get consultExerciseGoal;
+
+  /// No description provided for @consultHealthPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Health purpose'**
+  String get consultHealthPurpose;
+
+  /// No description provided for @consultPreferredTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred time'**
+  String get consultPreferredTime;
+
+  /// No description provided for @consultGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym'**
+  String get consultGym;
+
+  /// No description provided for @consultReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get consultReject;
+
+  /// No description provided for @consultApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get consultApprove;
+
+  /// No description provided for @consultRejectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline request'**
+  String get consultRejectTitle;
+
+  /// No description provided for @consultRejectNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The reason you write is sent to the member as a notification.'**
+  String get consultRejectNotice;
+
+  /// No description provided for @consultRejectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. We\'re fully booked this month'**
+  String get consultRejectHint;
+
+  /// No description provided for @consultRejectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get consultRejectAction;
+
+  /// No description provided for @consultStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Added as a client'**
+  String get consultStatusApproved;
+
+  /// No description provided for @workoutRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout log'**
+  String get workoutRecords;
+
+  /// No description provided for @workoutLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the workout log'**
+  String get workoutLoadFailed;
+
+  /// No description provided for @workoutEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No workouts logged yet'**
+  String get workoutEmpty;
+
+  /// No description provided for @routinesAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned routines'**
+  String get routinesAssigned;
+
+  /// No description provided for @routineNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New routine'**
+  String get routineNew;
+
+  /// No description provided for @routinesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load routines'**
+  String get routinesLoadFailed;
+
+  /// No description provided for @routinesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No routines assigned to this client yet'**
+  String get routinesEmpty;
+
+  /// No description provided for @minutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String minutesShort(int minutes);
+
+  /// No description provided for @ptProgramHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'PT program history'**
+  String get ptProgramHistory;
+
+  /// No description provided for @scheduleLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the schedule'**
+  String get scheduleLoadFailed;
+
+  /// No description provided for @ptSessionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No PT sessions yet'**
+  String get ptSessionsEmpty;
+
+  /// No description provided for @labelToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get labelToday;
+
+  /// No description provided for @sessionTypeAndDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · {minutes} min'**
+  String sessionTypeAndDuration(String type, int minutes);
+
+  /// No description provided for @programNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No program recorded'**
+  String get programNone;
+
+  /// No description provided for @weekCompletionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s completion'**
+  String get weekCompletionRate;
+
+  /// No description provided for @legendDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get legendDone;
+
+  /// No description provided for @legendPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get legendPartial;
+
+  /// No description provided for @legendMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get legendMissed;
+
+  /// No description provided for @clientFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Client feedback'**
+  String get clientFeedback;
+
+  /// No description provided for @trainerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer\'s note'**
+  String get trainerNote;
+
+  /// No description provided for @dietLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load meals'**
+  String get dietLoadFailed;
+
+  /// No description provided for @dietTodaySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s nutrition'**
+  String get dietTodaySummary;
+
+  /// No description provided for @dietSodiumTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium over the last 7 days'**
+  String get dietSodiumTrend;
+
+  /// No description provided for @dietAverageMg.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg {value}mg'**
+  String dietAverageMg(int value);
+
+  /// No description provided for @dietSodiumOverDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Over the {target}mg target on {days} of the last 7 days.'**
+  String dietSodiumOverDays(int days, int target);
+
+  /// No description provided for @dietSodiumAllWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Under the {target}mg target every day this week. Nice!'**
+  String dietSodiumAllWithin(int target);
+
+  /// No description provided for @dietSodiumValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium {value}mg'**
+  String dietSodiumValue(int value);
+
+  /// No description provided for @dietAiAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'AI analysis'**
+  String get dietAiAnalysis;
+
+  /// No description provided for @dietAiOverSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium is {over}mg over target. Adding cardio to today\'s routine would help.'**
+  String dietAiOverSodium(int over);
+
+  /// No description provided for @dietAiBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s meals are well balanced. Keep the current routine.'**
+  String get dietAiBalanced;
+
+  /// No description provided for @consultStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get consultStatusRejected;
+
+  /// No description provided for @consultStatusRejectedWithNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined · {note}'**
+  String consultStatusRejectedWithNote(String note);
 }
 
 class _AppLocalizationsDelegate

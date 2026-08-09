@@ -472,4 +472,201 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachSheetAskAgain => 'Ask again';
+
+  @override
+  String get consultTitle => 'Consultation requests';
+
+  @override
+  String consultPendingCount(int count) {
+    return '$count pending';
+  }
+
+  @override
+  String get consultNoPending => 'No pending requests';
+
+  @override
+  String get consultShowAll => 'All';
+
+  @override
+  String get consultShowPending => 'Pending only';
+
+  @override
+  String get consultLoadFailed => 'Couldn\'t load consultation requests';
+
+  @override
+  String get consultRetryLater => 'Please try again in a moment';
+
+  @override
+  String get consultEmptyPending => 'No pending consultation requests';
+
+  @override
+  String get consultEmptyHistory => 'No consultation history';
+
+  @override
+  String get consultEmptyHint =>
+      'Requests appear here when a member asks for a consultation with your gym or with you';
+
+  @override
+  String get consultActionFailed => 'Couldn\'t process the request';
+
+  @override
+  String consultApproved(String name) {
+    return '$name is now one of your clients';
+  }
+
+  @override
+  String get consultRejected => 'Request declined';
+
+  @override
+  String get consultTargetGym => 'Gym enquiry';
+
+  @override
+  String get consultTargetTrainer => 'Direct request';
+
+  @override
+  String get consultExerciseGoal => 'Training goal';
+
+  @override
+  String get consultHealthPurpose => 'Health purpose';
+
+  @override
+  String get consultPreferredTime => 'Preferred time';
+
+  @override
+  String get consultGym => 'Gym';
+
+  @override
+  String get consultReject => 'Decline';
+
+  @override
+  String get consultApprove => 'Approve';
+
+  @override
+  String get consultRejectTitle => 'Decline request';
+
+  @override
+  String get consultRejectNotice =>
+      'The reason you write is sent to the member as a notification.';
+
+  @override
+  String get consultRejectHint => 'e.g. We\'re fully booked this month';
+
+  @override
+  String get consultRejectAction => 'Decline';
+
+  @override
+  String get consultStatusApproved => 'Added as a client';
+
+  @override
+  String get workoutRecords => 'Workout log';
+
+  @override
+  String get workoutLoadFailed => 'Couldn\'t load the workout log';
+
+  @override
+  String get workoutEmpty => 'No workouts logged yet';
+
+  @override
+  String get routinesAssigned => 'Assigned routines';
+
+  @override
+  String get routineNew => 'New routine';
+
+  @override
+  String get routinesLoadFailed => 'Couldn\'t load routines';
+
+  @override
+  String get routinesEmpty => 'No routines assigned to this client yet';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get ptProgramHistory => 'PT program history';
+
+  @override
+  String get scheduleLoadFailed => 'Couldn\'t load the schedule';
+
+  @override
+  String get ptSessionsEmpty => 'No PT sessions yet';
+
+  @override
+  String get labelToday => 'Today';
+
+  @override
+  String sessionTypeAndDuration(String type, int minutes) {
+    return '$type · $minutes min';
+  }
+
+  @override
+  String get programNone => 'No program recorded';
+
+  @override
+  String get weekCompletionRate => 'This week\'s completion';
+
+  @override
+  String get legendDone => 'Done';
+
+  @override
+  String get legendPartial => 'Partial';
+
+  @override
+  String get legendMissed => 'Missed';
+
+  @override
+  String get clientFeedback => 'Client feedback';
+
+  @override
+  String get trainerNote => 'Trainer\'s note';
+
+  @override
+  String get dietLoadFailed => 'Couldn\'t load meals';
+
+  @override
+  String get dietTodaySummary => 'Today\'s nutrition';
+
+  @override
+  String get dietSodiumTrend => 'Sodium over the last 7 days';
+
+  @override
+  String dietAverageMg(int value) {
+    return 'Avg ${value}mg';
+  }
+
+  @override
+  String dietSodiumOverDays(int days, int target) {
+    return 'Over the ${target}mg target on $days of the last 7 days.';
+  }
+
+  @override
+  String dietSodiumAllWithin(int target) {
+    return 'Under the ${target}mg target every day this week. Nice!';
+  }
+
+  @override
+  String dietSodiumValue(int value) {
+    return 'Sodium ${value}mg';
+  }
+
+  @override
+  String get dietAiAnalysis => 'AI analysis';
+
+  @override
+  String dietAiOverSodium(int over) {
+    return 'Sodium is ${over}mg over target. Adding cardio to today\'s routine would help.';
+  }
+
+  @override
+  String get dietAiBalanced =>
+      'Today\'s meals are well balanced. Keep the current routine.';
+
+  @override
+  String get consultStatusRejected => 'Declined';
+
+  @override
+  String consultStatusRejectedWithNote(String note) {
+    return 'Declined · $note';
+  }
 }

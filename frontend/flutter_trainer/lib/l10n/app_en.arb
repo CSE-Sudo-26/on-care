@@ -307,5 +307,139 @@
   "coachSheetHint": "e.g. Sodium keeps running high — what meals should I suggest?",
   "coachSheetSources": "Sources",
   "coachSheetAsk": "Ask",
-  "coachSheetAskAgain": "Ask again"
+  "coachSheetAskAgain": "Ask again",
+  "consultTitle": "Consultation requests",
+  "consultPendingCount": "{count} pending",
+  "@consultPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "consultNoPending": "No pending requests",
+  "consultShowAll": "All",
+  "consultShowPending": "Pending only",
+  "consultLoadFailed": "Couldn't load consultation requests",
+  "consultRetryLater": "Please try again in a moment",
+  "consultEmptyPending": "No pending consultation requests",
+  "consultEmptyHistory": "No consultation history",
+  "consultEmptyHint": "Requests appear here when a member asks for a consultation with your gym or with you",
+  "consultActionFailed": "Couldn't process the request",
+  "consultApproved": "{name} is now one of your clients",
+  "@consultApproved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "consultRejected": "Request declined",
+  "consultTargetGym": "Gym enquiry",
+  "consultTargetTrainer": "Direct request",
+  "consultExerciseGoal": "Training goal",
+  "consultHealthPurpose": "Health purpose",
+  "consultPreferredTime": "Preferred time",
+  "consultGym": "Gym",
+  "consultReject": "Decline",
+  "consultApprove": "Approve",
+  "consultRejectTitle": "Decline request",
+  "consultRejectNotice": "The reason you write is sent to the member as a notification.",
+  "consultRejectHint": "e.g. We're fully booked this month",
+  "consultRejectAction": "Decline",
+  "consultStatusApproved": "Added as a client",
+  "workoutRecords": "Workout log",
+  "workoutLoadFailed": "Couldn't load the workout log",
+  "workoutEmpty": "No workouts logged yet",
+  "routinesAssigned": "Assigned routines",
+  "routineNew": "New routine",
+  "routinesLoadFailed": "Couldn't load routines",
+  "routinesEmpty": "No routines assigned to this client yet",
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "ptProgramHistory": "PT program history",
+  "scheduleLoadFailed": "Couldn't load the schedule",
+  "ptSessionsEmpty": "No PT sessions yet",
+  "labelToday": "Today",
+  "sessionTypeAndDuration": "{type} · {minutes} min",
+  "@sessionTypeAndDuration": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "programNone": "No program recorded",
+  "weekCompletionRate": "This week's completion",
+  "legendDone": "Done",
+  "legendPartial": "Partial",
+  "legendMissed": "Missed",
+  "clientFeedback": "Client feedback",
+  "trainerNote": "Trainer's note",
+  "dietLoadFailed": "Couldn't load meals",
+  "dietTodaySummary": "Today's nutrition",
+  "dietSodiumTrend": "Sodium over the last 7 days",
+  "dietAverageMg": "Avg {value}mg",
+  "@dietAverageMg": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumOverDays": "Over the {target}mg target on {days} of the last 7 days.",
+  "@dietSodiumOverDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumAllWithin": "Under the {target}mg target every day this week. Nice!",
+  "@dietSodiumAllWithin": {
+    "placeholders": {
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "dietSodiumValue": "Sodium {value}mg",
+  "@dietSodiumValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "dietAiAnalysis": "AI analysis",
+  "dietAiOverSodium": "Sodium is {over}mg over target. Adding cardio to today's routine would help.",
+  "@dietAiOverSodium": {
+    "placeholders": {
+      "over": {
+        "type": "int"
+      }
+    }
+  },
+  "dietAiBalanced": "Today's meals are well balanced. Keep the current routine.",
+  "consultStatusRejected": "Declined",
+  "consultStatusRejectedWithNote": "Declined · {note}",
+  "@consultStatusRejectedWithNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  }
 }

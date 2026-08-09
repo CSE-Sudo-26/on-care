@@ -462,4 +462,198 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachSheetAskAgain => '다시 묻기';
+
+  @override
+  String get consultTitle => '상담 요청';
+
+  @override
+  String consultPendingCount(int count) {
+    return '대기 중 $count건';
+  }
+
+  @override
+  String get consultNoPending => '대기 중인 요청이 없어요';
+
+  @override
+  String get consultShowAll => '전체 보기';
+
+  @override
+  String get consultShowPending => '대기 중만';
+
+  @override
+  String get consultLoadFailed => '상담 요청을 불러오지 못했어요';
+
+  @override
+  String get consultRetryLater => '잠시 후 다시 시도해 주세요';
+
+  @override
+  String get consultEmptyPending => '대기 중인 상담 요청이 없어요';
+
+  @override
+  String get consultEmptyHistory => '상담 요청 이력이 없어요';
+
+  @override
+  String get consultEmptyHint => '회원이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요';
+
+  @override
+  String get consultActionFailed => '상담을 처리하지 못했어요';
+
+  @override
+  String consultApproved(String name) {
+    return '$name 회원을 담당 고객으로 등록했어요';
+  }
+
+  @override
+  String get consultRejected => '상담 요청을 반려했어요';
+
+  @override
+  String get consultTargetGym => '헬스장 문의';
+
+  @override
+  String get consultTargetTrainer => '트레이너 지정';
+
+  @override
+  String get consultExerciseGoal => '운동 목표';
+
+  @override
+  String get consultHealthPurpose => '건강관리 목적';
+
+  @override
+  String get consultPreferredTime => '희망 일시';
+
+  @override
+  String get consultGym => '문의 헬스장';
+
+  @override
+  String get consultReject => '거절';
+
+  @override
+  String get consultApprove => '승인';
+
+  @override
+  String get consultRejectTitle => '상담 요청 반려';
+
+  @override
+  String get consultRejectNotice => '입력한 사유는 회원에게 알림으로 전달돼요.';
+
+  @override
+  String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
+
+  @override
+  String get consultRejectAction => '반려하기';
+
+  @override
+  String get consultStatusApproved => '담당 고객으로 등록됨';
+
+  @override
+  String get workoutRecords => '운동 기록';
+
+  @override
+  String get workoutLoadFailed => '운동 기록을 불러오지 못했어요';
+
+  @override
+  String get workoutEmpty => '아직 운동 기록이 없어요';
+
+  @override
+  String get routinesAssigned => '배정된 루틴';
+
+  @override
+  String get routineNew => '새 루틴';
+
+  @override
+  String get routinesLoadFailed => '루틴을 불러오지 못했어요';
+
+  @override
+  String get routinesEmpty => '아직 이 고객에게 배정된 루틴이 없어요';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String get ptProgramHistory => 'PT 프로그램 이력';
+
+  @override
+  String get scheduleLoadFailed => '일정을 불러오지 못했어요';
+
+  @override
+  String get ptSessionsEmpty => '등록된 PT 세션이 없어요';
+
+  @override
+  String get labelToday => '오늘';
+
+  @override
+  String sessionTypeAndDuration(String type, int minutes) {
+    return '$type · $minutes분';
+  }
+
+  @override
+  String get programNone => '등록된 프로그램 없음';
+
+  @override
+  String get weekCompletionRate => '이번 주 완료율';
+
+  @override
+  String get legendDone => '완료';
+
+  @override
+  String get legendPartial => '부분';
+
+  @override
+  String get legendMissed => '미완료';
+
+  @override
+  String get clientFeedback => '고객 피드백';
+
+  @override
+  String get trainerNote => '트레이너 메모';
+
+  @override
+  String get dietLoadFailed => '식단을 불러오지 못했어요';
+
+  @override
+  String get dietTodaySummary => '오늘 영양 요약';
+
+  @override
+  String get dietSodiumTrend => '최근 7일 나트륨 추이';
+
+  @override
+  String dietAverageMg(int value) {
+    return '평균 ${value}mg';
+  }
+
+  @override
+  String dietSodiumOverDays(int days, int target) {
+    return '지난 7일 중 $days일 목표(${target}mg)를 초과했어요.';
+  }
+
+  @override
+  String dietSodiumAllWithin(int target) {
+    return '지난 7일 모두 목표(${target}mg) 이내예요. 좋아요!';
+  }
+
+  @override
+  String dietSodiumValue(int value) {
+    return '나트륨 ${value}mg';
+  }
+
+  @override
+  String get dietAiAnalysis => 'AI 분석';
+
+  @override
+  String dietAiOverSodium(int over) {
+    return '나트륨이 목표치를 ${over}mg 초과했어요. 오늘 운동 루틴에 유산소를 추가하면 도움이 돼요.';
+  }
+
+  @override
+  String get dietAiBalanced => '오늘 식단은 균형이 잘 맞아요. 현재 루틴을 유지하세요.';
+
+  @override
+  String get consultStatusRejected => '반려됨';
+
+  @override
+  String consultStatusRejectedWithNote(String note) {
+    return '반려됨 · $note';
+  }
 }

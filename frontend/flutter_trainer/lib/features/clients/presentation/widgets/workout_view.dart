@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays;
+    show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -19,6 +19,8 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// 운동 — the whole prescription→execution loop for one client, in the
 /// order the trainer reasons about it.
@@ -38,6 +40,7 @@ class WorkoutView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final history = ref.watch(clientHistoryProvider(client.id));
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
     final sessions = ref.watch(
@@ -57,8 +60,8 @@ class WorkoutView extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         _WeekCompletionCard(week: client.weekCompletion),
         const SizedBox(height: AppSpacing.lg),
-        const Text(
-          '운동 기록',
+        Text(
+          l.workoutRecords,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
@@ -73,13 +76,13 @@ class WorkoutView extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           ],
-          error: (e, _) => const <Widget>[
-            EmptyHint(message: '운동 기록을 불러오지 못했어요'),
+          error: (e, _) => <Widget>[
+            EmptyHint(message: l.workoutLoadFailed),
           ],
           data: (entries) => <Widget>[
             if (entries.isEmpty)
-              const EmptyHint(
-                message: '아직 운동 기록이 없어요',
+              EmptyHint(
+                message: l.workoutEmpty,
                 icon: Icons.fitness_center_outlined,
               ),
             for (final entry in entries) ...<Widget>[
@@ -104,12 +107,13 @@ class _AssignedRoutinesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return SectionCard(
-      title: '배정된 루틴',
+      title: l.routinesAssigned,
       icon: Icons.assignment_turned_in_outlined,
       dense: true,
       trailing: CardLink(
-        label: '새 루틴',
+        label: l.routineNew,
         onTap: () => context.go(AppRoutes.coachingFor(clientId)),
       ),
       child: assigned.when(
@@ -117,10 +121,10 @@ class _AssignedRoutinesCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '루틴을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.routinesLoadFailed),
         data: (routines) => routines.isEmpty
-            ? const EmptyHint(
-                message: '아직 이 고객에게 배정된 루틴이 없어요',
+            ? EmptyHint(
+                message: l.routinesEmpty,
                 icon: Icons.assignment_outlined,
               )
             : Column(
@@ -164,7 +168,7 @@ class _AssignedRoutinesCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${routine.minutes}분',
+                            l.minutesShort(routine.minutes),
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
@@ -195,9 +199,10 @@ class _SessionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final today = ymd(DateTime.now());
     return SectionCard(
-      title: 'PT 프로그램 이력',
+      title: l.ptProgramHistory,
       icon: Icons.event_note_outlined,
       dense: true,
       child: sessions.when(
@@ -205,10 +210,10 @@ class _SessionsCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => const EmptyHint(message: '일정을 불러오지 못했어요'),
+        error: (e, _) => EmptyHint(message: l.scheduleLoadFailed),
         data: (list) => list.isEmpty
-            ? const EmptyHint(
-                message: '등록된 PT 세션이 없어요',
+            ? EmptyHint(
+                message: l.ptSessionsEmpty,
                 icon: Icons.event_busy_outlined,
               )
             : Column(
@@ -230,6 +235,7 @@ class _SessionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final date = DateTime.tryParse(session.date);
     final label = date == null ? session.date : '${date.month}/${date.day}';
     final exercises = session.program.map((p) => p.name).join(' · ');
@@ -242,7 +248,7 @@ class _SessionRow extends StatelessWidget {
           SizedBox(
             width: 46,
             child: Text(
-              session.date == today ? '오늘' : label,
+              session.date == today ? l.labelToday : label,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -257,7 +263,7 @@ class _SessionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '${session.type} · ${session.durationMinutes}분',
+                  l.sessionTypeAndDuration(sessionTypeLabel(l, session.type), session.durationMinutes),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -265,7 +271,7 @@ class _SessionRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  exercises.isEmpty ? '등록된 프로그램 없음' : exercises,
+                  exercises.isEmpty ? l.programNone : exercises,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -282,7 +288,7 @@ class _SessionRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            session.status,
+            scheduleStatusLabel(l, session.status),
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
@@ -346,10 +352,12 @@ class _WeekCompletionCard extends StatelessWidget {
 
   final List<int> week;
 
-  static const List<String> _days = <String>['월', '화', '수', '목', '금', '토', '일'];
+  /// 요일 라벨은 로케일을 따르므로 const 로 둘 수 없다. (#501)
+  static List<String> _days(AppLocalizations l) => weekdayLabels(l);
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // 아직 오지 않은 요일은 평균에서도 막대에서도 뺀다 — 0으로 세면
     // 주 초반일수록 실제보다 낮은 완료율이 나온다.
     final elapsed = elapsedWeekdays(DateTime.now());
@@ -371,9 +379,9 @@ class _WeekCompletionCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '이번 주 완료율',
+                  l.weekCompletionRate,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -398,7 +406,7 @@ class _WeekCompletionCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                for (var i = 0; i < week.length && i < _days.length; i++) ...[
+                for (var i = 0; i < week.length && i < weekdayCount; i++) ...[
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -416,7 +424,7 @@ class _WeekCompletionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _days[i],
+                          _days(l)[i],
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
@@ -436,11 +444,11 @@ class _WeekCompletionCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
-              const _LegendDot(color: AppColors.success, label: '완료'),
+              _LegendDot(color: AppColors.success, label: l.legendDone),
               const SizedBox(width: AppSpacing.md),
-              const _LegendDot(color: AppColors.warning, label: '부분'),
+              _LegendDot(color: AppColors.warning, label: l.legendPartial),
               const SizedBox(width: AppSpacing.md),
-              _LegendDot(color: AppColors.borderStrong, label: '미완료'),
+              _LegendDot(color: AppColors.borderStrong, label: l.legendMissed),
             ],
           ),
         ],
@@ -487,6 +495,7 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -531,7 +540,7 @@ class _HistoryCard extends StatelessWidget {
           if (entry.clientFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _NoteBox(
-              title: '고객 피드백',
+              title: l.clientFeedback,
               body: entry.clientFeedback,
               color: AppColors.accent,
             ),
@@ -539,7 +548,7 @@ class _HistoryCard extends StatelessWidget {
           if (entry.trainerNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
             _NoteBox(
-              title: '트레이너 메모',
+              title: l.trainerNote,
               body: entry.trainerNote,
               color: AppColors.warning,
             ),
