@@ -1514,4 +1514,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exConsultAcceptedGuide =>
       'You\'re connected with your trainer. You can start chatting now.';
+
+  @override
+  String get mySupportOpenFailed =>
+      'Couldn\'t open the link. Please try again in a moment';
+
+  @override
+  String get mySupportExternalHint => 'Opens the KakaoTalk channel';
 }
