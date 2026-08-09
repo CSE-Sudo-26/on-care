@@ -174,7 +174,9 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: AppSpacing.lg),
 
         for (final s in week.sessions) ...<Widget>[
-          if (s.id == null)
+          // 트레이너가 완료 처리한 PT 기록은 스와이프 삭제도 편집 시트도 열지
+          // 않는다. 서버가 409 로 거절하므로(#499) 열어 봐야 실패로 끝난다.
+          if (s.id == null || !s.isEditable)
             _SessionCard(session: s)
           else
             SwipeToDelete(
@@ -385,6 +387,30 @@ class _SessionCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // 트레이너가 완료 처리해 들어온 기록임을 밝힌다. 이 배지가
+                    // 없으면 회원은 자기가 넣지 않은 기록이 왜 있는지 알 수 없고,
+                    // 눌러도 편집이 열리지 않는 이유도 설명되지 않는다.
+                    if (session.source == ExerciseSource.trainerPt) ...<Widget>[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: const BorderRadius.all(AppRadius.pill),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context).exSourceTrainerPt,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
