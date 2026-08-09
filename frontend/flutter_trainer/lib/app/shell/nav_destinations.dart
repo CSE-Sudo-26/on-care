@@ -18,6 +18,10 @@ enum NavBadge {
   /// rather than looked up from [navDestinations] — this destination is
   /// conditional, so it is not in that list. (#467)
   pendingConsultations,
+
+  /// Unread trainer notifications. Supplied by the sidebar directly for the
+  /// same reason as [pendingConsultations]. (#503)
+  unreadNotifications,
 }
 
 /// One entry in the sidebar. The order of [navDestinations] is the tab
@@ -117,4 +121,14 @@ const NavDestination consultationsDestination = NavDestination(
   activeIcon: Icons.mark_email_unread,
   route: AppRoutes.consultations,
   badge: NavBadge.pendingConsultations,
+);
+
+/// 알림함 — [consultationsDestination] 과 같은 이유로 [navDestinations] 밖에
+/// 둔다. 실 API 빌드에서만 보이고, 브랜치 인덱스를 사이드바가 직접 넘긴다. (#503)
+const NavDestination notificationsDestination = NavDestination(
+  label: '알림',
+  icon: Icons.notifications_none,
+  activeIcon: Icons.notifications,
+  route: AppRoutes.notifications,
+  badge: NavBadge.unreadNotifications,
 );

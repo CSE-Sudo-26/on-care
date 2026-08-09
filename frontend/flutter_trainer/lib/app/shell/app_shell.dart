@@ -37,6 +37,10 @@ class AppShell extends StatelessWidget {
   /// could not shift any existing branch. (#467)
   static int get consultationsBranchIndex => myBranchIndex + 1;
 
+  /// Branch index of 알림함. 상담 요청과 같은 이유로 맨 뒤에 붙인다 — 앞에
+  /// 끼우면 `myBranchIndex` 가 밀려 푸터 선택이 조용히 깨진다. (#503)
+  static int get notificationsBranchIndex => consultationsBranchIndex + 1;
+
   void _goBranch(int index) {
     // Tapping the active destination resets it to its branch root (e.g.
     // 고객 상세에서 l.clientsTitle을 다시 누르면 목록으로) — the standard console

@@ -302,6 +302,15 @@ def reserve(
     try:
         db.flush()
         db.add(reservation)
+        # 트레이너는 회원이 잡은 자리를 스케줄을 다시 열어야만 안다. (#503)
+        # 일정→예약 순서 불변식과 무관하므로 그 뒤에 얹는다.
+        notification_service.queue_for_trainer(
+            db,
+            trainer_id=slot.trainer_id,
+            kind=notification_service.TRAINER_RESERVATION_KIND,
+            title="새 예약이 들어왔어요",
+            body=f"{member.name} 회원 · {local:%m월 %d일 %H:%M}",
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -390,6 +399,7 @@ def cancel(
         notification_service.queue_for_trainer(
             db,
             trainer_id=trainer_id,
+            kind=notification_service.TRAINER_RESERVATION_KIND,
             title="예약이 취소되었습니다",
             body=(
                 f"{member_name} 회원 · {local:%m월 %d일 %H:%M}"
