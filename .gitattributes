@@ -1,0 +1,55 @@
+# 저장소에 커밋되는 줄바꿈은 항상 LF로 고정한다.
+#
+# 이 파일이 없으면, Windows에서 도구가 파일을 재작성할 때 파일 전체가 CRLF로
+# 바뀌고 내용은 그대로인데 diff가 파일 전체로 부풀어 리뷰가 불가능해진다.
+# (#526 작업 중 실제 변경 431줄이 2,439줄로 표시된 사례가 있었다. git blame도
+# 함께 끊긴다.) 체크아웃 시 작업 디렉토리도 LF로 유지한다.
+* text=auto eol=lf
+
+# --- 텍스트 (자동 판별이 비ASCII 때문에 바이너리로 오인하는 경우 대비) ---
+*.dart    text eol=lf
+*.py      text eol=lf
+*.kt      text eol=lf
+*.java    text eol=lf
+*.swift   text eol=lf
+*.js      text eol=lf
+*.ts      text eol=lf
+*.html    text eol=lf
+*.css     text eol=lf
+*.sh      text eol=lf
+*.sql     text eol=lf
+*.md      text eol=lf
+*.arb     text eol=lf
+*.json    text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.toml    text eol=lf
+*.xml     text eol=lf
+*.plist   text eol=lf
+*.gradle  text eol=lf
+*.cfg     text eol=lf
+*.ini     text eol=lf
+*.txt     text eol=lf
+*.env     text eol=lf
+
+# --- Windows 전용 스크립트는 CRLF를 유지해야 cmd.exe가 정상 파싱한다 ---
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.ps1     text eol=crlf
+
+# --- 바이너리 (줄바꿈 변환·텍스트 diff 금지) ---
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.webp    binary
+*.ico     binary
+*.pdf     binary
+*.ttf     binary
+*.otf     binary
+*.woff    binary
+*.woff2   binary
+*.zip     binary
+*.jar     binary
+*.keystore binary
+*.jks     binary
