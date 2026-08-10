@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
+import 'package:oncare/features/diet/domain/entities/diet_analysis_failure.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -513,7 +516,9 @@ class _ResultSheet extends ConsumerStatefulWidget {
 class _ResultSheetState extends ConsumerState<_ResultSheet> {
   DietAnalysisResult? _result;
   bool _loading = true;
-  bool _failed = false;
+  DietAnalysisFailure? _failure;
+
+  bool get _failed => _failure != null;
 
   // One key per capture, reused across retries so a lost response followed by
   // 「다시 시도」 doesn't record the same meal twice (server dedupes on it).
@@ -529,7 +534,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
   Future<void> _run() async {
     setState(() {
       _loading = true;
-      _failed = false;
+      _failure = null;
     });
     try {
       final DietAnalysisResult result = await ref
@@ -546,13 +551,56 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
         _result = result;
         _loading = false;
       });
-    } catch (_) {
+    } on Object catch (error) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _failed = true;
+        _failure = DietAnalysisFailure.fromError(error);
       });
     }
+  }
+
+  /// Sends the user back to the source picker. The photo they have can't be
+  /// analysed, so "다시 시도" would just fail again — the useful next step is
+  /// choosing a different one.
+  void _pickAnother() {
+    final NavigatorState navigator = Navigator.of(context);
+    navigator.pop();
+    unawaited(showDietAddSheet(navigator.context));
+  }
+
+  String _failureMessage(AppLocalizations l, DietAnalysisFailure failure) =>
+      switch (failure) {
+        DietAnalysisFailure.unsupportedFormat =>
+          l.dietAnalysisUnsupportedFormat,
+        DietAnalysisFailure.badRequest => l.dietAnalysisBadRequest,
+        DietAnalysisFailure.unauthorized => l.dietAnalysisUnauthorized,
+        DietAnalysisFailure.notImplemented => l.dietAnalysisNotImplemented,
+        // 502 and transport failures share the "try again shortly" wording —
+        // from the user's side both are "it broke, not your photo".
+        DietAnalysisFailure.recognitionFailed ||
+        DietAnalysisFailure.temporary => l.dietAnalysisFailedBody,
+      };
+
+  /// The button only offers a retry when one can actually succeed; otherwise
+  /// it moves the user to the step that can (a different photo), or just
+  /// closes when nothing in this sheet will help.
+  VoidCallback _failureAction(DietAnalysisFailure failure) {
+    if (failure.canRetry) return _run;
+    return switch (failure) {
+      DietAnalysisFailure.unsupportedFormat ||
+      DietAnalysisFailure.badRequest => _pickAnother,
+      _ => () => Navigator.of(context).pop(),
+    };
+  }
+
+  String _failureActionLabel(AppLocalizations l, DietAnalysisFailure failure) {
+    if (failure.canRetry) return l.actionRetry;
+    return switch (failure) {
+      DietAnalysisFailure.unsupportedFormat ||
+      DietAnalysisFailure.badRequest => l.dietAnalysisPickAnother,
+      _ => l.dietAnalysisClose,
+    };
   }
 
   @override
@@ -632,19 +680,30 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       );
     }
     if (_failed || _result == null) {
+      // `_result == null` without a classified failure shouldn't happen, but
+      // treating it as temporary keeps a retry available instead of a dead end.
+      final DietAnalysisFailure failure =
+          _failure ?? DietAnalysisFailure.temporary;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           children: <Widget>[
             Text(
-              l.dietAnalysisFailedBody,
-              style: const TextStyle(fontSize: 14, color: AppColors.foreground),
+              _failureMessage(l, failure),
+              key: const Key('dietAnalysisFailureBody'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: AppColors.foreground,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _run,
+                key: const Key('dietAnalysisFailureAction'),
+                onPressed: _failureAction(failure),
                 style: FilledButton.styleFrom(
                   backgroundColor: FigmaColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 13),
@@ -653,7 +712,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
                   ),
                 ),
                 child: Text(
-                  l.actionRetry,
+                  _failureActionLabel(l, failure),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,

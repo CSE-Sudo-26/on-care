@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/features/diet/data/repositories/dio_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
@@ -209,6 +210,46 @@ void main() {
 
       expect(imagePart().filename, 'meal.png');
       expect(imagePart().contentType?.mimeType, 'image/png');
+    });
+
+    test('HTTP 실패는 DioException 이 아니라 AppError 로 올라온다', () async {
+      // 화면이 DioException 을 타입 검사하지 않고도 415/502 를 구분할 수 있어야
+      // 한다(core/errors/app_error.dart 의 레이어 규약).
+      final Dio failing = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      failing.interceptors.add(
+        InterceptorsWrapper(
+          onRequest:
+              (RequestOptions options, RequestInterceptorHandler handler) {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.badResponse,
+                    response: Response<Object?>(
+                      requestOptions: options,
+                      statusCode: 415,
+                    ),
+                  ),
+                );
+              },
+        ),
+      );
+      addTearDown(failing.close);
+
+      await expectLater(
+        DioDietRepository(failing).analyze(
+          photo: MealPhoto.fromBytes(
+            Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+          )!,
+          mealType: 'lunch',
+        ),
+        throwsA(
+          isA<ServerError>().having(
+            (ServerError e) => e.statusCode,
+            'statusCode',
+            415,
+          ),
+        ),
+      );
     });
 
     test('JPEG 사진은 jpg 파일명·image/jpeg 로 전송된다', () async {
