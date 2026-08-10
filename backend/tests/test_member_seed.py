@@ -5,16 +5,18 @@ seed_member_health_data 를 먼저 돌린 상태를 검증한다.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from sqlalchemy import func, select
+
+from app.core import clock
 
 
 _MEMBER_ID = "user-demo"
 
 
 def _this_monday_iso() -> str:
-    today = date.today()
+    today = clock.today()
     return (today - timedelta(days=today.weekday())).isoformat()
 
 
@@ -41,7 +43,7 @@ def test_exercise_seed_skips_future_weekdays(client, db_session):
     from app.db.seed_member_data import _WEEKDAY_INDEX
     from app.models.models import ExerciseSession
 
-    today_idx = date.today().weekday()
+    today_idx = clock.today().weekday()
     labels = db_session.scalars(
         select(ExerciseSession.day_label).where(
             ExerciseSession.user_id == _MEMBER_ID,

@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import DietEntry
 from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
@@ -32,7 +32,7 @@ DASH_SODIUM_LIMIT_MG = 2000
 
 
 def today_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    return clock.today_iso()
 
 
 def load_foods(foods_json: str) -> list[dict]:
@@ -138,12 +138,15 @@ def save_analyzed_entry(
          "sodium_mg": f.sodium_mg, "sugar_g": f.sugar_g, "source": f.source}
         for f in analysis.foods
     ]
+    # 날짜와 시각은 같은 시계 스냅샷에서 뽑는다. 따로 읽으면 KST 자정 사이에
+    # date 는 어제, time_label 은 오늘이 되어 한 행 안에서 어긋난다.
+    recorded_at = clock.now()
     entry = DietEntry(
         id=f"diet-{uuid.uuid4().hex[:12]}",
         user_id=user_id,
-        date=today_str(),
+        date=recorded_at.date().isoformat(),
         meal_type=meal_type,
-        time_label=datetime.now().strftime("%H:%M"),
+        time_label=recorded_at.strftime("%H:%M"),
         foods_json=json.dumps(foods_for_storage, ensure_ascii=False),
         total_calories=analysis.total_calories,
         carbs_g=analysis.total_carbs_g,

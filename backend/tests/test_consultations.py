@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 
+from app.core import clock
 from app.models.models import ConsultationRequest, Place, TrainerProfile, User
 from app.schemas.consultation_api import ConsultationOut
 
@@ -123,7 +124,7 @@ def _payload(
         "exercise_goal": "health",
         "health_purpose_type": "general",
         "health_purpose_detail": "  건강 습관 개선  ",
-        "preferred_date": (date.today() + timedelta(days=1)).isoformat(),
+        "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
         "preferred_time_slot": "afternoon",
         "message": "  상담을 받고 싶습니다.  ",
     }
@@ -133,7 +134,7 @@ def test_create_gym_consultation_sets_server_fields(client, db_session):
     member_id, token = _register_member(client)
     gym = _create_place(db_session)
     payload = _payload(gym_id=gym.id)
-    payload["preferred_date"] = date.today().isoformat()
+    payload["preferred_date"] = clock.today().isoformat()
 
     response = client.post(
         "/v1/consultations",
@@ -195,7 +196,7 @@ def test_consultation_out_validates_orm_instance():
         exercise_goal="health",
         health_purpose_type="general",
         health_purpose_detail=None,
-        preferred_date=date.today().isoformat(),
+        preferred_date=clock.today().isoformat(),
         preferred_time_slot="flexible",
         message=None,
         status="pending",
@@ -206,14 +207,14 @@ def test_consultation_out_validates_orm_instance():
     response = ConsultationOut.model_validate(consultation)
 
     assert response.id == consultation.id
-    assert response.preferred_date == date.today()
+    assert response.preferred_date == clock.today()
 
 
 def test_past_preferred_date_is_rejected(client, db_session):
     _, token = _register_member(client)
     gym = _create_place(db_session)
     payload = _payload(gym_id=gym.id)
-    payload["preferred_date"] = (date.today() - timedelta(days=1)).isoformat()
+    payload["preferred_date"] = (clock.today() - timedelta(days=1)).isoformat()
 
     response = client.post(
         "/v1/consultations", headers=_auth(token), json=payload
@@ -423,7 +424,7 @@ def test_partial_unique_index_allows_completed_but_rejects_second_pending(
         "trainer_id": trainer_id,
         "exercise_goal": "health",
         "health_purpose_type": "general",
-        "preferred_date": date.today().isoformat(),
+        "preferred_date": clock.today().isoformat(),
         "preferred_time_slot": "flexible",
     }
 

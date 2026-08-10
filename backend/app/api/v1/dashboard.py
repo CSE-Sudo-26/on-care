@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
+from app.core import clock
 from app.db.session import get_db
 from app.models.models import DietEntry, ExerciseSession, ScheduleEvent
 from app.schemas.dashboard_api import (
@@ -25,7 +26,6 @@ from app.schemas.dashboard_api import (
     DashboardSummary,
 )
 from app.schemas.diet_api import calculate_macros
-from app.services.exercise_service import monday_of_this_week_str
 
 router = APIRouter(tags=["dashboard"])
 
@@ -155,7 +155,7 @@ def dashboard_summary(
         if health_profile and health_profile.daily_sugar_g is not None
         else _MAX_SUGAR_G
     )
-    today_dt = datetime.now()
+    today_dt = clock.now()
     today = today_dt.strftime("%Y-%m-%d")
 
     # --- 오늘 식단 집계 ---
@@ -187,7 +187,9 @@ def dashboard_summary(
     nutrition_week_prev = _nutrition_week(db, uid, this_monday - timedelta(days=7))
 
     # --- 이번 주 운동 집계 ---
-    week = monday_of_this_week_str()
+    # 위 식단·주간 추이와 같은 스냅샷에서 뽑는다 — 여기서 시계를 다시 읽으면
+    # KST 자정을 걸친 요청에서 한 응답 안의 기준 주가 갈린다.
+    week = this_monday.strftime("%Y-%m-%d")
     ex_rows = db.scalars(
         select(ExerciseSession).where(ExerciseSession.user_id == uid)
         .where(ExerciseSession.week_start == week)

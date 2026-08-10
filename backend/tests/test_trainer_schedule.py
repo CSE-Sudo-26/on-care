@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import timedelta
 from threading import Barrier
 
 import pytest
 from sqlalchemy import select
 
+from app.core import clock
 from app.models.models import TrainerClient, TrainerSchedule
 
 
@@ -24,8 +25,8 @@ def _h(token: str) -> dict:
 
 
 def _today() -> str:
-    from datetime import date
-    return date.today().isoformat()
+    """서버가 쓰는 '오늘'과 같은 기준(KST). 러너 로컬 타임존이 UTC 여도 어긋나지 않는다."""
+    return clock.today().isoformat()
 
 
 def test_schedule_seeded_timeline(client):
@@ -68,7 +69,7 @@ def _delete_program_test_sessions(db_session, day: str) -> None:
 
 def test_schedule_program_command_reuses_the_created_session(client, db_session):
     token = _tok(client)
-    day = (date.today() + timedelta(days=61)).isoformat()
+    day = (clock.today() + timedelta(days=61)).isoformat()
     url = "/v1/trainer/clients/user-jisu/schedule-program"
     _delete_program_test_sessions(db_session, day)
 
@@ -109,7 +110,7 @@ def test_concurrent_schedule_program_commands_create_one_session(
     client, db_session
 ):
     token = _tok(client)
-    day = (date.today() + timedelta(days=62)).isoformat()
+    day = (clock.today() + timedelta(days=62)).isoformat()
     url = "/v1/trainer/clients/user-jisu/schedule-program"
     _delete_program_test_sessions(db_session, day)
 
@@ -337,10 +338,10 @@ def test_complete_session_logs_history_and_is_idempotent(client):
 
 
 def test_complete_future_session_rejected(client):
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     token = _tok(client)
-    future = (date.today() + timedelta(days=3)).isoformat()
+    future = (clock.today() + timedelta(days=3)).isoformat()
     c = client.post(
         "/v1/trainer/schedule",
         json={"date": future, "time": "10:00", "member_id": "user-jisu", "type": "1:1 PT"},
@@ -691,7 +692,7 @@ def test_past_session_lands_in_its_own_week(client, db_session, make_pt_session)
     from app.models import models
 
     token = _tok(client)
-    past = date.today() - timedelta(days=9)
+    past = clock.today() - timedelta(days=9)
     sid = make_pt_session(token, date=past.isoformat(), time="20:20")
     client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
 

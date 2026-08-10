@@ -11,13 +11,14 @@ DB 가 필요하므로 로컬에서는 skip 되고 CI(Postgres) 에서 실행된
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 
 from sqlalchemy import text
 
+from app.core import clock
 from app.core.security import hash_password
 from app.models.models import (
     ChatMessage,
@@ -191,7 +192,7 @@ def test_schedule_creates_a_notification(client, db_session):
         "/v1/trainer/schedule",
         headers=_auth(trainer_token),
         json={
-            "date": (date.today() + timedelta(days=1)).isoformat(),
+            "date": (clock.today() + timedelta(days=1)).isoformat(),
             "time": "10:00",
             "client_name": "알림 회원",
             "member_id": member_id,
@@ -251,7 +252,7 @@ def test_a_schedule_without_a_member_notifies_nobody(client, db_session):
         "/v1/trainer/schedule",
         headers=_auth(trainer_token),
         json={
-            "date": (date.today() + timedelta(days=1)).isoformat(),
+            "date": (clock.today() + timedelta(days=1)).isoformat(),
             "time": "14:00",
             "client_name": "신규 고객",
             "member_id": None,

@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import DietEntry, RoutineHistory, TrainerClient, TrainerRoutine
 from app.schemas.trainer_api import (
     RoutineOptionAnalysisOut,
@@ -74,7 +75,10 @@ def build_member_analysis(
     if link is None:
         raise ValueError("담당 고객을 찾을 수 없습니다.")
 
-    today = date.today().isoformat()
+    # 오늘과 28일 창을 같은 스냅샷에서 뽑는다 — 따로 읽으면 KST 자정 사이에
+    # 한 응답의 '오늘 나트륨'과 '최근 4주 이행률'이 다른 날을 기준으로 잡힌다.
+    today_date = clock.today()
+    today = today_date.isoformat()
     sodium = int(
         db.scalar(
             select(func.coalesce(func.sum(DietEntry.sodium_mg), 0)).where(
@@ -85,7 +89,7 @@ def build_member_analysis(
         or 0
     )
 
-    since = (date.today() - timedelta(days=27)).isoformat()
+    since = (today_date - timedelta(days=27)).isoformat()
     completion = db.scalar(
         select(func.avg(RoutineHistory.completion_rate)).where(
             RoutineHistory.member_id == member_id,

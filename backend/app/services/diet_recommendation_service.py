@@ -25,6 +25,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.data import meal_catalog
 from app.data.meal_catalog import CATALOG, DEFAULT_ORDER, RECOMMENDATION_COUNT, MealItem
 from app.models.models import DietEntry, HealthProfile
@@ -159,7 +160,7 @@ def build_context(db: Session, user_id: str, today: date | None = None) -> Nutri
     평균은 '기록이 있는 날' 기준이다. 기록이 없는 날을 0 으로 세면 하루만 기록한
     사용자의 평균이 실제보다 낮게 나와 과다 신호를 놓친다.
     """
-    today = today or date.today()
+    today = today or clock.today()
     start = (today - timedelta(days=LOOKBACK_DAYS - 1)).isoformat()
     end = today.isoformat()
 
@@ -387,7 +388,10 @@ def build_recommendations(
     today: date | None = None,
 ) -> DietRecommendationsResponse:
     """홈 추천 식단. 어떤 실패에도 카드 RECOMMENDATION_COUNT 장을 반환한다."""
-    ctx = build_context(db, user_id, today)
+    # 조회 구간과 캐시 키가 같은 날짜를 쓰도록 여기서 한 번만 확정한다 — 각자
+    # 시계를 읽으면 KST 자정 사이에 어제 데이터를 오늘 키로 캐싱할 수 있다.
+    effective_today = today or clock.today()
+    ctx = build_context(db, user_id, effective_today)
 
     # 근거가 없으면 LLM 을 부를 이유가 없다. 신규 가입자는 여기서 현재 홈 화면과
     # 동일한 기본 순서를 받는다.
@@ -397,7 +401,7 @@ def build_recommendations(
     # use_llm 을 키에 넣지 않으면 규칙 응답이 LLM 요청에 재사용된다(디버깅·비용 절감용
     # 호출 한 번이 그 사용자의 추천을 TTL 동안 규칙 결과로 고정해 버린다).
     cache_key = (
-        f"{user_id}:{(today or date.today()).isoformat()}:"
+        f"{user_id}:{effective_today.isoformat()}:"
         f"{ctx.fingerprint()}:llm={use_llm}"
     )
     hit = _cache.get(cache_key)

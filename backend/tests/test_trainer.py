@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from app.core import clock
+
 
 def test_user_role_defaults_to_member():
     from app.models.models import User
@@ -244,7 +246,7 @@ def test_history_excludes_other_trainers_records(client, db_session):
     db_session.flush()  # RoutineHistory.trainer_id FK 성립을 위해 User 를 먼저 반영
     db_session.add(RoutineHistory(
         id="hist-other-secret", member_id="user-jisu", trainer_id="trainer-other",
-        date=date.today().isoformat(), kind_label="PT 세션 · 타트레이너",
+        date=clock.today().isoformat(), kind_label="PT 세션 · 타트레이너",
         completion_rate=100, exercises_json="[]",
         client_feedback="", trainer_note="비밀 메모",
     ))
