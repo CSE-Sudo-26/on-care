@@ -30,6 +30,7 @@ class _FakePickImage {
   double? maxWidth;
   double? maxHeight;
   int? imageQuality;
+  bool? requestFullMetadata;
   int calls = 0;
 
   Future<XFile?> call({
@@ -37,12 +38,14 @@ class _FakePickImage {
     double? maxWidth,
     double? maxHeight,
     int? imageQuality,
+    bool requestFullMetadata = true,
   }) async {
     calls += 1;
     this.source = source;
     this.maxWidth = maxWidth;
     this.maxHeight = maxHeight;
     this.imageQuality = imageQuality;
+    this.requestFullMetadata = requestFullMetadata;
     if (error != null) throw error!;
     return result;
   }
@@ -77,6 +80,7 @@ void main() {
     expect(pick.maxWidth, 1600);
     expect(pick.maxHeight, 1600);
     expect(pick.imageQuality, 85);
+    expect(pick.requestFullMetadata, isFalse);
     expect(photo, isNotNull);
   });
 
@@ -89,7 +93,7 @@ void main() {
     expect(photo, isNull);
   });
 
-  test('카메라 권한 거부는 cameraPermissionDenied 로 구분한다', () async {
+  test('Android/Web의 재요청 가능한 카메라 거부는 denied로 구분한다', () async {
     final _FakePickImage pick = _FakePickImage(
       error: PlatformException(code: 'camera_access_denied'),
     );
@@ -97,6 +101,8 @@ void main() {
     await expectLater(
       ImagePickerMealPhotoPicker(
         pickImage: pick.call,
+        platform: TargetPlatform.android,
+        isWeb: false,
       ).pick(MealPhotoSource.camera),
       throwsA(
         isA<MealPhotoException>().having(
@@ -108,7 +114,28 @@ void main() {
     );
   });
 
-  test('사진 보관함 권한 거부는 photoPermissionDenied 로 구분한다', () async {
+  test('iOS 카메라 거부는 앱에서 재요청할 수 없는 영구 거부로 구분한다', () async {
+    final _FakePickImage pick = _FakePickImage(
+      error: PlatformException(code: 'camera_access_denied'),
+    );
+
+    await expectLater(
+      ImagePickerMealPhotoPicker(
+        pickImage: pick.call,
+        platform: TargetPlatform.iOS,
+        isWeb: false,
+      ).pick(MealPhotoSource.camera),
+      throwsA(
+        isA<MealPhotoException>().having(
+          (MealPhotoException e) => e.failure,
+          'failure',
+          MealPhotoFailure.cameraPermissionPermanentlyDenied,
+        ),
+      ),
+    );
+  });
+
+  test('iOS 13 사진 보관함 거부는 영구 거부로 구분한다', () async {
     final _FakePickImage pick = _FakePickImage(
       error: PlatformException(code: 'photo_access_denied'),
     );
@@ -116,12 +143,64 @@ void main() {
     await expectLater(
       ImagePickerMealPhotoPicker(
         pickImage: pick.call,
+        platform: TargetPlatform.iOS,
+        isWeb: false,
       ).pick(MealPhotoSource.gallery),
       throwsA(
         isA<MealPhotoException>().having(
           (MealPhotoException e) => e.failure,
           'failure',
-          MealPhotoFailure.photoPermissionDenied,
+          MealPhotoFailure.photoPermissionPermanentlyDenied,
+        ),
+      ),
+    );
+  });
+
+  test('restricted 오류는 denied와 별도 상태로 보존한다', () async {
+    for (final (code, source, expected)
+        in <(String, MealPhotoSource, MealPhotoFailure)>[
+          (
+            'camera_access_restricted',
+            MealPhotoSource.camera,
+            MealPhotoFailure.cameraPermissionRestricted,
+          ),
+          (
+            'photo_access_restricted',
+            MealPhotoSource.gallery,
+            MealPhotoFailure.photoPermissionRestricted,
+          ),
+        ]) {
+      await expectLater(
+        ImagePickerMealPhotoPicker(
+          pickImage: _FakePickImage(error: PlatformException(code: code)).call,
+          platform: TargetPlatform.iOS,
+          isWeb: false,
+        ).pick(source),
+        throwsA(
+          isA<MealPhotoException>().having(
+            (MealPhotoException e) => e.failure,
+            'failure',
+            expected,
+          ),
+        ),
+      );
+    }
+  });
+
+  test('Web에서는 iOS 플랫폼 값이어도 native 영구 거부로 분류하지 않는다', () async {
+    await expectLater(
+      ImagePickerMealPhotoPicker(
+        pickImage: _FakePickImage(
+          error: PlatformException(code: 'camera_access_denied'),
+        ).call,
+        platform: TargetPlatform.iOS,
+        isWeb: true,
+      ).pick(MealPhotoSource.camera),
+      throwsA(
+        isA<MealPhotoException>().having(
+          (MealPhotoException e) => e.failure,
+          'failure',
+          MealPhotoFailure.cameraPermissionDenied,
         ),
       ),
     );

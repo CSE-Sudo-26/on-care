@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,9 +29,11 @@ class _FakeMealPhotoPicker implements MealPhotoPicker {
   final MealPhoto? photo;
   final MealPhotoFailure? failure;
   MealPhotoSource? requestedSource;
+  int calls = 0;
 
   @override
   Future<MealPhoto?> pick(MealPhotoSource source) async {
+    calls += 1;
     requestedSource = source;
     if (failure != null) throw MealPhotoException(failure!);
     return photo;
@@ -159,7 +161,9 @@ void main() {
     expect(find.byKey(const Key('dietAddSheet')), findsOneWidget);
   });
 
-  testWidgets('카메라 권한이 거부되면 안내 메시지를 보여주고 앱은 살아있다', (WidgetTester tester) async {
+  testWidgets('일반 권한 거부는 재시도를 안내하고 설정 링크를 표시하지 않는다', (
+    WidgetTester tester,
+  ) async {
     final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
       failure: MealPhotoFailure.cameraPermissionDenied,
     );
@@ -172,9 +176,56 @@ void main() {
     expect(tester.takeException(), isNull);
     // 시트에 가려지지 않도록 안내를 시트 안에 그린다.
     expect(find.byKey(const Key('dietPhotoFailureNotice')), findsOneWidget);
-    expect(find.textContaining('카메라 접근이 허용되지 않았어요'), findsOneWidget);
+    expect(find.textContaining('카메라 권한이 필요해요'), findsOneWidget);
+    expect(find.byKey(const Key('dietOpenSettingsLink')), findsNothing);
     expect(repository.uploaded, isNull);
     expect(find.byKey(const Key('dietAddSheet')), findsOneWidget);
+
+    await tester.tap(find.text('사진 찍기'));
+    await tester.pumpAndSettle();
+    expect(picker.calls, 2);
+  });
+
+  testWidgets('iOS 영구 거부는 설정 안내와 설정 링크를 표시한다', (WidgetTester tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
+        failure: MealPhotoFailure.cameraPermissionPermanentlyDenied,
+      );
+      final _RecordingDietRepository repository = _RecordingDietRepository();
+      await _pumpAddSheet(tester, picker: picker, repository: repository);
+
+      await tester.tap(find.text('사진 찍기'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('설정에서 카메라를 켜면'), findsOneWidget);
+      expect(find.byKey(const Key('dietOpenSettingsLink')), findsOneWidget);
+      expect(find.byKey(const Key('dietAddSheet')), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('restricted는 정책 안내만 표시하고 설정 링크를 표시하지 않는다', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
+        failure: MealPhotoFailure.photoPermissionRestricted,
+      );
+      final _RecordingDietRepository repository = _RecordingDietRepository();
+      await _pumpAddSheet(tester, picker: picker, repository: repository);
+
+      await tester.tap(find.text('사진 선택'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('기기 설정이나 관리 정책'), findsOneWidget);
+      expect(find.byKey(const Key('dietOpenSettingsLink')), findsNothing);
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('서버가 받지 않는 형식은 형식 안내 메시지를 보여준다', (WidgetTester tester) async {

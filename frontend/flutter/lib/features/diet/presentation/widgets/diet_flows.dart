@@ -288,9 +288,9 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
   }
 }
 
-/// In-sheet explanation of why the photo couldn't be used. A denied
-/// permission also offers the jump to iOS Settings, since retrying in-app
-/// can't succeed until the switch is flipped there.
+/// In-sheet explanation of why the photo couldn't be used. Only a permanent
+/// iOS denial offers Settings; retryable denials and policy restrictions do
+/// not send the user somewhere that cannot fix them.
 class _PhotoFailureNotice extends StatefulWidget {
   const _PhotoFailureNotice({required this.failure});
 
@@ -308,18 +308,28 @@ class _PhotoFailureNoticeState extends State<_PhotoFailureNotice> {
   /// A tap that silently does nothing reads as a broken app (#507).
   bool _openSettingsFailed = false;
 
-  bool get _isPermissionDenied =>
-      widget.failure == MealPhotoFailure.cameraPermissionDenied ||
-      widget.failure == MealPhotoFailure.photoPermissionDenied;
+  bool get _isPermanentlyDenied =>
+      widget.failure == MealPhotoFailure.cameraPermissionPermanentlyDenied ||
+      widget.failure == MealPhotoFailure.photoPermissionPermanentlyDenied;
 
   /// Only iOS has a URL that lands on this app's permission screen;
   /// elsewhere the message alone has to do.
   bool get _canOpenAppSettings =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      _isPermanentlyDenied &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   String _message(AppLocalizations l) => switch (widget.failure) {
     MealPhotoFailure.cameraPermissionDenied => l.dietCameraPermissionDenied,
+    MealPhotoFailure.cameraPermissionPermanentlyDenied =>
+      l.dietCameraPermissionPermanentlyDenied,
+    MealPhotoFailure.cameraPermissionRestricted =>
+      l.dietPhotoPermissionRestricted,
     MealPhotoFailure.photoPermissionDenied => l.dietPhotoPermissionDenied,
+    MealPhotoFailure.photoPermissionPermanentlyDenied =>
+      l.dietPhotoPermissionPermanentlyDenied,
+    MealPhotoFailure.photoPermissionRestricted =>
+      l.dietPhotoPermissionRestricted,
     MealPhotoFailure.unsupportedFormat => l.dietPhotoUnsupportedFormat,
     MealPhotoFailure.tooLarge => l.dietPhotoTooLarge,
     MealPhotoFailure.readFailed => l.dietPhotoLoadError,
@@ -367,7 +377,7 @@ class _PhotoFailureNoticeState extends State<_PhotoFailureNotice> {
                     color: _warningInk,
                   ),
                 ),
-                if (_isPermissionDenied && _canOpenAppSettings)
+                if (_canOpenAppSettings)
                   GestureDetector(
                     onTap: _openSettings,
                     child: Padding(

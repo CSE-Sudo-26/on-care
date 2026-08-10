@@ -1091,14 +1091,32 @@ abstract class AppLocalizations {
   /// No description provided for @dietCameraPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Camera access is off. Turn it on in Settings to take a photo of your meal.'**
+  /// **'Camera permission is needed to photograph your meal. Tap Take Photo to try again.'**
   String get dietCameraPermissionDenied;
+
+  /// No description provided for @dietCameraPermissionPermanentlyDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is off. Turn it on in Settings to photograph your meal.'**
+  String get dietCameraPermissionPermanentlyDenied;
 
   /// No description provided for @dietPhotoPermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Photo access is off. Turn it on in Settings to pick a meal photo from your library.'**
+  /// **'Photo permission is needed to choose a meal photo. Tap Choose Photo to try again.'**
   String get dietPhotoPermissionDenied;
+
+  /// No description provided for @dietPhotoPermissionPermanentlyDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access is off. Turn it on in Settings to choose a meal photo.'**
+  String get dietPhotoPermissionPermanentlyDenied;
+
+  /// No description provided for @dietPhotoPermissionRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera or photo access is unavailable because of this device\'s settings or management policy.'**
+  String get dietPhotoPermissionRestricted;
 
   /// No description provided for @dietPhotoUnsupportedFormat.
   ///

@@ -555,11 +555,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietCameraPermissionDenied =>
-      'Camera access is off. Turn it on in Settings to take a photo of your meal.';
+      'Camera permission is needed to photograph your meal. Tap Take Photo to try again.';
+
+  @override
+  String get dietCameraPermissionPermanentlyDenied =>
+      'Camera access is off. Turn it on in Settings to photograph your meal.';
 
   @override
   String get dietPhotoPermissionDenied =>
-      'Photo access is off. Turn it on in Settings to pick a meal photo from your library.';
+      'Photo permission is needed to choose a meal photo. Tap Choose Photo to try again.';
+
+  @override
+  String get dietPhotoPermissionPermanentlyDenied =>
+      'Photo access is off. Turn it on in Settings to choose a meal photo.';
+
+  @override
+  String get dietPhotoPermissionRestricted =>
+      'Camera or photo access is unavailable because of this device\'s settings or management policy.';
 
   @override
   String get dietPhotoUnsupportedFormat =>
