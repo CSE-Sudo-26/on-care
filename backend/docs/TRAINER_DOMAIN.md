@@ -13,7 +13,7 @@
 트레이너 API는 회원이 회원 앱에서 남긴 `DietEntry`·`RoutineHistory`를 **그대로 읽어**
 로스터를 집계한다. 별도 동기화 파이프라인이 없어 데이터가 어긋날 여지가 없다.
 
-```
+```text
 회원 앱 ──기록──▶ diet_entries / routine_history ◀──조회── 트레이너 웹
                         (단일 원본, 실시간 공유)
 ```
