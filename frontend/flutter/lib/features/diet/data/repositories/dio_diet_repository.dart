@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
@@ -62,11 +63,18 @@ class DioDietRepository implements DietRepository {
       'meal_type': mealType,
       'idempotency_key': ?idempotencyKey,
     });
-    final res = await _dio.post<Map<String, Object?>>(
-      '/diet/analyze',
-      data: form,
-    );
-    return DietAnalysisResult.fromResponse(res.data!);
+    try {
+      final res = await _dio.post<Map<String, Object?>>(
+        '/diet/analyze',
+        data: form,
+      );
+      return DietAnalysisResult.fromResponse(res.data!);
+    } on DioException catch (e) {
+      // The screen has to tell "this photo will never work" (415) apart from
+      // "the recognizer hiccuped" (502) to know whether offering a retry is
+      // honest, and it must not type-test DioException to do it.
+      throw AppError.fromDio(e);
+    }
   }
 
   @override

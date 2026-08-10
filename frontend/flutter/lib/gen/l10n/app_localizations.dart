@@ -1160,6 +1160,48 @@ abstract class AppLocalizations {
   /// **'Analysis failed. Please try again in a moment.'**
   String get dietAnalysisFailedBody;
 
+  /// No description provided for @dietAnalysisUnsupportedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'This photo format can\'t be analyzed. Please pick a JPG or PNG photo instead.'**
+  String get dietAnalysisUnsupportedFormat;
+
+  /// No description provided for @dietAnalysisBadRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo couldn\'t be read. Please pick a different one.'**
+  String get dietAnalysisBadRequest;
+
+  /// No description provided for @dietAnalysisUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session expired. Please sign in again to log this meal.'**
+  String get dietAnalysisUnauthorized;
+
+  /// No description provided for @dietAnalysisNotImplemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo analysis is unavailable right now. Please log the meal manually.'**
+  String get dietAnalysisNotImplemented;
+
+  /// No description provided for @dietAnalysisPickAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick another photo'**
+  String get dietAnalysisPickAnother;
+
+  /// No description provided for @dietAnalysisSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get dietAnalysisSignIn;
+
+  /// No description provided for @dietAnalysisClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get dietAnalysisClose;
+
   /// No description provided for @dietRecognizedFood.
   ///
   /// In en, this message translates to:
