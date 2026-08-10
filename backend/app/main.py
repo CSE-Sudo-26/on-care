@@ -55,10 +55,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 업로드 본문 상한. add_middleware 는 나중에 추가한 것이 바깥에 감기므로,
-# 이걸 CORS 보다 먼저 등록해 CORS 가 바깥에 오게 한다 — 그래야 413 응답에도
-# CORS 헤더가 붙어서 웹 클라이언트가 상태코드를 읽을 수 있다.
-app.add_middleware(RequestBodySizeLimitMiddleware, max_bytes=settings.max_upload_bytes)
+# 업로드 본문 상한. 파일을 받는 경로에만 건다 — 전역으로 걸면 대량 텍스트를
+# JSON 본문으로 받는 엔드포인트(coach-docs 문서 적재 등)까지 같은 상한에 묶인다.
+#
+# add_middleware 는 나중에 추가한 것이 바깥에 감기므로, 이걸 CORS 보다 먼저
+# 등록해 CORS 가 바깥에 오게 한다 — 그래야 413 응답에도 CORS 헤더가 붙어서
+# 웹 클라이언트가 상태코드를 읽을 수 있다.
+app.add_middleware(
+    RequestBodySizeLimitMiddleware,
+    max_bytes=settings.max_upload_bytes,
+    protected_paths=(f"{settings.api_v1_prefix}/diet/analyze",),
+)
 
 # HTTPS 강제(운영). 프록시 뒤면 X-Forwarded-Proto 를 신뢰(uvicorn --proxy-headers).
 if settings.force_https:

@@ -1,4 +1,4 @@
-"""요청 본문 크기 제한 (413).
+"""업로드 요청 본문 크기 제한 (413).
 
 `/diet/analyze` 는 업로드된 사진을 `await image.read()` 로 메모리에 올린다.
 앞단에 리버스 프록시가 없고(App Runner + 앱 컨테이너), App Runner 의 서비스
@@ -12,6 +12,7 @@ Starlette 이 이미 multipart 본문을 파싱해 스풀한 뒤다. 막으려�
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -22,7 +23,7 @@ class _BodyTooLarge(Exception):
 
 
 class RequestBodySizeLimitMiddleware:
-    """본문이 [max_bytes] 를 넘으면 413 으로 끊는다.
+    """[protected_paths] 로 가는 본문이 [max_bytes] 를 넘으면 413 으로 끊는다.
 
     두 경로를 모두 막는다.
 
@@ -34,14 +35,26 @@ class RequestBodySizeLimitMiddleware:
     누적 카운터는 **앱이 실제로 읽은 바이트**만 센다. 본문을 읽지 않는 엔드포인트로
     Content-Length 없이 큰 본문을 보내면 413 이 나지 않는데, 그 경우엔 애초에
     앱 메모리에 적재되지도 않으므로 막으려던 문제가 아니다.
+
+    전역이 아니라 경로 목록을 받는 이유: 이 상한은 **업로드**를 겨냥한 값이다.
+    모든 요청에 걸면 대량 텍스트를 본문으로 받는 JSON 엔드포인트(`/coach-docs`
+    의 문서 적재 등)까지 같은 상한에 묶여, 의도치 않게 기능을 자른다. 업로드
+    엔드포인트가 늘어나면 여기에 경로를 추가한다.
     """
 
-    def __init__(self, app: ASGIApp, *, max_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        max_bytes: int,
+        protected_paths: Sequence[str],
+    ) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        self.protected_paths = tuple(protected_paths)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] != "http" or not self._is_protected(scope):
             await self.app(scope, receive, send)
             return
 
@@ -77,7 +90,13 @@ class RequestBodySizeLimitMiddleware:
                 raise
             await self._reject(send)
 
+    def _is_protected(self, scope: Scope) -> bool:
+        """이 요청이 상한을 적용할 업로드 경로로 가는가."""
+        path = scope.get("path", "")
+        return any(path.startswith(p) for p in self.protected_paths)
+
     def _declared_too_large(self, scope: Scope) -> bool:
+        """`Content-Length` 헤더만으로 상한 초과가 확정되는가."""
         raw = Headers(scope=scope).get("content-length")
         if raw is None:
             return False
@@ -88,6 +107,7 @@ class RequestBodySizeLimitMiddleware:
             return False
 
     async def _reject(self, send: Send) -> None:
+        """413 을 직접 써 보낸다(앱을 거치지 않으므로 FastAPI 예외 경로가 없다)."""
         # 기존 415 처리와 같은 형태({"detail": ...})로 맞춘다.
         limit_mb = self.max_bytes / (1024 * 1024)
         body = json.dumps(
