@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 
 void main() {
-  final Uint8List bytes = Uint8List(0);
+  final MealPhoto photo = MealPhoto.fromBytes(
+    Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+  )!;
 
   group('MockDietRepository keeps CRUD in memory (#294)', () {
     test(
@@ -95,8 +98,7 @@ void main() {
       expect(before.totalSugarG, closeTo(17.8, 0.001));
 
       final result = await repo.analyze(
-        imageBytes: bytes,
-        filename: 'dinner.jpg',
+        photo: photo,
         mealType: 'dinner',
         idempotencyKey: 'k1',
       );
@@ -119,14 +121,12 @@ void main() {
       () async {
         final repo = MockDietRepository();
         final first = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'same',
         );
         final second = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'same',
         );
@@ -141,8 +141,7 @@ void main() {
     test('deleteEntry removes it and restores the totals', () async {
       final repo = MockDietRepository();
       final result = await repo.analyze(
-        imageBytes: bytes,
-        filename: 'a.jpg',
+        photo: photo,
         mealType: 'snack',
         idempotencyKey: 'k2',
       );
@@ -162,8 +161,7 @@ void main() {
       () async {
         final repo = MockDietRepository();
         final first = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'reuse',
         );
@@ -175,8 +173,7 @@ void main() {
 
         // 같은 키로 재요청하면 (낡은 결과만 반환하는 대신) 다시 추가된다.
         final second = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'reuse',
         );

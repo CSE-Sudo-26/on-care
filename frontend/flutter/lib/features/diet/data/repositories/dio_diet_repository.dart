@@ -1,9 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
@@ -48,16 +47,17 @@ class DioDietRepository implements DietRepository {
 
   @override
   Future<DietAnalysisResult> analyze({
-    required Uint8List imageBytes,
-    required String filename,
+    required MealPhoto photo,
     required String mealType,
     String? idempotencyKey,
   }) async {
     final form = FormData.fromMap(<String, Object?>{
       'image': MultipartFile.fromBytes(
-        imageBytes,
-        filename: filename,
-        contentType: DioMediaType('image', 'jpeg'),
+        photo.bytes,
+        filename: photo.filename,
+        // Sniffed from the bytes — the server 415s when the declared MIME
+        // doesn't match what it can decode (an iPhone HEIC sent as JPEG).
+        contentType: DioMediaType.parse(photo.mimeType),
       ),
       'meal_type': mealType,
       'idempotency_key': ?idempotencyKey,

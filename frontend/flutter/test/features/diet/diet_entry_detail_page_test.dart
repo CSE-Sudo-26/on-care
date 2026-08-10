@@ -1,11 +1,10 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -56,8 +55,7 @@ class _RecordingDietRepository implements DietRepository {
 
   @override
   Future<DietAnalysisResult> analyze({
-    required Uint8List imageBytes,
-    required String filename,
+    required MealPhoto photo,
     required String mealType,
     String? idempotencyKey,
   }) async => throw UnimplementedError();
@@ -70,7 +68,9 @@ DietEntry _entry() => const DietEntry(
   totalCalories: 750,
   sodiumMg: 3200,
   sugarG: 8.5,
-  foods: <FoodItem>[FoodItem(name: '짬뽕', calories: 750, sodiumMg: 3200, sugarG: 8.5)],
+  foods: <FoodItem>[
+    FoodItem(name: '짬뽕', calories: 750, sodiumMg: 3200, sugarG: 8.5),
+  ],
 );
 
 Future<void> _pump(WidgetTester tester, _RecordingDietRepository repo) async {

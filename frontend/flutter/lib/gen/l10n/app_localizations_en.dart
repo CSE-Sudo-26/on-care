@@ -554,6 +554,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load the photo. Please try again in a moment.';
 
   @override
+  String get dietCameraPermissionDenied =>
+      'Camera access is off. Turn it on in Settings to take a photo of your meal.';
+
+  @override
+  String get dietPhotoPermissionDenied =>
+      'Photo access is off. Turn it on in Settings to pick a meal photo from your library.';
+
+  @override
+  String get dietPhotoUnsupportedFormat =>
+      'That photo format isn\'t supported. Please try a JPG or PNG photo.';
+
+  @override
+  String get dietPhotoTooLarge =>
+      'That photo is too large. Please try a different one.';
+
+  @override
+  String get dietOpenSettings => 'Open Settings';
+
+  @override
+  String get dietOpenSettingsFailed =>
+      'Couldn\'t open Settings. Turn on camera and photo access under Settings > Oncare.';
+
+  @override
   String get dietAnalyzing => 'Analyzing…';
 
   @override
