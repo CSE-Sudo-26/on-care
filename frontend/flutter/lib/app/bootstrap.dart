@@ -27,9 +27,11 @@ Future<void> bootstrap() async {
 
   final prefs = await SharedPreferences.getInstance();
 
-  // Local backend (drift-backed mock). Seed once on first run so the
-  // app boots with the React prototype's mock data even before the
-  // real FastAPI server exists. See docs/DUMMY_BACKEND.md.
+  // Local backend (drift-backed mock) — the demo mode the app falls back to
+  // when `USE_MOCK_API` is not turned off. Seed once on first run so the app
+  // boots with data. The real FastAPI backend is reached with
+  // `--dart-define=USE_MOCK_API=false`; docs/DUMMY_BACKEND.md records why this
+  // drift-backed option was chosen over the alternatives.
   //
   // The drift open is lazy — the first query (the `seedIfEmpty`
   // below) is what can throw. On the web build, drift needs

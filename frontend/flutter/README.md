@@ -8,13 +8,14 @@
 
 ## 문서
 
-- [docs/PLAN.md](./docs/PLAN.md) — 전체 로드맵 (Stage × Phase), 기술 스택, [결정 이력](./docs/PLAN.md#9-결정-이력-decision-log)
+- [docs/PLAN.md](./docs/PLAN.md) — 이식 로드맵과 [결정 이력](./docs/PLAN.md#9-결정-이력-decision-log) *(완료된 계획 문서 — 현재 구조는 STRUCTURE.md)*
 - [docs/STRUCTURE.md](./docs/STRUCTURE.md) — Flutter 디렉토리 구조 및 아키텍처 의존성 규칙
 - [docs/DESIGN_TOKENS.md](./docs/DESIGN_TOKENS.md) — 디자인 토큰 초안 (Figma 접근 후 보강)
 - [docs/CONTRIBUTING_NOTES.md](./docs/CONTRIBUTING_NOTES.md) — 커밋 컨벤션, AI co-author trailer 미사용 정책, Phase/Stage 커밋·푸시 케이던스
 - [docs/RELEASE.md](./docs/RELEASE.md) — Web/Android/iOS 수동 릴리즈 절차, SemVer 정책
-- [docs/API_CATALOG.md](./docs/API_CATALOG.md) — FastAPI 백엔드 endpoint 목록 (front 데이터 흐름 기준)
-- [docs/DUMMY_BACKEND.md](./docs/DUMMY_BACKEND.md) — 실 백엔드 전까지 dummy backend 옵션 비교 + 권장(drift backed)
+- [backend/API_CONTRACT.md](../../backend/API_CONTRACT.md) — **백엔드 API 계약(단일 출처)**
+- [docs/API_CATALOG.md](./docs/API_CATALOG.md) — 백엔드 구현 전 작성한 endpoint 제안 초안 *(계약의 정답은 위 API_CONTRACT.md)*
+- [docs/DUMMY_BACKEND.md](./docs/DUMMY_BACKEND.md) — dummy backend 옵션 비교 *(결론이 난 검토 문서 — 채택안이 현재 LocalApiInterceptor)*
 - [CHANGELOG.md](./CHANGELOG.md) — 버전별 변경 이력
 
 ## 빌드 / 실행
