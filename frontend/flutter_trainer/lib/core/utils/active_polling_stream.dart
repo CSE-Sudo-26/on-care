@@ -12,11 +12,13 @@ import 'package:flutter/widgets.dart';
 /// the timer immediately.
 Stream<T> activePollingStream<T>({
   required Future<T> Function() load,
-  required Duration interval,
+  required Duration? interval,
+  Stream<void>? refreshes,
 }) {
   late final StreamController<T> controller;
   late final _LifecycleObserver lifecycleObserver;
   Timer? timer;
+  StreamSubscription<void>? refreshSubscription;
   bool cancelled = false;
   bool loading = false;
   bool refreshPending = false;
@@ -59,8 +61,9 @@ Stream<T> activePollingStream<T>({
   scheduleNext = () {
     timer?.cancel();
     timer = null;
-    if (cancelled || !foreground) return;
-    timer = Timer(interval, () => unawaited(poll()));
+    final Duration? delay = interval;
+    if (cancelled || !foreground || delay == null) return;
+    timer = Timer(delay, () => unawaited(poll()));
   };
 
   void handleLifecycle(AppLifecycleState state) {
@@ -79,17 +82,31 @@ Stream<T> activePollingStream<T>({
     }
   }
 
+  void refreshNow() {
+    if (cancelled || !foreground) return;
+    timer?.cancel();
+    timer = null;
+    if (loading) {
+      refreshPending = true;
+    } else {
+      unawaited(poll());
+    }
+  }
+
   lifecycleObserver = _LifecycleObserver(handleLifecycle);
   controller = StreamController<T>(
     onListen: () {
       foreground = _isForeground(WidgetsBinding.instance.lifecycleState);
       WidgetsBinding.instance.addObserver(lifecycleObserver);
+      refreshSubscription = refreshes?.listen((_) => refreshNow());
       if (foreground) unawaited(poll());
     },
     onCancel: () {
       cancelled = true;
       timer?.cancel();
       timer = null;
+      unawaited(refreshSubscription?.cancel());
+      refreshSubscription = null;
       WidgetsBinding.instance.removeObserver(lifecycleObserver);
       unawaited(controller.close());
     },
