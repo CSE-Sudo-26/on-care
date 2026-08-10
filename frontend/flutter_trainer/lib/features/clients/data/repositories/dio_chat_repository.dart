@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/chat_dtos.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -9,18 +10,24 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 /// row set the member app reads via `/me/coach/chat`, so a trainer message
 /// is received in the member app and vice versa.
 ///
-/// Reads return single-emit streams (fetch → value); [ChatView] invalidates
-/// the thread/unread providers after a send or read so the next fetch shows
-/// the change. Selected when `USE_MOCK_API=false` (see
+/// The thread is polled only while its screen is subscribed and the app is in
+/// the foreground. Selected when `USE_MOCK_API=false` (see
 /// [chatRepositoryProvider]).
 class DioChatRepository implements ChatRepository {
-  DioChatRepository(this._dio);
+  DioChatRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 3),
+  });
 
   final Dio _dio;
+  final Duration pollInterval;
 
   @override
   Stream<List<ClientChatMessage>> watchThread(String clientId) =>
-      Stream<List<ClientChatMessage>>.fromFuture(_fetchThread(clientId));
+      activePollingStream<List<ClientChatMessage>>(
+        load: () => _fetchThread(clientId),
+        interval: pollInterval,
+      );
 
   Future<List<ClientChatMessage>> _fetchThread(String clientId) async {
     final encodedId = Uri.encodeComponent(clientId);

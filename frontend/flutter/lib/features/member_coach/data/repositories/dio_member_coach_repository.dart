@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:oncare/core/errors/app_error.dart';
+import 'package:oncare/core/utils/active_polling_stream.dart';
 import 'package:oncare/features/member_coach/data/dtos/member_coach_dtos.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
@@ -9,9 +10,13 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 /// backend. The chat thread is the same one the trainer app writes to, so
 /// messages and routines flow both ways.
 class DioMemberCoachRepository implements MemberCoachRepository {
-  DioMemberCoachRepository(this._dio);
+  DioMemberCoachRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 3),
+  });
 
   final Dio _dio;
+  final Duration pollInterval;
 
   @override
   Future<MemberCoach?> fetchCoach() async {
@@ -47,6 +52,13 @@ class DioMemberCoachRepository implements MemberCoachRepository {
     });
     return messages;
   }
+
+  @override
+  Stream<List<CoachMessage>> watchChat() =>
+      activePollingStream<List<CoachMessage>>(
+        load: fetchChat,
+        interval: pollInterval,
+      );
 
   @override
   Future<void> sendMessage(String text) async {

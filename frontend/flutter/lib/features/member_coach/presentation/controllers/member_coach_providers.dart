@@ -33,9 +33,10 @@ final coachSessionsProvider = FutureProvider<List<CoachSession>>((ref) {
   return ref.watch(memberCoachRepositoryProvider).fetchSessions();
 }, name: 'coachSessions');
 
-/// The member↔coach chat thread (oldest → newest).
-final coachChatProvider = FutureProvider<List<CoachMessage>>((ref) {
-  return ref.watch(memberCoachRepositoryProvider).fetchChat();
+/// The member↔coach chat thread (oldest → newest). Auto-dispose ends
+/// real-API polling as soon as the full-screen chat route is closed.
+final coachChatProvider = StreamProvider.autoDispose<List<CoachMessage>>((ref) {
+  return ref.watch(memberCoachRepositoryProvider).watchChat();
 });
 
 /// Unread coach-sent message count for the entry badge.
