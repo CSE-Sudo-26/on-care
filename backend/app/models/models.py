@@ -856,6 +856,12 @@ class AiConversation(Base):
     user_id: Mapped[str] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    #: 누가 나눈 대화인가 (#588). NULL 이면 회원 본인의 대화 — 회원 앱이 읽는 것.
+    #: 값이 있으면 그 트레이너가 이 회원에 대해 물어본 대화다. `user_id` 는 어느
+    #: 쪽이든 **검색 스코프**(누구 기록을 근거로 삼는가)라 항상 회원이다.
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     #: 비우면 활성 스레드. 값이 있으면 보관된 스레드(현재는 쓰지 않음).
     archived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

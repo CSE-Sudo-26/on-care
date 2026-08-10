@@ -43,6 +43,31 @@ abstract interface class ClientCoachRepository {
     required String memberId,
     required String message,
   });
+
+  /// 이 트레이너가 [memberId] 회원에 대해 나눈 문답을 오래된 순으로 복원한다. (#588)
+  ///
+  /// 시트를 닫았다 열면 대화가 사라지던 문제를 없앤다. 서버가 스레드를
+  /// (회원, 트레이너) 로 가르므로 다른 트레이너의 문답은 오지 않는다.
+  Future<List<ClientCoachTurn>> history({required String memberId});
+}
+
+/// 복원된 문답 한 줄. (#588)
+class ClientCoachTurn {
+  /// Creates a turn.
+  const ClientCoachTurn({
+    required this.isTrainer,
+    required this.content,
+    this.sources = const <String>[],
+  });
+
+  /// 트레이너가 물은 줄인가(아니면 AI 답변).
+  final bool isTrainer;
+
+  /// 질문 또는 답변 본문.
+  final String content;
+
+  /// 답변의 근거 문서 제목. 질문 줄에서는 비어 있다.
+  final List<String> sources;
 }
 
 /// 데모 빌드: 물어볼 근거가 없다.
@@ -60,6 +85,12 @@ class DemoClientCoachRepository implements ClientCoachRepository {
   }) async =>
       // 문구는 화면이 붙인다 — 리포지토리는 로케일을 모른다. (#501)
       throw const ValidationError();
+
+  @override
+  Future<List<ClientCoachTurn>> history({required String memberId}) async =>
+      // 물어볼 수 없는 빌드라 남은 문답도 없다. 빈 목록이 정확한 답이고, 여기서
+      // throw 하면 시트가 열리자마자 오류를 띄운다.
+      const <ClientCoachTurn>[];
 }
 
 /// 실 백엔드 구현.
@@ -105,6 +136,36 @@ class DioClientCoachRepository implements ClientCoachRepository {
       throw AppError.fromDio(e);
     }
   }
+
+  @override
+  Future<List<ClientCoachTurn>> history({required String memberId}) async {
+    try {
+      final res = await _dio.get<List<Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(memberId)}/ai-coach',
+      );
+      return <ClientCoachTurn>[
+        for (final Object? row in res.data ?? const <Object?>[])
+          if (row is Map<String, Object?>)
+            ClientCoachTurn(
+              // 서버 저장값은 user|coach 다. 트레이너가 물은 줄이 'user'.
+              isTrainer: row['role'] == 'user',
+              content: row['content'] is String
+                  ? row['content']! as String
+                  : '',
+              sources: _stringList(row['sources']),
+            ),
+      ];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) throw const NotFoundError();
+      throw AppError.fromDio(e);
+    }
+  }
+
+  List<String> _stringList(Object? value) => <String>[
+    if (value is List<Object?>)
+      for (final Object? item in value)
+        if (item is String && item.trim().isNotEmpty) item.trim(),
+  ];
 
   String? _detail(DioException e) {
     final data = e.response?.data;

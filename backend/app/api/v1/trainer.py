@@ -29,7 +29,8 @@ from app.schemas.consultation_api import (
     TrainerConsultationOut,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
+    ChatMessageOut, ChatSendRequest, ClientCoachMessageOut, ClientCoachOut,
+    ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
@@ -44,6 +45,7 @@ from app.services import (
     trainer_routine_options_service,
     trainer_service,
 )
+from app.services.coach import conversation
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
@@ -628,8 +630,43 @@ def trainer_client_ai_coach(
     message = payload.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="메시지가 비어 있습니다.")
-    reply, sources = coach_answer(db, member_id, message, [])
+
+    # 이 트레이너 전용 스레드다(#588). 검색 스코프는 회원이지만 문답의 주인은
+    # 트레이너라, 회원 대화(trainer_id IS NULL)와 섞이면 회원이 앱을 열었을 때
+    # 자기가 하지 않은 대화를 보게 된다.
+    history = conversation.load_messages(db, member_id, trainer_id=trainer.id)
+    reply, sources = coach_answer(db, member_id, message, history)
+    conversation.append_exchange(
+        db, member_id, question=message, reply=reply, sources=sources,
+        trainer_id=trainer.id,
+    )
     return ClientCoachOut(member_id=member_id, reply=reply, sources=sources)
+
+
+@router.get(
+    "/trainer/clients/{member_id}/ai-coach",
+    response_model=list[ClientCoachMessageOut],
+)
+def trainer_client_ai_coach_history(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[ClientCoachMessageOut]:
+    """이 트레이너가 해당 고객에 대해 나눈 문답 복원(오래된→최신).
+
+    시트를 닫았다 열면 대화가 사라지던 문제를 없앤다. 다른 트레이너의 문답은
+    스레드가 달라 보이지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    rows = conversation.load_messages(db, member_id, trainer_id=trainer.id)
+    return [
+        ClientCoachMessageOut(
+            role=m.role,
+            content=m.content,
+            sources=conversation.parse_sources(m.sources_json),
+        )
+        for m in rows
+    ]
 
 
 # ---- 주간 리포트 (트레이너 → 회원) ----

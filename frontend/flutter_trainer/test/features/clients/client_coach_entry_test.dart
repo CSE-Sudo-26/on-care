@@ -12,11 +12,24 @@ const String _minsuId = 'seed-client-1';
 
 /// 질문을 기록하고 정해진 답을 주는 페이크.
 class _FakeCoachRepository implements ClientCoachRepository {
-  _FakeCoachRepository({this.answer, this.failure});
+  _FakeCoachRepository({
+    this.answer,
+    this.failure,
+    this.stored = const <ClientCoachTurn>[],
+    this.historyFailure,
+  });
 
   final ClientCoachAnswer? answer;
   final AppError? failure;
+
+  /// 서버에 이미 저장돼 있는 문답 — 시트를 열 때 복원된다. (#588)
+  final List<ClientCoachTurn> stored;
+
+  /// 복원만 실패시키고 싶을 때. 새 질문은 여전히 되어야 한다.
+  final AppError? historyFailure;
+
   final List<(String, String)> asked = <(String, String)>[];
+  final List<String> restored = <String>[];
 
   @override
   bool get supportsAsk => true;
@@ -29,6 +42,13 @@ class _FakeCoachRepository implements ClientCoachRepository {
     asked.add((memberId, message));
     if (failure != null) throw failure!;
     return answer ?? const ClientCoachAnswer(reply: 'ok');
+  }
+
+  @override
+  Future<List<ClientCoachTurn>> history({required String memberId}) async {
+    restored.add(memberId);
+    if (historyFailure != null) throw historyFailure!;
+    return stored;
   }
 }
 
@@ -110,5 +130,69 @@ void main() {
     await settle(tester);
 
     expect(find.text('담당 고객이 아니에요'), findsOneWidget);
+  });
+
+  testWidgets('시트를 열면 지난 문답이 복원된다', (WidgetTester tester) async {
+    // 예전에는 시트를 닫으면 대화가 사라져 매 질문이 단발이었다. (#588)
+    final repo = _FakeCoachRepository(
+      stored: const <ClientCoachTurn>[
+        ClientCoachTurn(isTrainer: true, content: '무릎 상태 어떻게 볼까요?'),
+        ClientCoachTurn(
+          isTrainer: false,
+          content: '저충격 위주로 가시죠.',
+          sources: <String>['관절 운동 가이드'],
+        ),
+      ],
+    );
+    await _openClient(tester, coach: repo);
+
+    await tester.tap(find.text('AI에게 묻기'));
+    await settle(tester);
+
+    expect(repo.restored.single, _minsuId);
+    expect(find.text('무릎 상태 어떻게 볼까요?'), findsOneWidget);
+    expect(find.text('저충격 위주로 가시죠.'), findsOneWidget);
+    expect(find.text('· 관절 운동 가이드'), findsOneWidget);
+    // 이어서 묻는 버튼이어야 한다 — 빈 스레드가 아니다.
+    expect(find.text('다시 묻기'), findsOneWidget);
+  });
+
+  testWidgets('새 문답이 스레드 끝에 쌓인다', (WidgetTester tester) async {
+    final repo = _FakeCoachRepository(
+      stored: const <ClientCoachTurn>[
+        ClientCoachTurn(isTrainer: true, content: '첫 질문입니다'),
+        ClientCoachTurn(isTrainer: false, content: '첫 답변입니다'),
+      ],
+      answer: const ClientCoachAnswer(reply: '두 번째 답변입니다'),
+    );
+    await _openClient(tester, coach: repo);
+
+    await tester.tap(find.text('AI에게 묻기'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '두 번째 질문입니다');
+    await tester.tap(find.text('다시 묻기'));
+    await settle(tester);
+
+    // 앞 문답이 밀려나지 않는다.
+    expect(find.text('첫 질문입니다'), findsOneWidget);
+    expect(find.text('두 번째 질문입니다'), findsOneWidget);
+    expect(find.text('두 번째 답변입니다'), findsOneWidget);
+  });
+
+  testWidgets('복원이 실패해도 새로 물어볼 수 있다', (WidgetTester tester) async {
+    // 열자마자 오류를 띄우면 할 수 있는 일까지 막힌 것처럼 보인다.
+    final repo = _FakeCoachRepository(
+      historyFailure: const ServerError(),
+      answer: const ClientCoachAnswer(reply: '답변은 됩니다'),
+    );
+    await _openClient(tester, coach: repo);
+
+    await tester.tap(find.text('AI에게 묻기'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '질문');
+    await tester.tap(find.text('물어보기'));
+    await settle(tester);
+
+    expect(find.text('답변은 됩니다'), findsOneWidget);
   });
 }

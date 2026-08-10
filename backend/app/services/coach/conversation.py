@@ -36,28 +36,53 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:16]}"
 
 
-def get_or_create_active(db: Session, user_id: str) -> AiConversation:
-    """사용자의 활성 대화 스레드. 없으면 만든다."""
+def _active_thread_filter(user_id: str, trainer_id: str | None):
+    """스레드 식별 조건 — (회원, 화자) 쌍이 스레드를 가른다(#588).
+
+    `trainer_id` 가 NULL 인 스레드가 회원 본인의 대화다. 이 조건을 한 곳에 모아
+    두는 이유: 조회와 생성이 조건을 다르게 쓰면 매 요청이 새 스레드를 만들거나,
+    더 나쁘게는 트레이너 질의가 회원 대화에 섞인다.
+    """
+    owner = (
+        AiConversation.trainer_id.is_(None)
+        if trainer_id is None
+        else AiConversation.trainer_id == trainer_id
+    )
+    return (
+        AiConversation.user_id == user_id,
+        owner,
+        AiConversation.archived_at.is_(None),
+    )
+
+
+def get_or_create_active(
+    db: Session, user_id: str, *, trainer_id: str | None = None
+) -> AiConversation:
+    """활성 대화 스레드. 없으면 만든다.
+
+    [trainer_id] 가 있으면 그 트레이너가 이 회원에 대해 묻는 전용 스레드다.
+    """
     convo = db.scalar(
         select(AiConversation)
-        .where(
-            AiConversation.user_id == user_id,
-            AiConversation.archived_at.is_(None),
-        )
+        .where(*_active_thread_filter(user_id, trainer_id))
         .order_by(AiConversation.created_at.desc())
         .limit(1)
     )
     if convo is not None:
         return convo
 
-    convo = AiConversation(id=_new_id("aiconv"), user_id=user_id)
+    convo = AiConversation(
+        id=_new_id("aiconv"), user_id=user_id, trainer_id=trainer_id
+    )
     db.add(convo)
     db.commit()
     db.refresh(convo)
     return convo
 
 
-def load_messages(db: Session, user_id: str) -> list[AiMessage]:
+def load_messages(
+    db: Session, user_id: str, *, trainer_id: str | None = None
+) -> list[AiMessage]:
     """활성 대화의 메시지를 시간순으로. 대화가 없으면 빈 목록.
 
     스레드를 만들지 않는 조회 전용 경로다. 채팅 화면을 열기만 하고 아무 말도 하지
@@ -65,10 +90,7 @@ def load_messages(db: Session, user_id: str) -> list[AiMessage]:
     """
     convo = db.scalar(
         select(AiConversation)
-        .where(
-            AiConversation.user_id == user_id,
-            AiConversation.archived_at.is_(None),
-        )
+        .where(*_active_thread_filter(user_id, trainer_id))
         .order_by(AiConversation.created_at.desc())
         .limit(1)
     )
@@ -90,6 +112,7 @@ def append_exchange(
     question: str,
     reply: str,
     sources: list[str],
+    trainer_id: str | None = None,
 ) -> AiConversation:
     """질문과 답변을 한 번에 저장한다.
 
@@ -98,7 +121,7 @@ def append_exchange(
     now() 는 트랜잭션 시각이라 같은 커밋의 두 줄이 **동일한 created_at** 을 갖고,
     그러면 정렬이 랜덤한 id 순으로 무너져 답변이 질문보다 먼저 보인다.
     """
-    convo = get_or_create_active(db, user_id)
+    convo = get_or_create_active(db, user_id, trainer_id=trainer_id)
     # 빈 대화면 max 가 NULL 이라 coalesce 로 -1 → 첫 순번이 0 이 된다.
     next_seq = db.scalar(
         select(func.coalesce(func.max(AiMessage.seq), -1) + 1).where(

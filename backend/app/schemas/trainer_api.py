@@ -384,6 +384,17 @@ class ClientCoachRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
 
 
+class ClientCoachMessageOut(BaseModel):
+    """복원된 문답 한 줄 (#588).
+
+    `role` 은 저장값을 그대로 쓴다(user|coach). 회원 앱의 채팅 계약과 같은 값이라
+    프론트가 두 화면에서 같은 분기를 쓸 수 있다.
+    """
+    role: str
+    content: str
+    sources: list[str] = Field(default_factory=list)
+
+
 class ClientCoachOut(BaseModel):
     """AI 답변 + 근거.
 
