@@ -445,7 +445,7 @@
       "coachName": {"type": "String"}
     }
   },
-  "exProgramSets": "{count} sets",
+  "exProgramSets": "{count, plural, =1{1 set} other{{count} sets}}",
   "@exProgramSets": {
     "placeholders": {
       "count": {"type": "int"}

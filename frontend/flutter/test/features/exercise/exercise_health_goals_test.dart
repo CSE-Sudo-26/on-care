@@ -64,12 +64,13 @@ class _GoalSyncHostState extends State<_GoalSyncHost> {
 }
 
 class _SessionMemberCoachRepository implements MemberCoachRepository {
-  const _SessionMemberCoachRepository(this.sessions);
+  const _SessionMemberCoachRepository(this.sessions, {this.coach});
 
   final List<CoachSession> sessions;
+  final MemberCoach? coach;
 
   @override
-  Future<MemberCoach?> fetchCoach() async => null;
+  Future<MemberCoach?> fetchCoach() async => coach;
   @override
   Future<List<CoachRoutine>> fetchRoutines() async => const <CoachRoutine>[];
   @override
@@ -121,6 +122,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          appConfigProvider.overrideWithValue(
+            AppConfig(
+              environment: Environment.dev,
+              apiBaseUrl: 'https://example.test',
+              useMockApi: coachRepository == null,
+            ),
+          ),
           accountRepositoryProvider.overrideWithValue(
             MockAccountRepository(profile: profile),
           ),
@@ -183,25 +191,36 @@ void main() {
         name: '테스트',
         email: 'member@example.com',
       ),
-      coachRepository: _SessionMemberCoachRepository(<CoachSession>[
-        CoachSession(
-          id: 'completed-pt',
-          date: DateTime.now(),
-          time: '18:00',
-          type: '1:1 PT',
-          durationMinutes: 50,
-          status: '완료',
-          note: '오른쪽 어깨 가동 범위를 확인해 주세요.',
-          program: const <CoachProgramItem>[
-            CoachProgramItem(
-              name: '숄더 프레스',
-              sets: 4,
-              reps: '12회',
-              weight: '10kg',
-            ),
-          ],
+      coachRepository: _SessionMemberCoachRepository(
+        <CoachSession>[
+          CoachSession(
+            id: 'completed-pt',
+            date: DateTime.now(),
+            time: '18:00',
+            type: '1:1 PT',
+            durationMinutes: 50,
+            status: '완료',
+            note: '오른쪽 어깨 가동 범위를 확인해 주세요.',
+            program: const <CoachProgramItem>[
+              CoachProgramItem(
+                name: '숄더 프레스',
+                sets: 4,
+                reps: '12회',
+                weight: '10kg',
+              ),
+            ],
+          ),
+        ],
+        coach: const MemberCoach(
+          trainerId: 'trainer-1',
+          name: '김트레이너',
+          specialty: '근력 운동',
+          career: '5년',
+          intro: '',
+          gymName: '온케어짐',
+          goal: '근력 향상',
         ),
-      ]),
+      ),
     );
 
     await tester.scrollUntilVisible(
@@ -211,6 +230,7 @@ void main() {
 
     expect(find.text('18:00 수업 완료'), findsOneWidget);
     expect(find.text('숄더 프레스 · 10kg · 4세트 · 12회'), findsOneWidget);
+    expect(find.text('김트레이너 · 오늘의 피드백'), findsOneWidget);
     expect(find.text('오른쪽 어깨 가동 범위를 확인해 주세요.'), findsOneWidget);
   });
 

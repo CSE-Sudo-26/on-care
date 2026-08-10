@@ -1673,7 +1673,7 @@ abstract class AppLocalizations {
   /// No description provided for @exProgramSets.
   ///
   /// In en, this message translates to:
-  /// **'{count} sets'**
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
   String exProgramSets(int count);
 
   /// No description provided for @exEmptyLog.
