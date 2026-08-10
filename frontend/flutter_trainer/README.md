@@ -113,7 +113,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ### 실 API 로 실행 (회원 앱과 데이터 공유)
 
-위 명령은 목업 모드입니다(`useMockApi` 기본값 `true`). 이 모드에서는 트레이너 앱이 자기
+위 명령은 목업 모드입니다(`useMockApi` 기본값 `true`). 이 모드에서는 트레이너 웹이 자기
 로컬 drift DB 를 보기 때문에 **회원 앱에서 만든 데이터가 보이지 않습니다.**
 
 ```bash

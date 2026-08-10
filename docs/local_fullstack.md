@@ -1,10 +1,10 @@
-# 로컬 풀스택 실행 (백엔드 + 회원 앱 + 트레이너 앱)
+# 로컬 풀스택 실행 (백엔드 + 회원 앱 + 트레이너 웹)
 
-두 앱을 **같은 백엔드·같은 DB** 로 띄우는 절차입니다. 회원↔트레이너 상호작용
+회원 앱(모바일)과 트레이너 웹을 **같은 백엔드·같은 DB** 로 띄우는 절차입니다. 회원↔트레이너 상호작용
 (회원이 올린 식단을 트레이너가 보는 것 등)은 이 구성에서만 확인할 수 있습니다.
 
-> 두 앱의 `useMockApi` 기본값은 `true` 입니다. dart-define 없이 실행하면 각 앱이
-> **자기 로컬 drift DB** 를 보기 때문에, 두 앱이 각각 잘 도는 것처럼 보여도 서로의
+> 둘 다 `useMockApi` 기본값이 `true` 입니다. dart-define 없이 실행하면 각각
+> **자기 로컬 drift DB** 를 보기 때문에, 둘 다 잘 도는 것처럼 보여도 서로의
 > 데이터는 절대 보이지 않습니다. 상호작용을 확인하려면 아래 3단계를 모두 거쳐야 합니다.
 
 ## 1. 백엔드
@@ -44,7 +44,10 @@ docker compose ps             # app, db 모두 Up
 docker compose logs app       # alembic upgrade 성공 후 uvicorn 기동
 ```
 
-## 2. 회원 앱
+## 2. 회원 앱 (모바일)
+
+로컬 검증은 Chrome 으로 띄우는 편이 빠릅니다. 실제 배포 타깃은 iOS/Android 입니다.
+
 
 ```bash
 cd frontend/flutter
@@ -53,7 +56,7 @@ flutter run -d chrome \
   --dart-define=API_BASE_URL=http://localhost:8000/v1
 ```
 
-## 3. 트레이너 앱
+## 3. 트레이너 웹
 
 ```bash
 cd frontend/flutter_trainer
@@ -81,8 +84,8 @@ flutter run -d chrome \
 
 ## 상호작용이 실제로 연결됐는지 확인
 
-앱 없이 API 로만 30초 안에 확인할 수 있습니다. 회원이 올린 식단이 트레이너 쪽에
-나타나면 두 앱이 같은 DB 를 보고 있다는 뜻입니다.
+클라이언트 없이 API 로만 30초 안에 확인할 수 있습니다. 회원이 올린 식단이 트레이너 쪽에
+나타나면 둘이 같은 DB 를 보고 있다는 뜻입니다.
 
 ```bash
 M=$(curl -s -X POST http://localhost:8000/v1/auth/login \
@@ -111,5 +114,9 @@ curl -s -H "Authorization: Bearer $T" \
   Windows `curl.exe` 가 MSYS 경로를 못 읽습니다. `$(cygpath -w /tmp/x.jpg)` 로 변환하세요.
 - **셸에서 한글이 든 JSON 을 `-d` 로 보내면** 콘솔 인코딩(cp949) 때문에 깨져
   `400 There was an error parsing the body` 가 납니다. 파일(`-d @body.json`)로 보내거나
-  ASCII 로 확인하세요. 앱에서 보내는 요청은 정상입니다.
+  ASCII 로 확인하세요. 회원 앱·트레이너 웹이 보내는 요청은 정상입니다.
 - CORS 는 `.env` 기본값이 `CORS_ALLOW_ORIGINS=*` 라 로컬 웹에서 그대로 붙습니다.
+- **백엔드 테스트 스위트가 이 DB 를 그대로 씁니다**(`DATABASE_URL` 이 같은
+  `localhost:5432`). 손으로 API 를 찔러 데이터를 남기면 시드 개수를 단언하는 테스트가
+  깨집니다(예: `test_trainer_client_diet_maps_member_meals` 는 `len(meals) == 3`).
+  `pytest` 를 돌리기 전에 `docker compose down -v && docker compose up -d` 로 초기화하세요.
