@@ -189,6 +189,7 @@ def test_seed_backfills_an_empty_demo_password(client, db_session):
     """
     from sqlalchemy import select
 
+    from app.core.config import get_settings
     from app.db.seed_trainer import seed_trainer_domain
     from app.models.models import User
 
@@ -199,9 +200,17 @@ def test_seed_backfills_an_empty_demo_password(client, db_session):
 
     seed_trainer_domain()
 
-    db_session.expire_all()
-    restored = db_session.scalar(select(User).where(User.id == "user-demo"))
-    assert restored.hashed_password, "빈 비밀번호가 시드 재실행으로 채워져야 한다"
+    # 해시가 비어 있지 않은지만 보면 엉뚱한 문자열도 통과한다. 복구의 기준은
+    # "로그인이 되는가" 이므로 실제 로그인 계약으로 확인한다(리뷰 지적).
+    r = client.post(
+        "/v1/auth/login",
+        data={
+            "username": "minsu@oncare.com",
+            "password": get_settings().demo_login_password,
+        },
+    )
+    assert r.status_code == 200, f"백필된 해시로 로그인되지 않는다: {r.text}"
+    assert r.json().get("access_token")
 
 
 def test_backfill_skips_an_account_that_only_shares_the_id(client, db_session):
@@ -217,7 +226,12 @@ def test_backfill_skips_an_account_that_only_shares_the_id(client, db_session):
 
     squatter = db_session.scalar(select(User).where(User.id == "user-sungho"))
     assert squatter is not None
-    original_email, original_role = squatter.email, squatter.role
+    # 해시까지 저장해 뒀다가 직접 되돌린다. 시드가 복구해 주기를 기대하면, 정작
+    # 백필에 회귀가 생겼을 때 이 테스트는 통과하면서 뒤따르는 테스트에 빈 비밀번호를
+    # 남긴다(리뷰 지적).
+    original_email = squatter.email
+    original_role = squatter.role
+    original_hash = squatter.hashed_password
     squatter.email = "someone-else@example.com"
     squatter.role = "trainer"
     squatter.hashed_password = ""  # 백필 대상으로 보이는 상태
@@ -232,11 +246,12 @@ def test_backfill_skips_an_account_that_only_shares_the_id(client, db_session):
             "이메일·역할이 다른 계정에는 데모 비밀번호를 심으면 안 된다"
         )
     finally:
-        after = db_session.scalar(select(User).where(User.id == "user-sungho"))
-        after.email, after.role = original_email, original_role
-        after.hashed_password = ""
+        db_session.expire_all()
+        restored = db_session.scalar(select(User).where(User.id == "user-sungho"))
+        restored.email = original_email
+        restored.role = original_role
+        restored.hashed_password = original_hash
         db_session.commit()
-        seed_trainer_domain()  # 진짜 데모 계정으로 되돌린 뒤 정상 백필
 
 
 def test_email_conflict_is_detected(client, db_session):
