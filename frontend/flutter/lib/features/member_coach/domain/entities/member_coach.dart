@@ -58,6 +58,8 @@ class CoachSession {
     required this.type,
     required this.durationMinutes,
     required this.status,
+    this.note = '',
+    this.program = const <CoachProgramItem>[],
   });
 
   /// Server id.
@@ -79,9 +81,33 @@ class CoachSession {
   /// 예정 | 완료 | 공백.
   final String status;
 
+  /// The trainer's feedback recorded when completing the session.
+  final String note;
+
+  /// The workout program attached by the trainer.
+  final List<CoachProgramItem> program;
+
   /// Whether this session is still ahead. 완료된 세션은 '오늘의 일정'에
   /// 남겨 둘 이유가 없다.
   bool get isUpcoming => status != '완료';
+
+  /// Whether the trainer has completed this session.
+  bool get isDone => status == '완료';
+}
+
+/// One exercise in a trainer-authored PT program.
+class CoachProgramItem {
+  const CoachProgramItem({
+    required this.name,
+    required this.sets,
+    required this.reps,
+    required this.weight,
+  });
+
+  final String name;
+  final int sets;
+  final String reps;
+  final String weight;
 }
 
 /// Chat message viewpoint for the member: their own message vs the coach's.

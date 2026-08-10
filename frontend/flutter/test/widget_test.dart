@@ -19,11 +19,36 @@ import 'package:oncare/features/diet/presentation/controllers/diet_controller.da
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
 
+class _CountingMemberCoachRepository extends MockMemberCoachRepository {
+  int routineLoads = 0;
+  int sessionLoads = 0;
+
+  @override
+  Future<List<CoachRoutine>> fetchRoutines() {
+    routineLoads += 1;
+    return super.fetchRoutines();
+  }
+
+  @override
+  Future<List<CoachSession>> fetchSessions() {
+    sessionLoads += 1;
+    return super.fetchSessions();
+  }
+}
+
 void main() {
-  Future<void> pumpApp(WidgetTester tester, {Locale? locale}) async {
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Locale? locale,
+    MemberCoachRepository? memberCoachRepository,
+  }) async {
     const config = AppConfig(
       environment: Environment.dev,
       apiBaseUrl: 'https://dev.api.test',
@@ -51,6 +76,10 @@ void main() {
             MockDashboardRepository(MockDietRepository())
                 as DashboardRepository,
           ),
+          if (memberCoachRepository != null)
+            memberCoachRepositoryProvider.overrideWithValue(
+              memberCoachRepository,
+            ),
           sessionFeatureResetOverride(),
           if (locale != null) localeProvider.overrideWith((ref) => locale),
         ],
@@ -117,6 +146,33 @@ void main() {
     expect(find.text('Diet'), findsAtLeastNWidgets(1));
     expect(find.text('Exercise'), findsAtLeastNWidgets(1));
     expect(find.text('MY'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('member coaching data refreshes on branch entry and app resume', (
+    tester,
+  ) async {
+    final repository = _CountingMemberCoachRepository();
+    await pumpApp(
+      tester,
+      locale: const Locale('ko'),
+      memberCoachRepository: repository,
+    );
+    final int initialSessionLoads = repository.sessionLoads;
+
+    await tester.tap(find.text('운동').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.routineLoads, greaterThan(0));
+    expect(repository.sessionLoads, greaterThan(initialSessionLoads));
+    final int beforeResume = repository.sessionLoads;
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    expect(repository.sessionLoads, greaterThan(beforeResume));
   });
 
   testWidgets('record sheet has no fixed bottom gap without a system inset', (
@@ -367,6 +423,13 @@ void main() {
     // sanity: 'supportedLocales' is the canonical set.
     expect(AppLocalizations.supportedLocales, contains(const Locale('en')));
     expect(AppLocalizations.supportedLocales, contains(const Locale('ko')));
+  });
+
+  test('English PT set count uses the correct singular and plural forms', () {
+    final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+
+    expect(en.exProgramSets(1), '1 set');
+    expect(en.exProgramSets(2), '2 sets');
   });
 
   testWidgets('English locale localises the Home AI advice (리뷰 #292)', (

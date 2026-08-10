@@ -12,6 +12,7 @@ import 'package:oncare/features/ai_coach/presentation/controllers/chat_controlle
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
@@ -44,12 +45,25 @@ void main() {
   test(
     'session reset clears mutable account state and recreates mock roots',
     () async {
+      var accountId = 'account-a';
       final ProviderContainer container = ProviderContainer(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(_mockConfig),
           aiCoachRepositoryProvider.overrideWith(
             (ref) => _FakeAiCoachRepository(),
           ),
+          coachSessionsProvider.overrideWith((ref) async {
+            return <CoachSession>[
+              CoachSession(
+                id: '$accountId-session',
+                date: DateTime(2026, 8, 10),
+                time: '18:00',
+                type: '1:1 PT',
+                durationMinutes: 50,
+                status: '완료',
+              ),
+            ];
+          }),
           sessionFeatureResetOverride(),
         ],
       );
@@ -66,6 +80,10 @@ void main() {
 
       final MemberCoachRepository memberCoachBefore = container.read(
         memberCoachRepositoryProvider,
+      );
+      expect(
+        (await container.read(coachSessionsProvider.future)).single.id,
+        'account-a-session',
       );
       await memberCoachBefore.sendMessage('A 사용자 트레이너 메시지');
 
@@ -91,6 +109,7 @@ void main() {
           (await MockMemberCoachRepository().fetchChat()).length;
       expect(await memberCoachBefore.fetchChat(), hasLength(seedLength + 1));
 
+      accountId = 'account-b';
       container.read(sessionFeatureResetProvider)();
 
       expect(
@@ -105,6 +124,10 @@ void main() {
         greaterThan(0),
       );
       expect(container.read(exerciseRoutineDoneProvider), <bool>[false, false]);
+      expect(
+        (await container.read(coachSessionsProvider.future)).single.id,
+        'account-b-session',
+      );
 
       final MemberCoachRepository memberCoachAfter = container.read(
         memberCoachRepositoryProvider,
