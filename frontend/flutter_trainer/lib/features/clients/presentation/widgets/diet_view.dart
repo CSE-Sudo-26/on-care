@@ -15,7 +15,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show weekdayLabels;
 import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
-/// The 식단 sub-tab: today's nutrition summary (칼로리/나트륨/당류),
+/// The 식단 sub-tab: today's nutrition summary,
 /// per-meal records, and a conditional AI comment.
 class DietView extends ConsumerWidget {
   /// Creates the diet view for [client].
@@ -66,7 +66,7 @@ class DietView extends ConsumerWidget {
   }
 }
 
-/// "오늘 영양 요약" — 칼로리 / 나트륨 / 당류 tiles, warning-styled when
+/// "오늘 영양 요약" — nutrition tiles, warning-styled when
 /// over target.
 class _NutritionSummary extends StatelessWidget {
   const _NutritionSummary({required this.client});
@@ -122,6 +122,31 @@ class _NutritionSummary extends StatelessWidget {
                 // Navy base like the other tiles — orange only when over.
                 color: AppColors.accentDark,
                 warn: client.sugarG > sugarTargetG,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              MetricTile(
+                label: l.metricCarbs,
+                value: client.carbsG,
+                unit: 'g',
+                color: AppColors.accentDark,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              MetricTile(
+                label: l.metricProtein,
+                value: client.proteinG,
+                unit: 'g',
+                color: AppColors.accentDark,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              MetricTile(
+                label: l.metricFat,
+                value: client.fatG,
+                unit: 'g',
+                color: AppColors.accentDark,
               ),
             ],
           ),
@@ -285,7 +310,7 @@ class _TrendBar extends StatelessWidget {
   }
 }
 
-/// A single meal record card (아침/점심/저녁 badge, foods, kcal, sodium).
+/// A single meal record card with calories, sodium, and macronutrients.
 class _MealCard extends StatelessWidget {
   const _MealCard({required this.entry});
 
@@ -356,11 +381,25 @@ class _MealCard extends StatelessWidget {
               color: AppColors.subtleForeground,
             ),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              Text('${l.metricCarbs} ${_grams(entry.carbsG)}g'),
+              Text('${l.metricProtein} ${_grams(entry.proteinG)}g'),
+              Text('${l.metricFat} ${_grams(entry.fatG)}g'),
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
+String _grams(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(1);
 
 /// "✦ AI 분석" comment — flips wording on the sodium target.
 class _AiComment extends StatelessWidget {

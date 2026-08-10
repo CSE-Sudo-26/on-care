@@ -158,6 +158,9 @@ class DriftClientRepository implements ClientRepository {
               caloriesToday: 0,
               sodiumMg: 0,
               sugarG: 0,
+              carbsG: const Value(0),
+              proteinG: const Value(0),
+              fatG: const Value(0),
               lastRoutine: '-',
               weekCompletionJson: '[0,0,0,0,0,0,0]',
               sodiumWeekJson: const Value('[]'),
@@ -177,7 +180,6 @@ class DriftClientRepository implements ClientRepository {
     );
   }
 
-
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) {
@@ -194,6 +196,9 @@ class DriftClientRepository implements ClientRepository {
               items: row.items,
               calories: row.calories,
               sodiumMg: row.sodiumMg,
+              carbsG: row.carbsG,
+              proteinG: row.proteinG,
+              fatG: row.fatG,
             ),
           )
           .toList(),
@@ -247,6 +252,9 @@ class DriftClientRepository implements ClientRepository {
       calories: row.caloriesToday,
       sodiumMg: row.sodiumMg,
       sugarG: row.sugarG,
+      carbsG: row.carbsG,
+      proteinG: row.proteinG,
+      fatG: row.fatG,
       lastRoutine: row.lastRoutine,
       weekCompletion: week,
       sodiumWeek: sodiumWeek,

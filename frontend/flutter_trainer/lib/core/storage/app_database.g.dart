@@ -319,6 +319,38 @@ class $TrainerClientsTable extends TrainerClients
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _carbsGMeta = const VerificationMeta('carbsG');
+  @override
+  late final GeneratedColumn<double> carbsG = GeneratedColumn<double>(
+    'carbs_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _proteinGMeta = const VerificationMeta(
+    'proteinG',
+  );
+  @override
+  late final GeneratedColumn<double> proteinG = GeneratedColumn<double>(
+    'protein_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _fatGMeta = const VerificationMeta('fatG');
+  @override
+  late final GeneratedColumn<double> fatG = GeneratedColumn<double>(
+    'fat_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _lastRoutineMeta = const VerificationMeta(
     'lastRoutine',
   );
@@ -377,6 +409,9 @@ class $TrainerClientsTable extends TrainerClients
     caloriesToday,
     sodiumMg,
     sugarG,
+    carbsG,
+    proteinG,
+    fatG,
     lastRoutine,
     weekCompletionJson,
     sodiumWeekJson,
@@ -475,6 +510,24 @@ class $TrainerClientsTable extends TrainerClients
     } else if (isInserting) {
       context.missing(_sugarGMeta);
     }
+    if (data.containsKey('carbs_g')) {
+      context.handle(
+        _carbsGMeta,
+        carbsG.isAcceptableOrUnknown(data['carbs_g']!, _carbsGMeta),
+      );
+    }
+    if (data.containsKey('protein_g')) {
+      context.handle(
+        _proteinGMeta,
+        proteinG.isAcceptableOrUnknown(data['protein_g']!, _proteinGMeta),
+      );
+    }
+    if (data.containsKey('fat_g')) {
+      context.handle(
+        _fatGMeta,
+        fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
+      );
+    }
     if (data.containsKey('last_routine')) {
       context.handle(
         _lastRoutineMeta,
@@ -561,6 +614,18 @@ class $TrainerClientsTable extends TrainerClients
         DriftSqlType.int,
         data['${effectivePrefix}sugar_g'],
       )!,
+      carbsG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carbs_g'],
+      )!,
+      proteinG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}protein_g'],
+      )!,
+      fatG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fat_g'],
+      )!,
       lastRoutine: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}last_routine'],
@@ -598,6 +663,9 @@ class TrainerClientRow extends DataClass
   final int caloriesToday;
   final int sodiumMg;
   final int sugarG;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
   final String lastRoutine;
   final String weekCompletionJson;
   final String sodiumWeekJson;
@@ -613,6 +681,9 @@ class TrainerClientRow extends DataClass
     required this.caloriesToday,
     required this.sodiumMg,
     required this.sugarG,
+    required this.carbsG,
+    required this.proteinG,
+    required this.fatG,
     required this.lastRoutine,
     required this.weekCompletionJson,
     required this.sodiumWeekJson,
@@ -631,6 +702,9 @@ class TrainerClientRow extends DataClass
     map['calories_today'] = Variable<int>(caloriesToday);
     map['sodium_mg'] = Variable<int>(sodiumMg);
     map['sugar_g'] = Variable<int>(sugarG);
+    map['carbs_g'] = Variable<double>(carbsG);
+    map['protein_g'] = Variable<double>(proteinG);
+    map['fat_g'] = Variable<double>(fatG);
     map['last_routine'] = Variable<String>(lastRoutine);
     map['week_completion_json'] = Variable<String>(weekCompletionJson);
     map['sodium_week_json'] = Variable<String>(sodiumWeekJson);
@@ -650,6 +724,9 @@ class TrainerClientRow extends DataClass
       caloriesToday: Value(caloriesToday),
       sodiumMg: Value(sodiumMg),
       sugarG: Value(sugarG),
+      carbsG: Value(carbsG),
+      proteinG: Value(proteinG),
+      fatG: Value(fatG),
       lastRoutine: Value(lastRoutine),
       weekCompletionJson: Value(weekCompletionJson),
       sodiumWeekJson: Value(sodiumWeekJson),
@@ -673,6 +750,9 @@ class TrainerClientRow extends DataClass
       caloriesToday: serializer.fromJson<int>(json['caloriesToday']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
       sugarG: serializer.fromJson<int>(json['sugarG']),
+      carbsG: serializer.fromJson<double>(json['carbsG']),
+      proteinG: serializer.fromJson<double>(json['proteinG']),
+      fatG: serializer.fromJson<double>(json['fatG']),
       lastRoutine: serializer.fromJson<String>(json['lastRoutine']),
       weekCompletionJson: serializer.fromJson<String>(
         json['weekCompletionJson'],
@@ -695,6 +775,9 @@ class TrainerClientRow extends DataClass
       'caloriesToday': serializer.toJson<int>(caloriesToday),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
       'sugarG': serializer.toJson<int>(sugarG),
+      'carbsG': serializer.toJson<double>(carbsG),
+      'proteinG': serializer.toJson<double>(proteinG),
+      'fatG': serializer.toJson<double>(fatG),
       'lastRoutine': serializer.toJson<String>(lastRoutine),
       'weekCompletionJson': serializer.toJson<String>(weekCompletionJson),
       'sodiumWeekJson': serializer.toJson<String>(sodiumWeekJson),
@@ -713,6 +796,9 @@ class TrainerClientRow extends DataClass
     int? caloriesToday,
     int? sodiumMg,
     int? sugarG,
+    double? carbsG,
+    double? proteinG,
+    double? fatG,
     String? lastRoutine,
     String? weekCompletionJson,
     String? sodiumWeekJson,
@@ -728,6 +814,9 @@ class TrainerClientRow extends DataClass
     caloriesToday: caloriesToday ?? this.caloriesToday,
     sodiumMg: sodiumMg ?? this.sodiumMg,
     sugarG: sugarG ?? this.sugarG,
+    carbsG: carbsG ?? this.carbsG,
+    proteinG: proteinG ?? this.proteinG,
+    fatG: fatG ?? this.fatG,
     lastRoutine: lastRoutine ?? this.lastRoutine,
     weekCompletionJson: weekCompletionJson ?? this.weekCompletionJson,
     sodiumWeekJson: sodiumWeekJson ?? this.sodiumWeekJson,
@@ -749,6 +838,9 @@ class TrainerClientRow extends DataClass
           : this.caloriesToday,
       sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
       sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
+      proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
+      fatG: data.fatG.present ? data.fatG.value : this.fatG,
       lastRoutine: data.lastRoutine.present
           ? data.lastRoutine.value
           : this.lastRoutine,
@@ -775,6 +867,9 @@ class TrainerClientRow extends DataClass
           ..write('caloriesToday: $caloriesToday, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('lastRoutine: $lastRoutine, ')
           ..write('weekCompletionJson: $weekCompletionJson, ')
           ..write('sodiumWeekJson: $sodiumWeekJson, ')
@@ -795,6 +890,9 @@ class TrainerClientRow extends DataClass
     caloriesToday,
     sodiumMg,
     sugarG,
+    carbsG,
+    proteinG,
+    fatG,
     lastRoutine,
     weekCompletionJson,
     sodiumWeekJson,
@@ -814,6 +912,9 @@ class TrainerClientRow extends DataClass
           other.caloriesToday == this.caloriesToday &&
           other.sodiumMg == this.sodiumMg &&
           other.sugarG == this.sugarG &&
+          other.carbsG == this.carbsG &&
+          other.proteinG == this.proteinG &&
+          other.fatG == this.fatG &&
           other.lastRoutine == this.lastRoutine &&
           other.weekCompletionJson == this.weekCompletionJson &&
           other.sodiumWeekJson == this.sodiumWeekJson &&
@@ -831,6 +932,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
   final Value<int> caloriesToday;
   final Value<int> sodiumMg;
   final Value<int> sugarG;
+  final Value<double> carbsG;
+  final Value<double> proteinG;
+  final Value<double> fatG;
   final Value<String> lastRoutine;
   final Value<String> weekCompletionJson;
   final Value<String> sodiumWeekJson;
@@ -847,6 +951,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     this.caloriesToday = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     this.lastRoutine = const Value.absent(),
     this.weekCompletionJson = const Value.absent(),
     this.sodiumWeekJson = const Value.absent(),
@@ -864,6 +971,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     required int caloriesToday,
     required int sodiumMg,
     required int sugarG,
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     required String lastRoutine,
     required String weekCompletionJson,
     this.sodiumWeekJson = const Value.absent(),
@@ -891,6 +1001,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Expression<int>? caloriesToday,
     Expression<int>? sodiumMg,
     Expression<int>? sugarG,
+    Expression<double>? carbsG,
+    Expression<double>? proteinG,
+    Expression<double>? fatG,
     Expression<String>? lastRoutine,
     Expression<String>? weekCompletionJson,
     Expression<String>? sodiumWeekJson,
@@ -908,6 +1021,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       if (caloriesToday != null) 'calories_today': caloriesToday,
       if (sodiumMg != null) 'sodium_mg': sodiumMg,
       if (sugarG != null) 'sugar_g': sugarG,
+      if (carbsG != null) 'carbs_g': carbsG,
+      if (proteinG != null) 'protein_g': proteinG,
+      if (fatG != null) 'fat_g': fatG,
       if (lastRoutine != null) 'last_routine': lastRoutine,
       if (weekCompletionJson != null)
         'week_completion_json': weekCompletionJson,
@@ -928,6 +1044,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Value<int>? caloriesToday,
     Value<int>? sodiumMg,
     Value<int>? sugarG,
+    Value<double>? carbsG,
+    Value<double>? proteinG,
+    Value<double>? fatG,
     Value<String>? lastRoutine,
     Value<String>? weekCompletionJson,
     Value<String>? sodiumWeekJson,
@@ -945,6 +1064,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       caloriesToday: caloriesToday ?? this.caloriesToday,
       sodiumMg: sodiumMg ?? this.sodiumMg,
       sugarG: sugarG ?? this.sugarG,
+      carbsG: carbsG ?? this.carbsG,
+      proteinG: proteinG ?? this.proteinG,
+      fatG: fatG ?? this.fatG,
       lastRoutine: lastRoutine ?? this.lastRoutine,
       weekCompletionJson: weekCompletionJson ?? this.weekCompletionJson,
       sodiumWeekJson: sodiumWeekJson ?? this.sodiumWeekJson,
@@ -986,6 +1108,15 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     if (sugarG.present) {
       map['sugar_g'] = Variable<int>(sugarG.value);
     }
+    if (carbsG.present) {
+      map['carbs_g'] = Variable<double>(carbsG.value);
+    }
+    if (proteinG.present) {
+      map['protein_g'] = Variable<double>(proteinG.value);
+    }
+    if (fatG.present) {
+      map['fat_g'] = Variable<double>(fatG.value);
+    }
     if (lastRoutine.present) {
       map['last_routine'] = Variable<String>(lastRoutine.value);
     }
@@ -1017,6 +1148,9 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
           ..write('caloriesToday: $caloriesToday, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('lastRoutine: $lastRoutine, ')
           ..write('weekCompletionJson: $weekCompletionJson, ')
           ..write('sodiumWeekJson: $sodiumWeekJson, ')
@@ -1093,6 +1227,38 @@ class $ClientDietEntriesTable extends ClientDietEntries
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _carbsGMeta = const VerificationMeta('carbsG');
+  @override
+  late final GeneratedColumn<double> carbsG = GeneratedColumn<double>(
+    'carbs_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _proteinGMeta = const VerificationMeta(
+    'proteinG',
+  );
+  @override
+  late final GeneratedColumn<double> proteinG = GeneratedColumn<double>(
+    'protein_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _fatGMeta = const VerificationMeta('fatG');
+  @override
+  late final GeneratedColumn<double> fatG = GeneratedColumn<double>(
+    'fat_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -1113,6 +1279,9 @@ class $ClientDietEntriesTable extends ClientDietEntries
     items,
     calories,
     sodiumMg,
+    carbsG,
+    proteinG,
+    fatG,
     sortOrder,
   ];
   @override
@@ -1172,6 +1341,24 @@ class $ClientDietEntriesTable extends ClientDietEntries
     } else if (isInserting) {
       context.missing(_sodiumMgMeta);
     }
+    if (data.containsKey('carbs_g')) {
+      context.handle(
+        _carbsGMeta,
+        carbsG.isAcceptableOrUnknown(data['carbs_g']!, _carbsGMeta),
+      );
+    }
+    if (data.containsKey('protein_g')) {
+      context.handle(
+        _proteinGMeta,
+        proteinG.isAcceptableOrUnknown(data['protein_g']!, _proteinGMeta),
+      );
+    }
+    if (data.containsKey('fat_g')) {
+      context.handle(
+        _fatGMeta,
+        fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -1211,6 +1398,18 @@ class $ClientDietEntriesTable extends ClientDietEntries
         DriftSqlType.int,
         data['${effectivePrefix}sodium_mg'],
       )!,
+      carbsG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}carbs_g'],
+      )!,
+      proteinG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}protein_g'],
+      )!,
+      fatG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fat_g'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -1232,6 +1431,9 @@ class ClientDietEntryRow extends DataClass
   final String items;
   final int calories;
   final int sodiumMg;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
   final int sortOrder;
   const ClientDietEntryRow({
     required this.id,
@@ -1240,6 +1442,9 @@ class ClientDietEntryRow extends DataClass
     required this.items,
     required this.calories,
     required this.sodiumMg,
+    required this.carbsG,
+    required this.proteinG,
+    required this.fatG,
     required this.sortOrder,
   });
   @override
@@ -1251,6 +1456,9 @@ class ClientDietEntryRow extends DataClass
     map['items'] = Variable<String>(items);
     map['calories'] = Variable<int>(calories);
     map['sodium_mg'] = Variable<int>(sodiumMg);
+    map['carbs_g'] = Variable<double>(carbsG);
+    map['protein_g'] = Variable<double>(proteinG);
+    map['fat_g'] = Variable<double>(fatG);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -1263,6 +1471,9 @@ class ClientDietEntryRow extends DataClass
       items: Value(items),
       calories: Value(calories),
       sodiumMg: Value(sodiumMg),
+      carbsG: Value(carbsG),
+      proteinG: Value(proteinG),
+      fatG: Value(fatG),
       sortOrder: Value(sortOrder),
     );
   }
@@ -1279,6 +1490,9 @@ class ClientDietEntryRow extends DataClass
       items: serializer.fromJson<String>(json['items']),
       calories: serializer.fromJson<int>(json['calories']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
+      carbsG: serializer.fromJson<double>(json['carbsG']),
+      proteinG: serializer.fromJson<double>(json['proteinG']),
+      fatG: serializer.fromJson<double>(json['fatG']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -1292,6 +1506,9 @@ class ClientDietEntryRow extends DataClass
       'items': serializer.toJson<String>(items),
       'calories': serializer.toJson<int>(calories),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
+      'carbsG': serializer.toJson<double>(carbsG),
+      'proteinG': serializer.toJson<double>(proteinG),
+      'fatG': serializer.toJson<double>(fatG),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
@@ -1303,6 +1520,9 @@ class ClientDietEntryRow extends DataClass
     String? items,
     int? calories,
     int? sodiumMg,
+    double? carbsG,
+    double? proteinG,
+    double? fatG,
     int? sortOrder,
   }) => ClientDietEntryRow(
     id: id ?? this.id,
@@ -1311,6 +1531,9 @@ class ClientDietEntryRow extends DataClass
     items: items ?? this.items,
     calories: calories ?? this.calories,
     sodiumMg: sodiumMg ?? this.sodiumMg,
+    carbsG: carbsG ?? this.carbsG,
+    proteinG: proteinG ?? this.proteinG,
+    fatG: fatG ?? this.fatG,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   ClientDietEntryRow copyWithCompanion(ClientDietEntriesCompanion data) {
@@ -1321,6 +1544,9 @@ class ClientDietEntryRow extends DataClass
       items: data.items.present ? data.items.value : this.items,
       calories: data.calories.present ? data.calories.value : this.calories,
       sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
+      carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
+      proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
+      fatG: data.fatG.present ? data.fatG.value : this.fatG,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -1334,14 +1560,27 @@ class ClientDietEntryRow extends DataClass
           ..write('items: $items, ')
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, clientId, meal, items, calories, sodiumMg, sortOrder);
+  int get hashCode => Object.hash(
+    id,
+    clientId,
+    meal,
+    items,
+    calories,
+    sodiumMg,
+    carbsG,
+    proteinG,
+    fatG,
+    sortOrder,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1352,6 +1591,9 @@ class ClientDietEntryRow extends DataClass
           other.items == this.items &&
           other.calories == this.calories &&
           other.sodiumMg == this.sodiumMg &&
+          other.carbsG == this.carbsG &&
+          other.proteinG == this.proteinG &&
+          other.fatG == this.fatG &&
           other.sortOrder == this.sortOrder);
 }
 
@@ -1362,6 +1604,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
   final Value<String> items;
   final Value<int> calories;
   final Value<int> sodiumMg;
+  final Value<double> carbsG;
+  final Value<double> proteinG;
+  final Value<double> fatG;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const ClientDietEntriesCompanion({
@@ -1371,6 +1616,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.items = const Value.absent(),
     this.calories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1381,6 +1629,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     required String items,
     required int calories,
     required int sodiumMg,
+    this.carbsG = const Value.absent(),
+    this.proteinG = const Value.absent(),
+    this.fatG = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1396,6 +1647,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Expression<String>? items,
     Expression<int>? calories,
     Expression<int>? sodiumMg,
+    Expression<double>? carbsG,
+    Expression<double>? proteinG,
+    Expression<double>? fatG,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -1406,6 +1660,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       if (items != null) 'items': items,
       if (calories != null) 'calories': calories,
       if (sodiumMg != null) 'sodium_mg': sodiumMg,
+      if (carbsG != null) 'carbs_g': carbsG,
+      if (proteinG != null) 'protein_g': proteinG,
+      if (fatG != null) 'fat_g': fatG,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1418,6 +1675,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Value<String>? items,
     Value<int>? calories,
     Value<int>? sodiumMg,
+    Value<double>? carbsG,
+    Value<double>? proteinG,
+    Value<double>? fatG,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -1428,6 +1688,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       items: items ?? this.items,
       calories: calories ?? this.calories,
       sodiumMg: sodiumMg ?? this.sodiumMg,
+      carbsG: carbsG ?? this.carbsG,
+      proteinG: proteinG ?? this.proteinG,
+      fatG: fatG ?? this.fatG,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -1454,6 +1717,15 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     if (sodiumMg.present) {
       map['sodium_mg'] = Variable<int>(sodiumMg.value);
     }
+    if (carbsG.present) {
+      map['carbs_g'] = Variable<double>(carbsG.value);
+    }
+    if (proteinG.present) {
+      map['protein_g'] = Variable<double>(proteinG.value);
+    }
+    if (fatG.present) {
+      map['fat_g'] = Variable<double>(fatG.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -1472,6 +1744,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
           ..write('items: $items, ')
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
+          ..write('carbsG: $carbsG, ')
+          ..write('proteinG: $proteinG, ')
+          ..write('fatG: $fatG, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3755,6 +4030,9 @@ typedef $$TrainerClientsTableCreateCompanionBuilder =
       required int caloriesToday,
       required int sodiumMg,
       required int sugarG,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       required String lastRoutine,
       required String weekCompletionJson,
       Value<String> sodiumWeekJson,
@@ -3773,6 +4051,9 @@ typedef $$TrainerClientsTableUpdateCompanionBuilder =
       Value<int> caloriesToday,
       Value<int> sodiumMg,
       Value<int> sugarG,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       Value<String> lastRoutine,
       Value<String> weekCompletionJson,
       Value<String> sodiumWeekJson,
@@ -3836,6 +4117,21 @@ class $$TrainerClientsTableFilterComposer
 
   ColumnFilters<int> get sugarG => $composableBuilder(
     column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fatG => $composableBuilder(
+    column: $table.fatG,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3919,6 +4215,21 @@ class $$TrainerClientsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fatG => $composableBuilder(
+    column: $table.fatG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get lastRoutine => $composableBuilder(
     column: $table.lastRoutine,
     builder: (column) => ColumnOrderings(column),
@@ -3982,6 +4293,15 @@ class $$TrainerClientsTableAnnotationComposer
 
   GeneratedColumn<int> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<double> get carbsG =>
+      $composableBuilder(column: $table.carbsG, builder: (column) => column);
+
+  GeneratedColumn<double> get proteinG =>
+      $composableBuilder(column: $table.proteinG, builder: (column) => column);
+
+  GeneratedColumn<double> get fatG =>
+      $composableBuilder(column: $table.fatG, builder: (column) => column);
 
   GeneratedColumn<String> get lastRoutine => $composableBuilder(
     column: $table.lastRoutine,
@@ -4049,6 +4369,9 @@ class $$TrainerClientsTableTableManager
                 Value<int> caloriesToday = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<int> sugarG = const Value.absent(),
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 Value<String> lastRoutine = const Value.absent(),
                 Value<String> weekCompletionJson = const Value.absent(),
                 Value<String> sodiumWeekJson = const Value.absent(),
@@ -4065,6 +4388,9 @@ class $$TrainerClientsTableTableManager
                 caloriesToday: caloriesToday,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 lastRoutine: lastRoutine,
                 weekCompletionJson: weekCompletionJson,
                 sodiumWeekJson: sodiumWeekJson,
@@ -4083,6 +4409,9 @@ class $$TrainerClientsTableTableManager
                 required int caloriesToday,
                 required int sodiumMg,
                 required int sugarG,
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 required String lastRoutine,
                 required String weekCompletionJson,
                 Value<String> sodiumWeekJson = const Value.absent(),
@@ -4099,6 +4428,9 @@ class $$TrainerClientsTableTableManager
                 caloriesToday: caloriesToday,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 lastRoutine: lastRoutine,
                 weekCompletionJson: weekCompletionJson,
                 sodiumWeekJson: sodiumWeekJson,
@@ -4138,6 +4470,9 @@ typedef $$ClientDietEntriesTableCreateCompanionBuilder =
       required String items,
       required int calories,
       required int sodiumMg,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -4149,6 +4484,9 @@ typedef $$ClientDietEntriesTableUpdateCompanionBuilder =
       Value<String> items,
       Value<int> calories,
       Value<int> sodiumMg,
+      Value<double> carbsG,
+      Value<double> proteinG,
+      Value<double> fatG,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -4189,6 +4527,21 @@ class $$ClientDietEntriesTableFilterComposer
 
   ColumnFilters<int> get sodiumMg => $composableBuilder(
     column: $table.sodiumMg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fatG => $composableBuilder(
+    column: $table.fatG,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4237,6 +4590,21 @@ class $$ClientDietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get carbsG => $composableBuilder(
+    column: $table.carbsG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get proteinG => $composableBuilder(
+    column: $table.proteinG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fatG => $composableBuilder(
+    column: $table.fatG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -4269,6 +4637,15 @@ class $$ClientDietEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get sodiumMg =>
       $composableBuilder(column: $table.sodiumMg, builder: (column) => column);
+
+  GeneratedColumn<double> get carbsG =>
+      $composableBuilder(column: $table.carbsG, builder: (column) => column);
+
+  GeneratedColumn<double> get proteinG =>
+      $composableBuilder(column: $table.proteinG, builder: (column) => column);
+
+  GeneratedColumn<double> get fatG =>
+      $composableBuilder(column: $table.fatG, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -4320,6 +4697,9 @@ class $$ClientDietEntriesTableTableManager
                 Value<String> items = const Value.absent(),
                 Value<int> calories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDietEntriesCompanion(
@@ -4329,6 +4709,9 @@ class $$ClientDietEntriesTableTableManager
                 items: items,
                 calories: calories,
                 sodiumMg: sodiumMg,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -4340,6 +4723,9 @@ class $$ClientDietEntriesTableTableManager
                 required String items,
                 required int calories,
                 required int sodiumMg,
+                Value<double> carbsG = const Value.absent(),
+                Value<double> proteinG = const Value.absent(),
+                Value<double> fatG = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDietEntriesCompanion.insert(
@@ -4349,6 +4735,9 @@ class $$ClientDietEntriesTableTableManager
                 items: items,
                 calories: calories,
                 sodiumMg: sodiumMg,
+                carbsG: carbsG,
+                proteinG: proteinG,
+                fatG: fatG,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),

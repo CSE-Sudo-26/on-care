@@ -53,29 +53,32 @@ def _safe_commit(db: Session) -> None:
             raise
         logger.info("member seed commit skipped (already seeded by a concurrent start)")
 
-# 회원별 오늘 3끼 (meal_type, 음식, 칼로리, 나트륨, 당류) — 프론트 seed 와 동일 수치.
+# 회원별 오늘 3끼 (meal_type, 음식, 칼로리, 나트륨, 당류, 탄수화물, 단백질, 지방)
+# — 프론트 seed 와 동일 수치.
 # 하루 나트륨 합 == _SODIUM_WEEK[member][-1](오늘) 이 되도록 맞춰 둠.
-_TODAY_MEALS: dict[str, list[tuple[str, str, int, int, int]]] = {
+_TODAY_MEALS: dict[
+    str, list[tuple[str, str, int, int, float, float, float, float]]
+] = {
     "user-demo": [
-        ("breakfast", "오트밀, 바나나", 315, 380, 0),
-        ("lunch", "닭가슴살 샐러드, 현미밥", 620, 890, 45),
-        ("dinner", "두부찌개, 잡곡밥", 485, 830, 0),
+        ("breakfast", "스크램블 에그, 딸기", 217, 221, 6.3, 10, 13.5, 14.5),
+        ("lunch", "짬뽕", 750, 3200, 8.5, 107, 29, 22.5),
+        ("snack", "아이스 아메리카노, 견과류 한 봉", 100, 7, 3, 3, 2.5, 8),
     ],
     "user-jisu": [
-        ("breakfast", "그릭요거트, 과일", 280, 200, 38),
-        ("lunch", "현미밥, 불고기, 나물", 750, 980, 0),
-        ("dinner", "연어 샐러드", 650, 620, 0),
+        ("breakfast", "그릭요거트, 과일", 280, 200, 38, 40, 15, 6),
+        ("lunch", "현미밥, 불고기, 나물", 750, 980, 0, 90, 35, 20),
+        ("dinner", "연어 샐러드", 650, 620, 0, 20, 40, 22),
     ],
     "user-sungho": [
-        ("breakfast", "계란 3개, 토스트", 480, 520, 0),
-        ("lunch", "짜장면", 890, 1200, 55),
-        ("dinner", "삼겹살, 쌈채소", 730, 680, 0),
+        ("breakfast", "계란 3개, 토스트", 480, 520, 0, 35, 28, 24),
+        ("lunch", "짜장면", 890, 1200, 55, 120, 25, 30),
+        ("dinner", "삼겹살, 쌈채소", 730, 680, 0, 20, 45, 50),
     ],
 }
 
 # 최근 7일 일별 나트륨(오래된→오늘). 마지막 값은 오늘 3끼 합과 일치.
 _SODIUM_WEEK: dict[str, list[int]] = {
-    "user-demo": [2400, 2200, 1900, 2050, 2300, 1850, 2100],
+    "user-demo": [2400, 2200, 1900, 2050, 2300, 1850, 3428],
     "user-jisu": [1700, 1950, 1600, 1800, 2100, 1750, 1800],
     "user-sungho": [2600, 2500, 2300, 2450, 2200, 2550, 2400],
 }
@@ -430,7 +433,8 @@ def _seed_diet(db: Session, member_id: str) -> None:
 
     # 오늘 3끼 (오늘 기록이 아직 없을 때만)
     if not _has_diet_on(db, member_id, today_str):
-        for i, (meal_type, items, cal, na, sugar) in enumerate(meals):
+        for i, meal in enumerate(meals):
+            meal_type, items, cal, na, sugar, carbs, protein, fat = meal
             db.add(models.DietEntry(
                 id=f"seed-diet-{member_id}-{today_str}-{i}",
                 user_id=member_id,
@@ -442,6 +446,9 @@ def _seed_diet(db: Session, member_id: str) -> None:
                     ensure_ascii=False,
                 ),
                 total_calories=cal,
+                carbs_g=carbs,
+                protein_g=protein,
+                fat_g=fat,
                 sodium_mg=na,
                 sugar_g=sugar,
                 engine="seed",

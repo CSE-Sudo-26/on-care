@@ -136,14 +136,14 @@ void main() {
   testWidgets('the section stays put when switching clients', (tester) async {
     await openWide(tester);
 
-    // Open 식단 for 김민수 (2100mg — appears on the summary tile and as
+    // Open 식단 for 김민수 (3428mg — appears on the summary tile and as
     // the last sodium-trend bar label, so match ≥1)…
     await goTo(
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'diet'),
     );
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('2100'), findsWidgets);
+    expect(find.text('3428'), findsWidgets);
 
     // …switch to 박성호: same sub-tab, his data (2400mg).
     await tester.tap(card('박성호'));

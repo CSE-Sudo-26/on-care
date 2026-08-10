@@ -29,6 +29,9 @@ class TrainerClients extends Table {
   IntColumn get caloriesToday => integer()();
   IntColumn get sodiumMg => integer()();
   IntColumn get sugarG => integer()();
+  RealColumn get carbsG => real().withDefault(const Constant(0))();
+  RealColumn get proteinG => real().withDefault(const Constant(0))();
+  RealColumn get fatG => real().withDefault(const Constant(0))();
   TextColumn get lastRoutine => text()();
   TextColumn get weekCompletionJson => text()(); // [100, 67, ...] length 7
   // Last 7 days of daily sodium (mg), oldest→today (last == today).
@@ -43,15 +46,18 @@ class TrainerClients extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
-/// A single meal in a client's day (아침/점심/저녁).
+/// A single meal in a client's day (아침/점심/저녁/간식).
 @DataClassName('ClientDietEntryRow')
 class ClientDietEntries extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
-  TextColumn get meal => text()(); // 아침|점심|저녁
+  TextColumn get meal => text()(); // 아침|점심|저녁|간식
   TextColumn get items => text()();
   IntColumn get calories => integer()();
   IntColumn get sodiumMg => integer()();
+  RealColumn get carbsG => real().withDefault(const Constant(0))();
+  RealColumn get proteinG => real().withDefault(const Constant(0))();
+  RealColumn get fatG => real().withDefault(const Constant(0))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -168,7 +174,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -188,6 +194,16 @@ class AppDatabase extends _$AppDatabase {
           trainerScheduleEntries,
           trainerScheduleEntries.clientId,
         );
+      }
+      // v4: #527 client roster totals and per-meal macronutrients.
+      // Defaults keep existing demo rows readable until the next re-seed.
+      if (from < 4) {
+        await m.addColumn(trainerClients, trainerClients.carbsG);
+        await m.addColumn(trainerClients, trainerClients.proteinG);
+        await m.addColumn(trainerClients, trainerClients.fatG);
+        await m.addColumn(clientDietEntries, clientDietEntries.carbsG);
+        await m.addColumn(clientDietEntries, clientDietEntries.proteinG);
+        await m.addColumn(clientDietEntries, clientDietEntries.fatG);
       }
     },
   );

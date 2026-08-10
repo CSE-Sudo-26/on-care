@@ -385,6 +385,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metricSugar => '당류';
 
   @override
+  String get metricCarbs => '탄수화물';
+
+  @override
+  String get metricProtein => '단백질';
+
+  @override
+  String get metricFat => '지방';
+
+  @override
   String get clientWeeklyReport => '주간 리포트';
 
   @override

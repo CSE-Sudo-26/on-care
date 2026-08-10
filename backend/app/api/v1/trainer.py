@@ -239,7 +239,7 @@ def trainer_clients(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> list[TrainerClientOut]:
-    """담당 고객 로스터. 각 카드의 오늘 칼로리/나트륨/당류와 나트륨 추세는
+    """담당 고객 로스터. 각 카드의 오늘 영양소와 나트륨 추세는
     회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유."""
     return trainer_service.build_roster(db, trainer.id)
 

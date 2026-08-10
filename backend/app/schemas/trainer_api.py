@@ -56,7 +56,7 @@ class TrainerMe(BaseModel):
 class TrainerClientOut(BaseModel):
     """고객 로스터 카드 — 프론트 TrainerClient 계약 정렬.
 
-    id 는 회원 User id(하위 엔드포인트 키). calories/sodium_mg/sugar_g 는 회원의
+    id 는 회원 User id(하위 엔드포인트 키). 영양소 필드는 회원의
     실제 오늘 식단(DietEntry)에서 집계한 값이다(진짜 데이터 공유).
     """
     id: str                      # member_id — /trainer/clients/{id}/... 키
@@ -69,6 +69,9 @@ class TrainerClientOut(BaseModel):
     calories: int                # 오늘 총 칼로리(회원 실데이터)
     sodium_mg: int               # 오늘 총 나트륨
     sugar_g: float               # 오늘 총 당류(소수)
+    carbs_g: float               # 오늘 총 탄수화물(g)
+    protein_g: float             # 오늘 총 단백질(g)
+    fat_g: float                 # 오늘 총 지방(g)
     last_routine: str            # 마지막 루틴 전송 라벨(오늘/어제/N일 전)
     week_completion: list[int]   # 이번 주 일별 완료율 7개(월→일)
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
@@ -80,6 +83,9 @@ class ClientDietEntryOut(BaseModel):
     items: str       # 음식명 나열
     calories: int
     sodium_mg: int
+    carbs_g: float
+    protein_g: float
+    fat_g: float
 
 
 class RoutineHistoryOut(BaseModel):

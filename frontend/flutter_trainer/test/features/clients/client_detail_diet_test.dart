@@ -1,3 +1,5 @@
+import 'dart:ui' show Size;
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +19,7 @@ const Map<String, String> seedClientIds = <String, String>{
   '김민수': 'seed-client-1',
   '이지수': 'seed-client-2',
   '박성호': 'seed-client-3',
+  '강서연': 'seed-client-6',
   // The brand-new client: no meals, no history, no sodium series.
   '임도현': 'seed-client-7',
 };
@@ -35,10 +38,33 @@ void main() {
       final meals = await DriftClientRepository(
         db,
       ).watchDiet('seed-client-1').first;
-      expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '저녁']);
-      expect(meals.first.items, '오트밀, 바나나');
-      expect(meals.first.calories, 315);
-      expect(meals.first.sodiumMg, 380);
+      expect(meals.map((m) => m.meal).toList(), <String>['아침', '점심', '간식']);
+      expect(meals.first.items, '스크램블 에그, 딸기');
+      expect(meals.first.calories, 217);
+      expect(meals.first.sodiumMg, 221);
+      expect(meals.first.carbsG, 10);
+      expect(meals.first.proteinG, 13.5);
+      expect(meals.first.fatG, 14.5);
+      expect(meals[1].items, '짬뽕');
+      expect(meals[1].calories, 750);
+      expect(meals[1].sodiumMg, 3200);
+      expect(meals[1].carbsG, 107);
+      expect(meals[1].proteinG, 29);
+      expect(meals[1].fatG, 22.5);
+      expect(meals[2].items, '아이스 아메리카노, 견과류 한 봉');
+      expect(meals[2].calories, 100);
+      expect(meals[2].sodiumMg, 7);
+      expect(meals[2].carbsG, 3);
+      expect(meals[2].proteinG, 2.5);
+      expect(meals[2].fatG, 8);
+
+      final minsu = (await DriftClientRepository(db).watchClients().first)
+          .firstWhere((client) => client.id == 'seed-client-1');
+      expect(minsu.calories, 1067);
+      expect(minsu.sodiumMg, 3428);
+      expect(minsu.carbsG, 120);
+      expect(minsu.proteinG, 45);
+      expect(minsu.fatG, 45);
     });
 
     test('returns per-client data (clients differ)', () async {
@@ -91,14 +117,38 @@ void main() {
       expect(find.text('오늘 영양 요약'), findsOneWidget);
       // Nutrition metrics live only in the diet tab, not in the shared
       // detail header. The alert badge remains visible above the tabs.
-      expect(find.byType(MetricTile), findsNWidgets(3));
+      expect(find.byType(MetricTile), findsNWidgets(6));
+      expect(find.text('탄수화물'), findsOneWidget);
+      expect(find.text('단백질'), findsOneWidget);
+      expect(find.text('지방'), findsOneWidget);
+      final carbsTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricCarbs,
+      );
+      final proteinTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricProtein,
+      );
+      final fatTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricFat,
+      );
+      expect(
+        find.descendant(of: carbsTile, matching: find.text('120')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: proteinTile, matching: find.text('45')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: fatTile, matching: find.text('45')),
+        findsOneWidget,
+      );
       expect(find.text('나트륨 초과'), findsOneWidget);
       final sodiumTile = find.byWidgetPredicate(
         (widget) => widget is MetricTile && widget.label == _ko.metricSodium,
       );
       expect(sodiumTile, findsOneWidget);
       expect(
-        find.descendant(of: sodiumTile, matching: find.text('2100')),
+        find.descendant(of: sodiumTile, matching: find.text('3428')),
         findsOneWidget,
       );
       expect(
@@ -109,19 +159,49 @@ void main() {
       // down, so reach them by scrolling.
       await tester.scrollUntilVisible(find.text('아침'), 150);
       expect(find.text('아침'), findsOneWidget);
-      expect(find.text('오트밀, 바나나'), findsOneWidget);
-      expect(find.text('315 kcal'), findsOneWidget);
+      expect(find.text('스크램블 에그, 딸기'), findsOneWidget);
+      expect(find.text('217 kcal'), findsOneWidget);
+      expect(find.text('탄수화물 10g'), findsOneWidget);
+      expect(find.text('단백질 13.5g'), findsOneWidget);
+      expect(find.text('지방 14.5g'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('점심'), 150);
       expect(find.text('점심'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('저녁'), 150);
-      expect(find.text('저녁'), findsOneWidget);
-      // Over-target AI comment (2100 − 2000 = 100mg) — last list item,
+      await tester.scrollUntilVisible(find.text('간식'), 150);
+      expect(find.text('간식'), findsOneWidget);
+      // Over-target AI comment (3428 − 2000 = 1428mg) — last list item,
       // built lazily, so scroll it into view first.
       await tester.scrollUntilVisible(
-        find.textContaining('나트륨이 목표치를 100mg 초과했어요'),
+        find.textContaining('나트륨이 목표치를 1428mg 초과했어요'),
         150,
       );
-      expect(find.textContaining('나트륨이 목표치를 100mg 초과했어요'), findsOneWidget);
+      expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
+    });
+
+    testWidgets('a recorded 0g meal remains a meal instead of empty state', (
+      tester,
+    ) async {
+      await openDiet(tester, '강서연');
+
+      await tester.scrollUntilVisible(find.text('거름'), 150);
+      expect(find.text('아직 기록된 식단이 없어요'), findsNothing);
+      expect(find.text('탄수화물 0g'), findsWidgets);
+      expect(find.text('단백질 0g'), findsWidgets);
+      expect(find.text('지방 0g'), findsWidgets);
+    });
+
+    testWidgets('macro values wrap without overflow on a narrow screen', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(480, 700);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await openDiet(tester, '김민수');
+      await tester.scrollUntilVisible(find.text('탄수화물 10g'), 150);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('식단 shows the 7-day sodium trend with over-days count', (

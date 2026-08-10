@@ -5,8 +5,8 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// A nutrition metric tile (칼로리/나트륨/당류) shared by the 식단
-/// sub-tab and the AI 루틴 tab's diet summary. Neutral [color] base;
+/// A nutrition metric tile shared by the 식단 sub-tab and the AI 루틴
+/// tab's diet summary. Neutral [color] base;
 /// flips to the over-target red (+ "초과" suffix) when [warn].
 class MetricTile extends StatelessWidget {
   /// Creates a metric tile.
@@ -23,7 +23,7 @@ class MetricTile extends StatelessWidget {
   final String label;
 
   /// Today's value.
-  final int value;
+  final num value;
 
   /// Unit suffix (kcal / mg / g).
   final String unit;
@@ -58,7 +58,7 @@ class MetricTile extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '$value',
+              _displayValue(value),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -79,3 +79,7 @@ class MetricTile extends StatelessWidget {
     );
   }
 }
+
+String _displayValue(num value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(1);

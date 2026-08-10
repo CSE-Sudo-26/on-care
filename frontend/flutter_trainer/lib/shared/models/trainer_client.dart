@@ -21,6 +21,9 @@ class TrainerClient {
     required this.calories,
     required this.sodiumMg,
     required this.sugarG,
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
     required this.lastRoutine,
     required this.weekCompletion,
     required this.sodiumWeek,
@@ -55,6 +58,15 @@ class TrainerClient {
 
   /// Today's sugar (g).
   final int sugarG;
+
+  /// Today's carbohydrate intake (g).
+  final double carbsG;
+
+  /// Today's protein intake (g).
+  final double proteinG;
+
+  /// Today's fat intake (g).
+  final double fatG;
 
   /// Label for the last routine sent (e.g. 오늘 / 어제 / 5일 전).
   final String lastRoutine;

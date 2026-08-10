@@ -393,6 +393,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricSugar => 'Sugar';
 
   @override
+  String get metricCarbs => 'Carbs';
+
+  @override
+  String get metricProtein => 'Protein';
+
+  @override
+  String get metricFat => 'Fat';
+
+  @override
   String get clientWeeklyReport => 'Weekly report';
 
   @override

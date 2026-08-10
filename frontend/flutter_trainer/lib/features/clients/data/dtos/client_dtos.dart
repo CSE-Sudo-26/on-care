@@ -20,6 +20,9 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
     sugarG: _int(json['sugar_g']),
+    carbsG: _double(json['carbs_g']),
+    proteinG: _double(json['protein_g']),
+    fatG: _double(json['fat_g']),
     lastRoutine: _str(json['last_routine']),
     weekCompletion: _intList(json['week_completion']),
     sodiumWeek: _intList(json['sodium_week']),
@@ -33,6 +36,9 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     items: _str(json['items']),
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
+    carbsG: _double(json['carbs_g']),
+    proteinG: _double(json['protein_g']),
+    fatG: _double(json['fat_g']),
   );
 }
 
@@ -86,6 +92,8 @@ List<TrainerClient> prioritizeClients(
 String _str(Object? v) => v is String ? v : '';
 
 int _int(Object? v) => v is num ? v.toInt() : 0;
+
+double _double(Object? v) => v is num ? v.toDouble() : 0;
 
 // FastAPI emits JSON numbers that can decode as double on web — normalise
 // through num so `as int` never throws.

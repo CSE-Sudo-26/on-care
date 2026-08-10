@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v5']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v7']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,7 +26,9 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v5` (was `_v4`): 김민수's thread grew from five messages
+/// The flag is `_v7` (was `_v6`): 김민수's diet now matches the member
+/// app mock for #527. `_v6` added client diet macros. `_v5` had grown
+/// 김민수's thread from five messages
 /// to fifteen so the member and trainer demos tell the same story (#543).
 /// `_v4` had bumped `_v3` when the roster grew from three clients to
 /// fifteen. Without a bump, anyone who already opened the app today would
@@ -46,7 +48,7 @@ part 'seed_clients.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v5') == today) return;
+  if (await db.readValue('trainer_seeded_v7') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -97,6 +99,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               caloriesToday: client.calories,
               sodiumMg: client.sodiumMg,
               sugarG: client.sugarG,
+              carbsG: Value(client.carbsG),
+              proteinG: Value(client.proteinG),
+              fatG: Value(client.fatG),
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(client.weekCompletion),
               sodiumWeekJson: Value(jsonEncode(client.sodiumWeek)),
@@ -114,6 +119,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               items: client.diet[i].items,
               calories: client.diet[i].calories,
               sodiumMg: client.diet[i].sodiumMg,
+              carbsG: Value(client.diet[i].carbsG),
+              proteinG: Value(client.diet[i].proteinG),
+              fatG: Value(client.diet[i].fatG),
               sortOrder: Value(i),
             ),
         ]);
@@ -211,7 +219,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v5', today);
+    await db.putValue('trainer_seeded_v7', today);
   });
 }
 
@@ -221,11 +229,22 @@ Future<void> seedIfEmpty(AppDatabase db) async {
 // ---------------------------------------------------------------------------
 
 class _Meal {
-  const _Meal(this.meal, this.items, this.calories, this.sodiumMg);
+  const _Meal(
+    this.meal,
+    this.items,
+    this.calories,
+    this.sodiumMg, {
+    this.carbsG = 0,
+    this.proteinG = 0,
+    this.fatG = 0,
+  });
   final String meal;
   final String items;
   final int calories;
   final int sodiumMg;
+  final double carbsG;
+  final double proteinG;
+  final double fatG;
 }
 
 class _Routine {
@@ -302,6 +321,9 @@ class _Client {
   final List<int> weekCompletion;
   final List<int> sodiumWeek;
   final List<_Meal> diet;
+  double get carbsG => diet.fold(0, (total, meal) => total + meal.carbsG);
+  double get proteinG => diet.fold(0, (total, meal) => total + meal.proteinG);
+  double get fatG => diet.fold(0, (total, meal) => total + meal.fatG);
   final List<_Routine> aiRoutine;
   final List<_History> history;
   final List<_Chat> chat;
