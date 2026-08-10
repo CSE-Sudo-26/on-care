@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
@@ -18,6 +19,24 @@ class _ReadOnlyClientRepository extends DriftClientRepository {
 
   @override
   bool get supportsRosterMutations => false;
+}
+
+class _RecordingRefreshClientRepository extends DriftClientRepository
+    implements ClientDataRefresher {
+  _RecordingRefreshClientRepository(super.db);
+
+  var allRefreshes = 0;
+  final List<String> clientRefreshes = <String>[];
+
+  @override
+  void refreshAllClientData() {
+    allRefreshes += 1;
+  }
+
+  @override
+  void refreshClientData(String clientId) {
+    clientRefreshes.add(clientId);
+  }
 }
 
 void main() {
@@ -173,6 +192,64 @@ void main() {
   });
 
   group('ClientsPage', () {
+    testWidgets('re-entering the client branch requests a data refresh', (
+      tester,
+    ) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      late _RecordingRefreshClientRepository repository;
+
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith((ref) {
+            repository = _RecordingRefreshClientRepository(
+              ref.watch(appDatabaseProvider),
+            );
+            return repository;
+          }),
+        ],
+      );
+      expect(find.text('김민수'), findsOneWidget);
+
+      await goTo(tester, AppRoutes.dashboard);
+      await goTo(tester, AppRoutes.clients);
+
+      expect(repository.allRefreshes, 1);
+      expect(find.text('김민수'), findsOneWidget);
+    });
+
+    testWidgets('the detail refresh action targets the selected client', (
+      tester,
+    ) async {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      late _RecordingRefreshClientRepository repository;
+
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith((ref) {
+            repository = _RecordingRefreshClientRepository(
+              ref.watch(appDatabaseProvider),
+            );
+            return repository;
+          }),
+        ],
+      );
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-data-refresh')),
+      );
+      await settle(tester);
+
+      expect(repository.clientRefreshes, <String>['seed-client-1']);
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
+    });
+
     testWidgets('renders the roster with its size and priority order', (
       tester,
     ) async {

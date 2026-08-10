@@ -11,6 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
@@ -138,6 +139,14 @@ class ClientDetailView extends ConsumerWidget {
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
               showBack: showBack,
               onClose: onClose,
+              onRefresh: () {
+                final ClientRepository repository = ref.read(
+                  clientRepositoryProvider,
+                );
+                if (repository case final ClientDataRefresher refresher) {
+                  refresher.refreshClientData(client.id);
+                }
+              },
               onToggleActive: canManageRoster
                   ? () => ref
                         .read(clientRepositoryProvider)
@@ -232,6 +241,7 @@ class _Header extends ConsumerWidget {
     required this.alerts,
     required this.showBack,
     required this.onClose,
+    required this.onRefresh,
     required this.onToggleActive,
   });
 
@@ -242,6 +252,7 @@ class _Header extends ConsumerWidget {
 
   final bool showBack;
   final VoidCallback? onClose;
+  final VoidCallback onRefresh;
 
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
@@ -392,6 +403,13 @@ class _Header extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        IconButton(
+          key: const ValueKey<String>('client-data-refresh'),
+          icon: const Icon(Icons.refresh, size: 18),
+          color: AppColors.subtleForeground,
+          tooltip: l.actionRefresh,
+          onPressed: onRefresh,
         ),
         if (onClose != null)
           IconButton(

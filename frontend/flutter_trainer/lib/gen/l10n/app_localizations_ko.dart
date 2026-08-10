@@ -72,6 +72,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get actionRetry => '다시 시도';
 
   @override
+  String get actionRefresh => '새로고침';
+
+  @override
   String get actionChange => '변경';
 
   @override
