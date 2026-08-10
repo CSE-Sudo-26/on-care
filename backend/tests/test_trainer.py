@@ -164,6 +164,46 @@ def test_trainer_seed_is_idempotent(client, db_session):
     assert trainers >= 1
 
 
+def test_every_demo_member_can_log_in(client):
+    """데모 회원 3명 모두 DEMO_LOGIN_PASSWORD 로 로그인된다.
+
+    김민수(user-demo)는 데모 사용자 시드가 seed_trainer 보다 먼저 돌며 빈 해시로
+    만들던 탓에 로그인이 막혀 있었다. 하필 트레이너의 1번 고객이라 시연·통합
+    검증에서 가장 먼저 고르는 계정이다(#571).
+    """
+    from app.core.config import get_settings
+
+    password = get_settings().demo_login_password
+    for email in ("minsu@oncare.com", "jisu@oncare.com", "sungho@oncare.com"):
+        r = client.post(
+            "/v1/auth/login", data={"username": email, "password": password}
+        )
+        assert r.status_code == 200, f"{email} 로그인 실패: {r.status_code} {r.text}"
+        assert r.json().get("access_token")
+
+
+def test_seed_backfills_an_empty_demo_password(client, db_session):
+    """이미 빈 해시로 만들어진 볼륨도 재기동만으로 복구된다.
+
+    그냥 건너뛰면 기존 개발자는 볼륨을 지우기 전까지 계속 로그인할 수 없다.
+    """
+    from sqlalchemy import select
+
+    from app.db.seed_trainer import seed_trainer_domain
+    from app.models.models import User
+
+    minsu = db_session.scalar(select(User).where(User.id == "user-demo"))
+    assert minsu is not None
+    minsu.hashed_password = ""  # 회귀 상황 재현
+    db_session.commit()
+
+    seed_trainer_domain()
+
+    db_session.expire_all()
+    restored = db_session.scalar(select(User).where(User.id == "user-demo"))
+    assert restored.hashed_password, "빈 비밀번호가 시드 재실행으로 채워져야 한다"
+
+
 def test_email_conflict_is_detected(client, db_session):
     """이메일 충돌 감지 로직(시드가 이걸로 안전 스킵). 비파괴 — 임시행만 쓰고 정리."""
     from app.db.seed_trainer import _email_taken_by_other
