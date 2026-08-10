@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.clock import SEOUL
 from app.models.models import (
     TrainerClient,
     TrainerReservation,
@@ -21,8 +21,6 @@ from app.schemas.reservation_api import (
     TrainerSlotOut,
 )
 from app.services import notification_service
-
-SEOUL = ZoneInfo("Asia/Seoul")
 
 
 class SlotNotFound(Exception):

@@ -13,7 +13,9 @@
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
+
+from app.core import clock
 
 WEEKDAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"]
 
@@ -35,9 +37,8 @@ _INTENSITY_FACTOR = {"light": 0.85, "moderate": 1.0, "high": 1.2}
 
 
 def monday_of_this_week_str() -> str:
-    now = datetime.now()
-    monday = now - timedelta(days=now.weekday())
-    return monday.strftime("%Y-%m-%d")
+    today = clock.today()
+    return (today - timedelta(days=today.weekday())).isoformat()
 
 
 def monday_of_str(day: str) -> str:
@@ -58,7 +59,7 @@ def weekday_label_of(day: str) -> str:
     try:
         d = date.fromisoformat(day)
     except (TypeError, ValueError):
-        return WEEKDAY_LABELS[datetime.now().weekday()]
+        return WEEKDAY_LABELS[clock.today().weekday()]
     return WEEKDAY_LABELS[d.weekday()]
 
 
@@ -70,8 +71,8 @@ def estimate_calories(type_: str, minutes: int, intensity: str) -> int:
 
 
 def _date_label_for_day(day_label: str) -> str:
-    now = datetime.now()
-    today_idx = now.weekday()  # 0=월
+    today = clock.today()
+    today_idx = today.weekday()  # 0=월
     if day_label not in WEEKDAY_LABELS:
         return day_label
     day_idx = WEEKDAY_LABELS.index(day_label)
@@ -81,7 +82,7 @@ def _date_label_for_day(day_label: str) -> str:
     if delta == 1:
         return "어제"
     if 1 < delta <= 6:
-        d = now - timedelta(days=delta)
+        d = today - timedelta(days=delta)
         return f"{d.month}월 {d.day}일"
     return f"{day_label}요일"
 

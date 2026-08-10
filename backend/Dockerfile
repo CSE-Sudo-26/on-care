@@ -1,6 +1,10 @@
 FROM python:3.12-slim
 WORKDIR /code
 
+# 로그 타임스탬프를 KST 로 맞춘다. 도메인 날짜 계산은 여기에 기대지 않는다 —
+# 기준 시각은 app/core/clock.py 가 ZoneInfo 로 직접 고정한다(#557).
+ENV TZ=Asia/Seoul
+
 # psycopg[binary] 휠이 libpq 를 번들하므로 apt 빌드 툴체인(build-essential/libpq-dev)이
 # 불필요하다 — 이미지에서 수백 MB 를 덜어낸다. (소스 빌드로 바꾸면 psycopg[c] + libpq-dev 필요)
 COPY requirements.txt .

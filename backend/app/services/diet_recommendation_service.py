@@ -25,6 +25,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.data import meal_catalog
 from app.data.meal_catalog import CATALOG, DEFAULT_ORDER, RECOMMENDATION_COUNT, MealItem
 from app.models.models import DietEntry, HealthProfile
@@ -159,7 +160,7 @@ def build_context(db: Session, user_id: str, today: date | None = None) -> Nutri
     평균은 '기록이 있는 날' 기준이다. 기록이 없는 날을 0 으로 세면 하루만 기록한
     사용자의 평균이 실제보다 낮게 나와 과다 신호를 놓친다.
     """
-    today = today or date.today()
+    today = today or clock.today()
     start = (today - timedelta(days=LOOKBACK_DAYS - 1)).isoformat()
     end = today.isoformat()
 
@@ -397,7 +398,7 @@ def build_recommendations(
     # use_llm 을 키에 넣지 않으면 규칙 응답이 LLM 요청에 재사용된다(디버깅·비용 절감용
     # 호출 한 번이 그 사용자의 추천을 TTL 동안 규칙 결과로 고정해 버린다).
     cache_key = (
-        f"{user_id}:{(today or date.today()).isoformat()}:"
+        f"{user_id}:{(today or clock.today()).isoformat()}:"
         f"{ctx.fingerprint()}:llm={use_llm}"
     )
     hit = _cache.get(cache_key)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import (
     ConsultationRequest,
     MemberGym,
@@ -103,7 +104,7 @@ def _validate_target(db: Session, payload: ConsultationCreate) -> None:
 def create_consultation(
     db: Session, member_id: str, payload: ConsultationCreate
 ) -> ConsultationOut:
-    if payload.preferred_date < date.today():
+    if payload.preferred_date < clock.today():
         raise InvalidConsultationRequest("상담 희망일은 오늘 이후여야 합니다.")
 
     _validate_target(db, payload)

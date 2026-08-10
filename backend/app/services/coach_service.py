@@ -14,11 +14,10 @@ AI 코치 서비스.
 """
 from __future__ import annotations
 
-from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import DietEntry, ExerciseSession
 from app.schemas.misc_api import AiCoachFeedback, CoachSuggestion
 from app.services.exercise_service import monday_of_this_week_str
@@ -26,7 +25,7 @@ from app.services.exercise_service import monday_of_this_week_str
 
 def _diet_suggestion(db: Session, user_id: str) -> CoachSuggestion:
     """식단 도메인 코치 (STEP 7에서 RAG+LLM 으로 교체)."""
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = clock.today_iso()
     rows = db.scalars(
         select(DietEntry).where(DietEntry.user_id == user_id).where(DietEntry.date == today)
     ).all()
@@ -81,7 +80,7 @@ def _hydration_suggestion(db: Session, user_id: str) -> CoachSuggestion:
     RAG/LLM 전까지 규칙 기반으로 개인화한다: 나트륨이 높으면 배출을 위해 물을
     더 권하고, 그렇지 않으면 시간대에 맞춰 다르게 안내한다.
     """
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = clock.today_iso()
     total_na = sum(
         r.sodium_mg for r in db.scalars(
             select(DietEntry).where(DietEntry.user_id == user_id)
@@ -96,7 +95,7 @@ def _hydration_suggestion(db: Session, user_id: str) -> CoachSuggestion:
                 "물을 충분히 마시면 나트륨 배출에 도움이 됩니다."
             ),
         )
-    hour = datetime.now().hour
+    hour = clock.now().hour
     if hour < 11:
         body = "아침 물 한 잔으로 하루를 시작해 보세요. 하루 6~8잔이 목표예요."
     elif hour < 18:
@@ -115,7 +114,7 @@ def build_feedback(db: Session, user_id: str, user_name: str) -> AiCoachFeedback
     STEP 7: 식단·운동 코치는 RAG 기반(domain_coaches)으로 동작.
     RAG 가 불가(키 미설정/자료 없음)하면 내부에서 STEP 6 규칙 기반으로 자동 폴백.
     """
-    hour = datetime.now().hour
+    hour = clock.now().hour
     if hour < 11:
         greeting = f"{user_name}님, 좋은 아침이에요! 오늘도 건강하게 시작해봐요."
     elif hour < 18:

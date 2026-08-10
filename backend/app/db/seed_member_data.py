@@ -21,12 +21,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
@@ -304,7 +305,7 @@ def _seed_schedule(db: Session, valid: set[str]) -> None:
         )
     ) is None:
         return
-    today = date.today().isoformat()
+    today = clock.today_iso()
     # 오늘 스케줄이 이미 있으면 스킵(날짜 넘어가면 새로 시드)
     if db.scalar(
         select(models.TrainerSchedule.id)
@@ -424,7 +425,7 @@ def _seed_diet(db: Session, member_id: str) -> None:
     if not meals or not sodium_week:
         return
 
-    today = date.today()
+    today = clock.today()
     today_str = today.isoformat()
 
     # 오늘 3끼 (오늘 기록이 아직 없을 때만)
@@ -475,7 +476,7 @@ def _seed_history(db: Session, member_id: str) -> None:
     if not sessions:
         return
 
-    today = date.today()
+    today = clock.today()
     # 오늘 기록이 이미 있으면 스킵(멱등, 날짜 넘어가면 새로 시드)
     if db.scalar(
         select(models.RoutineHistory.id)
@@ -516,7 +517,7 @@ def _seed_exercise(db: Session, member_id: str) -> None:
     week = _EXERCISE_WEEK.get(member_id)
     if not week:
         return
-    today = date.today()
+    today = clock.today()
     week_start = (today - timedelta(days=today.weekday())).isoformat()  # 이번 주 월요일
     added = False
     for day_label, ex_type, minutes, calories in week:

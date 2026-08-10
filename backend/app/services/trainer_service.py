@@ -16,6 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
     TrainerClient, TrainerProfile, TrainerReservation, TrainerReservationSlot,
@@ -34,7 +35,7 @@ SODIUM_TARGET_MG = 2000
 
 
 def _today() -> date:
-    return datetime.now().date()
+    return clock.today()
 
 
 def today_iso() -> str:
@@ -93,13 +94,11 @@ def relative_time_label(ts: datetime) -> str:
 
 
 def _local_date_iso(ts: datetime) -> str:
-    """tz-aware(또는 naive=UTC 가정) 시각 → 로컬(서버 TZ) 날짜 YYYY-MM-DD.
+    """tz-aware(또는 naive=UTC 가정) 시각 → KST 날짜 YYYY-MM-DD.
 
-    created_at 은 UTC 로 저장되므로, 로컬 '오늘/어제' 판정과 맞추려면 로컬 날짜로 변환해야
+    created_at 은 UTC 로 저장되므로, '오늘/어제' 판정과 맞추려면 KST 날짜로 변환해야
     한다(안 그러면 KST 새벽엔 UTC 가 전날이라 '어제'로 어긋난다)."""
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return ts.astimezone().date().isoformat()
+    return clock.to_seoul(ts).date().isoformat()
 
 
 def _today_totals(diet_rows: list[DietEntry], today_str: str) -> tuple[int, int, int]:
@@ -294,10 +293,8 @@ def build_client_history(
 # ---- 채팅 (트레이너↔회원, 양방향 공유 스레드) ----
 
 def _hhmm(ts: datetime) -> str:
-    """created_at → 로컬 HH:MM (KST 서버면 KST)."""
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return ts.astimezone().strftime("%H:%M")
+    """created_at → KST HH:MM."""
+    return clock.to_seoul(ts).strftime("%H:%M")
 
 
 def _sender_out(sender: str, viewer: str = "trainer") -> str:

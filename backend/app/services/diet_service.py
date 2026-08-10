@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.models import DietEntry
 from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
@@ -32,7 +32,7 @@ DASH_SODIUM_LIMIT_MG = 2000
 
 
 def today_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    return clock.today_iso()
 
 
 def load_foods(foods_json: str) -> list[dict]:
@@ -143,7 +143,7 @@ def save_analyzed_entry(
         user_id=user_id,
         date=today_str(),
         meal_type=meal_type,
-        time_label=datetime.now().strftime("%H:%M"),
+        time_label=clock.now().strftime("%H:%M"),
         foods_json=json.dumps(foods_for_storage, ensure_ascii=False),
         total_calories=analysis.total_calories,
         carbs_g=analysis.total_carbs_g,

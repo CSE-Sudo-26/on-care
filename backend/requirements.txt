@@ -14,3 +14,7 @@ python-multipart>=0.0.9
 python-dotenv>=1.0
 google-genai>=1.0
 openai>=1.40
+# zoneinfo 의 타임존 DB. 슬림 컨테이너에는 시스템 tzdata 가 없을 수 있는데,
+# 기준 시각(app/core/clock.py)이 ZoneInfo("Asia/Seoul") 를 import 시점에 잡으므로
+# 없으면 앱이 아예 뜨지 않는다. 베이스 이미지와 무관하게 보장한다.
+tzdata>=2024.1

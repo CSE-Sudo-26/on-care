@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
+from app.core import clock
 from app.db.session import get_db
 from app.models.models import DietEntry, ExerciseSession, ScheduleEvent
 from app.schemas.dashboard_api import (
@@ -155,7 +156,7 @@ def dashboard_summary(
         if health_profile and health_profile.daily_sugar_g is not None
         else _MAX_SUGAR_G
     )
-    today_dt = datetime.now()
+    today_dt = clock.now()
     today = today_dt.strftime("%Y-%m-%d")
 
     # --- 오늘 식단 집계 ---

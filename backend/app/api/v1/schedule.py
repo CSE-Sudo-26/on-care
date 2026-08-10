@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import date as _date
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
+from app.core import clock
 from app.db.session import get_db
 from app.models.models import ScheduleEvent
 from app.schemas.misc_api import ScheduleEventCreate, ScheduleEventOut, ScheduleEventUpdate
@@ -74,7 +74,7 @@ def list_events(
             raise HTTPException(status_code=422, detail="month 는 YYYY-MM 형식이어야 합니다.")
         stmt = stmt.where(ScheduleEvent.date.like(f"{month}-%"))
     else:
-        target = date or datetime.now().strftime("%Y-%m-%d")
+        target = date or clock.today_iso()
         if not _is_ymd(target):
             raise HTTPException(status_code=422, detail="date 는 YYYY-MM-DD 형식이어야 합니다.")
         stmt = stmt.where(ScheduleEvent.date == target)

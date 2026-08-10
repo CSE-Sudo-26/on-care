@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
+from app.core import clock
 from app.db.session import get_db
 from app.models.models import ExerciseSession
 from app.schemas.exercise_api import (
@@ -74,7 +74,7 @@ def add_session(
         raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
     # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
 
-    day_label = payload.day_label or WEEKDAY_LABELS[datetime.now().weekday()]
+    day_label = payload.day_label or WEEKDAY_LABELS[clock.today().weekday()]
     if day_label not in WEEKDAY_LABELS:
         raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
 
