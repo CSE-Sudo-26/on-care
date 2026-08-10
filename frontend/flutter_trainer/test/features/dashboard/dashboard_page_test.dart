@@ -11,7 +11,7 @@ import '../../helpers/pump_app.dart';
 
 /// The 대시보드 against the seeded roster.
 ///
-/// Seed: 3 clients (김민수 2100mg and 박성호 2400mg are over the 2000mg
+/// Seed: 3 clients (김민수 3428mg and 박성호 2400mg are over the 2000mg
 /// target, 이지수 1800mg is not; 이지수 is 휴면), all three have unread
 /// replies (4 in total), and today has 4 booked sessions (6 slots − 2
 /// gaps).

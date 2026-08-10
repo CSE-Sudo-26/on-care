@@ -800,6 +800,24 @@ abstract class AppLocalizations {
   /// **'Sugar'**
   String get metricSugar;
 
+  /// No description provided for @metricCarbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Carbs'**
+  String get metricCarbs;
+
+  /// No description provided for @metricProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein'**
+  String get metricProtein;
+
+  /// No description provided for @metricFat.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat'**
+  String get metricFat;
+
   /// No description provided for @clientWeeklyReport.
   ///
   /// In en, this message translates to:

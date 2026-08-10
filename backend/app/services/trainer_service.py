@@ -1,7 +1,7 @@
 """
 트레이너 도메인 서비스 — 로스터/식단/기록 집계.
 
-핵심(진짜 데이터 공유): 고객의 칼로리·나트륨·당류·나트륨 추세는 별도 복제본이 아니라
+핵심(진짜 데이터 공유): 고객의 영양소·나트륨 추세는 별도 복제본이 아니라
 회원이 회원 앱에서 남긴 실제 DietEntry 를 집계한 값이다. 라우터는 얇게 두고 도메인
 로직(집계·라벨링·계약 매핑)은 여기에 모은다.
 """
@@ -101,14 +101,20 @@ def _local_date_iso(ts: datetime) -> str:
     return clock.to_seoul(ts).date().isoformat()
 
 
-def _today_totals(diet_rows: list[DietEntry], today_str: str) -> tuple[int, int, int]:
-    cal = na = sugar = 0
+def _today_totals(
+    diet_rows: list[DietEntry], today_str: str
+) -> tuple[int, int, float, float, float, float]:
+    calories = sodium_mg = 0
+    sugar_g = carbs_g = protein_g = fat_g = 0.0
     for e in diet_rows:
         if e.date == today_str:
-            cal += e.total_calories
-            na += e.sodium_mg
-            sugar += e.sugar_g
-    return cal, na, sugar
+            calories += e.total_calories
+            sodium_mg += e.sodium_mg
+            sugar_g += e.sugar_g
+            carbs_g += e.carbs_g
+            protein_g += e.protein_g
+            fat_g += e.fat_g
+    return calories, sodium_mg, sugar_g, carbs_g, protein_g, fat_g
 
 
 def _sodium_week(diet_rows: list[DietEntry], today: date) -> list[int]:
@@ -205,7 +211,9 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
         if member is None:
             continue
         diet_rows = diet_by_member.get(link.member_id, [])
-        cal, na, sugar = _today_totals(diet_rows, today_str)
+        calories, sodium_mg, sugar_g, carbs_g, protein_g, fat_g = _today_totals(
+            diet_rows, today_str
+        )
         last_msg = last_msg_by.get(link.member_id)
         last_rt = last_rt_by.get(link.member_id)
 
@@ -217,9 +225,12 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
             active=link.active,
-            calories=cal,
-            sodium_mg=na,
-            sugar_g=sugar,
+            calories=calories,
+            sodium_mg=sodium_mg,
+            sugar_g=sugar_g,
+            carbs_g=carbs_g,
+            protein_g=protein_g,
+            fat_g=fat_g,
             last_routine=(
                 relative_day_label(_local_date_iso(last_rt.created_at))
                 if last_rt else "-"
@@ -250,6 +261,9 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
             items=items,
             calories=r.total_calories,
             sodium_mg=r.sodium_mg,
+            carbs_g=r.carbs_g,
+            protein_g=r.protein_g,
+            fat_g=r.fat_g,
         ))
     return out
 

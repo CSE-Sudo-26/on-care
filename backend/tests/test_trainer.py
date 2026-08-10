@@ -203,6 +203,9 @@ def test_trainer_clients_roster_aggregates_real_diet(client):
     assert jisu["calories"] == 1680
     assert jisu["sodium_mg"] == 1800
     assert jisu["sugar_g"] == 38
+    assert jisu["carbs_g"] == 150
+    assert jisu["protein_g"] == 90
+    assert jisu["fat_g"] == 48
     assert jisu["name"] == "이지수"
     assert len(jisu["sodium_week"]) == 7
     assert jisu["sodium_week"][-1] == 1800  # 오늘 = 3끼 나트륨 합
@@ -218,6 +221,68 @@ def test_trainer_client_diet_maps_member_meals(client):
     assert meals[0]["meal"] == "아침"
     assert "그릭요거트" in meals[0]["items"]
     assert meals[0]["calories"] == 280
+    assert meals[0]["carbs_g"] == 40
+    assert meals[0]["protein_g"] == 15
+    assert meals[0]["fat_g"] == 6
+
+
+def test_trainer_client_macros_are_member_scoped_and_empty_day_is_empty(client):
+    token = _trainer_token(client)
+
+    jisu = client.get(
+        "/v1/trainer/clients/user-jisu/diet",
+        headers=_auth(token),
+    ).json()
+    sungho = client.get(
+        "/v1/trainer/clients/user-sungho/diet",
+        headers=_auth(token),
+    ).json()
+    assert sum(meal["carbs_g"] for meal in jisu) == 150
+    assert sum(meal["carbs_g"] for meal in sungho) == 175
+    assert jisu != sungho
+
+    empty = client.get(
+        "/v1/trainer/clients/user-jisu/diet?date=2099-01-01",
+        headers=_auth(token),
+    )
+    assert empty.status_code == 200
+    assert empty.json() == []
+
+
+def test_trainer_client_without_diet_has_zero_macro_totals(client, db_session):
+    from app.db.seed_trainer import TRAINER_ID
+    from app.models.models import TrainerClient, User
+
+    member_id = "tmp-member-no-diet"
+    db_session.add(User(
+        id=member_id,
+        email="tmp-member-no-diet@oncare.test",
+        name="식단없음",
+        role="member",
+    ))
+    db_session.flush()
+    db_session.add(TrainerClient(
+        id="tmp-link-no-diet",
+        trainer_id=TRAINER_ID,
+        member_id=member_id,
+        goal="",
+        sort_order=999,
+    ))
+    db_session.commit()
+
+    try:
+        token = _trainer_token(client)
+        roster = client.get("/v1/trainer/clients", headers=_auth(token)).json()
+        no_diet = next(item for item in roster if item["id"] == member_id)
+        assert no_diet["carbs_g"] == 0
+        assert no_diet["protein_g"] == 0
+        assert no_diet["fat_g"] == 0
+    finally:
+        db_session.query(TrainerClient).filter(
+            TrainerClient.id == "tmp-link-no-diet"
+        ).delete()
+        db_session.query(User).filter(User.id == member_id).delete()
+        db_session.commit()
 
 
 def test_trainer_client_history_newest_first(client):

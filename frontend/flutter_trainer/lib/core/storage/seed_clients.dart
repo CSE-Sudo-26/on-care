@@ -49,16 +49,34 @@ const List<_Client> _clients = <_Client>[
     lastTime: '18:18',
     threadHandled: true,
     active: true,
-    calories: 1420,
-    sodiumMg: 2100,
-    sugarG: 45,
+    calories: 1067,
+    sodiumMg: 3428,
+    // TrainerClient's existing sugar contract is int; the real DTO also
+    // normalises 17.8 to 17, so the mock follows that same display value.
+    sugarG: 17,
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
-    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 2100],
+    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 3428],
     diet: <_Meal>[
-      _Meal('아침', '오트밀, 바나나', 315, 380),
-      _Meal('점심', '닭가슴살 샐러드, 현미밥', 620, 890),
-      _Meal('저녁', '두부찌개, 잡곡밥', 485, 830),
+      _Meal(
+        '아침',
+        '스크램블 에그, 딸기',
+        217,
+        221,
+        carbsG: 10,
+        proteinG: 13.5,
+        fatG: 14.5,
+      ),
+      _Meal('점심', '짬뽕', 750, 3200, carbsG: 107, proteinG: 29, fatG: 22.5),
+      _Meal(
+        '간식',
+        '아이스 아메리카노, 견과류 한 봉',
+        100,
+        7,
+        carbsG: 3,
+        proteinG: 2.5,
+        fatG: 8,
+      ),
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
@@ -193,9 +211,9 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
     sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
     diet: <_Meal>[
-      _Meal('아침', '그릭요거트, 과일', 280, 200),
-      _Meal('점심', '현미밥, 불고기, 나물', 750, 980),
-      _Meal('저녁', '연어 샐러드', 650, 620),
+      _Meal('아침', '그릭요거트, 과일', 280, 200, carbsG: 40, proteinG: 15, fatG: 6),
+      _Meal('점심', '현미밥, 불고기, 나물', 750, 980, carbsG: 90, proteinG: 35, fatG: 20),
+      _Meal('저녁', '연어 샐러드', 650, 620, carbsG: 20, proteinG: 40, fatG: 22),
     ],
     aiRoutine: <_Routine>[
       _Routine('인터벌 런닝', 25, '유산소', '체지방 연소 효율↑'),
@@ -257,9 +275,9 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
     sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
     diet: <_Meal>[
-      _Meal('아침', '계란 3개, 토스트', 480, 520),
-      _Meal('점심', '짜장면', 890, 1200),
-      _Meal('저녁', '삼겹살, 쌈채소', 730, 680),
+      _Meal('아침', '계란 3개, 토스트', 480, 520, carbsG: 35, proteinG: 28, fatG: 24),
+      _Meal('점심', '짜장면', 890, 1200, carbsG: 120, proteinG: 25, fatG: 30),
+      _Meal('저녁', '삼겹살, 쌈채소', 730, 680, carbsG: 20, proteinG: 45, fatG: 50),
     ],
     aiRoutine: <_Routine>[
       _Routine('벤치프레스 4세트', 20, '근력', '상체 근력 목표'),

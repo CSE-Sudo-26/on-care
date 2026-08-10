@@ -33,6 +33,9 @@ void main() {
         'calories': 1800,
         'sodium_mg': 2100,
         'sugar_g': 40,
+        'carbs_g': 150.5,
+        'protein_g': 90,
+        'fat_g': 48.25,
         'last_routine': '오늘',
         'week_completion': <Object?>[100, 80, 0, 60, 90, 0, 0],
         'sodium_week': <Object?>[1900, 2200, 2100],
@@ -41,6 +44,9 @@ void main() {
       expect(c.id, 'm1');
       expect(c.name, '김민수');
       expect(c.sodiumMg, 2100);
+      expect(c.carbsG, 150.5);
+      expect(c.proteinG, 90);
+      expect(c.fatG, 48.25);
       expect(c.sodiumOverBudget, isTrue); // 2100 > 2000 target
       expect(c.weekCompletion, <int>[100, 80, 0, 60, 90, 0, 0]);
       expect(c.sodiumWeek, <int>[1900, 2200, 2100]);
@@ -71,10 +77,16 @@ void main() {
         'items': '김치찌개, 공기밥',
         'calories': 720,
         'sodium_mg': 1400,
+        'carbs_g': 40,
+        'protein_g': 25.5,
+        'fat_g': 15,
       });
       expect(d.meal, '점심');
       expect(d.items, '김치찌개, 공기밥');
       expect(d.sodiumMg, 1400);
+      expect(d.carbsG, 40);
+      expect(d.proteinG, 25.5);
+      expect(d.fatG, 15);
     });
 
     test('maps a history entry with exercises list', () {

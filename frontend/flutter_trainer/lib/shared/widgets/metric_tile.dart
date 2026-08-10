@@ -23,7 +23,7 @@ class MetricTile extends StatelessWidget {
   final String label;
 
   /// Today's value.
-  final int value;
+  final num value;
 
   /// Unit suffix (kcal / mg / g).
   final String unit;
@@ -58,7 +58,7 @@ class MetricTile extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '$value',
+              _displayValue(value),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -79,3 +79,7 @@ class MetricTile extends StatelessWidget {
     );
   }
 }
+
+String _displayValue(num value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(1);

@@ -391,7 +391,7 @@ void main() {
       await openTab(tester);
 
       expect(find.text('AI 코칭'), findsWidgets);
-      // 김민수 (2100mg, over) → cardio-boost verdict.
+      // 김민수 (3428mg, over) → cardio-boost verdict.
       expect(find.text('AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       expect(find.text('혈압 안정에 효과적'), findsOneWidget);

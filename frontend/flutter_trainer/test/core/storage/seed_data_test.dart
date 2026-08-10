@@ -52,7 +52,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v5'), _todayString());
+      expect(await db.readValue('trainer_seeded_v7'), _todayString());
     });
 
     // The roster is a fixture for the *charts*, not just the list — its
@@ -157,13 +157,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v5', '2020-01-01');
+      await db.putValue('trainer_seeded_v7', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v5'), _todayString());
+      expect(await db.readValue('trainer_seeded_v7'), _todayString());
     });
 
     test(
@@ -218,6 +218,9 @@ void main() {
         )..where((t) => t.clientId.equals(client.id))).get();
         final sodiumSum = meals.fold<int>(0, (s, m) => s + m.sodiumMg);
         final kcalSum = meals.fold<int>(0, (s, m) => s + m.calories);
+        final carbsSum = meals.fold<double>(0, (s, m) => s + m.carbsG);
+        final proteinSum = meals.fold<double>(0, (s, m) => s + m.proteinG);
+        final fatSum = meals.fold<double>(0, (s, m) => s + m.fatG);
         expect(
           sodiumSum,
           client.sodiumMg,
@@ -228,6 +231,17 @@ void main() {
           client.caloriesToday,
           reason: '${client.name}: meal calories must sum to the daily total',
         );
+        expect(
+          carbsSum,
+          client.carbsG,
+          reason: '${client.name}: carbs mismatch',
+        );
+        expect(
+          proteinSum,
+          client.proteinG,
+          reason: '${client.name}: protein mismatch',
+        );
+        expect(fatSum, client.fatG, reason: '${client.name}: fat mismatch');
       }
     });
 
@@ -272,7 +286,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v5'), today);
+        expect(await db.readValue('trainer_seeded_v7'), today);
       },
     );
 
@@ -294,7 +308,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v5', '2020-01-01');
+      await db.putValue('trainer_seeded_v7', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();
