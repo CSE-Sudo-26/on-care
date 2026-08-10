@@ -233,25 +233,17 @@ def test_schedule_update_member_id_empty_unassigns(client, db_session):
     "field",
     ["time", "client_name", "type", "duration_minutes", "note", "program"],
 )
-def test_schedule_update_rejects_null_for_non_nullable_fields(client, field):
+def test_schedule_update_rejects_null_for_non_nullable_fields(
+    client, field, make_pt_session
+):
     """명시적 null이 NOT NULL 컬럼까지 도달해 500을 만들지 않고 API 경계에서 422가 된다."""
     token = _tok(client)
-    c = client.post(
-        "/v1/trainer/schedule",
-        json={
-            "date": _today(),
-            "time": "16:50",
-            "client_name": "이지수",
-            "member_id": "user-jisu",
-            "type": "1:1 PT",
-            "duration_minutes": 40,
-        },
-        headers=_h(token),
-    )
-    assert c.status_code == 201, c.text
+    # 파라미터마다 세션이 하나씩 생긴다 — 지우지 않으면 실행 한 번에 여섯 건이
+    # 그대로 남아 이 파일에서 가장 크게 누적된다(#558).
+    sid = make_pt_session(token, time="16:50", duration_minutes=40)
 
     r = client.put(
-        f"/v1/trainer/schedule/{c.json()['id']}",
+        f"/v1/trainer/schedule/{sid}",
         json={field: None},
         headers=_h(token),
     )
@@ -294,27 +286,32 @@ def test_schedule_create_with_unlinked_member_404(client):
     assert r.status_code == 404
 
 
-def test_complete_session_logs_history_and_is_idempotent(client):
+def test_complete_session_logs_history_and_is_idempotent(
+    client, db_session, make_pt_session
+):
+    """완료 처리가 운동기록을 남기고, 재호출해도 중복되지 않는다.
+
+    목록 **개수**로 세지 않는다 — 이력 조회는 최신 60건 상한이라, 회원 이력이
+    상한에 닿으면 기록이 늘어도 개수가 그대로여서 단언이 엉뚱하게 깨진다(#558).
+    파생 기록의 id 는 `sched-hist-{sid}` 로 결정론적이니 그 행을 직접 본다.
+    """
+    from app.models import models
+
     token = _tok(client)
-    # 오늘 예정 세션 생성(user-jisu 매칭)
-    c = client.post(
-        "/v1/trainer/schedule",
-        json={
-            "date": _today(), "time": "18:30", "client_name": "이지수",
-            "member_id": "user-jisu", "type": "1:1 PT", "duration_minutes": 40,
-            "program": [
-                {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
-                {"name": "카프레이즈", "sets": 1, "reps": "20회", "weight": "-"},
-            ],
-        },
-        headers=_h(token),
+    # 오늘 예정 세션 생성(user-jisu 매칭). 픽스처가 테스트 끝에 지워 이력이 쌓이지 않는다.
+    sid = make_pt_session(
+        token,
+        time="18:30",
+        duration_minutes=40,
+        program=[
+            {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
+            {"name": "카프레이즈", "sets": 1, "reps": "20회", "weight": "-"},
+        ],
     )
-    sid = c.json()["id"]
+    hist_id = f"sched-hist-{sid}"
+    assert db_session.get(models.RoutineHistory, hist_id) is None
 
-    before = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
-    n_before = len(before)
-
-    # 완료 처리 → 완료 상태 + 운동기록 1건 추가
+    # 완료 처리 → 완료 상태 + 이 세션의 운동기록 생성
     done = client.post(
         f"/v1/trainer/schedule/{sid}/complete",
         json={"note": "잘 마쳤어요"}, headers=_h(token),
@@ -322,32 +319,31 @@ def test_complete_session_logs_history_and_is_idempotent(client):
     assert done.status_code == 200, done.text
     assert done.json()["status"] == "완료"
 
+    db_session.expire_all()
+    logged = db_session.get(models.RoutineHistory, hist_id)
+    assert logged is not None, "완료 처리가 회원 운동기록을 남기지 않았다"
+    assert logged.trainer_note == "잘 마쳤어요"
+
     after = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
-    assert len(after) == n_before + 1
     assert after[0]["label"] == "PT 세션 · 트레이너 지도"
     assert after[0]["trainer_note"] == "잘 마쳤어요"
     assert "레그프레스 3세트" in after[0]["exercises"]
 
-    # 재호출(멱등) → 상태 유지, 기록 중복 없음
+    # 재호출(멱등) → 상태 유지, 기록도 그 한 건 그대로(노트가 덮이지 않는다)
     again = client.post(
         f"/v1/trainer/schedule/{sid}/complete", json={"note": "x"}, headers=_h(token)
     )
     assert again.status_code == 200
-    after2 = client.get("/v1/trainer/clients/user-jisu/history", headers=_h(token)).json()
-    assert len(after2) == n_before + 1  # 중복 기록 없음
+    db_session.expire_all()
+    assert db_session.get(models.RoutineHistory, hist_id).trainer_note == "잘 마쳤어요"
 
 
-def test_complete_future_session_rejected(client):
+def test_complete_future_session_rejected(client, make_pt_session):
     from datetime import timedelta
 
     token = _tok(client)
     future = (clock.today() + timedelta(days=3)).isoformat()
-    c = client.post(
-        "/v1/trainer/schedule",
-        json={"date": future, "time": "10:00", "member_id": "user-jisu", "type": "1:1 PT"},
-        headers=_h(token),
-    )
-    sid = c.json()["id"]
+    sid = make_pt_session(token, date=future, time="10:00")
     r = client.post(f"/v1/trainer/schedule/{sid}/complete", json={}, headers=_h(token))
     assert r.status_code == 400  # 미래 일정 완료 불가
 
@@ -380,19 +376,16 @@ def test_booked_dates(client):
     assert _today() in dates  # 오늘 시드에 예약(공백 아님)이 있음
 
 
-def test_completed_session_cannot_be_edited(client):
+def test_completed_session_cannot_be_edited(client, make_pt_session):
     """완료된 세션 수정은 409 — 스케줄과 운동기록이 어긋나지 않게 한다(리뷰 재-#2)."""
     token = _tok(client)
-    c = client.post(
-        "/v1/trainer/schedule",
-        json={
-            "date": _today(), "time": "08:30", "client_name": "이지수",
-            "member_id": "user-jisu", "type": "1:1 PT",
-            "program": [{"name": "스쿼트", "sets": 3, "reps": "10회", "weight": "40kg"}],
-        },
-        headers=_h(token),
+    # 픽스처로 만들어 테스트 끝에 지운다 — 완료가 남기는 이력이 쌓이면 60건 상한에
+    # 닿아 다른 테스트가 깨진다(#558).
+    sid = make_pt_session(
+        token,
+        time="08:30",
+        program=[{"name": "스쿼트", "sets": 3, "reps": "10회", "weight": "40kg"}],
     )
-    sid = c.json()["id"]
     client.post(f"/v1/trainer/schedule/{sid}/complete", json={"note": "완료"}, headers=_h(token))
 
     # 완료 후 다른 회원으로 재배정 시도 → 409(데이터 분리 방지)
@@ -420,11 +413,14 @@ def test_schedule_invalid_date_time_422(client):
     # 잘못된/빈 시간
     assert client.post(url, json={**base, "time": "25:99"}, headers=_h(token)).status_code == 422
     assert client.post(url, json={**base, "time": ""}, headers=_h(token)).status_code == 422
-    # update 도 잘못된 시간 422
+    # update 도 잘못된 시간 422. 여기만 실제로 한 건이 만들어지므로 끝에 지운다(#558).
     sid = client.post(url, json=base, headers=_h(token)).json()["id"]
-    assert client.put(
-        f"{url}/{sid}", json={"time": "99:99"}, headers=_h(token)
-    ).status_code == 422
+    try:
+        assert client.put(
+            f"{url}/{sid}", json={"time": "99:99"}, headers=_h(token)
+        ).status_code == 422
+    finally:
+        client.delete(f"{url}/{sid}", headers=_h(token))
 
 
 # ---- 기간·고객 조회 (#378) ----
@@ -557,16 +553,22 @@ def test_schedule_member_only_returns_every_session_no_date_bound(client):
     assert created.status_code == 201, created.text
     old_id = created.json()["id"]
 
-    r = client.get(
-        "/v1/trainer/schedule",
-        params={"member_id": member_id},
-        headers=_sched_auth(token),
-    )
-    assert r.status_code == 200, r.text
-    ids = [s["id"] for s in r.json()]
-    assert old_id in ids
-    # 여전히 그 고객 것만.
-    assert all(s["status"] != "공백" for s in r.json())
+    # 지우지 않으면 이 고객의 세션이 실행마다 쌓인다. 회원별 조회는 최신 100건
+    # 상한이라, 상한에 닿는 순간 가장 오래된 이 2020 세션이 먼저 밀려나 여기서
+    # 깨진다 — 정확히 이 테스트가 증명하려는 것이 사라지는 셈이다(#558).
+    try:
+        r = client.get(
+            "/v1/trainer/schedule",
+            params={"member_id": member_id},
+            headers=_sched_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        ids = [s["id"] for s in r.json()]
+        assert old_id in ids
+        # 여전히 그 고객 것만.
+        assert all(s["status"] != "공백" for s in r.json())
+    finally:
+        client.delete(f"/v1/trainer/schedule/{old_id}", headers=_sched_auth(token))
 
 
 def test_schedule_member_filter_rejects_someone_elses_client(client):
