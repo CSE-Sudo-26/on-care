@@ -606,6 +606,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAnalysisPickAnother => '다른 사진 고르기';
 
   @override
+  String get dietAnalysisSignIn => '다시 로그인';
+
+  @override
   String get dietAnalysisClose => '닫기';
 
   @override

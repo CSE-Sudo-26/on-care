@@ -9,6 +9,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis_failure.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -569,6 +570,24 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     unawaited(showDietAddSheet(navigator.context));
   }
 
+  /// Takes an expired session back to sign-in.
+  ///
+  /// Signing out *is* the navigation: `appRouterProvider` refreshes the guard
+  /// on every session change, and `sessionRedirect` sends a signed-out user
+  /// to `/auth/sign-in`. Pushing that route directly would not work — while
+  /// the session still reads as authenticated the guard bounces anyone off
+  /// the auth routes back to the dashboard. Clearing the dead token is also
+  /// the point: it is what made the request fail.
+  Future<void> _signInAgain() async {
+    // Read before popping; this State is gone right after.
+    final NavigatorState navigator = Navigator.of(context);
+    final SessionController session = ref.read(
+      sessionControllerProvider.notifier,
+    );
+    navigator.pop();
+    await session.signOut();
+  }
+
   String _failureMessage(AppLocalizations l, DietAnalysisFailure failure) =>
       switch (failure) {
         DietAnalysisFailure.unsupportedFormat =>
@@ -590,6 +609,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     return switch (failure) {
       DietAnalysisFailure.unsupportedFormat ||
       DietAnalysisFailure.badRequest => _pickAnother,
+      DietAnalysisFailure.unauthorized => () => unawaited(_signInAgain()),
       _ => () => Navigator.of(context).pop(),
     };
   }
@@ -599,6 +619,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
     return switch (failure) {
       DietAnalysisFailure.unsupportedFormat ||
       DietAnalysisFailure.badRequest => l.dietAnalysisPickAnother,
+      DietAnalysisFailure.unauthorized => l.dietAnalysisSignIn,
       _ => l.dietAnalysisClose,
     };
   }

@@ -213,6 +213,7 @@
   "dietAnalysisUnauthorized": "로그인이 만료됐어요. 다시 로그인한 뒤 기록해 주세요.",
   "dietAnalysisNotImplemented": "지금은 사진 분석을 사용할 수 없어요. 직접 입력으로 기록해 주세요.",
   "dietAnalysisPickAnother": "다른 사진 고르기",
+  "dietAnalysisSignIn": "다시 로그인",
   "dietAnalysisClose": "닫기",
   "dietRecognizedFood": "인식된 음식",
   "dietNoRecognizedFood": "인식된 음식이 없어요",

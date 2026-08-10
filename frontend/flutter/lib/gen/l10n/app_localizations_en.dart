@@ -615,6 +615,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAnalysisPickAnother => 'Pick another photo';
 
   @override
+  String get dietAnalysisSignIn => 'Sign in again';
+
+  @override
   String get dietAnalysisClose => 'Close';
 
   @override

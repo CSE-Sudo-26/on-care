@@ -1190,6 +1190,12 @@ abstract class AppLocalizations {
   /// **'Pick another photo'**
   String get dietAnalysisPickAnother;
 
+  /// No description provided for @dietAnalysisSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get dietAnalysisSignIn;
+
   /// No description provided for @dietAnalysisClose.
   ///
   /// In en, this message translates to:

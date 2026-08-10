@@ -330,6 +330,7 @@
   "dietAnalysisUnauthorized": "Your session expired. Please sign in again to log this meal.",
   "dietAnalysisNotImplemented": "Photo analysis is unavailable right now. Please log the meal manually.",
   "dietAnalysisPickAnother": "Pick another photo",
+  "dietAnalysisSignIn": "Sign in again",
   "dietAnalysisClose": "Close",
   "dietRecognizedFood": "Recognized Food",
   "dietNoRecognizedFood": "No food recognized",
