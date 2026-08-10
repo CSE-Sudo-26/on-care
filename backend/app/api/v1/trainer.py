@@ -370,6 +370,7 @@ def trainer_assign_routine(
         db, trainer.id, member_id,
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
+        client_request_id=payload.client_request_id,
     )
 
 

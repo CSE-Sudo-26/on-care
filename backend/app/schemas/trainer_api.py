@@ -146,6 +146,9 @@ class RoutineAssignRequest(BaseModel):
     type: RoutineType
     reason: str = Field(default="", max_length=200)
     source: RoutineSource = "trainer"
+    #: 전송 시도당 클라이언트가 만드는 멱등키. 재시도 시 **같은 키를 다시 보내야**
+    #: 중복 배정이 막힌다. 없으면 기존처럼 매 요청이 새 배정이다(#581).
+    client_request_id: str | None = Field(default=None, max_length=64)
 
 
 class RoutineUpdateRequest(PartialUpdate):

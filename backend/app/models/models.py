@@ -662,8 +662,20 @@ class TrainerRoutine(Base):
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # 재전송 중복 배정 방지용 멱등키(전송 시도당 1회 생성). NULL 허용 → 기존/무키
+    # 요청은 제약 밖. DietEntry.idempotency_key 와 같은 방식이다.
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id",
+            "member_id",
+            "client_request_id",
+            name="uq_trainer_routines_client_request",
+        ),
     )
 
 
