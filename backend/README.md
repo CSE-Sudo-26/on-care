@@ -44,11 +44,14 @@ alembic downgrade -1          # 한 단계 롤백
 검증: `python -m scripts.check_gemini` · `/v1/ai-coach/chat` 응답의 `sources` 가 채워지면 RAG 가 실제로 동작(규칙 폴백 아님).
 
 ## 프론트 연동 (실서버 전환)
-프론트에서:
+회원 앱(모바일)·트레이너 웹 **양쪽 모두** 같은 방식으로 전환합니다.
 ```bash
 flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://localhost:8000/v1
 ```
 (LocalApiInterceptor 가 꺼지고 실제 /v1 서버로 요청)
+
+둘을 함께 띄워 회원↔트레이너 상호작용을 확인하는 절차·데모 계정·기동 실패 대처는
+**[docs/local_fullstack.md](../docs/local_fullstack.md)** 에 정리했습니다.
 
 ## 준비물
 - Docker Desktop (무료, 가입 없음)

@@ -111,6 +111,18 @@ dart run build_runner build --delete-conflicting-outputs
 로그인: 비어있지 않은 아무 이메일/비밀번호 → 시드 트레이너(김트레이너)로 로그인.
 "로그인 없이 데모 둘러보기"로 바로 진입할 수도 있습니다.
 
+### 실 API 로 실행 (회원 앱과 데이터 공유)
+
+위 명령은 목업 모드입니다(`useMockApi` 기본값 `true`). 이 모드에서는 트레이너 웹이 자기
+로컬 drift DB 를 보기 때문에 **회원 앱에서 만든 데이터가 보이지 않습니다.**
+
+```bash
+flutter run -d chrome   --dart-define=USE_MOCK_API=false   --dart-define=API_BASE_URL=http://localhost:8000/v1
+```
+
+백엔드 기동과 데모 계정, 상호작용 확인 방법은
+**[docs/local_fullstack.md](../../docs/local_fullstack.md)** 를 보세요.
+
 ## 구조
 
 [frontend/flutter/docs/STRUCTURE.md](../flutter/docs/STRUCTURE.md)의 레이어 규칙
