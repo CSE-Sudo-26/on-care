@@ -20,11 +20,27 @@ from app.models.models import ExerciseSession
 from app.schemas.exercise_api import (
     ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
+from app.services.coach import personal_ingest
 from app.services.exercise_service import (
     WEEKDAY_LABELS, build_current_week, monday_of_str, monday_of_this_week_str,
 )
 
 router = APIRouter(tags=["exercise"])
+
+
+def _session_date(row: ExerciseSession) -> str:
+    """세션의 실제 날짜 YYYY-MM-DD. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다.
+
+    적재 문구에 날짜를 넣으려면 되돌려야 한다 — "월요일"만 적으면 몇 주 전 기록도
+    똑같이 보여 코치가 최근 것과 구분하지 못한다.
+    """
+    from datetime import date as _d, timedelta
+
+    try:
+        monday = _d.fromisoformat(row.week_start)
+        return (monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))).isoformat()
+    except (ValueError, IndexError):
+        return row.week_start
 
 _ALLOWED_TYPES = {"cardio", "strength", "yoga", "walking", "stretching", "other"}
 _ALLOWED_INTENSITIES = {"light", "moderate", "high"}
@@ -97,7 +113,14 @@ def add_session(
 
     # 단건 응답도 프론트 표시 형식(date_label/time_label/items)을 채워 반환
     one = build_current_week([row])["sessions"][0]
-    return ExerciseSessionOut(**one)
+    out = ExerciseSessionOut(**one)
+    # 응답을 다 만든 뒤 적재한다(#586). 실패하면 personal_ingest 가 세션을 롤백하는데,
+    # 그때 row 가 만료되면 적재 실패가 기록 저장 실패로 번진다. 커밋은 이미 끝났다.
+    personal_ingest.record_exercise(
+        db, current_user.id, date=_session_date(row), type=row.type,
+        minutes=row.minutes, calories=row.calories, intensity=row.intensity,
+    )
+    return out
 
 
 @router.put("/exercise/sessions/{session_id}", response_model=ExerciseSessionOut)
