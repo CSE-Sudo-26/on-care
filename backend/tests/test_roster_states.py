@@ -30,6 +30,16 @@ def _roster(client) -> list[dict]:
     return r.json()
 
 
+def _unread_counts(client) -> dict[str, int]:
+    token = _trainer_token(client)
+    r = client.get(
+        "/v1/trainer/chat/unread",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
 def test_roster_matches_the_seeded_member_list(client):
     from app.db.seed_trainer import _MEMBERS
 
@@ -38,7 +48,7 @@ def test_roster_matches_the_seeded_member_list(client):
 
 
 def test_every_alert_state_is_reachable_through_the_api(client):
-    """경고를 그릴 수 있는 고객이 상태별로 최소 1명씩 있다."""
+    """화면 상태를 그릴 수 있는 고객이 상태별로 최소 1명씩 있다."""
     rows = _roster(client)
 
     sodium_over = [
@@ -56,6 +66,10 @@ def test_every_alert_state_is_reachable_through_the_api(client):
 
     dormant = [r for r in rows if r.get("active") is False]
     assert dormant, "휴면 고객이 없다"
+
+    unread = _unread_counts(client)
+    awaiting_reply = [r for r in rows if unread.get(r["id"], 0) > 0]
+    assert awaiting_reply, "답장 대기 배지를 그릴 고객이 없다"
 
 
 def test_sparklines_cover_empty_short_and_full_weeks(client):
