@@ -4,11 +4,12 @@
 """
 from __future__ import annotations
 
-from datetime import date
+
+from app.core import clock
 
 
 def _today() -> str:
-    return date.today().isoformat()
+    return clock.today().isoformat()
 
 
 # ---- 캘린더 상세(일정 CRUD) ----

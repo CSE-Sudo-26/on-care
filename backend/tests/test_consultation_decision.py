@@ -9,13 +9,14 @@ DB 가 필요하므로 로컬에서는 skip 되고 CI(Postgres) 에서 실행된
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core import clock
 from app.core.security import hash_password
 from app.models.models import (
     ConsultationRequest,
@@ -159,7 +160,7 @@ def _request_consultation(
         "exercise_goal": "weight_loss",
         "health_purpose_type": "general",
         "health_purpose_detail": None,
-        "preferred_date": (date.today() + timedelta(days=1)).isoformat(),
+        "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
         "preferred_time_slot": "evening",
         "message": "상담 부탁드립니다.",
     }

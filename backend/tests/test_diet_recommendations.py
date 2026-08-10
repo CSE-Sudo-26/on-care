@@ -13,11 +13,12 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlalchemy import delete
 
+from app.core import clock
 from app.data.meal_catalog import CATALOG, DEFAULT_ORDER, RECOMMENDATION_COUNT
 from app.services import diet_recommendation_service as svc
 
@@ -52,7 +53,7 @@ def _make_high_sodium_member(db_session) -> tuple:
     db_session.add(user)
     db_session.commit()
 
-    today = date.today()
+    today = clock.today()
     for offset in range(svc.LOOKBACK_DAYS):
         day = (today - timedelta(days=offset)).isoformat()
         for meal, cal, sodium in (

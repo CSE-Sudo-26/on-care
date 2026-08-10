@@ -16,11 +16,12 @@ DB 가 필요하므로 로컬에서는 skip 되고 CI(Postgres) 에서 실행된
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 
+from app.core import clock
 from app.models.models import (
     ConsultationRequest,
     MemberGym,
@@ -152,7 +153,7 @@ def _request_consultation(client, token: str, gym_id: str) -> str:
             "exercise_goal": "strength",
             "health_purpose_type": "general",
             "health_purpose_detail": None,
-            "preferred_date": (date.today() + timedelta(days=1)).isoformat(),
+            "preferred_date": (clock.today() + timedelta(days=1)).isoformat(),
             "preferred_time_slot": "morning",
             "message": "상담 부탁드립니다.",
         },
