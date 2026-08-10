@@ -11,6 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
@@ -139,9 +140,12 @@ class ClientDetailView extends ConsumerWidget {
               showBack: showBack,
               onClose: onClose,
               onRefresh: () {
-                ref.invalidate(clientsProvider);
-                ref.invalidate(clientDietProvider(client.id));
-                ref.invalidate(clientHistoryProvider(client.id));
+                final ClientRepository repository = ref.read(
+                  clientRepositoryProvider,
+                );
+                if (repository case final ClientDataRefresher refresher) {
+                  refresher.refreshClientData(client.id);
+                }
               },
               onToggleActive: canManageRoster
                   ? () => ref

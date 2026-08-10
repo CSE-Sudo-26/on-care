@@ -8,6 +8,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -81,6 +83,92 @@ void main() {
     final meals = await repo.watchDiet('m1').first;
     expect(meals.single.meal, '점심');
   });
+
+  test('a refresh failure keeps the last successful client data', () async {
+    const String path = '/trainer/clients/m1/diet';
+    var calls = 0;
+    final Completer<void> firstValue = Completer<void>();
+    final Completer<void> refreshAttempted = Completer<void>();
+    when(() => dio.get<List<dynamic>>(path)).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) {
+        return _okList(<dynamic>[
+          <String, Object?>{
+            'meal': '점심',
+            'items': '비빔밥',
+            'calories': 600,
+            'sodium_mg': 1200,
+          },
+        ], path);
+      }
+      if (!refreshAttempted.isCompleted) refreshAttempted.complete();
+      throw _httpError(503, path);
+    });
+    final values = <List<ClientDietEntry>>[];
+    final errors = <Object>[];
+    final subscription = repo.watchDiet('m1').listen((
+      List<ClientDietEntry> value,
+    ) {
+      values.add(value);
+      if (!firstValue.isCompleted) firstValue.complete();
+    }, onError: (Object error, StackTrace stackTrace) => errors.add(error));
+    try {
+      await firstValue.future.timeout(const Duration(seconds: 1));
+
+      repo.refreshClientData('m1');
+      await refreshAttempted.future.timeout(const Duration(seconds: 1));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(calls, 2);
+      expect(errors, isEmpty);
+      expect(values, hasLength(1));
+      expect(values.single.single.items, '비빔밥');
+    } finally {
+      await subscription.cancel();
+    }
+  });
+
+  test(
+    'an all-client refresh failure keeps the last successful roster',
+    () async {
+      const String path = '/trainer/clients';
+      var calls = 0;
+      final Completer<void> firstValue = Completer<void>();
+      final Completer<void> refreshAttempted = Completer<void>();
+      when(() => dio.get<List<dynamic>>(path)).thenAnswer((_) async {
+        calls += 1;
+        if (calls == 1) {
+          return _okList(<dynamic>[
+            <String, Object?>{'id': 'm1', 'name': '김민수', 'sodium_mg': 2100},
+          ], path);
+        }
+        if (!refreshAttempted.isCompleted) refreshAttempted.complete();
+        throw _httpError(503, path);
+      });
+      final values = <List<TrainerClient>>[];
+      final errors = <Object>[];
+      final subscription = repo.watchClients().listen((
+        List<TrainerClient> value,
+      ) {
+        values.add(value);
+        if (!firstValue.isCompleted) firstValue.complete();
+      }, onError: (Object error, StackTrace stackTrace) => errors.add(error));
+      try {
+        await firstValue.future.timeout(const Duration(seconds: 1));
+
+        repo.refreshAllClientData();
+        await refreshAttempted.future.timeout(const Duration(seconds: 1));
+        await Future<void>.delayed(Duration.zero);
+
+        expect(calls, 2);
+        expect(errors, isEmpty);
+        expect(values, hasLength(1));
+        expect(values.single.single.name, '김민수');
+      } finally {
+        await subscription.cancel();
+      }
+    },
+  );
 
   test('active client data revalidates when the app regains focus', () async {
     var calls = 0;

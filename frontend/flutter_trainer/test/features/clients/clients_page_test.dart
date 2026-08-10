@@ -6,11 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -22,22 +21,21 @@ class _ReadOnlyClientRepository extends DriftClientRepository {
   bool get supportsRosterMutations => false;
 }
 
-class _CountingClientRepository extends DriftClientRepository {
-  _CountingClientRepository(super.db);
+class _RecordingRefreshClientRepository extends DriftClientRepository
+    implements ClientDataRefresher {
+  _RecordingRefreshClientRepository(super.db);
 
-  int clientWatches = 0;
-  int dietWatches = 0;
+  var allRefreshes = 0;
+  final List<String> clientRefreshes = <String>[];
 
   @override
-  Stream<List<TrainerClient>> watchClients() {
-    clientWatches += 1;
-    return super.watchClients();
+  void refreshAllClientData() {
+    allRefreshes += 1;
   }
 
   @override
-  Stream<List<ClientDietEntry>> watchDiet(String clientId) {
-    dietWatches += 1;
-    return super.watchDiet(clientId);
+  void refreshClientData(String clientId) {
+    clientRefreshes.add(clientId);
   }
 }
 
@@ -194,10 +192,11 @@ void main() {
   });
 
   group('ClientsPage', () {
-    testWidgets('re-entering the client branch refreshes the roster', (
+    testWidgets('re-entering the client branch requests a data refresh', (
       tester,
     ) async {
-      late _CountingClientRepository repository;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      late _RecordingRefreshClientRepository repository;
 
       await pumpTrainerApp(
         tester,
@@ -205,25 +204,27 @@ void main() {
         at: AppRoutes.clients,
         extraOverrides: <Override>[
           clientRepositoryProvider.overrideWith((ref) {
-            repository = _CountingClientRepository(
+            repository = _RecordingRefreshClientRepository(
               ref.watch(appDatabaseProvider),
             );
             return repository;
           }),
         ],
       );
-      expect(repository.clientWatches, 1);
+      expect(find.text('김민수'), findsOneWidget);
 
       await goTo(tester, AppRoutes.dashboard);
       await goTo(tester, AppRoutes.clients);
 
-      expect(repository.clientWatches, 2);
+      expect(repository.allRefreshes, 1);
+      expect(find.text('김민수'), findsOneWidget);
     });
 
-    testWidgets('the detail refresh action reloads selected client data', (
+    testWidgets('the detail refresh action targets the selected client', (
       tester,
     ) async {
-      late _CountingClientRepository repository;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      late _RecordingRefreshClientRepository repository;
 
       await pumpTrainerApp(
         tester,
@@ -231,21 +232,22 @@ void main() {
         at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
         extraOverrides: <Override>[
           clientRepositoryProvider.overrideWith((ref) {
-            repository = _CountingClientRepository(
+            repository = _RecordingRefreshClientRepository(
               ref.watch(appDatabaseProvider),
             );
             return repository;
           }),
         ],
       );
-      expect(repository.dietWatches, 1);
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('client-data-refresh')),
       );
       await settle(tester);
 
-      expect(repository.dietWatches, 2);
+      expect(repository.clientRefreshes, <String>['seed-client-1']);
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
     });
 
     testWidgets('renders the roster with its size and priority order', (

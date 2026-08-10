@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -175,9 +176,10 @@ class ClientsPage extends ConsumerWidget {
     );
     return _RefreshOnBranchResume(
       onResume: () {
-        ref.invalidate(clientsProvider);
-        ref.invalidate(clientDietProvider);
-        ref.invalidate(clientHistoryProvider);
+        final ClientRepository repository = ref.read(clientRepositoryProvider);
+        if (repository case final ClientDataRefresher refresher) {
+          refresher.refreshAllClientData();
+        }
       },
       child: page,
     );
