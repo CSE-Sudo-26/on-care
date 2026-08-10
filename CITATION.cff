@@ -25,8 +25,8 @@ authors:
 # 본 파일도 함께 갱신할 것.
 date-released: "2026-05-20"
 version: "0.3.0+3"
-repository-code: "https://github.com/CSE-Sudo-26/sudo-capstone-project"
-url: "https://github.com/CSE-Sudo-26/sudo-capstone-project"
+repository-code: "https://github.com/CSE-Sudo-26/on-care"
+url: "https://github.com/CSE-Sudo-26/on-care"
 license: MIT
 keywords:
   - healthcare
