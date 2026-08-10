@@ -21,7 +21,7 @@ from app.schemas.exercise_api import (
     ExerciseSessionCreate, ExerciseSessionOut, ExerciseWeekResponse,
 )
 from app.services.exercise_service import (
-    WEEKDAY_LABELS, build_current_week, monday_of_this_week_str,
+    WEEKDAY_LABELS, build_current_week, monday_of_str, monday_of_this_week_str,
 )
 
 router = APIRouter(tags=["exercise"])
@@ -74,14 +74,17 @@ def add_session(
         raise HTTPException(status_code=400, detail=f"허용되지 않는 운동 강도: {payload.intensity}")
     # minutes(>0)·calories(>=0) 는 ExerciseSessionCreate 의 Field 제약에서 422 로 검증됨
 
-    day_label = payload.day_label or WEEKDAY_LABELS[clock.today().weekday()]
+    # 요일 라벨과 주차를 같은 스냅샷에서 뽑는다 — 따로 읽으면 KST 자정 사이에
+    # 저장된 한 세션의 요일과 주차가 서로 다른 날을 가리킬 수 있다.
+    today = clock.today()
+    day_label = payload.day_label or WEEKDAY_LABELS[today.weekday()]
     if day_label not in WEEKDAY_LABELS:
         raise HTTPException(status_code=400, detail=f"잘못된 요일 라벨: {day_label}")
 
     row = ExerciseSession(
         id=f"ex-{uuid.uuid4().hex[:12]}",
         user_id=current_user.id,
-        week_start=monday_of_this_week_str(),
+        week_start=monday_of_str(today.isoformat()),
         day_label=day_label,
         type=payload.type,
         minutes=payload.minutes,

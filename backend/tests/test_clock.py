@@ -81,6 +81,30 @@ def test_domain_today_helpers_use_kst(utc_process_tz):
     assert exercise_service.monday_of_this_week_str() == monday.isoformat()
 
 
+def test_domain_today_helpers_at_kst_early_morning(monkeypatch, utc_process_tz):
+    """KST 새벽 시각을 고정해 도메인 '오늘'을 검증한다.
+
+    실제 현재 시각에 기대면 KST 00:00~08:59 가 아닌 시간대에는 `date.today()`
+    같은 서버 로컬 날짜 회귀가 있어도 통과한다(UTC 와 KST 날짜가 같으므로).
+    문제 구간을 고정해야 회귀가 항상 잡힌다.
+    """
+    from app.services import diet_service, exercise_service, trainer_service
+
+    # 2026-03-02(월) 00:30 KST == 2026-03-01(일) 15:30 UTC.
+    # 일부러 **주가 갈리는** 시각을 골랐다 — UTC 로 밀리면 날짜뿐 아니라 주차까지
+    # 어긋나서, 어느 한쪽만 회귀해도 아래 단언이 잡는다.
+    frozen = datetime(2026, 3, 1, 15, 30, tzinfo=timezone.utc).astimezone(clock.SEOUL)
+    monkeypatch.setattr(clock, "now", lambda: frozen)
+
+    # 서버 로컬(UTC)로는 2026-03-01 이지만 서비스는 KST 날짜를 써야 한다.
+    assert clock.today().isoformat() == "2026-03-02"
+    assert clock.today_iso() == "2026-03-02"
+    assert diet_service.today_str() == "2026-03-02"
+    assert trainer_service.today_iso() == "2026-03-02"
+    # KST 로는 월요일 당일이 주 시작. UTC(일요일)로 읽으면 2026-02-23 이 된다.
+    assert exercise_service.monday_of_this_week_str() == "2026-03-02"
+
+
 def test_trainer_labels_use_kst_dates():
     """채팅 시각·이력 날짜 라벨이 UTC 가 아니라 KST 로 찍힌다."""
     from app.services import trainer_service
