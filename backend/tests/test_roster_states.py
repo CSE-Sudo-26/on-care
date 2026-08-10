@@ -1,0 +1,90 @@
+"""로스터가 트레이너 웹의 화면 상태를 실 API 에서도 재현하는지 (#572).
+
+목업 로스터(`seed_clients.dart`)의 15명은 **화면 상태의 fixture** 다 — 나트륨 초과,
+이행률 저조, 휴면, 답장 대기, 짧은 스파크라인을 클릭만으로 도달할 수 있게 고른 숫자다.
+실 API 시드가 3명뿐이던 동안에는 실서버로 전환하면 그 상태들이 대부분 도달 불가능했다.
+
+여기서 단언하는 것은 개별 숫자가 아니라 **상태가 하나라도 존재하는가** 다. 숫자를 그대로
+박으면 시드를 손볼 때마다 깨지고, 정작 지키려는 것(경고가 그려질 수 있는가)은 놓친다.
+임계값은 트레이너 웹 `client_alerts.dart` 와 맞춘다.
+"""
+from __future__ import annotations
+
+_SODIUM_OVER = 2000  # 하루 나트륨 초과 기준
+_COMPLETION_LOW = 60  # 기록된 날 평균 이행률이 이 아래면 '이행률 저조'
+
+
+def _trainer_token(client) -> str:
+    r = client.post(
+        "/v1/auth/login",
+        data={"username": "trainer@oncare.com", "password": "oncare123"},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()["access_token"]
+
+
+def _roster(client) -> list[dict]:
+    token = _trainer_token(client)
+    r = client.get("/v1/trainer/clients", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_roster_matches_the_seeded_member_list(client):
+    from app.db.seed_trainer import _MEMBERS
+
+    rows = _roster(client)
+    assert len(rows) == len(_MEMBERS)
+
+
+def test_every_alert_state_is_reachable_through_the_api(client):
+    """경고를 그릴 수 있는 고객이 상태별로 최소 1명씩 있다."""
+    rows = _roster(client)
+
+    sodium_over = [
+        r for r in rows
+        if sum(1 for v in r.get("sodium_week") or [] if v > _SODIUM_OVER) >= 3
+    ]
+    assert sodium_over, "나트륨 초과 경고를 그릴 고객이 없다"
+
+    low_completion = []
+    for r in rows:
+        logged = [v for v in r.get("week_completion") or [] if v > 0]
+        if logged and sum(logged) / len(logged) < _COMPLETION_LOW:
+            low_completion.append(r)
+    assert low_completion, "이행률 저조 경고를 그릴 고객이 없다"
+
+    dormant = [r for r in rows if r.get("active") is False]
+    assert dormant, "휴면 고객이 없다"
+
+
+def test_sparklines_cover_empty_short_and_full_weeks(client):
+    """차트가 그려야 하는 기록 길이가 모두 존재한다.
+
+    전부 7일치면 '기록이 적을 때' 화면(빈 상태·단일 포인트)이 도달 불가능해진다.
+    """
+    lengths = {
+        len([v for v in (r.get("sodium_week") or []) if v > 0]) for r in _roster(client)
+    }
+    assert 0 in lengths, "기록이 전혀 없는 고객이 없다"
+    assert any(0 < n < 7 for n in lengths), "기록이 일부만 있는 고객이 없다"
+    assert 7 in lengths, "한 주를 꽉 채운 고객이 없다"
+
+
+def test_detailed_records_stay_with_the_original_three(client):
+    """상세 기록은 기존 3명만 가진다(#572 결정).
+
+    확장 회원은 로스터·차트가 동작할 최소 기록만 가진다. 12명 전원에게 끼니별 음식·
+    피드백·트레이너 메모까지 넣으면 시드 유지 비용이 커진다.
+    """
+    token = _trainer_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    detailed = client.get("/v1/trainer/clients/user-jisu/diet", headers=headers)
+    assert detailed.status_code == 200
+    assert len(detailed.json()) >= 3, "기존 3명은 끼니별 상세를 유지해야 한다"
+
+    minimal = client.get("/v1/trainer/clients/user-seojin/diet", headers=headers)
+    assert minimal.status_code == 200
+    # 하루 한 줄짜리 — 있지만 상세하지는 않다.
+    assert minimal.json(), "확장 회원도 지표를 만들 기록은 있어야 한다"
