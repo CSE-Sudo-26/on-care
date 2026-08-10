@@ -1646,6 +1646,36 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your exercise data.'**
   String get exLoadError;
 
+  /// No description provided for @exCompletedPtTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s completed PT'**
+  String get exCompletedPtTitle;
+
+  /// No description provided for @exCompletedPtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} completed'**
+  String exCompletedPtTime(String time);
+
+  /// No description provided for @exCompletedPtNoProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout program was recorded.'**
+  String get exCompletedPtNoProgram;
+
+  /// No description provided for @exCompletedPtFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'{coachName} · Today\'s feedback'**
+  String exCompletedPtFeedback(String coachName);
+
+  /// No description provided for @exProgramSets.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 set} other{{count} sets}}'**
+  String exProgramSets(int count);
+
   /// No description provided for @exEmptyLog.
   ///
   /// In en, this message translates to:

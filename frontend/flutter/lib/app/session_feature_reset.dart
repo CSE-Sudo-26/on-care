@@ -44,6 +44,7 @@ Override sessionFeatureResetOverride() {
       ref.invalidate(consultationRequestControllerProvider);
       ref.invalidate(memberCoachProvider);
       ref.invalidate(coachRoutinesProvider);
+      ref.invalidate(coachSessionsProvider);
       ref.invalidate(coachChatProvider);
       ref.invalidate(coachUnreadProvider);
       ref.invalidate(myHealthStateProvider);
