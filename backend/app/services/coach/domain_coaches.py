@@ -15,6 +15,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.schemas.misc_api import CoachSuggestion
+from app.services.coach import prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
@@ -26,12 +27,15 @@ _DIET_SYSTEM = (
     "당신은 고혈압·당뇨 위험군을 돕는 전문 영양 코치입니다. "
     "제공된 '내 건강 기록'과 '참고 자료'에 근거해, 나트륨·당류 관리를 중심으로 "
     "DASH 식단 관점의 조언을 2~3문장으로 친근하게 한국어로 제시하세요. "
-    "근거 없는 단정은 피하고, 참고 자료가 있으면 그 권고를 반영하세요."
+    "근거 없는 단정은 피하고, 참고 자료가 있으면 그 권고를 반영하세요. "
+    # 개인 문서에는 트레이너와 주고받은 대화도 검색되어 들어온다(#580).
+    + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
 _EXERCISE_SYSTEM = (
     "당신은 만성질환 위험군을 돕는 운동 코치입니다. "
     "제공된 '내 건강 기록'과 '참고 자료'에 근거해, 혈압·혈당 관리에 도움이 되는 "
-    "운동 조언을 2~3문장으로 친근하게 한국어로 제시하세요."
+    "운동 조언을 2~3문장으로 친근하게 한국어로 제시하세요. "
+    + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
 
 
