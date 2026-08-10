@@ -1,6 +1,6 @@
 # 트레이너 도메인 · 회원↔트레이너 데이터 공유
 
-> 트레이너 앱 백엔드와 회원측 "내 담당 코치" 미러의 설계·계약 문서.
+> 트레이너 웹 백엔드와 회원측 "내 담당 코치" 미러의 설계·계약 문서.
 > 회원 앱 계약은 [`API_CONTRACT.md`](../API_CONTRACT.md)를, 프론트 구조는
 > [`frontend/flutter/docs/STRUCTURE.md`](../../frontend/flutter/docs/STRUCTURE.md)를 참고.
 >
@@ -8,19 +8,19 @@
 
 ## 1. 한 줄 요약
 
-트레이너 앱과 회원 앱은 **완전히 분리된 계정**(`users.role = 'member' | 'trainer'`)이지만
+트레이너 웹과 회원 앱은 **완전히 분리된 계정**(`users.role = 'member' | 'trainer'`)이지만
 **같은 회원 데이터를 공유**한다. "고객"은 별도 복제본이 아니라 **실제 회원 User**이며,
 트레이너 API는 회원이 회원 앱에서 남긴 `DietEntry`·`RoutineHistory`를 **그대로 읽어**
 로스터를 집계한다. 별도 동기화 파이프라인이 없어 데이터가 어긋날 여지가 없다.
 
 ```
-회원 앱 ──기록──▶ diet_entries / routine_history ◀──조회── 트레이너 앱
+회원 앱 ──기록──▶ diet_entries / routine_history ◀──조회── 트레이너 웹
                         (단일 원본, 실시간 공유)
 ```
 
 ## 2. 역할과 인증
 
-- `users.role`: `member`(회원 앱) | `trainer`(트레이너 앱). 서버 기본값 `member`.
+- `users.role`: `member`(회원 앱) | `trainer`(트레이너 웹). 서버 기본값 `member`.
 - 두 앱은 로그인 계정이 다르다. **앱 내 역할 전환 기능은 없다.**
 - 인증 의존성(`app/api/deps.py`):
   - `get_current_user` — 토큰 있으면 그 사용자, 없으면 데모 회원(회원 앱 계약 유지).

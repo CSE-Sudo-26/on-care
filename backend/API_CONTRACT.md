@@ -177,7 +177,7 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 
 ### 트레이너 도메인 / 회원측 코치 미러
 
-트레이너 앱 백엔드(`/v1/trainer/*`)와 회원측 "내 담당 코치" 미러(`/v1/me/coach/*`),
+트레이너 웹 백엔드(`/v1/trainer/*`)와 회원측 "내 담당 코치" 미러(`/v1/me/coach/*`),
 그리고 트레이너↔회원 **실데이터 공유** 설계는 별도 문서로 분리했다:
 **[`docs/TRAINER_DOMAIN.md`](docs/TRAINER_DOMAIN.md)**.
 

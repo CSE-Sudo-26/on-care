@@ -50,8 +50,6 @@ dependencies:
   # 데이터를 영속 저장한다 (사용자 앱과 동일 스택, 코드는 공유하지 않음).
   drift: ^2.20.3
   drift_flutter: ^0.2.4
-  sqlite3_flutter_libs: ^0.5.24
-  path_provider: ^2.1.4
   path: ^1.9.0
 
 dev_dependencies:
