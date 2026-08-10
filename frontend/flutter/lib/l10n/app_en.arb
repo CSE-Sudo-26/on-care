@@ -431,6 +431,26 @@
   "exUnitStreakDays": "day streak",
   "exToday": "Today",
   "exLoadError": "Couldn't load your exercise data.",
+  "exCompletedPtTitle": "Today's completed PT",
+  "exCompletedPtTime": "{time} completed",
+  "@exCompletedPtTime": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "exCompletedPtNoProgram": "No workout program was recorded.",
+  "exCompletedPtFeedback": "{coachName} · Today's feedback",
+  "@exCompletedPtFeedback": {
+    "placeholders": {
+      "coachName": {"type": "String"}
+    }
+  },
+  "exProgramSets": "{count, plural, =1{1 set} other{{count} sets}}",
+  "@exProgramSets": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "exEmptyLog": "No workouts logged this week.\nAdd one to start your log!",
   "exAiFeedback": "AI advice",
   "exAddExercise": "Add Exercise",

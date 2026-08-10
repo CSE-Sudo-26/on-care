@@ -840,6 +840,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exLoadError => '운동 정보를 불러오지 못했어요.';
 
   @override
+  String get exCompletedPtTitle => '오늘 완료한 PT';
+
+  @override
+  String exCompletedPtTime(String time) {
+    return '$time 수업 완료';
+  }
+
+  @override
+  String get exCompletedPtNoProgram => '등록된 운동 프로그램이 없습니다.';
+
+  @override
+  String exCompletedPtFeedback(String coachName) {
+    return '$coachName · 오늘의 피드백';
+  }
+
+  @override
+  String exProgramSets(int count) {
+    return '$count세트';
+  }
+
+  @override
   String get exEmptyLog => '이번 주 운동 기록이 없어요.\n운동을 추가해 기록을 남겨 보세요!';
 
   @override

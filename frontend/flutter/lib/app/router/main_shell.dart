@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
 import 'package:oncare/shared/widgets/oni_fab.dart';
@@ -14,10 +18,72 @@ import 'package:oncare/shared/widgets/oni_fab.dart';
 /// Persistent `Scaffold` hosting the bottom navigation bar. Icons and
 /// labels mirror the original React `BottomNav.tsx` (Home / 식단 /
 /// 운동 / My).
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell>
+    with WidgetsBindingObserver {
+  late int _lastIndex = widget.navigationShell.currentIndex;
+
+  StatefulNavigationShell get navigationShell => widget.navigationShell;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant MainShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final int nextIndex = navigationShell.currentIndex;
+    if (_lastIndex == nextIndex) return;
+    _lastIndex = nextIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshBranch(nextIndex);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _refreshMemberData();
+  }
+
+  void _refreshMemberData() {
+    ref.invalidate(dashboardSummaryProvider);
+    ref.invalidate(exerciseWeekProvider);
+    ref.invalidate(coachRoutinesProvider);
+    ref.invalidate(coachSessionsProvider);
+  }
+
+  void _refreshBranch(int index) {
+    switch (index) {
+      case 0:
+        ref.invalidate(dashboardSummaryProvider);
+        ref.invalidate(coachSessionsProvider);
+        break;
+      case 2:
+        ref.invalidate(exerciseWeekProvider);
+        ref.invalidate(coachRoutinesProvider);
+        ref.invalidate(coachSessionsProvider);
+        break;
+      default:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +187,8 @@ class MainShell extends StatelessWidget {
   }
 
   void _onTap(int index) {
+    _lastIndex = index;
+    _refreshBranch(index);
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -237,7 +305,9 @@ class _RecordAddSheet extends StatelessWidget {
       // Match the main content width so the sheet scales with the viewport
       // like the tab pages. The theme lifts the modal route cap to this
       // width too (see AppTheme._bottomSheetTheme); this centres the child.
-      constraints: const BoxConstraints(maxWidth: AppBreakpoints.contentMaxWidth),
+      constraints: const BoxConstraints(
+        maxWidth: AppBreakpoints.contentMaxWidth,
+      ),
       child: Container(
         key: const Key('recordAddSheet'),
         decoration: const BoxDecoration(

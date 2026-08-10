@@ -31,6 +31,7 @@ CoachRoutine coachRoutineFromJson(Map<String, Object?> json) {
 /// 날짜가 깨져도 던지지 않는다 — 한 행 때문에 일정 전체가 사라지면 안 된다.
 /// 화면이 date == null 인 항목을 걸러낸다.
 CoachSession coachSessionFromJson(Map<String, Object?> json) {
+  final Object? rawProgram = json['program'];
   return CoachSession(
     id: _str(json['id']),
     date: DateTime.tryParse(_str(json['date'])),
@@ -40,6 +41,24 @@ CoachSession coachSessionFromJson(Map<String, Object?> json) {
         ? (json['duration_minutes']! as num).toInt()
         : 0,
     status: _str(json['status']),
+    note: _str(json['note']),
+    program: rawProgram is List<Object?>
+        ? rawProgram
+              .map((Object? item) {
+                if (item is! Map<String, Object?>) {
+                  throw const FormatException('Invalid coach program item.');
+                }
+                return CoachProgramItem(
+                  name: _str(item['name']),
+                  sets: item['sets'] is num
+                      ? (item['sets']! as num).toInt()
+                      : 0,
+                  reps: _str(item['reps']),
+                  weight: _str(item['weight']),
+                );
+              })
+              .toList(growable: false)
+        : const <CoachProgramItem>[],
   );
 }
 

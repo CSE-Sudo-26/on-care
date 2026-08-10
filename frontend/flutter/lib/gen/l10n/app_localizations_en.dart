@@ -852,6 +852,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exLoadError => 'Couldn\'t load your exercise data.';
 
   @override
+  String get exCompletedPtTitle => 'Today\'s completed PT';
+
+  @override
+  String exCompletedPtTime(String time) {
+    return '$time completed';
+  }
+
+  @override
+  String get exCompletedPtNoProgram => 'No workout program was recorded.';
+
+  @override
+  String exCompletedPtFeedback(String coachName) {
+    return '$coachName · Today\'s feedback';
+  }
+
+  @override
+  String exProgramSets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get exEmptyLog =>
       'No workouts logged this week.\nAdd one to start your log!';
 
