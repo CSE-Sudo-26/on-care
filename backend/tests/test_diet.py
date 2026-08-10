@@ -440,6 +440,33 @@ def test_analyze_rejects_unsupported_mime(client):
     assert r.status_code == 415
 
 
+def test_analyze_rejects_oversized_upload(client):
+    """상한을 넘는 업로드는 413 — 앱의 8MiB 상한은 UX 보호일 뿐이라 API 직접
+    호출은 막지 못한다. 서버가 최후 방어선이다(#554)."""
+    from app.core.config import get_settings
+
+    limit = get_settings().max_upload_bytes
+    r = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG + b"x" * limit, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    )
+
+    assert r.status_code == 413
+    assert "detail" in r.json()
+
+
+def test_analyze_accepts_upload_under_the_limit(client):
+    """상한 이하는 기존과 동일하게 동작한다(413 이 정상 업로드를 잡아먹지 않는다)."""
+    r = client.post(
+        "/v1/diet/analyze",
+        files={"image": ("food.jpg", _JPEG, "image/jpeg")},
+        data={"meal_type": "lunch"},
+    )
+
+    assert r.status_code == 200
+
+
 def test_analyze_rejects_empty_file(client):
     r = client.post(
         "/v1/diet/analyze",

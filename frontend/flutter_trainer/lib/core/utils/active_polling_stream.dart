@@ -23,6 +23,7 @@ Stream<T> activePollingStream<T>({
   bool loading = false;
   bool refreshPending = false;
   bool hasValue = false;
+  int lifecycleGeneration = 0;
   bool foreground = _isForeground(WidgetsBinding.instance.lifecycleState);
 
   late void Function() scheduleNext;
@@ -30,14 +31,20 @@ Stream<T> activePollingStream<T>({
   Future<void> poll() async {
     if (cancelled || loading || !foreground) return;
     loading = true;
+    final int requestGeneration = lifecycleGeneration;
     try {
       final T value = await load();
-      if (!cancelled && foreground) {
+      if (!cancelled &&
+          foreground &&
+          requestGeneration == lifecycleGeneration) {
         hasValue = true;
         controller.add(value);
       }
     } catch (error, stackTrace) {
-      if (!cancelled && foreground && !hasValue) {
+      if (!cancelled &&
+          foreground &&
+          requestGeneration == lifecycleGeneration &&
+          !hasValue) {
         controller.addError(error, stackTrace);
       }
     } finally {
@@ -65,7 +72,14 @@ Stream<T> activePollingStream<T>({
     foreground = nextForeground;
     timer?.cancel();
     timer = null;
-    if (foreground) unawaited(poll());
+    if (!foreground) {
+      lifecycleGeneration += 1;
+      refreshPending = false;
+    } else if (loading) {
+      refreshPending = true;
+    } else {
+      unawaited(poll());
+    }
   }
 
   void refreshNow() {

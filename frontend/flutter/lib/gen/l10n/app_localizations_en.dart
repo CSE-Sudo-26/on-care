@@ -596,6 +596,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Analysis failed. Please try again in a moment.';
 
   @override
+  String get dietAnalysisUnsupportedFormat =>
+      'This photo format can\'t be analyzed. Please pick a JPG or PNG photo instead.';
+
+  @override
+  String get dietAnalysisBadRequest =>
+      'The photo couldn\'t be read. Please pick a different one.';
+
+  @override
+  String get dietAnalysisUnauthorized =>
+      'Your session expired. Please sign in again to log this meal.';
+
+  @override
+  String get dietAnalysisNotImplemented =>
+      'Photo analysis is unavailable right now. Please log the meal manually.';
+
+  @override
+  String get dietAnalysisPickAnother => 'Pick another photo';
+
+  @override
+  String get dietAnalysisSignIn => 'Sign in again';
+
+  @override
+  String get dietAnalysisClose => 'Close';
+
+  @override
   String get dietRecognizedFood => 'Recognized Food';
 
   @override

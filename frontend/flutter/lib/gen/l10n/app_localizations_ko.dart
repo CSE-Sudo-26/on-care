@@ -589,6 +589,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAnalysisFailedBody => '분석에 실패했어요. 잠시 후 다시 시도해 주세요.';
 
   @override
+  String get dietAnalysisUnsupportedFormat =>
+      '이 사진 형식은 분석할 수 없어요. JPG 또는 PNG 사진으로 다시 골라주세요.';
+
+  @override
+  String get dietAnalysisBadRequest => '사진을 읽지 못했어요. 다른 사진으로 다시 골라주세요.';
+
+  @override
+  String get dietAnalysisUnauthorized => '로그인이 만료됐어요. 다시 로그인한 뒤 기록해 주세요.';
+
+  @override
+  String get dietAnalysisNotImplemented =>
+      '지금은 사진 분석을 사용할 수 없어요. 직접 입력으로 기록해 주세요.';
+
+  @override
+  String get dietAnalysisPickAnother => '다른 사진 고르기';
+
+  @override
+  String get dietAnalysisSignIn => '다시 로그인';
+
+  @override
+  String get dietAnalysisClose => '닫기';
+
+  @override
   String get dietRecognizedFood => '인식된 음식';
 
   @override
