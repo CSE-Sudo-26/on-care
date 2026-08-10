@@ -838,9 +838,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 30));
       }
 
-      // Start 김민수's (slow) registration, hop to 이지수 and back.
+      // Start 김민수 and 이지수 independently, then return to 김민수 while
+      // both writes are still pending.
       await tapRegister();
       await selectClient('이지수');
+      await tapRegister();
       await selectClient('김민수');
       // Back on 김민수 while the first write is still in flight — the
       // button stays disabled, so this tap must NOT start a second one.
@@ -850,7 +852,7 @@ void main() {
       final repo =
           container.read(scheduleRepositoryProvider)
               as _SlowCountingScheduleRepository;
-      expect(repo.registerCalls, 1);
+      expect(repo.registerCalls, 2);
       await tester.pump(const Duration(seconds: 5));
       await settle(tester);
     });

@@ -15,12 +15,14 @@ Response<List<dynamic>> _okList(List<dynamic> body, String path) =>
       data: body,
     );
 
-Response<Map<String, dynamic>> _okMap(String path) =>
-    Response<Map<String, dynamic>>(
-      requestOptions: RequestOptions(path: path),
-      statusCode: 200,
-      data: <String, dynamic>{},
-    );
+Response<Map<String, dynamic>> _okMap(
+  String path, [
+  Map<String, dynamic> body = const <String, dynamic>{},
+]) => Response<Map<String, dynamic>>(
+  requestOptions: RequestOptions(path: path),
+  statusCode: 200,
+  data: body,
+);
 
 DioException _httpError(int status, String path) => DioException(
   requestOptions: RequestOptions(path: path),
@@ -230,16 +232,15 @@ void main() {
   );
 
   test(
-    'registerProgram updates the earliest upcoming session for the member',
+    'registerProgram delegates lookup and write to one atomic command',
     () async {
-      stubGet(<dynamic>[
-        _session(id: 'done', time: '09:00', status: '완료'),
-        _session(id: 'late', time: '15:00'),
-        _session(id: 'early', time: '11:00'),
-      ]);
+      const path = '/trainer/clients/m1/schedule-program';
       when(
-        () => dio.put<Map<String, dynamic>>(any(), data: any(named: 'data')),
-      ).thenAnswer((_) async => _okMap('$_schedulePath/early'));
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).thenAnswer(
+        (_) async =>
+            _okMap(path, <String, dynamic>{'attached_to_existing': true}),
+      );
 
       final attached = await repo.registerProgram(
         date: '2026-08-06',
@@ -252,32 +253,46 @@ void main() {
       );
 
       expect(attached, isTrue);
-      expect(capturedQuery(), <String, String>{
-        'date': '2026-08-06',
-        'member_id': 'm1',
+      final body =
+          verify(
+                () => dio.put<Map<String, dynamic>>(
+                  path,
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
+      expect(body.keys.toSet(), <String>{
+        'date',
+        'time',
+        'client_name',
+        'program',
       });
-      final verification = verify(
-        () => dio.put<Map<String, dynamic>>(
-          captureAny(),
-          data: captureAny(named: 'data'),
+      expect(body['client_name'], '김민수');
+      expect((body['program'] as List<Object?>).single, <String, Object?>{
+        'name': '스쿼트',
+        'sets': 1,
+        'reps': '20분',
+        'weight': '-',
+      });
+      verifyNever(
+        () => dio.get<List<dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
         ),
       );
-      final captured = verification.captured;
-      expect(captured[0], '$_schedulePath/early');
-      expect((captured[1] as Map<String, Object?>).keys, <String>['program']);
     },
   );
 
   test(
-    'registerProgram creates a real PT session when none is upcoming',
+    'registerProgram returns whether the server created a session',
     () async {
-      stubGet(<dynamic>[_session(id: 'done', time: '09:00', status: '완료')]);
+      const path = '/trainer/clients/m1/schedule-program';
       when(
-        () => dio.post<Map<String, dynamic>>(
-          _schedulePath,
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer((_) async => _okMap(_schedulePath));
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).thenAnswer(
+        (_) async =>
+            _okMap(path, <String, dynamic>{'attached_to_existing': false}),
+      );
 
       final attached = await repo.registerProgram(
         date: '2026-08-06',
@@ -290,26 +305,9 @@ void main() {
       );
 
       expect(attached, isFalse);
-      final body =
-          verify(
-                () => dio.post<Map<String, dynamic>>(
-                  _schedulePath,
-                  data: captureAny(named: 'data'),
-                ),
-              ).captured.single
-              as Map<String, Object?>;
-      expect(body['member_id'], 'm1');
-      expect(body['client_name'], '김민수');
-      expect(body['date'], '2026-08-06');
-      expect(body['time'], '16:00');
-      expect(body['type'], '1:1 PT');
-      expect(body['duration_minutes'], 60);
-      expect((body['program'] as List<Object?>).single, <String, Object?>{
-        'name': '플랭크',
-        'sets': 1,
-        'reps': '10분',
-        'weight': '-',
-      });
+      verify(
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).called(1);
     },
   );
 

@@ -813,6 +813,67 @@ def create_session(
     return _schedule_out(s)
 
 
+def register_program(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    *,
+    date: str,
+    time: str,
+    client_name: str,
+    program: list[ProgramItem],
+) -> tuple[ScheduleSessionOut, bool] | None:
+    """Atomically attach a program to a planned session or create one.
+
+    Locking the trainer-client link serializes this command for one
+    trainer/member pair. A concurrent request therefore cannot observe the
+    same empty schedule state and create a duplicate session: the second
+    request waits, then sees and updates the row committed by the first.
+    """
+    client_link = db.scalar(
+        select(TrainerClient)
+        .where(
+            TrainerClient.trainer_id == trainer_id,
+            TrainerClient.member_id == member_id,
+        )
+        .with_for_update()
+    )
+    if client_link is None:
+        return None
+
+    session = db.scalar(
+        select(TrainerSchedule)
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.date == date,
+            TrainerSchedule.status == "예정",
+        )
+        .order_by(TrainerSchedule.time, TrainerSchedule.id)
+        .limit(1)
+        .with_for_update()
+    )
+    if session is None:
+        created = create_session(
+            db,
+            trainer_id,
+            date=date,
+            time=time,
+            client_name=client_name,
+            member_id=member_id,
+            type_="1:1 PT",
+            duration_minutes=60,
+            note="",
+            program=program,
+        )
+        return created, False
+
+    session.program_json = _dump_program(program)
+    db.commit()
+    db.refresh(session)
+    return _schedule_out(session), True
+
+
 def update_session(
     db: Session, trainer_id: str, session_id: str, fields: dict
 ) -> ScheduleSessionOut | None:

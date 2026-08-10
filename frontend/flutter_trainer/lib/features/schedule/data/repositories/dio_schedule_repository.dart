@@ -7,7 +7,6 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// The trainer's timeline against the FastAPI backend
 /// (`/v1/trainer/schedule*`). Selected when `USE_MOCK_API=false`.
@@ -189,42 +188,28 @@ class DioScheduleRepository implements ScheduleRepository {
     required String time,
     required List<ProgramItem> program,
   }) async {
-    final sessions = await _fetch(<String, String>{
-      'date': date,
-      'member_id': clientId,
-    });
-    final upcoming =
-        sessions
-            .where((session) => session.status == ScheduleStatus.upcoming)
-            .toList()
-          ..sort((a, b) => a.time.compareTo(b.time));
-
-    if (upcoming.isNotEmpty) {
-      final id = Uri.encodeComponent(upcoming.first.id);
-      await _mutate(
-        () => _dio.put<Map<String, dynamic>>(
-          '/trainer/schedule/$id',
-          data: <String, Object?>{'program': programToJson(program)},
-        ),
-      );
-      return true;
-    }
-
-    await _mutate(
-      () => _dio.post<Map<String, dynamic>>(
-        '/trainer/schedule',
+    late bool attachedToExisting;
+    final memberId = Uri.encodeComponent(clientId);
+    await _mutate(() async {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/trainer/clients/$memberId/schedule-program',
         data: <String, Object?>{
           'date': date,
           'time': time,
           'client_name': clientName,
-          'member_id': clientId,
-          'type': SessionType.personalTraining,
-          'duration_minutes': 60,
           'program': programToJson(program),
         },
-      ),
-    );
-    return false;
+      );
+      final attached = response.data?['attached_to_existing'];
+      if (attached is! bool) {
+        throw const FormatException(
+          'schedule-program response is missing attached_to_existing',
+        );
+      }
+      attachedToExisting = attached;
+      return response;
+    });
+    return attachedToExisting;
   }
 
   @override

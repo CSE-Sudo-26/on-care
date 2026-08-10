@@ -32,7 +32,8 @@ from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachOut, ClientCoachRequest, ClientDietEntryOut,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
-    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleSessionOut, ScheduleUpdateRequest,
+    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
+    ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
@@ -521,6 +522,35 @@ def trainer_create_session(
         member_id=payload.member_id, type_=payload.type,
         duration_minutes=payload.duration_minutes, note=payload.note,
         program=payload.program,
+    )
+
+
+@router.put(
+    "/trainer/clients/{member_id}/schedule-program",
+    response_model=ScheduleProgramRegisterOut,
+)
+def trainer_register_schedule_program(
+    member_id: str,
+    payload: ScheduleProgramRegisterRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleProgramRegisterOut:
+    """Atomically attach an AI program or create the member's PT session."""
+    result = trainer_service.register_program(
+        db,
+        trainer.id,
+        member_id,
+        date=payload.date,
+        time=payload.time,
+        client_name=payload.client_name,
+        program=payload.program,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
+    session, attached_to_existing = result
+    return ScheduleProgramRegisterOut(
+        session=session,
+        attached_to_existing=attached_to_existing,
     )
 
 
