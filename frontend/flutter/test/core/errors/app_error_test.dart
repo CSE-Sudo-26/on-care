@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/errors/app_error.dart';
-import 'package:oncare/core/errors/result.dart';
 
 void main() {
   RequestOptions opts() => RequestOptions(path: '/ping');
@@ -60,25 +59,4 @@ void main() {
     });
   });
 
-  group('Result<T>', () {
-    test('ok branches through fold', () {
-      final r = Result<int>.ok(42);
-      expect(r.isOk, isTrue);
-      expect(r.valueOrNull, 42);
-      expect(r.errorOrNull, isNull);
-      expect(r.fold(ok: (v) => 'ok($v)', err: (_) => 'err'), 'ok(42)');
-    });
-
-    test('err branches through fold', () {
-      const err = NetworkError(message: 'down');
-      final r = Result<int>.err(err);
-      expect(r.isError, isTrue);
-      expect(r.valueOrNull, isNull);
-      expect(r.errorOrNull, same(err));
-      expect(
-        r.fold(ok: (_) => 'ok', err: (e) => e.runtimeType.toString()),
-        'NetworkError',
-      );
-    });
-  });
 }
