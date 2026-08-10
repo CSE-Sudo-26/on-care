@@ -30,7 +30,7 @@ from app.data import meal_catalog
 from app.data.meal_catalog import CATALOG, DEFAULT_ORDER, RECOMMENDATION_COUNT, MealItem
 from app.models.models import DietEntry, HealthProfile
 from app.schemas.diet_api import DietRecommendationItem, DietRecommendationsResponse
-from app.services.coach.llm import get_coach_llm
+from app.services.coach.llm import DEFAULT_THINKING_BUDGET, get_coach_llm
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +60,9 @@ _LOW_RATIO = 0.6
 #: 아래 사고 예산과 함께 쓰면 실측 1~2초라 6초면 충분한 여유다.
 LLM_TIMEOUT_SEC = 6.0
 
-#: Gemini 사고 토큰 상한. 기본값(사고 켜짐)으로는 이 짧은 JSON 하나에 10초 이상
-#: 걸려 타임아웃으로 폴백됐다. json_mode 와 함께 주면 1.5초 수준으로 떨어진다.
-#: 0 은 `gemini-flash-latest` 가 400 으로 거부하므로 작은 양수를 쓴다.
-LLM_THINKING_BUDGET = 128
+#: Gemini 사고 토큰 상한. 근거와 값은 `coach/llm.py` 로 승격했다 — 지연을 지배하는
+#: 값이라 호출부마다 따로 두면 한쪽만 누락돼 조용히 느려진다(#579).
+LLM_THINKING_BUDGET = DEFAULT_THINKING_BUDGET
 
 #: 추천 캐시 TTL(초). 홈 진입마다 LLM 을 부르면 비용·지연이 커진다. 같은 사용자의
 #: 같은 신호 조합이면 결과가 같으므로 짧게 캐시한다.

@@ -12,6 +12,36 @@ from app.schemas.trainer_api import (
     RoutineOptionsRequest,
 )
 from app.services import trainer_routine_options_service
+from app.services.coach.llm import DEFAULT_THINKING_BUDGET
+
+#: 계약을 만족하는 LLM 응답. 여러 테스트가 같은 페이로드를 쓴다.
+_VALID_LLM_JSON = """
+{
+  "plan_a": {
+    "key": "A",
+    "label": "관절 회복형",
+    "total_minutes": 20,
+    "intensity": "낮음",
+    "exercises": [
+      {"name": "저강도 걷기", "minutes": 20, "type": "유산소"}
+    ],
+    "reason": "부담을 낮춘 구성",
+    "rationale": "최근 기록과 메모를 반영"
+  },
+  "plan_b": {
+    "key": "B",
+    "label": "근력 강화형",
+    "total_minutes": 30,
+    "intensity": "보통",
+    "exercises": [
+      {"name": "스쿼트", "minutes": 15, "type": "근력"},
+      {"name": "실내 자전거", "minutes": 15, "type": "유산소"}
+    ],
+    "reason": "운동량을 높인 구성",
+    "rationale": "목표와 완료율을 반영"
+  }
+}
+"""
 
 
 def _trainer_token(client) -> str:
@@ -41,10 +71,16 @@ class _Result:
 class _FakeLlm:
     def __init__(self, text: str) -> None:
         self._text = text
+        #: 마지막 호출에 넘어온 생성 옵션. 사고 예산이 빠지면 상시 폴백으로
+        #: 떨어지므로(#579) 테스트가 이 값을 직접 확인한다.
+        self.last_kwargs: dict[str, object] = {}
 
-    def generate(self, system_prompt: str, user_prompt: str) -> _Result:
+    def generate(
+        self, system_prompt: str, user_prompt: str, **kwargs: object
+    ) -> _Result:
         assert "member_analysis" in user_prompt
         assert "JSON" in system_prompt
+        self.last_kwargs = kwargs
         return _Result(self._text)
 
 
@@ -116,37 +152,10 @@ def test_public_generator_falls_back_for_malformed_llm(monkeypatch):
 def test_routine_options_uses_valid_llm_json(client, monkeypatch):
     token = _trainer_token(client)
     member_id = _first_client_id(client, token)
-    payload = """
-    {
-      "plan_a": {
-        "key": "A",
-        "label": "관절 회복형",
-        "total_minutes": 20,
-        "intensity": "낮음",
-        "exercises": [
-          {"name": "저강도 걷기", "minutes": 20, "type": "유산소"}
-        ],
-        "reason": "부담을 낮춘 구성",
-        "rationale": "최근 기록과 메모를 반영"
-      },
-      "plan_b": {
-        "key": "B",
-        "label": "근력 강화형",
-        "total_minutes": 30,
-        "intensity": "보통",
-        "exercises": [
-          {"name": "스쿼트", "minutes": 15, "type": "근력"},
-          {"name": "실내 자전거", "minutes": 15, "type": "유산소"}
-        ],
-        "reason": "운동량을 높인 구성",
-        "rationale": "목표와 완료율을 반영"
-      }
-    }
-    """
     monkeypatch.setattr(
         trainer_routine_options_service,
         "get_coach_llm",
-        lambda: _FakeLlm(payload),
+        lambda: _FakeLlm(_VALID_LLM_JSON),
     )
 
     response = client.post(
@@ -213,3 +222,37 @@ def test_routine_options_rejects_unowned_member_before_ai_call(
     )
 
     assert response.status_code == 404
+
+
+def test_llm_is_called_with_json_mode_and_thinking_budget(monkeypatch):
+    """루틴 생성이 사고 예산과 json_mode 를 **함께** 넘긴다 (#579).
+
+    이 옵션이 빠지면 `gemini-flash-latest` 는 짧은 JSON 하나에도 10초 이상 걸려
+    (실측 10.9~12.8초) 클라이언트가 먼저 끊고, 트레이너는 AI 결과 대신 규칙형만
+    보게 된다. 옵션을 주면 4.0~6.4초로 떨어진다.
+
+    json_mode 만 켜면 오히려 크게 느려지므로 둘을 함께 확인한다.
+    """
+    fake = _FakeLlm(_VALID_LLM_JSON)
+    monkeypatch.setattr(
+        trainer_routine_options_service, "get_coach_llm", lambda: fake
+    )
+
+    result = trainer_routine_options_service._generate_with_llm(
+        _analysis(),
+        RoutineOptionsRequest(
+            available_minutes=30, intensity_preference="moderate", trainer_note=""
+        ),
+    )
+
+    assert result.generated_by == "ai"
+    assert fake.last_kwargs.get("json_mode") is True
+    assert fake.last_kwargs.get("thinking_budget") == DEFAULT_THINKING_BUDGET
+    assert fake.last_kwargs["thinking_budget"], "budget=0 은 모델이 400 으로 거부한다"
+
+
+def test_routine_and_diet_paths_share_one_thinking_budget():
+    """두 LLM 경로가 같은 상수를 본다 — 한쪽만 누락되는 것이 #579 의 원인이었다."""
+    from app.services import diet_recommendation_service
+
+    assert diet_recommendation_service.LLM_THINKING_BUDGET == DEFAULT_THINKING_BUDGET

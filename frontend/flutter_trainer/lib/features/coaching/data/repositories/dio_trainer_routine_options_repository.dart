@@ -13,6 +13,17 @@ class DioTrainerRoutineOptionsRepository
 
   final Dio _dio;
 
+  /// 루틴 생성 대기 시간. 전역 receiveTimeout(15초)으로는 모자란다.
+  ///
+  /// 생성은 회원 분석 + Gemini 호출이라 로컬 실측이 4.0~6.4초였다(사고 예산을
+  /// 넘기기 전에는 10.9~12.8초로, 15초에 여유가 2초뿐이라 네트워크 지연이 붙으면
+  /// 그대로 넘겼다 — #579). 여기서 앱만 먼저 포기하면 서버는 규칙형으로 정상
+  /// 폴백해 200 을 돌려주는데도 트레이너는 "생성 실패"만 보게 된다.
+  ///
+  /// 회원 앱 AI 코치와 같은 값을 쓴다. 서버 쪽 LLM 타임아웃(#584)이 들어와도
+  /// 그보다 넉넉해야 서버의 폴백 응답이 이기고, 앱은 실패 대신 결과를 받는다.
+  static const Duration _generateTimeout = Duration(seconds: 60);
+
   @override
   Future<RoutineOptions> generate(
     String memberId, {
@@ -29,6 +40,7 @@ class DioTrainerRoutineOptionsRepository
           'intensity_preference': intensityPreference,
           'trainer_note': trainerNote,
         },
+        options: Options(receiveTimeout: _generateTimeout),
       );
       final data = res.data;
       if (data == null) {

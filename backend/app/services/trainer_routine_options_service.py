@@ -21,7 +21,7 @@ from app.schemas.trainer_api import (
     RoutineOptionsRequest,
 )
 from app.services import routine_ai
-from app.services.coach.llm import get_coach_llm
+from app.services.coach.llm import DEFAULT_THINKING_BUDGET, get_coach_llm
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,14 @@ def _generate_with_llm(
         },
         ensure_ascii=False,
     )
-    result = get_coach_llm().generate(_SYSTEM_PROMPT, prompt)
+    # json_mode 와 사고 예산은 **반드시 함께** 넘긴다. 기본값(사고 켜짐)으로는 이
+    # 짧은 JSON 하나에도 10초 이상 걸려 클라이언트가 먼저 끊고 규칙형만 보게 된다.
+    # json_mode 만 켜면 오히려 더 느려진다(근거 실측은 coach/llm.py 주석).
+    result = get_coach_llm().generate(
+        _SYSTEM_PROMPT, prompt,
+        json_mode=True,
+        thinking_budget=DEFAULT_THINKING_BUDGET,
+    )
     payload = _decode_json_object(result.text)
     payload["analysis"] = analysis.model_dump()
     payload["generated_by"] = "ai"

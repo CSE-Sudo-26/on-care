@@ -134,7 +134,12 @@ def _stub_llm(monkeypatch, behaviour):
     from app.services.coach.llm_base import LLMResult
 
     class _StubLLM:
-        def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+        # 생성 옵션(json_mode·thinking_budget)은 여기서 검증하지 않는다 —
+        # 이 스텁은 응답 내용별 동작만 본다. 옵션 전달은
+        # test_trainer_routine_options.py 가 고정한다(#579).
+        def generate(
+            self, system_prompt: str, user_prompt: str, **kwargs: object
+        ) -> LLMResult:
             if isinstance(behaviour, Exception):
                 raise behaviour
             return LLMResult(text=behaviour, model="stub")
