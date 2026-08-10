@@ -195,6 +195,7 @@ void main() {
         client: makeClient(name: '김민수'),
         sessions: <ScheduleSession>[session(date: ymd(monday), status: '완료')],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       final message = reportMessage(_ko, report);
