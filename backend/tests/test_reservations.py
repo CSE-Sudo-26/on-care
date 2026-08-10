@@ -253,6 +253,51 @@ def test_reserved_schedule_cannot_be_updated_or_deleted_as_regular_schedule(
     assert persisted_slot.remaining == 0
 
 
+def test_reserved_schedule_accepts_program_without_changing_booking(
+    client, db_session, created_slots
+):
+    trainer_token = _login(client, "trainer@oncare.com")
+    member_token = _login(client, "jisu@oncare.com")
+    slot = _create_slot(client, trainer_token, created_slots, capacity=1)
+    booked = client.post(
+        "/v1/reservations",
+        headers=_headers(member_token),
+        json={"slot_id": slot["id"]},
+    )
+    assert booked.status_code == 201, booked.text
+
+    schedule_id = booked.json()["schedule_id"]
+    before = db_session.get(TrainerSchedule, schedule_id)
+    assert before is not None
+    original_time = before.time
+
+    updated = client.put(
+        f"/v1/trainer/schedule/{schedule_id}",
+        headers=_headers(trainer_token),
+        json={
+            "program": [
+                {
+                    "name": "저강도 걷기",
+                    "sets": 1,
+                    "reps": "30분",
+                    "weight": "-",
+                }
+            ]
+        },
+    )
+
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["program"][0]["name"] == "저강도 걷기"
+    db_session.expire_all()
+    persisted = db_session.get(TrainerSchedule, schedule_id)
+    assert persisted is not None
+    assert persisted.time == original_time
+    assert "저강도 걷기" in persisted.program_json
+    persisted_slot = db_session.get(TrainerReservationSlot, slot["id"])
+    assert persisted_slot is not None
+    assert persisted_slot.remaining == 0
+
+
 def test_member_account_deletion_restores_slot_and_removes_schedule(
     client, db_session
 ):

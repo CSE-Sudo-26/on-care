@@ -1,7 +1,15 @@
 """트레이너 스케줄 CRUD + 예약→수업→기록 완료 루프(#252). DB 필요."""
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
+from threading import Barrier
+
 import pytest
+from sqlalchemy import select
+
+from app.models.models import TrainerClient, TrainerSchedule
 
 
 def _tok(client) -> str:
@@ -32,6 +40,126 @@ def test_schedule_seeded_timeline(client):
     # 공백 슬롯 + program 포함 슬롯 존재
     assert any(s["status"] == "공백" for s in slots)
     assert any(len(s["program"]) > 0 for s in slots)
+
+
+def _program_command_body(day: str, exercise: str) -> dict:
+    return {
+        "date": day,
+        "time": "16:00",
+        "client_name": "이지수",
+        "program": [
+            {"name": exercise, "sets": 1, "reps": "20분", "weight": "-"}
+        ],
+    }
+
+
+def _delete_program_test_sessions(db_session, day: str) -> None:
+    rows = db_session.scalars(
+        select(TrainerSchedule).where(
+            TrainerSchedule.trainer_id == "trainer-demo",
+            TrainerSchedule.member_id == "user-jisu",
+            TrainerSchedule.date == day,
+        )
+    ).all()
+    for row in rows:
+        db_session.delete(row)
+    db_session.commit()
+
+
+def test_schedule_program_command_reuses_the_created_session(client, db_session):
+    token = _tok(client)
+    day = (date.today() + timedelta(days=61)).isoformat()
+    url = "/v1/trainer/clients/user-jisu/schedule-program"
+    _delete_program_test_sessions(db_session, day)
+
+    try:
+        first = client.put(
+            url,
+            json=_program_command_body(day, "걷기"),
+            headers=_h(token),
+        )
+        second = client.put(
+            url,
+            json=_program_command_body(day, "플랭크"),
+            headers=_h(token),
+        )
+
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
+        assert first.json()["attached_to_existing"] is False
+        assert second.json()["attached_to_existing"] is True
+        assert first.json()["session"]["id"] == second.json()["session"]["id"]
+        assert second.json()["session"]["program"][0]["name"] == "플랭크"
+
+        db_session.expire_all()
+        rows = db_session.scalars(
+            select(TrainerSchedule).where(
+                TrainerSchedule.trainer_id == "trainer-demo",
+                TrainerSchedule.member_id == "user-jisu",
+                TrainerSchedule.date == day,
+                TrainerSchedule.status == "예정",
+            )
+        ).all()
+        assert len(rows) == 1
+    finally:
+        _delete_program_test_sessions(db_session, day)
+
+
+def test_concurrent_schedule_program_commands_create_one_session(
+    client, db_session
+):
+    token = _tok(client)
+    day = (date.today() + timedelta(days=62)).isoformat()
+    url = "/v1/trainer/clients/user-jisu/schedule-program"
+    _delete_program_test_sessions(db_session, day)
+
+    # Hold the same row used as the service's mutex until both HTTP requests
+    # have started. Once released, they must serialize and converge on one row.
+    link = db_session.scalar(
+        select(TrainerClient)
+        .where(
+            TrainerClient.trainer_id == "trainer-demo",
+            TrainerClient.member_id == "user-jisu",
+        )
+        .with_for_update()
+    )
+    assert link is not None
+    barrier = Barrier(3)
+
+    def register(exercise: str):
+        barrier.wait()
+        return client.put(
+            url,
+            json=_program_command_body(day, exercise),
+            headers=_h(token),
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(register, name) for name in ("걷기", "플랭크")]
+            barrier.wait()
+            time.sleep(0.2)
+            db_session.commit()
+            responses = [future.result(timeout=10) for future in futures]
+
+        assert [response.status_code for response in responses] == [200, 200]
+        assert sorted(
+            response.json()["attached_to_existing"] for response in responses
+        ) == [False, True]
+
+        db_session.expire_all()
+        rows = db_session.scalars(
+            select(TrainerSchedule).where(
+                TrainerSchedule.trainer_id == "trainer-demo",
+                TrainerSchedule.member_id == "user-jisu",
+                TrainerSchedule.date == day,
+                TrainerSchedule.status == "예정",
+            )
+        ).all()
+        assert len(rows) == 1
+    finally:
+        db_session.rollback()
+        _delete_program_test_sessions(db_session, day)
 
 
 def test_schedule_crud(client):

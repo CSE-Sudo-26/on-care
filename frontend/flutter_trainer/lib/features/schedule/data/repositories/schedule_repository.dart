@@ -73,6 +73,21 @@ abstract interface class ScheduleRepository {
     required String note,
   });
 
+  /// Attaches [program] to the client's earliest upcoming PT session on
+  /// [date], or creates a new one at [time] when none exists.
+  ///
+  /// Returns `true` when an existing session was updated and `false` when a
+  /// new session was created. Both mock and real implementations expose the
+  /// same operation so AI coaching cannot accidentally write to a different
+  /// data source than the schedule screen.
+  Future<bool> registerProgram({
+    required String date,
+    required String clientId,
+    required String clientName,
+    required String time,
+    required List<ProgramItem> program,
+  });
+
   /// Removes a session from the timeline.
   Future<void> deleteSession(String id);
 
@@ -257,6 +272,77 @@ class DriftScheduleRepository implements ScheduleRepository {
         note: Value(note),
       ),
     );
+  }
+
+  @override
+  Future<bool> registerProgram({
+    required String date,
+    required String clientId,
+    required String clientName,
+    required String time,
+    required List<ProgramItem> program,
+  }) {
+    final table = _db.trainerScheduleEntries;
+    return _db.transaction(() async {
+      final candidates =
+          await (_db.select(table)
+                ..where(
+                  (t) =>
+                      t.date.equals(date) &
+                      t.status.equals(ScheduleStatus.upcoming),
+                )
+                ..orderBy(<OrderingTerm Function($TrainerScheduleEntriesTable)>[
+                  (t) => OrderingTerm(expression: t.time),
+                ]))
+              .get();
+
+      TrainerScheduleRow? existing;
+      final normalizedName = clientName.trim().toLowerCase();
+      for (final candidate in candidates) {
+        if (candidate.clientId == clientId ||
+            (candidate.clientId == null &&
+                candidate.clientName.trim().toLowerCase() == normalizedName)) {
+          existing = candidate;
+          break;
+        }
+      }
+
+      final encodedProgram = jsonEncode(<Map<String, Object?>>[
+        for (final item in program)
+          <String, Object?>{
+            'name': item.name,
+            'sets': item.sets,
+            'reps': item.reps,
+            'weight': item.weight,
+          },
+      ]);
+      if (existing != null) {
+        await (_db.update(
+          table,
+        )..where((t) => t.id.equals(existing!.id))).write(
+          TrainerScheduleEntriesCompanion(programJson: Value(encodedProgram)),
+        );
+        return true;
+      }
+
+      final now = DateTime.now();
+      await _db
+          .into(table)
+          .insert(
+            TrainerScheduleEntriesCompanion.insert(
+              id: 'sched-${now.microsecondsSinceEpoch}',
+              date: date,
+              time: time,
+              clientId: Value(clientId),
+              clientName: Value(clientName),
+              type: const Value(SessionType.personalTraining),
+              durationMinutes: const Value(60),
+              status: ScheduleStatus.upcoming,
+              programJson: Value(encodedProgram),
+            ),
+          );
+      return false;
+    });
   }
 
   /// Removes a session from the timeline.

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -760,6 +761,23 @@ def _is_reservation_schedule(db: Session, session_id: str) -> bool:
     ) is not None
 
 
+def _dump_program(
+    program: Sequence[ProgramItem | Mapping[str, object]],
+) -> str:
+    """Serialize validated program items from create and partial-update paths.
+
+    Schedule creation passes ``ProgramItem`` instances, while
+    ``ScheduleUpdateRequest.model_dump()`` recursively converts the same items
+    to dictionaries before calling the service.  Supporting both forms keeps
+    the service boundary consistent for API and direct service callers.
+    """
+    items = [
+        item.model_dump() if isinstance(item, ProgramItem) else dict(item)
+        for item in program
+    ]
+    return json.dumps(items, ensure_ascii=False)
+
+
 def create_session(
     db: Session, trainer_id: str, *, date: str, time: str, client_name: str,
     member_id: str | None, type_: str, duration_minutes: int, note: str,
@@ -776,7 +794,7 @@ def create_session(
         duration_minutes=duration_minutes,
         status="예정",
         note=note,
-        program_json=json.dumps([p.model_dump() for p in program], ensure_ascii=False),
+        program_json=_dump_program(program),
         sort_order=0,
     )
     db.add(s)
@@ -795,6 +813,67 @@ def create_session(
     return _schedule_out(s)
 
 
+def register_program(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    *,
+    date: str,
+    time: str,
+    client_name: str,
+    program: list[ProgramItem],
+) -> tuple[ScheduleSessionOut, bool] | None:
+    """Atomically attach a program to a planned session or create one.
+
+    Locking the trainer-client link serializes this command for one
+    trainer/member pair. A concurrent request therefore cannot observe the
+    same empty schedule state and create a duplicate session: the second
+    request waits, then sees and updates the row committed by the first.
+    """
+    client_link = db.scalar(
+        select(TrainerClient)
+        .where(
+            TrainerClient.trainer_id == trainer_id,
+            TrainerClient.member_id == member_id,
+        )
+        .with_for_update()
+    )
+    if client_link is None:
+        return None
+
+    session = db.scalar(
+        select(TrainerSchedule)
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.date == date,
+            TrainerSchedule.status == "예정",
+        )
+        .order_by(TrainerSchedule.time, TrainerSchedule.id)
+        .limit(1)
+        .with_for_update()
+    )
+    if session is None:
+        created = create_session(
+            db,
+            trainer_id,
+            date=date,
+            time=time,
+            client_name=client_name,
+            member_id=member_id,
+            type_="1:1 PT",
+            duration_minutes=60,
+            note="",
+            program=program,
+        )
+        return created, False
+
+    session.program_json = _dump_program(program)
+    db.commit()
+    db.refresh(session)
+    return _schedule_out(session), True
+
+
 def update_session(
     db: Session, trainer_id: str, session_id: str, fields: dict
 ) -> ScheduleSessionOut | None:
@@ -806,7 +885,13 @@ def update_session(
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return None
-    if _is_reservation_schedule(db, session_id):
+    # A reservation owns the booking coordinates and lifecycle, so changing
+    # its time/member/type/duration through the general schedule API would
+    # desynchronise the slot and remaining count. The trainer may still add
+    # the PT plan and memo: those fields do not alter the reservation.
+    if _is_reservation_schedule(db, session_id) and not set(fields).issubset(
+        {"program", "note"}
+    ):
         raise ScheduleConflict(
             "예약으로 생성된 일정은 일반 일정 화면에서 수정할 수 없습니다."
         )
@@ -826,9 +911,7 @@ def update_session(
     if "note" in fields:
         s.note = fields["note"]
     if "program" in fields and fields["program"] is not None:
-        s.program_json = json.dumps(
-            [p.model_dump() for p in fields["program"]], ensure_ascii=False
-        )
+        s.program_json = _dump_program(fields["program"])
     db.commit()
     db.refresh(s)
     return _schedule_out(s)

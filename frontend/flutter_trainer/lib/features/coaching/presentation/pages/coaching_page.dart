@@ -20,6 +20,8 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -28,7 +30,6 @@ import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// A trainer-added exercise (kept in-memory like the mock).
 class _CustomExercise {
@@ -88,11 +89,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
-  // The client whose registration is in flight (null when none). Tracked
-  // per-client — not a plain bool — so switching away and back can't let
-  // the SAME client's registration be triggered twice while the first is
-  // still saving (review PR 220).
-  String? _registeringClientId;
+  // Every client whose registration is in flight. Multiple clients may save
+  // concurrently, but each client may have only one pending write.
+  final Set<String> _registeringClientIds = <String>{};
   Timer? _registerTimer;
 
   /// Day offset (0 = 오늘 … 6) the routine gets registered on.
@@ -132,9 +131,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _sending = false;
       _registered = false;
       _registerOffset = 0;
-      // NOTE: _registeringClientId is intentionally NOT cleared — a
-      // registration in flight for another client keeps being tracked,
-      // so returning to it still blocks a duplicate (review PR 220).
+      // NOTE: _registeringClientIds is intentionally NOT cleared — writes
+      // for other clients keep being tracked while the selection changes.
     });
     _sentTimer?.cancel();
     _registerTimer?.cancel();
@@ -214,25 +212,25 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   }
 
   /// The composed routine (edited AI items minus removed, plus custom)
-  /// in the schedule programJson shape.
-  List<Map<String, Object?>> _composeProgram(List<AiRoutineItem> items) {
+  /// in the shared schedule API/domain shape.
+  List<ProgramItem> _composeProgram(List<AiRoutineItem> items) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return <Map<String, Object?>>[
+    return <ProgramItem>[
       for (final item in items)
         if (!_removed.contains(item.id))
-          <String, Object?>{
-            'name': _nameEdits[item.id] ?? item.name,
-            'sets': 1,
-            'reps': l.minutesShort(_minuteEdits[item.id] ?? item.minutes),
-            'weight': '-',
-          },
+          ProgramItem(
+            name: _nameEdits[item.id] ?? item.name,
+            sets: 1,
+            reps: l.minutesShort(_minuteEdits[item.id] ?? item.minutes),
+            weight: '-',
+          ),
       for (final c in _custom)
-        <String, Object?>{
-          'name': c.name,
-          'sets': 1,
-          'reps': l.minutesShort(c.minutes),
-          'weight': '-',
-        },
+        ProgramItem(
+          name: c.name,
+          sets: 1,
+          reps: l.minutesShort(c.minutes),
+          weight: '-',
+        ),
     ];
   }
 
@@ -276,7 +274,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   ) async {
     // Block a duplicate for THIS client — either just registered, or one
     // is already in flight for them.
-    if (_registered || _registeringClientId == client.id) return;
+    if (_registered || _registeringClientIds.contains(client.id)) return;
     final messenger = ScaffoldMessenger.of(context);
     final program = _composeProgram(items);
     if (program.isEmpty) {
@@ -289,24 +287,31 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
+    final now = DateTime.now();
+    // Today uses the next full hour (capped at the final 23:00 slot); a
+    // future date starts at 10:00, preserving the existing coaching UX.
+    final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
+    final time = '${hour.toString().padLeft(2, '0')}:00';
     // Remember who this write is for — the trainer can switch clients
     // while it saves, and the result must not be attributed to the new
     // one (review PR 220).
     final registeredFor = client.id;
-    setState(() => _registeringClientId = registeredFor);
+    setState(() => _registeringClientIds.add(registeredFor));
     try {
       await ref
-          .read(aiRoutineRepositoryProvider)
-          .registerToSchedule(
+          .read(scheduleRepositoryProvider)
+          .registerProgram(
             date: date,
+            clientId: client.id,
             clientName: client.name,
+            time: time,
             program: program,
           );
     } catch (_) {
       if (!mounted) return;
       // Clear the guard for this client so it can be retried.
-      if (_registeringClientId == registeredFor) {
-        setState(() => _registeringClientId = null);
+      if (_registeringClientIds.contains(registeredFor)) {
+        setState(() => _registeringClientIds.remove(registeredFor));
       }
       // Only surface the error if that client is still on screen.
       if (_isStillSelected(registeredFor)) {
@@ -318,8 +323,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     if (!mounted) return;
-    if (_registeringClientId == registeredFor) {
-      setState(() => _registeringClientId = null);
+    if (_registeringClientIds.contains(registeredFor)) {
+      setState(() => _registeringClientIds.remove(registeredFor));
     }
     // Attribute the success flash only to the client it was started for.
     if (!_isStillSelected(registeredFor)) return;
@@ -700,7 +705,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     // registration is in flight, so a second tap can't queue a
                     // duplicate session (review PR 220).
                     registered:
-                        _registered || _registeringClientId == client.id,
+                        _registered ||
+                        _registeringClientIds.contains(client.id),
                     icon: _registered
                         ? Icons.check_rounded
                         : Icons.calendar_today_outlined,
