@@ -33,6 +33,7 @@ from app.api.v1 import (
     users,
 )
 from app.core import observability
+from app.core.body_limit import RequestBodySizeLimitMiddleware
 from app.core.config import get_settings
 from app.db.init_db import init_db
 
@@ -53,6 +54,11 @@ app = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
 )
+
+# 업로드 본문 상한. add_middleware 는 나중에 추가한 것이 바깥에 감기므로,
+# 이걸 CORS 보다 먼저 등록해 CORS 가 바깥에 오게 한다 — 그래야 413 응답에도
+# CORS 헤더가 붙어서 웹 클라이언트가 상태코드를 읽을 수 있다.
+app.add_middleware(RequestBodySizeLimitMiddleware, max_bytes=settings.max_upload_bytes)
 
 # HTTPS 강제(운영). 프록시 뒤면 X-Forwarded-Proto 를 신뢰(uvicorn --proxy-headers).
 if settings.force_https:

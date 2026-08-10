@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     places_provider: Literal["auto", "kakao", "seed"] = "auto"
     kakao_timeout_seconds: float = 3.0
 
+    # --- 업로드 ---
+    # 요청 본문 상한(바이트). 회원 앱은 사진을 1600px·품질 85 로 재인코딩하고 8MiB 를
+    # 넘으면 보내지 않지만, 그건 앱의 UX 보호일 뿐 API 직접 호출은 막지 못한다.
+    # 여기가 최후 방어선이다.
+    #
+    # 값이 앱의 이미지 상한(8MiB)보다 큰 것은 의도한 것이다 — 이 한도는 multipart
+    # 경계·필드까지 포함한 '요청 본문' 크기라, 8MiB 로 맞추면 정확히 8MiB 인 사진이
+    # 프레이밍 오버헤드 때문에 억울하게 413 을 맞는다.
+    max_upload_bytes: int = 10 * 1024 * 1024
+
     # --- AI 엔진 ---
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo
     # 인식 후 공공 식품영양성분 DB 로 영양 수치 보강(정확도↑). 순수 LLM 비교실험 시 false.
