@@ -13,9 +13,10 @@
   python -m scripts.e2e_sweep --base http://localhost:8000/v1
 
 만든 것은 모두 되돌린다 — 식단·운동 세션은 DELETE, 건강 목표는 원래 값으로 복구,
-채팅은 DB 에서 제거(삭제 API 가 없다). 그래서 몇 번을 돌려도 데모 DB 가 그대로다.
-정리에 실패하면 조용히 넘어가지 않고 FAIL 로 보고한다. 채팅 정리만 로컬
-DATABASE_URL 을 쓰므로, --allow-remote 로 원격을 때리면 채팅은 남는다.
+채팅과 거기서 파생된 개인 RAG 문서(#580)는 DB 에서 제거(둘 다 삭제 API 가 없다).
+그래서 몇 번을 돌려도 데모 DB 가 그대로다. 정리에 실패하면 조용히 넘어가지 않고
+FAIL 로 보고한다. DB 정리는 로컬 DATABASE_URL 을 쓰므로, --allow-remote 로 원격을
+때리면 채팅과 RAG 문서는 남는다.
 
 AI 코칭·루틴 경로는 다루지 않는다. 키가 없으면 규칙 폴백이 200 을 돌려주어 통과처럼
 보이기 때문이다(#579 수정 후 #589 에서 검증).
@@ -44,6 +45,7 @@ _BOUNDARY = "----e2esweep"
 # 실행마다 다른 키를 쓴다. 고정 키면 정리(DELETE)가 실패했을 때 다음 실행이 기존
 # 엔트리를 그대로 돌려받아(find_by_idempotency), 식단이 안 늘어난 것처럼 보인다.
 _RUN_TAG = str(int(time.time()))
+_MARKER = "e2e-sweep-" + _RUN_TAG
 
 
 class Result:
@@ -197,7 +199,7 @@ def scenario_diet(api: Api, m: str, t: str, out: list[Result]) -> None:
         "/diet/analyze",
         token=m,
         multipart=("image", _JPEG, multipart_fields(
-            {"meal_type": "dinner", "idempotency_key": "e2e-sweep-" + _RUN_TAG}
+            {"meal_type": "dinner", "idempotency_key": _MARKER}
         )),
     )
     out.append(Result(g, "사진 업로드·분석", "PASS" if code == 200 else "FAIL", str(code)))
@@ -228,41 +230,77 @@ def scenario_diet(api: Api, m: str, t: str, out: list[Result]) -> None:
         out.append(Result(g, "식단 삭제(정리)", "FAIL", "entry_id 를 못 받아 정리 못 함"))
 
 
-def purge_sweep_chats(marker: str) -> tuple[int, str]:
-    """스윕이 남긴 채팅을 DB 에서 지운다.
+def _db_session():
+    """로컬 DB 세션. reembed.py 와 같은 방식이며, 열 수 없으면 사유를 돌려준다."""
+    try:
+        from app.db.session import SessionLocal
+    except Exception as e:  # noqa: BLE001 - 임포트 실패도 결과로 보고한다
+        return None, f"임포트 실패: {e!r}"
+    try:
+        return SessionLocal(), ""
+    except Exception as e:  # noqa: BLE001
+        return None, repr(e)
 
-    채팅에는 삭제 API 가 없다(coach/trainer 라우터 모두 GET·POST 뿐). 그대로 두면
-    반복 실행마다 데모 스레드에 쌓이고, #596 이 들어오면 메시지마다 개인 RAG 문서가
-    생겨 AI 코칭 근거까지 오염된다. 그래서 reembed.py 와 같은 방식으로 DB 를 직접
-    쓴다. 원격 대상(--allow-remote)은 로컬 DATABASE_URL 과 다르므로 지울 수 없다.
+
+def latest_document_id() -> tuple[int, str]:
+    """개인 RAG 문서의 현재 최대 id. 이후 생긴 문서를 가려내는 기준선이다."""
+    db, err = _db_session()
+    if db is None:
+        return -1, err
+    try:
+        from sqlalchemy import func, select
+
+        from app.models.models import CoachDocument
+
+        return int(db.execute(select(func.coalesce(func.max(CoachDocument.id), 0))).scalar_one()), ""
+    except Exception as e:  # noqa: BLE001
+        return -1, repr(e)
+    finally:
+        db.close()
+
+
+def purge_sweep_traces(marker: str, doc_baseline: int) -> tuple[int, int, str]:
+    """스윕이 남긴 채팅과 그로부터 파생된 개인 RAG 문서를 지운다.
+
+    채팅에는 삭제 API 가 없다(coach/trainer 라우터 모두 GET·POST 뿐). 게다가 #580
+    이후 식단·채팅이 개인 RAG 문서로 적재되므로(personal_ingest), 원본을 지워도
+    문서는 남아 AI 코칭 근거를 오염시킨다. 문서 본문에는 마커가 없는 것도 있어
+    (식단 문서는 분석 결과 그대로다) 문자열이 아니라 **실행 전 최대 id** 를
+    기준으로 그 뒤에 생긴 회원 문서를 지운다. 적재 경로가 늘어도 그대로 걸린다.
+
+    원격 대상(--allow-remote)은 로컬 DATABASE_URL 과 다르므로 지울 수 없다.
     """
+    db, err = _db_session()
+    if db is None:
+        return -1, -1, err
     try:
         from sqlalchemy import delete
 
-        from app.db.session import SessionLocal
-        from app.models.models import ChatMessage
-    except Exception as e:  # noqa: BLE001 - 임포트 실패도 결과로 보고한다
-        return -1, f"임포트 실패: {e!r}"
+        from app.models.models import ChatMessage, CoachDocument
 
-    try:
-        db = SessionLocal()
-        try:
-            res = db.execute(
-                delete(ChatMessage).where(ChatMessage.body.like("%" + marker + "%"))
-            )
-            db.commit()
-            return res.rowcount or 0, ""
-        finally:
-            db.close()
+        chats = db.execute(
+            delete(ChatMessage).where(ChatMessage.body.like("%" + marker + "%"))
+        ).rowcount or 0
+        docs = 0
+        if doc_baseline >= 0:
+            docs = db.execute(
+                delete(CoachDocument).where(
+                    CoachDocument.user_id == MEMBER_ID,
+                    CoachDocument.id > doc_baseline,
+                )
+            ).rowcount or 0
+        db.commit()
+        return chats, docs, ""
     except Exception as e:  # noqa: BLE001
-        return -1, repr(e)
+        return -1, -1, repr(e)
+    finally:
+        db.close()
 
 
 def scenario_chat(api: Api, m: str, t: str, out: list[Result]) -> None:
     g = "채팅"
-    marker = "e2e-sweep-" + _RUN_TAG
-    from_member = "e2e sweep from member " + marker
-    from_trainer = "e2e sweep from trainer " + marker
+    from_member = "e2e sweep from member " + _MARKER
+    from_trainer = "e2e sweep from trainer " + _MARKER
 
     code, _ = api.post("/me/coach/chat", token=m, json_body={"text": from_member})
     out.append(Result(g, "회원 발신", "PASS" if code in (200, 201) else "FAIL", str(code)))
@@ -288,12 +326,6 @@ def scenario_chat(api: Api, m: str, t: str, out: list[Result]) -> None:
 
     code, _ = api.get("/trainer/chat/unread", token=t)
     out.append(Result(g, "트레이너 미읽음 수", "PASS" if code == 200 else "FAIL", str(code)))
-
-    removed, err = purge_sweep_chats(marker)
-    out.append(Result(
-        g, "채팅 삭제(정리)", "PASS" if removed == 2 else "FAIL",
-        f"{removed}건 삭제 (2건 기대)" + (" - " + err if err else ""),
-    ))
 
 
 def scenario_roster(api: Api, m: str, t: str, out: list[Result]) -> None:
@@ -428,6 +460,9 @@ def main() -> int:
         print("  member=" + str(bool(member)) + " trainer=" + str(bool(trainer)))
         return 2
 
+    # 시나리오가 만든 개인 RAG 문서를 가려내려면 시작 전 기준선이 필요하다.
+    doc_baseline, base_err = latest_document_id()
+
     out: list[Result] = []
     for fn in (
         scenario_auth, scenario_diet, scenario_exercise, scenario_chat,
@@ -438,6 +473,18 @@ def main() -> int:
             fn(api, member, trainer, out)
         except Exception as e:  # noqa: BLE001 - 한 그룹이 죽어도 나머지는 계속
             out.append(Result(fn.__name__, "실행 중 예외", "FAIL", repr(e)))
+
+    # 채팅 2건과, 식단·채팅이 파생시킨 개인 RAG 문서 3건(식단 1 + 채팅 2)을 지운다.
+    g = "정리"
+    chats, docs, err = purge_sweep_traces(_MARKER, doc_baseline)
+    out.append(Result(
+        g, "채팅 삭제", "PASS" if chats == 2 else "FAIL",
+        f"{chats}건 (2건 기대)" + (" - " + err if err else ""),
+    ))
+    out.append(Result(
+        g, "개인 RAG 문서 삭제", "PASS" if docs == 3 else "FAIL",
+        f"{docs}건 (3건 기대)" + (" - " + (err or base_err) if (err or base_err) else ""),
+    ))
 
     group = None
     for r in out:
