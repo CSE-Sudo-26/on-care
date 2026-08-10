@@ -457,6 +457,7 @@
   "aiOverTarget": " · 목표 초과",
   "aiBasisCompletion": "{goal} · 완료율 {rate}% 기준",
   "aiBasisRuleBased": " · 규칙 기반 생성",
+  "aiChatEvidenceTitle": "참고한 최근 대화",
   "aiTotalMinutesIntensity": "총 {total}분 · 강도 {intensity}",
   "aiExerciseBullet": "· {name} · {minutes}분 ",
   "aiEditOption": "{option} 수정",

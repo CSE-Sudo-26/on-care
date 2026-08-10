@@ -7,28 +7,55 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core import clock
-from app.models.models import DietEntry, RoutineHistory, TrainerClient, TrainerRoutine
+from app.models.models import (
+    ChatMessage,
+    DietEntry,
+    RoutineHistory,
+    TrainerClient,
+    TrainerRoutine,
+)
 from app.schemas.trainer_api import (
+    ROUTINE_CHAT_MAX_MESSAGES,
     RoutineOptionAnalysisOut,
     RoutineOptionPlanOut,
     RoutineOptionsOut,
     RoutineOptionsRequest,
 )
 from app.services import routine_ai
+from app.services.coach import prompt_safety
 from app.services.coach.llm import get_coach_llm
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """\
+#: 프롬프트에 싣는 최근 대화 범위. 넓히면 오래된 통증 호소가 이미 나은 뒤에도
+#: 계속 루틴을 눌러 버리고, 좁히면 지난주 부상이 사라진다.
+CHAT_LOOKBACK_DAYS = 14
+
+#: 프롬프트에 싣는 최대 대화 수(최신 우선). 스키마가 단일 출처다.
+CHAT_MAX_MESSAGES = ROUTINE_CHAT_MAX_MESSAGES
+
+#: 발화 한 줄의 길이 상한. 긴 상담 메시지 하나가 프롬프트를 독차지하지 않게 자른다.
+CHAT_MAX_CHARS = 200
+
+# JSON 예시의 중괄호가 본문에 그대로 들어가므로 f-string 을 쓰지 않고 이어 붙인다.
+_SYSTEM_PROMPT = (
+    """\
 당신은 만성질환 위험군을 돕는 전문 운동 코치입니다.
 제공된 회원 분석과 트레이너 조건만 사용해 서로 다른 맞춤 루틴 두 개를 만드세요.
 의학적 진단이나 치료를 단정하지 말고, 통증·부상 메모가 있으면 저충격 대안을 우선하세요.
+recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담이 가는 운동을 피하고,
+왜 그렇게 구성했는지 rationale 에 그 발화를 근거로 적으세요.
+"""
+    + prompt_safety.UNTRUSTED_QUOTE_GUARD
+    + "\n"
+    + prompt_safety.TRAINER_NOTE_GUARD
+    + """
 
 반드시 설명이나 마크다운 없이 아래 JSON 객체만 반환하세요.
 {
@@ -57,6 +84,7 @@ _SYSTEM_PROMPT = """\
 }
 각 plan의 total_minutes는 exercises의 minutes 합과 정확히 같아야 합니다.
 """
+)
 
 
 def build_member_analysis(
@@ -118,7 +146,50 @@ def build_member_analysis(
         avg_completion_rate=round(float(completion or 0)),
         latest_routine=latest.name if latest is not None else "-",
         note=request.trainer_note.strip(),
+        recent_messages=_recent_chat_lines(db, trainer_id, member_id, today_date),
     )
+
+
+def _recent_chat_lines(
+    db: Session, trainer_id: str, member_id: str, today_date: date,
+) -> list[str]:
+    """최근 트레이너↔회원 대화를 발화자 라벨이 붙은 줄로 만든다(오래된→최신).
+
+    회원 앱 AI 코치는 같은 대화를 RAG(`personal_ingest.record_chat`)로 받지만,
+    이 경로는 RAG 를 쓰지 않고 실데이터를 직접 집계하므로 여기서 따로 읽는다.
+
+    양쪽 발화를 모두 싣고 라벨로 구분한다. 트레이너의 "이번 주는 하체 빼시죠" 도
+    루틴 구성의 근거인데, 라벨이 없으면 모델이 그 말을 회원의 증상 호소로 읽는다.
+    """
+    # created_at 은 timestamptz 다. 식단처럼 문자열 date 컬럼이 아니므로 KST
+    # 자정을 실제 시각으로 환산해 비교한다 — 날짜로 캐스팅해 비교하면 인덱스도
+    # 못 타고, 드라이버가 파라미터를 varchar 로 넘겨 타입 비교가 깨진다.
+    since = datetime.combine(
+        today_date - timedelta(days=CHAT_LOOKBACK_DAYS - 1),
+        time.min,
+        tzinfo=clock.SEOUL,
+    )
+    rows = db.execute(
+        select(ChatMessage.sender, ChatMessage.body)
+        .where(
+            ChatMessage.trainer_id == trainer_id,
+            ChatMessage.member_id == member_id,
+            ChatMessage.created_at >= since,
+        )
+        # 최신 N건을 고른 뒤 시간순으로 되돌린다 — 잘려 나가야 할 건 오래된 쪽이다.
+        .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+        .limit(CHAT_MAX_MESSAGES)
+    ).all()
+
+    lines: list[str] = []
+    for sender, body in reversed(rows):
+        text = (body or "").strip()
+        if not text:
+            continue
+        if len(text) > CHAT_MAX_CHARS:
+            text = text[:CHAT_MAX_CHARS] + "…"
+        lines.append(f"{prompt_safety.speaker_label(sender)}: {text}")
+    return lines
 
 
 def build_rule_options(

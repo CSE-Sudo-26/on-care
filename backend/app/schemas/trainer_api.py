@@ -168,6 +168,11 @@ class RoutineUpdateRequest(PartialUpdate):
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 
+#: 계획의 강도 라벨. 트레이너 앱이 이 세 값을 그대로 화면에 뿌리므로 열어 두면
+#: LLM 이 "아주높음" 같은 값을 반환해도 통과해 UI 가 깨진다(#585). 규칙형 생성기
+#: (`routine_ai._B_LABEL`)가 내는 값과 같아야 한다 — 어긋나면 폴백이 422 가 된다.
+RoutineIntensityLabel = Literal["낮음", "보통", "높음"]
+
 
 class RoutineOptionsRequest(BaseModel):
     """회원 데이터 기반 맞춤 루틴 후보 생성 조건."""
@@ -177,6 +182,12 @@ class RoutineOptionsRequest(BaseModel):
     trainer_note: str = Field(default="", max_length=500)
 
 
+#: 분석에 싣는 최근 대화 최대 건수. 서비스의 조회 limit 이 이 값을 그대로 쓴다 —
+#: 따로 두면 서비스 쪽만 올렸을 때 여기서 ValidationError 가 나는데, 그 생성은
+#: LLM 폴백 try 블록 밖이라 500 이 된다.
+ROUTINE_CHAT_MAX_MESSAGES = 10
+
+
 class RoutineOptionAnalysisOut(BaseModel):
     goal: str
     sodium_today_mg: int = Field(ge=0)
@@ -184,6 +195,12 @@ class RoutineOptionAnalysisOut(BaseModel):
     avg_completion_rate: int = Field(ge=0, le=100)
     latest_routine: str
     note: str
+    #: 최근 트레이너↔회원 대화(오래된→최신). "회원: …" / "트레이너: …" 라벨이
+    #: 붙은 한 줄씩이며, 통증·컨디션 언급을 루틴 생성 근거로 쓴다(#580).
+    #: 트레이너가 어떤 발화가 반영됐는지 확인할 수 있도록 응답에도 함께 내보낸다.
+    recent_messages: list[str] = Field(
+        default_factory=list, max_length=ROUTINE_CHAT_MAX_MESSAGES
+    )
 
 
 class RoutineOptionExerciseOut(BaseModel):
@@ -196,7 +213,7 @@ class RoutineOptionPlanOut(BaseModel):
     key: Literal["A", "B"]
     label: str = Field(min_length=1, max_length=50)
     total_minutes: int = Field(ge=1, le=180)
-    intensity: str = Field(min_length=1, max_length=20)
+    intensity: RoutineIntensityLabel
     exercises: list[RoutineOptionExerciseOut] = Field(min_length=1, max_length=12)
     reason: str = Field(min_length=1, max_length=200)
     rationale: str = Field(min_length=1, max_length=500)

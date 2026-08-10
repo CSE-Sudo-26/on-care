@@ -1052,6 +1052,7 @@
     }
   },
   "aiBasisRuleBased": " · rule-based",
+  "aiChatEvidenceTitle": "Recent conversation used",
   "aiTotalMinutesIntensity": "{total} min total · {intensity} intensity",
   "@aiTotalMinutesIntensity": {
     "placeholders": {
