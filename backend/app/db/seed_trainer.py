@@ -2,7 +2,9 @@
 트레이너 도메인 데모 시드.
 
 트레이너 앱의 데모/데이터 공유 데모를 위해 트레이너 계정 1명(김트레이너)과
-담당 회원 3명(김민수·이지수·박성호), 그리고 담당 링크를 시드한다.
+담당 회원 15명(#572), 그리고 담당 링크를 시드한다. 상세 기록(끼니별 음식·
+피드백·채팅·스케줄)은 앞의 3명만 가지고, 나머지는 로스터·차트가 동작할 만큼의
+주간 지표만 가진다(seed_roster).
 
 핵심(진짜 데이터 공유): 여기서 만드는 회원은 실제 회원 User 다. 이후 이슈에서
 이 회원들이 회원 앱으로 남긴 식단/운동/바이탈을 트레이너가 그대로 읽는다.
@@ -59,6 +61,21 @@ _MEMBERS: list[tuple[str, str, str, str, bool, int]] = [
     ("user-demo", "minsu@oncare.com", "김민수", "혈압 관리 · 체중 감량", True, 1),
     ("user-jisu", "jisu@oncare.com", "이지수", "체력 강화 · 다이어트", True, 2),
     ("user-sungho", "sungho@oncare.com", "박성호", "근력 향상", False, 3),
+    # 4~15: 트레이너 웹 목업 로스터와 같은 명단(#572). 주간 지표는 seed_roster 가
+    # 채운다 — 화면 상태(나트륨 초과·이행률 저조·휴면·답장 대기)를 실 API 에서도
+    # 재현하기 위한 fixture 다.
+    ("user-hayun", "hayun@oncare.demo", "정하윤", "산후 체력 회복", True, 4),
+    ("user-woojin", "woojin@oncare.demo", "최우진", "마라톤 완주 준비", True, 5),
+    ("user-kangseoyeon", "kangseoyeon@oncare.demo", "강서연", "체지방 감량", True, 6),
+    ("user-dohyun", "dohyun@oncare.demo", "임도현", "목표 설정 전", True, 7),
+    ("user-sera", "sera@oncare.demo", "오세라", "고혈압 관리", True, 8),
+    ("user-junhyuk", "junhyuk@oncare.demo", "배준혁", "수면 · 컨디션 개선", True, 9),
+    ("user-yuna", "yuna@oncare.demo", "신유나", "재활 후 복귀", True, 10),
+    ("user-jiho", "jiho@oncare.demo", "한지호", "현 체중 유지", True, 11),
+    ("user-gayoung", "gayoung@oncare.demo", "문가영", "체력 회복", False, 12),
+    ("user-taekyung", "taekyung@oncare.demo", "류태경", "벌크업", True, 13),
+    ("user-seojin", "seojin@oncare.demo", "백서진", "식습관 개선", True, 14),
+    ("user-eunchae", "eunchae@oncare.demo", "노은채", "운동 습관 만들기", True, 15),
 ]
 
 _CERTIFICATIONS = ["생활스포츠지도사 2급", "퍼스널트레이닝 CPT", "스포츠 영양사"]
