@@ -46,12 +46,12 @@ class TrainerClients extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
-/// A single meal in a client's day (아침/점심/저녁).
+/// A single meal in a client's day (아침/점심/저녁/간식).
 @DataClassName('ClientDietEntryRow')
 class ClientDietEntries extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
-  TextColumn get meal => text()(); // 아침|점심|저녁
+  TextColumn get meal => text()(); // 아침|점심|저녁|간식
   TextColumn get items => text()();
   IntColumn get calories => integer()();
   IntColumn get sodiumMg => integer()();
