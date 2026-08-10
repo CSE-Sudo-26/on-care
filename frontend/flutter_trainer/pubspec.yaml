@@ -50,8 +50,6 @@ dependencies:
   # 데이터를 영속 저장한다 (사용자 앱과 동일 스택, 코드는 공유하지 않음).
   drift: ^2.20.3
   drift_flutter: ^0.2.4
-  sqlite3_flutter_libs: ^0.5.24
-  path_provider: ^2.1.4
   path: ^1.9.0
 
 dev_dependencies:
@@ -59,9 +57,6 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^6.0.0
-
-  # 런처/파비콘 아이콘을 온케어 로고에서 생성 (dart run flutter_launcher_icons).
-  flutter_launcher_icons: ^0.14.1
 
   # 실 API repository / 세션 로직 단위 테스트용 목킹(사용자 앱과 동일).
   mocktail: ^1.0.4
@@ -77,17 +72,3 @@ flutter:
   assets:
     - assets/images/
 
-# 런처 아이콘 생성 설정 — 소스는 온케어 로고(500x500 RGBA).
-# iOS 아이콘은 불투명해야 하므로 alpha를 제거하고 흰 배경으로 합성한다.
-flutter_launcher_icons:
-  image_path: "assets/images/oncare-logo.png"
-  android: true
-  ios: true
-  remove_alpha_ios: true
-  background_color_ios: "#FFFFFF"
-  web:
-    generate: false
-  windows:
-    generate: false
-  macos:
-    generate: false

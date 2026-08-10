@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `https://ewhasudo.zapto.org/` | 랜딩페이지 | `public/index.html` |
 | `https://ewhasudo.zapto.org/frontend/` | 사용자 앱 | `public/frontend/` |
-| `https://ewhasudo.zapto.org/trainer/` | 트레이너 앱 | `public/trainer/` |
+| `https://ewhasudo.zapto.org/trainer/` | 트레이너 웹 | `public/trainer/` |
 
 - 배포 워크플로: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
 - 커스텀 도메인 설정: [`CNAME`](../CNAME)
@@ -17,9 +17,9 @@
 
 ## GitHub Pages 배포 과정
 
-1. 사용자 앱과 트레이너 앱의 Flutter 의존성을 설치합니다.
+1. 회원 앱과 트레이너 웹의 Flutter 의존성을 설치합니다.
 2. 두 앱에 필요한 drift WASM 파일을 내려받습니다.
-3. 사용자 앱을 `/frontend/`, 트레이너 앱을 `/trainer/` base path로 빌드합니다.
+3. 회원 앱을 `/frontend/`, 트레이너 웹을 `/trainer/` base path로 빌드합니다.
 4. 루트 `index.html`과 두 앱의 빌드 결과를 `public/` 아래에 모읍니다.
 5. Pages artifact를 업로드하고 `github-pages` 환경에 배포합니다.
 6. 배포 action이 제한 시간 안에 완료를 확인하지 못하면 `version.txt`로 실제 반영 여부를 추가 검증합니다.
@@ -49,7 +49,7 @@ Vercel 프로젝트가 이 Git 저장소와 연결되어 있으면 저장소 안
 
 - 랜딩페이지 `https://ewhasudo.zapto.org/`가 정상 응답하는지 확인
 - 사용자 앱 `https://ewhasudo.zapto.org/frontend/`이 정상 응답하는지 확인
-- 트레이너 앱 `https://ewhasudo.zapto.org/trainer/`이 정상 응답하는지 확인
+- 트레이너 웹 `https://ewhasudo.zapto.org/trainer/`이 정상 응답하는지 확인
 - `https://ewhasudo.zapto.org/version.txt`의 값이 배포한 전체 커밋 SHA와 일치하는지 확인
 
 ## AWS 이전 원칙

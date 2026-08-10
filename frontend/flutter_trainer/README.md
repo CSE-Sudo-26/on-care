@@ -1,6 +1,6 @@
 # oncare-trainer
 
-On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업](../../docs)을 기준으로
+On-Care **트레이너 전용 웹**입니다. [On-Care Figma 트레이너 목업](../../docs)을 기준으로
 사용자 앱([frontend/flutter](../flutter))과 **완전히 분리된 코드베이스**로 구현했습니다
 (아키텍처 패턴만 미러링, `package:oncare` import 0건 — 계정도 별도).
 
@@ -15,7 +15,7 @@ On-Care **트레이너 전용 앱**입니다. [On-Care Figma 트레이너 목업
 | 대상 | 플랫폼 |
 | --- | --- |
 | 일반 회원 | 네이티브 앱(iOS/Android) — 사용자 앱(`frontend/flutter`) |
-| 트레이너 | **웹 반응형 우선** (센터 PC·태블릿) — 본 앱. 수요 증가 시 앱 패키징 |
+| 트레이너 | **웹 전용** (센터 PC·태블릿) — 본 프로젝트. 수요가 생기면 앱 패키징 검토 |
 
 이에 따라 콘텐츠 폭 제한(`AppLayout.contentMaxWidth`), drift 웹 런타임
 (`tool/fetch_drift_wasm.sh`)이 포함되어 있습니다.

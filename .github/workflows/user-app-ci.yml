@@ -1,7 +1,7 @@
 name: User App CI
 
 # 사용자 Flutter 앱(frontend/flutter) 전용 PR/main CI.
-# 트레이너 앱은 trainer-ci.yml 이 같은 일을 하는데 사용자 앱에는 대응이 없어,
+# 트레이너 웹은 trainer-ci.yml 이 같은 일을 하는데 사용자 앱에는 대응이 없어,
 # 200건이 넘는 테스트가 로컬에서만 돌고 PR 화면에서는 통과 여부를 볼 수 없었다(#374).
 # 웹 빌드 검증은 deploy.yml 이 main 배포에서 이미 하므로 여기서는 analyze/test 만 한다.
 on:
