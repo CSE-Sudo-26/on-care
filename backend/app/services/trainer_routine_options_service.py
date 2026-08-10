@@ -53,6 +53,8 @@ recent_messages 에 통증·불편 언급이 있으면 해당 부위에 부담�
 왜 그렇게 구성했는지 rationale 에 그 발화를 근거로 적으세요.
 """
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
+    + "\n"
+    + prompt_safety.TRAINER_NOTE_GUARD
     + """
 
 반드시 설명이나 마크다운 없이 아래 JSON 객체만 반환하세요.
