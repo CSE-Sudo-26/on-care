@@ -43,6 +43,17 @@ alembic downgrade -1          # 한 단계 롤백
 임베딩 `gemini-embedding-001`(768) · 코치/인식 `gemini-flash-latest` · `.env`: `EMBEDDER=gemini`, `EMBED_DIM=768`.
 검증: `python -m scripts.check_gemini` · `/v1/ai-coach/chat` 응답의 `sources` 가 채워지면 RAG 가 실제로 동작(규칙 폴백 아님).
 
+## AI 폴백 지표
+루틴 생성·식단 추천은 실패해도 규칙 기반으로 조용히 폴백한다 — 사용자는 그럴듯한
+결과를 계속 받으므로 AI 가 죽어도 신고가 들어오지 않는다. 관리자 토큰으로 확인한다:
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/v1/system/metrics
+```
+`routine_options.generated{by=ai}` 가 0 이고 `fallback{reason=...}` 만 쌓이면 AI 경로가
+죽은 것이다. `reason=contract` 는 응답 규격 문제(프롬프트·스키마), `reason=infra` 는
+키 미설정·네트워크·5xx 다. 관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
+값은 프로세스 메모리에 있어 재시작하면 사라진다(단일 인스턴스 기준).
+
 ## 프론트 연동 (실서버 전환)
 회원 앱(모바일)·트레이너 웹 **양쪽 모두** 같은 방식으로 전환합니다.
 ```bash
