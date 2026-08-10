@@ -15,6 +15,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.security import hash_password
 from app.db.session import Base, SessionLocal, engine
 from app.models import models  # noqa: F401
 
@@ -69,7 +70,10 @@ def _seed_demo_user() -> None:
                 id=DEMO_USER_ID,
                 email="minsu@oncare.com",
                 name="김민수",
-                hashed_password="",  # 데모용. 로그인은 Stage 4.
+                # 다른 데모 계정과 같은 비밀번호로 로그인된다. 예전에는 빈 문자열이었는데,
+                # 이 시드가 seed_trainer 보다 먼저 돌고 seed_trainer 는 기존 사용자를
+                # 건너뛰기 때문에 김민수만 영영 로그인할 수 없었다.
+                hashed_password=hash_password(get_settings().demo_login_password),
             )
             db.add(user)
             db.commit()

@@ -550,11 +550,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietCameraPermissionDenied =>
-      '카메라 접근이 허용되지 않았어요. 설정에서 카메라를 켜면 음식 사진을 촬영할 수 있어요';
+      '음식 사진을 촬영하려면 카메라 권한이 필요해요. 사진 찍기를 눌러 다시 시도해 주세요';
+
+  @override
+  String get dietCameraPermissionPermanentlyDenied =>
+      '카메라 접근이 꺼져 있어요. 설정에서 카메라를 켜면 음식 사진을 촬영할 수 있어요';
 
   @override
   String get dietPhotoPermissionDenied =>
-      '사진 접근이 허용되지 않았어요. 설정에서 사진을 켜면 보관함에서 음식 사진을 고를 수 있어요';
+      '음식 사진을 고르려면 사진 권한이 필요해요. 사진 선택을 눌러 다시 시도해 주세요';
+
+  @override
+  String get dietPhotoPermissionPermanentlyDenied =>
+      '사진 접근이 꺼져 있어요. 설정에서 사진을 켜면 보관함에서 음식 사진을 고를 수 있어요';
+
+  @override
+  String get dietPhotoPermissionRestricted =>
+      '기기 설정이나 관리 정책으로 카메라·사진을 사용할 수 없어요';
 
   @override
   String get dietPhotoUnsupportedFormat =>

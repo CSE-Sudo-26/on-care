@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +14,7 @@ typedef PickImage =
       double? maxWidth,
       double? maxHeight,
       int? imageQuality,
+      bool requestFullMetadata,
     });
 
 /// [MealPhotoPicker] backed by `image_picker`.
@@ -25,8 +27,13 @@ typedef PickImage =
 ///   re-encodes at [_imageQuality], and anything still over [_maxBytes] is
 ///   rejected before it reaches the network.
 class ImagePickerMealPhotoPicker implements MealPhotoPicker {
-  ImagePickerMealPhotoPicker({PickImage? pickImage})
-    : _pickImage = pickImage ?? ImagePicker().pickImage;
+  ImagePickerMealPhotoPicker({
+    PickImage? pickImage,
+    TargetPlatform? platform,
+    bool? isWeb,
+  }) : _pickImage = pickImage ?? ImagePicker().pickImage,
+       _platform = platform ?? defaultTargetPlatform,
+       _isWeb = isWeb ?? kIsWeb;
 
   /// Longest-edge cap. Downscaling here also makes iOS re-encode the capture
   /// to JPEG, so a HEIC original normally never reaches the format check.
@@ -38,9 +45,13 @@ class ImagePickerMealPhotoPicker implements MealPhotoPicker {
   static const int _maxBytes = 8 * 1024 * 1024;
 
   static const String _cameraAccessDenied = 'camera_access_denied';
+  static const String _cameraAccessRestricted = 'camera_access_restricted';
   static const String _photoAccessDenied = 'photo_access_denied';
+  static const String _photoAccessRestricted = 'photo_access_restricted';
 
   final PickImage _pickImage;
+  final TargetPlatform _platform;
+  final bool _isWeb;
 
   @override
   Future<MealPhoto?> pick(MealPhotoSource source) async {
@@ -53,6 +64,9 @@ class ImagePickerMealPhotoPicker implements MealPhotoPicker {
         maxWidth: _maxDimension,
         maxHeight: _maxDimension,
         imageQuality: _imageQuality,
+        // We only upload the selected bytes. On iOS 14+ this keeps PHPicker
+        // permissionless instead of requesting library access for metadata.
+        requestFullMetadata: false,
       );
     } on PlatformException catch (error) {
       throw MealPhotoException(_failureOf(error, source), cause: error);
@@ -85,15 +99,30 @@ class ImagePickerMealPhotoPicker implements MealPhotoPicker {
   }
 
   MealPhotoFailure _failureOf(PlatformException error, MealPhotoSource source) {
+    final bool isNativeIos = !_isWeb && _platform == TargetPlatform.iOS;
     return switch (error.code) {
-      _cameraAccessDenied => MealPhotoFailure.cameraPermissionDenied,
-      _photoAccessDenied => MealPhotoFailure.photoPermissionDenied,
+      _cameraAccessRestricted => MealPhotoFailure.cameraPermissionRestricted,
+      _photoAccessRestricted => MealPhotoFailure.photoPermissionRestricted,
+      _cameraAccessDenied =>
+        isNativeIos
+            ? MealPhotoFailure.cameraPermissionPermanentlyDenied
+            : MealPhotoFailure.cameraPermissionDenied,
+      _photoAccessDenied =>
+        isNativeIos
+            ? MealPhotoFailure.photoPermissionPermanentlyDenied
+            : MealPhotoFailure.photoPermissionDenied,
       // Older plugin versions report a bare "access denied" without saying
       // which permission; fall back to the source the user tapped.
-      _ when error.code.contains('denied') =>
-        source == MealPhotoSource.camera
-            ? MealPhotoFailure.cameraPermissionDenied
-            : MealPhotoFailure.photoPermissionDenied,
+      _ when error.code.contains('denied') => switch ((source, isNativeIos)) {
+        (MealPhotoSource.camera, true) =>
+          MealPhotoFailure.cameraPermissionPermanentlyDenied,
+        (MealPhotoSource.camera, false) =>
+          MealPhotoFailure.cameraPermissionDenied,
+        (MealPhotoSource.gallery, true) =>
+          MealPhotoFailure.photoPermissionPermanentlyDenied,
+        (MealPhotoSource.gallery, false) =>
+          MealPhotoFailure.photoPermissionDenied,
+      },
       _ => MealPhotoFailure.readFailed,
     };
   }

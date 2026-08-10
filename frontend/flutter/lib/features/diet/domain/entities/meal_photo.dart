@@ -88,11 +88,23 @@ class MealPhoto {
 /// the picker returns null for that — so every value here is worth showing
 /// a message for.
 enum MealPhotoFailure {
-  /// iOS/Android denied camera access (or the user tapped "허용 안 함").
+  /// Camera access was denied, but the current platform may request it again.
   cameraPermissionDenied,
 
-  /// Photo-library access denied.
+  /// Camera access can only be restored outside the app.
+  cameraPermissionPermanentlyDenied,
+
+  /// Camera access is blocked by a device or account policy.
+  cameraPermissionRestricted,
+
+  /// Photo-library access was denied, but may be requested again.
   photoPermissionDenied,
+
+  /// Photo-library access can only be restored outside the app.
+  photoPermissionPermanentlyDenied,
+
+  /// Photo-library access is blocked by a device or account policy.
+  photoPermissionRestricted,
 
   /// The picked file is not JPEG/PNG/WebP (an unconverted HEIC, typically).
   unsupportedFormat,
