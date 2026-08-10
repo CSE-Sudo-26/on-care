@@ -1520,6 +1520,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiBasisRuleBased => ' · 규칙 기반 생성';
 
   @override
+  String get aiChatEvidenceTitle => '참고한 최근 대화';
+
+  @override
   String aiTotalMinutesIntensity(int total, String intensity) {
     return '총 $total분 · 강도 $intensity';
   }

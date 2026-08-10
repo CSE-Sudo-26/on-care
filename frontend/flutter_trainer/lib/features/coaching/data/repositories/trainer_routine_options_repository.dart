@@ -58,6 +58,10 @@ class MockTrainerRoutineOptionsRepository
         avgCompletionRate: completion,
         latestRoutine: '저강도 유산소 (걷기)',
         note: note,
+        // The demo generator is rule-based (`generatedBy: 'rule'`), and the
+        // flow only renders the evidence block for AI output — the rules
+        // never read chat. Left empty so the mock cannot imply otherwise.
+        recentMessages: const <String>[],
       ),
       planA: RoutinePlan(
         key: 'A',

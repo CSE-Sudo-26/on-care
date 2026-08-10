@@ -86,4 +86,75 @@ void main() {
     };
     expect(() => routineOptionsFromJson(invalid), throwsFormatException);
   });
+
+  group('recent_messages (#580)', () {
+    Map<String, Object?> payload(Object? recentMessages) => <String, Object?>{
+      'analysis': <String, Object?>{
+        'goal': '혈압 관리',
+        'sodium_today_mg': 2100,
+        'sodium_over_target': true,
+        'avg_completion_rate': 55,
+        'latest_routine': '걷기',
+        'note': '',
+        'recent_messages': ?recentMessages,
+      },
+      'plan_a': <String, Object?>{
+        'key': 'A',
+        'label': '회복형',
+        'total_minutes': 20,
+        'intensity': '낮음',
+        'exercises': <Object?>[
+          <String, Object?>{'name': '걷기', 'minutes': 20, 'type': '유산소'},
+        ],
+        'reason': 'r',
+        'rationale': 'r',
+      },
+      'plan_b': <String, Object?>{
+        'key': 'B',
+        'label': '강화형',
+        'total_minutes': 20,
+        'intensity': '높음',
+        'exercises': <Object?>[
+          <String, Object?>{'name': '스쿼트', 'minutes': 20, 'type': '근력'},
+        ],
+        'reason': 'r',
+        'rationale': 'r',
+      },
+      'generated_by': 'ai',
+    };
+
+    test('keeps speaker-labelled lines in order', () {
+      final o = routineOptionsFromJson(
+        payload(<Object?>['회원: 무릎이 아파요', '트레이너: 하체 부하를 낮출게요']),
+      );
+
+      expect(o.analysis.recentMessages, <String>[
+        '회원: 무릎이 아파요',
+        '트레이너: 하체 부하를 낮출게요',
+      ]);
+    });
+
+    test('a server without the field still yields usable options', () {
+      // The evidence block is supporting context — an older backend must not
+      // break routine generation.
+      final o = routineOptionsFromJson(payload(null));
+
+      expect(o.analysis.recentMessages, isEmpty);
+      expect(o.planA.key, 'A');
+    });
+
+    test('drops non-string and blank entries instead of throwing', () {
+      final o = routineOptionsFromJson(
+        payload(<Object?>['회원: 어지러워요', 42, null, '   ']),
+      );
+
+      expect(o.analysis.recentMessages, <String>['회원: 어지러워요']);
+    });
+
+    test('a malformed field degrades to empty', () {
+      final o = routineOptionsFromJson(payload('not-a-list'));
+
+      expect(o.analysis.recentMessages, isEmpty);
+    });
+  });
 }

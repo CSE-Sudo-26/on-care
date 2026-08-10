@@ -1558,6 +1558,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiBasisRuleBased => ' · rule-based';
 
   @override
+  String get aiChatEvidenceTitle => 'Recent conversation used';
+
+  @override
   String aiTotalMinutesIntensity(int total, String intensity) {
     return '$total min total · $intensity intensity';
   }

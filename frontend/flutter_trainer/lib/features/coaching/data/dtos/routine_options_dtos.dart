@@ -27,7 +27,20 @@ MemberAnalysis _analysis(Object? v) {
     avgCompletionRate: _requiredInt(m, 'avg_completion_rate'),
     latestRoutine: _requiredString(m, 'latest_routine'),
     note: _requiredString(m, 'note'),
+    recentMessages: _stringList(m, 'recent_messages'),
   );
+}
+
+/// Optional string list. Absent or malformed → empty, never a throw: the chat
+/// evidence is supporting context, and a server that predates #580 (or a
+/// member with no thread) must still produce usable routine options.
+List<String> _stringList(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is! List) return const <String>[];
+  return <String>[
+    for (final Object? item in value)
+      if (item is String && item.trim().isNotEmpty) item,
+  ];
 }
 
 RoutinePlan _plan(Object? v) {

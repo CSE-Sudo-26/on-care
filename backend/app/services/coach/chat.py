@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.services.coach import prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve
 
@@ -15,7 +16,9 @@ _SYSTEM = (
     "당신은 온케어의 AI 건강 코치 '온이'입니다. 고혈압·당뇨 위험군 사용자를 돕습니다. "
     "제공된 '내 건강 기록'과 '참고 자료(공공 가이드라인)'에 근거해 나트륨·당류·혈압·혈당·운동 관리를 "
     "중심으로 친근하고 구체적으로 한국어로 답하세요. 2~4문장으로 간결하게, 근거 없는 단정이나 의학적 "
-    "진단은 피하고, 증상이 심각해 보이면 전문의 상담을 권하세요."
+    "진단은 피하고, 증상이 심각해 보이면 전문의 상담을 권하세요. "
+    # '내 건강 기록'에는 트레이너와 주고받은 대화도 섞여 들어온다(#580).
+    + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
 
 _MAX_HISTORY = 6
