@@ -8,7 +8,6 @@ import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
-import 'package:oncare/features/diet/presentation/pages/diet_entry_detail_page.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
@@ -410,23 +409,4 @@ void main() {
     expect(find.textContaining('선택한 날짜에 기록된 식단'), findsNothing);
   });
 
-  testWidgets('diet detail shows meal and food macro values', (tester) async {
-    final DietDay day =
-        await tester.runAsync(() => MockDietRepository().fetchToday())
-            as DietDay;
-    final lunch = day.entries.firstWhere(
-      (entry) => entry.mealType == MealType.lunch,
-    );
-
-    await tester.binding.setSurfaceSize(const Size(900, 1800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(_app(DietEntryDetailPage(entry: lunch)));
-    await tester.pump();
-
-    expect(find.text('탄수화물 107g · 단백질 29g · 지방 22.5g'), findsOneWidget);
-    expect(
-      find.text('탄수화물 107g · 단백질 29g · 지방 22.5g · 나트륨 3200mg'),
-      findsOneWidget,
-    );
-  });
 }

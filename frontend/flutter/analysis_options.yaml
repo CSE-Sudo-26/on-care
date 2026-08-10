@@ -10,13 +10,10 @@ analyzer:
     strict-inference: true
     strict-raw-types: true
   errors:
-    # Treat these as errors so they cannot land in CI.
-    invalid_annotation_target: ignore   # codegen (freezed/json_serializable) noise
     todo: ignore
   exclude:
+    # drift 가 만드는 app_database.g.dart 가 유일한 생성물이다.
     - "**/*.g.dart"
-    - "**/*.freezed.dart"
-    - "**/*.gr.dart"
     - "lib/gen/**"
     - "build/**"
 

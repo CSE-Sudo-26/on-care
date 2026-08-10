@@ -19,17 +19,15 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # --- State management & DI ---
+  # 코드 생성(@riverpod)과 hooks 는 쓰지 않는다 — provider 를 직접 선언한다.
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
-  hooks_riverpod: ^2.6.1
-  flutter_hooks: ^0.21.2
 
   # --- Routing ---
   go_router: ^14.6.2
 
   # --- Networking ---
+  # 요청 로깅은 core/network/interceptors/api_logging_interceptor.dart 가 한다.
   dio: ^5.7.0
-  pretty_dio_logger: ^1.4.0
   # NOTE: `retrofit` + `retrofit_generator` are reintroduced in Stage 4
   # when real API clients land. The 9.7.0 generator is currently
   # incompatible with retrofit 4.9.2 (switch on Parser is non-exhaustive
@@ -44,10 +42,6 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.2
 
-  # --- Data modeling ---
-  freezed_annotation: ^3.0.0
-  json_annotation: ^4.9.0
-
   # --- UI / charts / animation ---
   fl_chart: ^0.69.2
   flutter_animate: ^4.5.0
@@ -58,7 +52,6 @@ dependencies:
   # --- i18n / utilities ---
   intl: any
   logger: ^2.4.0
-  equatable: ^2.0.7
 
   # --- Maps ---
   # 지도는 카카오맵으로 통일(#329) — 백엔드 장소 검색이 카카오 Local 이라 베이스맵도
@@ -81,10 +74,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
   # --- Codegen ---
+  # drift 스키마(app_database.g.dart)가 유일한 생성 대상이다.
   build_runner: ^2.4.13
-  riverpod_generator: ^2.6.5
-  freezed: ^3.0.0
-  json_serializable: ^6.8.0
   drift_dev: ^2.20.3
 
   # --- Lint plugins ---
@@ -92,8 +83,8 @@ dev_dependencies:
   riverpod_lint: ^2.6.3
 
   # --- Test helpers ---
+  # 골든 테스트는 flutter_test 의 matchesGoldenFile 을 쓴다.
   mocktail: ^1.0.4
-  golden_toolkit: ^0.15.0
 
 flutter:
   uses-material-design: true
