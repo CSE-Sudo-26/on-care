@@ -59,8 +59,22 @@ enum MealImageFormat {
 
 /// A food photo ready to upload: the bytes plus a file name and MIME type
 /// that actually describe them.
+///
+/// [fromBytes] is the only way to build one, and it derives the format from
+/// the bytes. There is deliberately no constructor taking a format: letting a
+/// caller pair PNG bytes with [MealImageFormat.jpeg] would put back exactly
+/// the body/extension/MIME mismatch this class exists to prevent.
 class MealPhoto {
-  const MealPhoto({required this.bytes, required this.format});
+  const MealPhoto._({required this.bytes, required this.format});
+
+  /// Returns null when [bytes] are not a format the server accepts — HEIC, an
+  /// empty file, a truncated download — so the caller can show a message
+  /// instead of letting the server answer 415.
+  static MealPhoto? fromBytes(Uint8List bytes) {
+    final MealImageFormat? format = MealImageFormat.detect(bytes);
+    if (format == null) return null;
+    return MealPhoto._(bytes: bytes, format: format);
+  }
 
   final Uint8List bytes;
   final MealImageFormat format;

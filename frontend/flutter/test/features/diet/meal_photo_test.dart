@@ -51,28 +51,42 @@ void main() {
     });
   });
 
-  group('MealPhoto', () {
-    test('파일명 확장자와 MIME 이 실제 형식과 일치한다', () {
-      final MealPhoto jpeg = MealPhoto(
-        bytes: _jpeg(),
-        format: MealImageFormat.jpeg,
-      );
+  group('MealPhoto.fromBytes', () {
+    test('파일명 확장자와 MIME 이 실제 바이트의 형식과 일치한다', () {
+      final MealPhoto jpeg = MealPhoto.fromBytes(_jpeg())!;
+      expect(jpeg.format, MealImageFormat.jpeg);
       expect(jpeg.filename, 'meal.jpg');
       expect(jpeg.mimeType, 'image/jpeg');
 
-      final MealPhoto png = MealPhoto(
-        bytes: _png(),
-        format: MealImageFormat.png,
-      );
+      final MealPhoto png = MealPhoto.fromBytes(_png())!;
+      expect(png.format, MealImageFormat.png);
       expect(png.filename, 'meal.png');
       expect(png.mimeType, 'image/png');
 
-      final MealPhoto webp = MealPhoto(
-        bytes: _webp(),
-        format: MealImageFormat.webp,
-      );
+      final MealPhoto webp = MealPhoto.fromBytes(_webp())!;
+      expect(webp.format, MealImageFormat.webp);
       expect(webp.filename, 'meal.webp');
       expect(webp.mimeType, 'image/webp');
+    });
+
+    test('서버가 받지 않는 형식·빈 바이트·잘린 헤더는 만들 수 없다', () {
+      // 형식을 직접 지정하는 생성자가 없으므로, 바이트와 형식이 어긋난
+      // MealPhoto 는 애초에 만들어질 수 없다(리뷰 지적 반영).
+      expect(MealPhoto.fromBytes(_heic()), isNull);
+      expect(MealPhoto.fromBytes(Uint8List(0)), isNull);
+      expect(
+        MealPhoto.fromBytes(Uint8List.fromList(<int>[0xFF, 0xD8])),
+        isNull,
+      );
+      expect(
+        MealPhoto.fromBytes(Uint8List.fromList(<int>[0x89, 0x50, 0x4E])),
+        isNull,
+      );
+    });
+
+    test('바이트를 그대로 보존한다', () {
+      final Uint8List bytes = _jpeg();
+      expect(MealPhoto.fromBytes(bytes)!.bytes, bytes);
     });
   });
 }

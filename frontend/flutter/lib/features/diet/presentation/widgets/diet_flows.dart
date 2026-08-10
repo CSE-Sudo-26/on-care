@@ -186,10 +186,14 @@ class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
       _settle(MealPhotoFailure.readFailed);
       return;
     }
+    // `navigator.mounted` is still true after this sheet is dismissed, so it
+    // can't tell us whether the route we're about to pop is ours. Only this
+    // State being mounted proves the sheet is still up — without the check a
+    // dismiss during the OS picker would pop the page underneath instead.
+    if (!mounted) return;
     _settle(null);
     if (photo == null) return; // user cancelled
 
-    if (!navigator.mounted) return;
     navigator.pop();
     await showDietResultSheet(navigator.context, photo, _currentMealType());
   }

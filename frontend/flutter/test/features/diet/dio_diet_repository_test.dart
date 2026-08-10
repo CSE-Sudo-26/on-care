@@ -190,10 +190,19 @@ void main() {
 
     test('PNG 사진은 png 파일명·image/png 로 전송된다', () async {
       await uploadRepository.analyze(
-        photo: MealPhoto(
-          bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
-          format: MealImageFormat.png,
-        ),
+        photo: MealPhoto.fromBytes(
+          // 완전한 PNG 시그니처 8바이트 (잘린 헤더는 fromBytes 가 null 을 준다).
+          Uint8List.fromList(<int>[
+            0x89,
+            0x50,
+            0x4E,
+            0x47,
+            0x0D,
+            0x0A,
+            0x1A,
+            0x0A,
+          ]),
+        )!,
         mealType: 'lunch',
         idempotencyKey: 'k1',
       );
@@ -204,10 +213,9 @@ void main() {
 
     test('JPEG 사진은 jpg 파일명·image/jpeg 로 전송된다', () async {
       await uploadRepository.analyze(
-        photo: MealPhoto(
-          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
-          format: MealImageFormat.jpeg,
-        ),
+        photo: MealPhoto.fromBytes(
+          Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+        )!,
         mealType: 'lunch',
       );
 

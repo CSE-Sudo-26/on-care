@@ -75,11 +75,13 @@ class ImagePickerMealPhotoPicker implements MealPhotoPicker {
       throw const MealPhotoException(MealPhotoFailure.tooLarge);
     }
 
-    final MealImageFormat? format = MealImageFormat.detect(bytes);
-    if (format == null) {
+    // Derives the format from the bytes, so the part we upload can't claim a
+    // type the body doesn't have.
+    final MealPhoto? photo = MealPhoto.fromBytes(bytes);
+    if (photo == null) {
       throw const MealPhotoException(MealPhotoFailure.unsupportedFormat);
     }
-    return MealPhoto(bytes: bytes, format: format);
+    return photo;
   }
 
   MealPhotoFailure _failureOf(PlatformException error, MealPhotoSource source) {

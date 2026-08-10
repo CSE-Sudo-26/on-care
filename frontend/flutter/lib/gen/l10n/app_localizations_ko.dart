@@ -568,7 +568,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietOpenSettingsFailed =>
-      '설정을 열지 못했어요. 설정 > 온케어에서 카메라·사진 접근을 켜주세요';
+      '설정을 열지 못했어요. 설정 > Oncare에서 카메라·사진 접근을 켜주세요';
 
   @override
   String get dietAnalyzing => '분석 중…';

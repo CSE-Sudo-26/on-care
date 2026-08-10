@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -35,6 +36,15 @@ class _FakeMealPhotoPicker implements MealPhotoPicker {
     if (failure != null) throw MealPhotoException(failure!);
     return photo;
   }
+}
+
+/// Picker whose completion the test controls, so the sheet can be dismissed
+/// while the OS picker is still "open".
+class _PendingMealPhotoPicker implements MealPhotoPicker {
+  final Completer<MealPhoto?> completer = Completer<MealPhoto?>();
+
+  @override
+  Future<MealPhoto?> pick(MealPhotoSource source) => completer.future;
 }
 
 class _RecordingDietRepository extends MockDietRepository {
@@ -92,7 +102,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
-      photo: MealPhoto(bytes: _jpegBytes, format: MealImageFormat.jpeg),
+      photo: MealPhoto.fromBytes(_jpegBytes)!,
     );
     final _RecordingDietRepository repository = _RecordingDietRepository();
     await _pumpAddSheet(tester, picker: picker, repository: repository);
@@ -110,8 +120,8 @@ void main() {
     WidgetTester tester,
   ) async {
     final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
-      photo: MealPhoto(
-        bytes: Uint8List.fromList(<int>[
+      photo: MealPhoto.fromBytes(
+        Uint8List.fromList(<int>[
           0x89,
           0x50,
           0x4E,
@@ -121,8 +131,7 @@ void main() {
           0x1A,
           0x0A,
         ]),
-        format: MealImageFormat.png,
-      ),
+      )!,
     );
     final _RecordingDietRepository repository = _RecordingDietRepository();
     await _pumpAddSheet(tester, picker: picker, repository: repository);
@@ -182,9 +191,80 @@ void main() {
     expect(repository.uploaded, isNull);
   });
 
+  testWidgets('사진 선택 중 시트를 닫으면 아래 화면을 대신 pop 하지 않는다', (
+    WidgetTester tester,
+  ) async {
+    final _PendingMealPhotoPicker picker = _PendingMealPhotoPicker();
+    final _RecordingDietRepository repository = _RecordingDietRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          mealPhotoPickerProvider.overrideWithValue(picker),
+          dietRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (BuildContext context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext inner) => Scaffold(
+                        body: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Text('식단 화면'),
+                              ElevatedButton(
+                                onPressed: () => showDietAddSheet(inner),
+                                child: const Text('open'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text('go'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 촬영을 시작한다 — 픽커는 완료되지 않고 대기 상태로 남는다.
+    await tester.tap(find.text('사진 찍기'));
+    await tester.pump();
+
+    // OS 픽커가 떠 있는 동안 사용자가 시트를 닫는다.
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dietAddSheet')), findsNothing);
+
+    // 그 뒤에 픽커가 사진을 들고 돌아온다.
+    picker.completer.complete(MealPhoto.fromBytes(_jpegBytes));
+    await tester.pumpAndSettle();
+
+    // 시트가 이미 닫혔으므로 pop 대상이 없다 — 아래 식단 화면이 그대로 있어야 한다.
+    expect(find.text('식단 화면'), findsOneWidget);
+    expect(find.text('go'), findsNothing);
+    expect(repository.uploaded, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('분석 API 가 실패해도 같은 사진으로 다시 시도할 수 있다', (WidgetTester tester) async {
     final _FakeMealPhotoPicker picker = _FakeMealPhotoPicker(
-      photo: MealPhoto(bytes: _jpegBytes, format: MealImageFormat.jpeg),
+      photo: MealPhoto.fromBytes(_jpegBytes)!,
     );
     final _FailingOnceDietRepository repository = _FailingOnceDietRepository();
 

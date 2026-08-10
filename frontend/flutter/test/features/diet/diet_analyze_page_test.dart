@@ -37,12 +37,11 @@ class _RetryDietRepository extends MockDietRepository {
 void main() {
   testWidgets('분석 재시도는 최초 요청과 같은 멱등키를 사용한다', (WidgetTester tester) async {
     final _RetryDietRepository repository = _RetryDietRepository();
-    final MealPhoto photo = MealPhoto(
-      bytes: base64Decode(
+    final MealPhoto photo = MealPhoto.fromBytes(
+      base64Decode(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
       ),
-      format: MealImageFormat.png,
-    );
+    )!;
 
     await tester.pumpWidget(
       ProviderScope(

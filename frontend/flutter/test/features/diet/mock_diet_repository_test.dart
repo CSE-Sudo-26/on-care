@@ -7,10 +7,9 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 
 void main() {
-  final MealPhoto photo = MealPhoto(
-    bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
-    format: MealImageFormat.jpeg,
-  );
+  final MealPhoto photo = MealPhoto.fromBytes(
+    Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+  )!;
 
   group('MockDietRepository keeps CRUD in memory (#294)', () {
     test(
