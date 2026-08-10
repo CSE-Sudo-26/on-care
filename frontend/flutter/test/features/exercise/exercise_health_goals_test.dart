@@ -18,6 +18,8 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -61,6 +63,30 @@ class _GoalSyncHostState extends State<_GoalSyncHost> {
   }
 }
 
+class _SessionMemberCoachRepository implements MemberCoachRepository {
+  const _SessionMemberCoachRepository(this.sessions);
+
+  final List<CoachSession> sessions;
+
+  @override
+  Future<MemberCoach?> fetchCoach() async => null;
+  @override
+  Future<List<CoachRoutine>> fetchRoutines() async => const <CoachRoutine>[];
+  @override
+  Future<List<CoachSession>> fetchSessions() async => sessions;
+  @override
+  Future<List<CoachMessage>> fetchChat() async => const <CoachMessage>[];
+  @override
+  Stream<List<CoachMessage>> watchChat() =>
+      const Stream<List<CoachMessage>>.empty();
+  @override
+  Future<void> sendMessage(String text) async {}
+  @override
+  Future<void> markRead() async {}
+  @override
+  Future<int> unreadCount() async => 0;
+}
+
 void main() {
   const ExerciseWeek week = ExerciseWeek(
     sessions: <ExerciseSession>[],
@@ -88,6 +114,7 @@ void main() {
   Future<void> pumpExercise(
     WidgetTester tester, {
     required UserProfile profile,
+    MemberCoachRepository? coachRepository,
   }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -99,7 +126,7 @@ void main() {
           ),
           exerciseWeekProvider.overrideWith((ref) async => week),
           memberCoachRepositoryProvider.overrideWithValue(
-            MockMemberCoachRepository(),
+            coachRepository ?? MockMemberCoachRepository(),
           ),
         ],
         child: const MaterialApp(
@@ -146,6 +173,45 @@ void main() {
     expect(find.text('2 /4일'), findsOneWidget);
     expect(find.text('100 /150분'), findsOneWidget);
     expect(find.text('300 /800kcal'), findsOneWidget);
+  });
+
+  testWidgets('트레이너가 완료한 PT 프로그램과 피드백을 표시한다', (WidgetTester tester) async {
+    await pumpExercise(
+      tester,
+      profile: const UserProfile(
+        id: 'member',
+        name: '테스트',
+        email: 'member@example.com',
+      ),
+      coachRepository: _SessionMemberCoachRepository(<CoachSession>[
+        CoachSession(
+          id: 'completed-pt',
+          date: DateTime.now(),
+          time: '18:00',
+          type: '1:1 PT',
+          durationMinutes: 50,
+          status: '완료',
+          note: '오른쪽 어깨 가동 범위를 확인해 주세요.',
+          program: const <CoachProgramItem>[
+            CoachProgramItem(
+              name: '숄더 프레스',
+              sets: 4,
+              reps: '12회',
+              weight: '10kg',
+            ),
+          ],
+        ),
+      ]),
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('completedPtSessionCard')),
+      400,
+    );
+
+    expect(find.text('18:00 수업 완료'), findsOneWidget);
+    expect(find.text('숄더 프레스 · 10kg · 4세트 · 12회'), findsOneWidget);
+    expect(find.text('오른쪽 어깨 가동 범위를 확인해 주세요.'), findsOneWidget);
   });
 
   testWidgets('MY에서 저장한 운동 목표가 열려 있던 홈·운동 탭에 반영된다', (

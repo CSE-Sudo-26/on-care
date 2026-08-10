@@ -25,6 +25,8 @@ Map<String, Object?> _row({
   Object? type = '1:1 PT',
   Object? minutes = 50,
   Object? status = '예정',
+  Object? note = '',
+  Object? program = const <Object?>[],
 }) => <String, Object?>{
   'id': id,
   'date': date,
@@ -33,8 +35,8 @@ Map<String, Object?> _row({
   'type': type,
   'duration_minutes': minutes,
   'status': status,
-  'note': '',
-  'program': <Object?>[],
+  'note': note,
+  'program': program,
 };
 
 const AppConfig _demo = AppConfig(
@@ -64,6 +66,30 @@ void main() {
 
     test('완료된 세션은 예정이 아니다', () {
       expect(coachSessionFromJson(_row(status: '완료')).isUpcoming, isFalse);
+    });
+
+    test('완료 메모와 운동 프로그램을 읽는다', () {
+      final CoachSession session = coachSessionFromJson(
+        _row(
+          status: '완료',
+          note: '오른쪽 어깨 가동 범위를 확인해 주세요.',
+          program: <Object?>[
+            <String, Object?>{
+              'name': '숄더 프레스',
+              'sets': 4,
+              'reps': '12회',
+              'weight': '10kg',
+            },
+          ],
+        ),
+      );
+
+      expect(session.isDone, isTrue);
+      expect(session.note, '오른쪽 어깨 가동 범위를 확인해 주세요.');
+      expect(session.program.single.name, '숄더 프레스');
+      expect(session.program.single.sets, 4);
+      expect(session.program.single.reps, '12회');
+      expect(session.program.single.weight, '10kg');
     });
 
     test('날짜가 깨져도 던지지 않는다', () {

@@ -13,6 +13,9 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/exercise/presentation/widgets/gym_tab.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -1534,8 +1537,190 @@ class _ExerciseFeedback extends StatelessWidget {
 
 /// Trainer-linked card summarising today's completed PT session and the
 /// coach's feedback. Demo scenario: 김코치님 12회차, 18:00 수업.
-class _PtLogCard extends StatelessWidget {
+class _PtLogCard extends ConsumerWidget {
   const _PtLogCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(memberCoachRepositoryProvider) is MockMemberCoachRepository) {
+      return const _DemoPtLogCard();
+    }
+
+    final DateTime now = DateTime.now();
+    final List<CoachSession> completedToday =
+        (ref.watch(coachSessionsProvider).valueOrNull ?? const <CoachSession>[])
+            .where((CoachSession session) {
+              final DateTime? date = session.date;
+              return session.isDone &&
+                  date != null &&
+                  date.year == now.year &&
+                  date.month == now.month &&
+                  date.day == now.day;
+            })
+            .toList(growable: false)
+          ..sort(
+            (CoachSession first, CoachSession second) =>
+                second.time.compareTo(first.time),
+          );
+    if (completedToday.isEmpty) return const SizedBox.shrink();
+
+    final MemberCoach? coach = ref.watch(memberCoachProvider).valueOrNull;
+    return _CompletedPtSessionCard(
+      session: completedToday.first,
+      coachName: coach?.name ?? AppLocalizations.of(context).exAssignedTrainer,
+    );
+  }
+}
+
+class _CompletedPtSessionCard extends StatelessWidget {
+  const _CompletedPtSessionCard({
+    required this.session,
+    required this.coachName,
+  });
+
+  final CoachSession session;
+  final String coachName;
+
+  String _programLabel(CoachProgramItem item, AppLocalizations l) {
+    final String details = <String>[
+      if (item.weight.isNotEmpty) item.weight,
+      if (item.sets > 0) l.exProgramSets(item.sets),
+      if (item.reps.isNotEmpty) item.reps,
+    ].join(' · ');
+    return details.isEmpty ? item.name : '${item.name} · $details';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const Key('completedPtSessionCard'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: kCardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.fitness_center_rounded,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                l.exCompletedPtTitle,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: FigmaColors.ink,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              _MetaChip(
+                icon: Icons.check_circle,
+                text: l.exCompletedPtTime(session.time),
+                color: FigmaColors.statusGreen,
+              ),
+              const SizedBox(width: 6),
+              _MetaChip(
+                icon: Icons.timer_outlined,
+                text: l.exDurationMinutes(session.durationMinutes),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: FigmaColors.hairline),
+          const SizedBox(height: 12),
+          if (session.program.isEmpty)
+            Text(
+              l.exCompletedPtNoProgram,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: AppColors.mutedForeground,
+              ),
+            )
+          else
+            for (final CoachProgramItem item in session.program)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 3, 0, 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(top: 7),
+                      decoration: const BoxDecoration(
+                        color: FigmaColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _programLabel(item, l),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          if (session.note.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: FigmaColors.softBlue,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: FigmaColors.primaryA(0.12)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l.exCompletedPtFeedback(coachName),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    session.note,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                      color: FigmaColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DemoPtLogCard extends StatelessWidget {
+  const _DemoPtLogCard();
 
   static const List<String> _items = <String>[
     '벤치프레스 40kg · 4세트',
