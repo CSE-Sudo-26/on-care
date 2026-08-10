@@ -1,13 +1,13 @@
-"""AI 루틴 A/B 생성 — 순수 로직(규칙형 폴백).
+"""AI 루틴 A/B 생성 — 순수 규칙형 로직.
 
 회원의 실데이터 요약(나트륨/완료율/목표)과 트레이너가 조종하는 입력(가능 시간/강도/
 메모)으로 두 계획을 만든다:
   * A안 — 짧고 지속하기 쉬운 회복 중심
   * B안 — 운동량/강도를 높인 루틴
 
-외부 LLM(Gemini 등)이 붙으면 `maybe_llm_plans` 가 계획을 반환하고, 실패/미설정이면
-여기 규칙형(`rule_based_plans`)으로 폴백한다. 규칙형은 결정적이라 테스트가 쉽고,
-의료 진단·치료 지시를 하지 않는다(운동 구성과 근거만 제시).
+LLM 생성과 이 규칙형 생성기로의 폴백은 `trainer_routine_options_service`가 담당한다.
+이 모듈은 결정적인 규칙형 계획만 만들며, 의료 진단·치료 지시를 하지 않는다
+(운동 구성과 근거만 제시).
 """
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ _STRENGTH2 = ("플랭크", "근력")
 _STRETCH = ("코어 스트레칭", "스트레칭")
 _STRETCH2 = ("목·어깨 스트레칭", "스트레칭")
 
-_INTENSITY_KR = {"low": "낮음", "moderate": "보통", "high": "높음"}
 _B_LABEL = {"low": "낮음", "moderate": "보통", "high": "높음"}
 
 
@@ -108,13 +107,3 @@ def rule_based_plans(
         ),
     }
     return plan_a, plan_b
-
-
-def maybe_llm_plans(**kwargs) -> tuple[dict, dict] | None:
-    """LLM(Gemini 등) 연동 지점. 미설정/실패 시 None → 규칙형 폴백.
-
-    아직 외부 LLM 키를 두지 않았으므로 항상 None 을 반환한다. 연동 시 여기서
-    프롬프트를 구성해 A/B(JSON)를 받아 검증 후 반환하고, 예외/스키마 불일치는
-    삼켜 None 을 돌려 규칙형으로 안전하게 폴백한다.
-    """
-    return None
