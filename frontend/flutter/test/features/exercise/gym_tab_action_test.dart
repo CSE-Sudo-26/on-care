@@ -117,6 +117,14 @@ void main() {
             (ref) async => const <Gym>[_gym],
           ),
           myTrainerProvider.overrideWith((ref) async => trainer),
+          // 트레이너 채팅 화면이 데모 안내 배너 노출을 이 설정으로 가른다.
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              environment: Environment.dev,
+              apiBaseUrl: 'http://localhost',
+              useMockApi: true,
+            ),
+          ),
           trainerProvider(_trainer.id).overrideWith((ref) async => _trainer),
           gymTrainersProvider(
             _gym.id,

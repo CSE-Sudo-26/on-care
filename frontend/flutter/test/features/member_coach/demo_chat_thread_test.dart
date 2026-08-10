@@ -1,0 +1,103 @@
+/// 회원 앱 데모의 트레이너 대화 — 트레이너 앱과 **같은 대화**여야 한다. (#543)
+///
+/// 데모 사용자는 트레이너 앱 시드 고객 김민수와 같은 사람이다. 전에는 이쪽만
+/// 메시지 한 개였고 그 문구는 저장소 어디에도 짝이 없어서, 같은 사람의 대화가
+/// 앱마다 달랐다. 여기서 본문과 순서를 통째로 고정해, 한쪽만 고치면 깨지게 한다.
+///
+/// 같은 목록을 고정하는 짝:
+///  * `frontend/flutter_trainer/test/core/storage/demo_chat_thread_test.dart`
+///  * `backend/tests/test_seed_demo_chat.py`
+library;
+
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
+
+/// (보낸 쪽, 본문) — 트레이너 앱 시드의 김민수 스레드와 글자까지 같아야 한다.
+/// 회원 시점이므로 트레이너 앱의 `client` 가 여기서는 `me` 다.
+const List<(CoachSender, String)> kDemoThread = <(CoachSender, String)>[
+  (
+    CoachSender.trainer,
+    '민수님, 지난주 기록 정리해 봤는데 요일마다 이행률이 들쭉날쭉하네요. 바쁜 요일이 정해져 있나요?',
+  ),
+  (CoachSender.me, '화요일이랑 목요일이 야근이 많아요 😥'),
+  (CoachSender.trainer, '그럼 그 이틀은 15분짜리 짧은 루틴으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다'),
+  (CoachSender.me, '그 정도면 퇴근하고도 할 수 있을 것 같아요'),
+  (CoachSender.trainer, '혈압약 드시는 시간은 그대로시죠? 유산소가 그 시간과 겹치지 않게 잡을게요'),
+  (CoachSender.me, '네, 아침 8시 그대로예요'),
+  (CoachSender.trainer, '확인했어요. 화·목은 15분 저강도로 바꿔서 보냈습니다 🙂'),
+  (
+    CoachSender.trainer,
+    '민수님, 요즘 나트륨이 목표(2,000mg) 근처에서 자주 걸리네요. 국·찌개가 잦으신 편인가요?',
+  ),
+  (CoachSender.me, '회사 구내식당이라 국물이 늘 나와요 😅'),
+  (CoachSender.trainer, '국물만 절반 남기셔도 400~500mg은 빠져요. 그거 하나만 먼저 해보죠'),
+  (CoachSender.me, '오늘은 국물 안 마셨어요! 걷기도 25분 했습니다'),
+  (CoachSender.trainer, '좋아요 👏 그 한 가지만 지켜도 추이가 달라져요'),
+  (CoachSender.trainer, '내일 루틴은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요'),
+  (CoachSender.trainer, '민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?'),
+  (CoachSender.me, '찌개 먹을 때 국물을 많이 마셨나봐요 😅'),
+  (CoachSender.trainer, '그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?'),
+  (CoachSender.me, '무릎이 가볍게 당기긴 했는데 괜찮아요'),
+  (
+    CoachSender.trainer,
+    '확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪',
+  ),
+];
+
+void main() {
+  test('데모 대화는 트레이너 앱 시드와 같은 본문·순서다', () async {
+    final List<CoachMessage> chat = await MockMemberCoachRepository()
+        .fetchChat();
+
+    expect(<(CoachSender, String)>[
+      for (final CoachMessage m in chat) (m.sender, m.body),
+    ], kDemoThread);
+  });
+
+  test('대화가 시간순으로 정렬돼 있다', () async {
+    final List<CoachMessage> chat = await MockMemberCoachRepository()
+        .fetchChat();
+
+    for (int i = 1; i < chat.length; i++) {
+      expect(
+        chat[i].createdAt.isAfter(chat[i - 1].createdAt),
+        isTrue,
+        reason: '$i번째 메시지가 앞 메시지보다 이르다',
+      );
+    }
+  });
+
+  test('오늘이 아닌 메시지는 라벨에 요일이 있다', () async {
+    // 이 화면에는 날짜 구분선이 없다. 라벨이 며칠 전인지 말해 주지 않으면
+    // 3일치 대화가 하루 안에 오간 것처럼 읽힌다.
+    final List<CoachMessage> chat = await MockMemberCoachRepository()
+        .fetchChat();
+    final List<String> older = <String>[
+      for (final CoachMessage m in chat.take(13)) m.timeLabel,
+    ];
+    final List<String> today = <String>[
+      for (final CoachMessage m in chat.skip(13)) m.timeLabel,
+    ];
+
+    expect(
+      older.every((String l) => l.startsWith('화 ') || l.startsWith('수 ')),
+      isTrue,
+    );
+    expect(
+      today.every((String l) => RegExp(r'^\d{2}:\d{2}$').hasMatch(l)),
+      isTrue,
+    );
+  });
+
+  test('미읽음은 마지막으로 내가 보낸 뒤에 온 것만 센다', () async {
+    // 스레드 전체의 트레이너 메시지를 세면 배지가 8이 된다 — 이미 주고받은
+    // 대화까지 안 읽은 것으로 치는 셈이다.
+    final repo = MockMemberCoachRepository();
+    expect(await repo.unreadCount(), 1);
+
+    await repo.markRead();
+    expect(await repo.unreadCount(), 0);
+  });
+}

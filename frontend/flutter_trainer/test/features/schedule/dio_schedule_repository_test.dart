@@ -15,12 +15,14 @@ Response<List<dynamic>> _okList(List<dynamic> body, String path) =>
       data: body,
     );
 
-Response<Map<String, dynamic>> _okMap(String path) =>
-    Response<Map<String, dynamic>>(
-      requestOptions: RequestOptions(path: path),
-      statusCode: 200,
-      data: <String, dynamic>{},
-    );
+Response<Map<String, dynamic>> _okMap(
+  String path, [
+  Map<String, dynamic> body = const <String, dynamic>{},
+]) => Response<Map<String, dynamic>>(
+  requestOptions: RequestOptions(path: path),
+  statusCode: 200,
+  data: body,
+);
 
 DioException _httpError(int status, String path) => DioException(
   requestOptions: RequestOptions(path: path),
@@ -38,12 +40,14 @@ Map<String, dynamic> _session({
   String date = '2026-08-06',
   String time = '10:00',
   String clientName = '김민수',
+  String? memberId = 'm1',
   String status = '예정',
   List<dynamic> program = const <dynamic>[],
 }) => <String, dynamic>{
   'id': id,
   'date': date,
   'time': time,
+  'member_id': memberId,
   'client_name': clientName,
   'type': '1:1 PT',
   'duration_minutes': 60,
@@ -224,6 +228,86 @@ void main() {
         'reps': '12회',
         'weight': '60kg',
       });
+    },
+  );
+
+  test(
+    'registerProgram delegates lookup and write to one atomic command',
+    () async {
+      const path = '/trainer/clients/m1/schedule-program';
+      when(
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).thenAnswer(
+        (_) async =>
+            _okMap(path, <String, dynamic>{'attached_to_existing': true}),
+      );
+
+      final attached = await repo.registerProgram(
+        date: '2026-08-06',
+        clientId: 'm1',
+        clientName: '김민수',
+        time: '16:00',
+        program: const <ProgramItem>[
+          ProgramItem(name: '스쿼트', sets: 1, reps: '20분', weight: '-'),
+        ],
+      );
+
+      expect(attached, isTrue);
+      final body =
+          verify(
+                () => dio.put<Map<String, dynamic>>(
+                  path,
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
+      expect(body.keys.toSet(), <String>{
+        'date',
+        'time',
+        'client_name',
+        'program',
+      });
+      expect(body['client_name'], '김민수');
+      expect((body['program'] as List<Object?>).single, <String, Object?>{
+        'name': '스쿼트',
+        'sets': 1,
+        'reps': '20분',
+        'weight': '-',
+      });
+      verifyNever(
+        () => dio.get<List<dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      );
+    },
+  );
+
+  test(
+    'registerProgram returns whether the server created a session',
+    () async {
+      const path = '/trainer/clients/m1/schedule-program';
+      when(
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).thenAnswer(
+        (_) async =>
+            _okMap(path, <String, dynamic>{'attached_to_existing': false}),
+      );
+
+      final attached = await repo.registerProgram(
+        date: '2026-08-06',
+        clientId: 'm1',
+        clientName: '김민수',
+        time: '16:00',
+        program: const <ProgramItem>[
+          ProgramItem(name: '플랭크', sets: 1, reps: '10분', weight: '-'),
+        ],
+      );
+
+      expect(attached, isFalse);
+      verify(
+        () => dio.put<Map<String, dynamic>>(path, data: any(named: 'data')),
+      ).called(1);
     },
   );
 

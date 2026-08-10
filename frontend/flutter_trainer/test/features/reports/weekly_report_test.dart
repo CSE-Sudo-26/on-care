@@ -63,6 +63,11 @@ void main() {
           session(date: ymd(sunday.add(const Duration(days: 1)))),
         ],
         weekStart: wednesday,
+        // Every call here pins `today`. Left to DateTime.now() the report
+        // silently switches to "past week" mode once the clock leaves
+        // 8/3–8/9, which drops completionAvg/sodium and flips isGoodWeek.
+        // That is what broke the suite on 2026-08-10 (#551).
+        today: wednesday,
       );
 
       expect(report.sessionsBooked, 2);
@@ -75,6 +80,7 @@ void main() {
         client: makeClient(),
         sessions: <ScheduleSession>[session(date: ymd(monday), status: '공백')],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       expect(report.sessionsBooked, 0);
@@ -195,6 +201,7 @@ void main() {
         client: makeClient(name: '김민수'),
         sessions: <ScheduleSession>[session(date: ymd(monday), status: '완료')],
         weekStart: wednesday,
+        today: wednesday,
       );
 
       final message = reportMessage(_ko, report);

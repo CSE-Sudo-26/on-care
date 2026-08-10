@@ -95,13 +95,14 @@ def _nutrition_week(
 def _build_sodium_warning(
     total_sodium_mg: int,
     source_names: list[str],
+    sodium_goal_mg: int = _MAX_SODIUM_MG,
 ) -> str | None:
-    if total_sodium_mg <= _MAX_SODIUM_MG:
+    if total_sodium_mg <= sodium_goal_mg:
         return None
     if not source_names:
         return (
             f"오늘 나트륨이 {total_sodium_mg}mg 으로 "
-            f"권장량({_MAX_SODIUM_MG}mg)을 넘었어요."
+            f"권장량({sodium_goal_mg}mg)을 넘었어요."
         )
 
     top_source_names = "·".join(source_names[:2])
@@ -138,6 +139,22 @@ def dashboard_summary(
     db: Annotated[Session, Depends(get_db)],
 ) -> DashboardSummary:
     uid = current_user.id
+    health_profile = current_user.health_profile
+    calorie_goal = (
+        health_profile.daily_calories
+        if health_profile and health_profile.daily_calories is not None
+        else _MAX_CALORIES
+    )
+    sodium_goal = (
+        health_profile.daily_sodium_mg
+        if health_profile and health_profile.daily_sodium_mg is not None
+        else _MAX_SODIUM_MG
+    )
+    sugar_goal = (
+        health_profile.daily_sugar_g
+        if health_profile and health_profile.daily_sugar_g is not None
+        else _MAX_SUGAR_G
+    )
     today_dt = datetime.now()
     today = today_dt.strftime("%Y-%m-%d")
 
@@ -154,15 +171,15 @@ def dashboard_summary(
     macros = calculate_macros(total_carbs, total_protein, total_fat)
 
     indicators = [
-        DashboardIndicator(label="칼로리", current=total_cal, max=_MAX_CALORIES,
-                           unit="kcal", over_budget=total_cal > _MAX_CALORIES),
-        DashboardIndicator(label="나트륨", current=total_na, max=_MAX_SODIUM_MG,
-                           unit="mg", over_budget=total_na > _MAX_SODIUM_MG),
-        DashboardIndicator(label="당류", current=total_sugar, max=_MAX_SUGAR_G,
-                           unit="g", over_budget=total_sugar > _MAX_SUGAR_G),
+        DashboardIndicator(label="칼로리", current=total_cal, max=calorie_goal,
+                           unit="kcal", over_budget=total_cal > calorie_goal),
+        DashboardIndicator(label="나트륨", current=total_na, max=sodium_goal,
+                           unit="mg", over_budget=total_na > sodium_goal),
+        DashboardIndicator(label="당류", current=total_sugar, max=sugar_goal,
+                           unit="g", over_budget=total_sugar > sugar_goal),
     ]
     source_names = _rank_sodium_sources(row.foods_json for row in diet_rows)
-    sodium_warning = _build_sodium_warning(total_na, source_names)
+    sodium_warning = _build_sodium_warning(total_na, source_names, sodium_goal)
 
     # --- 식단 주간 추이(이번 주 월~일 + 지난 주 월~일 비교선) ---
     this_monday = today_dt - timedelta(days=today_dt.weekday())
@@ -204,7 +221,7 @@ def dashboard_summary(
     this_avg_sodium = _avg_sodium_of_logged(nutrition_week)
     if this_avg_sodium is None:
         this_avg_sodium = total_na
-    score = _score_for(this_avg_sodium <= _MAX_SODIUM_MG, exercise_minutes)
+    score = _score_for(this_avg_sodium <= sodium_goal, exercise_minutes)
     last_week = (today_dt - timedelta(days=today_dt.weekday() + 7)).strftime("%Y-%m-%d")
     last_ex_minutes = sum(
         r.minutes for r in db.scalars(
@@ -213,7 +230,7 @@ def dashboard_summary(
         ).all()
     )
     last_avg_sodium = _avg_sodium_of_logged(nutrition_week_prev) or 0
-    last_week_score = _score_for(last_avg_sodium <= _MAX_SODIUM_MG, last_ex_minutes)
+    last_week_score = _score_for(last_avg_sodium <= sodium_goal, last_ex_minutes)
     week_score_delta = score - last_week_score
 
     return DashboardSummary(

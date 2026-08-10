@@ -96,7 +96,14 @@ void main() {
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'chat'),
     );
-    expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
+    // 김민수 스레드는 3일치라 열면 맨 아래에서 시작한다 — 위쪽 배너는 아직
+    // 만들어지지 않았으므로 나올 때까지 끌어올린다. (#543)
+    final Finder minsuBanner = find.textContaining('AI가 김민수님의');
+    for (int i = 0; i < 40 && minsuBanner.evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView).last, const Offset(0, 300));
+      await tester.pump();
+    }
+    expect(minsuBanner, findsOneWidget);
 
     await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));

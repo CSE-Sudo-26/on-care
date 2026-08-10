@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/diet/data/repositories/dio_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 
 void main() {
   late Dio dio;
@@ -143,6 +146,83 @@ void main() {
       expect(updated.sugarG, 5.5);
     },
   );
+
+  group('analyze uploads a part that matches the picked photo', () {
+    late Dio uploadDio;
+    late DioDietRepository uploadRepository;
+    late FormData? sentForm;
+
+    setUp(() {
+      sentForm = null;
+      uploadDio = Dio(BaseOptions(baseUrl: 'https://example.test'));
+      uploadDio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest:
+              (RequestOptions options, RequestInterceptorHandler handler) {
+                sentForm = options.data as FormData?;
+                handler.resolve(
+                  Response<Map<String, Object?>>(
+                    requestOptions: options,
+                    statusCode: 200,
+                    data: const <String, Object?>{
+                      'entry_id': 'diet-1',
+                      'analysis': <String, Object?>{
+                        'foods': <Object?>[],
+                        'total_calories': 0,
+                        'total_sodium_mg': 0,
+                        'total_sugar_g': 0,
+                        'coach_comment': '',
+                      },
+                    },
+                  ),
+                );
+              },
+        ),
+      );
+      uploadRepository = DioDietRepository(uploadDio);
+    });
+
+    tearDown(() => uploadDio.close());
+
+    MultipartFile imagePart() => sentForm!.files
+        .firstWhere((MapEntry<String, MultipartFile> f) => f.key == 'image')
+        .value;
+
+    test('PNG 사진은 png 파일명·image/png 로 전송된다', () async {
+      await uploadRepository.analyze(
+        photo: MealPhoto.fromBytes(
+          // 완전한 PNG 시그니처 8바이트 (잘린 헤더는 fromBytes 가 null 을 준다).
+          Uint8List.fromList(<int>[
+            0x89,
+            0x50,
+            0x4E,
+            0x47,
+            0x0D,
+            0x0A,
+            0x1A,
+            0x0A,
+          ]),
+        )!,
+        mealType: 'lunch',
+        idempotencyKey: 'k1',
+      );
+
+      expect(imagePart().filename, 'meal.png');
+      expect(imagePart().contentType?.mimeType, 'image/png');
+    });
+
+    test('JPEG 사진은 jpg 파일명·image/jpeg 로 전송된다', () async {
+      await uploadRepository.analyze(
+        photo: MealPhoto.fromBytes(
+          Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+        )!,
+        mealType: 'lunch',
+      );
+
+      expect(imagePart().filename, 'meal.jpg');
+      expect(imagePart().contentType?.mimeType, 'image/jpeg');
+    });
+  });
 }
 
 const Map<String, Object?> _staleResponse = <String, Object?>{

@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -68,10 +71,41 @@ void main() {
     expect(sodium.overBudget, isTrue);
     expect(sodium.progress, 1.0); // clamped
     // 매크로는 식단 저장소가 준 값 그대로다.
-    expect(s.macros.carbsG, 140);
-    expect(s.macros.proteinG, 79);
-    expect(s.macros.fatG, 72);
+    expect(s.macros.carbsG, 120);
+    expect(s.macros.proteinG, 45);
+    expect(s.macros.fatG, 45);
   });
+
+  test(
+    'MockDashboardRepository uses the same personal goals as diet',
+    () async {
+      const UserProfile profile = UserProfile(
+        id: 'member',
+        name: '회원',
+        email: 'member@example.com',
+        dailyCalories: 1800,
+        dailySodiumMg: 1500,
+        dailySugarG: 35,
+        dailyCarbsG: 220,
+        dailyProteinG: 120,
+        dailyFatG: 50,
+      );
+      final DashboardSummary summary = await MockDashboardRepository(
+        MockDietRepository(),
+        fetchProfile: () async => profile,
+      ).fetchSummary();
+      final indicators = <String, HealthIndicator>{
+        for (final indicator in summary.indicators) indicator.label: indicator,
+      };
+
+      expect(indicators['칼로리']!.max, profile.effectiveDailyCalories);
+      expect(indicators['나트륨']!.max, profile.effectiveDailySodiumMg);
+      expect(indicators['당류']!.max, profile.effectiveDailySugarG);
+      for (final indicator in indicators.values) {
+        expect(indicator.overBudget, indicator.current > indicator.max);
+      }
+    },
+  );
 
   // 홈이 영양 수치를 따로 들고 있다가 식단 탭과 어긋났다 — 홈 2,329mg·4끼 vs
   // 식단 3,428mg·3끼. 식단이 기준이므로 두 화면이 같은 값을 보는지 못박는다.
@@ -112,6 +146,7 @@ void main() {
     final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
         appConfigProvider.overrideWithValue(config),
+        accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
         dietRepositoryProvider.overrideWithValue(diet),
       ],
     );
@@ -124,7 +159,7 @@ void main() {
     final DashboardSummary before = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(before.dietEntries, 4);
+    expect(before.dietEntries, 3);
 
     final DietDay day = await diet.fetchToday();
     await diet.deleteEntry(
@@ -136,7 +171,7 @@ void main() {
     final DashboardSummary after = await container.read(
       dashboardSummaryProvider.future,
     );
-    expect(after.dietEntries, 3);
+    expect(after.dietEntries, 2);
   });
 
   // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
@@ -156,8 +191,8 @@ void main() {
         .firstWhere((HealthIndicator h) => h.label == '나트륨')
         .current;
 
-    expect(before.dietEntries, 4);
-    expect(after.dietEntries, 3);
+    expect(before.dietEntries, 3);
+    expect(after.dietEntries, 2);
     // 짬뽕(3,200mg)이 빠지면 목표 아래로 내려온다.
     expect(sodium(after), lessThan(sodium(before)));
     expect(

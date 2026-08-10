@@ -129,27 +129,54 @@ def _valid_member_ids(db: Session) -> set[str]:
     return {r[0] for r in rows}
 
 
-# 회원별 채팅 스레드 (sender: trainer|client, text) — 프론트 seed_data 정렬.
-_CHAT: dict[str, list[tuple[str, str]]] = {
+# 회원별 채팅 스레드 (sender: trainer|client, text, days_ago) — 프론트 시드와 정렬.
+#
+# user-demo 스레드는 회원 앱·트레이너 앱의 데모 시드와 **같은 대화**여야 한다.
+# 김민수는 회원 앱 데모 사용자(user-demo)와 같은 계정이라, 실서버로 붙여도
+# 데모에서 보던 대화가 그대로 이어져야 하기 때문이다. 같은 목록이 아래 두 곳에
+# 있다 — 한 곳만 고치면 그 파일의 테스트가 깨진다:
+#   * frontend/flutter_trainer/lib/core/storage/seed_clients.dart (트레이너 시점)
+#   * frontend/flutter/lib/features/member_coach/data/repositories/
+#     mock_member_coach_repository.dart (회원 시점)
+#
+# days_ago 는 그 메시지가 며칠 전 것인지다. 전부 같은 시각에 몰아넣으면 사흘에
+# 걸친 대화가 30분짜리 수다로 보이고, 화면이 날짜로 묶는 자리(하루치 AI 분석
+# 안내)도 하나로 뭉친다.
+_CHAT: dict[str, list[tuple[str, str, int]]] = {
     "user-demo": [
-        ("trainer", "민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?"),
-        ("client", "찌개 먹을 때 국물을 많이 마셨나봐요 😅"),
-        ("trainer", "그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?"),
-        ("client", "무릎이 가볍게 당기긴 했는데 괜찮아요"),
-        ("trainer", "확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 "
-                    "런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪"),
+        # 1일차.
+        ("trainer", "민수님, 지난주 기록 정리해 봤는데 요일마다 이행률이 들쭉날쭉하네요. 바쁜 요일이 정해져 있나요?", 5),
+        ("client", "화요일이랑 목요일이 야근이 많아요 😥", 5),
+        ("trainer", "그럼 그 이틀은 15분짜리 짧은 루틴으로 바꿔 둘게요. 안 하는 것보다 훨씬 낫습니다", 5),
+        ("client", "그 정도면 퇴근하고도 할 수 있을 것 같아요", 5),
+        ("trainer", "혈압약 드시는 시간은 그대로시죠? 유산소가 그 시간과 겹치지 않게 잡을게요", 5),
+        ("client", "네, 아침 8시 그대로예요", 5),
+        ("trainer", "확인했어요. 화·목은 15분 저강도로 바꿔서 보냈습니다 🙂", 5),
+        # 2일차.
+        ("trainer", "민수님, 요즘 나트륨이 목표(2,000mg) 근처에서 자주 걸리네요. 국·찌개가 잦으신 편인가요?", 4),
+        ("client", "회사 구내식당이라 국물이 늘 나와요 😅", 4),
+        ("trainer", "국물만 절반 남기셔도 400~500mg은 빠져요. 그거 하나만 먼저 해보죠", 4),
+        ("client", "오늘은 국물 안 마셨어요! 걷기도 25분 했습니다", 4),
+        ("trainer", "좋아요 👏 그 한 가지만 지켜도 추이가 달라져요", 4),
+        ("trainer", "내일 루틴은 걷기 20분으로 조금 늘려서 보냈어요. 주말까지 이 페이스로 가봐요", 4),
+        # 3일차.
+        ("trainer", "민수님, AI 식단 분석 잘 받았어요 👍 오늘 나트륨이 목표치를 좀 넘었는데 어떠셨어요?", 0),
+        ("client", "찌개 먹을 때 국물을 많이 마셨나봐요 😅", 0),
+        ("trainer", "그렇군요! 오늘 PT 후에 부상이나 불편한 데는 없으셨나요?", 0),
+        ("client", "무릎이 가볍게 당기긴 했는데 괜찮아요", 0),
+        ("trainer", "확인했어요. AI가 오늘 식단 기반으로 유산소 루틴을 추천했는데, 무릎 상태 감안해서 런닝 대신 걷기로 조정해서 보낼게요. 다음 PT 때 봐요 💪", 0),
     ],
     "user-jisu": [
-        ("trainer", "지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?"),
-        ("client", "생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨"),
+        ("trainer", "지수님, AI 운동 데이터 수신했어요 — 오늘 인터벌 런닝 25분 완료! 컨디션은 어때요?", 0),
+        ("client", "생각보다 괜찮았어요. 숨이 금방 차더라고요 😮‍💨", 0),
         ("trainer", "심폐 지구력 올라가는 과정이에요 💪 AI 분석 보니까 당류는 목표 안에 있고, "
-                    "루틴 다음 주부터 근력 비중 늘려볼게요. 식단도 AI 추천 참고해서 업데이트해 드릴게요"),
+                    "루틴 다음 주부터 근력 비중 늘려볼게요. 식단도 AI 추천 참고해서 업데이트해 드릴게요", 0),
     ],
     "user-sungho": [
-        ("trainer", "성호님, 이번 주 운동 기록이 AI 쪽에서 안 잡히는데 몸은 괜찮으세요?"),
-        ("client", "이번 주 일이 너무 많아서 못 갔어요 😓"),
+        ("trainer", "성호님, 이번 주 운동 기록이 AI 쪽에서 안 잡히는데 몸은 괜찮으세요?", 0),
+        ("client", "이번 주 일이 너무 많아서 못 갔어요 😓", 0),
         ("trainer", "이해해요! 대신 AI 식단 분석 보니까 나트륨이 좀 높더라고요. 주말에 30분 걷기라도 하면 "
-                    "도움 돼요. AI가 그에 맞는 루틴 다시 짜줬으니까 앱에서 확인해보세요 🙂"),
+                    "도움 돼요. AI가 그에 맞는 루틴 다시 짜줬으니까 앱에서 확인해보세요 🙂", 0),
     ],
 }
 
@@ -308,24 +335,55 @@ def _seed_schedule(db: Session, valid: set[str]) -> None:
 
 
 def _seed_chat(db: Session, member_id: str) -> None:
-    """트레이너↔회원 채팅 스레드(멱등, 결정론적 id). 최근 시각으로 정렬되게 시드."""
+    """트레이너↔회원 채팅 스레드(멱등, 결정론적 id). 최근 시각으로 정렬되게 시드.
+
+    **이미 있는 시드 행은 건너뛰지 않고 현재 대화로 덮어쓴다.** 건너뛰면, 전에
+    시드된 DB(공유 Neon 포함)가 옛 본문을 그대로 들고 새로 늘어난 메시지만
+    덧붙여 앞뒤가 다른 스레드가 된다 — 실제로 이 스레드는 다섯 개에서 열여덟
+    개로 바뀌면서 앞 다섯 개의 본문도 전부 달라졌다(리뷰 지적). 대화가 줄어든
+    경우를 위해 남는 시드 행도 지운다.
+
+    회원이 앱에서 직접 보낸 메시지는 `chat-` 로 시작하는 다른 id 라 건드리지
+    않는다 — 지우는 대상은 `seed-chat-{member_id}-` 접두사뿐이다.
+    """
     thread = _CHAT.get(member_id)
     if not thread:
         return
-    # 스레드가 최근으로 보이도록 base 를 몇 시간 전으로 두고 2분 간격.
+    # 스레드가 최근으로 보이도록 base 를 몇 시간 전으로 두고, 메시지마다 그
+    # 메시지의 days_ago 만큼 더 과거로 민다. 같은 날 안에서는 2분 간격이다.
+    # days_ago 가 뒤로 갈수록 작아지므로 시각은 계속 증가한다 — 스레드 정렬은
+    # (created_at, id) 이라 이 단조성이 대화 순서를 보장한다.
     base = datetime.now(timezone.utc) - timedelta(hours=2)
-    for i, (sender, text) in enumerate(thread):
+    keep: set[str] = set()
+    for i, (sender, text, days_ago) in enumerate(thread):
         cid = f"seed-chat-{member_id}-{i}"
-        if db.get(models.ChatMessage, cid) is not None:
+        keep.add(cid)
+        created_at = base - timedelta(days=days_ago) + timedelta(minutes=i * 2)
+        sender_out = "member" if sender == "client" else "trainer"
+        row = db.get(models.ChatMessage, cid)
+        if row is None:
+            db.add(models.ChatMessage(
+                id=cid,
+                trainer_id=TRAINER_ID,
+                member_id=member_id,
+                sender=sender_out,
+                body=text,
+                created_at=created_at,
+            ))
             continue
-        db.add(models.ChatMessage(
-            id=cid,
-            trainer_id=TRAINER_ID,
-            member_id=member_id,
-            sender="member" if sender == "client" else "trainer",
-            body=text,
-            created_at=base + timedelta(minutes=i * 2),
-        ))
+        row.sender = sender_out
+        row.body = text
+        row.created_at = created_at
+
+    stale = db.scalars(
+        select(models.ChatMessage).where(
+            models.ChatMessage.member_id == member_id,
+            models.ChatMessage.id.like(f"seed-chat-{member_id}-%"),
+        )
+    ).all()
+    for row in stale:
+        if row.id not in keep:
+            db.delete(row)
     _safe_commit(db)
 
 

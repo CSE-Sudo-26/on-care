@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/design_system/figma/figma_kit.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
@@ -70,11 +71,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          profileProvider.overrideWith(
-            (ref) async => const UserProfile(
-              id: 'member',
-              name: '테스트',
-              email: 'member@example.com',
+          accountRepositoryProvider.overrideWithValue(
+            MockAccountRepository(
+              profile: const UserProfile(
+                id: 'member',
+                name: '테스트',
+                email: 'member@example.com',
+              ),
             ),
           ),
           dashboardSummaryProvider.overrideWith((ref) async => summary),

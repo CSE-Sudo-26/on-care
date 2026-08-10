@@ -549,6 +549,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietPhotoLoadError => '사진을 불러오지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
+  String get dietCameraPermissionDenied =>
+      '카메라 접근이 허용되지 않았어요. 설정에서 카메라를 켜면 음식 사진을 촬영할 수 있어요';
+
+  @override
+  String get dietPhotoPermissionDenied =>
+      '사진 접근이 허용되지 않았어요. 설정에서 사진을 켜면 보관함에서 음식 사진을 고를 수 있어요';
+
+  @override
+  String get dietPhotoUnsupportedFormat =>
+      '지원하지 않는 사진 형식이에요. JPG 또는 PNG 사진으로 다시 시도해 주세요';
+
+  @override
+  String get dietPhotoTooLarge => '사진 용량이 너무 커요. 다른 사진으로 다시 시도해 주세요';
+
+  @override
+  String get dietOpenSettings => '설정 열기';
+
+  @override
+  String get dietOpenSettingsFailed =>
+      '설정을 열지 못했어요. 설정 > Oncare에서 카메라·사진 접근을 켜주세요';
+
+  @override
   String get dietAnalyzing => '분석 중…';
 
   @override
@@ -1290,6 +1312,35 @@ class AppLocalizationsKo extends AppLocalizations {
   String coachProgressDone(int done, int total) {
     return '$done/$total 완료';
   }
+
+  @override
+  String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
+
+  @override
+  String get coachChatBack => '뒤로가기';
+
+  @override
+  String get coachChatLoadFailed => '대화를 불러오지 못했어요';
+
+  @override
+  String get coachChatSendFailed => '메시지 전송에 실패했어요. 다시 시도해 주세요';
+
+  @override
+  String get coachChatInputHint => '트레이너에게 메시지 보내기...';
+
+  @override
+  String get coachChatDemoAnalyzed => 'AI가 내 식단·운동 데이터를 분석했어요';
+
+  @override
+  String coachChatDemoReportSent(String trainer) {
+    return '$trainer님께 요약 리포트가 전송됐어요';
+  }
+
+  @override
+  String get coachChatDemoRoutineReceived => 'AI 분석 기반 루틴을 받았어요';
+
+  @override
+  String get coachChatDemoNotified => '알림으로도 전달됐어요';
 
   @override
   String get coachCtaChat => 'AI와 대화하기';

@@ -10,6 +10,8 @@ import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
@@ -134,6 +136,9 @@ void main() {
             ),
             exerciseRepositoryProvider.overrideWithValue(
               MockExerciseRepository() as ExerciseRepository,
+            ),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
             ),
             // dashboardRepositoryProvider 는 일부러 덮지 않는다 — 데모에서
             // 어떤 저장소가 뽑히는지가 이 테스트의 핵심이다.

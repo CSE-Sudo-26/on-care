@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 
 void main() {
-  final Uint8List bytes = Uint8List(0);
+  final MealPhoto photo = MealPhoto.fromBytes(
+    Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+  )!;
 
   group('MockDietRepository keeps CRUD in memory (#294)', () {
     test(
@@ -16,13 +19,11 @@ void main() {
         final now = DateTime.now();
 
         final today = await repo.fetchByDate(now);
-        expect(today.entries.length, 4);
+        // 오늘 저녁은 데모 시연(사진으로 저녁 기록)을 위해 비워 둔다 (#548).
+        expect(today.entries.length, 3);
         expect(
-          today.entries
-              .firstWhere((entry) => entry.mealType == MealType.dinner)
-              .foods
-              .map((food) => food.name),
-          <String>['두부 샐러드'],
+          today.entries.map((entry) => entry.mealType),
+          isNot(contains(MealType.dinner)),
         );
         final yesterday = await repo.fetchByDate(
           now.subtract(const Duration(days: 1)),
@@ -57,11 +58,8 @@ void main() {
           salmonDinner.foods.fold<int>(0, (sum, food) => sum + food.calories),
           salmonDinner.totalCalories,
         );
-        for (final day in <DietDay>[
-          await repo.fetchByDate(now),
-          yesterday,
-          twoDaysAgo,
-        ]) {
+        // 지난 이틀은 저녁까지 있는 완결된 하루, 오늘은 저녁을 비워 둔다 (#548).
+        for (final day in <DietDay>[yesterday, twoDaysAgo]) {
           expect(
             day.entries.map((entry) => entry.mealType).toSet(),
             containsAll(<MealType>[
@@ -71,6 +69,11 @@ void main() {
             ]),
           );
         }
+        final DietDay todayAgain = await repo.fetchByDate(now);
+        expect(
+          todayAgain.entries.map((entry) => entry.mealType).toSet(),
+          <MealType>{MealType.breakfast, MealType.lunch, MealType.snack},
+        );
         expect(
           <DietDay>[await repo.fetchByDate(now), yesterday, twoDaysAgo]
               .expand((day) => day.entries)
@@ -89,28 +92,27 @@ void main() {
     test('analyze appends an entry and updates the day totals', () async {
       final repo = MockDietRepository();
       final DietDay before = await repo.fetchToday();
-      expect(before.entries.length, 4);
-      expect(before.totalCalories, 1517);
-      expect(before.totalSodiumMg, 4008);
-      expect(before.totalSugarG, closeTo(24.8, 0.001));
+      expect(before.entries.length, 3);
+      expect(before.totalCalories, 1067);
+      expect(before.totalSodiumMg, 3428);
+      expect(before.totalSugarG, closeTo(17.8, 0.001));
 
       final result = await repo.analyze(
-        imageBytes: bytes,
-        filename: 'dinner.jpg',
+        photo: photo,
         mealType: 'dinner',
         idempotencyKey: 'k1',
       );
 
       final DietDay after = await repo.fetchToday();
-      expect(after.entries.length, 5);
+      expect(after.entries.length, 4);
       expect(
         after.entries.map((DietEntry e) => e.id),
         contains(result.entryId),
       );
       expect(after.entries.last.mealType, MealType.dinner);
-      expect(after.totalCalories, 2132); // 1517 + 615
-      expect(after.totalSodiumMg, 5208); // 4008 + 1200
-      expect(after.totalSugarG, closeTo(33.8, 0.001)); // 24.8 + 9
+      expect(after.totalCalories, 1682); // 1067 + 615
+      expect(after.totalSodiumMg, 4628); // 3428 + 1200
+      expect(after.totalSugarG, closeTo(26.8, 0.001)); // 17.8 + 9
       _expectMacrosMatchEntries(after);
     });
 
@@ -119,42 +121,39 @@ void main() {
       () async {
         final repo = MockDietRepository();
         final first = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'same',
         );
         final second = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'same',
         );
 
         expect(second.entryId, first.entryId);
         final DietDay after = await repo.fetchToday();
-        expect(after.entries.length, 5); // 4 seeded + 1 (중복 없음)
-        expect(after.totalCalories, 2132);
+        expect(after.entries.length, 4); // 3 seeded + 1 (중복 없음)
+        expect(after.totalCalories, 1682);
       },
     );
 
     test('deleteEntry removes it and restores the totals', () async {
       final repo = MockDietRepository();
       final result = await repo.analyze(
-        imageBytes: bytes,
-        filename: 'a.jpg',
+        photo: photo,
         mealType: 'snack',
         idempotencyKey: 'k2',
       );
-      expect((await repo.fetchToday()).entries.length, 5);
+      expect((await repo.fetchToday()).entries.length, 4);
 
       await repo.deleteEntry(result.entryId);
 
       final DietDay after = await repo.fetchToday();
-      expect(after.entries.length, 4);
-      expect(after.totalCalories, 1517);
-      expect(after.totalSodiumMg, 4008);
-      expect(after.totalSugarG, closeTo(24.8, 0.001));
+      expect(after.entries.length, 3);
+      expect(after.totalCalories, 1067);
+      expect(after.totalSodiumMg, 3428);
+      expect(after.totalSugarG, closeTo(17.8, 0.001));
     });
 
     test(
@@ -162,31 +161,29 @@ void main() {
       () async {
         final repo = MockDietRepository();
         final first = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'reuse',
         );
-        expect((await repo.fetchToday()).entries.length, 5);
+        expect((await repo.fetchToday()).entries.length, 4);
 
         // 항목 삭제 → 멱등 캐시도 함께 정리돼야 한다.
         await repo.deleteEntry(first.entryId);
-        expect((await repo.fetchToday()).entries.length, 4);
+        expect((await repo.fetchToday()).entries.length, 3);
 
         // 같은 키로 재요청하면 (낡은 결과만 반환하는 대신) 다시 추가된다.
         final second = await repo.analyze(
-          imageBytes: bytes,
-          filename: 'a.jpg',
+          photo: photo,
           mealType: 'dinner',
           idempotencyKey: 'reuse',
         );
         final DietDay after = await repo.fetchToday();
-        expect(after.entries.length, 5);
+        expect(after.entries.length, 4);
         expect(
           after.entries.map((DietEntry e) => e.id),
           contains(second.entryId),
         );
-        expect(after.totalCalories, 2132); // 1517 + 615 다시 반영
+        expect(after.totalCalories, 1682); // 1067 + 615 다시 반영
       },
     );
 
@@ -209,21 +206,21 @@ void main() {
       );
 
       final DietDay after = await repo.fetchToday();
-      expect(after.entries.length, 4);
-      expect(after.totalCalories, 1267); // 1517 - 750 + 500
-      expect(after.totalSodiumMg, 1808); // 4008 - 3200 + 1000
-      expect(after.totalSugarG, closeTo(20.3, 0.001)); // 24.8 - 8.5 + 4
-      // 아침 + 간식 + 저녁 + 수정된 점심의 합계.
-      expect(after.macros.carbsG, closeTo(43, 0.001));
-      expect(after.macros.proteinG, closeTo(70, 0.001));
-      expect(after.macros.fatG, closeTo(54.5, 0.001));
+      expect(after.entries.length, 3);
+      expect(after.totalCalories, 817); // 1067 - 750 + 500
+      expect(after.totalSodiumMg, 1228); // 3428 - 3200 + 1000
+      expect(after.totalSugarG, closeTo(13.3, 0.001)); // 17.8 - 8.5 + 4
+      // 아침 + 간식 + 수정된 점심의 합계.
+      expect(after.macros.carbsG, closeTo(23, 0.001));
+      expect(after.macros.proteinG, closeTo(36, 0.001));
+      expect(after.macros.fatG, closeTo(27.5, 0.001));
       expect(
         <int>[
           after.macros.carbsPct,
           after.macros.proteinPct,
           after.macros.fatPct,
         ],
-        <int>[18, 30, 52],
+        <int>[19, 30, 51],
       );
       _expectMacrosMatchEntries(after);
     });
@@ -234,17 +231,17 @@ void main() {
       await repo.deleteEntry('mock-lunch');
 
       final DietDay after = await repo.fetchToday();
-      // 점심(짬뽕) 삭제 → 아침 + 간식 + 저녁만 남는다.
-      expect(after.macros.carbsG, closeTo(33, 0.001));
-      expect(after.macros.proteinG, closeTo(50, 0.001));
-      expect(after.macros.fatG, closeTo(49.5, 0.001));
+      // 점심(짬뽕) 삭제 → 아침 + 간식만 남는다.
+      expect(after.macros.carbsG, closeTo(13, 0.001));
+      expect(after.macros.proteinG, closeTo(16, 0.001));
+      expect(after.macros.fatG, closeTo(22.5, 0.001));
       expect(
         <int>[
           after.macros.carbsPct,
           after.macros.proteinPct,
           after.macros.fatPct,
         ],
-        <int>[17, 26, 57],
+        <int>[16, 20, 64],
       );
       _expectMacrosMatchEntries(after);
     });
@@ -360,7 +357,7 @@ void main() {
 
     expect(foods.take(2).map((FoodItem food) => food.name), <String>[
       '짬뽕',
-      '두부 샐러드',
+      '스크램블 에그',
     ]);
     expect(day.aiCoachMessage, contains('짬뽕'));
     expect(day.totalSodiumMg, greaterThan(2000));

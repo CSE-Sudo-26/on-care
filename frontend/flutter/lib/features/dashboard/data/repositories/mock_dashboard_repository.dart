@@ -1,4 +1,5 @@
 import 'package:oncare/core/demo/demo_ai_advice.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -13,18 +14,21 @@ import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 ///
 /// 운동·일정·주간 점수는 아직 식단과 무관한 데모 값이라 그대로 둔다.
 class MockDashboardRepository implements DashboardRepository {
-  const MockDashboardRepository(this._diet);
+  const MockDashboardRepository(this._diet, {this.fetchProfile});
 
   final DietRepository _diet;
-
-  /// 데모 일일 목표치. 실 백엔드가 사용자별 목표를 주기 전까지의 고정값이다.
-  static const int _calorieGoal = 2000;
-  static const int _sodiumGoalMg = 2000;
-  static const double _sugarGoalG = 50;
+  final Future<UserProfile> Function()? fetchProfile;
 
   @override
   Future<DashboardSummary> fetchSummary() async {
     final DietDay today = await _diet.fetchToday();
+    final UserProfile? profile = await fetchProfile?.call();
+    final int calorieGoal =
+        profile?.effectiveDailyCalories ?? UserProfile.defaultDailyCalories;
+    final int sodiumGoal =
+        profile?.effectiveDailySodiumMg ?? UserProfile.defaultDailySodiumMg;
+    final int sugarGoal =
+        profile?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG;
     final DateTime now = DateTime.now();
     final DateTime monday = DateTime(
       now.year,
@@ -54,23 +58,23 @@ class MockDashboardRepository implements DashboardRepository {
         HealthIndicator(
           label: '칼로리',
           current: today.totalCalories,
-          max: _calorieGoal,
+          max: calorieGoal,
           unit: 'kcal',
-          overBudget: today.totalCalories > _calorieGoal,
+          overBudget: today.totalCalories > calorieGoal,
         ),
         HealthIndicator(
           label: '나트륨',
           current: today.totalSodiumMg,
-          max: _sodiumGoalMg,
+          max: sodiumGoal,
           unit: 'mg',
-          overBudget: today.totalSodiumMg > _sodiumGoalMg,
+          overBudget: today.totalSodiumMg > sodiumGoal,
         ),
         HealthIndicator(
           label: '당류',
           current: today.totalSugarG,
-          max: _sugarGoalG,
+          max: sugarGoal,
           unit: 'g',
-          overBudget: today.totalSugarG > _sugarGoalG,
+          overBudget: today.totalSugarG > sugarGoal,
         ),
       ],
       macros: today.macros,
@@ -78,9 +82,6 @@ class MockDashboardRepository implements DashboardRepository {
       exerciseMinutes: 45,
       exerciseCalories: 520,
       exerciseCount: 4,
-      // 데모 주간 소모 목표. 화면이 하드코딩하던 값을 목 데이터로 옮겨,
-      // 홈·운동 탭이 같은 소스(exerciseBurnGoal)를 읽어도 데모 수치는 그대로.
-      exerciseBurnGoal: 1500,
       nutritionWeek: nutritionWeek,
       todaySchedule: const <ScheduleItem>[
         ScheduleItem(time: '10:00', title: '병원 정기검진', emoji: '🏥'),

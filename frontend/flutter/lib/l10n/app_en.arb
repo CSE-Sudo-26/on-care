@@ -313,6 +313,12 @@
   "dietTakePhoto": "Take a Photo",
   "dietTakePhotoSub": "Snap your food with the camera",
   "dietPhotoLoadError": "Couldn't load the photo. Please try again in a moment.",
+  "dietCameraPermissionDenied": "Camera access is off. Turn it on in Settings to take a photo of your meal.",
+  "dietPhotoPermissionDenied": "Photo access is off. Turn it on in Settings to pick a meal photo from your library.",
+  "dietPhotoUnsupportedFormat": "That photo format isn't supported. Please try a JPG or PNG photo.",
+  "dietPhotoTooLarge": "That photo is too large. Please try a different one.",
+  "dietOpenSettings": "Open Settings",
+  "dietOpenSettingsFailed": "Couldn't open Settings. Turn on camera and photo access under Settings > Oncare.",
   "dietAnalyzing": "Analyzing…",
   "dietAnalysisFailed": "Analysis failed",
   "dietAnalysisDone": "Analysis complete!",
@@ -742,6 +748,22 @@
       }
     }
   },
+  "coachChatSubtitle": "Personal trainer · Available",
+  "coachChatBack": "Back",
+  "coachChatLoadFailed": "Couldn't load the conversation",
+  "coachChatSendFailed": "Couldn't send your message. Please try again",
+  "coachChatInputHint": "Message your trainer...",
+  "coachChatDemoAnalyzed": "AI analyzed your diet and exercise data",
+  "coachChatDemoReportSent": "A summary report was sent to {trainer}",
+  "@coachChatDemoReportSent": {
+    "placeholders": {
+      "trainer": {
+        "type": "String"
+      }
+    }
+  },
+  "coachChatDemoRoutineReceived": "You received a routine based on AI analysis",
+  "coachChatDemoNotified": "It was also delivered as a notification",
   "coachCtaChat": "Chat with AI",
   "navAddRecordTitle": "Add a record",
   "navAddRecordSubtitle": "Choose diet or exercise",

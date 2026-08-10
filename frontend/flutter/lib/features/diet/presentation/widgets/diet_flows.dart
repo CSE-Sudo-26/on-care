@@ -1,9 +1,7 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
@@ -11,8 +9,10 @@ import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// A single logged food item, with the per-food nutrition shown on the meal
 /// card ([sodiumMg] / [sugarG] default to 0 for draft rows in the edit sheet).
@@ -134,37 +134,6 @@ Widget _sheetHandle() => Container(
 
 // ─────────────────────────────────────────────────── 식단 추가하기 ──
 
-/// Pick a food photo from [source], then hand it to the AI analysis sheet.
-/// Silently returns if the user cancels the picker.
-Future<void> _pickAndAnalyze(
-  BuildContext sheetContext,
-  ImageSource source,
-) async {
-  final NavigatorState navigator = Navigator.of(sheetContext);
-  final Uint8List bytes;
-  try {
-    final XFile? file = await ImagePicker().pickImage(
-      source: source,
-      imageQuality: 85,
-    );
-    if (file == null) return; // user cancelled
-    bytes = await file.readAsBytes();
-  } catch (_) {
-    // Permission denied / platform error / unreadable file — don't crash.
-    if (sheetContext.mounted) {
-      ScaffoldMessenger.of(sheetContext).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(sheetContext).dietPhotoLoadError),
-        ),
-      );
-    }
-    return;
-  }
-  if (!navigator.mounted) return;
-  navigator.pop();
-  await showDietResultSheet(navigator.context, bytes, _currentMealType());
-}
-
 /// Opens the short photo-source choice as a content-sized bottom sheet.
 Future<void> showDietAddSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -175,76 +144,261 @@ Future<void> showDietAddSheet(BuildContext context) {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
-    builder: (BuildContext ctx) {
-      final AppLocalizations l = AppLocalizations.of(ctx);
-      return _sheetShell(
-        ctx,
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Center(child: _sheetHandle()),
+    builder: (BuildContext ctx) => const _DietAddSheet(),
+  );
+}
+
+/// Photo-source choice for 식단 추가.
+///
+/// Owns the picker outcome so a failure can be shown *inside* the sheet: a
+/// SnackBar would sit behind this sheet, and the sheet staying open is what
+/// lets the user retry (or open Settings) without restarting the flow.
+/// Cancelling the camera/gallery is not a failure — nothing is shown.
+class _DietAddSheet extends ConsumerStatefulWidget {
+  const _DietAddSheet();
+
+  @override
+  ConsumerState<_DietAddSheet> createState() => _DietAddSheetState();
+}
+
+class _DietAddSheetState extends ConsumerState<_DietAddSheet> {
+  MealPhotoFailure? _failure;
+
+  /// Guards a second tap while the OS picker is up — image_picker rejects a
+  /// concurrent request with `multiple_request`.
+  bool _picking = false;
+
+  Future<void> _pickAndAnalyze(MealPhotoSource source) async {
+    if (_picking) return;
+    setState(() {
+      _picking = true;
+      _failure = null;
+    });
+    final NavigatorState navigator = Navigator.of(context);
+
+    final MealPhoto? photo;
+    try {
+      photo = await ref.read(mealPhotoPickerProvider).pick(source);
+    } on MealPhotoException catch (error) {
+      _settle(error.failure);
+      return;
+    } on Object {
+      _settle(MealPhotoFailure.readFailed);
+      return;
+    }
+    // `navigator.mounted` is still true after this sheet is dismissed, so it
+    // can't tell us whether the route we're about to pop is ours. Only this
+    // State being mounted proves the sheet is still up — without the check a
+    // dismiss during the OS picker would pop the page underneath instead.
+    if (!mounted) return;
+    _settle(null);
+    if (photo == null) return; // user cancelled
+
+    navigator.pop();
+    await showDietResultSheet(navigator.context, photo, _currentMealType());
+  }
+
+  void _settle(MealPhotoFailure? failure) {
+    if (!mounted) return;
+    setState(() {
+      _picking = false;
+      _failure = failure;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final MealPhotoFailure? failure = _failure;
+    return _sheetShell(
+      context,
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Center(child: _sheetHandle()),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        l.dietAddSheetTitle,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l.dietAddSheetSubtitle,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _CircleClose(onTap: () => Navigator.of(context).pop()),
+              ],
+            ),
+          ),
+          if (failure != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          l.dietAddSheetTitle,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: FigmaColors.ink,
-                          ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: _PhotoFailureNotice(failure: failure),
+            ),
+          Padding(
+            key: const Key('dietAddOptions'),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Column(
+              children: <Widget>[
+                _SourceOption(
+                  icon: Icons.image_outlined,
+                  iconBg: FigmaColors.primaryA(0.12),
+                  iconColor: FigmaColors.primary,
+                  title: l.dietPickPhoto,
+                  subtitle: l.dietPickPhotoSub,
+                  onTap: () => _pickAndAnalyze(MealPhotoSource.gallery),
+                ),
+                const SizedBox(height: 12),
+                _SourceOption(
+                  icon: Icons.photo_camera_outlined,
+                  iconBg: FigmaColors.greenA(0.12),
+                  iconColor: FigmaColors.greenText,
+                  title: l.dietTakePhoto,
+                  subtitle: l.dietTakePhotoSub,
+                  onTap: () => _pickAndAnalyze(MealPhotoSource.camera),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      key: const Key('dietAddSheet'),
+    );
+  }
+}
+
+/// In-sheet explanation of why the photo couldn't be used. A denied
+/// permission also offers the jump to iOS Settings, since retrying in-app
+/// can't succeed until the switch is flipped there.
+class _PhotoFailureNotice extends StatefulWidget {
+  const _PhotoFailureNotice({required this.failure});
+
+  final MealPhotoFailure failure;
+
+  @override
+  State<_PhotoFailureNotice> createState() => _PhotoFailureNoticeState();
+}
+
+class _PhotoFailureNoticeState extends State<_PhotoFailureNotice> {
+  static const Color _warningBg = Color(0xFFFFF1EF);
+  static const Color _warningInk = Color(0xFFD1442C);
+
+  /// Settings wouldn't open — fall back to telling the user the manual path.
+  /// A tap that silently does nothing reads as a broken app (#507).
+  bool _openSettingsFailed = false;
+
+  bool get _isPermissionDenied =>
+      widget.failure == MealPhotoFailure.cameraPermissionDenied ||
+      widget.failure == MealPhotoFailure.photoPermissionDenied;
+
+  /// Only iOS has a URL that lands on this app's permission screen;
+  /// elsewhere the message alone has to do.
+  bool get _canOpenAppSettings =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  String _message(AppLocalizations l) => switch (widget.failure) {
+    MealPhotoFailure.cameraPermissionDenied => l.dietCameraPermissionDenied,
+    MealPhotoFailure.photoPermissionDenied => l.dietPhotoPermissionDenied,
+    MealPhotoFailure.unsupportedFormat => l.dietPhotoUnsupportedFormat,
+    MealPhotoFailure.tooLarge => l.dietPhotoTooLarge,
+    MealPhotoFailure.readFailed => l.dietPhotoLoadError,
+  };
+
+  Future<void> _openSettings() async {
+    bool opened = false;
+    try {
+      // `app-settings:` is a system scheme, so the platform default mode is
+      // what lands on this app's permission screen (no external webview).
+      opened = await launchUrl(Uri.parse('app-settings:'));
+    } on Object {
+      opened = false;
+    }
+    if (!mounted || opened) return;
+    setState(() => _openSettingsFailed = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const Key('dietPhotoFailureNotice'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _warningBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(Icons.error_outline, size: 18, color: _warningInk),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  _message(l),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: _warningInk,
+                  ),
+                ),
+                if (_isPermissionDenied && _canOpenAppSettings)
+                  GestureDetector(
+                    onTap: _openSettings,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        l.dietOpenSettings,
+                        key: const Key('dietOpenSettingsLink'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.primary,
+                          decoration: TextDecoration.underline,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l.dietAddSheetSubtitle,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  _CircleClose(onTap: () => Navigator.of(ctx).pop()),
-                ],
-              ),
-            ),
-            Padding(
-              key: const Key('dietAddOptions'),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Column(
-                children: <Widget>[
-                  _SourceOption(
-                    icon: Icons.image_outlined,
-                    iconBg: FigmaColors.primaryA(0.12),
-                    iconColor: FigmaColors.primary,
-                    title: l.dietPickPhoto,
-                    subtitle: l.dietPickPhotoSub,
-                    onTap: () => _pickAndAnalyze(ctx, ImageSource.gallery),
+                if (_openSettingsFailed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      l.dietOpenSettingsFailed,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: _warningInk,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _SourceOption(
-                    icon: Icons.photo_camera_outlined,
-                    iconBg: FigmaColors.greenA(0.12),
-                    iconColor: FigmaColors.greenText,
-                    title: l.dietTakePhoto,
-                    subtitle: l.dietTakePhotoSub,
-                    onTap: () => _pickAndAnalyze(ctx, ImageSource.camera),
-                  ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
-        key: const Key('dietAddSheet'),
-      );
-    },
-  );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SourceOption extends StatelessWidget {
@@ -329,12 +483,12 @@ class _SourceOption extends StatelessWidget {
 // ─────────────────────────────────────────────────── 분석 완료 ──
 
 /// AI analysis result sheet shown after picking a photo.
-/// Runs the real `POST /diet/analyze` on the picked [imageBytes] and shows the
+/// Runs the real `POST /diet/analyze` on the picked [photo] and shows the
 /// recognised foods + nutrition. The backend persists the entry as part of
 /// analysis, so a successful result refreshes [dietTodayProvider].
 Future<void> showDietResultSheet(
   BuildContext context,
-  Uint8List imageBytes,
+  MealPhoto photo,
   String mealType,
 ) {
   return showModalBottomSheet<void>(
@@ -343,13 +497,13 @@ Future<void> showDietResultSheet(
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
     builder: (BuildContext ctx) =>
-        _ResultSheet(imageBytes: imageBytes, mealType: mealType),
+        _ResultSheet(photo: photo, mealType: mealType),
   );
 }
 
 class _ResultSheet extends ConsumerStatefulWidget {
-  const _ResultSheet({required this.imageBytes, required this.mealType});
-  final Uint8List imageBytes;
+  const _ResultSheet({required this.photo, required this.mealType});
+  final MealPhoto photo;
   final String mealType;
 
   @override
@@ -381,8 +535,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       final DietAnalysisResult result = await ref
           .read(dietRepositoryProvider)
           .analyze(
-            imageBytes: widget.imageBytes,
-            filename: 'meal.jpg',
+            photo: widget.photo,
             mealType: widget.mealType,
             idempotencyKey: _idempotencyKey,
           );

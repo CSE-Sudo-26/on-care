@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 
 abstract class DietRepository {
@@ -19,12 +18,15 @@ abstract class DietRepository {
   /// recognizes the foods, maps nutrition from the public DB, persists a
   /// diet entry, and returns the analysis.
   ///
+  /// [photo] carries the bytes together with the file name and MIME type
+  /// that describe them, so the multipart part the server validates always
+  /// matches the actual image (see [MealPhoto]).
+  ///
   /// [idempotencyKey], when supplied, lets the server dedupe a retried
   /// request (lost-response case) so the same photo isn't recorded twice.
   /// Generate it once per capture and reuse it across retries.
   Future<DietAnalysisResult> analyze({
-    required Uint8List imageBytes,
-    required String filename,
+    required MealPhoto photo,
     required String mealType,
     String? idempotencyKey,
   });

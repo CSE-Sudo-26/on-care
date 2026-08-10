@@ -256,6 +256,23 @@ class ScheduleCreateRequest(BaseModel):
     _v_time = field_validator("time")(_validate_hhmm)
 
 
+class ScheduleProgramRegisterRequest(BaseModel):
+    """AI coaching command to attach a program or create its PT session."""
+
+    date: str = Field(max_length=10)
+    time: str = Field(max_length=10)
+    client_name: str = Field(default="", max_length=100)
+    program: list[ProgramItem] = Field(min_length=1, max_length=30)
+
+    _v_date = field_validator("date")(_validate_ymd)
+    _v_time = field_validator("time")(_validate_hhmm)
+
+
+class ScheduleProgramRegisterOut(BaseModel):
+    session: ScheduleSessionOut
+    attached_to_existing: bool
+
+
 class ScheduleUpdateRequest(PartialUpdate):
     """부분 수정 — 제공된 필드만 반영."""
     time: str | None = Field(default=None, max_length=10)

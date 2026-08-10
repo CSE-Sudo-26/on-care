@@ -554,6 +554,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load the photo. Please try again in a moment.';
 
   @override
+  String get dietCameraPermissionDenied =>
+      'Camera access is off. Turn it on in Settings to take a photo of your meal.';
+
+  @override
+  String get dietPhotoPermissionDenied =>
+      'Photo access is off. Turn it on in Settings to pick a meal photo from your library.';
+
+  @override
+  String get dietPhotoUnsupportedFormat =>
+      'That photo format isn\'t supported. Please try a JPG or PNG photo.';
+
+  @override
+  String get dietPhotoTooLarge =>
+      'That photo is too large. Please try a different one.';
+
+  @override
+  String get dietOpenSettings => 'Open Settings';
+
+  @override
+  String get dietOpenSettingsFailed =>
+      'Couldn\'t open Settings. Turn on camera and photo access under Settings > Oncare.';
+
+  @override
   String get dietAnalyzing => 'Analyzing…';
 
   @override
@@ -1307,6 +1330,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String coachProgressDone(int done, int total) {
     return '$done/$total done';
   }
+
+  @override
+  String get coachChatSubtitle => 'Personal trainer · Available';
+
+  @override
+  String get coachChatBack => 'Back';
+
+  @override
+  String get coachChatLoadFailed => 'Couldn\'t load the conversation';
+
+  @override
+  String get coachChatSendFailed =>
+      'Couldn\'t send your message. Please try again';
+
+  @override
+  String get coachChatInputHint => 'Message your trainer...';
+
+  @override
+  String get coachChatDemoAnalyzed => 'AI analyzed your diet and exercise data';
+
+  @override
+  String coachChatDemoReportSent(String trainer) {
+    return 'A summary report was sent to $trainer';
+  }
+
+  @override
+  String get coachChatDemoRoutineReceived =>
+      'You received a routine based on AI analysis';
+
+  @override
+  String get coachChatDemoNotified => 'It was also delivered as a notification';
 
   @override
   String get coachCtaChat => 'Chat with AI';

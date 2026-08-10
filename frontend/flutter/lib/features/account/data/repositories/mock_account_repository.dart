@@ -4,7 +4,7 @@ import 'package:oncare/features/account/domain/repositories/account_repository.d
 /// Not wired by default (the app uses [DioAccountRepository] → the drift-backed
 /// LocalApiInterceptor). Kept for unit tests / offline overrides.
 class MockAccountRepository implements AccountRepository {
-  const MockAccountRepository();
+  MockAccountRepository({UserProfile profile = _demo}) : _profile = profile;
 
   static const UserProfile _demo = UserProfile(
     id: 'user-demo',
@@ -15,10 +15,18 @@ class MockAccountRepository implements AccountRepository {
     dailyCalories: 2000,
     dailySodiumMg: 2000,
     dailySugarG: 50,
+    dailyCarbsG: 275,
+    dailyProteinG: 100,
+    dailyFatG: 55,
+    weeklyWorkoutGoal: UserProfile.defaultWeeklyWorkoutGoal,
+    weeklyExerciseMinutesGoal: UserProfile.defaultWeeklyExerciseMinutesGoal,
+    weeklyBurnGoal: UserProfile.defaultWeeklyBurnGoal,
   );
 
+  UserProfile _profile;
+
   @override
-  Future<UserProfile> fetchProfile() async => _demo;
+  Future<UserProfile> fetchProfile() async => _profile;
 
   @override
   Future<void> deleteAccount() async {}
@@ -30,7 +38,7 @@ class MockAccountRepository implements AccountRepository {
     num? heightCm,
     String? conditions,
     int? dailySodiumMg,
-  }) async => _demo;
+  }) async => _profile;
 
   @override
   Future<UserProfile> updateProfile({
@@ -38,7 +46,7 @@ class MockAccountRepository implements AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
-  }) async => _demo;
+  }) async => _profile;
 
   @override
   Future<UserProfile> updateHealthGoals({
@@ -51,5 +59,24 @@ class MockAccountRepository implements AccountRepository {
     int? weeklyWorkoutGoal,
     int? weeklyExerciseMinutesGoal,
     int? weeklyBurnGoal,
-  }) async => _demo;
+  }) async {
+    _profile = UserProfile(
+      id: _profile.id,
+      name: _profile.name,
+      email: _profile.email,
+      phone: _profile.phone,
+      birthDate: _profile.birthDate,
+      dailyCalories: dailyCalories ?? _profile.dailyCalories,
+      dailySodiumMg: dailySodiumMg ?? _profile.dailySodiumMg,
+      dailySugarG: dailySugarG ?? _profile.dailySugarG,
+      dailyCarbsG: dailyCarbsG ?? _profile.dailyCarbsG,
+      dailyProteinG: dailyProteinG ?? _profile.dailyProteinG,
+      dailyFatG: dailyFatG ?? _profile.dailyFatG,
+      weeklyWorkoutGoal: weeklyWorkoutGoal ?? _profile.weeklyWorkoutGoal,
+      weeklyExerciseMinutesGoal:
+          weeklyExerciseMinutesGoal ?? _profile.weeklyExerciseMinutesGoal,
+      weeklyBurnGoal: weeklyBurnGoal ?? _profile.weeklyBurnGoal,
+    );
+    return _profile;
+  }
 }
