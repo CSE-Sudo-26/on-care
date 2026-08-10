@@ -108,6 +108,23 @@ curl -s -H "Authorization: Bearer $T" \
 로그인은 `OAuth2PasswordRequestForm` 이라 **JSON 이 아니라 폼 데이터**(`username=`)로
 보냅니다. 이메일을 `username` 필드에 넣습니다.
 
+### 전 경로 한 번에 훑기
+
+위 확인은 채팅 하나만 봅니다. 46개 경로(식단·운동·채팅·로스터·예약·상담)를 한 번에
+훑으려면:
+
+```bash
+cd backend
+python -m scripts.e2e_sweep
+```
+
+통과/실패를 그룹별로 출력하고, 실패가 있으면 마지막에 목록으로 모아 줍니다. 그 목록만
+화면으로 확인하면 됩니다. 식단·운동 세션을 만들었다가 지우므로 로컬 `--base` 만
+허용하고, 배포 대상을 가리키려면 `--allow-remote` 를 명시해야 합니다.
+
+AI 코칭·루틴 생성은 이 스윕에서 제외했습니다. `GEMINI_API_KEY` 가 없으면 규칙 폴백이
+200 을 돌려주어 **통과처럼 보이기** 때문입니다(#579 수정 후 #589 에서 검증).
+
 ## 알려진 함정
 
 - **Windows(Git Bash)에서 `curl -F "image=@/tmp/x.jpg"`** 는 `curl: (26)` 로 실패합니다.
