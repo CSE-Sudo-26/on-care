@@ -204,6 +204,41 @@ def test_seed_backfills_an_empty_demo_password(client, db_session):
     assert restored.hashed_password, "빈 비밀번호가 시드 재실행으로 채워져야 한다"
 
 
+def test_backfill_skips_an_account_that_only_shares_the_id(client, db_session):
+    """id 만 같고 이메일·역할이 다른 계정에는 데모 비밀번호를 심지 않는다.
+
+    id 만 보고 채우면, 그 id 를 선점한 남의 계정에 널리 알려진 데모 비밀번호로
+    로그인할 수단을 새로 만들어 주게 된다(리뷰 지적, PR #577).
+    """
+    from sqlalchemy import select
+
+    from app.db.seed_trainer import seed_trainer_domain
+    from app.models.models import User
+
+    squatter = db_session.scalar(select(User).where(User.id == "user-sungho"))
+    assert squatter is not None
+    original_email, original_role = squatter.email, squatter.role
+    squatter.email = "someone-else@example.com"
+    squatter.role = "trainer"
+    squatter.hashed_password = ""  # 백필 대상으로 보이는 상태
+    db_session.commit()
+
+    try:
+        seed_trainer_domain()
+
+        db_session.expire_all()
+        after = db_session.scalar(select(User).where(User.id == "user-sungho"))
+        assert after.hashed_password == "", (
+            "이메일·역할이 다른 계정에는 데모 비밀번호를 심으면 안 된다"
+        )
+    finally:
+        after = db_session.scalar(select(User).where(User.id == "user-sungho"))
+        after.email, after.role = original_email, original_role
+        after.hashed_password = ""
+        db_session.commit()
+        seed_trainer_domain()  # 진짜 데모 계정으로 되돌린 뒤 정상 백필
+
+
 def test_email_conflict_is_detected(client, db_session):
     """이메일 충돌 감지 로직(시드가 이걸로 안전 스킵). 비파괴 — 임시행만 쓰고 정리."""
     from app.db.seed_trainer import _email_taken_by_other
