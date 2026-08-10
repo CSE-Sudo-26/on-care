@@ -168,6 +168,11 @@ class RoutineUpdateRequest(PartialUpdate):
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 
+#: 계획의 강도 라벨. 트레이너 앱이 이 세 값을 그대로 화면에 뿌리므로 열어 두면
+#: LLM 이 "아주높음" 같은 값을 반환해도 통과해 UI 가 깨진다(#585). 규칙형 생성기
+#: (`routine_ai._B_LABEL`)가 내는 값과 같아야 한다 — 어긋나면 폴백이 422 가 된다.
+RoutineIntensityLabel = Literal["낮음", "보통", "높음"]
+
 
 class RoutineOptionsRequest(BaseModel):
     """회원 데이터 기반 맞춤 루틴 후보 생성 조건."""
@@ -208,7 +213,7 @@ class RoutineOptionPlanOut(BaseModel):
     key: Literal["A", "B"]
     label: str = Field(min_length=1, max_length=50)
     total_minutes: int = Field(ge=1, le=180)
-    intensity: str = Field(min_length=1, max_length=20)
+    intensity: RoutineIntensityLabel
     exercises: list[RoutineOptionExerciseOut] = Field(min_length=1, max_length=12)
     reason: str = Field(min_length=1, max_length=200)
     rationale: str = Field(min_length=1, max_length=500)
