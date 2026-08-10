@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -19,46 +20,26 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 /// without each of them having to remember to invalidate providers.
 class DioScheduleRepository implements ScheduleRepository {
   /// Creates the repository over [_dio].
-  DioScheduleRepository(this._dio);
+  DioScheduleRepository(
+    this._dio, {
+    this.pollInterval = const Duration(seconds: 5),
+  });
 
   final Dio _dio;
+  final Duration pollInterval;
 
   final StreamController<void> _revisions = StreamController<void>.broadcast();
 
-  /// Emits once on listen, then again after every mutation.
-  ///
-  /// Written with an explicit controller rather than `async*` + `await
-  /// for`: a generator suspended on the revision stream only resumes when
-  /// the consumer pulls, which made "write, then observe the re-read"
-  /// depend on listener timing instead of on the write.
-  Stream<T> _live<T>(Future<T> Function() read) {
-    late final StreamController<T> controller;
-    StreamSubscription<void>? revisions;
-
-    Future<void> emit() async {
-      if (controller.isClosed) return;
-      try {
-        final value = await read();
-        if (!controller.isClosed) controller.add(value);
-      } catch (error, stackTrace) {
-        // Surface as a stream error so the consuming AsyncValue shows its
-        // error state rather than hanging in loading.
-        if (!controller.isClosed) controller.addError(error, stackTrace);
-      }
-    }
-
-    controller = StreamController<T>(
-      onListen: () {
-        unawaited(emit());
-        revisions = _revisions.stream.listen((_) => unawaited(emit()));
-      },
-      onCancel: () async {
-        await revisions?.cancel();
-        revisions = null;
-      },
-    );
-    return controller.stream;
-  }
+  /// Emits once on listen, after every successful local mutation, and on a
+  /// short interval while a schedule consumer is visible. The periodic read
+  /// is what picks up reservations and cancellations written by the member
+  /// app; [_revisions] keeps trainer-side writes immediate.
+  Stream<T> _live<T>(Future<T> Function() read, {bool pollExternal = false}) =>
+      activePollingStream<T>(
+        load: read,
+        interval: pollExternal ? pollInterval : null,
+        refreshes: _revisions.stream,
+      );
 
   void _bump() {
     if (!_revisions.isClosed) _revisions.add(null);
@@ -76,7 +57,10 @@ class DioScheduleRepository implements ScheduleRepository {
 
   @override
   Stream<List<ScheduleSession>> watchRange(String fromDate, String toDate) =>
-      _live(() => _fetch(<String, String>{'from': fromDate, 'to': toDate}));
+      _live(
+        () => _fetch(<String, String>{'from': fromDate, 'to': toDate}),
+        pollExternal: true,
+      );
 
   /// `member_id` on its own means "every session for this client" — no
   /// date bounds. Standing in for that with a wide range would silently
@@ -107,7 +91,7 @@ class DioScheduleRepository implements ScheduleRepository {
       } on DioException catch (e) {
         throw AppError.fromDio(e);
       }
-    });
+    }, pollExternal: true);
   }
 
   @override
