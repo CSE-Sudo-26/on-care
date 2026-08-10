@@ -21,6 +21,10 @@ abstract interface class MemberCoachRepository {
   /// The chat thread (oldest → newest).
   Future<List<CoachMessage>> fetchChat();
 
+  /// Watches the chat while its screen is active. Real API implementations
+  /// poll the shared thread; demo implementations emit their in-memory state.
+  Stream<List<CoachMessage>> watchChat();
+
   /// Sends a message to the coach. No-ops on blank text.
   Future<void> sendMessage(String text);
 

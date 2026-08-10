@@ -38,15 +38,6 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
   int _lastCount = -1;
   bool _sending = false;
 
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.microtask(() async {
-      ref.invalidate(coachChatProvider);
-      await _markRead();
-    });
-  }
-
   /// 데모 안내 배너를 **하루 단위로** 끼워 넣은 목록을 만든다.
   ///
   /// 배너가 스레드 맨 앞·맨 뒤에 하나씩만 있으면, 사흘치 대화에서 "분석은 이
@@ -238,6 +229,9 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                     if (messages.length != _lastCount) {
                       _lastCount = messages.length;
                       _scrollToBottom();
+                      // Mark newly polled trainer messages read while this
+                      // full-screen route is visible, then refresh its badge.
+                      Future<void>.microtask(_markRead);
                     }
                     return ListView(
                       controller: _scroll,

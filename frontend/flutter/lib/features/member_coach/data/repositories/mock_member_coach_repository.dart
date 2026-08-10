@@ -195,6 +195,10 @@ class MockMemberCoachRepository implements MemberCoachRepository {
       List<CoachMessage>.unmodifiable(_chat);
 
   @override
+  Stream<List<CoachMessage>> watchChat() =>
+      Stream<List<CoachMessage>>.fromFuture(fetchChat());
+
+  @override
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;

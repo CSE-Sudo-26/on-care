@@ -23,6 +23,8 @@ DioException _httpError(int status, String path) => DioException(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioMemberCoachRepository repo;
 
@@ -100,6 +102,39 @@ void main() {
     ]);
     expect(chat.first.sender, CoachSender.trainer);
   });
+
+  test(
+    'watchChat polls and retries without replacing the last good data',
+    () async {
+      var calls = 0;
+      when(() => dio.get<List<dynamic>>('/me/coach/chat')).thenAnswer((
+        _,
+      ) async {
+        calls += 1;
+        if (calls == 2) throw _httpError(503, '/me/coach/chat');
+        return _ok<List<dynamic>>(<dynamic>[
+          <String, Object?>{
+            'id': calls == 1 ? 'before' : 'after',
+            'sender': 'trainer',
+            'body': 'message',
+            'time_label': '09:00',
+            'created_at': '2026-08-10T09:00:00Z',
+          },
+        ], '/me/coach/chat');
+      });
+
+      final emissions = await DioMemberCoachRepository(
+        dio,
+        pollInterval: const Duration(milliseconds: 5),
+      ).watchChat().take(2).toList().timeout(const Duration(seconds: 1));
+
+      expect(emissions.map((items) => items.single.id), <String>[
+        'before',
+        'after',
+      ]);
+      expect(calls, 3);
+    },
+  );
 
   test('fetchChat rejects a malformed list item', () async {
     when(() => dio.get<List<dynamic>>('/me/coach/chat')).thenAnswer(

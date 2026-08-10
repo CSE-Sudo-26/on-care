@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -24,6 +27,8 @@ DioException _httpError(int status, String path) => DioException(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioChatRepository repo;
 
@@ -56,6 +61,110 @@ void main() {
     expect(thread.map((m) => m.id).toList(), <String>['a', 'b']);
     expect(thread.last.sender, ChatSender.trainer);
   });
+
+  test('watchThread polls until its subscription is cancelled', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/clients/m1/chat')).thenAnswer((
+      _,
+    ) async {
+      calls += 1;
+      return _ok<List<dynamic>>(<dynamic>[
+        <String, Object?>{
+          'id': 'm$calls',
+          'sender': 'client',
+          'body': 'message $calls',
+          'time_label': '09:00',
+          'created_at': '2026-08-10T09:00:00Z',
+        },
+      ], '/trainer/clients/m1/chat');
+    });
+
+    final emissions = await DioChatRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    ).watchThread('m1').take(2).toList().timeout(const Duration(seconds: 1));
+
+    expect(emissions.map((items) => items.single.id), <String>['m1', 'm2']);
+    expect(calls, 2);
+  });
+
+  test(
+    'watchThread keeps the last value across a transient poll failure',
+    () async {
+      var calls = 0;
+      when(() => dio.get<List<dynamic>>('/trainer/clients/m1/chat')).thenAnswer(
+        (_) async {
+          calls += 1;
+          if (calls == 2) {
+            throw _httpError(503, '/trainer/clients/m1/chat');
+          }
+          return _ok<List<dynamic>>(<dynamic>[
+            <String, Object?>{
+              'id': calls == 1 ? 'before' : 'after',
+              'sender': 'client',
+              'body': 'message',
+              'time_label': '09:00',
+              'created_at': '2026-08-10T09:00:00Z',
+            },
+          ], '/trainer/clients/m1/chat');
+        },
+      );
+
+      final emissions = await DioChatRepository(
+        dio,
+        pollInterval: const Duration(milliseconds: 5),
+      ).watchThread('m1').take(2).toList().timeout(const Duration(seconds: 1));
+
+      expect(emissions.map((items) => items.single.id), <String>[
+        'before',
+        'after',
+      ]);
+      expect(calls, 3);
+    },
+  );
+
+  test(
+    'watchThread pauses in the background and resumes immediately',
+    () async {
+      var calls = 0;
+      when(() => dio.get<List<dynamic>>('/trainer/clients/m1/chat')).thenAnswer(
+        (_) async {
+          calls += 1;
+          return _ok<List<dynamic>>(
+            const <dynamic>[],
+            '/trainer/clients/m1/chat',
+          );
+        },
+      );
+      final repo = DioChatRepository(
+        dio,
+        pollInterval: const Duration(milliseconds: 20),
+      );
+      final first = Completer<void>();
+      final subscription = repo.watchThread('m1').listen((_) {
+        if (!first.isCompleted) first.complete();
+      });
+      final binding = TestWidgetsFlutterBinding.instance;
+      try {
+        await first.future.timeout(const Duration(seconds: 1));
+
+        binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(calls, 1);
+
+        binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await Future<void>.delayed(Duration.zero);
+        expect(calls, 2);
+
+        await subscription.cancel();
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(calls, 2);
+      } finally {
+        binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await subscription.cancel();
+      }
+    },
+  );
 
   test('sendTrainerMessage POSTs the trimmed text', () async {
     when(
