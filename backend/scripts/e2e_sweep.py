@@ -15,8 +15,11 @@
 만든 것은 모두 되돌린다 — 식단·운동 세션은 DELETE, 건강 목표는 원래 값으로 복구,
 채팅과 거기서 파생된 개인 RAG 문서(#580)는 DB 에서 제거(둘 다 삭제 API 가 없다).
 그래서 몇 번을 돌려도 데모 DB 가 그대로다. 정리에 실패하면 조용히 넘어가지 않고
-FAIL 로 보고한다. DB 정리는 로컬 DATABASE_URL 을 쓰므로, --allow-remote 로 원격을
-때리면 채팅과 RAG 문서는 남는다.
+FAIL 로 보고한다. DB 정리는 항상 로컬 DATABASE_URL 로 붙으므로 --allow-remote 로
+원격을 때릴 때는 아예 건너뛴다(SKIP) — 그러지 않으면 검증 대상도 아닌 로컬 문서를
+지운다. 대신 원격에는 채팅과 RAG 문서가 남는다.
+
+혼자 쓰는 로컬 데모 DB 를 전제로 한다. 자세한 이유는 purge_sweep_traces 참고.
 
 AI 코칭·루틴 경로는 다루지 않는다. 키가 없으면 규칙 폴백이 200 을 돌려주어 통과처럼
 보이기 때문이다(#579 수정 후 #589 에서 검증).
@@ -37,7 +40,9 @@ DEMO_PASSWORD = "oncare123"
 MEMBER_EMAIL = "jisu@oncare.com"
 MEMBER_ID = "user-jisu"
 TRAINER_EMAIL = "trainer@oncare.com"
-LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]", "host.docker.internal")
+# urlsplit(...).hostname 은 대괄호를 벗겨 '::1' 로 돌려준다. '[::1]' 로 적으면 영원히
+# 매칭되지 않아 IPv6 루프백이 원격 취급된다.
+LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1", "host.docker.internal")
 
 _JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF e2e-sweep"
 _BOUNDARY = "----e2esweep"
@@ -46,6 +51,9 @@ _BOUNDARY = "----e2esweep"
 # 엔트리를 그대로 돌려받아(find_by_idempotency), 식단이 안 늘어난 것처럼 보인다.
 _RUN_TAG = str(int(time.time()))
 _MARKER = "e2e-sweep-" + _RUN_TAG
+
+#: 스윕이 적재를 유발하는 경로. 정리 범위를 이 둘로 좁혀 다른 문서를 건드리지 않는다.
+SWEEP_DOC_SOURCES = ("chat", "diet")
 
 
 class Result:
@@ -151,31 +159,41 @@ def scenario_auth(api: Api, m: str, t: str, out: list[Result]) -> None:
     # 목표는 PUT 전용이라 GET 이 없지만 /users/me/profile 이 같은 값을 노출한다.
     # 원래 값을 먼저 읽어 두고 끝나면 되돌린다 — 스윕이 데모 DB 를 바꿔 놓으면
     # 반복 실행할수록 시연 데이터가 실제와 어긋난다.
-    _, profile = api.get("/users/me/profile", token=m)
-    original = profile.get("daily_calories") if isinstance(profile, dict) else None
-    probe = 1800 if original != 1800 else 1900
+    #
+    # 읽지 못했으면 아예 건드리지 않는다. 조회 실패를 None 으로 뭉개고 진행하면
+    # 원래 값을 덮어쓴 뒤 None 으로 "복구" 해서, 있던 목표를 지워 버린다.
+    prof_code, profile = api.get("/users/me/profile", token=m)
+    readable = prof_code == 200 and isinstance(profile, dict) and "daily_calories" in profile
+    if not readable:
+        out.append(Result(
+            g, "건강 목표 저장", "FAIL",
+            f"원래 값을 못 읽어 변경하지 않음 (프로필 조회 {prof_code})",
+        ))
+    else:
+        original = profile["daily_calories"]
+        probe = 1800 if original != 1800 else 1900
 
-    code, _ = api.put(
-        "/users/me/health-goals", token=m, json_body={"daily_calories": probe}
-    )
-    _, after = api.get("/users/me/profile", token=m)
-    saved = after.get("daily_calories") if isinstance(after, dict) else None
-    dash_code, _ = api.get("/dashboard/summary", token=m)
-    ok = code in (200, 201) and saved == probe and dash_code == 200
-    out.append(Result(
-        g, "건강 목표 저장", "PASS" if ok else "FAIL",
-        f"{code} daily_calories -> {saved} (기대 {probe})",
-    ))
+        code, _ = api.put(
+            "/users/me/health-goals", token=m, json_body={"daily_calories": probe}
+        )
+        _, after = api.get("/users/me/profile", token=m)
+        saved = after.get("daily_calories") if isinstance(after, dict) else None
+        dash_code, _ = api.get("/dashboard/summary", token=m)
+        ok = code in (200, 201) and saved == probe and dash_code == 200
+        out.append(Result(
+            g, "건강 목표 저장", "PASS" if ok else "FAIL",
+            f"{code} daily_calories -> {saved} (기대 {probe})",
+        ))
 
-    code, _ = api.put(
-        "/users/me/health-goals", token=m, json_body={"daily_calories": original}
-    )
-    _, restored = api.get("/users/me/profile", token=m)
-    back = restored.get("daily_calories") if isinstance(restored, dict) else None
-    out.append(Result(
-        g, "건강 목표 원복(정리)", "PASS" if back == original else "FAIL",
-        f"{back} (원래 {original})",
-    ))
+        code, _ = api.put(
+            "/users/me/health-goals", token=m, json_body={"daily_calories": original}
+        )
+        _, restored = api.get("/users/me/profile", token=m)
+        back = restored.get("daily_calories") if isinstance(restored, dict) else None
+        out.append(Result(
+            g, "건강 목표 원복(정리)", "PASS" if back == original else "FAIL",
+            f"{back} (원래 {original})",
+        ))
 
     code, _ = api.get("/trainer/me", token=t)
     out.append(Result(g, "트레이너 /trainer/me", "PASS" if code == 200 else "FAIL", str(code)))
@@ -266,9 +284,15 @@ def purge_sweep_traces(marker: str, doc_baseline: int) -> tuple[int, int, str]:
     이후 식단·채팅이 개인 RAG 문서로 적재되므로(personal_ingest), 원본을 지워도
     문서는 남아 AI 코칭 근거를 오염시킨다. 문서 본문에는 마커가 없는 것도 있어
     (식단 문서는 분석 결과 그대로다) 문자열이 아니라 **실행 전 최대 id** 를
-    기준으로 그 뒤에 생긴 회원 문서를 지운다. 적재 경로가 늘어도 그대로 걸린다.
+    기준으로, 스윕이 실제로 만드는 source('chat'·'diet') 만 지운다.
 
-    원격 대상(--allow-remote)은 로컬 DATABASE_URL 과 다르므로 지울 수 없다.
+    기준선은 '누가 만들었는지' 를 증명하지 못한다. 같은 회원이 그 사이에 앱을
+    쓰고 있었다면 그 문서도 범위에 든다. 이 스윕은 **혼자 쓰는 로컬 데모 DB** 를
+    전제로 한다(pytest 도 같은 DB 를 쓰므로 원래 그렇다 — docs/local_fullstack.md).
+    삭제 건수를 기대값과 대조하므로, 예상 밖이 섞이면 FAIL 로 드러난다.
+
+    호출자가 로컬 대상일 때만 부른다. DB 접속은 항상 로컬 DATABASE_URL 이라
+    원격 스윕에서 부르면 엉뚱한(로컬) 데이터를 지운다.
     """
     db, err = _db_session()
     if db is None:
@@ -287,6 +311,7 @@ def purge_sweep_traces(marker: str, doc_baseline: int) -> tuple[int, int, str]:
                 delete(CoachDocument).where(
                     CoachDocument.user_id == MEMBER_ID,
                     CoachDocument.id > doc_baseline,
+                    CoachDocument.source.in_(SWEEP_DOC_SOURCES),
                 )
             ).rowcount or 0
         db.commit()
@@ -460,8 +485,10 @@ def main() -> int:
         print("  member=" + str(bool(member)) + " trainer=" + str(bool(trainer)))
         return 2
 
-    # 시나리오가 만든 개인 RAG 문서를 가려내려면 시작 전 기준선이 필요하다.
-    doc_baseline, base_err = latest_document_id()
+    # DB 정리는 언제나 로컬 DATABASE_URL 로 붙는다. 원격을 훑는 중에 부르면
+    # 검증 대상이 아닌 로컬 데모 문서를 지우므로, 로컬일 때만 손댄다.
+    local = is_local(args.base)
+    doc_baseline, base_err = latest_document_id() if local else (-1, "")
 
     out: list[Result] = []
     for fn in (
@@ -476,15 +503,20 @@ def main() -> int:
 
     # 채팅 2건과, 식단·채팅이 파생시킨 개인 RAG 문서 3건(식단 1 + 채팅 2)을 지운다.
     g = "정리"
-    chats, docs, err = purge_sweep_traces(_MARKER, doc_baseline)
-    out.append(Result(
-        g, "채팅 삭제", "PASS" if chats == 2 else "FAIL",
-        f"{chats}건 (2건 기대)" + (" - " + err if err else ""),
-    ))
-    out.append(Result(
-        g, "개인 RAG 문서 삭제", "PASS" if docs == 3 else "FAIL",
-        f"{docs}건 (3건 기대)" + (" - " + (err or base_err) if (err or base_err) else ""),
-    ))
+    if not local:
+        note = "원격 대상 - 로컬 DB 를 건드리지 않음. 채팅·RAG 문서가 남는다"
+        out.append(Result(g, "채팅 삭제", "SKIP", note))
+        out.append(Result(g, "개인 RAG 문서 삭제", "SKIP", note))
+    else:
+        chats, docs, err = purge_sweep_traces(_MARKER, doc_baseline)
+        out.append(Result(
+            g, "채팅 삭제", "PASS" if chats == 2 else "FAIL",
+            f"{chats}건 (2건 기대)" + (" - " + err if err else ""),
+        ))
+        out.append(Result(
+            g, "개인 RAG 문서 삭제", "PASS" if docs == 3 else "FAIL",
+            f"{docs}건 (3건 기대)" + (" - " + (err or base_err) if (err or base_err) else ""),
+        ))
 
     group = None
     for r in out:
@@ -495,9 +527,14 @@ def main() -> int:
         print("  " + r.status.ljust(4) + " " + r.name.ljust(30) + " " + r.detail)
 
     failed = [r for r in out if r.status == "FAIL"]
+    skipped = [r for r in out if r.status == "SKIP"]
     print("")
-    print("총 " + str(len(out)) + "건 · 통과 " + str(len(out) - len(failed))
-          + " · 실패 " + str(len(failed)))
+    summary = ("총 " + str(len(out)) + "건 · 통과 "
+               + str(len(out) - len(failed) - len(skipped))
+               + " · 실패 " + str(len(failed)))
+    if skipped:
+        summary += " · 건너뜀 " + str(len(skipped))
+    print(summary)
     if failed:
         print("")
         print("실패 목록 (화면 확인 대상):")
