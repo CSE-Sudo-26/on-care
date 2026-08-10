@@ -57,6 +57,8 @@ Map<String, dynamic> _session({
 };
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioScheduleRepository repo;
 
@@ -117,6 +119,40 @@ void main() {
       'from': '2026-08-03',
       'to': '2026-08-09',
     });
+  });
+
+  test('an external reservation is picked up by the active poll', () async {
+    var calls = 0;
+    when(
+      () => dio.get<List<dynamic>>(
+        _schedulePath,
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      return _okList(<dynamic>[
+        _session(id: 'before'),
+        if (calls > 1) _session(id: 'member-reservation'),
+      ], _schedulePath);
+    });
+    final pollingRepo = DioScheduleRepository(
+      dio,
+      pollInterval: const Duration(milliseconds: 5),
+    );
+    addTearDown(pollingRepo.dispose);
+
+    final emissions = await pollingRepo
+        .watchRange('2026-08-06', '2026-08-12')
+        .take(2)
+        .toList()
+        .timeout(const Duration(seconds: 1));
+
+    expect(emissions.first.map((session) => session.id), <String>['before']);
+    expect(emissions.last.map((session) => session.id), <String>[
+      'before',
+      'member-reservation',
+    ]);
+    expect(calls, 2);
   });
 
   test(

@@ -484,18 +484,20 @@ final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
 }, name: 'scheduleRepository');
 
 /// Streams today's timeline for the 스케줄 tab.
-final todayScheduleProvider = StreamProvider<List<ScheduleSession>>((ref) {
-  return ref.watch(scheduleRepositoryProvider).watchToday();
-});
+final todayScheduleProvider = StreamProvider.autoDispose<List<ScheduleSession>>(
+  (ref) {
+    return ref.watch(scheduleRepositoryProvider).watchToday();
+  },
+);
 
 /// Streams the timeline for one calendar date (`YYYY-MM-DD`).
-final scheduleForDateProvider =
-    StreamProvider.family<List<ScheduleSession>, String>((ref, date) {
+final scheduleForDateProvider = StreamProvider.autoDispose
+    .family<List<ScheduleSession>, String>((ref, date) {
       return ref.watch(scheduleRepositoryProvider).watchDate(date);
     });
 
 /// Streams the set of dates that have booked sessions (strip dots).
-final bookedDatesProvider = StreamProvider<Set<String>>((ref) {
+final bookedDatesProvider = StreamProvider.autoDispose<Set<String>>((ref) {
   return ref.watch(scheduleRepositoryProvider).watchBookedDates();
 });
 
@@ -503,18 +505,15 @@ final bookedDatesProvider = StreamProvider<Set<String>>((ref) {
 typedef ScheduleRange = ({String from, String to});
 
 /// Streams every slot in a date range (week calendar).
-final scheduleRangeProvider =
-    StreamProvider.family<List<ScheduleSession>, ScheduleRange>((ref, range) {
+final scheduleRangeProvider = StreamProvider.autoDispose
+    .family<List<ScheduleSession>, ScheduleRange>((ref, range) {
       return ref
           .watch(scheduleRepositoryProvider)
           .watchRange(range.from, range.to);
     });
 
 /// Streams one client's booked sessions, newest first.
-final clientSessionsProvider =
-    StreamProvider.family<List<ScheduleSession>, ScheduleClientKey>((
-      ref,
-      client,
-    ) {
+final clientSessionsProvider = StreamProvider.autoDispose
+    .family<List<ScheduleSession>, ScheduleClientKey>((ref, client) {
       return ref.watch(scheduleRepositoryProvider).watchClientSessions(client);
     });
