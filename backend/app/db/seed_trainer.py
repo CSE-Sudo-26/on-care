@@ -146,7 +146,28 @@ def _seed_trainer_account(db: Session) -> None:
 def _seed_member_accounts(db: Session) -> None:
     """담당 회원 User(멱등, 이메일 충돌 안전). user-demo 는 기존 데모 시드가 만든다."""
     for user_id, email, name, _goal, _active, _order in _MEMBERS:
-        if db.scalar(select(models.User.id).where(models.User.id == user_id)) is not None:
+        existing = db.scalar(select(models.User).where(models.User.id == user_id))
+        if existing is not None:
+            # 비밀번호가 비어 있으면 채운다. 이 시드보다 먼저 도는 데모 사용자 시드가
+            # 예전에 김민수를 빈 해시로 만들었고, 그냥 건너뛰면 이미 볼륨을 가진
+            # 개발자는 재기동해도 영영 로그인할 수 없다.
+            #
+            # 단 **이 id 가 진짜 데모 계정일 때만** 채운다. id 만 보고 채우면, 다른
+            # 이메일·역할의 계정이 이 id 를 선점한 경우 그 계정에 널리 알려진 데모
+            # 비밀번호로 로그인할 수단을 새로 만들어 주게 된다. 위 트레이너 시드가
+            # 역할·이메일 불일치 시 기존 계정을 건드리지 않는 것과 같은 이유다.
+            if not existing.hashed_password:
+                if existing.email == email and existing.role == "member":
+                    existing.hashed_password = _demo_password_hash()
+                    logger.info(
+                        "데모 회원 %s 의 빈 비밀번호를 데모 비밀번호로 채웠습니다.", user_id,
+                    )
+                else:
+                    logger.warning(
+                        "기존 %s 계정이 데모 회원과 이메일/역할 불일치"
+                        "(email=%s, role=%s) — 비밀번호 백필 스킵.",
+                        user_id, existing.email, existing.role,
+                    )
             continue
         if _email_taken_by_other(db, email, user_id):
             logger.warning(
