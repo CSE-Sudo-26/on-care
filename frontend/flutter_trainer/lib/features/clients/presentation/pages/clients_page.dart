@@ -66,7 +66,7 @@ class ClientsPage extends ConsumerWidget {
         .supportsRosterMutations;
     final activeFilter = clientFilterFrom(filter);
 
-    return clientsAsync.when(
+    final Widget page = clientsAsync.when(
       loading: () => const _Frame(
         subtitle: null,
         child: Center(child: CircularProgressIndicator()),
@@ -102,7 +102,10 @@ class ClientsPage extends ConsumerWidget {
         final selected = selectedId;
 
         return _Frame(
-          subtitle: l.clientsCountSummary(all.length, all.where((c) => c.active).length),
+          subtitle: l.clientsCountSummary(
+            all.length,
+            all.where((c) => c.active).length,
+          ),
           actions: <Widget>[
             if (canManageRoster)
               ActionButton(
@@ -170,7 +173,48 @@ class ClientsPage extends ConsumerWidget {
         );
       },
     );
+    return _RefreshOnBranchResume(
+      onResume: () {
+        ref.invalidate(clientsProvider);
+        ref.invalidate(clientDietProvider);
+        ref.invalidate(clientHistoryProvider);
+      },
+      child: page,
+    );
   }
+}
+
+/// The router keeps every primary branch mounted in an indexed stack. This
+/// observes that stack's [TickerMode] so returning to the clients branch
+/// revalidates server-backed data even though [ClientsPage] was not rebuilt
+/// from scratch.
+class _RefreshOnBranchResume extends StatefulWidget {
+  const _RefreshOnBranchResume({required this.onResume, required this.child});
+
+  final VoidCallback onResume;
+  final Widget child;
+
+  @override
+  State<_RefreshOnBranchResume> createState() => _RefreshOnBranchResumeState();
+}
+
+class _RefreshOnBranchResumeState extends State<_RefreshOnBranchResume> {
+  bool? _active;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool active = TickerMode.valuesOf(context).enabled;
+    if (active && _active == false) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onResume();
+      });
+    }
+    _active = active;
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Shared page chrome so the loading/error/data states keep the same

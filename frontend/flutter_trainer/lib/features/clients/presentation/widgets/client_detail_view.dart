@@ -138,6 +138,11 @@ class ClientDetailView extends ConsumerWidget {
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
               showBack: showBack,
               onClose: onClose,
+              onRefresh: () {
+                ref.invalidate(clientsProvider);
+                ref.invalidate(clientDietProvider(client.id));
+                ref.invalidate(clientHistoryProvider(client.id));
+              },
               onToggleActive: canManageRoster
                   ? () => ref
                         .read(clientRepositoryProvider)
@@ -232,6 +237,7 @@ class _Header extends ConsumerWidget {
     required this.alerts,
     required this.showBack,
     required this.onClose,
+    required this.onRefresh,
     required this.onToggleActive,
   });
 
@@ -242,6 +248,7 @@ class _Header extends ConsumerWidget {
 
   final bool showBack;
   final VoidCallback? onClose;
+  final VoidCallback onRefresh;
 
   /// Flips the client between 활성 and 휴면.
   final VoidCallback? onToggleActive;
@@ -392,6 +399,13 @@ class _Header extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        IconButton(
+          key: const ValueKey<String>('client-data-refresh'),
+          icon: const Icon(Icons.refresh, size: 18),
+          color: AppColors.subtleForeground,
+          tooltip: l.actionRefresh,
+          onPressed: onRefresh,
         ),
         if (onClose != null)
           IconButton(

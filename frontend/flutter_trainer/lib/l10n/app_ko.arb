@@ -21,6 +21,7 @@
   "actionConfirm": "확인",
   "actionSend": "보내기",
   "actionRetry": "다시 시도",
+  "actionRefresh": "새로고침",
   "actionChange": "변경",
   "appWordmarkTrainer": "트레이너",
   "appAvatarFallback": "트",

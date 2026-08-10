@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -18,6 +20,25 @@ class _ReadOnlyClientRepository extends DriftClientRepository {
 
   @override
   bool get supportsRosterMutations => false;
+}
+
+class _CountingClientRepository extends DriftClientRepository {
+  _CountingClientRepository(super.db);
+
+  int clientWatches = 0;
+  int dietWatches = 0;
+
+  @override
+  Stream<List<TrainerClient>> watchClients() {
+    clientWatches += 1;
+    return super.watchClients();
+  }
+
+  @override
+  Stream<List<ClientDietEntry>> watchDiet(String clientId) {
+    dietWatches += 1;
+    return super.watchDiet(clientId);
+  }
 }
 
 void main() {
@@ -173,6 +194,60 @@ void main() {
   });
 
   group('ClientsPage', () {
+    testWidgets('re-entering the client branch refreshes the roster', (
+      tester,
+    ) async {
+      late _CountingClientRepository repository;
+
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clients,
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith((ref) {
+            repository = _CountingClientRepository(
+              ref.watch(appDatabaseProvider),
+            );
+            return repository;
+          }),
+        ],
+      );
+      expect(repository.clientWatches, 1);
+
+      await goTo(tester, AppRoutes.dashboard);
+      await goTo(tester, AppRoutes.clients);
+
+      expect(repository.clientWatches, 2);
+    });
+
+    testWidgets('the detail refresh action reloads selected client data', (
+      tester,
+    ) async {
+      late _CountingClientRepository repository;
+
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith((ref) {
+            repository = _CountingClientRepository(
+              ref.watch(appDatabaseProvider),
+            );
+            return repository;
+          }),
+        ],
+      );
+      expect(repository.dietWatches, 1);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('client-data-refresh')),
+      );
+      await settle(tester);
+
+      expect(repository.dietWatches, 2);
+    });
+
     testWidgets('renders the roster with its size and priority order', (
       tester,
     ) async {

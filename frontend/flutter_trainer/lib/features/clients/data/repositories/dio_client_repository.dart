@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
@@ -10,8 +11,8 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 /// Reads a trainer's clients + their diet/history from the FastAPI backend.
 /// Selected when `USE_MOCK_API=false` (see [clientRepositoryProvider]).
 ///
-/// Reads return single-emit streams (fetch → value); the consuming
-/// `AsyncValue` renders loading/error/empty. Roster mutations have no
+/// Reads revalidate when their screen subscribes and when the app/browser
+/// returns to the foreground. Roster mutations have no
 /// backend endpoint (the roster is derived from trainer↔member links), so
 /// they throw [UnsupportedError] — the demo-only add/activate UI is hidden
 /// in real-API mode.
@@ -25,7 +26,10 @@ class DioClientRepository implements ClientRepository {
 
   @override
   Stream<List<TrainerClient>> watchClients() =>
-      Stream<List<TrainerClient>>.fromFuture(_fetchClients());
+      activePollingStream<List<TrainerClient>>(
+        load: _fetchClients,
+        interval: null,
+      );
 
   /// The roster endpoint carries no chat-recency signal, so priority
   /// ordering falls back to the server's own order. Emitting an empty map
@@ -36,11 +40,17 @@ class DioClientRepository implements ClientRepository {
 
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) =>
-      Stream<List<ClientDietEntry>>.fromFuture(_fetchDiet(clientId));
+      activePollingStream<List<ClientDietEntry>>(
+        load: () => _fetchDiet(clientId),
+        interval: null,
+      );
 
   @override
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
-      Stream<List<RoutineHistoryEntry>>.fromFuture(_fetchHistory(clientId));
+      activePollingStream<List<RoutineHistoryEntry>>(
+        load: () => _fetchHistory(clientId),
+        interval: null,
+      );
 
   Future<List<TrainerClient>> _fetchClients() =>
       _getList('/trainer/clients', trainerClientFromJson);

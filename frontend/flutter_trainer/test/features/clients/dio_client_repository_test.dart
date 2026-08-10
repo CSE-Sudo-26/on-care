@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -25,6 +28,8 @@ DioException _httpError(int status, String path) => DioException(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _MockDio dio;
   late DioClientRepository repo;
 
@@ -75,6 +80,41 @@ void main() {
 
     final meals = await repo.watchDiet('m1').first;
     expect(meals.single.meal, '점심');
+  });
+
+  test('active client data revalidates when the app regains focus', () async {
+    var calls = 0;
+    when(() => dio.get<List<dynamic>>('/trainer/clients/m1/diet')).thenAnswer((
+      _,
+    ) async {
+      calls += 1;
+      return _okList(<dynamic>[
+        <String, Object?>{
+          'meal': 'meal $calls',
+          'items': 'items',
+          'calories': 100,
+          'sodium_mg': 100,
+        },
+      ], '/trainer/clients/m1/diet');
+    });
+    final first = Completer<void>();
+    final subscription = repo.watchDiet('m1').listen((_) {
+      if (!first.isCompleted) first.complete();
+    });
+    final binding = TestWidgetsFlutterBinding.instance;
+    try {
+      await first.future.timeout(const Duration(seconds: 1));
+      expect(calls, 1);
+
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(calls, 2);
+    } finally {
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await subscription.cancel();
+    }
   });
 
   test('encodes an opaque client id as one path segment', () async {
