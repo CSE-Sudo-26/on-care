@@ -107,16 +107,6 @@ def test_rule_based_rationale_cites_member_numbers_and_over_target():
     assert b["intensity"] == "낮음"
 
 
-def test_maybe_llm_plans_is_an_unused_seam_returning_none():
-    # 주의: 서비스는 이 함수를 쓰지 않는다(get_coach_llm 을 직접 호출).
-    # 남아 있는 이음새의 계약만 고정한다 — 폴백 경로는 아래 엔드포인트
-    # 테스트가 실제 호출 경로(get_coach_llm)를 막아서 검증한다.
-    assert routine_ai.maybe_llm_plans(
-        goal="", sodium_today_mg=0, avg_completion_rate=0,
-        available_minutes=30, intensity_preference="moderate", trainer_note="",
-    ) is None
-
-
 # ---- LLM 스텁 ----
 
 def _stub_llm(monkeypatch, behaviour):
@@ -124,8 +114,8 @@ def _stub_llm(monkeypatch, behaviour):
 
     서비스는 `from ... import get_coach_llm` 으로 이름을 바인딩하므로 원본
     모듈이 아니라 **서비스 모듈의 이름**을 갈아끼워야 한다. 예전 테스트는
-    `routine_ai.maybe_llm_plans` 를 patch 했는데 서비스가 그 함수를 쓰지
-    않아 무효였고, 키가 없는 CI 에서만 우연히 통과했다.
+    서비스가 사용하지 않는 규칙형 모듈의 seam을 patch해 무효였고, 키가 없는
+    CI에서만 우연히 통과했다.
 
     [behaviour] 가 Exception 이면 호출 시 그것을 던지고, 문자열이면 그
     문자열을 LLM 응답 본문으로 돌려준다.
