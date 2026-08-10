@@ -12,6 +12,11 @@
   python -m scripts.e2e_sweep
   python -m scripts.e2e_sweep --base http://localhost:8000/v1
 
+만든 것은 모두 되돌린다 — 식단·운동 세션은 DELETE, 건강 목표는 원래 값으로 복구,
+채팅은 DB 에서 제거(삭제 API 가 없다). 그래서 몇 번을 돌려도 데모 DB 가 그대로다.
+정리에 실패하면 조용히 넘어가지 않고 FAIL 로 보고한다. 채팅 정리만 로컬
+DATABASE_URL 을 쓰므로, --allow-remote 로 원격을 때리면 채팅은 남는다.
+
 AI 코칭·루틴 경로는 다루지 않는다. 키가 없으면 규칙 폴백이 200 을 돌려주어 통과처럼
 보이기 때문이다(#579 수정 후 #589 에서 검증).
 """
@@ -141,14 +146,34 @@ def scenario_auth(api: Api, m: str, t: str, out: list[Result]) -> None:
     code, _ = api.get("/users/me/health", token=m)
     out.append(Result(g, "건강정보 조회", "PASS" if code == 200 else "FAIL", str(code)))
 
-    # 목표는 PUT 전용이다(GET 없음). 저장이 실제로 반영되는지는 대시보드가 목표를
-    # 근거로 진행률을 그리므로 그쪽 200 으로 확인한다.
+    # 목표는 PUT 전용이라 GET 이 없지만 /users/me/profile 이 같은 값을 노출한다.
+    # 원래 값을 먼저 읽어 두고 끝나면 되돌린다 — 스윕이 데모 DB 를 바꿔 놓으면
+    # 반복 실행할수록 시연 데이터가 실제와 어긋난다.
+    _, profile = api.get("/users/me/profile", token=m)
+    original = profile.get("daily_calories") if isinstance(profile, dict) else None
+    probe = 1800 if original != 1800 else 1900
+
     code, _ = api.put(
-        "/users/me/health-goals", token=m, json_body={"daily_calories": 1800}
+        "/users/me/health-goals", token=m, json_body={"daily_calories": probe}
     )
+    _, after = api.get("/users/me/profile", token=m)
+    saved = after.get("daily_calories") if isinstance(after, dict) else None
     dash_code, _ = api.get("/dashboard/summary", token=m)
-    ok = code in (200, 201) and dash_code == 200
-    out.append(Result(g, "건강 목표 저장", "PASS" if ok else "FAIL", f"{code}/{dash_code}"))
+    ok = code in (200, 201) and saved == probe and dash_code == 200
+    out.append(Result(
+        g, "건강 목표 저장", "PASS" if ok else "FAIL",
+        f"{code} daily_calories -> {saved} (기대 {probe})",
+    ))
+
+    code, _ = api.put(
+        "/users/me/health-goals", token=m, json_body={"daily_calories": original}
+    )
+    _, restored = api.get("/users/me/profile", token=m)
+    back = restored.get("daily_calories") if isinstance(restored, dict) else None
+    out.append(Result(
+        g, "건강 목표 원복(정리)", "PASS" if back == original else "FAIL",
+        f"{back} (원래 {original})",
+    ))
 
     code, _ = api.get("/trainer/me", token=t)
     out.append(Result(g, "트레이너 /trainer/me", "PASS" if code == 200 else "FAIL", str(code)))
@@ -203,25 +228,59 @@ def scenario_diet(api: Api, m: str, t: str, out: list[Result]) -> None:
         out.append(Result(g, "식단 삭제(정리)", "FAIL", "entry_id 를 못 받아 정리 못 함"))
 
 
+def purge_sweep_chats(marker: str) -> tuple[int, str]:
+    """스윕이 남긴 채팅을 DB 에서 지운다.
+
+    채팅에는 삭제 API 가 없다(coach/trainer 라우터 모두 GET·POST 뿐). 그대로 두면
+    반복 실행마다 데모 스레드에 쌓이고, #596 이 들어오면 메시지마다 개인 RAG 문서가
+    생겨 AI 코칭 근거까지 오염된다. 그래서 reembed.py 와 같은 방식으로 DB 를 직접
+    쓴다. 원격 대상(--allow-remote)은 로컬 DATABASE_URL 과 다르므로 지울 수 없다.
+    """
+    try:
+        from sqlalchemy import delete
+
+        from app.db.session import SessionLocal
+        from app.models.models import ChatMessage
+    except Exception as e:  # noqa: BLE001 - 임포트 실패도 결과로 보고한다
+        return -1, f"임포트 실패: {e!r}"
+
+    try:
+        db = SessionLocal()
+        try:
+            res = db.execute(
+                delete(ChatMessage).where(ChatMessage.body.like("%" + marker + "%"))
+            )
+            db.commit()
+            return res.rowcount or 0, ""
+        finally:
+            db.close()
+    except Exception as e:  # noqa: BLE001
+        return -1, repr(e)
+
+
 def scenario_chat(api: Api, m: str, t: str, out: list[Result]) -> None:
     g = "채팅"
-    code, _ = api.post("/me/coach/chat", token=m, json_body={"text": "e2e sweep from member"})
+    marker = "e2e-sweep-" + _RUN_TAG
+    from_member = "e2e sweep from member " + marker
+    from_trainer = "e2e sweep from trainer " + marker
+
+    code, _ = api.post("/me/coach/chat", token=m, json_body={"text": from_member})
     out.append(Result(g, "회원 발신", "PASS" if code in (200, 201) else "FAIL", str(code)))
 
     code, msgs = api.get("/trainer/clients/" + MEMBER_ID + "/chat", token=t)
     items = msgs if isinstance(msgs, list) else (msgs or {}).get("messages", [])
-    seen = code == 200 and any("e2e sweep from member" in (x.get("body") or "") for x in items)
+    seen = code == 200 and any(from_member in (x.get("body") or "") for x in items)
     out.append(Result(g, "트레이너 수신", "PASS" if seen else "FAIL", str(code)))
 
     code, _ = api.post(
         "/trainer/clients/" + MEMBER_ID + "/chat", token=t,
-        json_body={"text": "e2e sweep from trainer"},
+        json_body={"text": from_trainer},
     )
     out.append(Result(g, "트레이너 발신", "PASS" if code in (200, 201) else "FAIL", str(code)))
 
     code, msgs = api.get("/me/coach/chat", token=m)
     items = msgs if isinstance(msgs, list) else (msgs or {}).get("messages", [])
-    seen = code == 200 and any("e2e sweep from trainer" in (x.get("body") or "") for x in items)
+    seen = code == 200 and any(from_trainer in (x.get("body") or "") for x in items)
     out.append(Result(g, "회원 수신", "PASS" if seen else "FAIL", str(code)))
 
     code, _ = api.get("/me/coach/chat/unread", token=m)
@@ -229,6 +288,12 @@ def scenario_chat(api: Api, m: str, t: str, out: list[Result]) -> None:
 
     code, _ = api.get("/trainer/chat/unread", token=t)
     out.append(Result(g, "트레이너 미읽음 수", "PASS" if code == 200 else "FAIL", str(code)))
+
+    removed, err = purge_sweep_chats(marker)
+    out.append(Result(
+        g, "채팅 삭제(정리)", "PASS" if removed == 2 else "FAIL",
+        f"{removed}건 삭제 (2건 기대)" + (" - " + err if err else ""),
+    ))
 
 
 def scenario_roster(api: Api, m: str, t: str, out: list[Result]) -> None:
