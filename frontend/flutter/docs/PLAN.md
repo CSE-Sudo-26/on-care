@@ -1,7 +1,12 @@
 # Oncare Flutter — 재구성 계획서
 
-> 본 문서는 [subin21cc/Oncareprototype](https://github.com/subin21cc/Oncareprototype)(React + TypeScript + Vite)을 Flutter로 재구성하기 위한 전체 로드맵입니다.
-> 디렉토리 구조 상세는 [STRUCTURE.md](./STRUCTURE.md), 커밋 규약은 [CONTRIBUTING_NOTES.md](./CONTRIBUTING_NOTES.md)를 참고하세요.
+> **[완료된 계획 문서]** React 프로토타입 → Flutter 이식은 끝났고, 이후 Figma 재구성까지
+> 반영된 상태입니다. 아래 로드맵과 화면 구성은 **당시 계획 시점의 기록**이라 현재 코드와
+> 다를 수 있습니다. 결정 이력(§9)을 되짚을 때 참고하고, **현재 구조는 아래를 보세요.**
+>
+> - 디렉토리 구조·의존성 규칙 → [STRUCTURE.md](./STRUCTURE.md)
+> - 커밋 규약 → [CONTRIBUTING_NOTES.md](./CONTRIBUTING_NOTES.md)
+> - 백엔드 API 계약 → [backend/API_CONTRACT.md](../../../backend/API_CONTRACT.md)
 
 ---
 

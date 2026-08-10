@@ -1,7 +1,14 @@
 # Dummy Backend Strategy — 실 FastAPI 서버 전까지
 
-> 본 문서는 "실제 백엔드 없이도 Flutter app이 풀 기능을 시연할 수 있는"
-> dummy backend 옵션을 비교합니다. 권장은 §3.
+> **[결론이 난 검토 문서]** 이 비교의 전제(실 백엔드가 아직 없다)는 끝났습니다.
+> 권장안이던 **옵션 C(drift 기반 로컬 인터셉터)** 를 채택해 구현했고, 실 FastAPI
+> 백엔드도 존재합니다. 지금은 `--dart-define=USE_MOCK_API=false` 로 실 백엔드에
+> 붙습니다.
+>
+> 아래는 그 선택에 이르기까지의 비교 기록입니다. **현재 동작은 아래를 보세요.**
+>
+> - 데모 응답 구현 → `lib/core/network/interceptors/local_api_interceptor.dart`
+> - 백엔드 API 계약 → [backend/API_CONTRACT.md](../../../backend/API_CONTRACT.md)
 
 ---
 

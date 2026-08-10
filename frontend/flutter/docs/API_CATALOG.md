@@ -1,9 +1,12 @@
 # Backend API Catalog — Oncare Flutter ⇆ FastAPI
 
-> 이 문서는 현재 Flutter front-end의 도메인 모델/리포지토리를 기준으로
-> 백엔드(FastAPI)가 노출해야 할 REST endpoint를 정리합니다. 모든 경로는
-> `${API_BASE_URL}/api/v1/...` 기준이며, 인증은 `Authorization: Bearer
-> <access_token>` 헤더를 사용합니다.
+> **[제안 문서 — 계약의 정답이 아닙니다]** 실제 API 계약은
+> **[backend/API_CONTRACT.md](../../../backend/API_CONTRACT.md)** 가 단일 출처입니다.
+> 백엔드가 구현된 지금, 엔드포인트·요청/응답 형태를 확인할 때는 그쪽을 보세요.
+> 두 문서가 어긋나면 `API_CONTRACT.md` 가 맞습니다.
+>
+> 아래는 백엔드 구현 **전에** 프런트 도메인 모델을 기준으로 "이런 엔드포인트가
+> 필요하다" 고 정리했던 초안입니다.
 
 | 베이스 | `${API_BASE_URL}/api/v1` |
 | --- | --- |
