@@ -57,6 +57,10 @@ def init_db() -> None:
         # 회원 계정 시드(seed_trainer_domain) 뒤에 호출.
         from app.db.seed_member_data import seed_member_health_data
         seed_member_health_data()
+        # 확장 회원(4~15)의 주간 지표. 상세 기록은 위 3명만 가지므로, 로스터·차트·
+        # 경고가 동작할 최소 기록만 따로 채운다(#572).
+        from app.db.seed_roster import seed_roster_metrics
+        seed_roster_metrics()
 
     _promote_admins()  # ADMIN_EMAILS 사용자를 관리자로 승격(멱등)
 

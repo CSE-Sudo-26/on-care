@@ -140,7 +140,7 @@ def build_member_analysis(
     return RoutineOptionAnalysisOut(
         goal=link.goal,
         sodium_today_mg=sodium,
-        sodium_over_target=sodium > 2000,
+        sodium_over_target=sodium > routine_ai.SODIUM_TARGET_MG,
         avg_completion_rate=round(float(completion or 0)),
         latest_routine=latest.name if latest is not None else "-",
         note=request.trainer_note.strip(),
