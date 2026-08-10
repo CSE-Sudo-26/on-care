@@ -996,6 +996,7 @@
   "aiOptionPush": "Push",
   "aiOptionExisting": "Existing",
   "aiGenerateFailed": "AI generation failed. Please try again in a moment",
+  "aiGenerateRateLimited": "Too many generation requests. Please try again shortly",
   "aiExerciseNameRequired": "Enter an exercise name",
   "aiKeepOneExercise": "Keep at least one exercise",
   "aiRoutineSent": "Routine sent to {name}",

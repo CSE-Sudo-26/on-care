@@ -41,6 +41,11 @@ sealed class AppError implements Exception {
         if (code == 404) {
           return NotFoundError(message: e.message);
         }
+        if (code == 429) {
+          // 실패가 아니라 **잠시 뒤 되는** 상태다. 다른 오류와 뭉뚱그리면
+          // 트레이너가 고장으로 읽는다(#582).
+          return RateLimitedError(message: e.message);
+        }
         if (code == 400 || code == 422) {
           // The server rejected the INPUT, not the request. Callers show
           // this inline on the offending field rather than as a "다시
@@ -84,6 +89,12 @@ class NotFoundError extends AppError {
 /// server's own wording so the UI can show it verbatim.
 class ValidationError extends AppError {
   const ValidationError({super.message});
+}
+
+/// 429 — 한도 초과. 실패가 아니라 잠시 뒤 되는 상태라, 화면이 "실패했어요"
+/// 대신 기다렸다 다시 하라고 안내할 수 있게 따로 둔다(#582).
+class RateLimitedError extends AppError {
+  const RateLimitedError({super.message});
 }
 
 class ServerError extends AppError {

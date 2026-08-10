@@ -1503,6 +1503,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'AI generation failed. Please try again in a moment';
 
   @override
+  String get aiGenerateRateLimited =>
+      'Too many generation requests. Please try again shortly';
+
+  @override
   String get aiExerciseNameRequired => 'Enter an exercise name';
 
   @override

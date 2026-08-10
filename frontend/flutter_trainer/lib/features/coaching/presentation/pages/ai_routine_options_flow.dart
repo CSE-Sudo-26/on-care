@@ -139,11 +139,19 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         _stage = 1;
         _maxReachedStage = 1;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
+      // 한도 초과는 고장이 아니라 잠시 뒤 되는 상태다. 다른 오류와 같은 문구를
+      // 쓰면 트레이너가 기능이 깨진 것으로 읽는다(#582).
       messenger.showSnackBar(
-        SnackBar(content: Text(l.aiGenerateFailed)),
+        SnackBar(
+          content: Text(
+            e is RateLimitedError
+                ? l.aiGenerateRateLimited
+                : l.aiGenerateFailed,
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _generating = false);

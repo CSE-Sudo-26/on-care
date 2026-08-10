@@ -2750,6 +2750,12 @@ abstract class AppLocalizations {
   /// **'AI generation failed. Please try again in a moment'**
   String get aiGenerateFailed;
 
+  /// No description provided for @aiGenerateRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many generation requests. Please try again shortly'**
+  String get aiGenerateRateLimited;
+
   /// No description provided for @aiExerciseNameRequired.
   ///
   /// In en, this message translates to:
