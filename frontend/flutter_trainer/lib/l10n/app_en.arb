@@ -39,6 +39,7 @@
   "actionConfirm": "Confirm",
   "actionSend": "Send",
   "actionRetry": "Retry",
+  "actionRefresh": "Refresh",
   "actionChange": "Change",
   "appWordmarkTrainer": "Trainer",
   "@appWordmarkTrainer": {

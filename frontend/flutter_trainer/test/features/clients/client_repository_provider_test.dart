@@ -88,6 +88,8 @@ ProviderContainer _containerFor({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('resolves the drift repository when USE_MOCK_API=true', () {
     final container = _containerFor(useMockApi: true);
     expect(

@@ -72,6 +72,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionRetry => 'Retry';
 
   @override
+  String get actionRefresh => 'Refresh';
+
+  @override
   String get actionChange => 'Change';
 
   @override
