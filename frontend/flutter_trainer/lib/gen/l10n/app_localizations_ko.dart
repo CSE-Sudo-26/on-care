@@ -1894,6 +1894,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchClear => '검색어 지우기';
 
   @override
+  String get searchQuickActions => '다른 탭에서 열기';
+
+  @override
   String searchNoResults(String query) {
     return '“$query”와 일치하는 고객이 없어요';
   }
@@ -1909,11 +1912,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get searchGoReport => '선택하면 주간 리포트를 열어요';
-
-  @override
-  String searchNoUpcomingFor(String name) {
-    return '$name님은 4주 안에 예정된 예약이 없어요';
-  }
 
   @override
   String get searchDetailNoIssues => '오늘 이상 없음';

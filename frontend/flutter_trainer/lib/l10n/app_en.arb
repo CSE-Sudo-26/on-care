@@ -1298,6 +1298,7 @@
   },
   "searchClientsHint": "Search by client name",
   "searchClear": "Clear search",
+  "searchQuickActions": "Open in another tab",
   "searchNoResults": "No client matches “{query}”",
   "@searchNoResults": {
     "placeholders": {
@@ -1313,14 +1314,6 @@
   "searchGoSchedule": "Picking one jumps to their next booked day",
   "searchGoCoaching": "Picking one loads them into AI coaching",
   "searchGoReport": "Picking one opens their weekly report",
-  "searchNoUpcomingFor": "{name} has nothing booked in the next 4 weeks",
-  "@searchNoUpcomingFor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "searchDetailNoIssues": "Nothing to act on today",
   "searchDetailUnread": "{count} awaiting a reply",
   "@searchDetailUnread": {

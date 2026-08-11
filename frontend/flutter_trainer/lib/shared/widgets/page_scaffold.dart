@@ -118,12 +118,11 @@ class _Header extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: AppLayout.pagePadding,
           ),
-          child: Row(
+          child: CustomMultiChildLayout(
+            delegate: _HeaderLayoutDelegate(hasCenter: center != null),
             children: <Widget>[
-              // Flexible, not Expanded: the centre slot is the one that
-              // absorbs the leftover width, so the title takes only what
-              // it needs and the search bar sits mid-header.
-              Flexible(
+              LayoutId(
+                id: _HeaderSlot.start,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,24 +150,85 @@ class _Header extends StatelessWidget {
                 ),
               ),
               if (center != null)
-                Expanded(
+                LayoutId(
+                  id: _HeaderSlot.center,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
                     ),
                     child: center,
                   ),
-                )
-              else
-                const Spacer(),
-              for (final action in actions) ...<Widget>[
-                const SizedBox(width: AppSpacing.sm),
-                action,
-              ],
+                ),
+              LayoutId(
+                id: _HeaderSlot.end,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    for (var i = 0; i < actions.length; i++) ...<Widget>[
+                      if (i > 0) const SizedBox(width: AppSpacing.sm),
+                      actions[i],
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+enum _HeaderSlot { start, center, end }
+
+/// Keeps the optional centre control on the header's physical centre.
+///
+/// The title and actions are measured first. The larger of their widths is
+/// reserved on *both* sides, so changing tabs cannot pull the search field
+/// towards whichever side happens to be shorter. When space is tight the
+/// centre child receives the smaller remaining width and can collapse itself.
+class _HeaderLayoutDelegate extends MultiChildLayoutDelegate {
+  _HeaderLayoutDelegate({required this.hasCenter});
+
+  final bool hasCenter;
+
+  @override
+  void performLayout(Size size) {
+    final loose = BoxConstraints.loose(size);
+    final endSize = layoutChild(_HeaderSlot.end, loose);
+    final startWidth = size.width - endSize.width - AppSpacing.sm;
+    final startSize = layoutChild(
+      _HeaderSlot.start,
+      BoxConstraints(
+        maxWidth: startWidth > 0 ? startWidth : 0,
+        maxHeight: size.height,
+      ),
+    );
+    positionChild(
+      _HeaderSlot.start,
+      Offset(0, (size.height - startSize.height) / 2),
+    );
+    positionChild(
+      _HeaderSlot.end,
+      Offset(size.width - endSize.width, (size.height - endSize.height) / 2),
+    );
+
+    if (!hasCenter) return;
+    final sideWidth = startSize.width > endSize.width
+        ? startSize.width
+        : endSize.width;
+    final centerWidth = (size.width - sideWidth * 2).clamp(0.0, size.width);
+    final centerSize = layoutChild(
+      _HeaderSlot.center,
+      BoxConstraints.tightFor(width: centerWidth, height: size.height),
+    );
+    positionChild(
+      _HeaderSlot.center,
+      Offset((size.width - centerSize.width) / 2, 0),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_HeaderLayoutDelegate oldDelegate) =>
+      hasCenter != oldDelegate.hasCenter;
 }

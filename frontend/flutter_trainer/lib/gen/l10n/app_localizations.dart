@@ -3524,6 +3524,12 @@ abstract class AppLocalizations {
   /// **'Clear search'**
   String get searchClear;
 
+  /// No description provided for @searchQuickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in another tab'**
+  String get searchQuickActions;
+
   /// No description provided for @searchNoResults.
   ///
   /// In en, this message translates to:
@@ -3553,12 +3559,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Picking one opens their weekly report'**
   String get searchGoReport;
-
-  /// No description provided for @searchNoUpcomingFor.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} has nothing booked in the next 4 weeks'**
-  String searchNoUpcomingFor(String name);
 
   /// No description provided for @searchDetailNoIssues.
   ///

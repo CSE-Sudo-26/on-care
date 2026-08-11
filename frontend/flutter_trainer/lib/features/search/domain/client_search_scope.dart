@@ -87,7 +87,8 @@ Map<String, ScheduleSession> nextSessionsByClient(
   for (final client in clients) {
     final name = client.name.trim().toLowerCase();
     for (final session in booked) {
-      final matches = session.clientId == client.id ||
+      final matches =
+          session.clientId == client.id ||
           (session.clientId == null &&
               session.clientName.trim().toLowerCase() == name);
       if (matches) {
@@ -147,17 +148,18 @@ String clientSearchFooter(AppLocalizations l, ClientSearchScope scope) =>
       ClientSearchScope.reports => l.searchGoReport,
     };
 
-/// The route picking [client] should open from this tab, or null when
-/// this tab has nothing to show for them (only 스케줄, for a client with
-/// no upcoming booking — the caller says so rather than navigating
-/// somewhere the trainer didn't ask for).
+/// The route picking [client] should open from this tab.
+///
+/// A schedule result without an upcoming booking falls back to the client
+/// detail. Global client search should always lead somewhere useful; the
+/// schedule quick action itself remains unavailable when there is no date.
 ///
 /// [clientSection] is the 고객 sub-tab currently open; searching from
 /// 운동 lands on the next client's 운동 rather than resetting to 식단.
 /// 채팅만은 이어받지 않는다 — 스레드를 여는 순간 읽음 처리되므로, 검색으로
 /// 지나가기만 해도 그 회원의 답장 대기 배지가 지워진다
 /// ([AppRoutes.defaultClientSection] 주석과 같은 이유).
-String? clientSearchDestination(
+String clientSearchDestination(
   ClientSearchScope scope,
   TrainerClient client,
   ClientSearchFacts facts, {
@@ -173,7 +175,7 @@ String? clientSearchDestination(
       return AppRoutes.clientDetail(client.id, section: section);
     case ClientSearchScope.schedule:
       final next = facts.nextSession[client.id];
-      if (next == null) return null;
+      if (next == null) return AppRoutes.clientDetail(client.id);
       return AppRoutes.scheduleView('day', date: next.date);
     case ClientSearchScope.coaching:
       return AppRoutes.coachingFor(client.id);

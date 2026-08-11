@@ -1950,6 +1950,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchClear => 'Clear search';
 
   @override
+  String get searchQuickActions => 'Open in another tab';
+
+  @override
   String searchNoResults(String query) {
     return 'No client matches “$query”';
   }
@@ -1965,11 +1968,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchGoReport => 'Picking one opens their weekly report';
-
-  @override
-  String searchNoUpcomingFor(String name) {
-    return '$name has nothing booked in the next 4 weeks';
-  }
 
   @override
   String get searchDetailNoIssues => 'Nothing to act on today';

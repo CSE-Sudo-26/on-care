@@ -114,7 +114,7 @@ void main() {
     expect(location(tester), '/schedule?v=day&d=${ymd(DateTime.now())}');
   });
 
-  testWidgets('스케줄 탭 — 예정된 예약이 없으면 옮기지 않고 이유를 알린다', (tester) async {
+  testWidgets('스케줄 탭 — 예정된 예약이 없으면 고객 상세로 이어진다', (tester) async {
     await openConsole(tester, AppRoutes.schedule);
 
     // 김민수의 오늘 세션은 완료 상태라 다음 예약이 아니다.
@@ -127,8 +127,7 @@ void main() {
     await tester.tap(row('김민수'));
     await settle(tester);
 
-    expect(find.textContaining('예정된 예약이 없어요'), findsOneWidget);
-    expect(location(tester), AppRoutes.schedule);
+    expect(location(tester), '/clients/seed-client-1/diet');
   });
 
   testWidgets('대시보드 탭 — 오늘 챙길 이유를 보여 주고 고객 상세로 넘긴다', (tester) async {
@@ -194,7 +193,10 @@ void main() {
     await settle(tester);
 
     final ctx = tester.element(find.byKey(clientSearchIconKey));
-    expect(GoRouter.of(ctx).state.uri.toString(), '/clients/seed-client-1/diet');
+    expect(
+      GoRouter.of(ctx).state.uri.toString(),
+      '/clients/seed-client-1/diet',
+    );
   });
 
   testWidgets('검색어를 지우면 드롭다운이 닫힌다', (tester) async {
@@ -229,9 +231,12 @@ void main() {
     // 다른 행을 가리켰는지 확인한다 (시드 순서에 기대지 않는 비교).
     await search(tester, '수');
     expect(
-      tester.widgetList<Text>(
-        find.descendant(of: results, matching: find.byType(Text)),
-      ).where((t) => t.style?.fontWeight == FontWeight.w700).length,
+      tester
+          .widgetList<Text>(
+            find.descendant(of: results, matching: find.byType(Text)),
+          )
+          .where((t) => t.style?.fontWeight == FontWeight.w700)
+          .length,
       greaterThan(1),
       reason: '결과가 둘 이상이어야 하이라이트 이동을 볼 수 있다',
     );
@@ -249,5 +254,39 @@ void main() {
     expect(first, startsWith('/clients/'));
     expect(second, startsWith('/clients/'));
     expect(second, isNot(first), reason: '↓ 를 눌렀으니 다른 고객이 열려야 한다');
+  });
+
+  testWidgets('탭의 제목과 액션 수가 달라도 검색창 중심은 고정된다', (tester) async {
+    await openConsole(tester, AppRoutes.dashboard);
+    final dashboardCenter = tester.getCenter(find.byKey(clientSearchFieldKey));
+
+    GoRouter.of(
+      tester.element(find.byKey(clientSearchFieldKey)),
+    ).go(AppRoutes.coaching);
+    await settle(tester);
+    final coachingCenter = tester.getCenter(find.byKey(clientSearchFieldKey));
+
+    GoRouter.of(
+      tester.element(find.byKey(clientSearchFieldKey)),
+    ).go(AppRoutes.reports);
+    await settle(tester);
+    final reportsCenter = tester.getCenter(find.byKey(clientSearchFieldKey));
+
+    expect(coachingCenter.dx, closeTo(dashboardCenter.dx, 0.1));
+    expect(reportsCenter.dx, closeTo(dashboardCenter.dx, 0.1));
+  });
+
+  testWidgets('한 고객 결과에서 다른 탭으로 바로 이동할 수 있다', (tester) async {
+    await openConsole(tester, AppRoutes.reports);
+    await search(tester, '김민수');
+
+    await tester.tap(find.byKey(clientSearchQuickActionsKey('seed-client-1')));
+    await settle(tester);
+    await tester.tap(
+      find.byKey(clientSearchDestinationKey('seed-client-1', 'coaching')),
+    );
+    await settle(tester);
+
+    expect(location(tester), '/coaching?client=seed-client-1');
   });
 }

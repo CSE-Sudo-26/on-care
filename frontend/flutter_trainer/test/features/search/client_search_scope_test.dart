@@ -58,7 +58,11 @@ void main() {
             clientId: 'c1',
             status: ScheduleStatus.done,
           ),
-          session(date: '2026-08-11', time: '12:00', status: ScheduleStatus.gap),
+          session(
+            date: '2026-08-11',
+            time: '12:00',
+            status: ScheduleStatus.gap,
+          ),
         ],
       );
 
@@ -130,16 +134,14 @@ void main() {
       );
     });
 
-    test('예정된 예약이 없으면 스케줄은 갈 곳이 없다', () {
-      // null 은 "아무 데나 보내지 말라"는 뜻이다 — 호출부가 대신 이유를
-      // 스낵바로 알린다.
+    test('예정된 예약이 없으면 고객 상세로 보낸다', () {
       expect(
         clientSearchDestination(
           ClientSearchScope.schedule,
           minsu,
           ClientSearchFacts.none,
         ),
-        isNull,
+        '/clients/c1/diet',
       );
     });
   });
