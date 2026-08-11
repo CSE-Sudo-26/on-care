@@ -38,16 +38,18 @@ const Map<String, String> _seedDietPhotoAssets = <String, String>{
 /// `core/network/case_mapper.dart` so the contract matches the real
 /// server's Pydantic models.
 class LocalApiInterceptor extends Interceptor {
-  LocalApiInterceptor(this._db, this._logger, {this.isRealApiPath});
+  LocalApiInterceptor(this._db, this._logger, {this.isRealApi});
 
   final AppDatabase _db;
   final Logger _logger;
 
-  /// 이 경로를 목업이 아니라 실 백엔드로 보내야 하는지 판정한다(`AppConfig.isRealApiPath`).
+  /// 이 요청을 목업이 아니라 실 백엔드로 보내야 하는지 판정한다(`AppConfig.isRealApi`).
   ///
   /// 주입받는 이유는 이 인터셉터가 설정에 직접 의존하지 않게 하기 위해서다 —
   /// 테스트에서 설정 전체를 세우지 않고 이 함수만 넘기면 된다.
-  final bool Function(String path)? isRealApiPath;
+  ///
+  /// 메서드를 함께 받는 이유는 조회가 딸려 열리지 않게 하기 위해서다(#616).
+  final bool Function(String method, String path)? isRealApi;
 
   // Path-pattern → handler map. Static paths get O(1) dispatch;
   // path-with-id endpoints (`/diet/entries/{id}`) fall to the regex
@@ -100,7 +102,7 @@ class LocalApiInterceptor extends Interceptor {
 
     // REAL_API 로 켠 기능은 목업이 가로채지 않고 실 백엔드로 흘려보낸다.
     // (null 을 돌려주면 다음 인터셉터를 거쳐 실 네트워크로 나간다.)
-    if (isRealApiPath != null && isRealApiPath!(path)) {
+    if (isRealApi != null && isRealApi!(method, path)) {
       _logger.d('[local-api] $key → 실 백엔드(REAL_API)');
       return null;
     }

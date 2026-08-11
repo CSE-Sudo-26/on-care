@@ -42,10 +42,10 @@ final dioProvider = Provider<Dio>((ref) {
         LocalApiInterceptor(
           ref.watch(appDatabaseProvider),
           logger,
-          isRealApiPath: config.isRealApiPath,
+          isRealApi: config.isRealApi,
         ),
       )
-      ..add(MockApiInterceptor(logger, isRealApiPath: config.isRealApiPath));
+      ..add(MockApiInterceptor(logger, isRealApi: config.isRealApi));
   }
   dio.interceptors.add(AuthInterceptor(ref));
   if (!config.isProd) {
