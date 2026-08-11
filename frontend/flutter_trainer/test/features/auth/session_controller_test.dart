@@ -149,6 +149,42 @@ void main() {
       );
     });
 
+    // 갱신 요청 자체가 실패하는 갈래 — 예전에는 원인을 가리지 않고 만료로 처리해
+    // 저장 토큰을 지웠다. 확인 요청과 같은 기준(명시적 거부만 만료)을 쓴다. (#641)
+    for (final (String, AuthFailure) row in <(String, AuthFailure)>[
+      ('연결 실패', AuthFailure.network),
+      ('응답 본문 없음', AuthFailure.emptyResponse),
+      ('알 수 없는 전송 실패', AuthFailure.unknown),
+    ]) {
+      final String name = row.$1;
+      final AuthFailure failure = row.$2;
+      test('갱신이 $name 로 끝나면 저장 토큰을 지우지 않는다', () async {
+        final fake = _FakeAuthRepository()
+          ..profileFailuresBeforeSuccess = 1
+          ..refreshThrows = true
+          ..refreshFailure = failure;
+        final container = _makeContainer(
+          tokens: <String, String>{
+            'access_token': 'stale',
+            'refresh_token': 'valid-refresh',
+          },
+          repoOverride: trainerAuthRepositoryProvider.overrideWithValue(fake),
+        );
+        container.read(sessionControllerProvider.notifier);
+        await _settle();
+
+        expect(
+          container.read(sessionControllerProvider).status,
+          SessionStatus.signedOut,
+        );
+        // 접근 토큰이 만료됐어도 갱신이 **거부된 것은 아니다.** 지우면 잠깐 끊긴
+        // 사용자에게 재로그인을 요구하게 된다.
+        final store = container.read(secureTokenStoreProvider);
+        expect(await store.readAccessToken(), 'stale');
+        expect(await store.readRefreshToken(), 'valid-refresh');
+      });
+    }
+
     test(
       'keeps the stored tokens on a transient network failure at restore',
       () async {
@@ -385,6 +421,9 @@ class _FakeAuthRepository implements TrainerAuthRepository {
   bool profileThrowsNotTrainer = false;
   bool profileThrowsNetwork = false;
   bool refreshThrows = false;
+
+  /// `refreshThrows` 일 때 던질 실패 코드. 기본은 실제 만료.
+  AuthFailure refreshFailure = AuthFailure.sessionExpired;
   bool refreshReturnsEmptyRefresh = false;
   Duration profileDelay = Duration.zero;
   Duration refreshDelay = Duration.zero;
@@ -423,7 +462,7 @@ class _FakeAuthRepository implements TrainerAuthRepository {
     refreshCalls++;
     if (!onRefreshEntered.isCompleted) onRefreshEntered.complete();
     if (refreshDelay > Duration.zero) await Future<void>.delayed(refreshDelay);
-    if (refreshThrows) throw const AuthException(AuthFailure.sessionExpired);
+    if (refreshThrows) throw AuthException(refreshFailure);
     return TrainerAuthTokens(
       access: 'rotated-access',
       refresh: refreshReturnsEmptyRefresh ? '' : 'rotated-refresh',
