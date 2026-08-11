@@ -49,6 +49,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final TextEditingController _birthDate = TextEditingController();
   String? _gender; // 'male' | 'female' | 'other'
   final TextEditingController _height = TextEditingController();
+  final TextEditingController _weight = TextEditingController();
   final Set<String> _conditions = <String>{};
   final TextEditingController _dailySodium = TextEditingController();
 
@@ -57,6 +58,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     _pager.dispose();
     _birthDate.dispose();
     _height.dispose();
+    _weight.dispose();
     _dailySodium.dispose();
     super.dispose();
   }
@@ -97,6 +99,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             birthDate: birth.isEmpty ? null : birth,
             gender: _gender,
             heightCm: _num(_height),
+            weightKg: _num(_weight),
             conditions: _conditions.isEmpty ? null : _conditions.join(', '),
             dailySodiumMg: _int(_dailySodium),
           );
@@ -266,6 +269,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           controller: _height,
           hint: l.onboardHeightHint,
           icon: Icons.straighten,
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AuthField(
+          controller: _weight,
+          hint: '체중 (kg)',
+          icon: Icons.monitor_weight_outlined,
           keyboardType: TextInputType.number,
         ),
       ],

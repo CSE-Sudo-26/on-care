@@ -170,6 +170,16 @@ def test_routine_options_generates_ab_for_owned_member(client, monkeypatch):
     # analysis reflects the member + echoes the trainer note.
     assert body["analysis"]["note"] == "테스트"
     assert isinstance(body["analysis"]["sodium_over_target"], bool)
+    assert {
+        "member_goal",
+        "conditions",
+        "gender",
+        "height_cm",
+        "weight_kg",
+        "weekly_workout_goal",
+        "weekly_exercise_minutes_goal",
+        "weekly_burn_goal",
+    } <= body["analysis"].keys()
 
 
 @pytest.mark.parametrize(

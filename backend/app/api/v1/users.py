@@ -97,6 +97,7 @@ def _profile_view(user: User) -> ProfileView:
         birth_date=p.birth_date if p else "",
         gender=p.gender if p else "",
         height_cm=p.height_cm if p else None,
+        weight_kg=p.weight_kg if p else None,
         conditions=p.conditions if p else "",
         goals=p.goals if p else "",
         daily_calories=p.daily_calories if p else None,
@@ -177,10 +178,16 @@ def update_me(
         user.name = data["name"]
 
     profile = _get_or_create_profile(db, user)
-    if "phone" in data and data["phone"] is not None:
-        profile.phone = data["phone"]
-    if "birth_date" in data and data["birth_date"] is not None:
-        profile.birth_date = data["birth_date"]
+    for field in (
+        "phone",
+        "birth_date",
+        "gender",
+        "height_cm",
+        "weight_kg",
+        "goals",
+    ):
+        if field in data and data[field] is not None:
+            setattr(profile, field, data[field])
 
     db.commit()
     db.refresh(user)

@@ -36,6 +36,7 @@ class MockAccountRepository implements AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
+    num? weightKg,
     String? conditions,
     int? dailySodiumMg,
   }) async => _profile;
@@ -46,6 +47,10 @@ class MockAccountRepository implements AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
+    String? gender,
+    num? heightCm,
+    num? weightKg,
+    String? goals,
   }) async => _profile;
 
   @override
@@ -66,6 +71,10 @@ class MockAccountRepository implements AccountRepository {
       email: _profile.email,
       phone: _profile.phone,
       birthDate: _profile.birthDate,
+      gender: _profile.gender,
+      heightCm: _profile.heightCm,
+      weightKg: _profile.weightKg,
+      goals: _profile.goals,
       dailyCalories: dailyCalories ?? _profile.dailyCalories,
       dailySodiumMg: dailySodiumMg ?? _profile.dailySodiumMg,
       dailySugarG: dailySugarG ?? _profile.dailySugarG,

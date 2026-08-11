@@ -432,3 +432,65 @@ def test_member_cannot_read_roster(client):
     token = _member_token(client)
     r = client.get("/v1/trainer/clients", headers=_auth(token))
     assert r.status_code == 403
+
+
+def test_trainer_can_read_and_update_member_health_profile(client, db_session):
+    from sqlalchemy import select
+
+    from app.models.models import HealthProfile
+
+    token = _trainer_token(client)
+    url = "/v1/trainer/clients/user-jisu/health-profile"
+    profile = db_session.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == "user-jisu")
+    )
+    assert profile is not None
+    original = {
+        "gender": profile.gender,
+        "height_cm": profile.height_cm,
+        "weight_kg": profile.weight_kg,
+        "goals": profile.goals,
+        "weekly_workout_goal": profile.weekly_workout_goal,
+        "weekly_exercise_minutes_goal": profile.weekly_exercise_minutes_goal,
+        "weekly_burn_goal": profile.weekly_burn_goal,
+    }
+
+    try:
+        response = client.put(
+            url,
+            headers=_auth(token),
+            json={
+                "gender": "female",
+                "height_cm": 164.5,
+                "weight_kg": 57.2,
+                "goals": "근력 향상과 체지방 감량",
+                "weekly_workout_goal": 4,
+                "weekly_exercise_minutes_goal": 180,
+                "weekly_burn_goal": 1600,
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["member_id"] == "user-jisu"
+        assert body["height_cm"] == 164.5
+        assert body["weight_kg"] == 57.2
+        assert body["goals"] == "근력 향상과 체지방 감량"
+        assert body["weekly_workout_goal"] == 4
+
+        fetched = client.get(url, headers=_auth(token))
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.json()["weekly_exercise_minutes_goal"] == 180
+        assert fetched.json()["weekly_burn_goal"] == 1600
+    finally:
+        for field, value in original.items():
+            setattr(profile, field, value)
+        db_session.commit()
+
+
+def test_trainer_cannot_read_unassigned_member_health_profile(client):
+    token = _trainer_token(client)
+    response = client.get(
+        "/v1/trainer/clients/user-nobody/health-profile",
+        headers=_auth(token),
+    )
+    assert response.status_code == 404

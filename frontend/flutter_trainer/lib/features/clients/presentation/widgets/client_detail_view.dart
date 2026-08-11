@@ -10,6 +10,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
@@ -307,6 +308,16 @@ class _Header extends ConsumerWidget {
           // AI 코칭 상담(#497)은 실 API 모드에서만 — 데모에는 근거로 삼을 회원
           // 기록이 없어 무엇을 물어도 의미 있는 답이 나오지 않는다. 기존 두
           // 버튼 행은 그대로 두고 아래에 붙여, 데모 헤더가 지금과 같게 남는다.
+          const SizedBox(height: AppSpacing.sm),
+          ActionButton(
+            label: '회원 신체·목표 관리',
+            icon: Icons.badge_outlined,
+            onPressed: () => showMemberHealthProfileDialog(
+              context,
+              memberId: client.id,
+              repository: ref.read(clientRepositoryProvider),
+            ),
+          ),
           if (ref.watch(clientCoachEnabledProvider)) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             ActionButton(

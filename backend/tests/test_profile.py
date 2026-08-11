@@ -26,6 +26,7 @@ def test_onboarding_saves_profile_and_marks_done(client):
         "birth_date": "1990-01-15",
         "gender": "male",
         "height_cm": 175.0,
+        "weight_kg": 72.5,
         "conditions": "고혈압, 당뇨 전단계",
         "goals": "혈압 정상화",
         "daily_calories": 2000,
@@ -38,6 +39,7 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert p["name"] == "온보딩유저"
     assert p["conditions"] == "고혈압, 당뇨 전단계"
     assert p["height_cm"] == 175.0
+    assert p["weight_kg"] == 72.5
     assert p["daily_calories"] == 2000
 
     # GET 으로도 동일하게 조회돼야 한다
@@ -60,6 +62,26 @@ def test_update_me_changes_name_and_phone(client):
 
     me = client.get("/v1/users/me", headers=_auth(token))
     assert me.json()["name"] == "새이름"
+
+
+def test_update_me_changes_body_profile_and_goal(client):
+    token, _ = _register_and_login(client)
+    response = client.put(
+        "/v1/users/me",
+        json={
+            "gender": "female",
+            "height_cm": 163.5,
+            "weight_kg": 54.2,
+            "goals": "주 3회 근력 운동",
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    profile = response.json()
+    assert profile["gender"] == "female"
+    assert profile["height_cm"] == 163.5
+    assert profile["weight_kg"] == 54.2
+    assert profile["goals"] == "주 3회 근력 운동"
 
 
 def test_update_me_duplicate_email_conflicts_409(client):

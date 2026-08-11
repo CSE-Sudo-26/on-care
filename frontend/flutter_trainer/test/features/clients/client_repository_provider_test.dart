@@ -11,6 +11,7 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -55,6 +56,14 @@ class _StreamingClientRepository implements ClientRepository {
   @override
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
       const Stream<List<RoutineHistoryEntry>>.empty();
+  @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) async =>
+      MemberHealthProfile(memberId: clientId, memberName: '회원');
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  ) => fetchHealthProfile(clientId);
   @override
   Future<bool> clientNameExists(String name) async => false;
   @override

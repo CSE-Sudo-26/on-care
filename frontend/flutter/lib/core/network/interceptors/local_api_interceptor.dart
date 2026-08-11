@@ -139,7 +139,9 @@ class LocalApiInterceptor extends Interceptor {
                 '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
             foodsJson: jsonEncode(foods),
             totalCalories: (analysis['total_calories'] as num?)?.toInt() ?? 0,
-            sodiumMg: Value((analysis['total_sodium_mg'] as num?)?.toInt() ?? 0),
+            sodiumMg: Value(
+              (analysis['total_sodium_mg'] as num?)?.toInt() ?? 0,
+            ),
             sugarG: Value(
               (analysis['total_sugar_g'] as num?)?.toDouble() ?? 0.0,
             ),
@@ -407,7 +409,8 @@ class LocalApiInterceptor extends Interceptor {
     // 노출하고, 없으면(시드 없는 테스트 DB 등) 나트륨 상위 급원 기반 경고를
     // 동적으로 생성한다.
     final seededAdvice = await _db.readValue('dashboard_ai_advice');
-    final bool hasSeededAdvice = seededAdvice != null && seededAdvice.isNotEmpty;
+    final bool hasSeededAdvice =
+        seededAdvice != null && seededAdvice.isNotEmpty;
 
     // Exercise aggregates for the current week.
     final weekStart = _mondayOfThisWeekString();
@@ -621,7 +624,8 @@ class LocalApiInterceptor extends Interceptor {
   Future<Response<Object?>> _dietRecommendations(RequestOptions options) async {
     return _ok(options, <String, Object?>{
       'items': <Map<String, Object?>>[
-        for (final MealRecommendation item in MealRecommendations.fallback.items)
+        for (final MealRecommendation item
+            in MealRecommendations.fallback.items)
           <String, Object?>{'key': item.key, 'reason_key': item.reasonKey},
       ],
       'personalized': false,
@@ -1292,6 +1296,8 @@ class LocalApiInterceptor extends Interceptor {
     'phone': '010-1234-5678',
     'birth_date': '1990-01-15',
     'gender': '',
+    'height_cm': 175.0,
+    'weight_kg': 72.0,
     'conditions': '',
     'goals': '',
     'daily_calories': 2000,
@@ -1341,7 +1347,16 @@ class LocalApiInterceptor extends Interceptor {
   Future<Response<Object?>> _usersMeUpdate(RequestOptions options) async {
     final body = _jsonBody(options);
     final patch = <String, Object?>{};
-    for (final String k in <String>['name', 'email', 'phone', 'birth_date']) {
+    for (final String k in <String>[
+      'name',
+      'email',
+      'phone',
+      'birth_date',
+      'gender',
+      'height_cm',
+      'weight_kg',
+      'goals',
+    ]) {
       if (body[k] != null) patch[k] = body[k];
     }
     await _mergeProfileOverlay(patch);
@@ -1387,6 +1402,7 @@ class LocalApiInterceptor extends Interceptor {
       'birth_date',
       'gender',
       'height_cm',
+      'weight_kg',
       'conditions',
       'goals',
       'daily_calories',
@@ -1526,7 +1542,9 @@ class LocalApiInterceptor extends Interceptor {
     }
     out.sort(
       (Map<String, Object?> a, Map<String, Object?> b) =>
-          (a['distance_meters']! as int).compareTo(b['distance_meters']! as int),
+          (a['distance_meters']! as int).compareTo(
+            b['distance_meters']! as int,
+          ),
     );
     return _ok(options, out);
   }

@@ -8,6 +8,7 @@ import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
@@ -85,6 +86,34 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
     '/trainer/clients/${Uri.encodeComponent(clientId)}/history',
     routineHistoryEntryFromJson,
   );
+
+  @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) async {
+    try {
+      final response = await _dio.get<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/health-profile',
+      );
+      return MemberHealthProfile.fromJson(response.data!);
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  ) async {
+    try {
+      final response = await _dio.put<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/health-profile',
+        data: values,
+      );
+      return MemberHealthProfile.fromJson(response.data!);
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
 
   /// GETs a JSON array and maps each element with [fromJson]. Transport /
   /// HTTP failures (incl. 404 for a client that isn't this trainer's)

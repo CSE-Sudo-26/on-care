@@ -124,6 +124,7 @@ class ProfileView(BaseModel):
     birth_date: str = ""
     gender: str = ""
     height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
     conditions: str = ""
     goals: str = ""
     daily_calories: Optional[int] = None
@@ -168,6 +169,7 @@ class OnboardingRequest(BaseModel):
     birth_date: Optional[str] = None       # YYYY-MM-DD
     gender: Optional[str] = None           # male|female|other
     height_cm: Optional[float] = None
+    weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
     conditions: Optional[str] = None       # "고혈압, 당뇨 전단계"
     goals: Optional[str] = None
     daily_calories: Optional[int] = None
@@ -185,3 +187,7 @@ class ProfileUpdate(PartialUpdate):
     email: Optional[str] = None
     phone: Optional[str] = None
     birth_date: Optional[str] = None
+    gender: Optional[str] = Field(default=None, pattern="^(male|female|other|)$")
+    height_cm: Optional[float] = Field(default=None, ge=50, le=300)
+    weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
+    goals: Optional[str] = Field(default=None, max_length=500)

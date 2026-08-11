@@ -11,6 +11,7 @@ import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
@@ -39,6 +40,11 @@ abstract interface class ClientRepository {
 
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId);
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  );
 
   /// Demo-only roster mutations — the backend roster comes from
   /// trainer↔member links, so these are unsupported against the real API.
@@ -179,6 +185,30 @@ class DriftClientRepository implements ClientRepository {
       TrainerClientsCompanion(active: Value(active)),
     );
   }
+
+  @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) async {
+    final row = await (_db.select(
+      _db.trainerClients,
+    )..where((table) => table.id.equals(clientId))).getSingle();
+    return MemberHealthProfile(
+      memberId: clientId,
+      memberName: row.name,
+      heightCm: 175,
+      weightKg: 72,
+      gender: 'male',
+      goals: row.goal,
+      weeklyWorkoutGoal: 3,
+      weeklyExerciseMinutesGoal: 150,
+      weeklyBurnGoal: 1500,
+    );
+  }
+
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  ) async => fetchHealthProfile(clientId);
 
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
