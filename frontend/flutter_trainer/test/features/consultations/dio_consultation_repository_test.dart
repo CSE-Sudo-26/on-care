@@ -56,22 +56,19 @@ void main() {
           queryParameters: any(named: 'queryParameters'),
         ),
       ).thenAnswer(
-        (_) async => _ok<List<dynamic>>(
-          <dynamic>[
-            <String, Object?>{
-              'id': 'consult-1',
-              'member_id': 'u1',
-              'member_name': '김민수',
-              'exercise_goal': 'strength',
-              'health_purpose_type': 'general',
-              'preferred_date': '2026-08-12',
-              'preferred_time_slot': 'morning',
-              'status': 'pending',
-              'via_gym': true,
-            },
-          ],
-          '/trainer/consultations',
-        ),
+        (_) async => _ok<List<dynamic>>(<dynamic>[
+          <String, Object?>{
+            'id': 'consult-1',
+            'member_id': 'u1',
+            'member_name': '김민수',
+            'exercise_goal': 'strength',
+            'health_purpose_type': 'general',
+            'preferred_date': '2026-08-12',
+            'preferred_time_slot': 'morning',
+            'status': 'pending',
+            'via_gym': true,
+          },
+        ], '/trainer/consultations'),
       );
 
       final list = await repo.fetch();
@@ -79,12 +76,14 @@ void main() {
       expect(list, hasLength(1));
       expect(list.single.memberName, '김민수');
       expect(list.single.viaGym, isTrue);
-      final captured = verify(
-        () => dio.get<List<dynamic>>(
-          '/trainer/consultations',
-          queryParameters: captureAny(named: 'queryParameters'),
-        ),
-      ).captured.single as Map<String, Object?>;
+      final captured =
+          verify(
+                () => dio.get<List<dynamic>>(
+                  '/trainer/consultations',
+                  queryParameters: captureAny(named: 'queryParameters'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
       expect(captured['status'], 'pending');
     });
 
@@ -121,10 +120,9 @@ void main() {
           '/trainer/consultations/pending-count',
         ),
       ).thenAnswer(
-        (_) async => _ok<Map<String, Object?>>(
-          <String, Object?>{'count': 3},
-          '/trainer/consultations/pending-count',
-        ),
+        (_) async => _ok<Map<String, Object?>>(<String, Object?>{
+          'count': 3,
+        }, '/trainer/consultations/pending-count'),
       );
 
       expect(await repo.pendingCount(), 3);
@@ -143,14 +141,27 @@ void main() {
         ),
       );
 
-      await repo.accept('consult-1');
-
-      verify(
-        () => dio.post<Map<String, Object?>>(
-          '/trainer/consultations/consult-1/accept',
-          data: any(named: 'data'),
+      await repo.accept(
+        'consult-1',
+        schedule: const ConsultationSchedule(
+          date: '2026-08-12',
+          time: '19:30',
+          type: '상담',
+          durationMinutes: 30,
         ),
-      ).called(1);
+      );
+
+      final data =
+          verify(
+                () => dio.post<Map<String, Object?>>(
+                  '/trainer/consultations/consult-1/accept',
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
+      expect(data['date'], '2026-08-12');
+      expect(data['time'], '19:30');
+      expect(data['duration_minutes'], 30);
     });
 
     test('reject carries the note the member will receive', () async {
@@ -168,42 +179,47 @@ void main() {
 
       await repo.reject('consult-1', note: '정원이 찼어요');
 
-      final data = verify(
-        () => dio.post<Map<String, Object?>>(
-          '/trainer/consultations/consult-1/reject',
-          data: captureAny(named: 'data'),
-        ),
-      ).captured.single as Map<String, Object?>;
+      final data =
+          verify(
+                () => dio.post<Map<String, Object?>>(
+                  '/trainer/consultations/consult-1/reject',
+                  data: captureAny(named: 'data'),
+                ),
+              ).captured.single
+              as Map<String, Object?>;
       expect(data['note'], '정원이 찼어요');
     });
 
-    test("409's own reason survives as the message shown to the trainer", () async {
-      when(
-        () => dio.post<Map<String, Object?>>(
-          '/trainer/consultations/consult-1/accept',
-          data: any(named: 'data'),
-        ),
-      ).thenThrow(
-        _httpError(
-          409,
-          '/trainer/consultations/consult-1/accept',
-          body: <String, Object?>{'detail': '이미 다른 트레이너가 담당 중인 회원입니다.'},
-        ),
-      );
-
-      // The whole point of the 409 is its sentence — a generic network
-      // error would leave the trainer with no idea why it failed.
-      await expectLater(
-        repo.accept('consult-1'),
-        throwsA(
-          isA<ValidationError>().having(
-            (e) => e.message,
-            'message',
-            '이미 다른 트레이너가 담당 중인 회원입니다.',
+    test(
+      "409's own reason survives as the message shown to the trainer",
+      () async {
+        when(
+          () => dio.post<Map<String, Object?>>(
+            '/trainer/consultations/consult-1/accept',
+            data: any(named: 'data'),
           ),
-        ),
-      );
-    });
+        ).thenThrow(
+          _httpError(
+            409,
+            '/trainer/consultations/consult-1/accept',
+            body: <String, Object?>{'detail': '이미 다른 트레이너가 담당 중인 회원입니다.'},
+          ),
+        );
+
+        // The whole point of the 409 is its sentence — a generic network
+        // error would leave the trainer with no idea why it failed.
+        await expectLater(
+          repo.accept('consult-1'),
+          throwsA(
+            isA<ValidationError>().having(
+              (e) => e.message,
+              'message',
+              '이미 다른 트레이너가 담당 중인 회원입니다.',
+            ),
+          ),
+        );
+      },
+    );
 
     test('a 404 stays a typed transport error', () async {
       when(
@@ -213,10 +229,7 @@ void main() {
         ),
       ).thenThrow(_httpError(404, '/trainer/consultations/nope/accept'));
 
-      await expectLater(
-        repo.accept('nope'),
-        throwsA(isA<NotFoundError>()),
-      );
+      await expectLater(repo.accept('nope'), throwsA(isA<NotFoundError>()));
     });
 
     test('ids are percent-encoded into the path', () async {
@@ -244,11 +257,9 @@ void main() {
   });
 
   group('consultationRepositoryProvider', () {
-    test('demo mode resolves the inbox-less source', () {
+    test('demo mode exposes the seeded schedule inbox', () {
       final container = ProviderContainer(
-        overrides: <Override>[
-          appConfigProvider.overrideWithValue(_demoConfig),
-        ],
+        overrides: <Override>[appConfigProvider.overrideWithValue(_demoConfig)],
       );
       addTearDown(container.dispose);
 
@@ -258,7 +269,7 @@ void main() {
       );
       // The demo console must look exactly as it does today — no inbox
       // row, no badge.
-      expect(container.read(consultationInboxEnabledProvider), isFalse);
+      expect(container.read(consultationInboxEnabledProvider), isTrue);
     });
 
     test('real-API mode resolves the Dio source', () {
@@ -277,23 +288,23 @@ void main() {
       expect(container.read(consultationInboxEnabledProvider), isTrue);
     });
 
-    test('the demo badge count is zero without issuing a request', () async {
+    test('the demo badge count includes the seeded request', () async {
       final container = ProviderContainer(
-        overrides: <Override>[
-          appConfigProvider.overrideWithValue(_demoConfig),
-        ],
+        overrides: <Override>[appConfigProvider.overrideWithValue(_demoConfig)],
       );
       addTearDown(container.dispose);
 
-      expect(await container.read(consultationPendingCountProvider.future), 0);
+      expect(await container.read(consultationPendingCountProvider.future), 1);
     });
 
-    test('the demo source refuses decisions rather than faking them', () async {
-      const repo = DemoConsultationRepository();
+    test('the demo source removes decided requests from pending', () async {
+      final repo = DemoConsultationRepository();
+      final request = (await repo.fetch()).single;
+
+      await repo.accept(request.id);
 
       expect(await repo.fetch(), isEmpty);
-      await expectLater(repo.accept('x'), throwsA(isA<ValidationError>()));
-      await expectLater(repo.reject('x'), throwsA(isA<ValidationError>()));
+      expect((await repo.fetch(status: 'all')).single.status, 'accepted');
     });
   });
 }

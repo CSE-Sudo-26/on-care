@@ -425,6 +425,20 @@ void main() {
       expect(find.text('예정'), findsWidgets);
     });
 
+    testWidgets('consultation inbox opens from the schedule tab', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('상담 요청'));
+      await settle(tester);
+
+      expect(find.text('김하늘'), findsOneWidget);
+      expect(find.text('퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.'), findsOneWidget);
+      expect(find.text('거절'), findsOneWidget);
+      expect(find.text('새 일정'), findsWidgets);
+    });
+
     testWidgets('예약 슬롯 action opens the selected-day management sheet', (
       tester,
     ) async {

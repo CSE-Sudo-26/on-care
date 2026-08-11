@@ -30,7 +30,7 @@ class NotificationsPage extends ConsumerWidget {
   /// 알림 종류별 이동할 곳. 모르는 종류는 이동하지 않는다.
   static String? _targetOf(TrainerNotificationKind kind) => switch (kind) {
     TrainerNotificationKind.message => AppRoutes.clients,
-    TrainerNotificationKind.consultation => AppRoutes.consultations,
+    TrainerNotificationKind.consultation => AppRoutes.schedule,
     TrainerNotificationKind.reservation => AppRoutes.schedule,
     TrainerNotificationKind.other => null,
   };

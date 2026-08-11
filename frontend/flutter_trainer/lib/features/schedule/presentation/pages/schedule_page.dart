@@ -16,6 +16,8 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
 import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -167,6 +169,20 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
   }
 
+  Future<void> _openConsultationInbox() async {
+    final date = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: AppRadius.card),
+      ),
+      builder: (_) => const ConsultationInboxSheet(),
+    );
+    final day = date == null ? null : DateTime.tryParse(date);
+    if (day != null && mounted) _selectDay(day, toTimeline: true);
+  }
+
   Future<void> _confirmDelete(ScheduleSession s) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
@@ -252,6 +268,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final today = _dateOnly(DateTime.now());
     final defaultAnchor = today.subtract(const Duration(days: 3));
     final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
+    final consultationInbox = ref.watch(consultationInboxEnabledProvider);
+    final compactConsultationInbox =
+        consultationInbox && MediaQuery.sizeOf(context).width < 900;
+    final pendingConsultations = consultationInbox
+        ? ref.watch(consultationPendingCountProvider).valueOrNull
+        : null;
 
     return PageScaffold(
       title: l.schedTitle,
@@ -260,6 +282,16 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // booking and picking one moves the calendar to that day.
       headerCenter: const ClientSearchBar(scope: ClientSearchScope.schedule),
       actions: <Widget>[
+        if (consultationInbox && !compactConsultationInbox)
+          Badge(
+            isLabelVisible: (pendingConsultations ?? 0) > 0,
+            label: Text('${pendingConsultations ?? 0}'),
+            child: ActionButton(
+              label: l.consultTitle,
+              icon: Icons.mark_email_unread_outlined,
+              onPressed: _openConsultationInbox,
+            ),
+          ),
         if (showToday)
           ActionButton(
             label: l.labelToday,
@@ -300,7 +332,26 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // spins up a new provider that starts in `loading`, and blanking
       // the whole page to a spinner each tap made the strip flicker.
       // Only the session list reacts to the async state (review PR 245).
-      child: _weekView ? _buildWeekGrid() : _buildDayView(schedule),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (compactConsultationInbox)
+            ListTile(
+              dense: true,
+              leading: Badge(
+                isLabelVisible: (pendingConsultations ?? 0) > 0,
+                label: Text('${pendingConsultations ?? 0}'),
+                child: const Icon(Icons.mark_email_unread_outlined),
+              ),
+              title: Text(l.consultTitle),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: _openConsultationInbox,
+            ),
+          Expanded(
+            child: _weekView ? _buildWeekGrid() : _buildDayView(schedule),
+          ),
+        ],
+      ),
     );
   }
 

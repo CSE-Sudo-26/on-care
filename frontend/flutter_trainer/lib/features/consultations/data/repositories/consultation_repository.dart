@@ -32,10 +32,25 @@ abstract interface class ConsultationRepository {
   Future<int> pendingCount();
 
   /// Accepts [id], creating the trainer↔member link server-side.
-  Future<void> accept(String id);
+  Future<void> accept(String id, {ConsultationSchedule? schedule});
 
   /// Rejects [id]. [note] is delivered to the member as the reason.
   Future<void> reject(String id, {String? note});
+}
+
+/// Calendar values submitted together with an approval.
+class ConsultationSchedule {
+  const ConsultationSchedule({
+    required this.date,
+    required this.time,
+    required this.type,
+    required this.durationMinutes,
+  });
+
+  final String date;
+  final String time;
+  final String type;
+  final int durationMinutes;
 }
 
 /// Demo build: no inbox. Reads succeed with nothing so any consumer that
@@ -43,25 +58,74 @@ abstract interface class ConsultationRepository {
 /// error, and decisions are refused rather than silently doing nothing.
 class DemoConsultationRepository implements ConsultationRepository {
   /// Creates the demo source.
-  const DemoConsultationRepository();
+  DemoConsultationRepository()
+    : _requests = <ConsultationRequest>[
+        ConsultationRequest(
+          id: 'demo-consultation-1',
+          memberId: 'demo-consult-member-1',
+          memberName: '김하늘',
+          goalCode: 'fitness',
+          purposeCode: 'general',
+          preferredDate: DateTime.now().add(const Duration(days: 1)),
+          preferredTimeCode: 'evening',
+          status: 'pending',
+          message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
+          viaGym: true,
+          gymName: '온케어 피트니스',
+        ),
+      ];
+
+  List<ConsultationRequest> _requests;
 
   @override
-  bool get supportsInbox => false;
+  bool get supportsInbox => true;
 
   @override
   Future<List<ConsultationRequest>> fetch({String status = 'pending'}) async =>
-      const <ConsultationRequest>[];
+      status == 'all'
+      ? List<ConsultationRequest>.unmodifiable(_requests)
+      : _requests.where((request) => request.status == status).toList();
 
   @override
-  Future<int> pendingCount() async => 0;
+  Future<int> pendingCount() async =>
+      _requests.where((request) => request.isPending).length;
 
   @override
-  Future<void> accept(String id) async =>
+  Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
+    _decide(id, 'accepted');
+  }
+
+  @override
+  Future<void> reject(String id, {String? note}) async {
+    _decide(id, 'rejected', note: note);
+  }
+
+  void _decide(String id, String status, {String? note}) {
+    final index = _requests.indexWhere((request) => request.id == id);
+    if (index < 0 || !_requests[index].isPending) {
       throw const ValidationError();
-
-  @override
-  Future<void> reject(String id, {String? note}) async =>
-      throw const ValidationError();
+    }
+    final request = _requests[index];
+    _requests = <ConsultationRequest>[
+      ..._requests.take(index),
+      ConsultationRequest(
+        id: request.id,
+        memberId: request.memberId,
+        memberName: request.memberName,
+        goalCode: request.goalCode,
+        purposeCode: request.purposeCode,
+        preferredDate: request.preferredDate,
+        preferredTimeCode: request.preferredTimeCode,
+        status: status,
+        message: request.message,
+        purposeDetail: request.purposeDetail,
+        viaGym: request.viaGym,
+        gymName: request.gymName,
+        decisionNote: note,
+      ),
+      ..._requests.skip(index + 1),
+    ];
+  }
 }
 
 /// Real backend: `/trainer/consultations`.
@@ -104,22 +168,35 @@ class DioConsultationRepository implements ConsultationRepository {
   }
 
   @override
-  Future<void> accept(String id) => _decide(id, 'accept', null);
+  Future<void> accept(String id, {ConsultationSchedule? schedule}) =>
+      _decide(id, 'accept', null, schedule: schedule);
 
   @override
-  Future<void> reject(String id, {String? note}) =>
-      _decide(id, 'reject', note);
+  Future<void> reject(String id, {String? note}) => _decide(id, 'reject', note);
 
   /// Both decisions share their failure modes, so they share the mapping.
   ///
   /// 409 carries the server's own reason — already decided, or the member
   /// already has another trainer. That sentence is exactly what the
   /// trainer needs, so it is surfaced instead of a generic network error.
-  Future<void> _decide(String id, String action, String? note) async {
+  Future<void> _decide(
+    String id,
+    String action,
+    String? note, {
+    ConsultationSchedule? schedule,
+  }) async {
     try {
       await _dio.post<Map<String, Object?>>(
         '/trainer/consultations/${Uri.encodeComponent(id)}/$action',
-        data: <String, Object?>{'note': note},
+        data: <String, Object?>{
+          'note': note,
+          if (schedule != null) ...<String, Object?>{
+            'date': schedule.date,
+            'time': schedule.time,
+            'type': schedule.type,
+            'duration_minutes': schedule.durationMinutes,
+          },
+        },
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -141,7 +218,7 @@ class DioConsultationRepository implements ConsultationRepository {
 /// Provides the inbox source for the current mode.
 final consultationRepositoryProvider = Provider<ConsultationRepository>((ref) {
   if (ref.watch(appConfigProvider).useMockApi) {
-    return const DemoConsultationRepository();
+    return DemoConsultationRepository();
   }
   return DioConsultationRepository(ref.watch(dioProvider));
 }, name: 'consultationRepository');
@@ -181,8 +258,12 @@ final consultationPendingCountProvider = FutureProvider<int>((ref) async {
 /// The roster is invalidated too — accepting is precisely the moment a new
 /// client appears, and a stale 고객 tab would make the trainer wonder
 /// whether the approval worked.
-Future<void> acceptConsultation(WidgetRef ref, String id) async {
-  await ref.read(consultationRepositoryProvider).accept(id);
+Future<void> acceptConsultation(
+  WidgetRef ref,
+  String id, {
+  ConsultationSchedule? schedule,
+}) async {
+  await ref.read(consultationRepositoryProvider).accept(id, schedule: schedule);
   _refreshAfterDecision(ref);
   ref.invalidate(clientsProvider);
 }
