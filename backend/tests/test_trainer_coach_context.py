@@ -64,7 +64,8 @@ def test_a_follow_up_question_carries_the_previous_exchange(
 
     first = _ask(client, token, member_id, "이 회원 무릎 상태 어떻게 볼까요?")
     assert first.status_code == 200, first.text
-    _ask(client, token, member_id, "그럼 다음 주는요?")
+    second = _ask(client, token, member_id, "그럼 다음 주는요?")
+    assert second.status_code == 200, second.text
 
     # 두 번째 요청의 프롬프트에 첫 질문과 답이 들어 있어야 한다.
     assert "이 회원 무릎 상태" in seen_prompts[-1]

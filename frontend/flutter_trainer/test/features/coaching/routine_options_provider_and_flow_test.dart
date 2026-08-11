@@ -53,11 +53,17 @@ class _CapturingRoutineRepository implements TrainerRoutineRepository {
 
   AssignedRoutine? assigned;
   String? memberId;
+  String? lastClientRequestId;
 
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {
     this.memberId = memberId;
     assigned = routine;
+    lastClientRequestId = clientRequestId;
   }
 
   @override
@@ -86,8 +92,16 @@ class _ThrowingRoutineRepository implements TrainerRoutineRepository {
 
   final Object error;
 
+  /// 시도마다 넘어온 멱등키 — 재시도가 같은 키인지 확인한다(#581).
+  final List<String?> attempts = <String?>[];
+
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {
+    attempts.add(clientRequestId);
     throw error;
   }
 
@@ -127,6 +141,8 @@ Future<void> _driveToSendReady(WidgetTester tester) async {
 }
 
 void main() {
+  group('생성 실패 문구 분기', _rateLimitMessageTests);
+
   group('trainerRoutineOptionsRepositoryProvider', () {
     test('mock when USE_MOCK_API=true', () {
       final c = ProviderContainer(
@@ -357,22 +373,22 @@ void main() {
   });
 
   testWidgets(
-    'a network/timeout assign failure shows the ambiguous verify-first '
-    "message, not '다시 시도' (assign is not idempotent — retrying on an "
-    'ambiguous failure risks a duplicate routine)',
+    '네트워크 실패도 재시도를 안내하고, 재시도는 같은 멱등키를 다시 보낸다 (#581)',
     (tester) async {
+      // 서버가 (trainer_id, member_id, client_request_id) 로 중복 배정을 막으므로
+      // 애매한 실패(서버는 커밋했는데 응답만 유실) 뒤에도 안전하게 다시 보낼 수
+      // 있다. 예전에는 "먼저 확인하라"고 안내할 수밖에 없었다.
       tester.view.physicalSize = const Size(1000, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      final repository = _ThrowingRoutineRepository(const NetworkError());
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
             appConfigProvider.overrideWithValue(_mockConfig),
-            trainerRoutineRepositoryProvider.overrideWithValue(
-              _ThrowingRoutineRepository(const NetworkError()),
-            ),
+            trainerRoutineRepositoryProvider.overrideWithValue(repository),
           ],
           child: MaterialApp(
           locale: const Locale('ko'),
@@ -390,16 +406,25 @@ void main() {
       );
 
       await _driveToSendReady(tester);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('send-selected-routine')),
+      final sendButton = find.byKey(
+        const ValueKey<String>('send-selected-routine'),
       );
+      await tester.tap(sendButton);
       await tester.pumpAndSettle();
 
+      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+
+      // 트레이너가 다시 누른다 — 같은 키가 나가야 중복 배정이 안 생긴다.
+      await tester.tap(sendButton);
+      await tester.pumpAndSettle();
+
+      expect(repository.attempts, hasLength(2));
+      expect(repository.attempts.first, isNotNull);
       expect(
-        find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-        findsOneWidget,
+        repository.attempts.first,
+        repository.attempts.last,
+        reason: '재시도가 새 키를 만들면 서버가 중복을 막을 수 없다',
       );
-      expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
     },
   );
 
@@ -444,5 +469,78 @@ void main() {
       find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
       findsNothing,
     );
+  });
+}
+
+/// Always throws [error] from `generate`, to exercise the generate button's
+/// failure-message branching (한도 초과 vs. 그 외).
+class _ThrowingOptionsRepository implements TrainerRoutineOptionsRepository {
+  _ThrowingOptionsRepository(this.error);
+
+  final Object error;
+
+  @override
+  Future<RoutineOptions> generate(
+    String memberId, {
+    required int availableMinutes,
+    required String intensityPreference,
+    required String trainerNote,
+  }) async {
+    throw error;
+  }
+}
+
+Future<void> _pumpFlowWithOptionsError(WidgetTester tester, Object error) async {
+  tester.view.physicalSize = const Size(1000, 2400);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        appConfigProvider.overrideWithValue(_mockConfig),
+        trainerRoutineOptionsRepositoryProvider.overrideWithValue(
+          _ThrowingOptionsRepository(error),
+        ),
+      ],
+      child: MaterialApp(
+        locale: const Locale('ko'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AiRoutineOptionsFlow(
+          client: _client,
+          recommendedExercises: <RoutineExercise>[
+            RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
+          ],
+          recommendedReason: '기존 고객 데이터 기반 추천',
+        ),
+      ),
+    ),
+  );
+
+  await tester.ensureVisible(
+    find.byKey(const ValueKey<String>('generate-routine-options')),
+  );
+  await tester.tap(
+    find.byKey(const ValueKey<String>('generate-routine-options')),
+  );
+  await tester.pumpAndSettle();
+}
+
+void _rateLimitMessageTests() {
+  testWidgets('한도 초과(429)는 고장이 아니라 기다리라고 안내한다 (#582)', (tester) async {
+    // 429 를 다른 오류와 뭉뚱그리면 트레이너가 기능이 깨진 것으로 읽는다.
+    await _pumpFlowWithOptionsError(tester, const RateLimitedError());
+
+    expect(find.text('AI 생성을 너무 자주 요청했어요. 잠시 후 다시 시도해 주세요'), findsOneWidget);
+    expect(find.text('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요'), findsNothing);
+  });
+
+  testWidgets('그 밖의 실패는 기존 문구를 그대로 쓴다 (#582)', (tester) async {
+    await _pumpFlowWithOptionsError(tester, const ServerError(statusCode: 500));
+
+    expect(find.text('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요'), findsOneWidget);
+    expect(find.text('AI 생성을 너무 자주 요청했어요. 잠시 후 다시 시도해 주세요'), findsNothing);
   });
 }

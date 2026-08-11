@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -17,6 +20,7 @@ class _FakeCoachRepository implements ClientCoachRepository {
     this.failure,
     this.stored = const <ClientCoachTurn>[],
     this.historyFailure,
+    this.historyFuture,
   });
 
   final ClientCoachAnswer? answer;
@@ -27,6 +31,9 @@ class _FakeCoachRepository implements ClientCoachRepository {
 
   /// 복원만 실패시키고 싶을 때. 새 질문은 여전히 되어야 한다.
   final AppError? historyFailure;
+
+  /// 복원 경합을 재현하기 위한 지연 응답.
+  final Future<List<ClientCoachTurn>>? historyFuture;
 
   final List<(String, String)> asked = <(String, String)>[];
   final List<String> restored = <String>[];
@@ -48,6 +55,7 @@ class _FakeCoachRepository implements ClientCoachRepository {
   Future<List<ClientCoachTurn>> history({required String memberId}) async {
     restored.add(memberId);
     if (historyFailure != null) throw historyFailure!;
+    if (historyFuture != null) return historyFuture!;
     return stored;
   }
 }
@@ -61,8 +69,7 @@ Future<void> _openClient(
     token: 'demo-trainer-token',
     at: AppRoutes.clientDetail(_minsuId, section: 'diet'),
     extraOverrides: <Override>[
-      if (coach != null)
-        clientCoachRepositoryProvider.overrideWithValue(coach),
+      if (coach != null) clientCoachRepositoryProvider.overrideWithValue(coach),
     ],
   );
 }
@@ -177,6 +184,41 @@ void main() {
     expect(find.text('첫 질문입니다'), findsOneWidget);
     expect(find.text('두 번째 질문입니다'), findsOneWidget);
     expect(find.text('두 번째 답변입니다'), findsOneWidget);
+  });
+
+  testWidgets('지난 문답을 복원하는 동안에는 새 질문을 보낼 수 없다', (WidgetTester tester) async {
+    final history = Completer<List<ClientCoachTurn>>();
+    final repo = _FakeCoachRepository(historyFuture: history.future);
+    await _openClient(tester, coach: repo);
+
+    await tester.tap(find.text('AI에게 묻기'));
+    await tester.pump();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).enabled,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<ActionButton>(find.widgetWithText(ActionButton, '물어보기'))
+          .onPressed,
+      isNull,
+    );
+    expect(repo.asked, isEmpty);
+
+    history.complete(const <ClientCoachTurn>[]);
+    await settle(tester);
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).enabled,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<ActionButton>(find.widgetWithText(ActionButton, '물어보기'))
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('복원이 실패해도 새로 물어볼 수 있다', (WidgetTester tester) async {

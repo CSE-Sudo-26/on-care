@@ -11,9 +11,10 @@ LLM 을 실패시키면 검색 기반 폴백 경로가 도는데, 그 경로에�
 from __future__ import annotations
 
 import uuid
+from threading import Barrier, Lock, Thread
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.models.models import AiConversation, AiMessage, User
 from app.services.coach import conversation
@@ -122,6 +123,73 @@ def test_multiple_turns_keep_their_order(client, member):
     assert [m["content"] for m in messages if m["role"] == "user"] == [
         "질문 0", "질문 1", "질문 2",
     ]
+
+
+def test_concurrent_exchanges_share_one_thread_and_keep_unique_sequence(
+    client, db_session, member, monkeypatch,
+):
+    """동시 첫 요청도 한 스레드와 연속된 질문·답변 순번으로 저장된다."""
+    from app.db.session import SessionLocal
+
+    user, _ = member
+    user_id = user.id
+    ready = Barrier(2)
+    original_new_id = conversation._new_id
+
+    def synchronized_new_id(prefix: str) -> str:
+        value = original_new_id(prefix)
+        if prefix == "aiconv":
+            # 두 요청 모두 '활성 스레드 없음'을 확인한 뒤 INSERT 하게 해 생성 경쟁을
+            # 결정적으로 재현한다. 유니크 인덱스가 없으면 스레드가 둘 생긴다.
+            ready.wait(timeout=10)
+        return value
+
+    monkeypatch.setattr(conversation, "_new_id", synchronized_new_id)
+
+    errors: list[Exception] = []
+    error_lock = Lock()
+
+    def append(question: str) -> None:
+        try:
+            with SessionLocal() as session:
+                conversation.append_exchange(
+                    session,
+                    user_id,
+                    question=question,
+                    reply=f"{question} 답변",
+                    sources=[],
+                )
+        except Exception as exc:  # noqa: BLE001 — 작업 스레드 오류를 본 테스트로 전달
+            with error_lock:
+                errors.append(exc)
+
+    threads = [Thread(target=append, args=(f"동시 질문 {i}",)) for i in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    assert all(not thread.is_alive() for thread in threads), "동시 저장이 교착됐습니다."
+    assert errors == []
+
+    db_session.expire_all()
+    conversations = db_session.scalars(
+        select(AiConversation).where(
+            AiConversation.user_id == user_id,
+            AiConversation.archived_at.is_(None),
+        )
+    ).all()
+    assert len(conversations) == 1
+
+    messages = db_session.scalars(
+        select(AiMessage)
+        .where(AiMessage.conversation_id == conversations[0].id)
+        .order_by(AiMessage.seq)
+    ).all()
+    assert [message.seq for message in messages] == [0, 1, 2, 3]
+    assert [message.role for message in messages] == ["user", "coach"] * 2
+    for question, reply in zip(messages[::2], messages[1::2], strict=True):
+        assert reply.content == f"{question.content} 답변"
 
 
 def test_sources_survive_a_reload(client, member):

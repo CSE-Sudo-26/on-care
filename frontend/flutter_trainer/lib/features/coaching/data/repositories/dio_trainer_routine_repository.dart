@@ -15,21 +15,22 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
 
   /// Assigns [routine] to [memberId].
   ///
-  /// NOT idempotent: `POST /trainer/clients/{id}/routines` inserts a fresh
-  /// `rt-{uuid}` row on every call, with no client-request-id/dedup key
-  /// today. If this throws after a network timeout, the backend may have
-  /// already committed the assign before the client gave up waiting —
-  /// blindly retrying can leave the member with two copies of the same
-  /// routine. Callers that retry on failure should special-case a network/
-  /// timeout error (ambiguous outcome) rather than assume a clean retry is
-  /// always safe (review; a full fix needs a backend idempotency key).
+  /// [clientRequestId] 를 주면 그 전송 시도에 대해 멱등하다 — 서버가
+  /// `(trainer_id, member_id, client_request_id)` 로 중복을 막고, 같은 키의
+  /// 재요청에는 먼저 저장된 배정을 그대로 돌려준다(#581). 그래서 네트워크
+  /// 타임아웃처럼 결과를 알 수 없는 실패 뒤에도 **같은 키로** 안전하게 재시도할
+  /// 수 있다. 키를 생략하면 예전처럼 매 호출이 새 배정이 된다.
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {
     final encodedId = Uri.encodeComponent(memberId);
     try {
       await _dio.post<Map<String, Object?>>(
         '/trainer/clients/$encodedId/routines',
-        data: assignRoutineToJson(routine),
+        data: assignRoutineToJson(routine, clientRequestId: clientRequestId),
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);

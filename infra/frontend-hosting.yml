@@ -7,7 +7,7 @@ Parameters:
     Default: CSE-Sudo-26
   GitHubRepository:
     Type: String
-    Default: sudo-capstone-project
+    Default: on-care
   GitHubBranch:
     Type: String
     Default: main
