@@ -14,9 +14,10 @@ import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 /// 하루치를 시드하고 analyze(=추가)/수정/삭제를 메모리에 유지하므로, 식단 탭 목록과
 /// "오늘의 영양 요약" 합계가 앱을 통한 편집을 따라간다(#294).
 ///
-/// Per-food nutrition is the single source of truth for the seeded meal and
-/// daily totals. CRUD applies calories, sodium, and sugar deltas on top of the
-/// seed; macro totals are derived from the current entries.
+/// 하루 합계는 **항상 [_entries] 에서 계산한다.** 예전에는 칼로리·나트륨·당류만
+/// 따로 캐시해 두고 CRUD 마다 증감을 더했는데, 경로가 셋(추가·수정·삭제)이라 하나만
+/// 빠져도 대역이 항목과 어긋난 합계를 돌려주게 된다 — 매크로는 이미 항목에서 계산하고
+/// 있었으므로 표현이 둘로 갈려 있기도 했다(리뷰).
 class FakeDietRepository implements DietRepository {
   FakeDietRepository();
 
@@ -116,9 +117,14 @@ class FakeDietRepository implements DietRepository {
     ),
   ];
 
-  int _totalCalories = 1067;
-  int _totalSodiumMg = 3428;
-  double _totalSugarG = 17.8;
+  int get _totalCalories =>
+      _entries.fold<int>(0, (int sum, DietEntry e) => sum + e.totalCalories);
+
+  int get _totalSodiumMg =>
+      _entries.fold<int>(0, (int sum, DietEntry e) => sum + e.sodiumMg);
+
+  double get _totalSugarG =>
+      _entries.fold<double>(0, (double sum, DietEntry e) => sum + e.sugarG);
   int _seq = 0;
 
   // idempotencyKey → 이미 기록한 분석 결과. 응답 유실 후 재시도(같은 키)에
@@ -181,10 +187,6 @@ class FakeDietRepository implements DietRepository {
             .toList(),
       ),
     );
-    _totalCalories += cals;
-    _totalSodiumMg += sodium;
-    _totalSugarG += sugar;
-
     final DietAnalysisResult result = DietAnalysisResult(
       entryId: id,
       foods: foods,
@@ -250,10 +252,6 @@ class FakeDietRepository implements DietRepository {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     final int idx = _entries.indexWhere((DietEntry e) => e.id == id);
     if (idx < 0) return;
-    final DietEntry e = _entries[idx];
-    _totalCalories = _nonNegInt(_totalCalories - e.totalCalories);
-    _totalSodiumMg = _nonNegInt(_totalSodiumMg - e.sodiumMg);
-    _totalSugarG = _nonNegDouble(_totalSugarG - e.sugarG);
     _entries.removeAt(idx);
     // 이 항목을 가리키던 멱등 캐시 키를 제거한다. 안 그러면 삭제 후 같은
     // idempotencyKey 로 재요청할 때 이미 사라진 항목의 낡은 결과만 반환되고
@@ -304,13 +302,6 @@ class FakeDietRepository implements DietRepository {
       foods: updatedFoods,
     );
     if (old != null) {
-      _totalCalories = _nonNegInt(
-        _totalCalories + updated.totalCalories - old.totalCalories,
-      );
-      _totalSodiumMg = _nonNegInt(
-        _totalSodiumMg + updated.sodiumMg - old.sodiumMg,
-      );
-      _totalSugarG = _nonNegDouble(_totalSugarG + updated.sugarG - old.sugarG);
       _entries[idx] = updated;
     }
     return updated;
@@ -330,8 +321,6 @@ class FakeDietRepository implements DietRepository {
     return '$hh:$mm';
   }
 
-  int _nonNegInt(int v) => v < 0 ? 0 : v;
-  double _nonNegDouble(double v) => v < 0 ? 0 : v;
 }
 
 const List<DietEntry> _yesterdayEntries = <DietEntry>[

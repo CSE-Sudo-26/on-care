@@ -403,6 +403,91 @@ void main() {
       }
     },
   );
+
+  group('하루 합계는 항상 항목에서 파생된다 (리뷰)', () {
+    // 예전에는 칼로리·나트륨·당류를 따로 캐시하고 CRUD 마다 증감을 더했다. 경로가
+    // 셋이라 하나만 빠져도 합계가 항목과 어긋나는데, 대역이 그런 상태를 돌려주면
+    // 화면 테스트가 실제와 다른 것을 검증하게 된다.
+
+    test('시드 상태에서 이미 일치한다', () async {
+      final repo = FakeDietRepository();
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('분석으로 추가한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+
+      await repo.analyze(photo: photo, mealType: 'dinner');
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('수정한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+      final DietDay before = await repo.fetchToday();
+
+      await repo.updateEntry(
+        id: before.entries.first.id!,
+        totalCalories: 999,
+        sodiumMg: 111,
+        sugarG: 4.5,
+      );
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('삭제한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+      final DietDay before = await repo.fetchToday();
+
+      await repo.deleteEntry(before.entries.first.id!);
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('전부 지우면 0 이 된다 — 캐시가 남아 음수로 고정되지 않는다', () async {
+      final repo = FakeDietRepository();
+      for (final DietEntry entry in (await repo.fetchToday()).entries) {
+        await repo.deleteEntry(entry.id!);
+      }
+
+      final DietDay day = await repo.fetchToday();
+      expect(day.entries, isEmpty);
+      expect(day.totalCalories, 0);
+      expect(day.totalSodiumMg, 0);
+      expect(day.totalSugarG, 0);
+    });
+  });
+}
+
+/// 하루 합계 세 값이 그 날 항목의 합과 같은지 확인한다.
+void _expectTotalsMatchEntries(DietDay day) {
+  expect(
+    day.totalCalories,
+    day.entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.totalCalories,
+    ),
+  );
+  expect(
+    day.totalSodiumMg,
+    day.entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.sodiumMg,
+    ),
+  );
+  expect(
+    day.totalSugarG,
+    closeTo(
+      day.entries.fold<double>(
+        0,
+        (double sum, DietEntry entry) => sum + entry.sugarG,
+      ),
+      0.001,
+    ),
+  );
+  _expectMacrosMatchEntries(day);
 }
 
 void _expectMacrosMatchEntries(DietDay day) {
