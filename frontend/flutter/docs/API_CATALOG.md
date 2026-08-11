@@ -91,7 +91,7 @@
 
 | Method | Path | Body / Query | 응답 | Flutter 사용처 |
 | --- | --- | --- | --- | --- |
-| GET | `/diet/days/today` | — | `DietDay` | `MockDietRepository.fetchToday` |
+| GET | `/diet/days/today` | — | `DietDay` | `DioDietRepository.fetchToday` (데모는 `LocalApiInterceptor` 가 응답) |
 | GET | `/diet/days/{date}` | `date=YYYY-MM-DD` | `DietDay` | (캘린더 진입 시) |
 | POST | `/diet/entries` | `DietEntry` (without id) | 생성된 `DietEntry` | FAB "식단 추가" |
 | PATCH | `/diet/entries/{id}` | partial `DietEntry` | 갱신된 entry | 식사 수정 |
