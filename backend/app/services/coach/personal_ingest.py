@@ -1,6 +1,12 @@
 """회원의 기록을 개인 RAG 문서로 적재(best-effort).
 
-지금 적재하는 것: 식단 기록(`record_diet`), 트레이너↔회원 채팅(`record_chat`, #580).
+지금 적재하는 것: 식단 기록(`record_diet`), 트레이너↔회원 채팅(`record_chat`, #580),
+운동 세션(`record_exercise`, #586).
+
+혈압·혈당은 여기 없고 앞으로도 없다 — 입력이 번거로워 **제품에서 빼기로 한 항목**이다
+(그래서 `vitals` 테이블도 엔드포인트도 없다). 적재를 깜빡한 게 아니므로 나중에
+"운동은 있는데 혈압은 왜 없지" 로 다시 열지 말 것. 다만 코치 프롬프트는 아직
+혈압·혈당 조언을 지시하고 있어, 그쪽을 줄이는 건 별도 과제다.
 적재해 두면 회원 앱 AI 코치의 두 경로(홈 피드백 카드·챗봇)가 retrieve 를 통해
 자동으로 근거로 쓴다 — 코치 쪽 코드를 건드리지 않아도 된다.
 
@@ -81,6 +87,40 @@ def record_chat(
         db, member_id, f"{date} 대화 — {speaker}: {text.strip()}",
         domain="general", source="chat",
     )
+
+
+#: 운동 타입/강도의 한국어 라벨. 검색 질의도 답변도 한국어라 저장 코드값(cardio,
+#: light …)을 그대로 넣으면 임베딩이 질의와 겉돈다.
+_EXERCISE_TYPE_KR = {
+    "cardio": "유산소",
+    "walking": "걷기",
+    "strength": "근력",
+    "yoga": "요가",
+    "stretching": "스트레칭",
+    "other": "기타",
+}
+_EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높음"}
+
+
+def record_exercise(
+    db: Session, user_id: str, *, date: str, exercise_type: str, minutes: int,
+    calories: int, intensity: str,
+) -> None:
+    """운동 세션 한 건을 개인 문서로 적재한다(#586).
+
+    운동 코치(`domain_coaches.exercise_coach`)는 `domain="exercise"` 로 검색하는데
+    지금까지 개인 문서가 하나도 없어, 프롬프트가 운동 조언을 지시해도 근거가 공공
+    가이드라인뿐이었다.
+
+    회원이 직접 남긴 기록과 PT 완료로 파생된 기록을 모두 받는다 — 회원 입장에서는
+    둘 다 '내가 한 운동'이고, 주간 집계도 이미 둘을 합쳐서 보여준다(#499).
+    """
+    text = (
+        f"{date} 운동 기록: "
+        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
+        f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
+    )
+    _safe(db, user_id, text, domain="exercise", source="exercise")
 
 
 def record_diet(

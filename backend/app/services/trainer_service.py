@@ -1049,6 +1049,7 @@ def complete_session(
         db.refresh(s)
         return _schedule_out(s)  # 동시 호출이 먼저 완료 처리함 — 기록 없이 현재 상태 반환
 
+    exercise_log: ExerciseSession | None = None
     if s.member_id:
         program = _program_items(s.program_json)
         exercises = [
@@ -1065,10 +1066,21 @@ def complete_session(
             exercises_json=json.dumps(exercises, ensure_ascii=False),
             trainer_note=note,
         ))
-        _add_member_exercise_log(db, s)
+        exercise_log = _add_member_exercise_log(db, s)
     db.commit()
     db.refresh(s)
-    return _schedule_out(s)
+    out = _schedule_out(s)
+    if exercise_log is not None:
+        # 회원 입장에서 PT 도 '내가 한 운동'이라 코치가 검색할 수 있어야 한다(#586).
+        # 커밋 뒤에 부르는 이유는 record_chat 과 같다 — 적재 실패의 롤백이 응답을
+        # 깨뜨리지 않도록, 값은 미리 뽑아 두고 응답도 이미 만들어 둔다.
+        personal_ingest.record_exercise(
+            db, exercise_log.user_id, date=s.date,
+            exercise_type=exercise_log.type,
+            minutes=exercise_log.minutes, calories=exercise_log.calories,
+            intensity=exercise_log.intensity,
+        )
+    return out
 
 
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅 / 내 세션) ----
