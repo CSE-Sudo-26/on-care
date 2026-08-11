@@ -53,9 +53,22 @@ alembic downgrade -1          # 한 단계 롤백
 ```bash
 curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/v1/system/metrics
 ```
-`routine_options.generated{by=ai}` 가 0 이고 `fallback{reason=...}` 만 쌓이면 AI 경로가
-죽은 것이다. `reason=contract` 는 응답 규격 문제(프롬프트·스키마), `reason=infra` 는
-키 미설정·네트워크·5xx 다. 관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
+응답의 `counters` 에 들어오는 키(전체 이름 그대로 조회):
+
+| 키 | 뜻 |
+| --- | --- |
+| `routine_options.generated{by=ai}` | LLM 이 만든 루틴. **0 이면 AI 경로가 죽은 것** |
+| `routine_options.generated{by=rule}` | 폴백으로 만든 루틴 |
+| `routine_options.fallback{reason=contract}` | 응답 규격 위반 → 프롬프트·스키마를 본다 |
+| `routine_options.fallback{reason=infra}` | 키 미설정·설정 오타·네트워크·5xx |
+| `routine_options.with_chat_context` | 채팅 근거가 실린 채 AI 가 성공한 횟수(#580) |
+| `diet_recommendations.generated{by=llm}` | LLM 이 만든 추천 |
+| `diet_recommendations.generated{by=rules}` | LLM 실패 후 규칙으로 만든 추천 |
+| `diet_recommendations.generated{by=no_data}` | 근거가 없어 LLM 을 부르지 않음(신규 가입자) |
+| `diet_recommendations.fallback{reason=busy\|timeout\|error}` | 동시 호출 한도·타임아웃·그 외 실패 |
+
+`durations` 에는 `routine_options.llm_ms` 가 count/avg/max 로 들어온다 — #584 의
+타임아웃 값을 정할 근거다. 관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
 값은 프로세스 메모리에 있어 재시작하면 사라진다(단일 인스턴스 기준).
 
 ## 프론트 연동 (실서버 전환)
