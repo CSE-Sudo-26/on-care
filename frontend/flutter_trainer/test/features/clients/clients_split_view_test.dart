@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 
 import '../../helpers/pump_app.dart';
@@ -67,6 +68,22 @@ void main() {
     expect(find.text('채팅'), findsOneWidget);
     expect(find.text('식단'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
+  });
+
+  testWidgets('picking a client does not expose the parent roster during '
+      'the route change', (tester) async {
+    await openWide(tester);
+
+    await tester.tap(card('김민수'));
+    await tester.pump();
+    await tester.pump();
+
+    // The detail route is nested under `/clients`. A default Material page
+    // transition leaves the parent roster exposed while the new page enters,
+    // which appears as a brief roster flash. The router consumes the first
+    // pump; the second is the first frame that contains the detail route.
+    expect(find.byType(ClientsPage), findsOneWidget);
+    expect(find.text('오늘 영양 요약'), findsOneWidget);
   });
 
   testWidgets('the close button collapses the panel back to the list', (

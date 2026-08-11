@@ -95,10 +95,12 @@ GoRouter buildAppRouter({
                   // a pushed screen — one widget owns the layout choice.
                   GoRoute(
                     path: AppRoutes.clientDetailPattern,
-                    builder: (context, state) => ClientsPage(
-                      selectedId: state.pathParameters['id'],
-                      section: state.pathParameters['section'],
-                      filter: state.uri.queryParameters['f'],
+                    pageBuilder: (context, state) => NoTransitionPage<void>(
+                      child: ClientsPage(
+                        selectedId: state.pathParameters['id'],
+                        section: state.pathParameters['section'],
+                        filter: state.uri.queryParameters['f'],
+                      ),
                     ),
                   ),
                 ],
