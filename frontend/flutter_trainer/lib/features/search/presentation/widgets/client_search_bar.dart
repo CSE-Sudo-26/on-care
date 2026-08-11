@@ -34,7 +34,7 @@ const double _fieldMaxWidth = 360;
 const double _minInlineWidth = 240;
 
 /// Height cap of the results card (≈ five rows plus the footer).
-const double _dropdownMaxHeight = 300;
+const double _dropdownMaxHeight = 360;
 
 /// Key of the search input, so a test can type into it without guessing
 /// which of the page's fields it is.
@@ -308,22 +308,26 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
         controller: _controller,
         focusNode: _focus,
         textInputAction: TextInputAction.search,
-        style: const TextStyle(fontSize: 13, color: AppColors.foreground),
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: AppColors.foreground,
+        ),
         decoration: InputDecoration(
           isDense: true,
           filled: true,
           fillColor: AppColors.inputBackground,
           hintText: l.searchClientsHint,
           hintStyle: const TextStyle(
-            fontSize: 13,
+            fontSize: 15,
             color: AppColors.subtleForeground,
           ),
           prefixIcon: const Icon(
             Icons.search,
-            size: 18,
+            size: 20,
             color: AppColors.subtleForeground,
           ),
-          prefixIconConstraints: const BoxConstraints(minWidth: 36),
+          prefixIconConstraints: const BoxConstraints(minWidth: 40),
           suffixIcon: _hasQuery
               ? IconButton(
                   // The controller has to be emptied too — clearing only
@@ -334,14 +338,14 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
                     _onQueryChanged('');
                   },
                   tooltip: l.searchClear,
-                  iconSize: 16,
-                  splashRadius: 16,
+                  iconSize: 18,
+                  splashRadius: 18,
                   color: AppColors.subtleForeground,
                   icon: const Icon(Icons.close),
                 )
               : null,
-          suffixIconConstraints: const BoxConstraints(minWidth: 36),
-          contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          suffixIconConstraints: const BoxConstraints(minWidth: 40),
+          contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           border: _fieldBorder,
           enabledBorder: _fieldBorder,
           focusedBorder: _fieldBorder,
@@ -484,7 +488,7 @@ class _ResultsCard extends StatelessWidget {
   }
 }
 
-class _ResultRow extends StatelessWidget {
+class _ResultRow extends StatefulWidget {
   const _ResultRow({
     required this.client,
     required this.detail,
@@ -502,72 +506,115 @@ class _ResultRow extends StatelessWidget {
   final ValueChanged<String> onOpenDestination;
 
   @override
+  State<_ResultRow> createState() => _ResultRowState();
+}
+
+class _ResultRowState extends State<_ResultRow> {
+  bool _showDestinations = false;
+
+  @override
   Widget build(BuildContext context) {
     return Material(
-      color: highlighted ? AppColors.accentSurface : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
+      color: widget.highlighted ? AppColors.accentSurface : Colors.transparent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
             children: <Widget>[
-              ClientAvatar(label: client.avatar, size: 30),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      client.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.foreground,
-                      ),
+                child: InkWell(
+                  onTap: widget.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: AppSpacing.md,
+                      top: AppSpacing.md,
+                      bottom: AppSpacing.md,
                     ),
-                    Text(
-                      detail,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.subtleForeground,
-                      ),
+                    child: Row(
+                      children: <Widget>[
+                        ClientAvatar(label: widget.client.avatar, size: 36),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                widget.client.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                widget.detail,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.subtleForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-              PopupMenuButton<_SearchDestination>(
-                key: clientSearchQuickActionsKey(client.id),
-                tooltip: AppLocalizations.of(context).searchQuickActions,
-                icon: const Icon(Icons.more_horiz, size: 18),
-                color: AppColors.card,
-                onSelected: (destination) {
-                  final route = routes[destination];
-                  if (route != null) onOpenDestination(route);
-                },
-                itemBuilder: (context) => <PopupMenuEntry<_SearchDestination>>[
-                  for (final destination in _SearchDestination.values)
-                    _destinationItem(context, destination),
-                ],
+              Semantics(
+                label: AppLocalizations.of(context).searchQuickActions,
+                button: true,
+                child: IconButton(
+                  key: clientSearchQuickActionsKey(widget.client.id),
+                  onPressed: () =>
+                      setState(() => _showDestinations = !_showDestinations),
+                  icon: Icon(
+                    _showDestinations ? Icons.expand_less : Icons.more_horiz,
+                    size: 22,
+                  ),
+                ),
               ),
+              const SizedBox(width: AppSpacing.xs),
             ],
           ),
-        ),
+          if (_showDestinations) _destinations(context),
+        ],
       ),
     );
   }
 
-  PopupMenuItem<_SearchDestination> _destinationItem(
+  Widget _destinations(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.borderStrong)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      child: Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        children: <Widget>[
+          for (final destination in _SearchDestination.values)
+            _destinationButton(context, destination),
+        ],
+      ),
+    );
+  }
+
+  Widget _destinationButton(
     BuildContext context,
     _SearchDestination destination,
   ) {
     final l = AppLocalizations.of(context);
-    final route = routes[destination];
+    final route = widget.routes[destination];
     final (label, icon, keyName) = switch (destination) {
       _SearchDestination.clients => (
         l.navClients,
@@ -575,9 +622,7 @@ class _ResultRow extends StatelessWidget {
         'clients',
       ),
       _SearchDestination.schedule => (
-        route == null
-            ? '${l.navSchedule} · ${l.searchDetailNoUpcoming}'
-            : l.navSchedule,
+        l.navSchedule,
         Icons.calendar_today_outlined,
         'schedule',
       ),
@@ -592,16 +637,28 @@ class _ResultRow extends StatelessWidget {
         'reports',
       ),
     };
-    return PopupMenuItem<_SearchDestination>(
-      key: clientSearchDestinationKey(client.id, keyName),
-      value: destination,
+    return Semantics(
+      label: route == null ? '$label · ${l.searchDetailNoUpcoming}' : label,
+      button: true,
       enabled: route != null,
-      child: Row(
-        children: <Widget>[
-          Icon(icon, size: 18),
-          const SizedBox(width: AppSpacing.sm),
-          Text(label),
-        ],
+      child: OutlinedButton.icon(
+        key: clientSearchDestinationKey(widget.client.id, keyName),
+        onPressed: route == null ? null : () => widget.onOpenDestination(route),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.foreground,
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          textStyle: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+          side: const BorderSide(color: AppColors.borderStrong),
+        ),
+        icon: Icon(icon, size: 17),
+        label: Text(label),
       ),
     );
   }
@@ -627,7 +684,7 @@ class _Footer extends StatelessWidget {
         children: <Widget>[
           const Icon(
             Icons.subdirectory_arrow_left,
-            size: 13,
+            size: 15,
             color: AppColors.subtleForeground,
           ),
           const SizedBox(width: AppSpacing.xs),
@@ -636,7 +693,7 @@ class _Footer extends StatelessWidget {
               text,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.subtleForeground,
               ),
@@ -716,7 +773,8 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                 autofocus: true,
                 textInputAction: TextInputAction.search,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.foreground,
                 ),
                 decoration: InputDecoration(
@@ -725,15 +783,15 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                   fillColor: AppColors.card,
                   hintText: l.searchClientsHint,
                   hintStyle: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 15,
                     color: AppColors.subtleForeground,
                   ),
                   prefixIcon: const Icon(
                     Icons.search,
-                    size: 18,
+                    size: 20,
                     color: AppColors.subtleForeground,
                   ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 36),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 40),
                   contentPadding: const EdgeInsets.symmetric(
                     vertical: AppSpacing.md,
                   ),

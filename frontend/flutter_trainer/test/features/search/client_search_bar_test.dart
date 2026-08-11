@@ -280,8 +280,24 @@ void main() {
     await openConsole(tester, AppRoutes.reports);
     await search(tester, '김민수');
 
+    expect(
+      find.descendant(
+        of: results,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is PopupMenuButton || widget is Tooltip,
+        ),
+      ),
+      findsNothing,
+      reason: '결과 오버레이 안에 또 다른 오버레이를 여는 위젯을 두지 않는다',
+    );
+
     await tester.tap(find.byKey(clientSearchQuickActionsKey('seed-client-1')));
     await settle(tester);
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(clientSearchDestinationKey('seed-client-1', 'coaching')),
+      findsOneWidget,
+    );
     await tester.tap(
       find.byKey(clientSearchDestinationKey('seed-client-1', 'coaching')),
     );
