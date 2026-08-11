@@ -21,10 +21,12 @@ const instance, in which case Riverpod may leave its dependents unchanged.
 | `exerciseRepositoryProvider`, `exerciseWeekProvider` | The mock repository mutates sessions in memory; the leaf caches the week | Recreate the mock root and invalidate the leaf |
 | `exerciseRoutineDoneProvider` | Non-auto-dispose local completion flags | Restore the initial flags |
 | `gymRepositoryProvider`, `myGymProvider`, `myTrainerProvider` | The mock repository mutates membership links; leaves cache account links | Recreate the mock root and invalidate account leaves |
+| `myReservationsProvider` | Reservations are per account. The leaf already refetches through the gym repository root, but relying on that propagation is fragile | Invalidate the leaf explicitly, like the other gym leaves |
 | `consultationRequestControllerProvider` | Non-auto-dispose in-memory requests and pending state | Recreate the controller |
 | `memberCoachRepositoryProvider` and its four leaf providers | The mock repository mutates chat; leaves cache coach, routines, chat, and unread state | Recreate the mock root and invalidate all four leaves |
 | `myHealthStateProvider` | Non-auto-dispose profile, health risk, points, and settings cache | Invalidate the cached state |
 | Notification controller/list | The controller retains read and simulated-push state; an active list watcher can retain fetched items | Recreate the controller and invalidate the list |
+| `notificationSettingsProvider` | Delivery settings are stored per account on the real backend; the cached toggles otherwise survive until an app restart | Invalidate the cached settings |
 | Schedule date/month families | Active family instances can retain account schedule entries | Invalidate every family instance |
 
 Auto-dispose alone is not a sufficient boundary: demo-to-login authentication
@@ -32,6 +34,27 @@ can succeed without leaving the current page, so an actively watched provider
 can survive the transition. Authentication success therefore publishes the new
 access token before resetting feature state, ensuring immediate refetches use
 the new account.
+
+## How to decide
+
+두 개가 조용히 빠져 있었던 이유는 기준이 글로 없었기 때문이다(#634). 새 provider 를
+만들 때 아래를 순서대로 묻는다.
+
+1. **이 값이 계정마다 다른가?** 다르면 등록한다. 서버가 계정별로 주는 것(예약, 알림 수신
+   설정, 프로필)과 데모 저장소가 계정별로 들고 있는 것 모두 해당한다.
+2. **자동 폐기(auto-dispose)에 기대도 되는가?** 안 된다. 데모에서 로그인으로 넘어가는
+   전환은 화면을 떠나지 않고도 성립하므로, 보고 있는 provider 는 전환을 그대로 살아남는다.
+3. **뿌리(저장소)만 무효화하면 되는가?** 안 된다. 저장소가 같은 const 인스턴스로 다시
+   만들어지면 Riverpod 이 그 의존자를 그대로 둘 수 있다. 화면이 읽는 잎도 함께 적는다.
+   `myReservationsProvider` 는 뿌리(`gymRepositoryProvider`)를 통해 이미 다시 조회되고
+   있었지만, 그 전이는 뿌리 구조가 바뀌면 조용히 끊긴다. 같은 뿌리를 보는 다른 잎들처럼
+   명시적으로 적었다.
+4. **다른 곳에서 이미 무효화하니 괜찮은가?** 그 무효화가 **세션 전환에서** 일어나는지
+   확인한다. 화면 안의 갱신(예약 직후 목록 새로고침 같은)은 계정이 바뀔 때 돌지 않는다.
+   `notificationSettingsProvider` 가 그렇게 빠져 있었다 — 잎도 그 저장소도 레지스트리에
+   없어 전이조차 일어나지 않았고, 앞 계정의 토글이 앱을 다시 켤 때까지 남았다.
+
+계정과 무관한 것(기기 표시 설정, 공개 장소 검색, 앱 인프라)은 아래 표에 남긴다.
 
 ## Intentionally retained
 
