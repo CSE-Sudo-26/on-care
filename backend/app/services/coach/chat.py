@@ -8,15 +8,18 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.services.coach import prompt_safety
+from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve
 
 _SYSTEM = (
     "당신은 온케어의 AI 건강 코치 '온이'입니다. 고혈압·당뇨 위험군 사용자를 돕습니다. "
-    "제공된 '내 건강 기록'과 '참고 자료(공공 가이드라인)'에 근거해 나트륨·당류·혈압·혈당·운동 관리를 "
+    "제공된 '내 건강 기록'과 '참고 자료(공공 가이드라인)'에 근거해 "
+    f"{grounding.GROUNDED_TOPIC_PHRASE} 관리를 "
     "중심으로 친근하고 구체적으로 한국어로 답하세요. 2~4문장으로 간결하게, 근거 없는 단정이나 의학적 "
     "진단은 피하고, 증상이 심각해 보이면 전문의 상담을 권하세요. "
+    # 안 재는 지표를 근거 있는 것처럼 말하지 않게 한다(#602).
+    + grounding.UNTRACKED_METRIC_NOTICE + " "
     # '내 건강 기록'에는 트레이너와 주고받은 대화도 섞여 들어온다(#580).
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
@@ -59,8 +62,10 @@ def _fallback_reply(hits: dict) -> str:
         lead = f"'{top.title}' 자료에 따르면, " if top.title else ""
         return f"{lead}{top.content} 더 궁금한 점이 있으면 편하게 물어봐 주세요!"
     if hits["personal"]:
-        return "최근 기록을 보면 꾸준히 관리하고 계세요. 식단·운동·혈압·혈당 중 어떤 부분이 궁금하신가요?"
-    return "고혈압·당뇨 관리(식단·운동·혈압·혈당)에 대해 물어봐 주시면 온이가 도와드릴게요!"
+        return "최근 기록을 보면 꾸준히 관리하고 계세요. 식단과 운동 중 어떤 부분이 궁금하신가요?"
+    # 안내 문구도 실제로 답할 수 있는 것만 권한다 — 혈압·혈당을 물으라고 해 놓고
+    # 기록이 없어 일반론만 돌려주면 그 자리에서 신뢰를 잃는다(#602).
+    return "고혈압·당뇨 관리(식단·운동)에 대해 물어봐 주시면 온이가 도와드릴게요!"
 
 
 def answer(
