@@ -10,8 +10,8 @@
 
 기존 행은 전부 회원 본인 대화이므로 NULL 이 맞다. 백필이 필요 없다.
 
-Revision ID: 0028_aiconv_trainer
-Revises: 0027_exercise_source
+Revision ID: 0029_aiconv_trainer
+Revises: 0028_routine_client_req
 Create Date: 2026-08-11
 """
 from __future__ import annotations
@@ -21,8 +21,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0028_aiconv_trainer"
-down_revision: str | Sequence[str] | None = "0027_exercise_source"
+revision: str = "0029_aiconv_trainer"
+down_revision: str | Sequence[str] | None = "0028_routine_client_req"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
