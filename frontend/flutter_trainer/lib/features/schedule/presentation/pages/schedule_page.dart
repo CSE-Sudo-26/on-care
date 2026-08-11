@@ -1566,6 +1566,7 @@ class _DayCell extends StatelessWidget {
         : (isToday ? AppColors.primary : AppColors.subtleForeground);
 
     return InkWell(
+      key: ValueKey<String>('schedule-day-${ymd(date)}'),
       onTap: onTap,
       borderRadius: const BorderRadius.all(AppRadius.lg),
       child: Container(
