@@ -107,7 +107,17 @@ def _stub_llm(monkeypatch, behaviour):
     from app.services.coach.llm_base import LLMResult
 
     class _StubLLM:
-        def generate(self, system_prompt: str, user_prompt: str) -> LLMResult:
+        # 실제 호출부는 json_mode·thinking_budget 을 넘긴다. 스텁이 프로토콜
+        # (`llm_base.CoachLLM.generate`)을 그대로 받지 않으면 TypeError 가 나고,
+        # 서비스가 그걸 폴백으로 삼켜 계측 테스트가 엉뚱한 이유로 깨진다.
+        def generate(
+            self,
+            system_prompt: str,
+            user_prompt: str,
+            *,
+            json_mode: bool = False,
+            thinking_budget: int | None = None,
+        ) -> LLMResult:
             if isinstance(behaviour, Exception):
                 raise behaviour
             return LLMResult(text=behaviour, model="stub")
