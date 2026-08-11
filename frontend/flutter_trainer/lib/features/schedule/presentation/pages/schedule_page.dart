@@ -1386,7 +1386,7 @@ class _DayColumn extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.disabledForeground,
+                        color: AppColors.subtleForeground,
                       ),
                     ),
                   )
@@ -1718,7 +1718,7 @@ class _GapSlot extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: AppColors.disabledForeground,
+          color: AppColors.subtleForeground,
         ),
       ),
     );

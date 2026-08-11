@@ -150,10 +150,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ),
         error: (e, _) => Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
-          child: Center(
-            child: Text(
-              l.reportsLoadFailed,
-              style: TextStyle(color: AppColors.mutedForeground),
+          child: EmptyHint(
+            message: l.reportsLoadFailed,
+            icon: Icons.error_outline,
+            action: ActionButton(
+              key: const ValueKey<String>('reports-clients-retry'),
+              label: l.actionRetry,
+              onPressed: clientsAsync.isLoading
+                  ? null
+                  : () => ref.invalidate(clientsProvider),
             ),
           ),
         ),
@@ -199,11 +204,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   // The report itself comes from the repository: local
                   // in demo, server-aggregated against the real API
                   // (only the backend has the member's full history).
+                  final reportKey = (client: selected, weekStart: _weekStart);
                   final reportAsync = ref.watch(
-                    weeklyReportProvider((
-                      client: selected,
-                      weekStart: _weekStart,
-                    )),
+                    weeklyReportProvider(reportKey),
                   );
                   final report = reportAsync.when(
                     loading: () => SectionCard(
@@ -217,7 +220,19 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     error: (e, _) => SectionCard(
                       title: l.reportsWeekly,
                       icon: Icons.description_outlined,
-                      child: EmptyHint(message: l.reportsLoadFailed),
+                      child: EmptyHint(
+                        message: l.reportsLoadFailed,
+                        icon: Icons.error_outline,
+                        action: ActionButton(
+                          key: const ValueKey<String>('reports-weekly-retry'),
+                          label: l.actionRetry,
+                          onPressed: reportAsync.isLoading
+                              ? null
+                              : () => ref.invalidate(
+                                  weeklyReportProvider(reportKey),
+                                ),
+                        ),
+                      ),
                     ),
                     data: (data) => _ClientReport(
                       report: data,

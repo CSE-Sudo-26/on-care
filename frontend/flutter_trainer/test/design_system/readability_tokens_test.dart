@@ -27,6 +27,10 @@ void main() {
       greaterThanOrEqualTo(4.5),
     );
     expect(
+      _contrast(AppColors.mutedForeground, AppColors.accentSurface),
+      greaterThanOrEqualTo(4.5),
+    );
+    expect(
       _contrast(AppColors.disabledForeground, Colors.white),
       greaterThanOrEqualTo(3),
     );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -100,9 +101,19 @@ class NotificationsPage extends ConsumerWidget {
         error: (error, _) => Padding(
           padding: const EdgeInsets.only(top: AppSpacing.xxl),
           child: EmptyHint(
-            message:
-                (error is AppError ? error.message : null) ?? l.notifLoadFailed,
+            message: serverDetailOr(
+              l,
+              error is AppError ? error.message : null,
+              l.notifLoadFailed,
+            ),
             icon: Icons.error_outline,
+            action: ActionButton(
+              key: const ValueKey<String>('notifications-retry'),
+              label: l.actionRetry,
+              onPressed: notifications.isLoading
+                  ? null
+                  : () => ref.invalidate(trainerNotificationsProvider),
+            ),
           ),
         ),
         data: (rows) {

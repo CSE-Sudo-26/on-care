@@ -37,9 +37,11 @@ TrainerNotification _notification({
 
 /// 실 API 처럼 동작하는 페이크 — 읽음 처리 호출을 기록한다.
 class _FakeNotificationRepository implements TrainerNotificationRepository {
-  _FakeNotificationRepository(this._rows);
+  _FakeNotificationRepository(this._rows, {this.fetchFailures = 0});
 
   List<TrainerNotification> _rows;
+  int fetchFailures;
+  int fetchCalls = 0;
   final List<String> readCalls = <String>[];
   int readAllCalls = 0;
 
@@ -47,7 +49,14 @@ class _FakeNotificationRepository implements TrainerNotificationRepository {
   bool get supportsInbox => true;
 
   @override
-  Future<List<TrainerNotification>> fetch() async => _rows;
+  Future<List<TrainerNotification>> fetch() async {
+    fetchCalls++;
+    if (fetchFailures > 0) {
+      fetchFailures--;
+      throw StateError('DioException internal detail');
+    }
+    return _rows;
+  }
 
   @override
   Future<int> unreadCount() async =>
@@ -132,6 +141,31 @@ void main() {
     );
 
     expect(find.text('아직 받은 알림이 없어요'), findsOneWidget);
+    expect(find.text('다시 시도'), findsNothing);
+  });
+
+  testWidgets('알림 오류는 empty와 구분되고 재시도 후 복구한다', (tester) async {
+    final repo = _FakeNotificationRepository(<TrainerNotification>[
+      _notification(title: '재시도로 복구된 알림'),
+    ], fetchFailures: 1);
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-token',
+      at: AppRoutes.notifications,
+      extraOverrides: <Override>[
+        trainerNotificationRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+
+    expect(find.text('알림을 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('아직 받은 알림이 없어요'), findsNothing);
+    expect(find.text('DioException internal detail'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey<String>('notifications-retry')));
+    await settle(tester);
+
+    expect(repo.fetchCalls, 2);
+    expect(find.text('재시도로 복구된 알림'), findsOneWidget);
   });
 
   testWidgets('알림을 누르면 읽음 처리된다', (tester) async {

@@ -89,7 +89,7 @@ class ClientCard extends StatelessWidget {
                                 client.lastTime,
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.disabledForeground,
+                                  color: AppColors.subtleForeground,
                                 ),
                               ),
                             ],

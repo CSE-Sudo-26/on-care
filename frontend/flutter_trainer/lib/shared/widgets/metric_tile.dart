@@ -53,7 +53,7 @@ class MetricTile extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.subtleForeground,
+                color: AppColors.mutedForeground,
               ),
             ),
             const SizedBox(height: 2),
@@ -70,7 +70,7 @@ class MetricTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: warn ? FontWeight.w700 : FontWeight.w400,
-                color: warn ? AppColors.overTarget : AppColors.subtleForeground,
+                color: warn ? AppColors.overTarget : AppColors.mutedForeground,
               ),
             ),
           ],

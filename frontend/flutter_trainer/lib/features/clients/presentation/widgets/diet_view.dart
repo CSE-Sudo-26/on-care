@@ -10,6 +10,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show weekdayLabels;
@@ -31,10 +32,15 @@ class DietView extends ConsumerWidget {
 
     return diet.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text(
-          l.dietLoadFailed,
-          style: TextStyle(color: AppColors.mutedForeground),
+      error: (e, _) => EmptyHint(
+        message: l.dietLoadFailed,
+        icon: Icons.error_outline,
+        action: ActionButton(
+          key: ValueKey<String>('diet-retry-${client.id}'),
+          label: l.actionRetry,
+          onPressed: diet.isLoading
+              ? null
+              : () => ref.invalidate(clientDietProvider(client.id)),
         ),
       ),
       data: (meals) => ListView(

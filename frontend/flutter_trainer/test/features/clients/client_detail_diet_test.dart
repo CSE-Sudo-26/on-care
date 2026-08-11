@@ -1,11 +1,13 @@
-import 'dart:ui' show Size;
-
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
@@ -23,6 +25,23 @@ const Map<String, String> seedClientIds = <String, String>{
   // The brand-new client: no meals, no history, no sodium series.
   '임도현': 'seed-client-7',
 };
+
+class _DietFailsOnceRepository extends DriftClientRepository {
+  _DietFailsOnceRepository(super.db);
+
+  int watchDietCalls = 0;
+
+  @override
+  Stream<List<ClientDietEntry>> watchDiet(String clientId) {
+    watchDietCalls++;
+    if (watchDietCalls == 1) {
+      return Stream<List<ClientDietEntry>>.error(
+        StateError('diet transport detail'),
+      );
+    }
+    return super.watchDiet(clientId);
+  }
+}
 
 void main() {
   group('ClientRepository.watchDiet', () {
@@ -109,6 +128,49 @@ void main() {
         at: AppRoutes.clientDetail(seedClientIds[clientName]!, section: 'diet'),
       );
     }
+
+    testWidgets('a failed diet retries in place on a narrow viewport', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(480, 700);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith(
+            (ref) => _DietFailsOnceRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+
+      expect(find.text('식단을 불러오지 못했어요'), findsOneWidget);
+      expect(find.text('아직 기록된 식단이 없어요'), findsNothing);
+      expect(find.text('diet transport detail'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('diet-retry-seed-client-1')),
+      );
+      await settle(tester);
+
+      final repository =
+          container.read(clientRepositoryProvider) as _DietFailsOnceRepository;
+      final context = tester.element(find.byType(Navigator).first);
+      expect(repository.watchDietCalls, 2);
+      expect(
+        GoRouter.of(context).routeInformationProvider.value.uri.toString(),
+        AppRoutes.clientDetail('seed-client-1', section: 'diet'),
+      );
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('김민수 (sodium over target) shows warning + over AI comment', (
       tester,

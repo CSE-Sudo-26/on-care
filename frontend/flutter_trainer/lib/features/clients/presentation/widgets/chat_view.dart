@@ -8,7 +8,9 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The 채팅 sub-tab: an AI-received system banner, the message thread
@@ -180,10 +182,15 @@ class _ChatViewState extends ConsumerState<ChatView> {
         Expanded(
           child: messages.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Text(
-                l.chatLoadFailed,
-                style: TextStyle(color: AppColors.mutedForeground),
+            error: (e, _) => EmptyHint(
+              message: l.chatLoadFailed,
+              icon: Icons.error_outline,
+              action: ActionButton(
+                key: ValueKey<String>('chat-retry-${widget.clientId}'),
+                label: l.actionRetry,
+                onPressed: messages.isLoading
+                    ? null
+                    : () => ref.invalidate(chatThreadProvider(widget.clientId)),
               ),
             ),
             data: (list) {
@@ -370,7 +377,7 @@ class _Bubble extends StatelessWidget {
           message.timeLabel,
           style: const TextStyle(
             fontSize: 10,
-            color: AppColors.disabledForeground,
+            color: AppColors.subtleForeground,
           ),
         ),
       ],

@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
@@ -86,6 +87,21 @@ class _StaticLiveChatRepository implements ChatRepository {
   @override
   Stream<Map<String, int>> watchUnreadCounts() =>
       Stream<Map<String, int>>.value(const <String, int>{});
+}
+
+class _ThreadFailsOnceRepository extends _StaticLiveChatRepository {
+  int watchCalls = 0;
+
+  @override
+  Stream<List<ClientChatMessage>> watchThread(String clientId) {
+    watchCalls++;
+    if (watchCalls == 1) {
+      return Stream<List<ClientChatMessage>>.error(
+        StateError('chat transport detail'),
+      );
+    }
+    return super.watchThread(clientId);
+  }
 }
 
 void main() {
@@ -294,6 +310,36 @@ void main() {
   });
 
   group('ClientDetailPage chat', () {
+    testWidgets('a failed thread retries without leaving the client chat', (
+      tester,
+    ) async {
+      final repository = _ThreadFailsOnceRepository();
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+        extraOverrides: <Override>[
+          chatRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+
+      expect(find.text('대화를 불러오지 못했어요'), findsOneWidget);
+      expect(find.text('chat transport detail'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('chat-retry-seed-client-1')),
+      );
+      await settle(tester);
+
+      final context = tester.element(find.byType(Navigator).first);
+      expect(
+        GoRouter.of(context).routeInformationProvider.value.uri.toString(),
+        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
+      expect(repository.watchCalls, 2);
+      expect(find.text('실제 고객 답장'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
     testWidgets('real chat omits demo-only analysis and sent banners', (
       tester,
     ) async {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -59,8 +60,11 @@ class ConsultationsPage extends ConsumerWidget {
         error: (error, _) => _InboxMessage(
           icon: Icons.error_outline,
           title: l.consultLoadFailed,
-          detail:
-              (error is AppError ? error.message : null) ?? l.consultRetryLater,
+          detail: serverDetailOr(
+            l,
+            error is AppError ? error.message : null,
+            l.consultRetryLater,
+          ),
           action: ActionButton(
             label: l.actionRetry,
             onPressed: () => ref.invalidate(consultationsProvider),
@@ -111,7 +115,8 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     // messenger 와 같이 await 전에 잡아 둔다.
-    final String failureText = AppLocalizations.of(context).consultActionFailed;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String failureText = l.consultActionFailed;
     try {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(success)));
@@ -124,7 +129,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       ref.invalidate(consultationPendingCountProvider);
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
-      messenger.showSnackBar(SnackBar(content: Text(e.message ?? failureText)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(serverDetailOr(l, e.message, failureText))),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }

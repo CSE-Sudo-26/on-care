@@ -822,10 +822,11 @@ class _ProfileCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Row(
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
                       children: <Widget>[
                         _Tag(text: profile.specialty, color: AppColors.success),
-                        const SizedBox(width: AppSpacing.xs),
                         _Tag(
                           text: l.myCareerYears(profile.career),
                           color: AppColors.accent,
@@ -1773,12 +1774,17 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.foreground,
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.foreground,
+              ),
             ),
           ),
         ],
