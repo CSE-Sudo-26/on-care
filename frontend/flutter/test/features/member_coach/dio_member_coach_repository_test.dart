@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -206,6 +208,52 @@ void main() {
     expect(
       bodies[2]['client_request_id'],
       isNot(bodies[1]['client_request_id']),
+    );
+  });
+
+  test('another message does not replace a failed send request id', () async {
+    final firstResponse = Completer<Response<Map<String, Object?>>>();
+    var isFirstAttempt = true;
+    when(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) {
+      final data = invocation.namedArguments[#data]! as Map<String, Object?>;
+      if (data['text'] == '첫 메시지' && isFirstAttempt) {
+        isFirstAttempt = false;
+        return firstResponse.future;
+      }
+      return Future<Response<Map<String, Object?>>>.value(
+        _ok<Map<String, Object?>>(<String, Object?>{
+          'id': 'x',
+        }, '/me/coach/chat'),
+      );
+    });
+
+    final firstSend = repo.sendMessage('첫 메시지');
+    final firstFailure = expectLater(firstSend, throwsA(isA<AppError>()));
+    await repo.sendMessage('두 번째 메시지');
+    firstResponse.completeError(_httpError(503, '/me/coach/chat'));
+    await firstFailure;
+    await repo.sendMessage('첫 메시지');
+
+    final bodies = verify(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, Object?>>();
+    expect(bodies.map((body) => body['text']), <String>[
+      '첫 메시지',
+      '두 번째 메시지',
+      '첫 메시지',
+    ]);
+    expect(bodies[0]['client_request_id'], bodies[2]['client_request_id']);
+    expect(
+      bodies[1]['client_request_id'],
+      isNot(bodies[0]['client_request_id']),
     );
   });
 

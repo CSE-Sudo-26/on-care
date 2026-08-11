@@ -20,7 +20,7 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   final Dio _dio;
   final Duration pollInterval;
   final String Function() _requestIdFactory;
-  ({String text, String id})? _pendingSend;
+  final Map<String, String> _pendingRequestIds = <String, String>{};
 
   @override
   Future<MemberCoach?> fetchCoach() async {
@@ -68,23 +68,24 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    final previous = _pendingSend;
-    final attempt = previous != null && previous.text == trimmed
-        ? previous
-        : (text: trimmed, id: _requestIdFactory());
-    _pendingSend = attempt;
+    final requestId = _pendingRequestIds.putIfAbsent(
+      trimmed,
+      _requestIdFactory,
+    );
     try {
       await _dio.post<Map<String, Object?>>(
         '/me/coach/chat',
         data: <String, Object?>{
           'text': trimmed,
-          'client_request_id': attempt.id,
+          'client_request_id': requestId,
         },
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);
     }
-    if (_pendingSend == attempt) _pendingSend = null;
+    if (_pendingRequestIds[trimmed] == requestId) {
+      _pendingRequestIds.remove(trimmed);
+    }
   }
 
   @override

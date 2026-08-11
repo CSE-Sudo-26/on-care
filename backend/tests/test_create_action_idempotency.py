@@ -59,7 +59,7 @@ def _schedule_body(key: str | None, *, note: str = "") -> dict:
 def _purge(db_session) -> None:
     db_session.rollback()
     db_session.query(Notification).filter(
-        Notification.body.like(f"{KEY_PREFIX}%")
+        Notification.body.like(f"%{KEY_PREFIX}%")
     ).delete(synchronize_session=False)
     db_session.query(ChatMessage).filter(
         or_(
@@ -368,21 +368,35 @@ def test_same_key_is_isolated_by_user_sender_and_operation(client, db_session):
 
 @pytest.mark.parametrize("operation", ["chat", "schedule"])
 def test_concurrent_same_key_creates_one_row(client, db_session, operation):
-    token = _trainer_token(client)
+    token = (
+        _member_token(client)
+        if operation == "chat"
+        else _trainer_token(client)
+    )
     key = _key()
     barrier = Barrier(2)
+    chat_body = f"{KEY_PREFIX}concurrent"
+    schedule_type = f"{KEY_PREFIX}schedule"
 
     def send():
         barrier.wait()
         if operation == "chat":
             return client.post(
-                f"/v1/trainer/clients/{MEMBER}/chat",
-                json={"text": f"{KEY_PREFIX}concurrent", "client_request_id": key},
+                "/v1/me/coach/chat",
+                json={"text": chat_body, "client_request_id": key},
                 headers=_headers(token),
             )
+        body = _schedule_body(key)
+        body.update(
+            {
+                "client_name": "이지수",
+                "member_id": MEMBER,
+                "type": schedule_type,
+            }
+        )
         return client.post(
             "/v1/trainer/schedule",
-            json=_schedule_body(key),
+            json=body,
             headers=_headers(token),
         )
 
@@ -400,3 +414,16 @@ def test_concurrent_same_key_creates_one_row(client, db_session, operation):
         else _schedule_rows(db_session, key)
     )
     assert len(rows) == 1
+    db_session.expire_all()
+    expected_body = (
+        chat_body
+        if operation == "chat"
+        else f"2026-12-31 16:00 · {schedule_type}"
+    )
+    expected_user = TRAINER if operation == "chat" else MEMBER
+    assert (
+        db_session.query(Notification)
+        .filter_by(user_id=expected_user, body=expected_body)
+        .count()
+        == 1
+    )

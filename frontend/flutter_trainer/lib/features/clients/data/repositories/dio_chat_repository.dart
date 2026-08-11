@@ -24,8 +24,8 @@ class DioChatRepository implements ChatRepository {
   final Dio _dio;
   final Duration pollInterval;
   final String Function() requestIdFactory;
-  final Map<String, ({String text, String id})> _pendingSends =
-      <String, ({String text, String id})>{};
+  final Map<({String clientId, String text}), String> _pendingRequestIds =
+      <({String clientId, String text}), String>{};
 
   @override
   Stream<List<ClientChatMessage>> watchThread(String clientId) =>
@@ -64,24 +64,21 @@ class DioChatRepository implements ChatRepository {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final encodedId = Uri.encodeComponent(clientId);
-    final previous = _pendingSends[clientId];
-    final attempt = previous != null && previous.text == trimmed
-        ? previous
-        : (text: trimmed, id: requestIdFactory());
-    _pendingSends[clientId] = attempt;
+    final payload = (clientId: clientId, text: trimmed);
+    final requestId = _pendingRequestIds.putIfAbsent(payload, requestIdFactory);
     try {
       await _dio.post<Map<String, Object?>>(
         '/trainer/clients/$encodedId/chat',
         data: <String, Object?>{
           'text': trimmed,
-          'client_request_id': attempt.id,
+          'client_request_id': requestId,
         },
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);
     }
-    if (_pendingSends[clientId] == attempt) {
-      _pendingSends.remove(clientId);
+    if (_pendingRequestIds[payload] == requestId) {
+      _pendingRequestIds.remove(payload);
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -252,6 +254,59 @@ void main() {
     expect(
       bodies[2]['client_request_id'],
       isNot(bodies[1]['client_request_id']),
+    );
+  });
+
+  test('another create does not replace a failed request id', () async {
+    final firstResponse = Completer<Response<Map<String, dynamic>>>();
+    var isFirstAttempt = true;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) {
+      final data = invocation.namedArguments[#data]! as Map<String, dynamic>;
+      if (data['note'] == '첫 일정' && isFirstAttempt) {
+        isFirstAttempt = false;
+        return firstResponse.future;
+      }
+      return Future<Response<Map<String, dynamic>>>.value(
+        _okMap(_schedulePath),
+      );
+    });
+
+    Future<void> add(String note) => repo.addSession(
+      date: '2026-08-06',
+      clientName: '김민수',
+      time: '15:00',
+      type: '1:1 PT',
+      durationMinutes: 60,
+      note: note,
+    );
+
+    final firstCreate = add('첫 일정');
+    final firstFailure = expectLater(firstCreate, throwsA(isA<AppError>()));
+    await add('두 번째 일정');
+    firstResponse.completeError(_httpError(503, _schedulePath));
+    await firstFailure;
+    await add('첫 일정');
+
+    final bodies = verify(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, dynamic>>();
+    expect(bodies.map((body) => body['note']), <String>[
+      '첫 일정',
+      '두 번째 일정',
+      '첫 일정',
+    ]);
+    expect(bodies[0]['client_request_id'], bodies[2]['client_request_id']);
+    expect(
+      bodies[1]['client_request_id'],
+      isNot(bodies[0]['client_request_id']),
     );
   });
 
