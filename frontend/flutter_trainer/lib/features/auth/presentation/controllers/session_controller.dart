@@ -106,15 +106,46 @@ class SessionController extends StateNotifier<SessionState> {
       } else {
         await _expire();
       }
-    } on AuthException {
+    } on AuthException catch (e) {
       if (_userActionStarted) return;
-      await _expire();
+      // 인증 계열 실패라도 **명시적으로 거부된 것만** 세션의 끝이다. 같은 예외로
+      // 실려 오는 연결 실패·서버 오류를 만료로 처리하면, 잠깐 끊긴 사용자에게
+      // 재로그인을 요구하게 된다.
+      if (_endsSession(e.failure)) {
+        await _expire();
+      } else {
+        _keepTokensAndSignOut();
+      }
     } catch (_) {
       // Transient (network/server) — keep tokens, just show signed out.
       if (!mounted || _userActionStarted) return;
-      _setAccessToken(null);
-      state = const SessionState(status: SessionStatus.signedOut);
+      _keepTokensAndSignOut();
     }
+  }
+
+  /// 이 실패가 **세션의 끝**인가.
+  ///
+  /// 서버가 자격을 거부한 것(만료·잘못된 자격·트레이너 아님)만 해당한다. 연결 실패나
+  /// 계약이 깨진 응답은 다음 실행에서 다시 시도할 여지가 있으므로 토큰을 남긴다.
+  bool _endsSession(AuthFailure failure) => switch (failure) {
+    AuthFailure.sessionExpired ||
+    AuthFailure.invalidCredentials ||
+    AuthFailure.notTrainer => true,
+    AuthFailure.network ||
+    AuthFailure.emptyResponse ||
+    AuthFailure.unknown ||
+    AuthFailure.emailTaken ||
+    AuthFailure.inviteCodeInvalid ||
+    AuthFailure.noSocialToken ||
+    AuthFailure.emptyCredentials => false,
+  };
+
+  /// 이번에는 못 들어갔지만 세션이 끝난 것은 아니다 — 저장된 토큰을 남긴 채 로그인
+  /// 화면으로 보낸다. 다음 실행에서 다시 시도한다.
+  void _keepTokensAndSignOut() {
+    if (!mounted || _userActionStarted) return;
+    _setAccessToken(null);
+    state = const SessionState(status: SessionStatus.signedOut);
   }
 
   Future<void> _refreshAndResolve(String refresh) async {
@@ -122,12 +153,21 @@ class SessionController extends StateNotifier<SessionState> {
     final TrainerAuthTokens tokens;
     try {
       tokens = await _repo.refresh(refresh);
-    } catch (_) {
+    } on AuthException catch (e) {
       // The refresh failed — but a user action (login/demo/sign-out) may
-      // have landed during the slow call; don't clobber it. Otherwise the
-      // session really is expired.
+      // have landed during the slow call; don't clobber it.
       if (_userActionStarted) return;
-      await _expire();
+      // 확인 요청과 같은 기준을 쓴다. 예전에는 여기서 모든 실패를 만료로 보내,
+      // 갱신이 연결 실패나 서버 오류로 끝나도 저장된 토큰을 지웠다.
+      if (_endsSession(e.failure)) {
+        await _expire();
+      } else {
+        _keepTokensAndSignOut();
+      }
+      return;
+    } catch (_) {
+      if (_userActionStarted) return;
+      _keepTokensAndSignOut();
       return;
     }
     // Re-check the race guard after the await, like every _resolveSession
@@ -203,7 +243,9 @@ class SessionController extends StateNotifier<SessionState> {
         profile: profile,
       );
     } catch (e) {
-      await _expire();
+      // 로그인·가입·소셜이 실패한 것이라 이 만료도 그 사용자 행동의 일부다 —
+      // 사용자 행동 가드에 막히면 거부된 자격이 저장소에 남는다.
+      await _expire(userInitiated: true);
       if (e is AuthException) rethrow;
       throw const AuthException(AuthFailure.unknown);
     }
@@ -237,7 +279,8 @@ class SessionController extends StateNotifier<SessionState> {
   /// Signs out — clears persisted tokens and returns to the login screen.
   Future<void> signOut() async {
     _userActionStarted = true;
-    await _expire();
+    // 사용자가 직접 요청한 만료다 — 자기 자신의 가드에 막히면 안 된다.
+    await _expire(userInitiated: true);
   }
 
   // --- helpers ------------------------------------------------------------
@@ -271,11 +314,25 @@ class SessionController extends StateNotifier<SessionState> {
   }
 
   /// Clears tokens + in-memory state and lands signed out.
-  Future<void> _expire() async {
+  /// 세션을 끝내고 저장된 토큰을 지운다.
+  ///
+  /// [userInitiated] 는 **이 만료가 지금 진행 중인 사용자 행동의 일부인가**다.
+  /// 로그아웃, 그리고 로그인·가입·소셜이 거부되어 방금 받은 자격을 지우는 경우가
+  /// 여기 해당한다. 이때 사용자 행동 가드를 적용하면 그 행동이 자기 자신의 가드에
+  /// 막혀 아무 일도 일어나지 않는다.
+  ///
+  /// 기본값(false)은 복구가 만료로 흘러가는 경우다. 이때는 **지우기 전에** 확인한다.
+  /// 느린 복구 중에 로그인이 끝났다면 저장소에는 방금 받은 토큰이 들어 있고, 저장소
+  /// 작업은 큐로 직렬화되어 나중에 들어간 것이 뒤에 실행되므로, 뒤늦은 만료의 `clear`
+  /// 는 그 저장을 **확실히** 덮어쓴다 — 화면은 로그인 상태인데 다음 실행에서 로그아웃된다.
+  Future<void> _expire({bool userInitiated = false}) async {
+    if (!mounted) return;
+    if (!userInitiated && _userActionStarted) return;
     await _clearPersistedTokens();
     // `_setAccessToken` reads a provider — guard it behind the mounted check
     // so it never runs against a disposed container during teardown.
     if (!mounted) return;
+    if (!userInitiated && _userActionStarted) return;
     _setAccessToken(null);
     state = const SessionState(status: SessionStatus.signedOut);
   }
