@@ -424,3 +424,105 @@ def test_broken_food_json_never_raises(raw):
     assert personal_ingest.diet_text(
         date="2026-08-11", foods=foods, total_calories=1, sodium_mg=1, sugar_g=1.0
     )
+
+
+# ---- 완료 순서 역전 (CodeRabbit PR#619 리뷰) ----
+
+def test_the_older_refresh_finishing_last_still_leaves_the_latest_value(
+    client, db_session
+):
+    """먼저 시작한 갱신이 **마지막에 끝나도** 최종 근거는 DB 최신값이어야 한다.
+
+    앞선 테스트는 "잠금 안에서 다시 읽는다"는 메커니즘만 본다. 진짜 위험한 순서는
+    이것이다:
+
+        A 호출(행=30) → B 호출(행=45) → B 적재(45) → **A 적재**
+
+    A 가 호출 시점의 30 을 들고 있으면 마지막 쓰기가 30 이 되어, DB 는 45 인데
+    코치는 30 을 근거로 답한다. 그래서 A 를 **잠금에 들어가기 직전에** 세워 둔다 —
+    값을 들고 다니던 설계와 다시 읽는 설계가 갈리는 지점이 정확히 거기다.
+    """
+    import threading
+
+    from app.db.session import SessionLocal
+    from app.models.models import ExerciseSession
+    from app.services.coach import personal_ingest
+
+    token = _member_token(client)
+    created = client.post(
+        "/v1/exercise/sessions",
+        headers=_headers(token),
+        json={"type": "walking", "minutes": 30, "calories": 100, "intensity": "light"},
+    )
+    assert created.status_code == 201, created.text
+    session_id = created.json()["id"]
+    user_id = db_session.scalar(
+        select(ExerciseSession.user_id).where(ExerciseSession.id == session_id)
+    )
+
+    original_replace = personal_ingest.replace_personal_text
+    at_the_gate = threading.Event()  # A 가 잠금 직전까지 왔다
+    let_a_go = threading.Event()     # B 가 끝난 뒤 A 를 들여보낸다
+    first_call = threading.Lock()
+    seen = {"first": False}
+
+    def _gated_replace(*args, **kwargs):
+        with first_call:
+            is_a = not seen["first"]
+            seen["first"] = True
+        if is_a:
+            # A 만 세운다. 이 지점은 잠금·재조회 **이전**이라, 값을 미리 읽어 두는
+            # 설계였다면 A 는 이미 30 을 손에 쥔 상태다.
+            at_the_gate.set()
+            assert let_a_go.wait(timeout=30), "A 를 들여보내지 못했다"
+        return original_replace(*args, **kwargs)
+
+    personal_ingest.replace_personal_text = _gated_replace  # type: ignore[assignment]
+    errors: list[BaseException] = []
+
+    def _refresh_in_own_session() -> None:
+        db = SessionLocal()
+        try:
+            personal_ingest.refresh_exercise(db, user_id, session_id=session_id)
+        except BaseException as exc:  # noqa: BLE001 - 스레드 예외를 본체로 옮긴다
+            errors.append(exc)
+        finally:
+            db.close()
+
+    try:
+        a = threading.Thread(target=_refresh_in_own_session, daemon=True)
+        a.start()
+        assert at_the_gate.wait(timeout=30), "A 가 잠금 직전까지 오지 못했다"
+
+        # A 가 멈춰 있는 사이 행이 45 로 바뀐다.
+        writer = SessionLocal()
+        try:
+            row = writer.scalar(
+                select(ExerciseSession).where(ExerciseSession.id == session_id)
+            )
+            row.minutes = 45
+            writer.commit()
+        finally:
+            writer.close()
+
+        # B 를 **끝까지** 돌린다. 여기서 문서는 45 가 된다.
+        b = threading.Thread(target=_refresh_in_own_session, daemon=True)
+        b.start()
+        b.join(timeout=60)
+        assert not b.is_alive(), "B 가 끝나지 않았다"
+
+        # 이제 A 가 마지막으로 쓴다.
+        let_a_go.set()
+        a.join(timeout=60)
+        assert not a.is_alive(), "A 가 끝나지 않았다"
+    finally:
+        personal_ingest.replace_personal_text = original_replace  # type: ignore[assignment]
+        let_a_go.set()
+
+    assert not errors, f"갱신 중 예외: {errors!r}"
+
+    db_session.expire_all()
+    contents = [d.content for d in _docs_for(db_session, session_id)]
+    assert contents, "겹쳐 돌린 뒤 근거가 사라지면 안 된다"
+    assert all("45분" in c for c in contents), contents
+    assert not any("30분" in c for c in contents), contents
