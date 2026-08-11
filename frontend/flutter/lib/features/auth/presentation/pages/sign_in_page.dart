@@ -8,6 +8,7 @@ import 'package:oncare/design_system/tokens/radius.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 로그인 화면 — 이메일/비밀번호 로그인 + 우측 상단 "데모로 시작" 바로가기.
 class SignInPage extends ConsumerStatefulWidget {
@@ -37,11 +38,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   Future<void> _login() async {
     if (_loading) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('이메일과 비밀번호를 입력해 주세요')));
+      messenger.showSnackBar(SnackBar(content: Text(l.authMissingCredentials)));
       return;
     }
     setState(() => _loading = true);
@@ -55,12 +57,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('로그인에 실패했어요. 이메일·비밀번호를 확인해 주세요')),
+        SnackBar(content: Text(l.authSignInFailed)),
       );
     }
   }
 
   Future<void> _social(String provider) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     if (_loading) return;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _loading = true);
@@ -75,13 +78,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.authSocialSignInFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -116,7 +120,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '고혈압·당뇨 관리를 위한 AI 헬스케어',
+                        l.authTagline,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
@@ -126,14 +130,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
                       AuthField(
                         controller: _email,
-                        hint: '이메일',
+                        hint: l.authEmailHint,
                         icon: Icons.mail_outline,
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _password,
-                        hint: '비밀번호',
+                        hint: l.authPasswordHint,
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         onSubmitted: (_) => _login(),
@@ -151,33 +155,40 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       // 로그인 버튼(그라데이션)
                       AuthGradientButton(
                         loading: _loading,
-                        label: '로그인',
+                        label: l.authSignInAction,
                         onTap: _login,
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       const _OrDivider(),
                       const SizedBox(height: AppSpacing.lg),
                       _SocialButton.kakao(
+                        label: l.authKakaoAction,
                         onTap: _loading ? null : () => _social('kakao'),
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       _SocialButton.google(
+                        label: l.authGoogleAction,
                         onTap: _loading ? null : () => _social('google'),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Wrap 인 이유: 로케일에 따라 이 줄의 길이가 크게 달라진다.
+                      // Row 로 두면 영어에서 화면 밖으로 넘친다(폭 400 기준 실측).
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: <Widget>[
-                          const Text(
-                            '계정이 없으신가요?',
-                            style: TextStyle(color: AppColors.mutedForeground),
+                          Text(
+                            l.authNoAccountQuestion,
+                            style: const TextStyle(
+                              color: AppColors.mutedForeground,
+                            ),
                           ),
                           TextButton(
                             onPressed: () => context.push(AppRoutes.signUp),
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.primary,
                             ),
-                            child: const Text('회원가입'),
+                            child: Text(l.authSignUpAction),
                           ),
                         ],
                       ),
@@ -188,7 +199,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,
                           ),
-                          child: const Text('로그인 없이 데모 둘러보기'),
+                          child: Text(l.authDemoAction),
                         ),
                       ),
                     ],
@@ -209,17 +220,20 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: <Widget>[
-        Expanded(child: Divider(color: AppColors.border)),
+        const Expanded(child: Divider(color: AppColors.border)),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
-            '또는',
-            style: TextStyle(color: AppColors.mutedForeground, fontSize: 13),
+            AppLocalizations.of(context).authOrDivider,
+            style: const TextStyle(
+              color: AppColors.mutedForeground,
+              fontSize: 13,
+            ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.border)),
+        const Expanded(child: Divider(color: AppColors.border)),
       ],
     );
   }
@@ -238,16 +252,22 @@ class _SocialButton extends StatelessWidget {
     this.iconSize = 20,
   });
 
-  factory _SocialButton.kakao({required VoidCallback? onTap}) => _SocialButton(
-    label: '카카오로 시작하기',
+  factory _SocialButton.kakao({
+    required String label,
+    required VoidCallback? onTap,
+  }) => _SocialButton(
+    label: label,
     icon: Icons.chat_bubble_rounded,
     background: const Color(0xFFFEE500),
     foreground: const Color(0xFF191600),
     onTap: onTap,
   );
 
-  factory _SocialButton.google({required VoidCallback? onTap}) => _SocialButton(
-    label: '구글로 시작하기',
+  factory _SocialButton.google({
+    required String label,
+    required VoidCallback? onTap,
+  }) => _SocialButton(
+    label: label,
     icon: Icons.g_mobiledata,
     background: AppColors.card,
     foreground: AppColors.foreground,
