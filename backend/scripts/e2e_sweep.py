@@ -21,8 +21,9 @@ FAIL 로 보고한다. DB 정리는 항상 로컬 DATABASE_URL 로 붙으므로 
 
 혼자 쓰는 로컬 데모 DB 를 전제로 한다. 자세한 이유는 purge_sweep_traces 참고.
 
-AI 코칭·루틴 경로는 다루지 않는다. 키가 없으면 규칙 폴백이 200 을 돌려주어 통과처럼
-보이기 때문이다(#579 수정 후 #589 에서 검증).
+AI 루틴 경로(A/B 생성 → 편집 → 배정 → 회원 수신)도 훑는다(#589). 키가 없으면 규칙
+폴백이 200 을 돌려주므로, 계약 검사와 "AI 가 실제로 돌았는가" 를 분리해 뒤쪽은
+`generated_by` 로 판정한다 — 폴백이면 SKIP 이라 조용히 초록불이 되지 않는다.
 """
 from __future__ import annotations
 
@@ -428,6 +429,131 @@ def scenario_consultation(api: Api, m: str, t: str, out: list[Result]) -> None:
         out.append(Result(g, label, "PASS" if code == 200 else "FAIL", str(code)))
 
 
+def scenario_ai_routine(api: Api, m: str, t: str, out: list[Result]) -> None:
+    """AI 루틴 A/B 생성 → 편집 → 배정 → 회원 수신 (#589).
+
+    이 경로를 스윕에 넣지 못했던 이유가 있다: 키가 없으면 규칙 폴백이 200 을
+    돌려주어 **AI 가 죽어도 통과처럼 보인다**. 그래서 계약 검사(A/B 모양·시간 상한)와
+    "AI 가 실제로 돌았는가" 를 분리한다. 앞은 어느 경우든 PASS 여야 하고, 뒤는
+    `generated_by` 로 판정해 규칙 폴백이면 SKIP 으로 남긴다 — 조용히 초록불이
+    되지 않게.
+    """
+    g = "AI 루틴"
+    available = 40
+    code, options = api.post(
+        "/trainer/clients/" + MEMBER_ID + "/routine-options",
+        token=t,
+        json_body={
+            "available_minutes": available,
+            "intensity_preference": "moderate",
+            "trainer_note": _MARKER + " 무릎 부담 낮게",
+        },
+    )
+    ok = code == 200 and isinstance(options, dict)
+    out.append(Result(g, "A/B 생성", "PASS" if ok else "FAIL", str(code)))
+    if not ok:
+        return
+
+    plan_a = options.get("plan_a") or {}
+    plan_b = options.get("plan_b") or {}
+    shape_ok = (
+        plan_a.get("key") == "A" and plan_b.get("key") == "B"
+        and bool(plan_a.get("exercises")) and bool(plan_b.get("exercises"))
+    )
+    out.append(Result(
+        g, "A/B 계약", "PASS" if shape_ok else "FAIL",
+        "key=" + str(plan_a.get("key")) + "/" + str(plan_b.get("key")),
+    ))
+
+    # 트레이너가 입력한 가능 시간을 넘는 계획은 그대로 배정될 수 없다.
+    totals = [p.get("total_minutes") for p in (plan_a, plan_b)]
+    within_limit = all(
+        type(minutes) is int and minutes <= available
+        for minutes in totals
+    )
+    out.append(Result(
+        g, "가능 시간 상한", "PASS" if within_limit else "FAIL",
+        f"available={available} total_minutes={totals}",
+    ))
+
+    generated_by = options.get("generated_by")
+    if generated_by == "ai":
+        out.append(Result(g, "AI 가 실제로 생성", "PASS", "generated_by=ai"))
+    else:
+        out.append(Result(
+            g, "AI 가 실제로 생성", "SKIP",
+            "generated_by=" + str(generated_by) + " - LLM 키가 없거나 폴백. "
+            "코치 키를 넣고 다시 돌려야 이 경로가 검증된다",
+        ))
+
+    # #580: 채팅이 근거로 실렸는지. 앞선 채팅 시나리오가 남긴 메시지가 있어야 한다.
+    recent = (options.get("analysis") or {}).get("recent_messages")
+    evidence_ok = (
+        isinstance(recent, list)
+        and any(
+            isinstance(message, str) and _MARKER in message
+            for message in recent
+        )
+    )
+    out.append(Result(
+        g, "채팅 근거 반영(#580)",
+        "PASS" if evidence_ok else "FAIL",
+        f"recent_messages={len(recent) if isinstance(recent, list) else 'none'}",
+    ))
+
+    # 트레이너가 A안을 손봐서 배정한다 — 생성 결과를 그대로 보내는 게 아니라
+    # 편집이 반영되는지까지 봐야 화면과 같은 경로다.
+    first = (plan_a.get("exercises") or [{}])[0]
+    routine = {
+        "name": _MARKER + " 편집한 루틴",
+        "minutes": max(1, int(first.get("minutes") or 10)),
+        "type": first.get("type") or "유산소",
+        "reason": "스윕이 배정",
+        "source": "ai",
+        "client_request_id": "sweep-" + _RUN_TAG,
+    }
+    code, assigned = api.post(
+        "/trainer/clients/" + MEMBER_ID + "/routines", token=t, json_body=routine
+    )
+    created = code in (200, 201) and isinstance(assigned, dict)
+    out.append(Result(g, "편집 후 배정", "PASS" if created else "FAIL", str(code)))
+    routine_id = assigned.get("id") if created else None
+
+    # #581: 같은 키로 재전송해도 하나만 남아야 한다. 끊긴 전송을 다시 누르는 상황이다.
+    code, again = api.post(
+        "/trainer/clients/" + MEMBER_ID + "/routines", token=t, json_body=routine
+    )
+    same = isinstance(again, dict) and again.get("id") == routine_id
+    out.append(Result(
+        g, "재전송 멱등(#581)", "PASS" if same else "FAIL",
+        f"{code} id={again.get('id') if isinstance(again, dict) else again} (같아야 함)",
+    ))
+
+    # 회원 쪽에서 실제로 받았는가 — 여기까지 와야 루프가 닫힌다.
+    code, mine = api.get("/me/coach/routines", token=m)
+    names = [r.get("name") for r in mine] if isinstance(mine, list) else []
+    received = routine["name"] in names
+    out.append(Result(
+        g, "회원이 수신", "PASS" if received else "FAIL",
+        f"{code} n={len(names)}",
+    ))
+    # 배정이 하나만 갔는지 — 멱등이 깨지면 여기서 2건으로 보인다.
+    out.append(Result(
+        g, "중복 배정 없음", "PASS" if names.count(routine["name"]) == 1 else "FAIL",
+        f"{names.count(routine['name'])}건 (1건 기대)",
+    ))
+
+    if routine_id:
+        code, _ = api.delete(
+            "/trainer/clients/" + MEMBER_ID + "/routines/" + routine_id, token=t
+        )
+        out.append(Result(
+            g, "루틴 철회(정리)", "PASS" if code in (200, 204) else "FAIL", str(code)
+        ))
+    else:
+        out.append(Result(g, "루틴 철회(정리)", "FAIL", "id 를 못 받아 정리 못 함"))
+
+
 def scenario_misc(api: Api, m: str, t: str, out: list[Result]) -> None:
     g = "회원 화면"
     for path, label in (
@@ -493,15 +619,21 @@ def main() -> int:
     out: list[Result] = []
     for fn in (
         scenario_auth, scenario_diet, scenario_exercise, scenario_chat,
-        scenario_roster, scenario_reservation, scenario_consultation,
-        scenario_misc,
+        # AI 루틴은 채팅 뒤에 둔다 — 채팅이 남긴 메시지가 생성 근거로 실렸는지
+        # (#580) 함께 보기 때문이다.
+        scenario_roster, scenario_ai_routine, scenario_reservation,
+        scenario_consultation, scenario_misc,
     ):
         try:
             fn(api, member, trainer, out)
         except Exception as e:  # noqa: BLE001 - 한 그룹이 죽어도 나머지는 계속
             out.append(Result(fn.__name__, "실행 중 예외", "FAIL", repr(e)))
 
-    # 채팅 2건과, 식단·채팅이 파생시킨 개인 RAG 문서 3건(식단 1 + 채팅 2)을 지운다.
+    # 채팅 2건과, 채팅이 파생시킨 개인 RAG 문서 2건을 지운다.
+    #
+    # 식단 문서는 여기까지 오지 않는다. `DELETE /diet/entries/{id}` 가 그 기록의
+    # 문서까지 함께 지우기 때문이다(#603 `personal_ingest.forget`). 기대값이 3이던
+    # 시절은 삭제가 원본만 지우던 때다 — 그대로 두면 이 스윕이 매번 FAIL 로 뜬다.
     g = "정리"
     if not local:
         note = "원격 대상 - 로컬 DB 를 건드리지 않음. 채팅·RAG 문서가 남는다"
@@ -514,8 +646,9 @@ def main() -> int:
             f"{chats}건 (2건 기대)" + (" - " + err if err else ""),
         ))
         out.append(Result(
-            g, "개인 RAG 문서 삭제", "PASS" if docs == 3 else "FAIL",
-            f"{docs}건 (3건 기대)" + (" - " + (err or base_err) if (err or base_err) else ""),
+            g, "개인 RAG 문서 삭제", "PASS" if docs == 2 else "FAIL",
+            f"{docs}건 (2건 기대 - 식단 문서는 DELETE 가 이미 정리)"
+            + (" - " + (err or base_err) if (err or base_err) else ""),
         ))
 
     group = None
