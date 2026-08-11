@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 void main() {
   test('dietTodayProvider returns mock day (stub repo)', () async {
@@ -11,7 +12,7 @@ void main() {
       overrides: <Override>[
         // Default repo is DioDietRepository (needs db + dio overrides);
         // for this unit test the in-memory mock from stage 4 is enough.
-        dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+        dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
       ],
     );
     addTearDown(container.dispose);
@@ -80,7 +81,7 @@ void main() {
   );
 }
 
-class _DateRecordingDietRepository extends MockDietRepository {
+class _DateRecordingDietRepository extends FakeDietRepository {
   final List<DateTime> requestedDates = <DateTime>[];
 
   @override

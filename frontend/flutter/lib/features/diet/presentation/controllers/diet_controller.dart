@@ -1,24 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/diet/data/repositories/dio_diet_repository.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/data/sources/image_picker_meal_photo_picker.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/domain/repositories/meal_photo_picker.dart';
 
+/// 식단 저장소 — 빌드와 무관하게 **항상** 네트워크 구현이다.
+///
+/// 데모 응답은 `LocalApiInterceptor` 가 drift 에서 만들어 준다. AI 코치가 이미 쓰는
+/// 구조이고, 식단만 저장소 단에서 갈라져 있던 것이 `REAL_API=diet` 를 죽은 스위치로
+/// 만들었다 — 인메모리 구현은 Dio 를 타지 않으니 인터셉터의 통과 규칙에 닿을 일이
+/// 없었다(#616).
+///
+/// 이제 분석 요청만 실 백엔드로 흘려보낼 수 있고, 나머지 조회·수정·삭제는 그대로
+/// 로컬이 답하므로 데모 화면이 움직이지 않는다.
 final dietRepositoryProvider = Provider<DietRepository>((ref) {
-  // In local/demo mode serve the fully-populated mock day (food photos,
-  // per-food nutrition, per-meal AI feedback) so the diet tab renders
-  // real-looking data with no backend. The real REST repo is used otherwise.
-  if (ref.watch(appConfigProvider).useMockApi) {
-    // One instance per provider lifetime so in-memory CRUD (analyze/edit/
-    // delete) persists across `dietTodayProvider` invalidations for the session.
-    return MockDietRepository();
-  }
   return DioDietRepository(ref.watch(dioProvider));
 }, name: 'dietRepository');
 

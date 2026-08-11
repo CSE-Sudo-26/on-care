@@ -27,6 +27,13 @@ class DietEntries extends Table {
   // 당류만 실수. 서버 계약(diet_entries.sugar_g)이 float 이고 도메인 엔티티도
   // double 이라, 로컬 캐시만 정수면 데모 모드에서 8.5 가 8 로 잘린다.
   RealColumn get sugarG => real().withDefault(const Constant(0.0))();
+  // 끼니별 AI 코멘트. 식단 상세가 이 값을 그대로 그린다. 데모 시드가 채워 두고,
+  // 새로 분석된 항목은 인식 응답이 준 코멘트를 받는다. 값이 없으면 화면이 칸을
+  // 통째로 감추므로 빈 문자열이 안전한 기본값이다.
+  TextColumn get aiComment => text().withDefault(const Constant(''))();
+  // 끼니 사진 에셋 경로. 예전에는 인터셉터가 시드 id → 에셋 맵을 들고 있어서
+  // 새로 추가된 항목에는 사진이 붙지 않았다. 행이 자기 사진을 갖게 한다.
+  TextColumn get photoAsset => text().withDefault(const Constant(''))();
   // 재시도 중복 저장 방지 멱등키(요청당 1회). 무키 요청은 null.
   TextColumn get idempotencyKey => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -109,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -143,6 +150,14 @@ class AppDatabase extends _$AppDatabase {
         // 그대로 REAL 로 저장되고, 읽을 때는 drift 가 선언 타입(double)으로
         // 매핑한다. 기존 정수 값도 8 → 8.0 으로 읽혀 손실이 없다.
         // 스키마 버전만 올려 이 결정을 기록해 둔다.
+      }
+      if (from < 7) {
+        // 끼니별 AI 코멘트·사진 컬럼 추가 — 기존 행은 빈 문자열.
+        //
+        // 식단이 인메모리 목업 저장소에서 로컬 인터셉터 경로로 옮겨 오면서
+        // 필요해졌다. 그 두 값은 목업 쪽에만 있었고 테이블에는 자리가 없었다.
+        await m.addColumn(dietEntries, dietEntries.aiComment);
+        await m.addColumn(dietEntries, dietEntries.photoAsset);
       }
     },
   );

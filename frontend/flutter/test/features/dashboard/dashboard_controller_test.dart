@@ -9,9 +9,10 @@ import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repos
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 class _FailingDashboardRepository implements DashboardRepository {
   const _FailingDashboardRepository();
@@ -29,7 +30,7 @@ void main() {
         // Default impl is DioDashboardRepository (Stage 9.8). For
         // this unit test the React-shaped mock is enough.
         dashboardRepositoryProvider.overrideWithValue(
-          MockDashboardRepository(MockDietRepository()),
+          MockDashboardRepository(FakeDietRepository()),
         ),
       ],
     );
@@ -63,7 +64,7 @@ void main() {
   });
 
   test('MockDashboardRepository marks sodium as over-budget', () async {
-    final repo = MockDashboardRepository(MockDietRepository());
+    final repo = MockDashboardRepository(FakeDietRepository());
     final s = await repo.fetchSummary();
     final sodium = s.indicators.firstWhere(
       (HealthIndicator h) => h.label == '나트륨',
@@ -91,7 +92,7 @@ void main() {
         dailyFatG: 50,
       );
       final DashboardSummary summary = await MockDashboardRepository(
-        MockDietRepository(),
+        FakeDietRepository(),
         fetchProfile: () async => profile,
       ).fetchSummary();
       final indicators = <String, HealthIndicator>{
@@ -110,7 +111,7 @@ void main() {
   // 홈이 영양 수치를 따로 들고 있다가 식단 탭과 어긋났다 — 홈 2,329mg·4끼 vs
   // 식단 3,428mg·3끼. 식단이 기준이므로 두 화면이 같은 값을 보는지 못박는다.
   test('홈 요약의 영양 수치는 식단 하루치와 일치한다', () async {
-    final MockDietRepository diet = MockDietRepository();
+    final FakeDietRepository diet = FakeDietRepository();
     final DietDay today = await diet.fetchToday();
     final DashboardSummary s = await MockDashboardRepository(
       diet,
@@ -142,7 +143,7 @@ void main() {
       apiBaseUrl: 'https://dev.api.test',
       useMockApi: true,
     );
-    final MockDietRepository diet = MockDietRepository();
+    final FakeDietRepository diet = FakeDietRepository();
     final ProviderContainer container = ProviderContainer(
       overrides: <Override>[
         appConfigProvider.overrideWithValue(config),
@@ -176,7 +177,7 @@ void main() {
 
   // 데모 중 식단을 지우면 홈도 따라 줄어야 한다 — 같은 인스턴스를 공유하는지.
   test('식단 CRUD 가 홈 요약에 반영된다', () async {
-    final MockDietRepository diet = MockDietRepository();
+    final FakeDietRepository diet = FakeDietRepository();
     final MockDashboardRepository dashboard = MockDashboardRepository(diet);
 
     final DashboardSummary before = await dashboard.fetchSummary();

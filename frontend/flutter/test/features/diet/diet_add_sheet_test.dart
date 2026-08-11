@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/repositories/meal_photo_picker.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 final Uint8List _jpegBytes = Uint8List.fromList(<int>[
   0xFF,
@@ -49,7 +50,7 @@ class _PendingMealPhotoPicker implements MealPhotoPicker {
   Future<MealPhoto?> pick(MealPhotoSource source) => completer.future;
 }
 
-class _RecordingDietRepository extends MockDietRepository {
+class _RecordingDietRepository extends FakeDietRepository {
   MealPhoto? uploaded;
 
   @override
@@ -357,7 +358,7 @@ void main() {
   });
 }
 
-class _FailingOnceDietRepository extends MockDietRepository {
+class _FailingOnceDietRepository extends FakeDietRepository {
   int calls = 0;
 
   @override
