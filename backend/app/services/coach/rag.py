@@ -65,6 +65,22 @@ def purge_personal(db: Session, user_id: str, source_ref: str) -> int:
     return result.rowcount or 0
 
 
+def has_personal_doc(db: Session, user_id: str, source_ref: str) -> bool:
+    """이 기록이 이미 적재됐는가 (#604).
+
+    시드 적재의 멱등 판정에 쓴다. 기동할 때마다 같은 기록을 다시 임베딩하면 비용도
+    비용이지만 같은 내용이 여러 벌 검색돼 상위를 독차지한다.
+    """
+    return db.scalar(
+        select(CoachDocument.id)
+        .where(
+            CoachDocument.user_id == user_id,
+            CoachDocument.source_ref == source_ref,
+        )
+        .limit(1)
+    ) is not None
+
+
 def ingest_personal_text(
     db: Session, user_id: str, text: str, *, domain: str, source: str,
     title: str = "", source_ref: str | None = None,

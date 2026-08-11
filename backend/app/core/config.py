@@ -104,8 +104,12 @@ class Settings(BaseSettings):
     # 검색: 개인 문서 / 공공 문서 각각 top-k
     retrieve_personal_k: int = 3
     retrieve_public_k: int = 3
-    # 식단/바이탈 기록 시 개인 RAG 문서 자동 적재(코치가 내 최근 데이터를 검색하도록)
+    # 식단/운동/채팅 기록 시 개인 RAG 문서 자동 적재(코치가 내 최근 데이터를 검색하도록)
     rag_auto_ingest: bool = True
+    # 시드 기록도 개인 문서로 적재할지 (#604). 데모 계정에서 회원 앱 AI 코치가
+    # 시드된 식단·운동·대화를 근거로 답하게 한다. 멱등이라 최초 기동에서만 임베딩이
+    # 돌지만, 실 임베딩 키로 처음 띄우면 그만큼 기동이 길어진다 — 끄고 싶으면 false.
+    seed_rag_ingest: bool = True
 
     # --- 기타 ---
     cors_allow_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
