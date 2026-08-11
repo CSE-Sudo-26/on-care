@@ -58,22 +58,24 @@ class ConsultationSchedule {
 /// error, and decisions are refused rather than silently doing nothing.
 class DemoConsultationRepository implements ConsultationRepository {
   /// Creates the demo source.
-  DemoConsultationRepository()
-    : _requests = <ConsultationRequest>[
-        ConsultationRequest(
-          id: 'demo-consultation-1',
-          memberId: 'demo-consult-member-1',
-          memberName: '김하늘',
-          goalCode: 'fitness',
-          purposeCode: 'general',
-          preferredDate: DateTime.now().add(const Duration(days: 1)),
-          preferredTimeCode: 'evening',
-          status: 'pending',
-          message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
-          viaGym: true,
-          gymName: '온케어 피트니스',
-        ),
-      ];
+  DemoConsultationRepository({List<ConsultationRequest>? requests})
+    : _requests =
+          requests ??
+          <ConsultationRequest>[
+            ConsultationRequest(
+              id: 'demo-consultation-1',
+              memberId: 'demo-consult-member-1',
+              memberName: '김하늘',
+              goalCode: 'fitness',
+              purposeCode: 'general',
+              preferredDate: DateTime.now().add(const Duration(days: 1)),
+              preferredTimeCode: 'evening',
+              status: 'pending',
+              message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
+              viaGym: true,
+              gymName: '온케어 피트니스',
+            ),
+          ];
 
   List<ConsultationRequest> _requests;
 

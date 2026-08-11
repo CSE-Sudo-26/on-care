@@ -161,6 +161,7 @@ void main() {
               as Map<String, Object?>;
       expect(data['date'], '2026-08-12');
       expect(data['time'], '19:30');
+      expect(data['type'], '상담');
       expect(data['duration_minutes'], 30);
     });
 

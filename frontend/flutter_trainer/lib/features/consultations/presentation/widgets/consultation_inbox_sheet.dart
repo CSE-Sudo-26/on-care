@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -107,12 +108,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
         type: '상담',
         durationMinutes: booking.durationMinutes,
       );
-      await acceptConsultation(ref, widget.request.id, schedule: schedule);
-
       // Demo mode has no backend transaction, so mirror the accepted request
-      // into the local Drift calendar. Real mode receives the entry from the
-      // atomic accept endpoint and only needs its providers refreshed.
-      if (ref.read(appConfigProvider).useMockApi) {
+      // into the local Drift calendar before finalizing the decision. A failed
+      // calendar write therefore leaves the request pending and retryable.
+      final useMockApi = ref.read(appConfigProvider).useMockApi;
+      if (useMockApi) {
         await ref
             .read(scheduleRepositoryProvider)
             .addSession(
@@ -125,6 +125,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
               note: widget.request.message ?? '',
             );
       }
+      await acceptConsultation(ref, widget.request.id, schedule: schedule);
       ref.invalidate(scheduleForDateProvider(schedule.date));
       ref.invalidate(bookedDatesProvider);
       if (!mounted) return;
@@ -134,7 +135,11 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       );
     } on AppError catch (error) {
       messenger.showSnackBar(
-        SnackBar(content: Text(error.message ?? l.consultActionFailed)),
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.consultActionFailed),
+          ),
+        ),
       );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l.consultActionFailed)));
@@ -161,18 +166,34 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(l.actionCancel),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(l.consultRejectAction),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => TextButton(
+              onPressed: value.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(value.text.trim()),
+              child: Text(l.consultRejectAction),
+            ),
           ),
         ],
       ),
     );
     controller.dispose();
-    if (note == null || !mounted) return;
+    if (note == null || note.isEmpty || !mounted) return;
     setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await rejectConsultation(ref, widget.request.id, note: note);
+    } on AppError catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.consultActionFailed),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.consultActionFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -280,7 +301,7 @@ class _ScheduleDialog extends StatefulWidget {
 }
 
 class _ScheduleDialogState extends State<_ScheduleDialog> {
-  late DateTime _date = widget.request.preferredDate;
+  late DateTime _date;
   late int _hour = switch (widget.request.preferredTimeCode) {
     'morning' => 10,
     'afternoon' => 14,
@@ -289,6 +310,24 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   };
   int _minute = 0;
   int _duration = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = DateUtils.dateOnly(DateTime.now());
+    final lastDate = today.add(const Duration(days: 365));
+    _date = _clampDate(
+      DateUtils.dateOnly(widget.request.preferredDate),
+      today,
+      lastDate,
+    );
+  }
+
+  DateTime _clampDate(DateTime value, DateTime first, DateTime last) {
+    if (value.isBefore(first)) return first;
+    if (value.isAfter(last)) return last;
+    return value;
+  }
 
   String get _time =>
       '${_hour.toString().padLeft(2, '0')}:${_minute.toString().padLeft(2, '0')}';
@@ -308,11 +347,13 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             icon: const Icon(Icons.calendar_today_outlined),
             label: Text(dateLabel(l, _date)),
             onPressed: () async {
+              final today = DateUtils.dateOnly(DateTime.now());
+              final lastDate = today.add(const Duration(days: 365));
               final picked = await showDatePicker(
                 context: context,
-                initialDate: _date,
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365)),
+                initialDate: _clampDate(_date, today, lastDate),
+                firstDate: today,
+                lastDate: lastDate,
               );
               if (picked != null) setState(() => _date = picked);
             },
