@@ -16,7 +16,8 @@ Future<void> showClientCoachSheet(
 }) {
   return showDialog<void>(
     context: context,
-    builder: (_) => _ClientCoachSheet(memberId: memberId, clientName: clientName),
+    builder: (_) =>
+        _ClientCoachSheet(memberId: memberId, clientName: clientName),
   );
 }
 
@@ -40,8 +41,17 @@ class _ClientCoachSheet extends ConsumerStatefulWidget {
 class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
   final TextEditingController _question = TextEditingController();
   bool _asking = false;
-  ClientCoachAnswer? _answer;
+  bool _restoring = true;
+  // 최신 답변 하나가 아니라 스레드를 들고 있다(#588). 서버가 문답을 저장하므로
+  // 시트를 닫았다 열어도 이어지고, 후속 질문도 앞 문답을 근거로 답한다.
+  final List<ClientCoachTurn> _turns = <ClientCoachTurn>[];
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
 
   @override
   void dispose() {
@@ -49,10 +59,30 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
     super.dispose();
   }
 
+  Future<void> _restore() async {
+    try {
+      final List<ClientCoachTurn> rows = await ref
+          .read(clientCoachRepositoryProvider)
+          .history(memberId: widget.memberId);
+      if (!mounted) return;
+      setState(() {
+        _turns
+          ..clear()
+          ..addAll(rows);
+        _restoring = false;
+      });
+    } catch (_) {
+      // 복원 실패는 조용히 넘긴다 — 새로 물어보는 건 여전히 되므로, 시트를 열자마자
+      // 오류를 띄우면 할 수 있는 일까지 막힌 것처럼 보인다.
+      if (!mounted) return;
+      setState(() => _restoring = false);
+    }
+  }
+
   Future<void> _ask() async {
     final String message = _question.text.trim();
     // 빈 질문은 서버도 400 이다. 왕복할 이유가 없다.
-    if (message.isEmpty || _asking) return;
+    if (message.isEmpty || _asking || _restoring) return;
 
     setState(() {
       _asking = true;
@@ -64,7 +94,18 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
           .ask(memberId: widget.memberId, message: message);
       if (!mounted) return;
       setState(() {
-        _answer = answer;
+        _turns
+          ..add(ClientCoachTurn(isTrainer: true, content: message))
+          ..add(
+            ClientCoachTurn(
+              isTrainer: false,
+              content: answer.reply,
+              sources: answer.sources,
+            ),
+          );
+        // 보낸 질문은 지운다 — 남겨 두면 다음 질문을 쓸 때마다 지워야 하고,
+        // 방금 물은 내용은 이미 위 스레드에 남아 있다.
+        _question.clear();
         _asking = false;
       });
     } on AppError catch (e) {
@@ -105,12 +146,47 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                   color: AppColors.mutedForeground,
                 ),
               ),
+              if (_restoring) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                const Center(child: CircularProgressIndicator()),
+              ],
+              // 스레드를 입력칸 위에 둔다 — 대화는 위에서 아래로 읽고, 새로 쓰는
+              // 칸은 항상 같은 자리(맨 아래)에 있어야 찾지 않는다.
+              for (final ClientCoachTurn turn in _turns) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                _Note(
+                  tone: turn.isTrainer
+                      ? AppColors.mutedForeground
+                      : AppColors.primary,
+                  text: turn.content,
+                ),
+                if (turn.sources.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l.coachSheetSources,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.subtleForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  for (final String source in turn.sources)
+                    Text(
+                      '· $source',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                ],
+              ],
               const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _question,
                 maxLines: 3,
                 maxLength: 1000,
-                enabled: !_asking,
+                enabled: !_asking && !_restoring,
                 onSubmitted: (_) => _ask(),
                 decoration: InputDecoration(
                   hintText: l.coachSheetHint,
@@ -126,30 +202,6 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                 const SizedBox(height: AppSpacing.md),
                 _Note(tone: AppColors.destructive, text: _error!),
               ],
-              if (_answer != null && !_asking) ...<Widget>[
-                const SizedBox(height: AppSpacing.md),
-                _Note(tone: AppColors.primary, text: _answer!.reply),
-                if (_answer!.sources.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    l.coachSheetSources,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.subtleForeground,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  for (final String source in _answer!.sources)
-                    Text(
-                      '· $source',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                ],
-              ],
             ],
           ),
         ),
@@ -160,9 +212,9 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
           child: Text(l.actionClose),
         ),
         ActionButton(
-          label: _answer == null ? l.coachSheetAsk : l.coachSheetAskAgain,
+          label: _turns.isEmpty ? l.coachSheetAsk : l.coachSheetAskAgain,
           primary: true,
-          onPressed: _asking ? null : _ask,
+          onPressed: _asking || _restoring ? null : _ask,
         ),
       ],
     );

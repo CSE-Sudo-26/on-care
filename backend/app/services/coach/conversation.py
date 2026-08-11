@@ -20,6 +20,7 @@ import json
 import uuid
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.models import AiConversation, AiMessage
@@ -36,28 +37,68 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:16]}"
 
 
-def get_or_create_active(db: Session, user_id: str) -> AiConversation:
-    """사용자의 활성 대화 스레드. 없으면 만든다."""
+def _active_thread_filter(user_id: str, trainer_id: str | None):
+    """스레드 식별 조건 — (회원, 화자) 쌍이 스레드를 가른다(#588).
+
+    `trainer_id` 가 NULL 인 스레드가 회원 본인의 대화다. 이 조건을 한 곳에 모아
+    두는 이유: 조회와 생성이 조건을 다르게 쓰면 매 요청이 새 스레드를 만들거나,
+    더 나쁘게는 트레이너 질의가 회원 대화에 섞인다.
+    """
+    owner = (
+        AiConversation.trainer_id.is_(None)
+        if trainer_id is None
+        else AiConversation.trainer_id == trainer_id
+    )
+    return (
+        AiConversation.user_id == user_id,
+        owner,
+        AiConversation.archived_at.is_(None),
+    )
+
+
+def get_or_create_active(
+    db: Session, user_id: str, *, trainer_id: str | None = None
+) -> AiConversation:
+    """활성 대화 스레드. 없으면 만든다.
+
+    [trainer_id] 가 있으면 그 트레이너가 이 회원에 대해 묻는 전용 스레드다.
+    """
     convo = db.scalar(
         select(AiConversation)
-        .where(
-            AiConversation.user_id == user_id,
-            AiConversation.archived_at.is_(None),
-        )
+        .where(*_active_thread_filter(user_id, trainer_id))
         .order_by(AiConversation.created_at.desc())
         .limit(1)
     )
     if convo is not None:
         return convo
 
-    convo = AiConversation(id=_new_id("aiconv"), user_id=user_id)
+    convo = AiConversation(
+        id=_new_id("aiconv"), user_id=user_id, trainer_id=trainer_id
+    )
     db.add(convo)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 같은 (회원, 트레이너) 요청이 동시에 생성되면 부분 유니크 인덱스에서
+        # 한쪽만 이긴다. 실패한 세션을 정리한 뒤 승자가 만든 스레드를 반환한다.
+        db.rollback()
+        winner = db.scalar(
+            select(AiConversation)
+            .where(*_active_thread_filter(user_id, trainer_id))
+            .order_by(AiConversation.created_at.desc())
+            .limit(1)
+        )
+        if winner is None:
+            # FK 위반 등 활성 스레드 경쟁이 아닌 무결성 오류는 숨기지 않는다.
+            raise
+        return winner
     db.refresh(convo)
     return convo
 
 
-def load_messages(db: Session, user_id: str) -> list[AiMessage]:
+def load_messages(
+    db: Session, user_id: str, *, trainer_id: str | None = None
+) -> list[AiMessage]:
     """활성 대화의 메시지를 시간순으로. 대화가 없으면 빈 목록.
 
     스레드를 만들지 않는 조회 전용 경로다. 채팅 화면을 열기만 하고 아무 말도 하지
@@ -65,10 +106,7 @@ def load_messages(db: Session, user_id: str) -> list[AiMessage]:
     """
     convo = db.scalar(
         select(AiConversation)
-        .where(
-            AiConversation.user_id == user_id,
-            AiConversation.archived_at.is_(None),
-        )
+        .where(*_active_thread_filter(user_id, trainer_id))
         .order_by(AiConversation.created_at.desc())
         .limit(1)
     )
@@ -90,6 +128,7 @@ def append_exchange(
     question: str,
     reply: str,
     sources: list[str],
+    trainer_id: str | None = None,
 ) -> AiConversation:
     """질문과 답변을 한 번에 저장한다.
 
@@ -98,7 +137,17 @@ def append_exchange(
     now() 는 트랜잭션 시각이라 같은 커밋의 두 줄이 **동일한 created_at** 을 갖고,
     그러면 정렬이 랜덤한 id 순으로 무너져 답변이 질문보다 먼저 보인다.
     """
-    convo = get_or_create_active(db, user_id)
+    convo = get_or_create_active(db, user_id, trainer_id=trainer_id)
+    # 대화 한 행을 순번 할당용 mutex 로 쓴다. PostgreSQL 에서는 같은 스레드의
+    # 동시 append 가 여기서 직렬화되므로 max(seq)를 읽고 두 메시지를 커밋할 때까지
+    # 다른 요청이 같은 순번을 가져갈 수 없다.
+    convo = db.scalar(
+        select(AiConversation)
+        .where(AiConversation.id == convo.id)
+        .with_for_update()
+    )
+    if convo is None:
+        raise RuntimeError("활성 AI 대화 스레드가 저장 중 삭제되었습니다.")
     # 빈 대화면 max 가 NULL 이라 coalesce 로 -1 → 첫 순번이 0 이 된다.
     next_seq = db.scalar(
         select(func.coalesce(func.max(AiMessage.seq), -1) + 1).where(

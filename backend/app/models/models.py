@@ -868,6 +868,12 @@ class AiConversation(Base):
     user_id: Mapped[str] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    #: 누가 나눈 대화인가 (#588). NULL 이면 회원 본인의 대화 — 회원 앱이 읽는 것.
+    #: 값이 있으면 그 트레이너가 이 회원에 대해 물어본 대화다. `user_id` 는 어느
+    #: 쪽이든 **검색 스코프**(누구 기록을 근거로 삼는가)라 항상 회원이다.
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     #: 비우면 활성 스레드. 값이 있으면 보관된 스레드(현재는 쓰지 않음).
     archived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -877,6 +883,24 @@ class AiConversation(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # NULL 은 일반 UNIQUE 에서 서로 다른 값으로 취급된다. 회원 본인 스레드와
+    # 트레이너별 스레드를 별도 부분 인덱스로 묶어 활성 대화를 하나만 허용한다.
+    __table_args__ = (
+        Index(
+            "uq_ai_conversations_active_member",
+            "user_id",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL AND trainer_id IS NULL"),
+        ),
+        Index(
+            "uq_ai_conversations_active_trainer",
+            "user_id",
+            "trainer_id",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL AND trainer_id IS NOT NULL"),
+        ),
     )
 
 
