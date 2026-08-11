@@ -15,7 +15,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.schemas.misc_api import CoachSuggestion
-from app.services.coach import prompt_safety
+from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve_context
 # STEP 6 규칙 기반(폴백)
@@ -28,13 +28,19 @@ _DIET_SYSTEM = (
     "제공된 '내 건강 기록'과 '참고 자료'에 근거해, 나트륨·당류 관리를 중심으로 "
     "DASH 식단 관점의 조언을 2~3문장으로 친근하게 한국어로 제시하세요. "
     "근거 없는 단정은 피하고, 참고 자료가 있으면 그 권고를 반영하세요. "
+    # 식단 조언도 자유 서술이라 "나트륨을 줄이면 당신 혈압이…" 로 새어 나갈 수
+    # 있다. 세 코치 모두 같은 안내를 싣는다(#602).
+    + grounding.UNTRACKED_METRIC_NOTICE + " "
     # 개인 문서에는 트레이너와 주고받은 대화도 검색되어 들어온다(#580).
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
 _EXERCISE_SYSTEM = (
     "당신은 만성질환 위험군을 돕는 운동 코치입니다. "
-    "제공된 '내 건강 기록'과 '참고 자료'에 근거해, 혈압·혈당 관리에 도움이 되는 "
+    "제공된 '내 건강 기록'과 '참고 자료'에 근거해, 최근 운동량과 생활 습관에 맞는 "
     "운동 조언을 2~3문장으로 친근하게 한국어로 제시하세요. "
+    # 예전에는 "혈압·혈당 관리에 도움이 되는" 이라고 지시했다. 그 수치를 재지
+    # 않으므로 모델이 근거 없이 답하거나 일반론으로 흘렀다(#602).
+    + grounding.UNTRACKED_METRIC_NOTICE + " "
     + prompt_safety.UNTRUSTED_QUOTE_GUARD
 )
 
@@ -73,6 +79,8 @@ def exercise_coach(db: Session, user_id: str) -> CoachSuggestion:
     fallback = _exercise_suggestion(db, user_id)
     return _rag_suggestion(
         db, user_id, domain="exercise", system_prompt=_EXERCISE_SYSTEM,
-        query="이번 주 운동량과 혈압·혈당 관리를 위한 운동 제안",
+        # 질의문도 실제 적재된 것으로 좁힌다 — 혈압·혈당으로 검색해 봐야 개인
+        # 문서에는 없고, 엉뚱한 공공 문서만 상위로 끌어올린다(#602).
+        query="이번 주 운동량과 최근 운동 기록을 바탕으로 한 운동 제안",
         tag="exercise", title="오늘의 운동 코칭", fallback=fallback,
     )
