@@ -21,6 +21,7 @@ class OnboardingPage extends ConsumerStatefulWidget {
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   static const int _steps = 3;
+
   /// 만성질환 선택지 — **전송 값**이다.
   ///
   /// 서버는 이 값을 자유 텍스트로 저장하고 AI 코치가 '내 건강 기록' 으로 읽는다. 화면
@@ -50,6 +51,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   String? _gender; // 'male' | 'female' | 'other'
   final TextEditingController _height = TextEditingController();
   final TextEditingController _weight = TextEditingController();
+  final TextEditingController _goals = TextEditingController();
   final Set<String> _conditions = <String>{};
   final TextEditingController _dailySodium = TextEditingController();
 
@@ -59,6 +61,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     _birthDate.dispose();
     _height.dispose();
     _weight.dispose();
+    _goals.dispose();
     _dailySodium.dispose();
     super.dispose();
   }
@@ -101,6 +104,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             heightCm: _num(_height),
             weightKg: _num(_weight),
             conditions: _conditions.isEmpty ? null : _conditions.join(', '),
+            goals: _goals.text.trim().isEmpty ? null : _goals.text.trim(),
             dailySodiumMg: _int(_dailySodium),
           );
       ref.invalidate(profileProvider);
@@ -108,9 +112,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.onboardSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.onboardSaveFailed)));
     }
   }
 
@@ -274,7 +276,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         const SizedBox(height: AppSpacing.md),
         AuthField(
           controller: _weight,
-          hint: '체중 (kg)',
+          hint: l.onboardWeightHint,
           icon: Icons.monitor_weight_outlined,
           keyboardType: TextInputType.number,
         ),
@@ -318,6 +320,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       title: l.onboardGoalTitle,
       subtitle: l.onboardGoalSubtitle,
       children: <Widget>[
+        AuthField(
+          controller: _goals,
+          hint: l.onboardGoalHint,
+          icon: Icons.flag_outlined,
+        ),
+        const SizedBox(height: AppSpacing.md),
         AuthField(
           controller: _dailySodium,
           hint: l.onboardSodiumGoalHint,

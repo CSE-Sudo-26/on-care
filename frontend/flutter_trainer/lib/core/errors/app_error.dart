@@ -17,6 +17,11 @@ sealed class AppError implements Exception {
   /// Map a `DioException` into the closest AppError. Add new branches
   /// here rather than at call sites.
   factory AppError.fromDio(DioException e) {
+    final data = e.response?.data;
+    final detail = data is Map<String, dynamic> && data['detail'] is String
+        ? data['detail'] as String
+        : null;
+    final message = detail ?? e.message;
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
@@ -24,7 +29,7 @@ sealed class AppError implements Exception {
       case DioExceptionType.transformTimeout:
       case DioExceptionType.connectionError:
         return NetworkError(
-          message: e.message,
+          message: message,
           cause: e,
           stackTrace: e.stackTrace,
         );
@@ -33,30 +38,30 @@ sealed class AppError implements Exception {
       case DioExceptionType.badResponse:
         final code = e.response?.statusCode ?? 0;
         if (code == 401) {
-          return UnauthorizedError(message: e.message);
+          return UnauthorizedError(message: message);
         }
         if (code == 403) {
-          return ForbiddenError(message: e.message);
+          return ForbiddenError(message: message);
         }
         if (code == 404) {
-          return NotFoundError(message: e.message);
+          return NotFoundError(message: message);
         }
         if (code == 429) {
           // 실패가 아니라 **잠시 뒤 되는** 상태다. 다른 오류와 뭉뚱그리면
           // 트레이너가 고장으로 읽는다(#582).
-          return RateLimitedError(message: e.message);
+          return RateLimitedError(message: message);
         }
         if (code == 400 || code == 422) {
           // The server rejected the INPUT, not the request. Callers show
           // this inline on the offending field rather than as a "다시
           // 시도해 주세요" retry — retrying the same value can't help.
-          return ValidationError(message: e.message);
+          return ValidationError(message: message);
         }
-        return ServerError(statusCode: code, message: e.message);
+        return ServerError(statusCode: code, message: message);
       case DioExceptionType.badCertificate:
       case DioExceptionType.unknown:
         return UnknownError(
-          message: e.message,
+          message: message,
           cause: e,
           stackTrace: e.stackTrace,
         );

@@ -722,6 +722,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t add the client. Please try again'**
   String get clientsAddFailed;
 
+  /// No description provided for @memberHealthLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the member profile. Please try again'**
+  String get memberHealthLoadFailed;
+
+  /// No description provided for @memberHealthSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the member profile. Please try again'**
+  String get memberHealthSaveFailed;
+
   /// No description provided for @clientsDuplicateName.
   ///
   /// In en, this message translates to:

@@ -3,9 +3,10 @@
 
 모든 필드는 snake_case (프론트 case_mapper 가 camelCase 로 변환).
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.partial_update import PartialUpdate
@@ -64,7 +65,6 @@ class MemberNotificationSettingsUpdate(PartialUpdate):
     weekly_report: bool | None = None
 
 
-
 class UserHealth(BaseModel):
     profile: HealthProfileBrief
     risk: RiskInfo
@@ -117,6 +117,7 @@ class TrainerRegister(UserRegister):
 # ---- 프로필 / 온보딩 / 건강 목표 ----
 class ProfileView(BaseModel):
     """GET /users/me/profile — 내 프로필 화면용 통합 뷰."""
+
     id: str
     name: str
     email: str
@@ -149,6 +150,7 @@ class HealthGoalsUpdate(BaseModel):
     그대로 컬럼에 반영한다. 규약은 *NOT NULL 컬럼* 을 지키려는 것이므로 여기에는
     해당하지 않고, 적용하면 목표를 지울 방법이 사라진다.
     """
+
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
     daily_sugar_g: Optional[int] = None
@@ -165,12 +167,13 @@ class OnboardingRequest(BaseModel):
 
     name 은 User, 나머지는 HealthProfile 컬럼과 1:1 로 매핑된다.
     """
+
     name: Optional[str] = None
-    birth_date: Optional[str] = None       # YYYY-MM-DD
-    gender: Optional[str] = None           # male|female|other
+    birth_date: Optional[str] = None  # YYYY-MM-DD
+    gender: Optional[str] = None  # male|female|other
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
-    conditions: Optional[str] = None       # "고혈압, 당뇨 전단계"
+    conditions: Optional[str] = None  # "고혈압, 당뇨 전단계"
     goals: Optional[str] = None
     daily_calories: Optional[int] = None
     daily_sodium_mg: Optional[int] = None
@@ -183,6 +186,9 @@ class ProfileUpdate(PartialUpdate):
     네 항목 모두 DB NOT NULL 이라 null 로 바꿀 수 있는 값이 아니다. 전에는
     핸들러가 `is not None` 으로 걸러 조용히 무시했다 — 저장된 줄 알게 된다(#495).
     """
+
+    nullable_fields: ClassVar[frozenset[str]] = frozenset({"height_cm", "weight_kg"})
+
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None

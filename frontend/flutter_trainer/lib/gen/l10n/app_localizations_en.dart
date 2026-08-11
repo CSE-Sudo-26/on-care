@@ -354,6 +354,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsAddFailed => 'Couldn\'t add the client. Please try again';
 
   @override
+  String get memberHealthLoadFailed =>
+      'Couldn\'t load the member profile. Please try again';
+
+  @override
+  String get memberHealthSaveFailed =>
+      'Couldn\'t save the member profile. Please try again';
+
+  @override
   String get clientsDuplicateName => 'A client with that name already exists';
 
   @override

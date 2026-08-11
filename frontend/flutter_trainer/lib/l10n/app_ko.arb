@@ -104,6 +104,8 @@
   "clientsSeeAll": "전체 보기",
   "clientsNameRequired": "이름을 입력해 주세요",
   "clientsAddFailed": "등록에 실패했어요. 다시 시도해 주세요",
+  "memberHealthLoadFailed": "회원 정보를 불러오지 못했어요. 다시 시도해 주세요",
+  "memberHealthSaveFailed": "회원 정보를 저장하지 못했어요. 다시 시도해 주세요",
   "clientsDuplicateName": "이미 같은 이름의 고객이 있어요",
   "clientsAddTitle": "신규 고객 등록",
   "clientsNameLabel": "고객 이름",

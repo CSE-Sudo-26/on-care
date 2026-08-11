@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
@@ -114,6 +115,30 @@ void main() {
       isA<DioClientRepository>(),
     );
   });
+
+  test(
+    'demo health-profile updates persist and preserve omitted fields',
+    () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      await seedIfEmpty(db);
+      final repository = DriftClientRepository(db);
+
+      final before = await repository.fetchHealthProfile('seed-client-1');
+      final updated = await repository.updateHealthProfile('seed-client-1', {
+        'weight_kg': 68.4,
+        'weekly_workout_goal': 0,
+        'goals': '체지방 감량',
+      });
+      final fetchedAgain = await repository.fetchHealthProfile('seed-client-1');
+
+      expect(updated.weightKg, 68.4);
+      expect(updated.weeklyWorkoutGoal, 0);
+      expect(fetchedAgain.weightKg, 68.4);
+      expect(fetchedAgain.goals, '체지방 감량');
+      expect(fetchedAgain.heightCm, before.heightCm);
+    },
+  );
 
   test('watching clientsProvider + prioritizedClientsProvider together issues '
       'exactly one GET /trainer/clients in real-API mode (review: the two '

@@ -38,8 +38,19 @@ class MockAccountRepository implements AccountRepository {
     num? heightCm,
     num? weightKg,
     String? conditions,
+    String? goals,
     int? dailySodiumMg,
-  }) async => _profile;
+  }) async {
+    _profile = _replaceProfile(
+      birthDate: birthDate,
+      gender: gender,
+      heightCm: heightCm,
+      weightKg: weightKg,
+      goals: goals,
+      dailySodiumMg: dailySodiumMg,
+    );
+    return _profile;
+  }
 
   @override
   Future<UserProfile> updateProfile({
@@ -51,7 +62,50 @@ class MockAccountRepository implements AccountRepository {
     num? heightCm,
     num? weightKg,
     String? goals,
-  }) async => _profile;
+  }) async {
+    _profile = _replaceProfile(
+      name: name,
+      email: email,
+      phone: phone,
+      birthDate: birthDate,
+      gender: gender,
+      heightCm: heightCm,
+      weightKg: weightKg,
+      goals: goals,
+    );
+    return _profile;
+  }
+
+  UserProfile _replaceProfile({
+    String? name,
+    String? email,
+    String? phone,
+    String? birthDate,
+    String? gender,
+    num? heightCm,
+    num? weightKg,
+    String? goals,
+    int? dailySodiumMg,
+  }) => UserProfile(
+    id: _profile.id,
+    name: name ?? _profile.name,
+    email: email ?? _profile.email,
+    phone: phone ?? _profile.phone,
+    birthDate: birthDate ?? _profile.birthDate,
+    gender: gender ?? _profile.gender,
+    heightCm: heightCm?.toDouble() ?? _profile.heightCm,
+    weightKg: weightKg?.toDouble() ?? _profile.weightKg,
+    goals: goals ?? _profile.goals,
+    dailyCalories: _profile.dailyCalories,
+    dailySodiumMg: dailySodiumMg ?? _profile.dailySodiumMg,
+    dailySugarG: _profile.dailySugarG,
+    dailyCarbsG: _profile.dailyCarbsG,
+    dailyProteinG: _profile.dailyProteinG,
+    dailyFatG: _profile.dailyFatG,
+    weeklyWorkoutGoal: _profile.weeklyWorkoutGoal,
+    weeklyExerciseMinutesGoal: _profile.weeklyExerciseMinutesGoal,
+    weeklyBurnGoal: _profile.weeklyBurnGoal,
+  );
 
   @override
   Future<UserProfile> updateHealthGoals({

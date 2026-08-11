@@ -1281,6 +1281,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myFieldBirth => '생년월일';
 
   @override
+  String get myFieldGender => '성별';
+
+  @override
+  String get myFieldHeight => '키 (cm)';
+
+  @override
+  String get myFieldWeight => '체중 (kg)';
+
+  @override
+  String get myFieldGoals => '건강·운동 목표';
+
+  @override
   String get myNotifDietLog => '식단 기록 알림';
 
   @override
@@ -1732,6 +1744,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get onboardHeightHint => '키 (cm)';
 
   @override
+  String get onboardWeightHint => '체중 (kg)';
+
+  @override
   String get onboardHealthTitle => '건강 상태';
 
   @override
@@ -1742,6 +1757,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get onboardGoalSubtitle => '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.';
+
+  @override
+  String get onboardGoalHint => '건강·운동 목표';
 
   @override
   String get onboardSodiumGoalHint => '하루 나트륨 목표 (mg)';
