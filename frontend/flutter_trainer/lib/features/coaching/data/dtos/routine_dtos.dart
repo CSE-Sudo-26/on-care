@@ -41,13 +41,20 @@ AssignedRoutine assignedRoutineFromJson(Map<String, Object?> json) {
 
 /// [AssignedRoutine] → `RoutineAssignRequest` JSON. Clamps/normalises so the
 /// backend's validators (minutes 0–600, type literal, lengths) never 422.
-Map<String, Object?> assignRoutineToJson(AssignedRoutine r) {
+///
+/// [clientRequestId] 는 전송 시도의 멱등키다. 넣어 보내면 같은 키의 재요청이
+/// 새 배정을 만들지 않는다(#581). 생략하면 서버는 기존처럼 매번 새로 배정한다.
+Map<String, Object?> assignRoutineToJson(
+  AssignedRoutine r, {
+  String? clientRequestId,
+}) {
   return <String, Object?>{
     'name': r.name.trim().isEmpty ? 'AI 맞춤 루틴' : _truncate(r.name.trim(), 100),
     'minutes': r.minutes.clamp(0, 600),
     'type': kRoutineTypes.contains(r.type) ? r.type : '근력',
     'reason': _truncate(r.reason, 200),
     'source': r.source == 'trainer' ? 'trainer' : 'ai',
+    'client_request_id': ?clientRequestId,
   };
 }
 

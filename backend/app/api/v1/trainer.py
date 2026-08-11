@@ -20,6 +20,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
+from app.core.config import get_settings
+from app.core.rate_limit import rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import Notification, TrainerClient, TrainerProfile
@@ -370,6 +372,7 @@ def trainer_assign_routine(
         db, trainer.id, member_id,
         name=payload.name.strip(), minutes=payload.minutes,
         type_=payload.type, reason=payload.reason, source=payload.source,
+        client_request_id=payload.client_request_id,
     )
 
 
@@ -424,6 +427,14 @@ def trainer_delete_routine(
 @router.post(
     "/trainer/clients/{member_id}/routine-options",
     response_model=RoutineOptionsOut,
+    # LLM 을 부르는 엔드포인트라 /ai-coach/chat 과 같은 가드를 건다. 생성이
+    # 실패해 규칙형으로 폴백해도 공급자 호출 비용은 이미 나간 뒤이므로,
+    # 연타가 그대로 청구되지 않게 앞에서 막는다.
+    dependencies=[
+        Depends(
+            rate_limit("routine-options", get_settings().routine_options_per_minute)
+        )
+    ],
 )
 def trainer_routine_options(
     member_id: str,

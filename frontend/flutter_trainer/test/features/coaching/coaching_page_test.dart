@@ -182,8 +182,16 @@ class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
   final Object? throwOnAssign;
   AssignedRoutine? lastAssigned;
 
+  /// 전송 시도마다 넘어온 멱등키. 재시도가 같은 키를 쓰는지 본다(#581).
+  final List<String?> assignAttempts = <String?>[];
+
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {
+    assignAttempts.add(clientRequestId);
     if (throwOnAssign != null) throw throwOnAssign!;
     lastAssigned = routine;
   }
@@ -1095,19 +1103,19 @@ void main() {
     );
 
     testWidgets(
-      'a network/timeout assign failure shows the ambiguous verify-first '
-      "message, not '다시 시도' (assign is not idempotent — retrying on an "
-      'ambiguous failure risks a duplicate routine)',
+      '네트워크 실패도 재시도를 안내한다 — 멱등키를 함께 보내므로 다시 눌러도 '
+      '회원에게 루틴이 두 번 배정되지 않는다 (#581)',
       (tester) async {
         await openRealApiTab(tester, assignError: const NetworkError());
 
         await tapSend(tester);
 
+        expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
         expect(
           find.text('응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요'),
-          findsOneWidget,
+          findsNothing,
+          reason: '멱등해진 뒤에는 "먼저 확인하라"고 막을 이유가 없다',
         );
-        expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
       },
     );
 
@@ -1123,6 +1131,28 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets(
+      '실패 후 재시도는 같은 멱등키를 다시 보낸다 (#581)',
+      (tester) async {
+        // 키가 매번 새로 생기면 서버의 유니크 제약이 아무것도 막지 못한다.
+        final routineRepo = await openRealApiTab(
+          tester,
+          assignError: const NetworkError(),
+        );
+
+        await tapSend(tester);
+        await tapSend(tester);
+
+        expect(routineRepo.assignAttempts, hasLength(2));
+        expect(routineRepo.assignAttempts.first, isNotNull);
+        expect(
+          routineRepo.assignAttempts.first,
+          routineRepo.assignAttempts.last,
+          reason: '재시도가 새 키를 만들면 중복 배정이 그대로 생긴다',
+        );
+      },
+    );
 
     testWidgets(
       'an all-custom send (every AI suggestion removed) assigns type/source '
