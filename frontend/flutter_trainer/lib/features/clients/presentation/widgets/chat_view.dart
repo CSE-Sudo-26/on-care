@@ -453,6 +453,7 @@ class _InputBar extends StatelessWidget {
             color: sending ? AppColors.disabledForeground : AppColors.accent,
             shape: const CircleBorder(),
             child: InkWell(
+              key: const ValueKey<String>('client-chat-send'),
               customBorder: const CircleBorder(),
               onTap: sending ? null : onSend,
               child: const Padding(

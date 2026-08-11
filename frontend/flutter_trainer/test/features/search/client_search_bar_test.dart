@@ -199,6 +199,30 @@ void main() {
     );
   });
 
+  testWidgets('접힌 검색 다이얼로그도 ↓와 Enter로 다른 고객을 고른다', (tester) async {
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clients,
+    );
+
+    await tester.tap(find.byKey(clientSearchIconKey));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '수');
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await settle(tester);
+
+    final ctx = tester.element(find.byKey(clientSearchIconKey));
+    expect(
+      GoRouter.of(ctx).state.uri.toString(),
+      '/clients/seed-client-2/diet',
+      reason: '두 번째 검색 결과가 선택되어야 한다',
+    );
+  });
+
   testWidgets('검색어를 지우면 드롭다운이 닫힌다', (tester) async {
     await openConsole(tester, AppRoutes.clients);
 

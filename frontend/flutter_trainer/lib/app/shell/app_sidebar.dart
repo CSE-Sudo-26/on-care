@@ -310,6 +310,7 @@ class _NavTile extends StatelessWidget {
           color: selected ? AppColors.accentSurface : Colors.transparent,
           borderRadius: const BorderRadius.all(AppRadius.md),
           child: InkWell(
+            key: ValueKey<String>('sidebar-${destination.route}'),
             onTap: onTap,
             borderRadius: const BorderRadius.all(AppRadius.md),
             child: DecoratedBox(

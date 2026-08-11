@@ -85,6 +85,45 @@ flutter run -d chrome \
 > 4~15번 고객은 로스터·차트가 동작할 최소 지표만 있고(#572) 상세 기록은 위 3명에게만
 > 있습니다.
 
+## 트레이너 웹 브라우저 E2E
+
+트레이너 웹의 로그인·고객 상세·채팅·상담 거절·스케줄 핵심 흐름은 Flutter 공식
+[`integration_test`](https://docs.flutter.dev/testing/integration-tests)와 ChromeDriver로
+실 API를 확인합니다. 먼저 위 백엔드를 기본 데모 비밀번호(`oncare123`)로 띄운 뒤 두
+터미널에서 실행합니다.
+
+```bash
+# 터미널 1 — 설치된 Chrome과 호환되는 ChromeDriver
+chromedriver --port=4444
+
+# 터미널 2
+cd frontend/flutter_trainer
+bash tool/fetch_drift_wasm.sh   # 최초 1회
+bash tool/run_web_e2e.sh
+```
+
+테스트는 다음 계약을 고정합니다.
+
+- 트레이너 계정은 `trainer@oncare.com`, 상담 fixture 준비 계정은
+  `jisu@oncare.com`이며 둘 다 기본 `DEMO_LOGIN_PASSWORD=oncare123`을 사용합니다.
+- `USE_MOCK_API=false`, `API_BASE_URL=http://localhost:8000/v1`가 아니면 즉시 실패합니다.
+- 트레이너 토큰을 주입하지 않고 `trainer@oncare.com`으로 로그인 화면을 통과합니다.
+- 고객/상담/스케줄 이동은 사이드바와 화면 안의 탭·버튼만 사용합니다.
+- 채팅은 실행 시각이 포함된 고유 문구를 한 번 보내고 화면 재진입 뒤에도 한 건만 보이는지
+  확인합니다. 채팅 삭제 API가 없으므로 이 문구는 로컬 DB에 남습니다.
+- 상담 테스트는 `jisu@oncare.com`으로 기존 대기 요청을 재사용하거나 새 요청을 만든 뒤
+  트레이너 화면에서 거절합니다. 승인과 달리 담당 고객 관계를 바꾸지 않으며, 다음 실행은
+  다시 새 대기 요청을 만들 수 있습니다.
+
+### 새로고침 검증의 범위
+
+Flutter 3.44의 `integration_test` WebDriver 채널은 브라우저 스크린샷 명령만 제공하고,
+실행 중인 테스트가 `location.reload()`를 호출하면 테스트 런타임 자체도 함께 종료됩니다.
+따라서 이 스위트는 브라우저 URL을 그대로 둔 채 운영 앱 루트를 다시 부팅하여, 실제
+새로고침의 앱 측 계약인 **보안 저장소 세션 복원**과 **현재 URL의 고객/하위 탭 복원**을
+검증합니다. Chrome 프로세스 자체의 reload 이벤트까지 자동화해야 한다면 Flutter 공식
+드라이버가 reload 명령을 지원할 때 별도 시나리오로 추가해야 합니다.
+
 ### 시드 기록과 AI 코치
 
 시드된 식단·운동·대화는 기동할 때 **개인 RAG 문서로도 적재**됩니다(#604). 그래서 데모

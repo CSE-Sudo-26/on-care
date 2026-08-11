@@ -725,6 +725,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
   final TextEditingController _controller = TextEditingController();
   List<TrainerClient> _results = const <TrainerClient>[];
   String _query = '';
+  int _highlight = 0;
 
   @override
   void dispose() {
@@ -738,7 +739,21 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
     setState(() {
       _query = value;
       _results = searchClients(clients, value);
+      _highlight = 0;
     });
+  }
+
+  void _move(int delta) {
+    if (_results.isEmpty) return;
+    setState(
+      () => _highlight = (_highlight + delta).clamp(0, _results.length - 1),
+    );
+  }
+
+  void _submit(ClientSearchFacts facts) {
+    if (_results.isEmpty) return;
+    final index = _highlight.clamp(0, _results.length - 1);
+    _pop(_results[index], facts);
   }
 
   @override
@@ -768,41 +783,49 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
             Material(
               color: AppColors.card,
               borderRadius: const BorderRadius.all(AppRadius.pill),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.foreground,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: AppColors.card,
-                  hintText: l.searchClientsHint,
-                  hintStyle: const TextStyle(
-                    fontSize: 15,
-                    color: AppColors.subtleForeground,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    size: 20,
-                    color: AppColors.subtleForeground,
-                  ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 40),
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.md,
-                  ),
-                  border: _fieldBorder,
-                  enabledBorder: _fieldBorder,
-                  focusedBorder: _fieldBorder,
-                ),
-                onChanged: _onQueryChanged,
-                onSubmitted: (_) {
-                  if (_results.isNotEmpty) _pop(_results.first, facts);
+              child: CallbackShortcuts(
+                bindings: <ShortcutActivator, VoidCallback>{
+                  const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                      _move(1),
+                  const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                      _move(-1),
+                  const SingleActivator(LogicalKeyboardKey.escape): () =>
+                      Navigator.of(context).pop(),
                 },
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.foreground,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: AppColors.card,
+                    hintText: l.searchClientsHint,
+                    hintStyle: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.subtleForeground,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: AppColors.subtleForeground,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 40),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    border: _fieldBorder,
+                    enabledBorder: _fieldBorder,
+                    focusedBorder: _fieldBorder,
+                  ),
+                  onChanged: _onQueryChanged,
+                  onSubmitted: (_) => _submit(facts),
+                ),
               ),
             ),
             if (_query.trim().isNotEmpty) ...<Widget>[
@@ -814,8 +837,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                 results: _results,
                 facts: facts,
                 clientSection: widget.clientSection,
-                // Touch surface: no keyboard cursor to show.
-                highlighted: -1,
+                highlighted: _highlight,
                 onPick: (client) => _pop(client, facts),
                 onOpenDestination: (client, route) => _popRoute(client, route),
               ),

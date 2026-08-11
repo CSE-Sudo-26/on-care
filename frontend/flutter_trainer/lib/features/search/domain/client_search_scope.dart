@@ -83,13 +83,23 @@ Map<String, ScheduleSession> nextSessionsByClient(
       return byDate != 0 ? byDate : a.time.compareTo(b.time);
     });
 
+  final nameCounts = <String, int>{};
+  for (final client in clients) {
+    final name = client.name.trim().toLowerCase();
+    if (name.isNotEmpty) {
+      nameCounts.update(name, (count) => count + 1, ifAbsent: () => 1);
+    }
+  }
+
   final out = <String, ScheduleSession>{};
   for (final client in clients) {
     final name = client.name.trim().toLowerCase();
+    final canMatchLegacyName = name.isNotEmpty && nameCounts[name] == 1;
     for (final session in booked) {
       final matches =
           session.clientId == client.id ||
           (session.clientId == null &&
+              canMatchLegacyName &&
               session.clientName.trim().toLowerCase() == name);
       if (matches) {
         out[client.id] = session;

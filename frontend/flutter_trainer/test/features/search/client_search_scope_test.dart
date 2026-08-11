@@ -81,6 +81,19 @@ void main() {
 
       expect(map['c1']!.time, '11:00');
     });
+
+    test('동명이인은 client_id 없는 옛 행을 누구에게도 연결하지 않는다', () {
+      final anotherMinsu = makeClient(id: 'c3', name: ' 김민수 ');
+
+      final map = nextSessionsByClient(
+        <TrainerClient>[minsu, anotherMinsu],
+        <ScheduleSession>[
+          session(date: '2026-08-13', time: '11:00', clientName: '김민수'),
+        ],
+      );
+
+      expect(map, isEmpty);
+    });
   });
 
   group('clientSearchDestination', () {

@@ -70,12 +70,14 @@ class ClientsPage extends ConsumerWidget {
     final activeFilter = clientFilterFrom(filter);
 
     final Widget page = clientsAsync.when(
-      loading: () => const _Frame(
+      loading: () => _Frame(
         subtitle: null,
+        section: section,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => _Frame(
         subtitle: null,
+        section: section,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
