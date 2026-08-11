@@ -1671,4 +1671,147 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mySupportExternalHint => 'Opens the KakaoTalk channel';
+
+  @override
+  String get authTagline => 'AI healthcare for hypertension and diabetes';
+
+  @override
+  String get authEmailHint => 'Email';
+
+  @override
+  String get authPasswordHint => 'Password';
+
+  @override
+  String get authSignInAction => 'Sign in';
+
+  @override
+  String get authNoAccountQuestion => 'Don\'t have an account?';
+
+  @override
+  String get authSignUpAction => 'Sign up';
+
+  @override
+  String get authDemoAction => 'Explore the demo without signing in';
+
+  @override
+  String get authOrDivider => 'or';
+
+  @override
+  String get authKakaoAction => 'Continue with Kakao';
+
+  @override
+  String get authGoogleAction => 'Continue with Google';
+
+  @override
+  String get authMissingCredentials => 'Enter your email and password';
+
+  @override
+  String get authSignInFailed =>
+      'Sign-in failed. Check your email and password';
+
+  @override
+  String get authSocialSignInFailed =>
+      'Social sign-in failed. Please try again in a moment';
+
+  @override
+  String get signUpTitle => 'Sign up';
+
+  @override
+  String get signUpSubtitle =>
+      'Create an On-Care account and start managing your health';
+
+  @override
+  String get signUpNameHint => 'Name';
+
+  @override
+  String get signUpPasswordHint => 'Password (8+ characters)';
+
+  @override
+  String get signUpPasswordConfirmHint => 'Confirm password';
+
+  @override
+  String get signUpAction => 'Sign up and start';
+
+  @override
+  String get signUpHaveAccountQuestion => 'Already have an account?';
+
+  @override
+  String get signUpPasswordTooShort => 'Password must be at least 8 characters';
+
+  @override
+  String get signUpPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get signUpEmailTaken =>
+      'That email is already registered. Please sign in.';
+
+  @override
+  String get signUpFailed => 'Sign-up failed. Please try again in a moment.';
+
+  @override
+  String get onboardSkip => 'Do this later';
+
+  @override
+  String get onboardPrevious => 'Back';
+
+  @override
+  String get onboardNext => 'Next';
+
+  @override
+  String get onboardDone => 'Done';
+
+  @override
+  String get onboardSaveFailed =>
+      'Could not save. Please try again in a moment';
+
+  @override
+  String get onboardBasicTitle => 'Basic information';
+
+  @override
+  String get onboardBasicSubtitle =>
+      'Tell us a little about yourself so we can tailor your care.';
+
+  @override
+  String get onboardBirthHint => 'Date of birth (YYYY-MM-DD)';
+
+  @override
+  String get onboardHeightHint => 'Height (cm)';
+
+  @override
+  String get onboardHealthTitle => 'Health conditions';
+
+  @override
+  String get onboardHealthSubtitle =>
+      'Select the chronic conditions you manage. (Choose any that apply)';
+
+  @override
+  String get onboardGoalTitle => 'Health goals';
+
+  @override
+  String get onboardGoalSubtitle =>
+      'Tell us what you want to achieve. You can change this later.';
+
+  @override
+  String get onboardSodiumGoalHint => 'Daily sodium goal (mg)';
+
+  @override
+  String get onboardGenderMale => 'Male';
+
+  @override
+  String get onboardGenderFemale => 'Female';
+
+  @override
+  String get onboardGenderOther => 'Other';
+
+  @override
+  String get onboardConditionHypertension => 'Hypertension';
+
+  @override
+  String get onboardConditionDiabetes => 'Diabetes';
+
+  @override
+  String get onboardConditionDyslipidemia => 'Dyslipidemia';
+
+  @override
+  String get onboardConditionObesity => 'Obesity';
 }

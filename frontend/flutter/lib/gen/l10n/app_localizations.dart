@@ -3097,6 +3097,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opens the KakaoTalk channel'**
   String get mySupportExternalHint;
+
+  /// No description provided for @authTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'AI healthcare for hypertension and diabetes'**
+  String get authTagline;
+
+  /// No description provided for @authEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get authEmailHint;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPasswordHint;
+
+  /// No description provided for @authSignInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authSignInAction;
+
+  /// No description provided for @authNoAccountQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account?'**
+  String get authNoAccountQuestion;
+
+  /// No description provided for @authSignUpAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get authSignUpAction;
+
+  /// No description provided for @authDemoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the demo without signing in'**
+  String get authDemoAction;
+
+  /// No description provided for @authOrDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get authOrDivider;
+
+  /// No description provided for @authKakaoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Kakao'**
+  String get authKakaoAction;
+
+  /// No description provided for @authGoogleAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get authGoogleAction;
+
+  /// No description provided for @authMissingCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email and password'**
+  String get authMissingCredentials;
+
+  /// No description provided for @authSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Check your email and password'**
+  String get authSignInFailed;
+
+  /// No description provided for @authSocialSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Social sign-in failed. Please try again in a moment'**
+  String get authSocialSignInFailed;
+
+  /// No description provided for @signUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get signUpTitle;
+
+  /// No description provided for @signUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an On-Care account and start managing your health'**
+  String get signUpSubtitle;
+
+  /// No description provided for @signUpNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get signUpNameHint;
+
+  /// No description provided for @signUpPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Password (8+ characters)'**
+  String get signUpPasswordHint;
+
+  /// No description provided for @signUpPasswordConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get signUpPasswordConfirmHint;
+
+  /// No description provided for @signUpAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up and start'**
+  String get signUpAction;
+
+  /// No description provided for @signUpHaveAccountQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get signUpHaveAccountQuestion;
+
+  /// No description provided for @signUpPasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get signUpPasswordTooShort;
+
+  /// No description provided for @signUpPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get signUpPasswordMismatch;
+
+  /// No description provided for @signUpEmailTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'That email is already registered. Please sign in.'**
+  String get signUpEmailTaken;
+
+  /// No description provided for @signUpFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-up failed. Please try again in a moment.'**
+  String get signUpFailed;
+
+  /// No description provided for @onboardSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Do this later'**
+  String get onboardSkip;
+
+  /// No description provided for @onboardPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get onboardPrevious;
+
+  /// No description provided for @onboardNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardNext;
+
+  /// No description provided for @onboardDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get onboardDone;
+
+  /// No description provided for @onboardSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save. Please try again in a moment'**
+  String get onboardSaveFailed;
+
+  /// No description provided for @onboardBasicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic information'**
+  String get onboardBasicTitle;
+
+  /// No description provided for @onboardBasicSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us a little about yourself so we can tailor your care.'**
+  String get onboardBasicSubtitle;
+
+  /// No description provided for @onboardBirthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth (YYYY-MM-DD)'**
+  String get onboardBirthHint;
+
+  /// No description provided for @onboardHeightHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get onboardHeightHint;
+
+  /// No description provided for @onboardHealthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Health conditions'**
+  String get onboardHealthTitle;
+
+  /// No description provided for @onboardHealthSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the chronic conditions you manage. (Choose any that apply)'**
+  String get onboardHealthSubtitle;
+
+  /// No description provided for @onboardGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Health goals'**
+  String get onboardGoalTitle;
+
+  /// No description provided for @onboardGoalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us what you want to achieve. You can change this later.'**
+  String get onboardGoalSubtitle;
+
+  /// No description provided for @onboardSodiumGoalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sodium goal (mg)'**
+  String get onboardSodiumGoalHint;
+
+  /// No description provided for @onboardGenderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get onboardGenderMale;
+
+  /// No description provided for @onboardGenderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get onboardGenderFemale;
+
+  /// No description provided for @onboardGenderOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get onboardGenderOther;
+
+  /// No description provided for @onboardConditionHypertension.
+  ///
+  /// In en, this message translates to:
+  /// **'Hypertension'**
+  String get onboardConditionHypertension;
+
+  /// No description provided for @onboardConditionDiabetes.
+  ///
+  /// In en, this message translates to:
+  /// **'Diabetes'**
+  String get onboardConditionDiabetes;
+
+  /// No description provided for @onboardConditionDyslipidemia.
+  ///
+  /// In en, this message translates to:
+  /// **'Dyslipidemia'**
+  String get onboardConditionDyslipidemia;
+
+  /// No description provided for @onboardConditionObesity.
+  ///
+  /// In en, this message translates to:
+  /// **'Obesity'**
+  String get onboardConditionObesity;
 }
 
 class _AppLocalizationsDelegate

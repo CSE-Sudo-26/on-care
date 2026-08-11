@@ -8,6 +8,7 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 회원가입 화면 — 이름/이메일/비밀번호로 계정을 만들고, 성공 시 자동
 /// 로그인해 대시보드로 진입한다(라우터 가드가 인증 상태를 감지).
@@ -45,6 +46,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   Future<void> _register() async {
     if (_loading) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final name = _name.text.trim();
     final email = _email.text.trim();
@@ -52,19 +54,19 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     final confirm = _passwordConfirm.text;
     if (email.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('이메일과 비밀번호를 입력해 주세요')),
+        SnackBar(content: Text(l.authMissingCredentials)),
       );
       return;
     }
     if (password.length < 8) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('비밀번호는 8자 이상이어야 해요')),
+        SnackBar(content: Text(l.signUpPasswordTooShort)),
       );
       return;
     }
     if (password != confirm) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('비밀번호가 일치하지 않아요')),
+        SnackBar(content: Text(l.signUpPasswordMismatch)),
       );
       return;
     }
@@ -80,19 +82,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     } on DioException catch (e) {
       if (mounted) setState(() => _loading = false);
       final msg = e.response?.statusCode == 409
-          ? '이미 가입된 이메일이에요. 로그인해 주세요.'
-          : '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
+          ? l.signUpEmailTaken
+          : l.signUpFailed;
       messenger.showSnackBar(SnackBar(content: Text(msg)));
     } catch (_) {
       if (mounted) setState(() => _loading = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.')),
+        SnackBar(content: Text(l.signUpFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -120,7 +123,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       Text(
-                        '회원가입',
+                        l.signUpTitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -128,7 +131,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'On-Care 계정을 만들어 건강 관리를 시작하세요',
+                        l.signUpSubtitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
@@ -138,20 +141,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                       AuthField(
                         controller: _name,
-                        hint: '이름',
+                        hint: l.signUpNameHint,
                         icon: Icons.person_outline,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _email,
-                        hint: '이메일',
+                        hint: l.authEmailHint,
                         icon: Icons.mail_outline,
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _password,
-                        hint: '비밀번호 (8자 이상)',
+                        hint: l.signUpPasswordHint,
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         trailing: IconButton(
@@ -166,7 +169,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
                         controller: _passwordConfirm,
-                        hint: '비밀번호 확인',
+                        hint: l.signUpPasswordConfirmHint,
                         icon: Icons.lock_outline,
                         obscure: _obscure,
                         onSubmitted: (_) => _register(),
@@ -175,23 +178,28 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                       AuthGradientButton(
                         loading: _loading,
-                        label: '가입하고 시작하기',
+                        label: l.signUpAction,
                         onTap: _register,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Wrap 인 이유: 로케일에 따라 이 줄의 길이가 크게 달라진다.
+                      // Row 로 두면 영어에서 화면 밖으로 넘친다(폭 400 기준 실측).
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: <Widget>[
-                          const Text(
-                            '이미 계정이 있으신가요?',
-                            style: TextStyle(color: AppColors.mutedForeground),
+                          Text(
+                            l.signUpHaveAccountQuestion,
+                            style: const TextStyle(
+                              color: AppColors.mutedForeground,
+                            ),
                           ),
                           TextButton(
                             onPressed: _backToSignIn,
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.primary,
                             ),
-                            child: const Text('로그인'),
+                            child: Text(l.authSignInAction),
                           ),
                         ],
                       ),

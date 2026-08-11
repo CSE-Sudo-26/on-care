@@ -7,6 +7,7 @@ import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/auth/presentation/widgets/auth_fields.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// First-run onboarding — a 3-step wizard shown right after sign-up.
 /// Collects basic info → chronic conditions → health goals, then
@@ -20,12 +21,26 @@ class OnboardingPage extends ConsumerStatefulWidget {
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   static const int _steps = 3;
+  /// 만성질환 선택지 — **전송 값**이다.
+  ///
+  /// 서버는 이 값을 자유 텍스트로 저장하고 AI 코치가 '내 건강 기록' 으로 읽는다. 화면
+  /// 로케일에 따라 저장되는 문자열이 달라지면 같은 사용자의 기록이 언어별로 갈라지므로,
+  /// 값은 한국어로 고정하고 표시 문구만 번역한다.
   static const List<String> _conditionOptions = <String>[
     '고혈압',
     '당뇨',
     '고지혈증',
     '비만',
   ];
+
+  /// 전송 값 → 화면에 보일 문구.
+  String _conditionLabel(AppLocalizations l, String value) => switch (value) {
+    '고혈압' => l.onboardConditionHypertension,
+    '당뇨' => l.onboardConditionDiabetes,
+    '고지혈증' => l.onboardConditionDyslipidemia,
+    '비만' => l.onboardConditionObesity,
+    _ => value,
+  };
 
   final PageController _pager = PageController();
   int _step = 0;
@@ -71,6 +86,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Future<void> _finish() async {
     if (_saving) return;
+    final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
@@ -90,13 +106,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text('저장에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.onboardSaveFailed)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final isLast = _step == _steps - 1;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -125,7 +142,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.mutedForeground,
                     ),
-                    child: const Text('나중에 하기'),
+                    child: Text(l.onboardSkip),
                   ),
                 ],
               ),
@@ -171,14 +188,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           vertical: 16,
                         ),
                       ),
-                      child: const Text('이전'),
+                      child: Text(l.onboardPrevious),
                     ),
                     const SizedBox(width: AppSpacing.md),
                   ],
                   Expanded(
                     child: AuthGradientButton(
                       loading: _saving,
-                      label: isLast ? '완료' : '다음',
+                      label: isLast ? l.onboardDone : l.onboardNext,
                       onTap: isLast ? _finish : _next,
                     ),
                   ),
@@ -228,13 +245,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   Widget _stepBasic() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _stepBody(
-      title: '기본 정보',
-      subtitle: '맞춤 건강 관리를 위해 기본 정보를 알려주세요.',
+      title: l.onboardBasicTitle,
+      subtitle: l.onboardBasicSubtitle,
       children: <Widget>[
         AuthField(
           controller: _birthDate,
-          hint: '생년월일 (YYYY-MM-DD)',
+          hint: l.onboardBirthHint,
           icon: Icons.cake_outlined,
           keyboardType: TextInputType.datetime,
         ),
@@ -246,7 +264,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         const SizedBox(height: AppSpacing.md),
         AuthField(
           controller: _height,
-          hint: '키 (cm)',
+          hint: l.onboardHeightHint,
           icon: Icons.straighten,
           keyboardType: TextInputType.number,
         ),
@@ -255,9 +273,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   Widget _stepConditions() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _stepBody(
-      title: '건강 상태',
-      subtitle: '관리 중인 만성질환을 선택해 주세요. (복수 선택 가능)',
+      title: l.onboardHealthTitle,
+      subtitle: l.onboardHealthSubtitle,
       children: <Widget>[
         Wrap(
           spacing: AppSpacing.sm,
@@ -265,7 +284,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           children: <Widget>[
             for (final String c in _conditionOptions)
               FilterChip(
-                label: Text(c),
+                label: Text(_conditionLabel(l, c)),
                 selected: _conditions.contains(c),
                 onSelected: (sel) => setState(() {
                   if (sel) {
@@ -284,13 +303,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   Widget _stepGoals() {
+    final AppLocalizations l = AppLocalizations.of(context);
     return _stepBody(
-      title: '건강 목표',
-      subtitle: '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.',
+      title: l.onboardGoalTitle,
+      subtitle: l.onboardGoalSubtitle,
       children: <Widget>[
         AuthField(
           controller: _dailySodium,
-          hint: '하루 나트륨 목표 (mg)',
+          hint: l.onboardSodiumGoalHint,
           icon: Icons.spa_outlined,
           keyboardType: TextInputType.number,
         ),
@@ -304,15 +324,16 @@ class _GenderSelector extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
-  static const Map<String, String> _labels = <String, String>{
-    'male': '남성',
-    'female': '여성',
-    'other': '기타',
+  /// 전송 값은 이미 영문 코드라 그대로 두고 문구만 로케일을 따른다.
+  static Map<String, String> _labelsOf(AppLocalizations l) => <String, String>{
+    'male': l.onboardGenderMale,
+    'female': l.onboardGenderFemale,
+    'other': l.onboardGenderOther,
   };
 
   @override
   Widget build(BuildContext context) {
-    final entries = _labels.entries.toList();
+    final entries = _labelsOf(AppLocalizations.of(context)).entries.toList();
     return Row(
       children: <Widget>[
         for (int i = 0; i < entries.length; i++) ...<Widget>[

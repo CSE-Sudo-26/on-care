@@ -1631,4 +1631,139 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mySupportExternalHint => '카카오톡 채널로 연결돼요';
+
+  @override
+  String get authTagline => '고혈압·당뇨 관리를 위한 AI 헬스케어';
+
+  @override
+  String get authEmailHint => '이메일';
+
+  @override
+  String get authPasswordHint => '비밀번호';
+
+  @override
+  String get authSignInAction => '로그인';
+
+  @override
+  String get authNoAccountQuestion => '계정이 없으신가요?';
+
+  @override
+  String get authSignUpAction => '회원가입';
+
+  @override
+  String get authDemoAction => '로그인 없이 데모 둘러보기';
+
+  @override
+  String get authOrDivider => '또는';
+
+  @override
+  String get authKakaoAction => '카카오로 시작하기';
+
+  @override
+  String get authGoogleAction => '구글로 시작하기';
+
+  @override
+  String get authMissingCredentials => '이메일과 비밀번호를 입력해 주세요';
+
+  @override
+  String get authSignInFailed => '로그인에 실패했어요. 이메일·비밀번호를 확인해 주세요';
+
+  @override
+  String get authSocialSignInFailed => '소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get signUpTitle => '회원가입';
+
+  @override
+  String get signUpSubtitle => 'On-Care 계정을 만들어 건강 관리를 시작하세요';
+
+  @override
+  String get signUpNameHint => '이름';
+
+  @override
+  String get signUpPasswordHint => '비밀번호 (8자 이상)';
+
+  @override
+  String get signUpPasswordConfirmHint => '비밀번호 확인';
+
+  @override
+  String get signUpAction => '가입하고 시작하기';
+
+  @override
+  String get signUpHaveAccountQuestion => '이미 계정이 있으신가요?';
+
+  @override
+  String get signUpPasswordTooShort => '비밀번호는 8자 이상이어야 해요';
+
+  @override
+  String get signUpPasswordMismatch => '비밀번호가 일치하지 않아요';
+
+  @override
+  String get signUpEmailTaken => '이미 가입된 이메일이에요. 로그인해 주세요.';
+
+  @override
+  String get signUpFailed => '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get onboardSkip => '나중에 하기';
+
+  @override
+  String get onboardPrevious => '이전';
+
+  @override
+  String get onboardNext => '다음';
+
+  @override
+  String get onboardDone => '완료';
+
+  @override
+  String get onboardSaveFailed => '저장에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get onboardBasicTitle => '기본 정보';
+
+  @override
+  String get onboardBasicSubtitle => '맞춤 건강 관리를 위해 기본 정보를 알려주세요.';
+
+  @override
+  String get onboardBirthHint => '생년월일 (YYYY-MM-DD)';
+
+  @override
+  String get onboardHeightHint => '키 (cm)';
+
+  @override
+  String get onboardHealthTitle => '건강 상태';
+
+  @override
+  String get onboardHealthSubtitle => '관리 중인 만성질환을 선택해 주세요. (복수 선택 가능)';
+
+  @override
+  String get onboardGoalTitle => '건강 목표';
+
+  @override
+  String get onboardGoalSubtitle => '달성하고 싶은 목표를 입력해 주세요. 나중에 바꿀 수 있어요.';
+
+  @override
+  String get onboardSodiumGoalHint => '하루 나트륨 목표 (mg)';
+
+  @override
+  String get onboardGenderMale => '남성';
+
+  @override
+  String get onboardGenderFemale => '여성';
+
+  @override
+  String get onboardGenderOther => '기타';
+
+  @override
+  String get onboardConditionHypertension => '고혈압';
+
+  @override
+  String get onboardConditionDiabetes => '당뇨';
+
+  @override
+  String get onboardConditionDyslipidemia => '고지혈증';
+
+  @override
+  String get onboardConditionObesity => '비만';
 }
