@@ -55,6 +55,7 @@ void main() {
       () => dio.post<Map<String, Object?>>(
         '/trainer/clients/m1/routine-options',
         data: any(named: 'data'),
+        options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => Response<Map<String, Object?>>(
@@ -75,7 +76,7 @@ void main() {
     expect(o.planA.key, 'A');
     expect(o.planB.totalMinutes, 30);
 
-    verify(
+    final captured = verify(
       () => dio.post<Map<String, Object?>>(
         '/trainer/clients/m1/routine-options',
         data: <String, Object?>{
@@ -83,8 +84,14 @@ void main() {
           'intensity_preference': 'moderate',
           'trainer_note': '무릎 주의',
         },
+        options: captureAny(named: 'options'),
       ),
-    ).called(1);
+    ).captured;
+
+    // 전역 receiveTimeout(15초)으로는 생성이 끝나기 전에 앱이 포기한다 — 요청
+    // 단위로 넉넉히 올렸는지 고정한다(#579).
+    final options = captured.single as Options;
+    expect(options.receiveTimeout, const Duration(seconds: 60));
   });
 
   test('surfaces a failure as AppError', () async {
@@ -92,6 +99,7 @@ void main() {
       () => dio.post<Map<String, Object?>>(
         '/trainer/clients/m1/routine-options',
         data: any(named: 'data'),
+        options: any(named: 'options'),
       ),
     ).thenThrow(
       DioException(
@@ -122,7 +130,11 @@ void main() {
   test('encodes an opaque member id as one path segment', () async {
     const path = '/trainer/clients/member%2Fwith%3Freserved/routine-options';
     when(
-      () => dio.post<Map<String, Object?>>(path, data: any(named: 'data')),
+      () => dio.post<Map<String, Object?>>(
+        path,
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => Response<Map<String, Object?>>(
         requestOptions: RequestOptions(path: path),
@@ -139,7 +151,11 @@ void main() {
     );
 
     verify(
-      () => dio.post<Map<String, Object?>>(path, data: any(named: 'data')),
+      () => dio.post<Map<String, Object?>>(
+        path,
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
     ).called(1);
   });
 }
