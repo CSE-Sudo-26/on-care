@@ -146,6 +146,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   const SizedBox(height: AppSpacing.xxl),
 
                   AuthField(
+                    key: const ValueKey<String>('trainer-login-email'),
                     controller: _email,
                     hint: l.authEmail,
                     icon: Icons.mail_outline,
@@ -153,6 +154,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AuthField(
+                    key: const ValueKey<String>('trainer-login-password'),
                     controller: _password,
                     hint: l.authPassword,
                     icon: Icons.lock_outline,
@@ -170,6 +172,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
                   const SizedBox(height: AppSpacing.xl),
 
                   AuthGradientButton(
+                    key: const ValueKey<String>('trainer-login-submit'),
                     loading: _loading,
                     label: l.authSignIn,
                     onTap: _login,

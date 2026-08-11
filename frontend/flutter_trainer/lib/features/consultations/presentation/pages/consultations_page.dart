@@ -78,7 +78,10 @@ class ConsultationsPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   for (final request in list) ...<Widget>[
-                    _RequestCard(request: request),
+                    _RequestCard(
+                      key: ValueKey<String>('consultation-${request.id}'),
+                      request: request,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                   ],
                 ],
@@ -91,7 +94,7 @@ class ConsultationsPage extends ConsumerWidget {
 /// One request. Pending cards carry the 승인 / 거절 actions; decided ones
 /// keep their place under the 전체 filter as a read-only record.
 class _RequestCard extends ConsumerStatefulWidget {
-  const _RequestCard({required this.request});
+  const _RequestCard({required this.request, super.key});
 
   final ConsultationRequest request;
 
@@ -208,6 +211,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
                 ActionButton(
+                  key: ValueKey<String>('consultation-reject-${request.id}'),
                   label: l.consultReject,
                   tone: AppColors.destructive,
                   onPressed: _busy ? null : _reject,
@@ -279,6 +283,7 @@ class _RejectDialogState extends State<_RejectDialog> {
           child: Text(l.actionCancel),
         ),
         TextButton(
+          key: const ValueKey<String>('consultation-reject-confirm'),
           // Returns '' rather than null when left blank: null is the
           // cancel signal, and an empty note is a valid "no reason given".
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),

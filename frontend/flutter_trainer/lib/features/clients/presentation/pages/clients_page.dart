@@ -328,6 +328,7 @@ class _RosterList extends StatelessWidget {
         else
           for (final client in clients) ...<Widget>[
             ClientCard(
+              key: ValueKey<String>('client-${client.id}'),
               client: client,
               selected: client.id == selectedId,
               unread: unread[client.id] ?? 0,
