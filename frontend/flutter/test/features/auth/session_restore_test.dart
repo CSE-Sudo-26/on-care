@@ -328,7 +328,7 @@ void main() {
     expect(await store.readAccessToken(), 'stored-access');
   });
 
-  test('갱신 요청이 연결 실패로 끝나면 토큰을 지키지 않고 남긴다', () async {
+  test('갱신 요청이 연결 실패로 끝나면 저장 토큰을 지우지 않는다', () async {
     final script = _ScriptedDio(<String, List<_Reply>>{
       'GET /users/me': <_Reply>[const _Reply.status(401)],
       'POST /auth/refresh': <_Reply>[const _Reply.connectionError()],
@@ -385,6 +385,9 @@ void main() {
     );
     final store = container.read(secureTokenStoreProvider);
     expect(await store.readAccessToken(), 'stored-access');
+    // 갱신 토큰만 지우는 회귀는 접근 토큰 확인만으로는 잡히지 않는다 — 그 상태로는
+    // 다음 만료 때 되살릴 방법이 없다(리뷰).
+    expect(await store.readRefreshToken(), 'stored-refresh');
   });
 
   // 이 테스트가 고정하는 것은 **결과**다 — 복구가 만료로 흘러가는 도중에 로그인이
