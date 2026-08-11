@@ -485,6 +485,7 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
     original = (
         {
             "gender": profile_before.gender,
+            "conditions": profile_before.conditions,
             "height_cm": profile_before.height_cm,
             "weight_kg": profile_before.weight_kg,
             "goals": profile_before.goals,
@@ -504,6 +505,7 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
             headers=_auth(token),
             json={
                 "gender": "female",
+                "conditions": "고혈압",
                 "height_cm": 164.5,
                 "weight_kg": 57.2,
                 "goals": "근력 향상과 체지방 감량",
@@ -515,6 +517,8 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["member_id"] == "user-jisu"
+        assert body["gender"] == "female"
+        assert body["conditions"] == "고혈압"
         assert body["height_cm"] == 164.5
         assert body["weight_kg"] == 57.2
         assert body["goals"] == "근력 향상과 체지방 감량"
@@ -522,8 +526,11 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
 
         fetched = client.get(url, headers=_auth(token))
         assert fetched.status_code == 200, fetched.text
-        assert fetched.json()["weekly_exercise_minutes_goal"] == 180
-        assert fetched.json()["weekly_burn_goal"] == 1600
+        fetched_body = fetched.json()
+        assert fetched_body["gender"] == "female"
+        assert fetched_body["conditions"] == "고혈압"
+        assert fetched_body["weekly_exercise_minutes_goal"] == 180
+        assert fetched_body["weekly_burn_goal"] == 1600
     finally:
         # The API uses a separate session. Reload its committed row before
         # restoring state; otherwise SQLAlchemy may consider the original

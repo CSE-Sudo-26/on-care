@@ -200,10 +200,16 @@ class _MyPageState extends ConsumerState<MyPage> {
   String _saveFailureMessage(Object error, {required bool profileSaved}) {
     final AppLocalizations l = AppLocalizations.of(context);
     final detail = error is AppError ? error.message : null;
+    if (profileSaved) {
+      final localizedDetail = serverDetailOr(l, detail, '');
+      return localizedDetail.isEmpty
+          ? l.myGymChangeFailed
+          : '${l.myGymChangeFailed} $localizedDetail';
+    }
     return serverDetailOr(
       l,
       detail,
-      profileSaved ? l.myGymChangeFailed : l.myProfileSaveFailed,
+      l.myProfileSaveFailed,
     );
   }
 
