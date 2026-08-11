@@ -264,7 +264,7 @@ class _SystemBanner extends StatelessWidget {
               l.chatDemoReportSent,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9.5,
+                fontSize: 10.5,
                 color: AppColors.mutedForeground,
                 fontWeight: FontWeight.w500,
               ),
@@ -310,7 +310,7 @@ class _SentBanner extends StatelessWidget {
               l.chatDemoNotified,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9.5,
+                fontSize: 10.5,
                 color: AppColors.mutedForeground,
                 fontWeight: FontWeight.w500,
               ),
@@ -356,7 +356,7 @@ class _Bubble extends StatelessWidget {
           child: Text(
             message.body,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.4,
               fontWeight: FontWeight.w500,
               color: fromTrainer
@@ -369,7 +369,7 @@ class _Bubble extends StatelessWidget {
         Text(
           message.timeLabel,
           style: const TextStyle(
-            fontSize: 9,
+            fontSize: 10,
             color: AppColors.disabledForeground,
           ),
         ),

@@ -74,7 +74,7 @@ class ActionButton extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: fg,
                 ),
@@ -137,7 +137,7 @@ class SegmentedSwitch extends StatelessWidget {
                     child: Text(
                       labels[i],
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: selected == i
                             ? AppColors.primary

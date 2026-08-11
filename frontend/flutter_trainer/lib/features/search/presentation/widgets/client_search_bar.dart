@@ -309,7 +309,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
         focusNode: _focus,
         textInputAction: TextInputAction.search,
         style: const TextStyle(
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: FontWeight.w500,
           color: AppColors.foreground,
         ),
@@ -319,7 +319,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           fillColor: AppColors.inputBackground,
           hintText: l.searchClientsHint,
           hintStyle: const TextStyle(
-            fontSize: 15,
+            fontSize: 16,
             color: AppColors.subtleForeground,
           ),
           prefixIcon: const Icon(
@@ -444,7 +444,7 @@ class _ResultsCard extends StatelessWidget {
               child: Text(
                 l.searchNoResults(query.trim()),
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -542,7 +542,7 @@ class _ResultRowState extends State<_ResultRow> {
                                 widget.client.name,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.foreground,
                                 ),
@@ -552,7 +552,7 @@ class _ResultRowState extends State<_ResultRow> {
                                 widget.detail,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: AppColors.subtleForeground,
                                 ),
@@ -652,7 +652,7 @@ class _ResultRowState extends State<_ResultRow> {
             vertical: AppSpacing.sm,
           ),
           textStyle: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 13.5,
             fontWeight: FontWeight.w600,
           ),
           side: const BorderSide(color: AppColors.borderStrong),
@@ -693,7 +693,7 @@ class _Footer extends StatelessWidget {
               text,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: AppColors.subtleForeground,
               ),
@@ -797,7 +797,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                   autofocus: true,
                   textInputAction: TextInputAction.search,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: AppColors.foreground,
                   ),
@@ -807,7 +807,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                     fillColor: AppColors.card,
                     hintText: l.searchClientsHint,
                     hintStyle: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       color: AppColors.subtleForeground,
                     ),
                     prefixIcon: const Icon(

@@ -149,7 +149,7 @@ class AuthGradientButton extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: AppColors.primaryForeground,
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -51,7 +51,7 @@ class MetricTile extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 9.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w600,
                 color: AppColors.subtleForeground,
               ),
@@ -60,7 +60,7 @@ class MetricTile extends StatelessWidget {
             Text(
               _displayValue(value),
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
                 color: warn ? AppColors.overTarget : color,
               ),
@@ -68,7 +68,7 @@ class MetricTile extends StatelessWidget {
             Text(
               warn ? l.metricOverBy(unit) : unit,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: warn ? FontWeight.w700 : FontWeight.w400,
                 color: warn ? AppColors.overTarget : AppColors.subtleForeground,
               ),

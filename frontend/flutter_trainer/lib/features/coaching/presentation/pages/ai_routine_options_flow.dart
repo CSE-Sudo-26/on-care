@@ -290,7 +290,10 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       (best, entry) => best == null || entry.value > best.value ? entry : best,
     );
     final exerciseSummary = _edited
-        .map((exercise) => l.aiExerciseWithMinutes(exercise.name, exercise.minutes))
+        .map(
+          (exercise) =>
+              l.aiExerciseWithMinutes(exercise.name, exercise.minutes),
+        )
         .join(', ');
     final memo = _trainerMemo.text.trim();
     final rationale = memo.isEmpty ? _selectedChoiceOf(l).reason : memo;
@@ -402,7 +405,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           _analysisRow(
             l.aiTodaySodium,
             '${client.sodiumMg}mg'
-                '${client.sodiumOverBudget ? l.aiOverTarget : l.aiWithinTarget}',
+            '${client.sodiumOverBudget ? l.aiOverTarget : l.aiWithinTarget}',
             warn: client.sodiumOverBudget,
           ),
           _analysisRow(l.aiRecentRoutine, client.lastRoutine),
@@ -421,7 +424,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             l.aiNotePlaceholderHint,
-            style: TextStyle(fontSize: 9.5, color: AppColors.mutedForeground),
+            style: TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
           ),
         ],
       ),
@@ -467,7 +470,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               ) +
               (options.generatedBy == 'rule' ? l.aiBasisRuleBased : ''),
           style: const TextStyle(
-            fontSize: 10.5,
+            fontSize: 11.5,
             color: AppColors.mutedForeground,
           ),
         ),
@@ -585,7 +588,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                     child: Text(
                       '$optionName · ${choice.label}',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
                       ),
@@ -597,7 +600,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
               Text(
                 l.aiTotalAndIntensity(total, choice.intensity),
                 style: const TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.accent,
                 ),
@@ -610,7 +613,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                     '${l.aiBulletExercise(exercise.name, exercise.minutes)}'
                     '(${routineTypeLabel(l, exercise.type)})',
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: AppColors.foreground,
                     ),
                   ),
@@ -621,7 +624,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   height: 1.35,
                   color: AppColors.mutedForeground,
                 ),
@@ -643,7 +646,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditBlurb,
-          style: TextStyle(fontSize: 10, color: AppColors.mutedForeground),
+          style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
         for (int index = 0; index < _edited.length; index++) ...<Widget>[
@@ -707,7 +710,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             ),
             initialValue: exercise.name,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: AppColors.foreground,
             ),
@@ -835,7 +838,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditsApplied,
-          style: TextStyle(fontSize: 10, color: AppColors.mutedForeground),
+          style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
         for (final exercise in _edited) ...<Widget>[
@@ -854,7 +857,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Text(
                     routineTypeLabel(l, exercise.type),
                     style: const TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.accent,
                     ),
@@ -865,7 +868,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                   child: Text(
                     exercise.name,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.foreground,
                     ),
@@ -874,7 +877,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 Text(
                   l.minutesShort(exercise.minutes),
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.accent,
                   ),
@@ -902,7 +905,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                       Text(
                         l.schedNote,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: AppColors.warning,
                         ),
@@ -911,7 +914,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                       Text(
                         memo,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           height: 1.4,
                           color: AppColors.foreground,
                         ),
@@ -980,7 +983,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             l.aiRoutineSent(widget.client.name),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
             ),
@@ -989,7 +992,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           Text(
             l.aiGoToChatHint,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
+            style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
           ),
         ],
       ),
@@ -1024,7 +1027,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: warn ? AppColors.overTarget : AppColors.foreground,
               ),
@@ -1205,7 +1208,7 @@ class _ProgressStepper extends StatelessWidget {
                                   : Text(
                                       _steps(l)[index].$1,
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: index <= maxReachedStage
                                             ? AppColors.accentForeground
@@ -1220,7 +1223,7 @@ class _ProgressStepper extends StatelessWidget {
                       Text(
                         _steps(l)[index].$2,
                         style: TextStyle(
-                          fontSize: 9.5,
+                          fontSize: 10.5,
                           fontWeight: index == stage
                               ? FontWeight.w800
                               : FontWeight.w600,
@@ -1297,7 +1300,7 @@ class _ChatEvidence extends StatelessWidget {
               child: Text(
                 line,
                 style: const TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11.5,
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -1309,13 +1312,13 @@ class _ChatEvidence extends StatelessWidget {
 }
 
 const TextStyle _sectionTitleStyle = TextStyle(
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: FontWeight.w800,
   color: AppColors.foreground,
 );
 
 const TextStyle _labelStyle = TextStyle(
-  fontSize: 10.5,
+  fontSize: 11.5,
   fontWeight: FontWeight.w700,
   color: AppColors.mutedForeground,
 );

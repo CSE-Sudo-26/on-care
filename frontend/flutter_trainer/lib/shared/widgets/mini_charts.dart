@@ -100,7 +100,7 @@ class BarSeriesChart extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.clip,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: highlightIndex == i
                         ? FontWeight.w800
                         : FontWeight.w500,
@@ -171,7 +171,7 @@ class _Bar extends StatelessWidget {
                   child: Text(
                     label!,
                     style: const TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.mutedForeground,
                     ),
@@ -224,7 +224,7 @@ class Sparkline extends StatelessWidget {
         child: Center(
           child: Text(
             l.chartNotEnoughData,
-            style: TextStyle(fontSize: 11, color: AppColors.subtleForeground),
+            style: TextStyle(fontSize: 12, color: AppColors.subtleForeground),
           ),
         ),
       );

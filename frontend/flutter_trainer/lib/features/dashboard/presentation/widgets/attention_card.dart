@@ -96,7 +96,7 @@ class _Row extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.foreground,
                     ),
@@ -106,7 +106,7 @@ class _Row extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11.5,
                       color: AppColors.subtleForeground,
                       fontWeight: FontWeight.w500,
                     ),

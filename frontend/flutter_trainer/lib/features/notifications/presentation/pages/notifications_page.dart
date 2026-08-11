@@ -101,8 +101,7 @@ class NotificationsPage extends ConsumerWidget {
           padding: const EdgeInsets.only(top: AppSpacing.xxl),
           child: EmptyHint(
             message:
-                (error is AppError ? error.message : null) ??
-                l.notifLoadFailed,
+                (error is AppError ? error.message : null) ?? l.notifLoadFailed,
             icon: Icons.error_outline,
           ),
         ),
@@ -176,7 +175,7 @@ class _NotificationTile extends StatelessWidget {
                     Text(
                       notification.title,
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14.5,
                         fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
                         color: AppColors.foreground,
                       ),
@@ -188,7 +187,7 @@ class _NotificationTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 13.5,
                           color: AppColors.mutedForeground,
                         ),
                       ),
@@ -200,7 +199,7 @@ class _NotificationTile extends StatelessWidget {
               Text(
                 notification.timeAgo,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.subtleForeground,
                 ),

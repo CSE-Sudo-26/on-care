@@ -131,7 +131,7 @@ class _Header extends StatelessWidget {
                       title,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
                       ),
@@ -141,7 +141,7 @@ class _Header extends StatelessWidget {
                         subtitle!,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           color: AppColors.subtleForeground,
                           fontWeight: FontWeight.w500,
                         ),

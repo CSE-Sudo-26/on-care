@@ -63,7 +63,7 @@ class WorkoutView extends ConsumerWidget {
         Text(
           l.workoutRecords,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: 12.5,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
           ),
@@ -76,9 +76,7 @@ class WorkoutView extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           ],
-          error: (e, _) => <Widget>[
-            EmptyHint(message: l.workoutLoadFailed),
-          ],
+          error: (e, _) => <Widget>[EmptyHint(message: l.workoutLoadFailed)],
           data: (entries) => <Widget>[
             if (entries.isEmpty)
               EmptyHint(
@@ -148,7 +146,7 @@ class _AssignedRoutinesCard extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.foreground,
                                   ),
@@ -159,7 +157,7 @@ class _AssignedRoutinesCard extends ConsumerWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 10.5,
+                                      fontSize: 11.5,
                                       color: AppColors.subtleForeground,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -170,7 +168,7 @@ class _AssignedRoutinesCard extends ConsumerWidget {
                           Text(
                             l.minutesShort(routine.minutes),
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
@@ -178,10 +176,7 @@ class _AssignedRoutinesCard extends ConsumerWidget {
                           // 배정 뒤 정정·철회. 전에는 잘못 넣어도 고칠 수 없어
                           // 새 루틴을 하나 더 배정했고, 회원 앱에는 둘 다
                           // 그대로 보였다. (#504)
-                          _RoutineActions(
-                            clientId: clientId,
-                            routine: routine,
-                          ),
+                          _RoutineActions(clientId: clientId, routine: routine),
                         ],
                       ),
                     ),
@@ -257,7 +252,7 @@ class _SessionRow extends StatelessWidget {
             child: Text(
               session.date == today ? l.labelToday : label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: session.date == today
                     ? AppColors.primary
@@ -270,9 +265,12 @@ class _SessionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  l.sessionTypeAndDuration(sessionTypeLabel(l, session.type), session.durationMinutes),
+                  l.sessionTypeAndDuration(
+                    sessionTypeLabel(l, session.type),
+                    session.durationMinutes,
+                  ),
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
                   ),
@@ -282,7 +280,7 @@ class _SessionRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     height: 1.4,
                     fontWeight: FontWeight.w500,
                     color: exercises.isEmpty
@@ -297,7 +295,7 @@ class _SessionRow extends StatelessWidget {
           Text(
             scheduleStatusLabel(l, session.status),
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 11.5,
               fontWeight: FontWeight.w800,
               color: session.isDone ? AppColors.success : AppColors.primary,
             ),
@@ -330,13 +328,13 @@ class _TypeChip extends StatelessWidget {
               icon: Icons.auto_awesome,
               label: label,
               color: color,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w800,
             )
           : Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
@@ -390,7 +388,7 @@ class _WeekCompletionCard extends StatelessWidget {
                 child: Text(
                   l.weekCompletionRate,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
                   ),
@@ -399,7 +397,7 @@ class _WeekCompletionCard extends StatelessWidget {
               Text(
                 '$avg%',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
@@ -433,7 +431,7 @@ class _WeekCompletionCard extends StatelessWidget {
                         Text(
                           _days(l)[i],
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: i >= elapsed
                                 ? AppColors.disabledForeground
@@ -484,7 +482,7 @@ class _LegendDot extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 9,
+            fontSize: 10,
             color: AppColors.subtleForeground,
           ),
         ),
@@ -523,7 +521,7 @@ class _HistoryCard extends StatelessWidget {
                     Text(
                       entry.dateLabel,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: AppColors.foreground,
                       ),
@@ -531,7 +529,7 @@ class _HistoryCard extends StatelessWidget {
                     Text(
                       entry.label,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: AppColors.subtleForeground,
                       ),
@@ -605,7 +603,7 @@ class _ExerciseLine extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w500,
                 color: color,
                 decoration: skipped ? TextDecoration.lineThrough : null,
@@ -642,7 +640,7 @@ class _CompletionDonut extends StatelessWidget {
           Text(
             '$rate%',
             style: TextStyle(
-              fontSize: 8,
+              fontSize: 9.5,
               fontWeight: FontWeight.w800,
               color: rate == 0 ? AppColors.disabledForeground : color,
             ),
@@ -686,7 +684,7 @@ class _NoteBox extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -695,7 +693,7 @@ class _NoteBox extends StatelessWidget {
           Text(
             body,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
@@ -728,10 +726,11 @@ class _RoutineActionsState extends ConsumerState<_RoutineActions> {
     // messenger 와 함께 await 전에 잡아 둔다 — 실패 경로가 await 뒤에 있다.
     final messenger = ScaffoldMessenger.of(context);
     final AppLocalizations l = AppLocalizations.of(context);
-    final result = await showDialog<({String name, int minutes, String reason})>(
-      context: context,
-      builder: (_) => _RoutineEditDialog(routine: widget.routine),
-    );
+    final result =
+        await showDialog<({String name, int minutes, String reason})>(
+          context: context,
+          builder: (_) => _RoutineEditDialog(routine: widget.routine),
+        );
     if (result == null || !mounted) return;
 
     setState(() => _busy = true);
@@ -753,15 +752,11 @@ class _RoutineActionsState extends ConsumerState<_RoutineActions> {
         setState(() => _busy = false);
         ref.invalidate(assignedRoutinesProvider(widget.clientId));
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.routineAlreadyGone)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
       return;
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.routineUpdateFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.routineUpdateFailed)));
       return;
     }
     if (!mounted) return;
@@ -808,15 +803,11 @@ class _RoutineActionsState extends ConsumerState<_RoutineActions> {
         setState(() => _busy = false);
         ref.invalidate(assignedRoutinesProvider(widget.clientId));
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.routineAlreadyGone)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.routineAlreadyGone)));
       return;
     } catch (_) {
       if (mounted) setState(() => _busy = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.routineDeleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.routineDeleteFailed)));
       return;
     }
     if (!mounted) return;
@@ -965,7 +956,7 @@ class _RoutineEditDialogState extends State<_RoutineEditDialog> {
             Text(
               _error!,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: AppColors.destructive,
               ),
             ),

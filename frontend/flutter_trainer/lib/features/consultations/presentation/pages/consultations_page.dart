@@ -47,9 +47,8 @@ class ConsultationsPage extends ConsumerWidget {
         ActionButton(
           label: filter == 'pending' ? l.consultShowAll : l.consultShowPending,
           icon: Icons.filter_list,
-          onPressed: () => ref
-              .read(consultationFilterProvider.notifier)
-              .state = filter == 'pending' ? 'all' : 'pending',
+          onPressed: () => ref.read(consultationFilterProvider.notifier).state =
+              filter == 'pending' ? 'all' : 'pending',
         ),
       ],
       child: requests.when(
@@ -60,7 +59,8 @@ class ConsultationsPage extends ConsumerWidget {
         error: (error, _) => _InboxMessage(
           icon: Icons.error_outline,
           title: l.consultLoadFailed,
-          detail: (error is AppError ? error.message : null) ?? l.consultRetryLater,
+          detail:
+              (error is AppError ? error.message : null) ?? l.consultRetryLater,
           action: ActionButton(
             label: l.actionRetry,
             onPressed: () => ref.invalidate(consultationsProvider),
@@ -124,9 +124,7 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       ref.invalidate(consultationPendingCountProvider);
       // 409 carries the server's reason (이미 처리됨 / 다른 트레이너가 담당 중)
       // — that sentence is the whole point, so it is shown verbatim.
-      messenger.showSnackBar(
-        SnackBar(content: Text(e.message ?? failureText)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(e.message ?? failureText)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -177,7 +175,10 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    _Field(label: l.consultExerciseGoal, value: label(exerciseGoalLabels(l), request.goalCode)),
+                    _Field(
+                      label: l.consultExerciseGoal,
+                      value: label(exerciseGoalLabels(l), request.goalCode),
+                    ),
                     _Field(
                       label: l.consultHealthPurpose,
                       value: request.purposeDetail == null
@@ -262,7 +263,7 @@ class _RejectDialogState extends State<_RejectDialog> {
         children: <Widget>[
           Text(
             l.consultRejectNotice,
-            style: TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
+            style: TextStyle(fontSize: 13.5, color: AppColors.mutedForeground),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
@@ -320,7 +321,7 @@ class _DecisionSummary extends StatelessWidget {
                       ? l.consultStatusRejected
                       : l.consultStatusRejectedWithNote(request.decisionNote!)),
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               color: AppColors.mutedForeground,
               fontWeight: FontWeight.w600,
             ),
@@ -349,7 +350,7 @@ class _Field extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: AppColors.subtleForeground,
                 fontWeight: FontWeight.w600,
               ),
@@ -359,7 +360,7 @@ class _Field extends StatelessWidget {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 color: AppColors.foreground,
                 fontWeight: FontWeight.w600,
               ),
@@ -389,7 +390,7 @@ class _Quote extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           height: 1.5,
           color: AppColors.foreground,
         ),
@@ -418,7 +419,7 @@ class _Tag extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
           color: tone,
         ),
@@ -453,7 +454,7 @@ class _InboxMessage extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.foreground,
             ),
@@ -463,7 +464,7 @@ class _InboxMessage extends StatelessWidget {
             detail,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               color: AppColors.mutedForeground,
             ),
           ),

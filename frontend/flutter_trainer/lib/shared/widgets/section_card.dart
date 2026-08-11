@@ -72,7 +72,7 @@ class SectionCard extends StatelessWidget {
                     title,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w800,
                       color: AppColors.foreground,
                     ),
@@ -118,7 +118,7 @@ class CardLink extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
@@ -156,7 +156,7 @@ class EmptyHint extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.subtleForeground,
             ),

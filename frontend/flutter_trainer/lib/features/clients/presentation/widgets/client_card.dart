@@ -79,7 +79,7 @@ class ClientCard extends StatelessWidget {
                                 child: Text(
                                   client.name,
                                   style: const TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.foreground,
                                   ),
@@ -88,7 +88,7 @@ class ClientCard extends StatelessWidget {
                               Text(
                                 client.lastTime,
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: AppColors.disabledForeground,
                                 ),
                               ),
@@ -98,7 +98,7 @@ class ClientCard extends StatelessWidget {
                           Text(
                             client.goal,
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12.5,
                               color: AppColors.subtleForeground,
                               fontWeight: FontWeight.w500,
                             ),
@@ -112,7 +112,7 @@ class ClientCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     color: unread > 0
                                         ? AppColors.foreground
                                         : AppColors.mutedForeground,
@@ -140,7 +140,7 @@ class ClientCard extends StatelessWidget {
                                   child: Text(
                                     '$unread',
                                     style: const TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.accentForeground,
                                     ),
@@ -164,13 +164,19 @@ class ClientCard extends StatelessWidget {
                 ),
                 Row(
                   children: <Widget>[
-                    _Metric(label: l.metricCalories, value: '${client.calories}kcal'),
+                    _Metric(
+                      label: l.metricCalories,
+                      value: '${client.calories}kcal',
+                    ),
                     _Metric(
                       label: l.metricSodium,
                       value: '${client.sodiumMg}mg',
                       warn: client.sodiumOverBudget,
                     ),
-                    _Metric(label: l.clientLastRoutine, value: client.lastRoutine),
+                    _Metric(
+                      label: l.clientLastRoutine,
+                      value: client.lastRoutine,
+                    ),
                   ],
                 ),
               ],
@@ -197,7 +203,7 @@ class _Metric extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               color: AppColors.subtleForeground,
               fontWeight: FontWeight.w500,
             ),
@@ -206,7 +212,7 @@ class _Metric extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: warn ? AppColors.overTarget : AppColors.foreground,
             ),

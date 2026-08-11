@@ -205,7 +205,9 @@ class _KpiRow extends StatelessWidget {
         tone: summary.healthAttentionCount == 0
             ? StatTone.positive
             : StatTone.warn,
-        hint: summary.healthAttentionCount == 0 ? l.dashNoIssues : l.dashCheckSodiumCompletion,
+        hint: summary.healthAttentionCount == 0
+            ? l.dashNoIssues
+            : l.dashCheckSodiumCompletion,
         onTap: () => context.go(AppRoutes.clientsFiltered('attention')),
       ),
     ];
@@ -272,7 +274,7 @@ class _WeeklyCompletionCard extends StatelessWidget {
           : Text(
               l.dashAveragePercent(average),
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),

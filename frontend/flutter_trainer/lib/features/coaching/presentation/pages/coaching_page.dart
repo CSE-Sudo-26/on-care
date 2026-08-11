@@ -289,9 +289,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       final AppLocalizations l = AppLocalizations.of(context);
       // Every exercise was removed — tell the trainer instead of a
       // silent no-op (review PR 220).
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.coachNeedOneExercise)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.coachNeedOneExercise)));
       return;
     }
     final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
@@ -324,9 +322,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       // Only surface the error if that client is still on screen.
       if (_isStillSelected(registeredFor)) {
         final AppLocalizations l = AppLocalizations.of(context);
-        messenger.showSnackBar(
-          SnackBar(content: Text(l.coachScheduleFailed)),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l.coachScheduleFailed)));
       }
       return;
     }
@@ -685,7 +681,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         l.coachClientNotified,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.success,
                         ),
@@ -723,7 +719,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         ? Icons.check_rounded
                         : Icons.calendar_today_outlined,
                     label: _registered
-                        ? l.coachRegisteredOn(_dateChipLabel(l, _registerOffset))
+                        ? l.coachRegisteredOn(
+                            _dateChipLabel(l, _registerOffset),
+                          )
                         : l.coachRegisterOn(_dateChipLabel(l, _registerOffset)),
                     onTap: () => _registerToSchedule(
                       client,
@@ -737,10 +735,12 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                         // Match the button's day label — 오늘/내일/'M/D' — so a
                         // future-day registration isn't described as 오늘
                         // (CodeRabbit review).
-                        l.coachFindInSchedule(_dateChipLabel(l, _registerOffset)),
+                        l.coachFindInSchedule(
+                          _dateChipLabel(l, _registerOffset),
+                        ),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.success,
                         ),
@@ -756,7 +756,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 11.5,
+        fontSize: 12.5,
         fontWeight: FontWeight.w600,
         color: AppColors.subtleForeground,
       ),
@@ -807,7 +807,7 @@ class _ClientChip extends StatelessWidget {
                         style: const TextStyle(
                           color: AppColors.primaryForeground,
                           fontWeight: FontWeight.w800,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     )
@@ -816,7 +816,7 @@ class _ClientChip extends StatelessWidget {
               Text(
                 client.name,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? AppColors.primaryForeground
@@ -890,11 +890,9 @@ class _DietSummaryCard extends StatelessWidget {
             ),
             child: IconLabel(
               icon: Icons.auto_awesome,
-              label: over
-                  ? l.coachVerdictSodium
-                  : l.coachVerdictBalanced,
+              label: over ? l.coachVerdictSodium : l.coachVerdictBalanced,
               color: AppColors.accent,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -949,7 +947,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                     Text(
                       l.coachRequestCustom,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
                       ),
@@ -958,7 +956,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                     Text(
                       l.coachRequestBlurb(clientName),
                       style: const TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11.5,
                         height: 1.35,
                         color: AppColors.mutedForeground,
                       ),
@@ -1037,7 +1035,7 @@ class _RoutineCard extends StatelessWidget {
                   child: Text(
                     type,
                     style: TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       color: accent,
                     ),
@@ -1059,7 +1057,7 @@ class _RoutineCard extends StatelessWidget {
                             Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.foreground,
                               ),
@@ -1068,7 +1066,7 @@ class _RoutineCard extends StatelessWidget {
                               Text(
                                 l.coachTapToEdit,
                                 style: TextStyle(
-                                  fontSize: 8.5,
+                                  fontSize: 10,
                                   color: AppColors.disabledForeground,
                                 ),
                               ),
@@ -1107,7 +1105,7 @@ class _RoutineCard extends StatelessWidget {
                 child: Text(
                   reason,
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.subtleForeground,
                   ),
@@ -1134,7 +1132,7 @@ class _RoutineCard extends StatelessWidget {
             Text(
               l.minutesShort(minutes),
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.accent,
               ),
@@ -1183,7 +1181,7 @@ class _NameEditFieldState extends State<_NameEditField> {
       onSubmitted: (_) => widget.onDone?.call(),
       onTapOutside: (_) => widget.onDone?.call(),
       style: const TextStyle(
-        fontSize: 12.5,
+        fontSize: 13.5,
         fontWeight: FontWeight.w700,
         color: AppColors.foreground,
       ),
@@ -1228,7 +1226,7 @@ class _AddExerciseButton extends StatelessWidget {
           child: Text(
             l.coachAddExerciseManually,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.accent,
             ),
@@ -1278,7 +1276,7 @@ class _AddExerciseFormState extends State<_AddExerciseForm> {
           Text(
             l.progAddExercise,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.foreground,
             ),
@@ -1376,7 +1374,7 @@ class _FormButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: foreground,
             ),
@@ -1423,7 +1421,7 @@ class _DateChip extends StatelessWidget {
         child: Text(
           _dateChipLabel(AppLocalizations.of(context), offset),
           style: TextStyle(
-            fontSize: 10.5,
+            fontSize: 11.5,
             fontWeight: FontWeight.w700,
             color: selected
                 ? AppColors.primaryForeground
@@ -1477,7 +1475,7 @@ class _RegisterButton extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: color,
                   ),
@@ -1516,9 +1514,11 @@ class _SendButton extends StatelessWidget {
           alignment: Alignment.center,
           child: IconLabel(
             icon: sent ? Icons.check_circle : Icons.send_outlined,
-            label: sent ? l.coachSentToClient(clientName) : l.coachReviewAndSend(clientName),
+            label: sent
+                ? l.coachSentToClient(clientName)
+                : l.coachReviewAndSend(clientName),
             color: AppColors.primaryForeground,
-            fontSize: 14,
+            fontSize: 15,
           ),
         ),
       ),
@@ -1570,7 +1570,7 @@ class _TemplateCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.foreground,
                                 ),
@@ -1584,7 +1584,7 @@ class _TemplateCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 10.5,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w500,
                                   color: AppColors.subtleForeground,
                                 ),
@@ -1667,7 +1667,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         child: Text(
                           l.coachHomework,
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.brandOrange,
                           ),
@@ -1679,7 +1679,7 @@ class _SendHistoryCard extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.foreground,
                           ),
@@ -1690,13 +1690,13 @@ class _SendHistoryCard extends ConsumerWidget {
                               icon: Icons.auto_awesome,
                               label: 'AI',
                               color: AppColors.primary,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
                             )
                           : Text(
                               l.coachTrainer,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.primary,
                               ),
@@ -1716,7 +1716,7 @@ class _SendHistoryCard extends ConsumerWidget {
                               ? l.labelToday
                               : s.date.substring(5).replaceAll('-', '/'),
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: s.date == today
                                 ? AppColors.primary
@@ -1726,11 +1726,14 @@ class _SendHistoryCard extends ConsumerWidget {
                       ),
                       Expanded(
                         child: Text(
-                          l.coachSessionExercises(sessionTypeLabel(l, s.type), s.program.length),
+                          l.coachSessionExercises(
+                            sessionTypeLabel(l, s.type),
+                            s.program.length,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.foreground,
                           ),
@@ -1739,7 +1742,7 @@ class _SendHistoryCard extends ConsumerWidget {
                       Text(
                         scheduleStatusLabel(l, s.status),
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           color: s.isDone
                               ? AppColors.success

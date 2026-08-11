@@ -44,7 +44,7 @@ class StatusDotLabel extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
             color: color,
           ),

@@ -100,9 +100,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = null);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.reportsSendFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.reportsSendFailed)));
       return;
     }
     if (!mounted) return;
@@ -127,7 +125,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
     return PageScaffold(
       title: l.reportsTitle,
-      subtitle: l.reportsSubtitle(l.dateMonthDay(_weekStart.month, _weekStart.day)),
+      subtitle: l.reportsSubtitle(
+        l.dateMonthDay(_weekStart.month, _weekStart.day),
+      ),
       // 리포트 asks how the week went, so the rows lead with this week's
       // completion and picking one opens that client's report.
       headerCenter: const ClientSearchBar(scope: ClientSearchScope.reports),
@@ -253,7 +253,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   child: Text(
                     l.reportsScheduleWarning,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12.5,
                       color: AppColors.warning,
                       fontWeight: FontWeight.w600,
                     ),
@@ -295,7 +295,9 @@ class _TrainerStats extends StatelessWidget {
             unit: l.unitTimes,
             icon: Icons.check_circle_outline,
             tone: StatTone.positive,
-            hint: rate == null || loading ? null : l.reportsCompletionRate(rate),
+            hint: rate == null || loading
+                ? null
+                : l.reportsCompletionRate(rate),
           ),
           StatCard(
             label: l.reportsProgramReady,
@@ -399,7 +401,7 @@ class _ClientPicker extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                               fontWeight: client.id == selectedId
                                   ? FontWeight.w800
                                   : FontWeight.w600,
@@ -451,7 +453,7 @@ class _ClientReport extends StatelessWidget {
       trailing: Text(
         report.rangeLabel(l),
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppColors.subtleForeground,
         ),
@@ -495,7 +497,7 @@ class _ClientReport extends StatelessWidget {
           Text(
             l.reportsCompletionByDay,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: AppColors.subtleForeground,
             ),
@@ -521,7 +523,7 @@ class _ClientReport extends StatelessWidget {
           Text(
             l.reportsSodiumTrend,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: AppColors.subtleForeground,
             ),
@@ -548,7 +550,7 @@ class _ClientReport extends StatelessWidget {
             child: Text(
               reportMessage(l, report),
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 height: 1.6,
                 fontWeight: FontWeight.w500,
                 color: AppColors.mutedForeground,
@@ -559,7 +561,9 @@ class _ClientReport extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: ActionButton(
-              label: sent ? l.reportsSendStateSent : (sending ? l.reportsSendStateSending : l.reportsSendAction),
+              label: sent
+                  ? l.reportsSendStateSent
+                  : (sending ? l.reportsSendStateSending : l.reportsSendAction),
               icon: sent ? Icons.check : Icons.send_outlined,
               primary: true,
               onPressed: sent || sending ? null : () => onSend(report),
@@ -593,7 +597,7 @@ class _Figure extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.subtleForeground,
             ),
@@ -615,7 +619,7 @@ class _Figure extends StatelessWidget {
               Text(
                 unit,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.subtleForeground,
                 ),

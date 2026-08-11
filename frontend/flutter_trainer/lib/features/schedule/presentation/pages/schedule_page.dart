@@ -173,10 +173,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text(l.schedDeleteTitle, style: TextStyle(fontSize: 16)),
+        title: Text(l.schedDeleteTitle, style: TextStyle(fontSize: 17)),
         content: Text(
           l.schedDeleteConfirm(s.time, s.clientName),
-          style: const TextStyle(fontSize: 13),
+          style: const TextStyle(fontSize: 14),
         ),
         actions: <Widget>[
           TextButton(
@@ -199,9 +199,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       await ref.read(scheduleRepositoryProvider).deleteSession(s.id);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.schedDeleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.schedDeleteFailed)));
     }
   }
 
@@ -224,9 +222,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // A DB or programJson-decode failure must not escape to the UI —
       // the session stays 예정 and the trainer is told (review PR 237).
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.schedCompleteFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.schedCompleteFailed)));
     }
   }
 
@@ -443,7 +439,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             l.schedEmptyDay,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
               height: 1.5,
@@ -526,7 +522,7 @@ class _CompleteDialogState extends State<_CompleteDialog> {
     final s = widget.session;
     return AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text(l.schedCompleteTitle, style: TextStyle(fontSize: 16)),
+      title: Text(l.schedCompleteTitle, style: TextStyle(fontSize: 17)),
       content: SizedBox(
         width: 320,
         child: Column(
@@ -535,7 +531,7 @@ class _CompleteDialogState extends State<_CompleteDialog> {
           children: <Widget>[
             Text(
               l.schedCompleteBody(s.time, s.clientName),
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
@@ -687,9 +683,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
       // Surface the failure and keep the sheet open so the input isn't
       // lost (review PR 218).
       if (mounted) setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l.schedSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.schedSaveFailed)));
       return;
     }
     if (mounted) setState(() => _saving = false);
@@ -727,7 +721,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
             Text(
               widget.existing == null ? l.schedAddTitle : l.schedEditTitle,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: AppColors.foreground,
               ),
@@ -776,7 +770,9 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         for (final h in _hourOptions)
                           DropdownMenuItem<int>(
                             value: h,
-                            child: Text(l.schedHourLabel(h.toString().padLeft(2, '0'))),
+                            child: Text(
+                              l.schedHourLabel(h.toString().padLeft(2, '0')),
+                            ),
                           ),
                       ],
                       onChanged: (v) => setState(() => _hour = v ?? _hour),
@@ -792,7 +788,9 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         for (final m in _minuteOptions)
                           DropdownMenuItem<int>(
                             value: m,
-                            child: Text(l.schedMinuteLabel(m.toString().padLeft(2, '0'))),
+                            child: Text(
+                              l.schedMinuteLabel(m.toString().padLeft(2, '0')),
+                            ),
                           ),
                       ],
                       onChanged: (v) => setState(() => _minute = v ?? _minute),
@@ -809,7 +807,10 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                 underline: const SizedBox.shrink(),
                 items: <DropdownMenuItem<int>>[
                   for (final d in _durationOptions)
-                    DropdownMenuItem<int>(value: d, child: Text(l.minutesShort(d))),
+                    DropdownMenuItem<int>(
+                      value: d,
+                      child: Text(l.minutesShort(d)),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _duration = v ?? _duration),
               ),
@@ -853,9 +854,11 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
                         height: 44,
                         alignment: Alignment.center,
                         child: Text(
-                          widget.existing == null ? l.schedAddAction : l.schedSaveAction,
+                          widget.existing == null
+                              ? l.schedAddAction
+                              : l.schedSaveAction,
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: AppColors.primaryForeground,
                           ),
@@ -878,7 +881,7 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     bool stacked = false,
   }) {
     const labelStyle = TextStyle(
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: FontWeight.w600,
       color: AppColors.subtleForeground,
     );
@@ -988,9 +991,9 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.progSaveFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.progSaveFailed)));
       return;
     }
     if (!mounted) return;
@@ -1014,7 +1017,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
           Text(
             l.progEditTitle,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
             ),
@@ -1036,7 +1039,7 @@ class _ProgramEditorState extends ConsumerState<_ProgramEditor> {
           const SizedBox(height: AppSpacing.md),
           Text(
             l.schedNote,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           TextField(
@@ -1232,9 +1235,12 @@ class _WeekNav extends StatelessWidget {
           _ChevronButton(icon: Icons.chevron_left, onTap: () => onShift(-1)),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            l.dateRange(l.dateMonthDay(start.month, start.day), l.dateMonthDay(end.month, end.day)),
+            l.dateRange(
+              l.dateMonthDay(start.month, start.day),
+              l.dateMonthDay(end.month, end.day),
+            ),
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
             ),
@@ -1351,7 +1357,7 @@ class _DayColumn extends StatelessWidget {
                   Text(
                     weekdayNames(l)[day.weekday - 1],
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                       color: weekend
                           ? AppColors.subtleForeground
@@ -1362,7 +1368,7 @@ class _DayColumn extends StatelessWidget {
                   Text(
                     '${day.day}',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: isToday ? AppColors.primary : AppColors.foreground,
                     ),
@@ -1378,7 +1384,7 @@ class _DayColumn extends StatelessWidget {
                     child: Text(
                       l.schedEmptySlotShort,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: AppColors.disabledForeground,
                       ),
@@ -1427,7 +1433,7 @@ class _WeekChip extends StatelessWidget {
                 Text(
                   session.time,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: color,
                   ),
@@ -1437,7 +1443,7 @@ class _WeekChip extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.foreground,
                   ),
@@ -1580,7 +1586,7 @@ class _DayCell extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: labelColor,
               ),
@@ -1589,7 +1595,7 @@ class _DayCell extends StatelessWidget {
             Text(
               '${date.day}',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: dayColor,
               ),
@@ -1660,7 +1666,7 @@ class _TimelineRow extends StatelessWidget {
             child: Text(
               session.time,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: session.isDone
                     ? AppColors.disabledForeground
@@ -1710,7 +1716,7 @@ class _GapSlot extends StatelessWidget {
       child: Text(
         l.dashEmptySlot,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w500,
           color: AppColors.disabledForeground,
         ),
@@ -1797,15 +1803,18 @@ class _SessionCard extends StatelessWidget {
                         Text(
                           s.clientName,
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: AppColors.foreground,
                           ),
                         ),
                         Text(
-                          l.sessionTypeAndDuration(sessionTypeLabel(l, s.type), s.durationMinutes),
+                          l.sessionTypeAndDuration(
+                            sessionTypeLabel(l, s.type),
+                            s.durationMinutes,
+                          ),
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w500,
                             color: AppColors.subtleForeground,
                           ),
@@ -1920,7 +1929,11 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         // 색은 계약값(`status`)으로 고르고, 글자는 로케일 문구로 그린다.
         scheduleStatusLabel(AppLocalizations.of(context), status),
-        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: fg),
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
       ),
     );
   }
@@ -1959,7 +1972,7 @@ class _ProgramRow extends StatelessWidget {
             child: Text(
               '$index',
               style: const TextStyle(
-                fontSize: 9.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 color: AppColors.secondary,
               ),
@@ -1973,7 +1986,7 @@ class _ProgramRow extends StatelessWidget {
                 Text(
                   item.name,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
                   ),
@@ -1981,7 +1994,7 @@ class _ProgramRow extends StatelessWidget {
                 Text(
                   detail.toString(),
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.subtleForeground,
                   ),
@@ -2018,7 +2031,7 @@ class _NoPlanBox extends StatelessWidget {
           Text(
             l.progEmpty,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.mutedForeground,
             ),
@@ -2027,7 +2040,7 @@ class _NoPlanBox extends StatelessWidget {
           Text(
             l.progEmptyHint,
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 11.5,
               fontWeight: FontWeight.w500,
               color: AppColors.subtleForeground,
             ),
@@ -2081,7 +2094,11 @@ class _ManageRow extends StatelessWidget {
           color: AppColors.secondary,
           onTap: onEditProgram,
         ),
-        _ActionChip(label: l.actionDelete, color: AppColors.destructive, onTap: onDelete),
+        _ActionChip(
+          label: l.actionDelete,
+          color: AppColors.destructive,
+          onTap: onDelete,
+        ),
         _ActionChip(
           key: const ValueKey<String>('session-chat-chip'),
           icon: Icons.chat_bubble_outline,
@@ -2109,7 +2126,7 @@ class _SentBadge extends StatelessWidget {
         Text(
           l.schedSent,
           style: TextStyle(
-            fontSize: 9.5,
+            fontSize: 10.5,
             fontWeight: FontWeight.w700,
             color: AppColors.success,
           ),
@@ -2142,7 +2159,7 @@ class _ActionChip extends StatelessWidget {
     final text = Text(
       label,
       style: TextStyle(
-        fontSize: 10.5,
+        fontSize: 11.5,
         fontWeight: FontWeight.w700,
         color: color,
       ),
@@ -2203,7 +2220,7 @@ class _NoteBox extends StatelessWidget {
           Text(
             l.schedNote,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               color: AppColors.warning,
             ),
@@ -2212,7 +2229,7 @@ class _NoteBox extends StatelessWidget {
           Text(
             note,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
@@ -2272,7 +2289,7 @@ class _SendButton extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: fg,
                   ),
