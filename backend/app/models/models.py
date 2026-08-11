@@ -873,6 +873,24 @@ class AiConversation(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    # NULL 은 일반 UNIQUE 에서 서로 다른 값으로 취급된다. 회원 본인 스레드와
+    # 트레이너별 스레드를 별도 부분 인덱스로 묶어 활성 대화를 하나만 허용한다.
+    __table_args__ = (
+        Index(
+            "uq_ai_conversations_active_member",
+            "user_id",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL AND trainer_id IS NULL"),
+        ),
+        Index(
+            "uq_ai_conversations_active_trainer",
+            "user_id",
+            "trainer_id",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL AND trainer_id IS NOT NULL"),
+        ),
+    )
+
 
 class AiMessage(Base):
     """AI 코치 대화의 한 줄.

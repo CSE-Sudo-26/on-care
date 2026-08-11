@@ -40,16 +40,55 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
-    # 스레드 조회는 항상 (user_id, trainer_id) 로 좁힌다.
+    # 예전 get-or-create 는 동시 요청에서 같은 회원의 활성 스레드를 둘 이상 만들 수
+    # 있었다. 현재 조회가 선택하던 최신 한 건만 활성으로 남겨 유니크 인덱스 생성이
+    # 기존 데이터 때문에 실패하지 않게 한다. 이 시점의 기존 행은 전부 trainer_id=NULL.
+    op.execute(
+        sa.text(
+            """
+            WITH ranked AS (
+                SELECT
+                    id,
+                    row_number() OVER (
+                        PARTITION BY user_id
+                        ORDER BY created_at DESC, id DESC
+                    ) AS position
+                FROM ai_conversations
+                WHERE archived_at IS NULL AND trainer_id IS NULL
+            )
+            UPDATE ai_conversations AS conversation
+            SET archived_at = CURRENT_TIMESTAMP
+            FROM ranked
+            WHERE conversation.id = ranked.id AND ranked.position > 1
+            """
+        )
+    )
+
+    # PostgreSQL 의 UNIQUE 는 NULL 끼리를 같은 값으로 보지 않는다. 따라서 회원 본인
+    # 스레드(trainer_id IS NULL)와 트레이너별 스레드를 별도 부분 인덱스로 보호한다.
     op.create_index(
-        "ix_ai_conversations_user_trainer",
+        "uq_ai_conversations_active_member",
+        "ai_conversations",
+        ["user_id"],
+        unique=True,
+        postgresql_where=sa.text("archived_at IS NULL AND trainer_id IS NULL"),
+    )
+    op.create_index(
+        "uq_ai_conversations_active_trainer",
         "ai_conversations",
         ["user_id", "trainer_id"],
+        unique=True,
+        postgresql_where=sa.text("archived_at IS NULL AND trainer_id IS NOT NULL"),
     )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_ai_conversations_user_trainer", table_name="ai_conversations")
+    op.drop_index(
+        "uq_ai_conversations_active_trainer", table_name="ai_conversations"
+    )
+    op.drop_index(
+        "uq_ai_conversations_active_member", table_name="ai_conversations"
+    )
     op.drop_constraint(
         "fk_ai_conversations_trainer_id_users",
         "ai_conversations",
