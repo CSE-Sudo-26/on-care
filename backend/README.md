@@ -59,6 +59,8 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/v1/system/met
 | --- | --- |
 | `routine_options.generated{by=ai}` | LLM 이 만든 루틴. **0 이면 AI 경로가 죽은 것** |
 | `routine_options.generated{by=rule}` | 폴백으로 만든 루틴 |
+| `routine_options.fallback{reason=busy}` | 동시 호출 한도 초과 → `LLM_MAX_CONCURRENCY` 를 본다 |
+| `routine_options.fallback{reason=timeout}` | `LLM_TIMEOUT_SEC` 초과 → 아래 `llm_ms` 와 함께 본다 |
 | `routine_options.fallback{reason=contract}` | 응답 규격 위반 → 프롬프트·스키마를 본다 |
 | `routine_options.fallback{reason=infra}` | 키 미설정·설정 오타·네트워크·5xx |
 | `routine_options.with_chat_context` | 채팅 근거가 실린 채 AI 가 성공한 횟수(#580) |
@@ -67,8 +69,16 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/v1/system/met
 | `diet_recommendations.generated{by=no_data}` | 근거가 없어 LLM 을 부르지 않음(신규 가입자) |
 | `diet_recommendations.fallback{reason=busy\|timeout\|error}` | 동시 호출 한도·타임아웃·그 외 실패 |
 
-`durations` 에는 `routine_options.llm_ms` 가 count/avg/max 로 들어온다 — #584 의
-타임아웃 값을 정할 근거다. 관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
+사유가 넷인 이유는 볼 곳이 다르기 때문이다. `busy`·`timeout` 은 **공급자는 멀쩡한데
+우리 쪽 상한에 걸린 것**이라 동시성·타임아웃 설정을 조정할 신호이고, `contract` 는
+프롬프트나 스키마를, `infra` 는 키·네트워크를 본다. 한 칸에 뭉쳐 세면 이 구분이
+사라진다.
+
+`durations` 에는 `routine_options.llm_ms` 가 count/avg/max 로 들어온다. `timeout` 이
+쌓이는데 `avg_ms` 가 `LLM_TIMEOUT_SEC` 에 못 미치면 몇 건이 유난히 느린 것이므로
+`max_ms` 를 본다.
+
+관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
 값은 프로세스 메모리에 있어 재시작하면 사라진다(단일 인스턴스 기준).
 
 ## 프론트 연동 (실서버 전환)
