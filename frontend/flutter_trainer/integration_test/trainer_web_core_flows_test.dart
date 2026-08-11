@@ -26,6 +26,7 @@ const String _password = 'oncare123';
 const String _clientId = 'user-demo';
 const String _consultationMemberName = '이지수';
 const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+const Duration _fixtureApiTimeout = Duration(seconds: 15);
 
 Future<void> _pumpUntil(
   WidgetTester tester,
@@ -39,6 +40,20 @@ Future<void> _pumpUntil(
     await tester.pump(const Duration(milliseconds: 100));
   }
   expect(finder, findsWidgets, reason: '$step timed out after $timeout.');
+}
+
+Future<void> _pumpUntilAbsent(
+  WidgetTester tester,
+  Finder finder, {
+  required String step,
+  Duration timeout = const Duration(seconds: 15),
+}) async {
+  final deadline = tester.binding.clock.now().add(timeout);
+  while (finder.evaluate().isNotEmpty &&
+      tester.binding.clock.now().isBefore(deadline)) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsNothing, reason: '$step timed out after $timeout.');
 }
 
 String _location(WidgetTester tester) {
@@ -132,7 +147,14 @@ String _ymd(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}';
 
 Future<String> _ensurePendingConsultation() async {
-  final dio = Dio(BaseOptions(baseUrl: _apiBaseUrl));
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: _apiBaseUrl,
+      connectTimeout: _fixtureApiTimeout,
+      sendTimeout: _fixtureApiTimeout,
+      receiveTimeout: _fixtureApiTimeout,
+    ),
+  );
   final login = await dio.post<Map<String, dynamic>>(
     '/auth/login',
     data: <String, String>{'username': _memberEmail, 'password': _password},
@@ -286,9 +308,9 @@ void main() {
       find.text(_l10n(tester).consultRejected),
       step: 'consultation rejection result',
     );
-    await _pumpUntil(
+    await _pumpUntilAbsent(
       tester,
-      find.text(_l10n(tester).consultShowAll),
+      find.byKey(requestKey),
       step: 'pending consultation list refresh',
     );
     expect(find.byKey(requestKey), findsNothing);
