@@ -312,11 +312,11 @@ class $TrainerClientsTable extends TrainerClients
   );
   static const VerificationMeta _sugarGMeta = const VerificationMeta('sugarG');
   @override
-  late final GeneratedColumn<int> sugarG = GeneratedColumn<int>(
+  late final GeneratedColumn<double> sugarG = GeneratedColumn<double>(
     'sugar_g',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _carbsGMeta = const VerificationMeta('carbsG');
@@ -611,7 +611,7 @@ class $TrainerClientsTable extends TrainerClients
         data['${effectivePrefix}sodium_mg'],
       )!,
       sugarG: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}sugar_g'],
       )!,
       carbsG: attachedDatabase.typeMapping.read(
@@ -662,7 +662,7 @@ class TrainerClientRow extends DataClass
   final bool active;
   final int caloriesToday;
   final int sodiumMg;
-  final int sugarG;
+  final double sugarG;
   final double carbsG;
   final double proteinG;
   final double fatG;
@@ -701,7 +701,7 @@ class TrainerClientRow extends DataClass
     map['active'] = Variable<bool>(active);
     map['calories_today'] = Variable<int>(caloriesToday);
     map['sodium_mg'] = Variable<int>(sodiumMg);
-    map['sugar_g'] = Variable<int>(sugarG);
+    map['sugar_g'] = Variable<double>(sugarG);
     map['carbs_g'] = Variable<double>(carbsG);
     map['protein_g'] = Variable<double>(proteinG);
     map['fat_g'] = Variable<double>(fatG);
@@ -749,7 +749,7 @@ class TrainerClientRow extends DataClass
       active: serializer.fromJson<bool>(json['active']),
       caloriesToday: serializer.fromJson<int>(json['caloriesToday']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
-      sugarG: serializer.fromJson<int>(json['sugarG']),
+      sugarG: serializer.fromJson<double>(json['sugarG']),
       carbsG: serializer.fromJson<double>(json['carbsG']),
       proteinG: serializer.fromJson<double>(json['proteinG']),
       fatG: serializer.fromJson<double>(json['fatG']),
@@ -774,7 +774,7 @@ class TrainerClientRow extends DataClass
       'active': serializer.toJson<bool>(active),
       'caloriesToday': serializer.toJson<int>(caloriesToday),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
-      'sugarG': serializer.toJson<int>(sugarG),
+      'sugarG': serializer.toJson<double>(sugarG),
       'carbsG': serializer.toJson<double>(carbsG),
       'proteinG': serializer.toJson<double>(proteinG),
       'fatG': serializer.toJson<double>(fatG),
@@ -795,7 +795,7 @@ class TrainerClientRow extends DataClass
     bool? active,
     int? caloriesToday,
     int? sodiumMg,
-    int? sugarG,
+    double? sugarG,
     double? carbsG,
     double? proteinG,
     double? fatG,
@@ -931,7 +931,7 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
   final Value<bool> active;
   final Value<int> caloriesToday;
   final Value<int> sodiumMg;
-  final Value<int> sugarG;
+  final Value<double> sugarG;
   final Value<double> carbsG;
   final Value<double> proteinG;
   final Value<double> fatG;
@@ -970,7 +970,7 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     this.active = const Value.absent(),
     required int caloriesToday,
     required int sodiumMg,
-    required int sugarG,
+    required double sugarG,
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
@@ -1000,7 +1000,7 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Expression<bool>? active,
     Expression<int>? caloriesToday,
     Expression<int>? sodiumMg,
-    Expression<int>? sugarG,
+    Expression<double>? sugarG,
     Expression<double>? carbsG,
     Expression<double>? proteinG,
     Expression<double>? fatG,
@@ -1043,7 +1043,7 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Value<bool>? active,
     Value<int>? caloriesToday,
     Value<int>? sodiumMg,
-    Value<int>? sugarG,
+    Value<double>? sugarG,
     Value<double>? carbsG,
     Value<double>? proteinG,
     Value<double>? fatG,
@@ -1106,7 +1106,7 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       map['sodium_mg'] = Variable<int>(sodiumMg.value);
     }
     if (sugarG.present) {
-      map['sugar_g'] = Variable<int>(sugarG.value);
+      map['sugar_g'] = Variable<double>(sugarG.value);
     }
     if (carbsG.present) {
       map['carbs_g'] = Variable<double>(carbsG.value);
@@ -4029,7 +4029,7 @@ typedef $$TrainerClientsTableCreateCompanionBuilder =
       Value<bool> active,
       required int caloriesToday,
       required int sodiumMg,
-      required int sugarG,
+      required double sugarG,
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
@@ -4050,7 +4050,7 @@ typedef $$TrainerClientsTableUpdateCompanionBuilder =
       Value<bool> active,
       Value<int> caloriesToday,
       Value<int> sodiumMg,
-      Value<int> sugarG,
+      Value<double> sugarG,
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
@@ -4115,7 +4115,7 @@ class $$TrainerClientsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get sugarG => $composableBuilder(
+  ColumnFilters<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
     builder: (column) => ColumnFilters(column),
   );
@@ -4210,7 +4210,7 @@ class $$TrainerClientsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get sugarG => $composableBuilder(
+  ColumnOrderings<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
     builder: (column) => ColumnOrderings(column),
   );
@@ -4291,7 +4291,7 @@ class $$TrainerClientsTableAnnotationComposer
   GeneratedColumn<int> get sodiumMg =>
       $composableBuilder(column: $table.sodiumMg, builder: (column) => column);
 
-  GeneratedColumn<int> get sugarG =>
+  GeneratedColumn<double> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
 
   GeneratedColumn<double> get carbsG =>
@@ -4368,7 +4368,7 @@ class $$TrainerClientsTableTableManager
                 Value<bool> active = const Value.absent(),
                 Value<int> caloriesToday = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
-                Value<int> sugarG = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
@@ -4408,7 +4408,7 @@ class $$TrainerClientsTableTableManager
                 Value<bool> active = const Value.absent(),
                 required int caloriesToday,
                 required int sodiumMg,
-                required int sugarG,
+                required double sugarG,
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),

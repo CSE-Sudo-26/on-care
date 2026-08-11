@@ -121,7 +121,7 @@ class _NutritionSummary extends StatelessWidget {
                 unit: 'g',
                 // Navy base like the other tiles — orange only when over.
                 color: AppColors.accentDark,
-                warn: client.sugarG > sugarTargetG,
+                warn: client.sugarOverBudget,
               ),
             ],
           ),

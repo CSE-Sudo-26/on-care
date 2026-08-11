@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v7']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v8']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,8 +26,9 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v7` (was `_v6`): 김민수's diet now matches the member
-/// app mock for #527. `_v6` added client diet macros. `_v5` had grown
+/// The flag is `_v8` (was `_v7`): 김민수's sugar now preserves the member
+/// app mock's 17.8g for #565. `_v7` aligned his diet for #527, `_v6` added
+/// client diet macros, and `_v5` had grown
 /// 김민수's thread from five messages
 /// to fifteen so the member and trainer demos tell the same story (#543).
 /// `_v4` had bumped `_v3` when the roster grew from three clients to
@@ -48,7 +49,7 @@ part 'seed_clients.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v7') == today) return;
+  if (await db.readValue('trainer_seeded_v8') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -219,7 +220,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v7', today);
+    await db.putValue('trainer_seeded_v8', today);
   });
 }
 
@@ -316,7 +317,7 @@ class _Client {
   final bool active;
   final int calories;
   final int sodiumMg;
-  final int sugarG;
+  final double sugarG;
   final String lastRoutine;
   final List<int> weekCompletion;
   final List<int> sodiumWeek;

@@ -51,9 +51,8 @@ const List<_Client> _clients = <_Client>[
     active: true,
     calories: 1067,
     sodiumMg: 3428,
-    // TrainerClient's existing sugar contract is int; the real DTO also
-    // normalises 17.8 to 17, so the mock follows that same display value.
-    sugarG: 17,
+    // Keep this aligned with the member app's current mock daily total.
+    sugarG: 17.8,
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
     sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 3428],
