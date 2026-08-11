@@ -148,7 +148,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('운동 탭은 프로필의 운동 목표 3종을 표시한다', (WidgetTester tester) async {
+  testWidgets('운동 탭 요약은 일수 카드를 제외한 운동 목표를 표시한다', (
+    WidgetTester tester,
+  ) async {
     await pumpExercise(
       tester,
       profile: const UserProfile(
@@ -161,9 +163,11 @@ void main() {
       ),
     );
 
-    expect(find.text('2 /5일'), findsOneWidget);
+    expect(find.text('일수'), findsNothing);
+    expect(find.text('2 /5일'), findsNothing);
     expect(find.text('100 /240분'), findsOneWidget);
     expect(find.text('300 /900kcal'), findsOneWidget);
+    expect(find.text('연속'), findsOneWidget);
   });
 
   testWidgets('운동 목표가 없으면 필드별 기본값을 표시한다', (WidgetTester tester) async {
@@ -178,7 +182,7 @@ void main() {
       ),
     );
 
-    expect(find.text('2 /4일'), findsOneWidget);
+    expect(find.text('2 /4일'), findsNothing);
     expect(find.text('100 /150분'), findsOneWidget);
     expect(find.text('300 /800kcal'), findsOneWidget);
   });
@@ -295,7 +299,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('showExercise')));
     await tester.pumpAndSettle();
-    expect(find.text('2 /5일'), findsOneWidget);
+    expect(find.text('2 /5일'), findsNothing);
     expect(find.text('100 /240분'), findsOneWidget);
     expect(find.text('300 /900kcal'), findsOneWidget);
 

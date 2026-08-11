@@ -257,19 +257,6 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
                 children: <Widget>[
                   Expanded(
                     child: _StatCard(
-                      label: l.exStatDays,
-                      // 운동 일수 = 운동한 활성 일수(workoutCount). 하루에 유형을
-                      // 나눠 여러 세션으로 기록해도 1일로 센다(요일 수).
-                      // 홈 운동 카드의 '주간 운동 일수'와 동일한 정의.
-                      value: '${week.workoutCount}',
-                      unit: l.unitDays,
-                      goal: '${goals.workouts}',
-                      accent: true,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatCard(
                       label: l.exStatTime,
                       value: '${week.totalMinutes}',
                       unit: l.unitMinutes,
