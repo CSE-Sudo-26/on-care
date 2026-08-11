@@ -3,6 +3,7 @@
 - role 파싱/기본값은 순수(로컬 실행).
 - 엔드포인트 보호(200/403/401)는 DB 필요(로컬 skip, CI 실행).
 """
+
 from __future__ import annotations
 
 from uuid import uuid4
@@ -27,7 +28,9 @@ def _trainer_token(client) -> str:
 
 def _member_token(client) -> str:
     email = f"member-{uuid4().hex[:8]}@oncare.com"
-    client.post("/v1/auth/register", json={"email": email, "password": "pw!", "name": "u"})
+    client.post(
+        "/v1/auth/register", json={"email": email, "password": "pw!", "name": "u"}
+    )
     return client.post(
         "/v1/auth/login", data={"username": email, "password": "pw!"}
     ).json()["access_token"]
@@ -102,13 +105,15 @@ def test_demo_trainer_client_links_seeded(client, db_session):
 
 # ---- 리뷰 반영: prod 데모 시드 안전장치(순수, DB 불필요) ----
 
+
 def test_prod_demo_seed_requires_strong_password():
     import pytest
 
     from app.core.config import Settings
 
     common = dict(
-        _env_file=None, env="prod",
+        _env_file=None,
+        env="prod",
         jwt_secret="a-strong-enough-production-secret-value-01234567",
         cors_allow_origins="https://app.example.com",
         auto_create_tables=False,  # 운영 스키마 가드(#288) 충족 — 이 테스트는 데모 비번 강도만 검증
@@ -130,6 +135,7 @@ def test_prod_demo_seed_requires_strong_password():
 
 # ---- 리뷰 반영: 역할 분리(트레이너 토큰의 회원 API 접근 차단) ----
 
+
 def test_trainer_token_rejected_by_member_api(client):
     token = _trainer_token(client)
     h = {"Authorization": f"Bearer {token}"}
@@ -145,6 +151,7 @@ def test_member_api_still_works_without_token(client):
 
 # ---- 리뷰 반영: 시드 멱등성(이메일 충돌·재실행) ----
 
+
 def test_trainer_seed_is_idempotent(client, db_session):
     from sqlalchemy import func, select
 
@@ -155,7 +162,8 @@ def test_trainer_seed_is_idempotent(client, db_session):
     seed_trainer_domain()
     seed_trainer_domain()
     links = db_session.scalar(
-        select(func.count()).select_from(TrainerClient)
+        select(func.count())
+        .select_from(TrainerClient)
         .where(TrainerClient.trainer_id == TRAINER_ID)
     )
     assert links == len(_MEMBERS)
@@ -243,9 +251,9 @@ def test_backfill_skips_an_account_that_only_shares_the_id(client, db_session):
 
         db_session.expire_all()
         after = db_session.scalar(select(User).where(User.id == "user-sungho"))
-        assert after.hashed_password == "", (
-            "이메일·역할이 다른 계정에는 데모 비밀번호를 심으면 안 된다"
-        )
+        assert (
+            after.hashed_password == ""
+        ), "이메일·역할이 다른 계정에는 데모 비밀번호를 심으면 안 된다"
     finally:
         db_session.expire_all()
         restored = db_session.scalar(select(User).where(User.id == "user-sungho"))
@@ -260,21 +268,35 @@ def test_email_conflict_is_detected(client, db_session):
     from app.db.seed_trainer import _email_taken_by_other
     from app.models.models import User
 
-    db_session.add(User(
-        id="tmp-squatter", email="conflict-test@oncare.com", name="x", role="member",
-    ))
+    db_session.add(
+        User(
+            id="tmp-squatter",
+            email="conflict-test@oncare.com",
+            name="x",
+            role="member",
+        )
+    )
     db_session.commit()
     try:
         # 다른 id 가 같은 이메일을 쓰려 하면 충돌로 감지 → 시드는 스킵한다
-        assert _email_taken_by_other(db_session, "conflict-test@oncare.com", "other-id") is True
+        assert (
+            _email_taken_by_other(db_session, "conflict-test@oncare.com", "other-id")
+            is True
+        )
         # 본인 id 는 충돌 아님
-        assert _email_taken_by_other(db_session, "conflict-test@oncare.com", "tmp-squatter") is False
+        assert (
+            _email_taken_by_other(
+                db_session, "conflict-test@oncare.com", "tmp-squatter"
+            )
+            is False
+        )
     finally:
         db_session.query(User).filter(User.id == "tmp-squatter").delete()
         db_session.commit()
 
 
 # ---- #250: 로스터 + 회원 실데이터 공유 ----
+
 
 def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
@@ -345,20 +367,24 @@ def test_trainer_client_without_diet_has_zero_macro_totals(client, db_session):
     from app.models.models import TrainerClient, User
 
     member_id = "tmp-member-no-diet"
-    db_session.add(User(
-        id=member_id,
-        email="tmp-member-no-diet@oncare.test",
-        name="식단없음",
-        role="member",
-    ))
+    db_session.add(
+        User(
+            id=member_id,
+            email="tmp-member-no-diet@oncare.test",
+            name="식단없음",
+            role="member",
+        )
+    )
     db_session.flush()
-    db_session.add(TrainerClient(
-        id="tmp-link-no-diet",
-        trainer_id=TRAINER_ID,
-        member_id=member_id,
-        goal="",
-        sort_order=999,
-    ))
+    db_session.add(
+        TrainerClient(
+            id="tmp-link-no-diet",
+            trainer_id=TRAINER_ID,
+            member_id=member_id,
+            goal="",
+            sort_order=999,
+        )
+    )
     db_session.commit()
 
     try:
@@ -396,16 +422,28 @@ def test_history_excludes_other_trainers_records(client, db_session):
     from app.models.models import RoutineHistory, User
     from app.services.trainer_service import build_client_history
 
-    db_session.add(User(
-        id="trainer-other", email="other-t@oncare.com", name="타트레이너", role="trainer",
-    ))
+    db_session.add(
+        User(
+            id="trainer-other",
+            email="other-t@oncare.com",
+            name="타트레이너",
+            role="trainer",
+        )
+    )
     db_session.flush()  # RoutineHistory.trainer_id FK 성립을 위해 User 를 먼저 반영
-    db_session.add(RoutineHistory(
-        id="hist-other-secret", member_id="user-jisu", trainer_id="trainer-other",
-        date=clock.today().isoformat(), kind_label="PT 세션 · 타트레이너",
-        completion_rate=100, exercises_json="[]",
-        client_feedback="", trainer_note="비밀 메모",
-    ))
+    db_session.add(
+        RoutineHistory(
+            id="hist-other-secret",
+            member_id="user-jisu",
+            trainer_id="trainer-other",
+            date=clock.today().isoformat(),
+            kind_label="PT 세션 · 타트레이너",
+            completion_rate=100,
+            exercises_json="[]",
+            client_feedback="",
+            trainer_note="비밀 메모",
+        )
+    )
     db_session.commit()
     try:
         mine = build_client_history(db_session, "user-jisu", TRAINER_ID)
@@ -441,19 +479,24 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
 
     token = _trainer_token(client)
     url = "/v1/trainer/clients/user-jisu/health-profile"
-    profile = db_session.scalar(
+    profile_before = db_session.scalar(
         select(HealthProfile).where(HealthProfile.user_id == "user-jisu")
     )
-    assert profile is not None
-    original = {
-        "gender": profile.gender,
-        "height_cm": profile.height_cm,
-        "weight_kg": profile.weight_kg,
-        "goals": profile.goals,
-        "weekly_workout_goal": profile.weekly_workout_goal,
-        "weekly_exercise_minutes_goal": profile.weekly_exercise_minutes_goal,
-        "weekly_burn_goal": profile.weekly_burn_goal,
-    }
+    original = (
+        {
+            "gender": profile_before.gender,
+            "height_cm": profile_before.height_cm,
+            "weight_kg": profile_before.weight_kg,
+            "goals": profile_before.goals,
+            "weekly_workout_goal": profile_before.weekly_workout_goal,
+            "weekly_exercise_minutes_goal": (
+                profile_before.weekly_exercise_minutes_goal
+            ),
+            "weekly_burn_goal": profile_before.weekly_burn_goal,
+        }
+        if profile_before is not None
+        else None
+    )
 
     try:
         response = client.put(
@@ -482,8 +525,20 @@ def test_trainer_can_read_and_update_member_health_profile(client, db_session):
         assert fetched.json()["weekly_exercise_minutes_goal"] == 180
         assert fetched.json()["weekly_burn_goal"] == 1600
     finally:
-        for field, value in original.items():
-            setattr(profile, field, value)
+        # The API uses a separate session. Reload its committed row before
+        # restoring state; otherwise SQLAlchemy may consider the original
+        # in-memory values unchanged and skip the cleanup UPDATE.
+        db_session.expire_all()
+        profile_after = db_session.scalar(
+            select(HealthProfile).where(HealthProfile.user_id == "user-jisu")
+        )
+        if original is None:
+            if profile_after is not None:
+                db_session.delete(profile_after)
+        else:
+            assert profile_after is not None
+            for field, value in original.items():
+                setattr(profile_after, field, value)
         db_session.commit()
 
 
