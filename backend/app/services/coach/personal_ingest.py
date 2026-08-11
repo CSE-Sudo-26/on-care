@@ -21,7 +21,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.coach import prompt_safety
-from app.services.coach.rag import ingest_personal_text, purge_personal
+from app.services.coach.rag import (
+    ingest_personal_text,
+    purge_personal,
+    replace_personal_text,
+)
 
 log = logging.getLogger(__name__)
 
@@ -35,8 +39,16 @@ def _safe(
     try:
         # 교체는 지우고 다시 넣는다(#603). 그냥 넣으면 옛 수치 문서가 남아 코치가
         # "30분"과 "45분"을 동시에 근거로 삼는다 — 안 고치느니만 못하다.
+        #
+        # 삭제·삽입을 한 트랜잭션으로 묶는 replace_personal_text 를 쓴다. 예전처럼
+        # purge 후 ingest 를 따로 부르면 임베딩이 삭제 뒤에 실패했을 때 기존 청크를
+        # 되살릴 수 없고, 두 커밋 사이에 근거가 텅 빈 순간이 생긴다.
         if replace and source_ref:
-            purge_personal(db, user_id, source_ref)
+            replace_personal_text(
+                db, user_id, text, domain=domain, source=source,
+                source_ref=source_ref, title="",
+            )
+            return
         ingest_personal_text(
             db, user_id, text, domain=domain, source=source, title="",
             source_ref=source_ref,
@@ -132,7 +144,7 @@ _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높�
 
 
 def record_exercise(
-    db: Session, user_id: str, *, date: str, type: str, minutes: int,
+    db: Session, user_id: str, *, date: str, exercise_type: str, minutes: int,
     calories: int, intensity: str, source_ref: str | None = None,
     replace: bool = False,
 ) -> None:
@@ -146,7 +158,8 @@ def record_exercise(
     둘 다 '내가 한 운동'이고, 주간 집계도 이미 둘을 합쳐서 보여준다(#499).
     """
     text = (
-        f"{date} 운동 기록: {_EXERCISE_TYPE_KR.get(type, type)} {minutes}분, "
+        f"{date} 운동 기록: "
+        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
         f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
     )
     _safe(

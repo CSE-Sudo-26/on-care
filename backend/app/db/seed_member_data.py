@@ -381,7 +381,7 @@ def _ingest_member_documents(db: Session, member_id: str) -> int:
         if has_personal_doc(db, member_id, session.id):
             continue
         personal_ingest.record_exercise(
-            db, member_id, date=_session_date(session), type=session.type,
+            db, member_id, date=_session_date(session), exercise_type=session.type,
             minutes=session.minutes, calories=session.calories,
             intensity=session.intensity, source_ref=session.id,
         )

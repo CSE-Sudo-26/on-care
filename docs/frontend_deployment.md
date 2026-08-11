@@ -34,7 +34,7 @@ Vercel 프로젝트가 이 Git 저장소와 연결되어 있으면 저장소 안
 이 배포는 GitHub Pages로 전달되는 중간 단계가 아니라 **Vercel이 같은 커밋을 독립적으로 배포하는 중복 경로**입니다. 공식 서비스에서 Vercel을 사용하지 않으므로 아래 순서로 연결을 정리합니다.
 
 1. 루트 [`vercel.json`](../vercel.json)의 `git.deploymentEnabled: false`를 반영해 모든 브랜치의 자동 배포를 차단합니다.
-2. Vercel Dashboard에서 `sudo-capstone-project`를 엽니다.
+2. Vercel Dashboard에서 이 저장소와 연결된 프로젝트를 엽니다. Vercel 프로젝트 이름은 GitHub 저장소 이름 변경을 따라가지 않으므로, 저장소가 `on-care`로 바뀐 뒤에도 목록에는 이전 이름인 `sudo-capstone-project`로 남아 있을 수 있습니다.
 3. `Settings` → `Git`에서 연결된 GitHub 저장소를 `Disconnect`합니다.
 4. GitHub 저장소의 Rulesets 또는 Branch protection에서 Vercel 관련 required check가 있으면 제거합니다.
 5. 새 PR을 갱신해 Vercel Preview와 Bot 댓글이 더 생성되지 않는지 확인합니다.

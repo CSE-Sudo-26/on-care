@@ -11,8 +11,8 @@
 나왔는지 사후에 복원할 방법이 없고, 참조 없는 문서는 지금처럼 그냥 남아 검색될 뿐
 동작을 깨지 않는다.
 
-Revision ID: 0029_doc_source_ref
-Revises: 0028_aiconv_trainer
+Revision ID: 0030_doc_source_ref
+Revises: 0029_aiconv_trainer
 Create Date: 2026-08-11
 """
 from __future__ import annotations
@@ -22,8 +22,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0029_doc_source_ref"
-down_revision: str | Sequence[str] | None = "0028_aiconv_trainer"
+revision: str = "0030_doc_source_ref"
+down_revision: str | Sequence[str] | None = "0029_aiconv_trainer"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
