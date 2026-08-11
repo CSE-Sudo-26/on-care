@@ -135,6 +135,7 @@ void main() {
       expect(updated.weightKg, 68.4);
       expect(updated.weeklyWorkoutGoal, 0);
       expect(fetchedAgain.weightKg, 68.4);
+      expect(fetchedAgain.weeklyWorkoutGoal, 0);
       expect(fetchedAgain.goals, '체지방 감량');
       expect(fetchedAgain.heightCm, before.heightCm);
     },

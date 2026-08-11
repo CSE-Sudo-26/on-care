@@ -30,6 +30,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
@@ -61,10 +62,7 @@ void main() {
       isNotNull,
     );
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, '횟수'),
-      '3.5',
-    );
+    await tester.enterText(find.widgetWithText(TextFormField, '횟수'), '3.5');
     await tester.tap(find.text('저장'));
     await tester.pump();
 

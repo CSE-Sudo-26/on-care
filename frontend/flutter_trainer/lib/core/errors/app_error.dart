@@ -18,8 +18,11 @@ sealed class AppError implements Exception {
   /// here rather than at call sites.
   factory AppError.fromDio(DioException e) {
     final data = e.response?.data;
-    final detail = data is Map<String, dynamic> && data['detail'] is String
+    final rawDetail = data is Map<String, dynamic> && data['detail'] is String
         ? data['detail'] as String
+        : null;
+    final detail = rawDetail != null && rawDetail.trim().isNotEmpty
+        ? rawDetail
         : null;
     final message = detail ?? e.message;
     switch (e.type) {

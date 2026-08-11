@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
+
 
 def _register_and_login(client, name: str = "테스터") -> tuple[str, str]:
     """가입+로그인 후 (access_token, email) 반환."""
@@ -52,6 +54,24 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert got.status_code == 200
     assert got.json()["onboarded"] is True
     assert got.json()["daily_sodium_mg"] == 2000
+
+
+@pytest.mark.parametrize(
+    "invalid_body",
+    [
+        {"gender": "invalid"},
+        {"height_cm": 49},
+        {"height_cm": 301},
+    ],
+)
+def test_onboarding_rejects_invalid_gender_and_height(client, invalid_body):
+    token, _ = _register_and_login(client)
+    response = client.post(
+        "/v1/users/me/onboarding",
+        json=invalid_body,
+        headers=_auth(token),
+    )
+    assert response.status_code == 422, response.text
 
 
 def test_update_me_changes_name_and_phone(client):

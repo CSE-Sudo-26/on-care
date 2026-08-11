@@ -200,9 +200,11 @@ class _MyPageState extends ConsumerState<MyPage> {
   String _saveFailureMessage(Object error, {required bool profileSaved}) {
     final AppLocalizations l = AppLocalizations.of(context);
     final detail = error is AppError ? error.message : null;
-    if (!profileSaved) return detail ?? l.myProfileSaveFailed;
-    final partial = l.myGymChangeFailed;
-    return detail == null ? partial : '$partial $detail';
+    return serverDetailOr(
+      l,
+      detail,
+      profileSaved ? l.myGymChangeFailed : l.myProfileSaveFailed,
+    );
   }
 
   void _applySavedProfile(TrainerProfile saved) {
@@ -254,7 +256,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     } on AppError catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(e.message ?? l.myDeleteFailed)),
+        SnackBar(content: Text(serverDetailOr(l, e.message, l.myDeleteFailed))),
       );
       return;
     }

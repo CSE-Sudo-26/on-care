@@ -107,8 +107,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             goals: _goals.text.trim().isEmpty ? null : _goals.text.trim(),
             dailySodiumMg: _int(_dailySodium),
           );
-      ref.invalidate(profileProvider);
       if (!mounted) return;
+      ref.invalidate(profileProvider);
       context.go(AppRoutes.dashboard);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
@@ -143,7 +143,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   ),
                   const Spacer(),
                   TextButton(
-                    onPressed: _skip,
+                    onPressed: _saving ? null : _skip,
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.mutedForeground,
                     ),
