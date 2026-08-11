@@ -89,7 +89,7 @@ class _Row extends StatelessWidget {
                 child: Text(
                   session.time,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.subtleForeground,
                   ),
@@ -106,11 +106,13 @@ class _Row extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  muted ? l.dashEmptySlot : '${session.clientName} · ${session.type}',
+                  muted
+                      ? l.dashEmptySlot
+                      : '${session.clientName} · ${session.type}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: muted ? FontWeight.w500 : FontWeight.w600,
                     color: muted
                         ? AppColors.subtleForeground
@@ -123,7 +125,7 @@ class _Row extends StatelessWidget {
                   // 저장된 계약값이 아니라 표시 문구를 그린다. (#501)
                   scheduleStatusLabel(l, session.status),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: _statusColor,
                   ),

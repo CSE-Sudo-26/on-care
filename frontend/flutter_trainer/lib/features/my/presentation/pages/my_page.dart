@@ -131,9 +131,9 @@ class _MyPageState extends ConsumerState<MyPage> {
     final careerYears = int.tryParse(careerMatch?.group(1) ?? '');
     if (careerYears == null || careerYears < 0 || careerYears > 80) {
       final AppLocalizations l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.myCareerInvalid)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.myCareerInvalid)));
       return;
     }
 
@@ -347,7 +347,7 @@ class _MyPageState extends ConsumerState<MyPage> {
             child: Text(
               l.mySaved,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.success,
               ),
@@ -405,7 +405,9 @@ class _MyPageState extends ConsumerState<MyPage> {
     if (controller.lastError) {
       controller.clearError();
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).mySettingsSaveFailed)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).mySettingsSaveFailed),
+        ),
       );
     }
   }
@@ -448,7 +450,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                       child: Text(
                         l.myReminderLead,
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
@@ -456,7 +458,8 @@ class _MyPageState extends ConsumerState<MyPage> {
                     ),
                     SegmentedSwitch(
                       labels: <String>[
-                        for (final m in reminderLeadOptions) l.myMinutesBefore(m),
+                        for (final m in reminderLeadOptions)
+                          l.myMinutesBefore(m),
                       ],
                       selected: reminderLeadOptions.indexOf(
                         settings.reminderLeadMinutes,
@@ -488,7 +491,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                         Text(
                           l.myChangePassword,
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.mutedForeground,
                           ),
@@ -498,7 +501,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                               ? l.myChangePasswordHint
                               : l.myChangePasswordDemo,
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w500,
                             color: AppColors.disabledForeground,
                           ),
@@ -552,7 +555,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 11.5,
+        fontSize: 12.5,
         fontWeight: FontWeight.w600,
         color: AppColors.subtleForeground,
       ),
@@ -600,17 +603,15 @@ class _DeleteAccountRow extends StatelessWidget {
               Text(
                 l.myDeleteAccount,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
               ),
               Text(
-                enabled
-                    ? l.myDeleteHint
-                    : l.myDeleteDemo,
+                enabled ? l.myDeleteHint : l.myDeleteDemo,
                 style: const TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w500,
                   color: AppColors.disabledForeground,
                 ),
@@ -621,12 +622,10 @@ class _DeleteAccountRow extends StatelessWidget {
         TextButton(
           key: const ValueKey<String>('delete-account'),
           onPressed: enabled ? onTap : null,
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.destructive,
-          ),
+          style: TextButton.styleFrom(foregroundColor: AppColors.destructive),
           child: Text(
             l.myDeleteAction,
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -672,12 +671,12 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(l.myDeleteBody, style: const TextStyle(fontSize: 12.5)),
+          Text(l.myDeleteBody, style: const TextStyle(fontSize: 13.5)),
           const SizedBox(height: AppSpacing.md),
           Text(
             l.myDeleteConfirmPrompt(widget.name),
             style: const TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               color: AppColors.mutedForeground,
             ),
           ),
@@ -737,7 +736,7 @@ class _ChipButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: foreground,
             ),
@@ -795,7 +794,7 @@ class _ProfileCard extends StatelessWidget {
                 child: Text(
                   profile.name.isNotEmpty ? profile.name.substring(0, 1) : '·',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
@@ -809,7 +808,7 @@ class _ProfileCard extends StatelessWidget {
                     Text(
                       profile.name,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
                       ),
@@ -817,16 +816,17 @@ class _ProfileCard extends StatelessWidget {
                     Text(
                       profile.email,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColors.subtleForeground,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Row(
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
                       children: <Widget>[
                         _Tag(text: profile.specialty, color: AppColors.success),
-                        const SizedBox(width: AppSpacing.xs),
                         _Tag(
                           text: l.myCareerYears(profile.career),
                           color: AppColors.accent,
@@ -899,7 +899,7 @@ class _Tag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 9.5,
+          fontSize: 10.5,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -933,7 +933,7 @@ class _EditField extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 9.5,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: AppColors.subtleForeground,
             ),
@@ -945,7 +945,7 @@ class _EditField extends StatelessWidget {
             enabled: enabled,
             maxLines: maxLines,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: AppColors.foreground,
             ),
@@ -1023,7 +1023,7 @@ class _CertsCard extends StatelessWidget {
                     child: Text(
                       certs[i],
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.foreground,
                       ),
@@ -1157,7 +1157,7 @@ class _Stat extends StatelessWidget {
           Text(
             unit,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
             ),
@@ -1165,7 +1165,7 @@ class _Stat extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 9.5,
+              fontSize: 10.5,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
@@ -1265,7 +1265,7 @@ class _GymCard extends StatelessWidget {
                           Text(
                             gym.name,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: AppColors.foreground,
                             ),
@@ -1273,7 +1273,7 @@ class _GymCard extends StatelessWidget {
                           Text(
                             gym.address,
                             style: const TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                               color: AppColors.subtleForeground,
                             ),
@@ -1327,7 +1327,7 @@ class _GymChoiceField extends StatelessWidget {
           Text(
             l.myGym,
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: AppColors.subtleForeground,
             ),
@@ -1337,7 +1337,7 @@ class _GymChoiceField extends StatelessWidget {
             loading: () => const LinearProgressIndicator(minHeight: 2),
             error: (_, _) => Text(
               l.myGymListFailed,
-              style: TextStyle(color: AppColors.destructive, fontSize: 11),
+              style: TextStyle(color: AppColors.destructive, fontSize: 12),
             ),
             data: (items) {
               final currentId = selectedGymId;
@@ -1358,10 +1358,7 @@ class _GymChoiceField extends StatelessWidget {
                   ),
                 ),
                 items: <DropdownMenuItem<String>>[
-                  DropdownMenuItem<String>(
-                    value: '',
-                    child: Text(l.myNoGym),
-                  ),
+                  DropdownMenuItem<String>(value: '', child: Text(l.myNoGym)),
                   if (!hasCurrent)
                     DropdownMenuItem<String>(
                       value: currentId,
@@ -1403,7 +1400,7 @@ class _GymDetail extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppColors.subtleForeground,
             ),
@@ -1412,7 +1409,7 @@ class _GymDetail extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: AppColors.foreground,
             ),
@@ -1454,7 +1451,7 @@ class _LogoutButton extends StatelessWidget {
               Text(
                 l.mySignOut,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.destructive,
                 ),
@@ -1496,7 +1493,7 @@ class _SwitchRow extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.mutedForeground,
                   ),
@@ -1504,7 +1501,7 @@ class _SwitchRow extends StatelessWidget {
                 Text(
                   hint,
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: AppColors.disabledForeground,
                   ),
@@ -1660,7 +1657,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
           Text(
             l.myChangePassword,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
             ),
@@ -1699,7 +1696,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
                 child: Text(
                   _saving ? l.myPwChanging : l.myPwChangeAction,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primaryForeground,
                   ),
@@ -1771,18 +1768,23 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: AppColors.subtleForeground,
               ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.foreground,
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.foreground,
+              ),
             ),
           ),
         ],

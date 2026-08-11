@@ -58,7 +58,9 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       setState(() => _loading = false);
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrSocialFailed)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrSocialFailed),
+        ),
       );
     }
   }
@@ -70,7 +72,9 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrEmptyCredentials)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrEmptyCredentials),
+        ),
       );
       return;
     }
@@ -90,7 +94,9 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
       if (!mounted) return;
       setState(() => _loading = false);
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrSignInFailed)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrSignInFailed),
+        ),
       );
     }
   }
@@ -250,7 +256,7 @@ class _OrDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
             AppLocalizations.of(context).authOr,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
           ),
         ),
         const Expanded(child: Divider(color: Color(0x1A000000))),

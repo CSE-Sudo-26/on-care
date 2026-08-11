@@ -58,14 +58,18 @@ class AppColors {
   /// Primary text.
   static const Color foreground = Color(0xFF1A1A1A);
 
-  /// Secondary body text (slate-ish `#5A6A7A`).
-  static const Color mutedForeground = Color(0xFF5A6A7A);
+  /// Secondary body text. Dark enough to stay readable on white and the
+  /// app's pale surfaces (white contrast 7.61:1).
+  static const Color mutedForeground = Color(0xFF465568);
 
-  /// Tertiary / placeholder text (`#A0A8B5`).
-  static const Color subtleForeground = Color(0xFFA0A8B5);
+  /// Tertiary / placeholder text (white contrast 4.72:1, WCAG AA for
+  /// normal text). It remains lighter than [mutedForeground] without
+  /// fading into the card background.
+  static const Color subtleForeground = Color(0xFF667585);
 
-  /// Disabled / hairline text (`#C0CDD6`).
-  static const Color disabledForeground = Color(0xFFC0CDD6);
+  /// Disabled text. Visibly inactive but still legible (white contrast
+  /// 3.77:1) when a trainer needs to understand why an action is disabled.
+  static const Color disabledForeground = Color(0xFF768596);
 
   // --- Semantic ---
   /// Success / "완료" green (`#34C759`).

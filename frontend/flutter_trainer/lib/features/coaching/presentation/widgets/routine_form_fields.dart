@@ -36,7 +36,7 @@ class RoutineCategoryChips extends StatelessWidget {
         Text(
           l.routineFieldType,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
           ),
@@ -90,7 +90,7 @@ class RoutineMinutesSlider extends StatelessWidget {
             Text(
               label ?? l.routineFieldMinutes,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.subtleForeground,
               ),
@@ -99,7 +99,7 @@ class RoutineMinutesSlider extends StatelessWidget {
             Text(
               l.minutesShort(minutes),
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: AppColors.accent,
               ),
@@ -148,7 +148,7 @@ class RoutineIntensityChips extends StatelessWidget {
         Text(
           l.routineFieldIntensity,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
           ),
@@ -156,7 +156,11 @@ class RoutineIntensityChips extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
-            for (var index = 0; index < _choices(l).length; index++) ...<Widget>[
+            for (
+              var index = 0;
+              index < _choices(l).length;
+              index++
+            ) ...<Widget>[
               Builder(
                 builder: (BuildContext context) {
                   final (String label, String wire) = _choices(l)[index];
@@ -219,7 +223,7 @@ class _ChoiceButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: selected ? AppColors.accent : AppColors.subtleForeground,
             ),

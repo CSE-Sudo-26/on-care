@@ -142,7 +142,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
               Text(
                 l.coachSheetSubtitle,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -165,7 +165,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                   Text(
                     l.coachSheetSources,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.subtleForeground,
                     ),
@@ -175,7 +175,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                     Text(
                       '· $source',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -240,7 +240,7 @@ class _Note extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 14,
           height: 1.5,
           color: AppColors.foreground,
         ),

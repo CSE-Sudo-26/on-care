@@ -89,6 +89,10 @@ class StatCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: const BorderRadius.all(AppRadius.card),
           child: Container(
+            // Browser text metrics can round the intrinsic Column height
+            // down by one physical pixel. Keep a small floor so enlarged
+            // labels and hints never paint past the KPI card.
+            constraints: const BoxConstraints(minHeight: 124),
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(AppRadius.card),
@@ -116,7 +120,7 @@ class StatCard extends StatelessWidget {
                         label,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
@@ -154,7 +158,7 @@ class StatCard extends StatelessWidget {
                         Text(
                           unit!,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.subtleForeground,
                           ),
@@ -170,7 +174,7 @@ class StatCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: AppColors.subtleForeground,
                       fontWeight: FontWeight.w500,
                     ),

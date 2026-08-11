@@ -129,7 +129,7 @@ class _CompactBar extends StatelessWidget implements PreferredSizeWidget {
                 style: TextStyle(color: AppColors.primary),
               ),
             ],
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
         ),
       ),

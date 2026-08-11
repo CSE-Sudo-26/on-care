@@ -213,7 +213,7 @@ class _StatusView extends StatelessWidget {
           Text(
             message,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.mutedForeground,
             ),
@@ -351,7 +351,7 @@ class _Header extends ConsumerWidget {
                       client.name,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.foreground,
                       ),
@@ -396,7 +396,7 @@ class _Header extends ConsumerWidget {
                 client.goal,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11.5,
                   color: AppColors.subtleForeground,
                   fontWeight: FontWeight.w500,
                 ),
@@ -487,7 +487,7 @@ class _ChatSegment extends StatelessWidget {
                 Text(
                   l.clientChat,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: fg,
                   ),
@@ -508,7 +508,7 @@ class _ChatSegment extends StatelessWidget {
                     child: Text(
                       '$unread',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: selected
                             ? AppColors.accent
@@ -599,7 +599,7 @@ class _SubTabs extends StatelessWidget {
                         child: Text(
                           clientSectionLabels(l)[i],
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: current == i
                                 ? AppColors.accentForeground

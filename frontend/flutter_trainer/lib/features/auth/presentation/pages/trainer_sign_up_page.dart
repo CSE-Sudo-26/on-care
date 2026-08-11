@@ -67,23 +67,33 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
     final inviteCode = _inviteCode.text.trim();
     if (email.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrEmptyCredentials)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrEmptyCredentials),
+        ),
       );
       return;
     }
     if (password.length < 8) {
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrPasswordTooShort)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrPasswordTooShort),
+        ),
       );
       return;
     }
     if (password != confirm) {
-      messenger.showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).authErrPasswordMismatch)));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrPasswordMismatch),
+        ),
+      );
       return;
     }
     if (requiresInviteCode && inviteCode.isEmpty) {
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrInviteCodeRequired)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrInviteCodeRequired),
+        ),
       );
       return;
     }
@@ -110,7 +120,9 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
       if (!mounted) return;
       setState(() => _loading = false);
       messenger.showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).authErrSignUpFailed)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).authErrSignUpFailed),
+        ),
       );
     }
   }
@@ -213,7 +225,7 @@ class _TrainerSignUpPageState extends ConsumerState<TrainerSignUpPage> {
                         Text(
                           l.authInviteCodeHelp,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: Color(0xFF64748B),
                           ),
                         ),

@@ -74,7 +74,7 @@ class AiSummaryCard extends StatelessWidget {
               Text(
                 l.dashAiSummaryTitle,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppColors.foreground,
                 ),
@@ -89,7 +89,7 @@ class AiSummaryCard extends StatelessWidget {
                 child: Text(
                   l.dashToday,
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primary,
                   ),
@@ -101,7 +101,7 @@ class AiSummaryCard extends StatelessWidget {
           Text(
             messageFor(l, summary),
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.55,
               fontWeight: FontWeight.w500,
               color: AppColors.foreground,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
 /// A coloured dot followed by a status word (활성 / 휴면 / 영업 중).
@@ -20,7 +21,7 @@ class StatusDotLabel extends StatelessWidget {
   /// The status word.
   final String label;
 
-  /// Colour of both the dot and the text.
+  /// Semantic colour of the dot.
   final Color color;
 
   /// Whether the dot is solid (an on state) or a ring (an off state).
@@ -44,9 +45,9 @@ class StatusDotLabel extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: color,
+            color: AppColors.foreground,
           ),
         ),
       ],

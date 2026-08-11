@@ -249,7 +249,12 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                l.slotIntro(l.dateMonthDay(widget.selectedDay.month, widget.selectedDay.day)),
+                l.slotIntro(
+                  l.dateMonthDay(
+                    widget.selectedDay.month,
+                    widget.selectedDay.day,
+                  ),
+                ),
                 style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -355,7 +360,10 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                                 child: Text(
                                   slot.isClosed
                                       ? l.slotClosedSummary(slot.booked)
-                                      : l.slotOpenSummary(slot.booked, slot.remaining),
+                                      : l.slotOpenSummary(
+                                          slot.booked,
+                                          slot.remaining,
+                                        ),
                                   style: TextStyle(
                                     color: slot.isClosed
                                         ? AppColors.subtleForeground

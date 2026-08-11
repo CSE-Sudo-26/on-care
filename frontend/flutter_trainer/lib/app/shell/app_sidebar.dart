@@ -217,7 +217,7 @@ class _Brand extends StatelessWidget {
                         ),
                       ],
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 19,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -226,7 +226,10 @@ class _Brand extends StatelessWidget {
                 ),
               ],
             )
-          : Tooltip(message: AppLocalizations.of(context).appTitle, child: logo),
+          : Tooltip(
+              message: AppLocalizations.of(context).appTitle,
+              child: logo,
+            ),
     );
   }
 }
@@ -273,7 +276,7 @@ class _NavTile extends StatelessWidget {
                     label,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 14.5,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
                           ? AppColors.foreground
@@ -323,9 +326,7 @@ class _NavTile extends StatelessWidget {
                   ),
                 ),
               ),
-              child: expanded
-                  ? row
-                  : Tooltip(message: label, child: row),
+              child: expanded ? row : Tooltip(message: label, child: row),
             ),
           ),
         ),
@@ -400,7 +401,7 @@ class _ProfileFooter extends StatelessWidget {
             ? AppLocalizations.of(context).appAvatarFallback
             : String.fromCharCode(name.runes.first),
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w800,
           color: AppColors.primary,
         ),
@@ -437,7 +438,7 @@ class _ProfileFooter extends StatelessWidget {
                               name,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.foreground,
                               ),
@@ -446,7 +447,7 @@ class _ProfileFooter extends StatelessWidget {
                               gym,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: AppColors.subtleForeground,
                               ),
                             ),
@@ -461,9 +462,11 @@ class _ProfileFooter extends StatelessWidget {
                     ],
                   )
                 : Tooltip(
-                  message: AppLocalizations.of(context).sidebarMyTooltip(name),
-                  child: avatar,
-                ),
+                    message: AppLocalizations.of(
+                      context,
+                    ).sidebarMyTooltip(name),
+                    child: avatar,
+                  ),
           ),
         ),
       ),

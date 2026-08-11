@@ -96,7 +96,7 @@ class _NutritionSummary extends StatelessWidget {
           Text(
             l.dietTodaySummary,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: AppColors.foreground,
             ),
@@ -211,7 +211,7 @@ class _SodiumTrendCard extends StatelessWidget {
                 child: Text(
                   l.dietSodiumTrend,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.foreground,
                   ),
@@ -221,7 +221,7 @@ class _SodiumTrendCard extends StatelessWidget {
                 Text(
                   l.dietAverageMg(avg),
                   style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.subtleForeground,
                   ),
@@ -230,7 +230,7 @@ class _SodiumTrendCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
-            height: 84,
+            height: 88,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
@@ -252,7 +252,7 @@ class _SodiumTrendCard extends StatelessWidget {
                 ? l.dietSodiumOverDays(overDays, sodiumTargetMg)
                 : l.dietSodiumAllWithin(sodiumTargetMg),
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: overDays > 0 ? AppColors.overTarget : AppColors.success,
             ),
@@ -288,7 +288,7 @@ class _TrendBar extends StatelessWidget {
         Text(
           '$value',
           style: const TextStyle(
-            fontSize: 7.5,
+            fontSize: 9,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
           ),
@@ -306,7 +306,7 @@ class _TrendBar extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 9,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
             color: AppColors.subtleForeground,
           ),
@@ -353,7 +353,7 @@ class _MealCard extends StatelessWidget {
                 child: Text(
                   entry.meal,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.accent,
                   ),
@@ -363,7 +363,7 @@ class _MealCard extends StatelessWidget {
               Text(
                 '${entry.calories} kcal',
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.accent,
                 ),
@@ -374,7 +374,7 @@ class _MealCard extends StatelessWidget {
           Text(
             entry.items,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
@@ -383,7 +383,7 @@ class _MealCard extends StatelessWidget {
           Text(
             l.dietSodiumValue(entry.sodiumMg),
             style: const TextStyle(
-              fontSize: 10.5,
+              fontSize: 11.5,
               color: AppColors.subtleForeground,
             ),
           ),
@@ -432,7 +432,7 @@ class _AiComment extends StatelessWidget {
             icon: Icons.auto_awesome,
             label: l.dietAiAnalysis,
             color: AppColors.accent,
-            fontSize: 10,
+            fontSize: 11,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -440,7 +440,7 @@ class _AiComment extends StatelessWidget {
                 ? l.dietAiOverSodium(sodiumMg - sodiumTargetMg)
                 : l.dietAiBalanced,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               height: 1.55,
               fontWeight: FontWeight.w500,
               color: AppColors.foreground,

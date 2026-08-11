@@ -281,7 +281,7 @@ class _NoSelection extends StatelessWidget {
             l.clientsPickHint,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.6,
               fontWeight: FontWeight.w500,
               color: AppColors.subtleForeground,
@@ -394,7 +394,7 @@ class _FilterBanner extends StatelessWidget {
             child: Text(
               l.clientsFilterSummary(filter.label(l), shown, total),
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
@@ -408,7 +408,7 @@ class _FilterBanner extends StatelessWidget {
               child: Text(
                 l.clientsSeeAll,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.mutedForeground,
                 ),
@@ -507,7 +507,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
           Text(
             l.clientsAddTitle,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
             ),
@@ -565,7 +565,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
                 child: Text(
                   l.clientsAddAction,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primaryForeground,
                   ),
