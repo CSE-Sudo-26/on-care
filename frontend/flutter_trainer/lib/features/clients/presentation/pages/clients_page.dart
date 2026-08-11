@@ -11,6 +11,8 @@ import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
+import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -68,12 +70,14 @@ class ClientsPage extends ConsumerWidget {
     final activeFilter = clientFilterFrom(filter);
 
     final Widget page = clientsAsync.when(
-      loading: () => const _Frame(
+      loading: () => _Frame(
         subtitle: null,
+        section: section,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => _Frame(
         subtitle: null,
+        section: section,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -107,6 +111,7 @@ class ClientsPage extends ConsumerWidget {
             all.length,
             all.where((c) => c.active).length,
           ),
+          section: section,
           actions: <Widget>[
             if (canManageRoster)
               ActionButton(
@@ -225,11 +230,16 @@ class _Frame extends StatelessWidget {
   const _Frame({
     required this.subtitle,
     required this.child,
+    this.section,
     this.actions = const <Widget>[],
   });
 
   final String? subtitle;
   final Widget child;
+
+  /// Sub-tab currently open, handed to the search bar so picking another
+  /// client keeps the trainer on 식단/운동 rather than resetting.
+  final String? section;
   final List<Widget> actions;
 
   @override
@@ -238,6 +248,10 @@ class _Frame extends StatelessWidget {
     return PageScaffold(
       title: l.clientsTitle,
       subtitle: subtitle,
+      headerCenter: ClientSearchBar(
+        scope: ClientSearchScope.clients,
+        clientSection: section,
+      ),
       actions: actions,
       scrollable: false,
       contentPadding: EdgeInsets.zero,

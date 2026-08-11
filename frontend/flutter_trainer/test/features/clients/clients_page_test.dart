@@ -7,9 +7,11 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -192,6 +194,33 @@ void main() {
   });
 
   group('ClientsPage', () {
+    for (final entry in <(String, AsyncValue<List<TrainerClient>>)>[
+      ('loading', const AsyncLoading<List<TrainerClient>>()),
+      (
+        'error',
+        AsyncError<List<TrainerClient>>(
+          StateError('roster unavailable'),
+          StackTrace.empty,
+        ),
+      ),
+    ]) {
+      testWidgets('${entry.$1} 상태에서도 검색이 현재 고객 하위 탭을 유지한다', (tester) async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+          extraOverrides: <Override>[
+            prioritizedClientsProvider.overrideWithValue(entry.$2),
+          ],
+        );
+
+        final search = tester.widget<ClientSearchBar>(
+          find.byType(ClientSearchBar),
+        );
+        expect(search.clientSection, 'workout');
+      });
+    }
+
     testWidgets('re-entering the client branch requests a data refresh', (
       tester,
     ) async {

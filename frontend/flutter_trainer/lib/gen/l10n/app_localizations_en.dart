@@ -1939,4 +1939,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String routineDeleteBody(String name) {
     return '$name disappears from the client\'s app too.';
   }
+
+  @override
+  String get searchClients => 'Search clients';
+
+  @override
+  String get searchClientsHint => 'Search by client name';
+
+  @override
+  String get searchClear => 'Clear search';
+
+  @override
+  String get searchQuickActions => 'Open in another tab';
+
+  @override
+  String searchNoResults(String query) {
+    return 'No client matches “$query”';
+  }
+
+  @override
+  String get searchGoClientDetail => 'Picking one opens their detail';
+
+  @override
+  String get searchGoSchedule => 'Picking one jumps to their next booked day';
+
+  @override
+  String get searchGoCoaching => 'Picking one loads them into AI coaching';
+
+  @override
+  String get searchGoReport => 'Picking one opens their weekly report';
+
+  @override
+  String get searchDetailNoIssues => 'Nothing to act on today';
+
+  @override
+  String searchDetailUnread(int count) {
+    return '$count awaiting a reply';
+  }
+
+  @override
+  String searchDetailMessage(String message, String time) {
+    return '$message · $time';
+  }
+
+  @override
+  String searchDetailNextSession(String date, String time) {
+    return 'Next session $date $time';
+  }
+
+  @override
+  String get searchDetailNoUpcoming => 'Nothing booked';
+
+  @override
+  String searchDetailLastRoutine(String when) {
+    return 'Last routine $when';
+  }
+
+  @override
+  String get searchDetailNoRoutine => 'No routine sent yet';
+
+  @override
+  String searchDetailCompletion(int percent) {
+    return '$percent% completion this week';
+  }
+
+  @override
+  String get searchDetailNoRecord => 'Nothing recorded this week';
 }

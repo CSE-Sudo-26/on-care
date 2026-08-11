@@ -22,6 +22,8 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_fo
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -349,6 +351,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return PageScaffold(
       title: l.coachTitle,
       subtitle: l.coachSubtitle,
+      // The workspace's own picker is a horizontal strip of everyone;
+      // search is how a trainer with a long roster reaches the client
+      // they already have in mind. The rows show what was last sent.
+      headerCenter: const ClientSearchBar(scope: ClientSearchScope.coaching),
       scrollable: false,
       contentPadding: EdgeInsets.zero,
       child: clientsAsync.when(
