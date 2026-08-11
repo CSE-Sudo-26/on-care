@@ -10,6 +10,7 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
+import 'package:oncare/features/notification/data/repositories/notification_settings_repository.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 
@@ -41,6 +42,9 @@ Override sessionFeatureResetOverride() {
       ref.invalidate(exerciseRoutineDoneProvider);
       ref.invalidate(myGymProvider);
       ref.invalidate(myTrainerProvider);
+      // 예약 내역은 헬스장 저장소를 통해 이미 함께 무효화되지만, 같은 뿌리를 보는
+      // 위 두 잎처럼 명시해 둔다 — 전이에 기대면 뿌리 구조가 바뀔 때 조용히 새어 나간다.
+      ref.invalidate(myReservationsProvider);
       ref.invalidate(consultationRequestControllerProvider);
       ref.invalidate(memberCoachProvider);
       ref.invalidate(coachRoutinesProvider);
@@ -50,6 +54,9 @@ Override sessionFeatureResetOverride() {
       ref.invalidate(myHealthStateProvider);
       ref.invalidate(notificationControllerProvider);
       ref.invalidate(notificationListProvider);
+      // 알림 수신 설정은 실 백엔드에서 계정 단위다. 여기 없으면 앞 계정의 토글이
+      // 앱을 다시 켤 때까지 남는다.
+      ref.invalidate(notificationSettingsProvider);
       ref.invalidate(scheduleEventsProvider);
       ref.invalidate(scheduleMonthProvider);
     };
