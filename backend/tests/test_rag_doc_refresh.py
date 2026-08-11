@@ -211,8 +211,8 @@ def test_a_failed_embedding_leaves_the_old_documents_intact(
     user_id = "user-demo"
     ref = "atomicity-probe-1"
     rag.replace_personal_text(
-        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
-        domain="exercise", source="exercise", source_ref=ref,
+        db_session, user_id, domain="exercise", source="exercise", source_ref=ref,
+        load_text=lambda: "2026-08-11 운동 기록: 걷기 30분.",
     )
     before = [d.content for d in _docs_for(db_session, ref)]
     assert before, "먼저 적재돼 있어야 이 테스트가 의미를 갖는다"
@@ -225,8 +225,9 @@ def test_a_failed_embedding_leaves_the_old_documents_intact(
 
     try:
         rag.replace_personal_text(
-            db_session, user_id, "2026-08-11 운동 기록: 걷기 45분.",
-            domain="exercise", source="exercise", source_ref=ref,
+            db_session, user_id, domain="exercise", source="exercise",
+            source_ref=ref,
+            load_text=lambda: "2026-08-11 운동 기록: 걷기 45분.",
         )
     except RuntimeError:
         pass
@@ -241,8 +242,8 @@ def test_replacing_never_exposes_a_moment_with_no_evidence(client, db_session):
     user_id = "user-demo"
     ref = "atomicity-probe-2"
     rag.replace_personal_text(
-        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
-        domain="exercise", source="exercise", source_ref=ref,
+        db_session, user_id, domain="exercise", source="exercise", source_ref=ref,
+        load_text=lambda: "2026-08-11 운동 기록: 걷기 30분.",
     )
 
     # 커밋 직전에 세션이 들고 있는 새 문서 수를 기록한다. 세션은 autoflush=False 라
@@ -259,8 +260,9 @@ def test_replacing_never_exposes_a_moment_with_no_evidence(client, db_session):
     db_session.commit = _counting_commit  # type: ignore[method-assign]
     try:
         rag.replace_personal_text(
-            db_session, user_id, "2026-08-11 운동 기록: 걷기 45분.",
-            domain="exercise", source="exercise", source_ref=ref,
+            db_session, user_id, domain="exercise", source="exercise",
+            source_ref=ref,
+            load_text=lambda: "2026-08-11 운동 기록: 걷기 45분.",
         )
     finally:
         db_session.commit = original  # type: ignore[method-assign]
@@ -277,14 +279,14 @@ def test_emptying_a_record_clears_its_evidence(client, db_session):
     user_id = "user-demo"
     ref = "atomicity-probe-3"
     rag.replace_personal_text(
-        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
-        domain="exercise", source="exercise", source_ref=ref,
+        db_session, user_id, domain="exercise", source="exercise", source_ref=ref,
+        load_text=lambda: "2026-08-11 운동 기록: 걷기 30분.",
     )
     assert _docs_for(db_session, ref)
 
     rag.replace_personal_text(
-        db_session, user_id, "   ", domain="exercise", source="exercise",
-        source_ref=ref,
+        db_session, user_id, domain="exercise", source="exercise",
+        source_ref=ref, load_text=lambda: "   ",
     )
     db_session.expire_all()
 
@@ -304,3 +306,72 @@ def test_public_documents_keep_a_null_reference(client, db_session):
         )
     )
     assert count == 0
+
+
+# ---- 최신성 보장 (#614) ----
+
+def test_a_late_arriving_refresh_still_writes_the_current_row(client, db_session):
+    """늦게 도착한 갱신이 옛 값을 되살리면 안 된다.
+
+    두 수정이 이렇게 엇갈릴 수 있다:
+        A: 30분 커밋 → B: 45분 커밋 → B 적재(45) → **A 적재**
+    A 가 자기가 읽은 30분을 쓰면 DB 는 45분인데 근거는 30분이 된다. 갱신이 잠금
+    안에서 행을 다시 읽으므로, 늦게 도착한 A 도 45분을 써야 한다.
+    """
+    from app.models.models import ExerciseSession
+    from app.services.coach import personal_ingest
+
+    token = _member_token(client)
+    created = client.post(
+        "/v1/exercise/sessions",
+        headers=_headers(token),
+        json={"type": "walking", "minutes": 30, "calories": 100, "intensity": "light"},
+    )
+    assert created.status_code == 201, created.text
+    session_id = created.json()["id"]
+
+    row = db_session.scalar(
+        select(ExerciseSession).where(ExerciseSession.id == session_id)
+    )
+    user_id = row.user_id
+
+    # DB 를 45분으로 바꾼다 — "B 가 이미 커밋한" 상태.
+    row.minutes = 45
+    db_session.commit()
+
+    # 이제 "A 의 늦은 적재" 가 도착한다. 30분을 넘겨 줄 방법이 없다 — 갱신은
+    # id 만 받고 행을 다시 읽는다.
+    personal_ingest.refresh_exercise(db_session, user_id, session_id=session_id)
+    db_session.expire_all()
+
+    contents = [d.content for d in _docs_for(db_session, session_id)]
+    assert contents, "갱신 후 근거가 있어야 한다"
+    assert all("45분" in c for c in contents)
+    assert not any("30분" in c for c in contents)
+
+
+def test_refreshing_a_deleted_record_clears_its_evidence(client, db_session):
+    """원본이 사라졌으면 근거도 사라져야 한다 — 지운 기록이 되살아나면 안 된다."""
+    from app.models.models import ExerciseSession
+    from app.services.coach import personal_ingest
+
+    token = _member_token(client)
+    created = client.post(
+        "/v1/exercise/sessions",
+        headers=_headers(token),
+        json={"type": "yoga", "minutes": 20, "calories": 60, "intensity": "moderate"},
+    )
+    session_id = created.json()["id"]
+    row = db_session.scalar(
+        select(ExerciseSession).where(ExerciseSession.id == session_id)
+    )
+    user_id = row.user_id
+    assert _docs_for(db_session, session_id)
+
+    db_session.delete(row)
+    db_session.commit()
+
+    personal_ingest.refresh_exercise(db_session, user_id, session_id=session_id)
+    db_session.expire_all()
+
+    assert _docs_for(db_session, session_id) == []

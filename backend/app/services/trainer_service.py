@@ -1122,14 +1122,10 @@ def complete_session(
         # 회원 입장에서 PT 도 '내가 한 운동'이라 코치가 검색할 수 있어야 한다(#586).
         # 커밋 뒤에 부르는 이유는 record_chat 과 같다 — 적재 실패의 롤백이 응답을
         # 깨뜨리지 않도록, 값은 미리 뽑아 두고 응답도 이미 만들어 둔다.
-        personal_ingest.record_exercise(
-            db, exercise_log.user_id, date=s.date,
-            exercise_type=exercise_log.type,
-            minutes=exercise_log.minutes, calories=exercise_log.calories,
-            intensity=exercise_log.intensity, source_ref=exercise_log.id,
-            # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라
-            # (`_derived_exercise_id`), 교체로 두어야 문서가 겹쳐 쌓이지 않는다.
-            replace=True,
+        # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라
+        # (`_derived_exercise_id`), 교체로 두어야 문서가 겹쳐 쌓이지 않는다.
+        personal_ingest.refresh_exercise(
+            db, exercise_log.user_id, session_id=exercise_log.id
         )
     return out
 
