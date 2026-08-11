@@ -17,8 +17,12 @@ def _captured(monkeypatch):
     monkeypatch.setattr(
         personal_ingest,
         "_safe",
-        lambda db, user_id, text, *, domain, source: calls.append(
-            {"user_id": user_id, "text": text, "domain": domain, "source": source}
+        lambda db, user_id, text, *, domain, source, source_ref=None,
+        replace=False: calls.append(
+            {
+                "user_id": user_id, "text": text, "domain": domain,
+                "source": source, "source_ref": source_ref, "replace": replace,
+            }
         ),
     )
     return calls

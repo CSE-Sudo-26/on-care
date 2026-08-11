@@ -174,7 +174,7 @@ def save_analyzed_entry(
         record_diet(
             db, user_id, date=entry.date, foods=foods_for_storage,
             total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
-            sugar_g=entry.sugar_g,
+            sugar_g=entry.sugar_g, source_ref=entry.id,
         )
     except Exception as exc:  # noqa: BLE001 — 개인 RAG 적재는 best-effort
         db.rollback()
@@ -203,4 +203,12 @@ def apply_entry_update(db: Session, entry: DietEntry, payload: DietEntryUpdate) 
             setattr(entry, field, value)
     db.commit()
     db.refresh(entry)
-    return _entry_out(entry)
+    out = _entry_out(entry)
+    # 코치가 보는 근거도 함께 바뀌어야 한다(#603). 안 바꾸면 나트륨을 정정해도
+    # 코치는 계속 옛 수치로 조언한다.
+    record_diet(
+        db, entry.user_id, date=entry.date, foods=load_foods(entry.foods_json),
+        total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
+        sugar_g=entry.sugar_g, source_ref=entry.id, replace=True,
+    )
+    return out

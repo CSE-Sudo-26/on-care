@@ -12,7 +12,7 @@ STEP 8 챗봇도 retrieve_context() 를 그대로 재사용합니다.
 from __future__ import annotations
 
 
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -30,6 +30,7 @@ def ingest_document(
     domain: str = "general",  # diet|exercise|general
     source: str = "",
     title: str = "",
+    source_ref: str | None = None,  # 원본 기록 id (#603)
 ) -> int:
     """문서를 청킹→임베딩→저장. 저장한 청크 수 반환."""
     chunks = chunk_text(content)
@@ -41,17 +42,41 @@ def ingest_document(
     for chunk, vec in zip(chunks, vectors, strict=True):
         db.add(CoachDocument(
             user_id=user_id, domain=domain, source=source,
-            title=title, content=chunk, embedding=vec,
+            title=title, content=chunk, embedding=vec, source_ref=source_ref,
         ))
     db.commit()
     return len(chunks)
 
 
+def purge_personal(db: Session, user_id: str, source_ref: str) -> int:
+    """한 기록에서 나온 개인 문서를 모두 지운다. 지운 행 수 반환 (#603).
+
+    청킹 때문에 기록 하나가 문서 여러 개일 수 있어 단건 삭제로는 부족하다.
+    `user_id` 로도 좁히는 이유는 방어다 — 참조 id 는 접두사가 붙은 uuid 라 충돌이
+    사실상 없지만, 남의 문서를 지울 수 있는 경로를 열어 둘 이유도 없다.
+    """
+    result = db.execute(
+        delete(CoachDocument).where(
+            CoachDocument.user_id == user_id,
+            CoachDocument.source_ref == source_ref,
+        )
+    )
+    db.commit()
+    return result.rowcount or 0
+
+
 def ingest_personal_text(
-    db: Session, user_id: str, text: str, *, domain: str, source: str, title: str = ""
+    db: Session, user_id: str, text: str, *, domain: str, source: str,
+    title: str = "", source_ref: str | None = None,
 ) -> int:
-    """환자 개인 데이터(식단/운동/바이탈 요약)를 적재."""
-    return ingest_document(db, text, user_id=user_id, domain=domain, source=source, title=title)
+    """환자 개인 데이터(식단/운동/채팅 요약)를 적재.
+
+    [source_ref] 를 주면 나중에 그 기록만 골라 교체·삭제할 수 있다.
+    """
+    return ingest_document(
+        db, text, user_id=user_id, domain=domain, source=source, title=title,
+        source_ref=source_ref,
+    )
 
 
 # ---- 검색 ----

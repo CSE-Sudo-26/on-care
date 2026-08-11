@@ -119,6 +119,7 @@ def add_session(
     personal_ingest.record_exercise(
         db, current_user.id, date=_session_date(row), type=row.type,
         minutes=row.minutes, calories=row.calories, intensity=row.intensity,
+        source_ref=row.id,
     )
     return out
 
@@ -159,7 +160,15 @@ def update_session(
     db.refresh(row)
 
     one = build_current_week([row])["sessions"][0]
-    return ExerciseSessionOut(**one)
+    out = ExerciseSessionOut(**one)
+    # 30분을 45분으로 고쳤으면 코치도 45분으로 알아야 한다(#603). 지우지 않고
+    # 덧붙이면 두 수치가 함께 검색돼 안 고치느니만 못하다.
+    personal_ingest.record_exercise(
+        db, current_user.id, date=_session_date(row), type=row.type,
+        minutes=row.minutes, calories=row.calories, intensity=row.intensity,
+        source_ref=row.id, replace=True,
+    )
+    return out
 
 
 @router.delete("/exercise/sessions/{session_id}")
@@ -179,4 +188,5 @@ def delete_session(
     _reject_if_derived(row)
     db.delete(row)
     db.commit()
+    personal_ingest.forget(db, current_user.id, session_id)
     return {"status": "deleted"}

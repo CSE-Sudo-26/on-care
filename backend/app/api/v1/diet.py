@@ -31,6 +31,7 @@ from app.schemas.diet_api import (
     DietTodayResponse,
 )
 from app.services import diet_recommendation_service, diet_service
+from app.services.coach import personal_ingest
 from app.services.nutrition.enrich import enrich_analysis
 from app.services.recognizer.factory import get_recognizer
 
@@ -161,4 +162,7 @@ def delete_entry(
         raise HTTPException(status_code=404, detail="식단 기록을 찾을 수 없습니다.")
     db.delete(row)
     db.commit()
+    # 근거 문서도 지운다(#603). 남겨 두면 코치가 사용자가 지운 기록으로 계속
+    # 조언해, 지운 것이 되살아나는 것처럼 보인다.
+    personal_ingest.forget(db, current_user.id, entry_id)
     return {"status": "deleted"}

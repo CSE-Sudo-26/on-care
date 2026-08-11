@@ -421,6 +421,7 @@ def send_message(
     personal_ingest.record_chat(
         db, member_id, sender=sender, text=text,
         date=clock.to_seoul(msg.created_at).date().isoformat(),
+        source_ref=msg.id,
     )
     return out
 
@@ -1077,7 +1078,10 @@ def complete_session(
         personal_ingest.record_exercise(
             db, exercise_log.user_id, date=s.date, type=exercise_log.type,
             minutes=exercise_log.minutes, calories=exercise_log.calories,
-            intensity=exercise_log.intensity,
+            intensity=exercise_log.intensity, source_ref=exercise_log.id,
+            # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라
+            # (`_derived_exercise_id`), 교체로 두어야 문서가 겹쳐 쌓이지 않는다.
+            replace=True,
         )
     return out
 
