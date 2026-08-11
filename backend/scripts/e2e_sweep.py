@@ -466,13 +466,14 @@ def scenario_ai_routine(api: Api, m: str, t: str, out: list[Result]) -> None:
     ))
 
     # 트레이너가 입력한 가능 시간을 넘는 계획은 그대로 배정될 수 없다.
-    over = [
-        p.get("total_minutes") for p in (plan_a, plan_b)
-        if isinstance(p.get("total_minutes"), int) and p["total_minutes"] > available
-    ]
+    totals = [p.get("total_minutes") for p in (plan_a, plan_b)]
+    within_limit = all(
+        type(minutes) is int and minutes <= available
+        for minutes in totals
+    )
     out.append(Result(
-        g, "가능 시간 상한", "PASS" if not over else "FAIL",
-        f"available={available} 초과={over}",
+        g, "가능 시간 상한", "PASS" if within_limit else "FAIL",
+        f"available={available} total_minutes={totals}",
     ))
 
     generated_by = options.get("generated_by")
@@ -487,9 +488,16 @@ def scenario_ai_routine(api: Api, m: str, t: str, out: list[Result]) -> None:
 
     # #580: 채팅이 근거로 실렸는지. 앞선 채팅 시나리오가 남긴 메시지가 있어야 한다.
     recent = (options.get("analysis") or {}).get("recent_messages")
+    evidence_ok = (
+        isinstance(recent, list)
+        and any(
+            isinstance(message, str) and _MARKER in message
+            for message in recent
+        )
+    )
     out.append(Result(
         g, "채팅 근거 반영(#580)",
-        "PASS" if isinstance(recent, list) and recent else "SKIP",
+        "PASS" if evidence_ok else "FAIL",
         f"recent_messages={len(recent) if isinstance(recent, list) else 'none'}",
     ))
 
