@@ -29,7 +29,7 @@ def _captured(monkeypatch):
 def test_exercise_document_is_written_in_korean(_captured):
     """저장 코드값(cardio/light)을 그대로 넣으면 한국어 질의와 임베딩이 겉돈다."""
     personal_ingest.record_exercise(
-        None, "user-1", date="2026-08-11", type="cardio", minutes=30,
+        None, "user-1", date="2026-08-11", exercise_type="cardio", minutes=30,
         calories=250, intensity="light",
     )
 
@@ -43,7 +43,7 @@ def test_exercise_document_is_written_in_korean(_captured):
 
 def test_exercise_is_ingested_into_the_exercise_domain(_captured):
     personal_ingest.record_exercise(
-        None, "user-1", date="2026-08-11", type="strength", minutes=40,
+        None, "user-1", date="2026-08-11", exercise_type="strength", minutes=40,
         calories=300, intensity="high",
     )
 
@@ -65,7 +65,7 @@ def test_exercise_is_ingested_into_the_exercise_domain(_captured):
 def test_every_allowed_exercise_type_has_a_label(_captured, type_, expected):
     """라우터의 _ALLOWED_TYPES 전부를 덮는다 — 빠진 값은 코드가 그대로 노출된다."""
     personal_ingest.record_exercise(
-        None, "u", date="2026-08-11", type=type_, minutes=10, calories=50,
+        None, "u", date="2026-08-11", exercise_type=type_, minutes=10, calories=50,
         intensity="moderate",
     )
     assert expected in _captured[-1]["text"]
@@ -73,7 +73,8 @@ def test_every_allowed_exercise_type_has_a_label(_captured, type_, expected):
 
 def test_an_unknown_code_degrades_to_itself_instead_of_crashing(_captured):
     personal_ingest.record_exercise(
-        None, "u", date="2026-08-11", type="crossfit", minutes=10, calories=50,
+        None, "u", date="2026-08-11", exercise_type="crossfit", minutes=10,
+        calories=50,
         intensity="extreme",
     )
 

@@ -217,15 +217,28 @@ def build_rule_options(
     )
 
 
+class RoutineContractError(ValueError):
+    """LLM 응답이 계약을 어겼다 — 공급자는 살아 있고, 볼 곳은 프롬프트·스키마다.
+
+    `ValueError` 를 통째로 계약 위반으로 잡으면 안 된다. `get_coach_llm()` 은
+    COACH_LLM 값이 오타면 `ValueError("알 수 없는 코치 LLM: ...")` 를 던지는데
+    (`coach/llm.py`), 그건 설정 문제라 프롬프트를 아무리 손봐도 안 고쳐진다.
+    계약 위반만 이 타입으로 좁혀 `reason=contract` 와 `reason=infra` 를 가른다.
+    """
+
+
 def _decode_json_object(text: str) -> dict:
     """LLM이 실수로 붙인 코드펜스·설명 앞뒤를 제거하고 첫 JSON 객체만 읽는다."""
     start = text.find("{")
     end = text.rfind("}")
     if start < 0 or end <= start:
-        raise ValueError("LLM 응답에 JSON 객체가 없습니다.")
-    parsed = json.loads(text[start : end + 1])
+        raise RoutineContractError("LLM 응답에 JSON 객체가 없습니다.")
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except json.JSONDecodeError as exc:
+        raise RoutineContractError(f"LLM 응답 JSON 파싱 실패: {exc}") from exc
     if not isinstance(parsed, dict):
-        raise ValueError("LLM 응답은 JSON 객체여야 합니다.")
+        raise RoutineContractError("LLM 응답은 JSON 객체여야 합니다.")
     return parsed
 
 
@@ -251,7 +264,7 @@ def _generate_with_llm(
         options.plan_a.total_minutes > request.available_minutes
         or options.plan_b.total_minutes > request.available_minutes
     ):
-        raise ValueError("LLM 루틴 시간이 요청 가능한 시간을 초과했습니다.")
+        raise RoutineContractError("LLM 루틴 시간이 요청 가능한 시간을 초과했습니다.")
     return options
 
 
@@ -267,10 +280,11 @@ def generate_routine_options(
     had_chat = bool(analysis.recent_messages)
     try:
         options = _generate_with_llm(analysis, request)
-    except (ValidationError, ValueError) as exc:
+    except (ValidationError, RoutineContractError) as exc:
         # 계약 위반 — 공급자는 살아 있는데 응답이 규격에 안 맞는다. 프롬프트나
         # 스키마를 손볼 신호라 인프라 장애와 섞으면 안 된다.
-        # (json.JSONDecodeError 는 ValueError 의 하위 타입이라 여기 걸린다.)
+        # 넓은 ValueError 가 아니라 이 두 타입만 잡는다 — COACH_LLM 오타 같은
+        # 설정 오류도 ValueError 라, 그것까지 계약 위반으로 세면 지표가 엉킨다.
         _record(started, reason="contract", had_chat_context=had_chat)
         logger.warning(
             "맞춤 루틴 LLM 계약 위반 — 규칙 기반 폴백 사용 "
@@ -278,7 +292,7 @@ def generate_routine_options(
             trainer_id, member_id, exc,
         )
         return fallback
-    except Exception:  # noqa: BLE001 — 키 미설정·네트워크·5xx, 그리고 우리 쪽 버그
+    except Exception:  # noqa: BLE001 — 키 미설정·설정 오타·네트워크·5xx, 우리 쪽 버그
         # 이쪽은 stack trace 를 남긴다. 예전엔 한 덩어리로 삼켜서, 스키마 필드
         # 이름을 잘못 쓴 버그도 조용히 규칙형으로 내려가 아무도 몰랐다.
         _record(started, reason="infra", had_chat_context=had_chat)
