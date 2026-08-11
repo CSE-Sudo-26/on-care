@@ -30,12 +30,13 @@
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
 | GET | `/users/me` | `{ id(str), name, email }` |
-| GET | `/users/me/health` | `{ profile, risk, indicators[], activity_points, activity_rank, settings[] }` |
-
-`indicators[]` 각 항목(kind = weight|blood-pressure|blood-sugar):
-`{ kind, label, latest_value(str), unit, delta_text, improving(bool), last_7_days[float], chart_values[float], chart_min_y, chart_max_y, chart_interval, recent_records[{label,value}] }`
+| GET | `/users/me/health` | `{ profile, risk, activity_points, activity_rank, settings[] }` |
 
 `risk`: `{ title, body, level(low|medium|high) }`
+
+`indicators[]`(체중·혈압·혈당 추이)는 **없다.** 바이탈 기능과 함께 제거됐다 — 아래
+"바이탈" 절 참조. 대시보드의 `indicators[]` 는 이름만 같고 칼로리·나트륨·당류로,
+전혀 다른 값이다.
 
 ### 대시보드
 
@@ -108,16 +109,20 @@ category: reminder|health_check|achievement|system
 
 tag: diet|exercise|hydration|...
 
-### 바이탈 (체중/혈압/혈당)
+### 바이탈 (체중/혈압/혈당) — 제거됨
 
-| Method | Path | 본문/응답 |
-|---|---|---|
-| POST | `/vitals/weight` | body: `{ ...value, recorded_at? }` → `{ id, kind, value, recorded_at }` |
-| POST | `/vitals/blood-pressure` | 〃 (value 예: `{systolic, diastolic}`) |
-| POST | `/vitals/blood-sugar` | 〃 (value 예: `{mg_per_dl}`) |
-| GET | `/vitals/{kind}/latest` | `{ id, kind, value, recorded_at }` 또는 `{}` (데이터 없음) |
+**이 엔드포인트들은 존재하지 않는다.** 입력이 번거로워 제품에서 빼기로 했고, 테이블과
+목표 컬럼까지 걷어냈다(`migrations/versions/0016_drop_vitals.py`, 2026-07-31).
 
-value 예시(drift 주석): weight `{kg}`, blood-pressure `{systolic, diastolic}`, blood-sugar `{mg_per_dl}`
+없는 것: `POST /vitals/{weight|blood-pressure|blood-sugar}`, `GET /vitals/{kind}/latest`,
+`vitals` 테이블, `health_profiles` 의 체중·목표 컬럼, `/users/me/health` 의 `indicators[]`.
+
+남은 것: 식단 일일 영양 목표(`daily_calories`, `daily_sodium_mg`, `daily_sugar_g`,
+`daily_carbs_g`, `daily_protein_g`, `daily_fat_g`)와 주간 운동 목표.
+
+이 절을 지우지 않고 남겨 두는 이유: 프론트의 옛 목업(`local_api_interceptor`)과
+`frontend/flutter/docs/API_CATALOG.md` 에 아직 이 경로가 남아 있어, "계약에 없으니
+백엔드가 안 만든 것" 으로 오해할 여지가 있다. 만들지 않기로 한 것이다.
 
 ### 장소 (온오프라인 연결, O2O)
 
