@@ -134,13 +134,16 @@ class CardLink extends StatelessWidget {
 /// Centered placeholder for an empty card body.
 class EmptyHint extends StatelessWidget {
   /// Creates the hint.
-  const EmptyHint({super.key, required this.message, this.icon});
+  const EmptyHint({super.key, required this.message, this.icon, this.action});
 
   /// What to tell the trainer.
   final String message;
 
   /// Optional glyph above the message.
   final IconData? icon;
+
+  /// Optional recovery action for an error state.
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -161,6 +164,10 @@ class EmptyHint extends StatelessWidget {
               color: AppColors.subtleForeground,
             ),
           ),
+          if (action != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            action!,
+          ],
         ],
       ),
     );

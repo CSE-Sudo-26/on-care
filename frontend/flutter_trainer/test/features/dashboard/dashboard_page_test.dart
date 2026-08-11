@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,7 +9,10 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
 
+import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
 
 /// The 대시보드 against the seeded roster.
@@ -37,6 +43,47 @@ void main() {
   testWidgets('is the landing page after a restored session', (tester) async {
     await openDashboard(tester);
     expect(find.text('대시보드'), findsWidgets);
+  });
+
+  testWidgets('a failed summary retries once and renders fresh data', (
+    tester,
+  ) async {
+    final retryGate = Completer<List<TrainerClient>>();
+    int attempts = 0;
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.dashboard,
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith((ref) {
+          attempts++;
+          if (attempts == 1) {
+            return Stream<List<TrainerClient>>.error(
+              StateError('internal transport detail'),
+            );
+          }
+          return Stream<List<TrainerClient>>.fromFuture(retryGate.future);
+        }),
+      ],
+    );
+
+    expect(find.text('대시보드를 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('internal transport detail'), findsNothing);
+
+    final retry = find.byKey(const ValueKey<String>('dashboard-retry'));
+    await tester.tap(retry);
+    await tester.pump();
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(attempts, 2, reason: '재시도 중 중복 요청이 시작됐어요');
+
+    retryGate.complete(<TrainerClient>[
+      makeClient(name: '복구 고객', sodiumMg: 2500),
+    ]);
+    await settle(tester);
+
+    expect(find.text('복구 고객'), findsOneWidget);
+    expect(find.text('대시보드를 불러오지 못했어요'), findsNothing);
   });
 
   testWidgets('the KPI row reports the seeded numbers', (tester) async {

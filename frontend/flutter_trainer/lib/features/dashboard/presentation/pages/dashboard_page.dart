@@ -60,10 +60,15 @@ class DashboardPage extends ConsumerWidget {
         ),
         error: (e, _) => Padding(
           padding: EdgeInsets.only(top: AppSpacing.xxxl),
-          child: Center(
-            child: Text(
-              l.dashLoadFailed,
-              style: const TextStyle(color: AppColors.mutedForeground),
+          child: EmptyHint(
+            message: l.dashLoadFailed,
+            icon: Icons.error_outline,
+            action: ActionButton(
+              key: const ValueKey<String>('dashboard-retry'),
+              label: l.actionRetry,
+              onPressed: summaryAsync.isLoading
+                  ? null
+                  : () => ref.invalidate(clientsProvider),
             ),
           ),
         ),
