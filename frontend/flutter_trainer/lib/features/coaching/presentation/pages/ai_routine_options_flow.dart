@@ -460,6 +460,15 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
             color: AppColors.mutedForeground,
           ),
         ),
+        // Only when the AI actually generated these plans. The rule-based
+        // fallback ignores chat entirely, so showing "참고한 최근 대화" next to a
+        // rule plan would claim an input that was never used — the trainer
+        // would think a knee complaint was accounted for when it wasn't.
+        if (options.generatedBy == 'ai' &&
+            options.analysis.recentMessages.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.xs),
+          _ChatEvidence(lines: options.analysis.recentMessages),
+        ],
         const SizedBox(height: AppSpacing.md),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -1241,6 +1250,49 @@ class _AssistantLabel extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: Text(text, style: _sectionTitleStyle)),
       ],
+    );
+  }
+}
+
+/// The trainer↔member chat lines the generation was grounded on (#580).
+///
+/// Shown because the trainer is the one who has to trust the routine: if the
+/// AI quietly ignored "무릎이 아파요", the only way to notice is to see which
+/// utterances it was given. Lines arrive speaker-labelled from the server, so
+/// this widget only handles layout.
+class _ChatEvidence extends StatelessWidget {
+  const _ChatEvidence({required this.lines});
+
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l.aiChatEvidenceTitle, style: _labelStyle),
+          const SizedBox(height: AppSpacing.xs),
+          for (final String line in lines)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                line,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

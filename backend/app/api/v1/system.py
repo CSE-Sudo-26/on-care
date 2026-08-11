@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.deps import RequireAdmin
+from app.core import metrics
 from app.core.config import get_settings
 from app.db.session import get_db
 
@@ -58,3 +60,16 @@ def readyz(db: Annotated[Session, Depends(get_db)]) -> dict[str, str]:
 @router.get("/version")
 def version() -> dict[str, str]:
     return {"api_version": "v1", "app_version": settings.app_version}
+
+
+@router.get("/system/metrics")
+def system_metrics(admin: RequireAdmin) -> dict[str, object]:
+    """AI 경로 성공/폴백 카운터(#583). 관리자 전용.
+
+    폴백은 조용하다 — 사용자는 그럴듯한 규칙형 결과를 계속 받으므로 아무도 신고하지
+    않는다. 여기서 `routine_options.generated{by=ai}` 가 0 이면 AI 가 죽은 것이다.
+
+    인증을 거는 이유: 어떤 공급자가 얼마나 실패하는지는 운영 정보다. 공개 헬스
+    체크(/healthz, /readyz)와 달리 LB 가 볼 필요도 없다.
+    """
+    return metrics.snapshot()

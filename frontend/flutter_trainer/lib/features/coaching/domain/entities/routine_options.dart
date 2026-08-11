@@ -13,6 +13,7 @@ class MemberAnalysis {
     required this.avgCompletionRate,
     required this.latestRoutine,
     required this.note,
+    this.recentMessages = const <String>[],
   });
 
   final String goal;
@@ -21,6 +22,14 @@ class MemberAnalysis {
   final int avgCompletionRate;
   final String latestRoutine;
   final String note;
+
+  /// Recent trainer↔member chat the generation was grounded on, oldest first
+  /// and already speaker-labelled by the server ("회원: …" / "트레이너: …").
+  ///
+  /// Shown to the trainer so they can check WHICH utterance the AI acted on —
+  /// a routine that silently drops a knee-pain complaint is worse than one
+  /// that never saw it. Empty when the thread has no recent messages.
+  final List<String> recentMessages;
 }
 
 /// One exercise line in a plan.

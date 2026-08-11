@@ -88,13 +88,14 @@ def test_unauthenticated_trainer_is_rejected(client):
 def test_demo_trainer_client_links_seeded(client, db_session):
     from sqlalchemy import select
 
-    from app.db.seed_trainer import TRAINER_ID
+    from app.db.seed_trainer import _MEMBERS, TRAINER_ID
     from app.models.models import TrainerClient
 
     links = db_session.scalars(
         select(TrainerClient).where(TrainerClient.trainer_id == TRAINER_ID)
     ).all()
-    assert len(links) == 3
+    # 명단 크기는 _MEMBERS 에서 읽는다 — 로스터가 늘 때마다 테스트를 고치지 않도록.
+    assert len(links) == len(_MEMBERS)
     member_ids = {l.member_id for l in links}
     assert {"user-demo", "user-jisu", "user-sungho"} <= member_ids
 
@@ -147,7 +148,7 @@ def test_member_api_still_works_without_token(client):
 def test_trainer_seed_is_idempotent(client, db_session):
     from sqlalchemy import func, select
 
-    from app.db.seed_trainer import TRAINER_ID, seed_trainer_domain
+    from app.db.seed_trainer import _MEMBERS, TRAINER_ID, seed_trainer_domain
     from app.models.models import TrainerClient, User
 
     # 여러 번 재실행해도 계정/링크 수가 늘지 않는다
@@ -157,7 +158,7 @@ def test_trainer_seed_is_idempotent(client, db_session):
         select(func.count()).select_from(TrainerClient)
         .where(TrainerClient.trainer_id == TRAINER_ID)
     )
-    assert links == 3
+    assert links == len(_MEMBERS)
     trainers = db_session.scalar(
         select(func.count()).select_from(User).where(User.role == "trainer")
     )

@@ -2840,6 +2840,12 @@ abstract class AppLocalizations {
   /// **' · rule-based'**
   String get aiBasisRuleBased;
 
+  /// No description provided for @aiChatEvidenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent conversation used'**
+  String get aiChatEvidenceTitle;
+
   /// No description provided for @aiTotalMinutesIntensity.
   ///
   /// In en, this message translates to:
