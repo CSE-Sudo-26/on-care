@@ -19,7 +19,6 @@ class AppColors {
 
   /// Deeper navy — gradient second stop for primary CTAs.
   static const Color secondary = Color(0xFF17435F);
-  static const Color secondaryForeground = Color(0xFFFFFFFF);
 
   /// Trainer identity orange — kept only as a small accent (the
   /// "트레이너" brand word, MY-tab highlights), not as the main color.
@@ -38,13 +37,8 @@ class AppColors {
   static const Color aiCardGradientStart = Color(0xFFDCEAF4);
   static const Color aiCardGradientEnd = Color(0xFF9DC3E0);
 
-  /// MY 탭 "이번 달 통계" warm gradient (mock: `linear-gradient(135deg,
-  /// #FFF4EE,#FFE8D8)`) — kept orange as a trainer-identity block.
-  static const Color statsGradientStart = Color(0xFFFFF4EE);
-  static const Color statsGradientEnd = Color(0xFFFFE8D8);
-
-  /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). 통계 카드 등
-  /// 남색 톤으로 통일할 때 사용.
+  /// 사용자 앱 "오늘의 AI 통합 조언" 배너 배경(연한 남색). MY 탭
+  /// "이번 달 통계" 카드도 이 남색 톤을 쓴다.
   static const Color bannerStart = Color(0xFFEAF2F9);
   static const Color bannerEnd = Color(0xFFD6E7F3);
 
@@ -74,12 +68,10 @@ class AppColors {
   // --- Semantic ---
   /// Success / "완료" green (`#34C759`).
   static const Color success = Color(0xFF34C759);
-  static const Color successForeground = Color(0xFFFFFFFF);
 
   /// Warning orange (`#FF953C`) — a caution that is NOT a target being
   /// exceeded: partial routine completion, a manual entry to double-check.
   static const Color warning = Color(0xFFFF953C);
-  static const Color warningForeground = Color(0xFFFFFFFF);
 
   /// "목표 초과" red (`#F04438`). Matches the member app's
   /// `FigmaColors.dangerRed` — a member who sees 나트륨 초과 in red on
