@@ -1,0 +1,189 @@
+/// 운동 기록 탭 그래프의 진입 애니메이션 (#653).
+///
+/// 오늘 = 도넛(원을 따라 그려짐), 이번 주/이번 달 = 스택 막대(바닥에서 자람).
+/// painter 를 직접 래스터화해 칠해진 픽셀이 늘어나는 것으로 "정말 그려지고
+/// 있는가"를 확인한다 — `shouldRepaint` 만으로는 방향을 알 수 없다.
+library;
+
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/design_system/charts/chart_reveal.dart';
+import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
+import 'package:oncare/features/account/domain/entities/user_profile.dart';
+import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
+import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
+import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
+import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
+
+void main() {
+  // 요일마다 세 종류가 모두 있는 주 — 도넛에 세 조각, 막대에 세 층이 쌓인다.
+  const ExerciseWeek week = ExerciseWeek(
+    sessions: <ExerciseSession>[],
+    dailyMinutes: <double>[60, 45, 70, 30, 55, 40, 65],
+    dailyCalories: <double>[300, 220, 350, 150, 270, 200, 320],
+    cardioMinutes: <double>[30, 20, 35, 15, 25, 20, 30],
+    strengthMinutes: <double>[20, 15, 25, 10, 20, 12, 25],
+    stretchingMinutes: <double>[10, 10, 10, 5, 10, 8, 10],
+    dayLabels: <String>['월', '화', '수', '목', '금', '토', '일'],
+    totalMinutes: 365,
+    totalCalories: 1810,
+    streakDays: 7,
+    aiCoachMessage: '꾸준히 운동해 보세요.',
+  );
+
+  /// 진입 애니메이션이 도는 중을 봐야 하므로 `pumpAndSettle` 은 쓰지 않는다.
+  Future<void> pumpExercise(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appConfigProvider.overrideWithValue(
+            const AppConfig(
+              environment: Environment.dev,
+              apiBaseUrl: 'https://example.test',
+              useMockApi: true,
+            ),
+          ),
+          accountRepositoryProvider.overrideWithValue(
+            MockAccountRepository(
+              profile: const UserProfile(
+                id: 'member',
+                name: '테스트',
+                email: 'member@example.com',
+              ),
+            ),
+          ),
+          exerciseWeekProvider.overrideWith((ref) async => week),
+          memberCoachRepositoryProvider.overrideWithValue(
+            MockMemberCoachRepository(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ExercisePage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+  }
+
+  /// 기간 토글의 그래프 painter. 도넛과 스택 막대 모두 `ChartReveal` 바로 아래
+  /// 첫 `CustomPaint` 다.
+  CustomPainter chartPainter(WidgetTester tester) {
+    return tester
+        .widget<CustomPaint>(
+          find
+              .descendant(
+                of: find.byType(ChartReveal),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        )
+        .painter!;
+  }
+
+  Future<int> inkOf(CustomPainter painter, Size size) async {
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    painter.paint(Canvas(recorder), size);
+    final ui.Image image = await recorder.endRecording().toImage(
+      size.width.ceil(),
+      size.height.ceil(),
+    );
+    final ByteData pixels = (await image.toByteData())!;
+    image.dispose();
+    int ink = 0;
+    for (int i = 3; i < pixels.lengthInBytes; i += 4) {
+      if (pixels.getUint8(i) > 0) ink++;
+    }
+    return ink;
+  }
+
+  testWidgets('오늘 도넛은 원을 따라 점점 그려진다', (WidgetTester tester) async {
+    await pumpExercise(tester);
+    await tester.tap(find.text('오늘'));
+    await tester.pump();
+
+    const Size size = Size.square(116);
+    final CustomPainter atStart = chartPainter(tester);
+    await tester.pump(const Duration(milliseconds: 300));
+    final CustomPainter midway = chartPainter(tester);
+    await tester.pumpAndSettle();
+    final CustomPainter settled = chartPainter(tester);
+
+    final List<int> ink = (await tester.runAsync(() async {
+      return <int>[
+        await inkOf(atStart, size),
+        await inkOf(midway, size),
+        await inkOf(settled, size),
+      ];
+    }))!;
+
+    expect(ink[0], 0, reason: '첫 프레임부터 호가 그려져 있다');
+    expect(ink[1], greaterThan(ink[0]), reason: '호가 뻗어 나가지 않았다');
+    expect(ink[2], greaterThan(ink[1]), reason: '호가 한 바퀴를 채우지 못했다');
+  });
+
+  testWidgets('주간 스택 막대는 바닥에서 자라 오른다', (WidgetTester tester) async {
+    await pumpExercise(tester);
+
+    const Size size = Size(600, 150);
+    final CustomPainter atStart = chartPainter(tester);
+    await tester.pump(const Duration(milliseconds: 350));
+    final CustomPainter midway = chartPainter(tester);
+    await tester.pumpAndSettle();
+    final CustomPainter settled = chartPainter(tester);
+
+    final List<int> ink = (await tester.runAsync(() async {
+      return <int>[
+        await inkOf(atStart, size),
+        await inkOf(midway, size),
+        await inkOf(settled, size),
+      ];
+    }))!;
+
+    // 눈금선과 요일 라벨은 처음부터 그려지므로 0 은 아니고, 막대가 자라는
+    // 만큼만 늘어난다.
+    expect(ink[1], greaterThan(ink[0]), reason: '막대가 자라지 않았다');
+    expect(ink[2], greaterThan(ink[1]), reason: '막대가 끝까지 자라지 않았다');
+  });
+
+  testWidgets('이번 주 ↔ 이번 달 전환은 막대 애니메이션을 다시 재생한다', (WidgetTester tester) async {
+    await pumpExercise(tester);
+    await tester.pumpAndSettle();
+
+    ChartReveal reveal() =>
+        tester.widget<ChartReveal>(find.byType(ChartReveal).first);
+
+    final Object? weekly = reveal().replayKey;
+    expect(weekly, isNotNull, reason: '기간을 재생 키로 넘기지 않고 있다');
+
+    await tester.tap(find.text('이번 달'));
+    await tester.pump();
+    expect(reveal().replayKey, isNot(weekly));
+
+    const Size size = Size(600, 150);
+    final CustomPainter atStart = chartPainter(tester);
+    await tester.pump(const Duration(milliseconds: 350));
+    final CustomPainter midway = chartPainter(tester);
+
+    final List<int> ink = (await tester.runAsync(() async {
+      return <int>[await inkOf(atStart, size), await inkOf(midway, size)];
+    }))!;
+    expect(ink[1], greaterThan(ink[0]), reason: '월간 막대가 다시 자라지 않았다');
+
+    await tester.pumpAndSettle();
+  });
+}

@@ -8,8 +8,10 @@ import 'package:intl/intl.dart' show NumberFormat;
 
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
@@ -850,6 +852,9 @@ class _ActivityStatusState extends State<_ActivityStatus> {
                 bars: data.bars,
                 dayLabels: data.labels,
                 todayIndex: data.todayIndex,
+                // 주 ↔ 월 전환은 같은 위젯이 데이터만 갈아끼우므로,
+                // 기간을 재생 키로 넘겨 막대를 다시 자라게 한다.
+                replayKey: _period,
               );
             },
           ),
@@ -894,9 +899,11 @@ class _TodayDonut extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: <Widget>[
-                    CustomPaint(
-                      size: const Size.square(116),
-                      painter: _DonutPainter(segs),
+                    ChartReveal(
+                      builder: (BuildContext context, double t) => CustomPaint(
+                        size: const Size.square(116),
+                        painter: _DonutPainter(segs, progress: t),
+                      ),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1004,8 +1011,12 @@ class _DonutLegendRow extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter(this.segs);
+  const _DonutPainter(this.segs, {this.progress = 1});
   final List<_DonutSeg> segs;
+
+  /// 0 → 1 진입 애니메이션 진행도. 12시 방향에서 시계 방향으로, 세그먼트
+  /// 경계와 무관하게 한 자루의 펜이 원을 따라 그려 나가는 것처럼 보이게 한다.
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1020,25 +1031,38 @@ class _DonutPainter extends CustomPainter {
     final Rect rect = Rect.fromCircle(center: center, radius: radius);
     const double gap = 0.06; // radians of spacing between segments
     const double full = 2 * math.pi;
+    // 원 전체 중 지금까지 그려진 각도. 각 세그먼트는 자기 구간에 해당하는
+    // 만큼만 잘라 쓴다.
+    final double drawn = progress.clamp(0.0, 1.0) * full;
     double start = -math.pi / 2; // top (12 o'clock)
+    double consumed = 0; // 시작점에서 이 세그먼트까지의 누적 각도
     for (final _DonutSeg s in segs) {
+      final double share = (s.minutes / total) * full;
+      final double sweep = share - gap;
       // Skip 0-minute categories (a checked routine may zero one out); a
       // negative sweep would otherwise paint a stray rounded dot.
-      if (s.minutes <= 0) continue;
-      final double sweep = (s.minutes / total) * full - gap;
-      final Paint p = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..color = s.color;
-      canvas.drawArc(rect, start + gap / 2, sweep, false, p);
-      start += (s.minutes / total) * full;
+      if (s.minutes <= 0 || sweep <= 0) {
+        start += share;
+        consumed += share;
+        continue;
+      }
+      final double visible = (drawn - consumed - gap / 2).clamp(0.0, sweep);
+      if (visible > 0) {
+        final Paint p = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.round
+          ..color = s.color;
+        canvas.drawArc(rect, start + gap / 2, visible, false, p);
+      }
+      start += share;
+      consumed += share;
     }
   }
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      oldDelegate.segs != segs;
+      oldDelegate.segs != segs || oldDelegate.progress != progress;
 }
 
 /// Compact segmented control (오늘 / 이번 주 / 이번 달) matching the app's
@@ -1102,11 +1126,15 @@ class _ActivityChart extends StatelessWidget {
     required this.bars,
     required this.dayLabels,
     required this.todayIndex,
+    this.replayKey,
   });
 
   final List<_Bar> bars;
   final List<String> dayLabels;
   final int todayIndex;
+
+  /// 값이 바뀌면 막대 성장 애니메이션을 처음부터 다시 재생하기 위한 키.
+  final Object? replayKey;
 
   /// Hover tooltip content for a bar — one line per activity type as
   /// [color square] 종류   N분 (see the legend).
@@ -1176,12 +1204,19 @@ class _ActivityChart extends StatelessWidget {
             child: Stack(
               children: <Widget>[
                 Positioned.fill(
-                  child: CustomPaint(
-                    painter: _StackedBarPainter(
-                      bars: bars,
-                      dayLabels: dayLabels,
-                      todayIndex: todayIndex,
-                      todayLabel: l.exToday,
+                  child: ChartReveal(
+                    replayKey: replayKey,
+                    duration: AppMotion.chartGrow,
+                    // 막대별 stagger 는 painter 안에서 곡선을 적용한다.
+                    curve: Curves.linear,
+                    builder: (BuildContext context, double t) => CustomPaint(
+                      painter: _StackedBarPainter(
+                        bars: bars,
+                        dayLabels: dayLabels,
+                        todayIndex: todayIndex,
+                        todayLabel: l.exToday,
+                        progress: t,
+                      ),
                     ),
                   ),
                 ),
@@ -1288,6 +1323,7 @@ class _StackedBarPainter extends CustomPainter {
     required this.dayLabels,
     required this.todayIndex,
     required this.todayLabel,
+    this.progress = 1,
   });
 
   final List<_Bar> bars;
@@ -1296,6 +1332,10 @@ class _StackedBarPainter extends CustomPainter {
 
   /// Resolved in the widget's build (CustomPainter has no BuildContext).
   final String todayLabel;
+
+  /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 왼쪽부터 차례로 바닥에서
+  /// 자라 오른다. 눈금선과 요일 라벨은 처음부터 그대로 둔다.
+  final double progress;
 
   /// Round the busiest day up to the next 20-minute step so bars never clip;
   /// falls back to 90 when there's no data yet.
@@ -1357,10 +1397,13 @@ class _StackedBarPainter extends CustomPainter {
       final bool cardioTop = b.cardio > 0;
       final bool strengthTop = !cardioTop && b.strength > 0;
       final bool stretchTop = !cardioTop && !strengthTop && b.stretch > 0;
+      // 막대별 진행도 — 각 구간 높이에 함께 곱해 스택 전체가 비율을 유지한 채
+      // 바닥에서 자라 오르게 한다.
+      final double t = chartStagger(progress, i, bars.length);
       double yBottom = chartH;
       double h;
       // stretch (light, bottom)
-      h = (b.stretch / max) * chartH;
+      h = (b.stretch / max) * chartH * t;
       if (h > 0) {
         _rrect(
           canvas,
@@ -1374,7 +1417,7 @@ class _StackedBarPainter extends CustomPainter {
         yBottom -= h;
       }
       // strength (dark mid)
-      h = (b.strength / max) * chartH;
+      h = (b.strength / max) * chartH * t;
       if (h > 0) {
         _rrect(
           canvas,
@@ -1388,7 +1431,7 @@ class _StackedBarPainter extends CustomPainter {
         yBottom -= h;
       }
       // cardio (blue top)
-      h = (b.cardio / max) * chartH;
+      h = (b.cardio / max) * chartH * t;
       if (h > 0) {
         _rrect(
           canvas,
@@ -1406,9 +1449,9 @@ class _StackedBarPainter extends CustomPainter {
         _rrect(
           canvas,
           x,
-          chartH - 3,
+          chartH - 3 * t,
           barW,
-          3,
+          3 * t,
           const Color(0xFFEEF2F6),
           topRadius: 1.5,
         );
@@ -1465,7 +1508,8 @@ class _StackedBarPainter extends CustomPainter {
       oldDelegate.bars != bars ||
       oldDelegate.dayLabels != dayLabels ||
       oldDelegate.todayIndex != todayIndex ||
-      oldDelegate.todayLabel != todayLabel;
+      oldDelegate.todayLabel != todayLabel ||
+      oldDelegate.progress != progress;
 }
 
 class _ExerciseFeedback extends StatelessWidget {
