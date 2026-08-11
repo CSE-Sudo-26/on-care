@@ -160,8 +160,15 @@ def diet_text(
     *, date: str, foods: list[dict], total_calories: int, sodium_mg: int,
     sugar_g: float,
 ) -> str:
-    """식단 기록 한 건의 문서 본문."""
-    names = ", ".join(f.get("name", "") for f in foods if f.get("name")) or "식단"
+    """식단 기록 한 건의 문서 본문.
+
+    dict 이 아닌 항목은 건너뛴다. 저장된 JSON 이 늘 dict 목록이라는 보장이 없고,
+    여기서 터지면 갱신이 조용히 실패해 옛 근거가 남는다.
+    """
+    names = ", ".join(
+        f["name"] for f in foods
+        if isinstance(f, dict) and isinstance(f.get("name"), str) and f["name"]
+    ) or "식단"
     return (
         f"{date} 식단 기록: {names}. "
         f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g}g."
@@ -281,12 +288,20 @@ def refresh_diet(db: Session, user_id: str, *, entry_id: str) -> None:
 
 
 def _entry_foods(foods_json: str | None) -> list[dict]:
-    """저장된 foods_json → 리스트. 깨진 값이면 빈 목록(문서 갱신이 죽으면 안 된다)."""
+    """저장된 foods_json → 음식 dict 목록. 깨진 값은 걸러 낸다.
+
+    최상위가 리스트여도 항목이 문자열·숫자일 수 있다. 그대로 넘기면 `diet_text` 가
+    `f.get(...)` 에서 터지고, 그 예외를 `_safe_replace` 가 삼켜 **근거가 옛 값으로
+    남는다** — 수정했는데 코치는 여전히 이전 수치로 답한다. 조용히 실패하는 경로라
+    여기 파싱 경계에서 dict 만 남긴다.
+    """
     try:
         value = json.loads(foods_json or "[]")
     except (TypeError, ValueError):
         return []
-    return value if isinstance(value, list) else []
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def exercise_session_date(row) -> str:

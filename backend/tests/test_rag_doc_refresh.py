@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import func, select
 
 from app.models.models import CoachDocument
@@ -375,3 +376,51 @@ def test_refreshing_a_deleted_record_clears_its_evidence(client, db_session):
     db_session.expire_all()
 
     assert _docs_for(db_session, session_id) == []
+
+
+# ---- 깨진 foods_json (CodeRabbit PR#616 리뷰) ----
+
+def test_a_malformed_food_list_still_refreshes_the_evidence(client, db_session):
+    """항목이 dict 이 아니어도 갱신은 끝나야 한다.
+
+    예전엔 diet_text 가 `f.get(...)` 에서 터지고 _safe_replace 가 그 예외를 삼켜,
+    수정했는데도 **옛 수치 문서가 그대로 남았다**. 조용히 실패하는 경로라 화면에서
+    알아챌 방법이 없다.
+    """
+    from app.models.models import DietEntry
+    from app.services.coach import personal_ingest
+
+    entry_id = _log_meal(db_session)
+    assert any("1800mg" in d.content for d in _docs_for(db_session, entry_id))
+
+    row = db_session.scalar(select(DietEntry).where(DietEntry.id == entry_id))
+    # 항목이 문자열·숫자인 목록. 저장된 JSON 이 늘 dict 목록이라는 보장은 없다.
+    row.foods_json = '["김치찌개", 42, null]'
+    row.sodium_mg = 900
+    db_session.commit()
+
+    personal_ingest.refresh_diet(db_session, row.user_id, entry_id=entry_id)
+    db_session.expire_all()
+
+    docs = _docs_for(db_session, entry_id)
+    assert docs, "갱신이 삼켜지면 옛 문서만 남는다"
+    assert any("900mg" in d.content for d in docs)
+    assert all("1800mg" not in d.content for d in docs)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ['["문자열만"]', "[1, 2, 3]", '{"not": "a list"}', "{{{ 깨진 json", "", "null"],
+)
+def test_broken_food_json_never_raises(raw):
+    """파싱 경계에서 걸러 내므로 어떤 값이 와도 본문 생성이 죽지 않는다."""
+    from app.services.coach import personal_ingest
+
+    foods = personal_ingest._entry_foods(raw)
+
+    assert isinstance(foods, list)
+    assert all(isinstance(f, dict) for f in foods)
+    # 본문 생성까지 통과해야 갱신이 끝난다.
+    assert personal_ingest.diet_text(
+        date="2026-08-11", foods=foods, total_calories=1, sodium_mg=1, sugar_g=1.0
+    )
