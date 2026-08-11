@@ -269,8 +269,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     final defaultAnchor = today.subtract(const Duration(days: 3));
     final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
     final consultationInbox = ref.watch(consultationInboxEnabledProvider);
-    final compactConsultationInbox =
-        consultationInbox && MediaQuery.sizeOf(context).width < 900;
     final pendingConsultations = consultationInbox
         ? ref.watch(consultationPendingCountProvider).valueOrNull
         : null;
@@ -282,16 +280,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // booking and picking one moves the calendar to that day.
       headerCenter: const ClientSearchBar(scope: ClientSearchScope.schedule),
       actions: <Widget>[
-        if (consultationInbox && !compactConsultationInbox)
-          Badge(
-            isLabelVisible: (pendingConsultations ?? 0) > 0,
-            label: Text('${pendingConsultations ?? 0}'),
-            child: ActionButton(
-              label: l.consultTitle,
-              icon: Icons.mark_email_unread_outlined,
-              onPressed: _openConsultationInbox,
-            ),
-          ),
         if (showToday)
           ActionButton(
             label: l.labelToday,
@@ -335,7 +323,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (compactConsultationInbox)
+          if (consultationInbox)
             ListTile(
               dense: true,
               leading: Badge(
