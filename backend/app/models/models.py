@@ -310,6 +310,12 @@ class CoachDocument(Base):
     source: Mapped[str] = mapped_column(String(50), default="")
     # 도메인 필터용: 'diet' | 'exercise' | 'general' (도메인별 코치가 자기 자료만 검색)
     domain: Mapped[str] = mapped_column(String(20), default="general", index=True)
+    #: 이 문서를 만든 원본 기록의 id (#603). 기록을 고치면 같은 참조의 문서를 지우고
+    #: 다시 적재해, 옛 수치와 새 수치가 함께 검색되는 일이 없게 한다. 공공 문서와
+    #: 참조를 남기기 전에 적재된 문서는 NULL 이다.
+    source_ref: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(300), default="")
     content: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float] | None] = mapped_column(
