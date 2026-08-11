@@ -8,8 +8,9 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
@@ -29,7 +30,7 @@ void main() {
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           localeProvider.overrideWith((ref) => const Locale('ko')),
           dashboardRepositoryProvider.overrideWithValue(
-            MockDashboardRepository(MockDietRepository()),
+            MockDashboardRepository(FakeDietRepository()),
           ),
         ],
         child: const OncareApp(),

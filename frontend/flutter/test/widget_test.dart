@@ -13,7 +13,6 @@ import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
@@ -25,6 +24,8 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
+
+import 'helpers/fake_diet_repository.dart';
 
 class _CountingMemberCoachRepository extends MockMemberCoachRepository {
   int routineLoads = 0;
@@ -62,7 +63,7 @@ void main() {
           // Diet repo defaults to DioDietRepository (Stage 9) which
           // needs a real dio+db. Swap to the in-memory mock here.
           dietRepositoryProvider.overrideWithValue(
-            MockDietRepository() as DietRepository,
+            FakeDietRepository() as DietRepository,
           ),
           // Same reason — exercise repo defaults to DioExerciseRepository
           // (Stage 9.6); swap to the in-memory mock here.
@@ -73,7 +74,7 @@ void main() {
           // 9.8); the smoke test only inspects the nav, so the mock is
           // plenty.
           dashboardRepositoryProvider.overrideWithValue(
-            MockDashboardRepository(MockDietRepository())
+            MockDashboardRepository(FakeDietRepository())
                 as DashboardRepository,
           ),
           if (memberCoachRepository != null)

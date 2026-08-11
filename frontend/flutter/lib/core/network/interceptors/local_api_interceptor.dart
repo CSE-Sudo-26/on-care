@@ -8,23 +8,8 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
-
-const Map<String, String> _seedDietPhotoAssets = <String, String>{
-  'seed-diet-breakfast':
-      'assets/images/breakfast-scrambled-egg-strawberry.jpg',
-  'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
-  'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
-  'seed-diet-yesterday-breakfast':
-      'assets/images/diet-oatmeal-banana.jpeg',
-  'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',
-  'seed-diet-yesterday-dinner': 'assets/images/diet-doenjang-rice.jpeg',
-  'seed-diet-two-days-ago-breakfast':
-      'assets/images/diet-greek-yogurt-nuts.jpeg',
-  'seed-diet-two-days-ago-lunch':
-      'assets/images/diet-vegetable-bibimbap.jpg',
-  'seed-diet-two-days-ago-dinner':
-      'assets/images/diet-salmon-brown-rice.jpeg',
-};
+import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
+import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 
 /// A drift-backed dummy backend. Intercepts dio requests and serves
 /// them out of the local SQLite database so the app can run as a
@@ -60,6 +45,7 @@ class LocalApiInterceptor extends Interceptor {
     'GET /version': _version,
     'GET /dashboard/summary': _dashboardSummary,
     'GET /diet/days/today': _dietToday,
+    'GET /diet/recommendations': _dietRecommendations,
     'POST /diet/analyze': _dietAnalyze,
     'GET /exercise/weeks/current': _exerciseCurrentWeek,
     'POST /exercise/sessions': _exerciseAddSession,
@@ -93,6 +79,74 @@ class LocalApiInterceptor extends Interceptor {
       return;
     }
     handler.next(options);
+  }
+
+  /// 실 백엔드가 처리한 응답 중, 로컬 데모 데이터에 비춰야 하는 것을 반영한다.
+  ///
+  /// 지금은 식단 분석 하나다. `REAL_API` 로 분석만 실 서버에 맡기면 인식은 진짜가
+  /// 되지만 목록은 여전히 로컬에서 읽으므로, 반영하지 않으면 **방금 찍은 끼니가
+  /// 목록에 나타나지 않는다.**
+  ///
+  /// 인터셉터가 스스로 만든 응답은 여기로 오지 않는다 — `handler.resolve` 는 뒤따르는
+  /// 응답 인터셉터를 부르지 않는 것이 기본값이라, 로컬 경로에서 두 번 저장될 일이 없다.
+  @override
+  Future<void> onResponse(
+    Response<Object?> response,
+    ResponseInterceptorHandler handler,
+  ) async {
+    try {
+      await _mirrorRealAnalyze(response);
+    } catch (e, st) {
+      // 반영에 실패해도 인식 결과 자체는 사용자에게 보여 준다. 화면이 비는 것보다
+      // 목록 반영이 한 번 빠지는 편이 낫다.
+      _logger.e('[local-api] 실 분석 결과 로컬 반영 실패', error: e, stackTrace: st);
+    }
+    handler.next(response);
+  }
+
+  /// 실 백엔드가 준 분석 결과를 로컬 오늘 식단에 넣는다.
+  Future<void> _mirrorRealAnalyze(Response<Object?> response) async {
+    final RequestOptions options = response.requestOptions;
+    final String method = options.method.toUpperCase();
+    if (method != 'POST' || !options.path.startsWith('/diet/analyze')) return;
+    if (isRealApi == null || !isRealApi!(method, options.path)) return;
+
+    final Object? body = response.data;
+    if (body is! Map) return;
+    final Object? analysis = body['analysis'];
+    if (analysis is! Map) return;
+
+    final String id = (body['entry_id'] as String?) ?? '';
+    if (id.isEmpty) return;
+
+    final List<Object?> foods =
+        (analysis['foods'] as List<Object?>?) ?? const <Object?>[];
+    final (String mealType, String? idempotencyKey) = _analyzeRequestFields(
+      options,
+    );
+    final DateTime now = DateTime.now();
+
+    // 서버가 준 id 를 그대로 쓴다 — 이어지는 수정·삭제가 같은 행을 가리킨다.
+    // 같은 응답이 두 번 들어와도(재시도) 덮어쓰기라 중복 행이 생기지 않는다.
+    await _db
+        .into(_db.dietEntries)
+        .insertOnConflictUpdate(
+          DietEntriesCompanion.insert(
+            id: id,
+            date: _todayDateString(),
+            mealType: mealType,
+            timeLabel:
+                '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+            foodsJson: jsonEncode(foods),
+            totalCalories: (analysis['total_calories'] as num?)?.toInt() ?? 0,
+            sodiumMg: Value((analysis['total_sodium_mg'] as num?)?.toInt() ?? 0),
+            sugarG: Value(
+              (analysis['total_sugar_g'] as num?)?.toDouble() ?? 0.0,
+            ),
+            aiComment: Value((analysis['coach_comment'] as String?) ?? ''),
+            idempotencyKey: Value(idempotencyKey),
+          ),
+        );
   }
 
   Future<Response<Object?>?> _safeHandle(RequestOptions options) async {
@@ -268,6 +322,10 @@ class LocalApiInterceptor extends Interceptor {
       'fat_g': macros.fatG,
       'sodium_mg': row.sodiumMg,
       'sugar_g': row.sugarG,
+      // 수정은 끼니 내용만 바꾼다 — 코멘트와 사진은 그 행의 것을 그대로 돌려준다.
+      // 빼먹으면 수정 직후 목록에서 사진과 코멘트가 사라진다.
+      'ai_comment': row.aiComment,
+      'photo_asset': row.photoAsset.isEmpty ? null : row.photoAsset,
     });
   }
 
@@ -536,7 +594,8 @@ class LocalApiInterceptor extends Interceptor {
         'fat_g': macros.fatG,
         'sodium_mg': r.sodiumMg,
         'sugar_g': r.sugarG,
-        'photo_asset': _seedDietPhotoAssets[r.id],
+        'ai_comment': r.aiComment,
+        'photo_asset': r.photoAsset.isEmpty ? null : r.photoAsset,
       });
     }
     return _ok(options, <String, Object?>{
@@ -545,12 +604,60 @@ class LocalApiInterceptor extends Interceptor {
       'total_sodium_mg': totalSodium,
       'total_sugar_g': totalSugar,
       'macros': _macroPayload(totalCarbs, totalProtein, totalFat),
-      'ai_coach_message': totalSodium > 2000
-          ? '오늘 나트륨 섭취가 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!'
-          : rows.isEmpty
-          ? '아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?'
-          : '균형 잡힌 하루였어요. 내일도 이대로 가요!',
+      'ai_coach_message':
+          await _dietDayMessage(date) ??
+          _derivedDietDayMessage(totalSodium: totalSodium, empty: rows.isEmpty),
     });
+  }
+
+  /// GET /diet/recommendations — 홈 "AI 추천 식단".
+  ///
+  /// 데모에는 개인화 근거가 없다(로그인하지 않은 둘러보기). 그래서 서버가 고르는
+  /// 대신 앱과 서버가 공유하는 기본 순서를 그대로 돌려주고, `reason_text` 는 비워
+  /// 둔다 — 카드 문구는 앱의 l10n 기본값이 쓰여 로케일을 따라간다.
+  ///
+  /// `personalized` 를 false 로 주는 것이 핵심이다. 화면이 그 값으로 근거 줄을
+  /// 감추므로, 근거가 없는데 있는 척하지 않게 된다.
+  Future<Response<Object?>> _dietRecommendations(RequestOptions options) async {
+    return _ok(options, <String, Object?>{
+      'items': <Map<String, Object?>>[
+        for (final MealRecommendation item in MealRecommendations.fallback.items)
+          <String, Object?>{'key': item.key, 'reason_key': item.reasonKey},
+      ],
+      'personalized': false,
+      'days_with_data': 0,
+      'avg_sodium_mg': 0,
+      'sodium_limit_mg': 0,
+    });
+  }
+
+  /// 시드가 정해 둔 그 날짜의 코치 문구. 없으면 null.
+  ///
+  /// 시연에 쓰는 사흘은 문장이 정해져 있다(`kDietDayMessagesKey`). 그 날짜에
+  /// 수치 기반 문구를 대신 쓰면 데모 화면의 문장이 바뀌므로 저장된 것을 먼저 본다.
+  Future<String?> _dietDayMessage(String date) async {
+    final String? raw = await _db.readValue(kDietDayMessagesKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, Object?>) return null;
+      final Object? message = decoded[date];
+      return message is String && message.isNotEmpty ? message : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// 시드에 문장이 없는 날짜용 — 그날의 수치를 보고 만든 문구.
+  String _derivedDietDayMessage({
+    required int totalSodium,
+    required bool empty,
+  }) {
+    if (empty) return '아직 오늘 식단 기록이 없어요. 첫 끼니를 기록해 볼까요?';
+    if (totalSodium > 2000) {
+      return '오늘 나트륨 섭취가 많았어요. 저녁은 담백한 구이/샐러드로 균형을 맞춰봐요!';
+    }
+    return '균형 잡힌 하루였어요. 내일도 이대로 가요!';
   }
 
   /// POST /diet/analyze — the mock can't see the uploaded image, so it
@@ -559,27 +666,15 @@ class LocalApiInterceptor extends Interceptor {
   /// drift so it shows up in GET /diet/days/today. `diet-` id (not
   /// `seed-`) means seedIfEmpty never wipes it.
   Future<Response<Object?>> _dietAnalyze(RequestOptions options) async {
-    // meal_type·idempotency_key 는 multipart FormData 또는 Map 에서 추출.
-    String mealType = 'lunch';
-    String? idempotencyKey;
-    final data = options.data;
-    if (data is FormData) {
-      for (final MapEntry<String, String> f in data.fields) {
-        if (f.key == 'meal_type' && f.value.isNotEmpty) mealType = f.value;
-        if (f.key == 'idempotency_key' && f.value.isNotEmpty) {
-          idempotencyKey = f.value;
-        }
-      }
-    } else if (data is Map) {
-      mealType = (data['meal_type'] as String?) ?? 'lunch';
-      idempotencyKey = data['idempotency_key'] as String?;
-    }
+    final (String mealType, String? idempotencyKey) = _analyzeRequestFields(
+      options,
+    );
 
     // 같은 멱등키가 이미 저장돼 있으면 새로 저장하지 않고 기존 entry 를 반환(재시도 중복 방지).
     if (idempotencyKey != null) {
       final existing =
           await (_db.select(_db.dietEntries)
-                ..where((t) => t.idempotencyKey.equals(idempotencyKey!)))
+                ..where((t) => t.idempotencyKey.equals(idempotencyKey)))
               .getSingleOrNull();
       if (existing != null) {
         final storedFoods = (jsonDecode(existing.foodsJson) as List<Object?>)
@@ -592,7 +687,9 @@ class LocalApiInterceptor extends Interceptor {
             'total_calories': existing.totalCalories,
             'total_sodium_mg': existing.sodiumMg,
             'total_sugar_g': existing.sugarG,
-            'coach_comment': '',
+            // 저장해 둔 코멘트를 그대로 돌려준다. 빈 문자열을 주면 재시도한
+            // 사용자만 코멘트 없는 결과를 보게 된다.
+            'coach_comment': existing.aiComment,
           },
         });
       }
@@ -623,7 +720,9 @@ class LocalApiInterceptor extends Interceptor {
     const int totalCal = 615;
     const int totalNa = 1200;
     const double totalSugar = 9;
-    const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 고추장·간장을 조금 줄여보세요.';
+    // 데모가 보여 주던 문장 그대로. 식단이 인메모리 목업 저장소에서 이 경로로
+    // 옮겨 오면서 문구가 달라지면 시연 화면이 바뀐다.
+    const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 장을 줄여보세요.';
 
     final now = DateTime.now();
     final id = 'diet-${now.microsecondsSinceEpoch}';
@@ -640,6 +739,10 @@ class LocalApiInterceptor extends Interceptor {
             totalCalories: totalCal,
             sodiumMg: const Value(totalNa),
             sugarG: const Value(totalSugar),
+            // 인식 결과의 코멘트를 행에 남긴다 — 목록으로 돌아갔을 때도 끼니
+            // 카드에 그대로 보인다. 사진은 붙이지 않는다(업로드한 사진을 데모가
+            // 보관하지 않으므로, 남의 사진을 대신 보여 주게 된다).
+            aiComment: const Value(coach),
             idempotencyKey: Value(idempotencyKey),
           ),
         );
@@ -655,6 +758,28 @@ class LocalApiInterceptor extends Interceptor {
         'coach_comment': coach,
       },
     });
+  }
+
+  /// 분석 요청에서 끼니 구분과 멱등키를 꺼낸다.
+  ///
+  /// 요청 본문은 실기기에서 multipart([FormData]), 테스트에서 Map 으로 온다.
+  /// 로컬 응답과 실 백엔드 응답의 로컬 반영이 같은 값을 봐야 하므로 한곳에 둔다.
+  (String, String?) _analyzeRequestFields(RequestOptions options) {
+    String mealType = 'lunch';
+    String? idempotencyKey;
+    final data = options.data;
+    if (data is FormData) {
+      for (final MapEntry<String, String> f in data.fields) {
+        if (f.key == 'meal_type' && f.value.isNotEmpty) mealType = f.value;
+        if (f.key == 'idempotency_key' && f.value.isNotEmpty) {
+          idempotencyKey = f.value;
+        }
+      }
+    } else if (data is Map) {
+      mealType = (data['meal_type'] as String?) ?? 'lunch';
+      idempotencyKey = data['idempotency_key'] as String?;
+    }
+    return (mealType, idempotencyKey);
   }
 
   String _todayDateString() {

@@ -301,6 +301,30 @@ class $DietEntriesTable extends DietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _aiCommentMeta = const VerificationMeta(
+    'aiComment',
+  );
+  @override
+  late final GeneratedColumn<String> aiComment = GeneratedColumn<String>(
+    'ai_comment',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _photoAssetMeta = const VerificationMeta(
+    'photoAsset',
+  );
+  @override
+  late final GeneratedColumn<String> photoAsset = GeneratedColumn<String>(
+    'photo_asset',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
     'idempotencyKey',
   );
@@ -334,6 +358,8 @@ class $DietEntriesTable extends DietEntries
     totalCalories,
     sodiumMg,
     sugarG,
+    aiComment,
+    photoAsset,
     idempotencyKey,
     createdAt,
   ];
@@ -409,6 +435,18 @@ class $DietEntriesTable extends DietEntries
         sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
       );
     }
+    if (data.containsKey('ai_comment')) {
+      context.handle(
+        _aiCommentMeta,
+        aiComment.isAcceptableOrUnknown(data['ai_comment']!, _aiCommentMeta),
+      );
+    }
+    if (data.containsKey('photo_asset')) {
+      context.handle(
+        _photoAssetMeta,
+        photoAsset.isAcceptableOrUnknown(data['photo_asset']!, _photoAssetMeta),
+      );
+    }
     if (data.containsKey('idempotency_key')) {
       context.handle(
         _idempotencyKeyMeta,
@@ -465,6 +503,14 @@ class $DietEntriesTable extends DietEntries
         DriftSqlType.double,
         data['${effectivePrefix}sugar_g'],
       )!,
+      aiComment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ai_comment'],
+      )!,
+      photoAsset: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_asset'],
+      )!,
       idempotencyKey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}idempotency_key'],
@@ -491,6 +537,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
   final int totalCalories;
   final int sodiumMg;
   final double sugarG;
+  final String aiComment;
+  final String photoAsset;
   final String? idempotencyKey;
   final DateTime createdAt;
   const DietEntryRow({
@@ -502,6 +550,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     required this.totalCalories,
     required this.sodiumMg,
     required this.sugarG,
+    required this.aiComment,
+    required this.photoAsset,
     this.idempotencyKey,
     required this.createdAt,
   });
@@ -516,6 +566,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     map['total_calories'] = Variable<int>(totalCalories);
     map['sodium_mg'] = Variable<int>(sodiumMg);
     map['sugar_g'] = Variable<double>(sugarG);
+    map['ai_comment'] = Variable<String>(aiComment);
+    map['photo_asset'] = Variable<String>(photoAsset);
     if (!nullToAbsent || idempotencyKey != null) {
       map['idempotency_key'] = Variable<String>(idempotencyKey);
     }
@@ -533,6 +585,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       totalCalories: Value(totalCalories),
       sodiumMg: Value(sodiumMg),
       sugarG: Value(sugarG),
+      aiComment: Value(aiComment),
+      photoAsset: Value(photoAsset),
       idempotencyKey: idempotencyKey == null && nullToAbsent
           ? const Value.absent()
           : Value(idempotencyKey),
@@ -554,6 +608,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       totalCalories: serializer.fromJson<int>(json['totalCalories']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
       sugarG: serializer.fromJson<double>(json['sugarG']),
+      aiComment: serializer.fromJson<String>(json['aiComment']),
+      photoAsset: serializer.fromJson<String>(json['photoAsset']),
       idempotencyKey: serializer.fromJson<String?>(json['idempotencyKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -570,6 +626,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
       'totalCalories': serializer.toJson<int>(totalCalories),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
       'sugarG': serializer.toJson<double>(sugarG),
+      'aiComment': serializer.toJson<String>(aiComment),
+      'photoAsset': serializer.toJson<String>(photoAsset),
       'idempotencyKey': serializer.toJson<String?>(idempotencyKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -584,6 +642,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     int? totalCalories,
     int? sodiumMg,
     double? sugarG,
+    String? aiComment,
+    String? photoAsset,
     Value<String?> idempotencyKey = const Value.absent(),
     DateTime? createdAt,
   }) => DietEntryRow(
@@ -595,6 +655,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     totalCalories: totalCalories ?? this.totalCalories,
     sodiumMg: sodiumMg ?? this.sodiumMg,
     sugarG: sugarG ?? this.sugarG,
+    aiComment: aiComment ?? this.aiComment,
+    photoAsset: photoAsset ?? this.photoAsset,
     idempotencyKey: idempotencyKey.present
         ? idempotencyKey.value
         : this.idempotencyKey,
@@ -612,6 +674,10 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
           : this.totalCalories,
       sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
       sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      aiComment: data.aiComment.present ? data.aiComment.value : this.aiComment,
+      photoAsset: data.photoAsset.present
+          ? data.photoAsset.value
+          : this.photoAsset,
       idempotencyKey: data.idempotencyKey.present
           ? data.idempotencyKey.value
           : this.idempotencyKey,
@@ -630,6 +696,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
           ..write('totalCalories: $totalCalories, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('aiComment: $aiComment, ')
+          ..write('photoAsset: $photoAsset, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -646,6 +714,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
     totalCalories,
     sodiumMg,
     sugarG,
+    aiComment,
+    photoAsset,
     idempotencyKey,
     createdAt,
   );
@@ -661,6 +731,8 @@ class DietEntryRow extends DataClass implements Insertable<DietEntryRow> {
           other.totalCalories == this.totalCalories &&
           other.sodiumMg == this.sodiumMg &&
           other.sugarG == this.sugarG &&
+          other.aiComment == this.aiComment &&
+          other.photoAsset == this.photoAsset &&
           other.idempotencyKey == this.idempotencyKey &&
           other.createdAt == this.createdAt);
 }
@@ -674,6 +746,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
   final Value<int> totalCalories;
   final Value<int> sodiumMg;
   final Value<double> sugarG;
+  final Value<String> aiComment;
+  final Value<String> photoAsset;
   final Value<String?> idempotencyKey;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -686,6 +760,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     this.totalCalories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.aiComment = const Value.absent(),
+    this.photoAsset = const Value.absent(),
     this.idempotencyKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -699,6 +775,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     required int totalCalories,
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.aiComment = const Value.absent(),
+    this.photoAsset = const Value.absent(),
     this.idempotencyKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -717,6 +795,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Expression<int>? totalCalories,
     Expression<int>? sodiumMg,
     Expression<double>? sugarG,
+    Expression<String>? aiComment,
+    Expression<String>? photoAsset,
     Expression<String>? idempotencyKey,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -730,6 +810,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
       if (totalCalories != null) 'total_calories': totalCalories,
       if (sodiumMg != null) 'sodium_mg': sodiumMg,
       if (sugarG != null) 'sugar_g': sugarG,
+      if (aiComment != null) 'ai_comment': aiComment,
+      if (photoAsset != null) 'photo_asset': photoAsset,
       if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -745,6 +827,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     Value<int>? totalCalories,
     Value<int>? sodiumMg,
     Value<double>? sugarG,
+    Value<String>? aiComment,
+    Value<String>? photoAsset,
     Value<String?>? idempotencyKey,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -758,6 +842,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
       totalCalories: totalCalories ?? this.totalCalories,
       sodiumMg: sodiumMg ?? this.sodiumMg,
       sugarG: sugarG ?? this.sugarG,
+      aiComment: aiComment ?? this.aiComment,
+      photoAsset: photoAsset ?? this.photoAsset,
       idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -791,6 +877,12 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
     if (sugarG.present) {
       map['sugar_g'] = Variable<double>(sugarG.value);
     }
+    if (aiComment.present) {
+      map['ai_comment'] = Variable<String>(aiComment.value);
+    }
+    if (photoAsset.present) {
+      map['photo_asset'] = Variable<String>(photoAsset.value);
+    }
     if (idempotencyKey.present) {
       map['idempotency_key'] = Variable<String>(idempotencyKey.value);
     }
@@ -814,6 +906,8 @@ class DietEntriesCompanion extends UpdateCompanion<DietEntryRow> {
           ..write('totalCalories: $totalCalories, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('aiComment: $aiComment, ')
+          ..write('photoAsset: $photoAsset, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -2352,6 +2446,8 @@ typedef $$DietEntriesTableCreateCompanionBuilder =
       required int totalCalories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<String> aiComment,
+      Value<String> photoAsset,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2366,6 +2462,8 @@ typedef $$DietEntriesTableUpdateCompanionBuilder =
       Value<int> totalCalories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<String> aiComment,
+      Value<String> photoAsset,
       Value<String?> idempotencyKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -2417,6 +2515,16 @@ class $$DietEntriesTableFilterComposer
 
   ColumnFilters<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aiComment => $composableBuilder(
+    column: $table.aiComment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2480,6 +2588,16 @@ class $$DietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get aiComment => $composableBuilder(
+    column: $table.aiComment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get idempotencyKey => $composableBuilder(
     column: $table.idempotencyKey,
     builder: (column) => ColumnOrderings(column),
@@ -2525,6 +2643,14 @@ class $$DietEntriesTableAnnotationComposer
 
   GeneratedColumn<double> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<String> get aiComment =>
+      $composableBuilder(column: $table.aiComment, builder: (column) => column);
+
+  GeneratedColumn<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get idempotencyKey => $composableBuilder(
     column: $table.idempotencyKey,
@@ -2574,6 +2700,8 @@ class $$DietEntriesTableTableManager
                 Value<int> totalCalories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<String> aiComment = const Value.absent(),
+                Value<String> photoAsset = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2586,6 +2714,8 @@ class $$DietEntriesTableTableManager
                 totalCalories: totalCalories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                aiComment: aiComment,
+                photoAsset: photoAsset,
                 idempotencyKey: idempotencyKey,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -2600,6 +2730,8 @@ class $$DietEntriesTableTableManager
                 required int totalCalories,
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<String> aiComment = const Value.absent(),
+                Value<String> photoAsset = const Value.absent(),
                 Value<String?> idempotencyKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2612,6 +2744,8 @@ class $$DietEntriesTableTableManager
                 totalCalories: totalCalories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                aiComment: aiComment,
+                photoAsset: photoAsset,
                 idempotencyKey: idempotencyKey,
                 createdAt: createdAt,
                 rowid: rowid,

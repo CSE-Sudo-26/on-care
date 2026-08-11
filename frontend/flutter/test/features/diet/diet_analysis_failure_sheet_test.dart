@@ -9,13 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/features/auth/presentation/controllers/session_controller.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_analysis.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/repositories/meal_photo_picker.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 final Uint8List _jpegBytes = Uint8List.fromList(<int>[
   0xFF,
@@ -35,7 +36,7 @@ class _FixedPicker implements MealPhotoPicker {
 
 /// Fails every analyze with the given HTTP status, counting attempts so a
 /// test can prove whether the button actually re-sent the request.
-class _FailingDietRepository extends MockDietRepository {
+class _FailingDietRepository extends FakeDietRepository {
   _FailingDietRepository(this.statusCode);
 
   final int statusCode;

@@ -1,15 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logger/logger.dart';
 
 import 'package:oncare/app/session_feature_reset.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/core/session/session_feature_reset.dart';
 import 'package:oncare/features/ai_coach/domain/entities/ai_coach_state.dart';
 import 'package:oncare/features/ai_coach/domain/entities/chat_message.dart';
 import 'package:oncare/features/ai_coach/domain/repositories/ai_coach_repository.dart';
 import 'package:oncare/features/ai_coach/presentation/controllers/ai_coach_controller.dart';
 import 'package:oncare/features/ai_coach/presentation/controllers/chat_controller.dart';
-import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
@@ -64,6 +65,8 @@ void main() {
               ),
             ];
           }),
+          // 식단 저장소가 Dio 를 타면서 로거가 필요해졌다(#616).
+          appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           sessionFeatureResetOverride(),
         ],
       );
@@ -87,9 +90,6 @@ void main() {
       );
       await memberCoachBefore.sendMessage('A 사용자 트레이너 메시지');
 
-      final Object dietRepositoryBefore = container.read(
-        dietRepositoryProvider,
-      );
       final Object exerciseRepositoryBefore = container.read(
         exerciseRepositoryProvider,
       );
@@ -134,10 +134,10 @@ void main() {
       );
       expect(identical(memberCoachAfter, memberCoachBefore), isFalse);
       expect(await memberCoachAfter.fetchChat(), hasLength(seedLength));
-      expect(
-        identical(container.read(dietRepositoryProvider), dietRepositoryBefore),
-        isFalse,
-      );
+      // 식단 저장소는 여기서 검사하지 않는다. 인메모리 목업이던 시절에는 계정
+      // 사이에 편집이 새지 않도록 인스턴스를 다시 만들어야 했지만, 지금은 데모
+      // 데이터가 drift 에 있고 저장소는 상태를 들지 않는다(#616). 대신 식단
+      // 화면이 읽는 provider 들은 리셋 목록에 그대로 남아 다시 조회된다.
       expect(
         identical(
           container.read(exerciseRepositoryProvider),

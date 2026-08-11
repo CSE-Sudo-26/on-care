@@ -2,20 +2,21 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 void main() {
   final MealPhoto photo = MealPhoto.fromBytes(
     Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
   )!;
 
-  group('MockDietRepository keeps CRUD in memory (#294)', () {
+  group('FakeDietRepository keeps CRUD in memory (#294)', () {
     test(
       'fetchByDate returns seeded history and keeps an older date empty',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final now = DateTime.now();
 
         final today = await repo.fetchByDate(now);
@@ -90,7 +91,7 @@ void main() {
     );
 
     test('analyze appends an entry and updates the day totals', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final DietDay before = await repo.fetchToday();
       expect(before.entries.length, 3);
       expect(before.totalCalories, 1067);
@@ -119,7 +120,7 @@ void main() {
     test(
       'analyze is idempotent on a repeated key (no duplicate entry)',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final first = await repo.analyze(
           photo: photo,
           mealType: 'dinner',
@@ -139,7 +140,7 @@ void main() {
     );
 
     test('deleteEntry removes it and restores the totals', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final result = await repo.analyze(
         photo: photo,
         mealType: 'snack',
@@ -159,7 +160,7 @@ void main() {
     test(
       'same key after delete re-adds the entry (cache purged on delete, 리뷰 #294)',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final first = await repo.analyze(
           photo: photo,
           mealType: 'dinner',
@@ -188,7 +189,7 @@ void main() {
     );
 
     test('updateEntry re-derives day totals and macros', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       await repo.updateEntry(
         id: 'mock-lunch',
         foods: const <FoodItem>[
@@ -226,7 +227,7 @@ void main() {
     });
 
     test('deleteEntry re-derives day macros from remaining entries', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
 
       await repo.deleteEntry('mock-lunch');
 
@@ -247,7 +248,7 @@ void main() {
     });
 
     test('empty entries return zero macros without throwing', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final DietDay before = await repo.fetchToday();
 
       for (final entry in before.entries) {
@@ -268,7 +269,7 @@ void main() {
   test(
     'realistic seed keeps food, meal and daily nutrition totals aligned',
     () async {
-      final day = await MockDietRepository().fetchToday();
+      final day = await FakeDietRepository().fetchToday();
 
       for (final entry in day.entries) {
         expect(
@@ -351,7 +352,7 @@ void main() {
   );
 
   test('jjamppong is the largest sodium source', () async {
-    final day = await MockDietRepository().fetchToday();
+    final day = await FakeDietRepository().fetchToday();
     final foods = day.entries.expand((DietEntry entry) => entry.foods).toList()
       ..sort((FoodItem a, FoodItem b) => b.sodiumMg.compareTo(a.sodiumMg));
 
@@ -366,7 +367,7 @@ void main() {
   test(
     'historical photo analysis keeps food and meal totals aligned',
     () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final now = DateTime.now();
       for (final daysAgo in <int>[1, 2]) {
         final day = await repo.fetchByDate(

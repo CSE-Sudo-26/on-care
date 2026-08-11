@@ -15,7 +15,6 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
@@ -24,6 +23,8 @@ import 'package:oncare/features/exercise/domain/repositories/exercise_repository
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 final RegExp _hangul = RegExp('[가-힣]');
 
@@ -48,7 +49,7 @@ DashboardSummary _summary({String? adviceKey, String? sodiumWarning}) =>
 void main() {
   test('데모 mock 요약은 문구가 아니라 키를 싣는다', () async {
     final DashboardSummary summary = await MockDashboardRepository(
-      MockDietRepository(),
+      FakeDietRepository(),
     ).fetchSummary();
 
     expect(summary.aiAdviceKey, kDailyCombinedAdviceKey);
@@ -132,7 +133,7 @@ void main() {
             appConfigProvider.overrideWithValue(config),
             appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
             dietRepositoryProvider.overrideWithValue(
-              MockDietRepository() as DietRepository,
+              FakeDietRepository() as DietRepository,
             ),
             exerciseRepositoryProvider.overrideWithValue(
               MockExerciseRepository() as ExerciseRepository,

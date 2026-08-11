@@ -4,18 +4,21 @@ import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 
-/// In-memory stateful mock for demo mode (`useMockApi`). Seeds a realistic day,
-/// then keeps analyze(=add)/update/delete in memory for
-/// the app session so the diet-tab list and the "오늘의 영양 요약" totals
-/// reflect edits made through the app (issue #294). A single instance is
-/// created by [dietRepositoryProvider] and lives for the session, so the drift
-/// persists until the app is restarted.
+/// 테스트용 인메모리 식단 저장소.
+///
+/// 예전에는 데모 모드(`useMockApi`)의 실제 구현이었다. 지금 데모 응답은
+/// `LocalApiInterceptor` 가 drift 에서 만들고 저장소는 항상 Dio 라(#616), 이 구현은
+/// **테스트 대역으로만** 남는다 — 위젯 테스트가 drift 를 세우지 않고 식단 화면의
+/// 상태 변화를 확인할 수 있게 해 준다.
+///
+/// 하루치를 시드하고 analyze(=추가)/수정/삭제를 메모리에 유지하므로, 식단 탭 목록과
+/// "오늘의 영양 요약" 합계가 앱을 통한 편집을 따라간다(#294).
 ///
 /// Per-food nutrition is the single source of truth for the seeded meal and
 /// daily totals. CRUD applies calories, sodium, and sugar deltas on top of the
 /// seed; macro totals are derived from the current entries.
-class MockDietRepository implements DietRepository {
-  MockDietRepository();
+class FakeDietRepository implements DietRepository {
+  FakeDietRepository();
 
   static const String _aiCoachMessage =
       '점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.';
