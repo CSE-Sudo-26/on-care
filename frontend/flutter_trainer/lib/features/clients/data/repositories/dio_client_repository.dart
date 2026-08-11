@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
@@ -73,6 +74,18 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
 
   @override
   void refreshClientData(String clientId) => _refreshes.add(clientId);
+
+  @override
+  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async {
+    final path =
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/exercise-week';
+    try {
+      final response = await _dio.get<Map<String, Object?>>(path);
+      return ClientExerciseWeek.fromJson(response.data!);
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
 
   Future<List<TrainerClient>> _fetchClients() =>
       _getList('/trainer/clients', trainerClientFromJson);

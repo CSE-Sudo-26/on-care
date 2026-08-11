@@ -129,6 +129,27 @@ void main() {
     });
   });
 
+  group('ClientRepository.fetchExerciseWeek', () {
+    late AppDatabase db;
+
+    setUp(() async {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      await seedIfEmpty(db);
+    });
+    tearDown(() => db.close());
+
+    test('derives demo weekly totals from the same client week', () async {
+      final week = await DriftClientRepository(
+        db,
+      ).fetchExerciseWeek('seed-client-1');
+      expect(week.dayLabels, hasLength(7));
+      expect(week.dailyMinutes, hasLength(7));
+      expect(week.workoutCount, greaterThan(0));
+      expect(week.totalMinutes, week.dailyMinutes.reduce((a, b) => a + b));
+      expect(week.totalCalories, week.dailyCalories.reduce((a, b) => a + b));
+    });
+  });
+
   group('WorkoutView', () {
     Future<void> openWorkout(WidgetTester tester, String clientName) async {
       await pumpTrainerApp(
@@ -276,6 +297,11 @@ void main() {
               as _SessionsFailsOnceRepository;
       expect(repository.watchSessionCalls, 2);
       expect(find.textContaining('복구 PT'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('이번 주 완료율'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text('이번 주 완료율'), findsOneWidget);
     });
   });

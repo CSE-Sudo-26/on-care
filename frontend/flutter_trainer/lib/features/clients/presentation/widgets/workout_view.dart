@@ -16,6 +16,7 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
@@ -46,6 +47,7 @@ class WorkoutView extends ConsumerWidget {
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
     final sessionKey = (id: client.id, name: client.name);
     final sessions = ref.watch(clientSessionsProvider(sessionKey));
+    final exerciseWeek = ref.watch(clientExerciseWeekProvider(client.id));
 
     // Each section owns its own async state. Gating the whole list on
     // the history provider would mean a failing /history takes the
@@ -60,6 +62,8 @@ class WorkoutView extends ConsumerWidget {
           sessions: sessions,
           onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
         ),
+        const SizedBox(height: AppSpacing.md),
+        WeeklyExerciseTrendCard(week: exerciseWeek),
         const SizedBox(height: AppSpacing.md),
         _WeekCompletionCard(week: client.weekCompletion),
         const SizedBox(height: AppSpacing.lg),

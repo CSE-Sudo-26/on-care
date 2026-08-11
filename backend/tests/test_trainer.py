@@ -494,3 +494,48 @@ def test_trainer_cannot_read_unassigned_member_health_profile(client):
         headers=_auth(token),
     )
     assert response.status_code == 404
+
+
+def test_trainer_client_exercise_week_uses_member_sessions(client, db_session):
+    from app.models.models import ExerciseSession
+    from app.services.exercise_service import WEEKDAY_LABELS, monday_of_this_week_str
+
+    token = _trainer_token(client)
+    url = "/v1/trainer/clients/user-jisu/exercise-week"
+    before_response = client.get(url, headers=_auth(token))
+    assert before_response.status_code == 200, before_response.text
+    before = before_response.json()
+
+    row = ExerciseSession(
+        id=f"test-exercise-week-{uuid4().hex[:10]}",
+        user_id="user-jisu",
+        week_start=monday_of_this_week_str(),
+        day_label=WEEKDAY_LABELS[0],
+        type="strength",
+        minutes=42,
+        calories=321,
+        intensity="moderate",
+    )
+    db_session.add(row)
+    db_session.commit()
+    try:
+        response = client.get(url, headers=_auth(token))
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["total_minutes"] == before["total_minutes"] + 42
+        assert body["total_calories"] == before["total_calories"] + 321
+        assert body["daily_minutes"][0] == before["daily_minutes"][0] + 42
+        assert body["daily_calories"][0] == before["daily_calories"][0] + 321
+        assert len(body["day_labels"]) == 7
+    finally:
+        db_session.delete(row)
+        db_session.commit()
+
+
+def test_trainer_cannot_read_unassigned_member_exercise_week(client):
+    token = _trainer_token(client)
+    response = client.get(
+        "/v1/trainer/clients/user-nobody/exercise-week",
+        headers=_auth(token),
+    )
+    assert response.status_code == 404
