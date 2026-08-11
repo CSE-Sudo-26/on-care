@@ -15,8 +15,11 @@
 """
 from __future__ import annotations
 
+import json
 import logging
+from datetime import date, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -33,8 +36,7 @@ log = logging.getLogger(__name__)
 
 def _safe(
     db: Session, user_id: str, text: str, *, domain: str, source: str,
-    source_ref: str | None = None, replace: bool = False,
-    once: bool = False,
+    source_ref: str | None = None, once: bool = False,
 ) -> None:
     if not get_settings().rag_auto_ingest or not user_id or not text.strip():
         return
@@ -44,18 +46,6 @@ def _safe(
         # 두 인스턴스가 동시에 기동할 때 같은 기록의 청크가 두 벌 들어간다.
         if once and source_ref:
             ensure_personal_text(
-                db, user_id, text, domain=domain, source=source,
-                source_ref=source_ref, title="",
-            )
-            return
-        # 교체는 지우고 다시 넣는다(#603). 그냥 넣으면 옛 수치 문서가 남아 코치가
-        # "30분"과 "45분"을 동시에 근거로 삼는다 — 안 고치느니만 못하다.
-        #
-        # 삭제·삽입을 한 트랜잭션으로 묶는 replace_personal_text 를 쓴다. 예전처럼
-        # purge 후 ingest 를 따로 부르면 임베딩이 삭제 뒤에 실패했을 때 기존 청크를
-        # 되살릴 수 없고, 두 커밋 사이에 근거가 텅 빈 순간이 생긴다.
-        if replace and source_ref:
-            replace_personal_text(
                 db, user_id, text, domain=domain, source=source,
                 source_ref=source_ref, title="",
             )
@@ -154,10 +144,41 @@ _EXERCISE_TYPE_KR = {
 _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높음"}
 
 
+def exercise_text(
+    *, date: str, exercise_type: str, minutes: int, calories: int,
+    intensity: str,
+) -> str:
+    """운동 세션 한 건의 문서 본문. 적재와 갱신이 같은 문구를 쓰게 한 곳에 둔다."""
+    return (
+        f"{date} 운동 기록: "
+        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
+        f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
+    )
+
+
+def diet_text(
+    *, date: str, foods: list[dict], total_calories: int, sodium_mg: int,
+    sugar_g: float,
+) -> str:
+    """식단 기록 한 건의 문서 본문.
+
+    dict 이 아닌 항목은 건너뛴다. 저장된 JSON 이 늘 dict 목록이라는 보장이 없고,
+    여기서 터지면 갱신이 조용히 실패해 옛 근거가 남는다.
+    """
+    names = ", ".join(
+        f["name"] for f in foods
+        if isinstance(f, dict) and isinstance(f.get("name"), str) and f["name"]
+    ) or "식단"
+    return (
+        f"{date} 식단 기록: {names}. "
+        f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g}g."
+    )
+
+
 def record_exercise(
     db: Session, user_id: str, *, date: str, exercise_type: str, minutes: int,
     calories: int, intensity: str, source_ref: str | None = None,
-    replace: bool = False, once: bool = False,
+    once: bool = False,
 ) -> None:
     """운동 세션 한 건을 개인 문서로 적재한다(#586).
 
@@ -168,29 +189,129 @@ def record_exercise(
     회원이 직접 남긴 기록과 PT 완료로 파생된 기록을 모두 받는다 — 회원 입장에서는
     둘 다 '내가 한 운동'이고, 주간 집계도 이미 둘을 합쳐서 보여준다(#499).
     """
-    text = (
-        f"{date} 운동 기록: "
-        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
-        f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
+    text = exercise_text(
+        date=date, exercise_type=exercise_type, minutes=minutes,
+        calories=calories, intensity=intensity,
     )
     _safe(
         db, user_id, text, domain="exercise", source="exercise",
-        source_ref=source_ref, replace=replace, once=once,
+        source_ref=source_ref, once=once,
     )
 
 
 def record_diet(
     db: Session, user_id: str, *, date: str, foods: list[dict],
     total_calories: int, sodium_mg: int, sugar_g: float,
-    source_ref: str | None = None, replace: bool = False,
-    once: bool = False,
+    source_ref: str | None = None, once: bool = False,
 ) -> None:
-    names = ", ".join(f.get("name", "") for f in foods if f.get("name")) or "식단"
-    text = (
-        f"{date} 식단 기록: {names}. "
-        f"총 {total_calories}kcal, 나트륨 {sodium_mg}mg, 당류 {sugar_g}g."
+    text = diet_text(
+        date=date, foods=foods, total_calories=total_calories,
+        sodium_mg=sodium_mg, sugar_g=sugar_g,
     )
     _safe(
         db, user_id, text, domain="diet", source="diet",
-        source_ref=source_ref, replace=replace, once=once,
+        source_ref=source_ref, once=once,
     )
+
+
+def _safe_replace(
+    db: Session, user_id: str, *, domain: str, source: str, source_ref: str,
+    load_text,
+) -> None:
+    """교체도 best-effort 다 — 실패가 원 기록 수정을 되돌리면 안 된다."""
+    if not get_settings().rag_auto_ingest or not user_id or not source_ref:
+        return
+    try:
+        replace_personal_text(
+            db, user_id, domain=domain, source=source, source_ref=source_ref,
+            load_text=load_text, title="",
+        )
+    except Exception as e:  # noqa: BLE001 — 적재 실패가 원 기록을 깨면 안 됨
+        log.warning("개인 RAG 문서 갱신 실패(무시): %s", e)
+        try:
+            db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def refresh_exercise(db: Session, user_id: str, *, session_id: str) -> None:
+    """운동 기록이 바뀌었을 때 그 근거 문서를 현재 행에 맞춘다 (#603, #614).
+
+    값을 받지 않고 **잠금 안에서 행을 다시 읽는다.** 호출자가 읽은 값을 넘기면,
+    두 수정이 역순으로 적재될 때 옛 값이 최종 문서로 남는다 — DB 는 45분인데
+    코치는 30분을 근거로 답하게 된다.
+    """
+    from app.models.models import ExerciseSession
+
+    def _load() -> str | None:
+        row = db.scalar(
+            select(ExerciseSession).where(
+                ExerciseSession.id == session_id,
+                ExerciseSession.user_id == user_id,
+            )
+        )
+        if row is None:
+            return None  # 그 사이 지워졌다 — 근거도 지운다.
+        return exercise_text(
+            date=exercise_session_date(row), exercise_type=row.type,
+            minutes=row.minutes, calories=row.calories, intensity=row.intensity,
+        )
+
+    _safe_replace(
+        db, user_id, domain="exercise", source="exercise",
+        source_ref=session_id, load_text=_load,
+    )
+
+
+def refresh_diet(db: Session, user_id: str, *, entry_id: str) -> None:
+    """식단 기록이 바뀌었을 때 그 근거 문서를 현재 행에 맞춘다 (#603, #614)."""
+    from app.models.models import DietEntry
+
+    def _load() -> str | None:
+        row = db.scalar(
+            select(DietEntry).where(
+                DietEntry.id == entry_id, DietEntry.user_id == user_id
+            )
+        )
+        if row is None:
+            return None
+        return diet_text(
+            date=row.date, foods=_entry_foods(row.foods_json),
+            total_calories=row.total_calories, sodium_mg=row.sodium_mg,
+            sugar_g=row.sugar_g,
+        )
+
+    _safe_replace(
+        db, user_id, domain="diet", source="diet", source_ref=entry_id,
+        load_text=_load,
+    )
+
+
+def _entry_foods(foods_json: str | None) -> list[dict]:
+    """저장된 foods_json → 음식 dict 목록. 깨진 값은 걸러 낸다.
+
+    최상위가 리스트여도 항목이 문자열·숫자일 수 있다. 그대로 넘기면 `diet_text` 가
+    `f.get(...)` 에서 터지고, 그 예외를 `_safe_replace` 가 삼켜 **근거가 옛 값으로
+    남는다** — 수정했는데 코치는 여전히 이전 수치로 답한다. 조용히 실패하는 경로라
+    여기 파싱 경계에서 dict 만 남긴다.
+    """
+    try:
+        value = json.loads(foods_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def exercise_session_date(row) -> str:
+    """세션의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다."""
+    from app.services.exercise_service import WEEKDAY_LABELS
+
+    try:
+        monday = date.fromisoformat(row.week_start)
+        return (
+            monday + timedelta(days=WEEKDAY_LABELS.index(row.day_label))
+        ).isoformat()
+    except (ValueError, IndexError):
+        return row.week_start

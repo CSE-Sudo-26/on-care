@@ -21,7 +21,7 @@ from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
     DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
-from app.services.coach.personal_ingest import record_diet
+from app.services.coach.personal_ingest import record_diet, refresh_diet
 
 logger = logging.getLogger(__name__)
 
@@ -206,9 +206,6 @@ def apply_entry_update(db: Session, entry: DietEntry, payload: DietEntryUpdate) 
     out = _entry_out(entry)
     # 코치가 보는 근거도 함께 바뀌어야 한다(#603). 안 바꾸면 나트륨을 정정해도
     # 코치는 계속 옛 수치로 조언한다.
-    record_diet(
-        db, entry.user_id, date=entry.date, foods=load_foods(entry.foods_json),
-        total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
-        sugar_g=entry.sugar_g, source_ref=entry.id, replace=True,
-    )
+    # id 만 넘긴다 — 갱신은 잠금 안에서 행을 다시 읽는다(#614).
+    refresh_diet(db, entry.user_id, entry_id=entry.id)
     return out
