@@ -66,7 +66,11 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    repo = DioScheduleRepository(dio);
+    var requestId = 0;
+    repo = DioScheduleRepository(
+      dio,
+      requestIdFactory: () => 'req-${++requestId}',
+    );
     addTearDown(repo.dispose);
   });
 
@@ -211,6 +215,44 @@ void main() {
     expect(emissions, hasLength(2));
     expect(emissions.last.map((s) => s.id), <String>['before', 'after']);
     await sub.cancel();
+  });
+
+  test('add retry reuses its request id; next create rotates it', () async {
+    var calls = 0;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) throw _httpError(503, _schedulePath);
+      return _okMap(_schedulePath);
+    });
+
+    Future<void> add() => repo.addSession(
+      date: '2026-08-06',
+      clientName: '김민수',
+      time: '15:00',
+      type: '1:1 PT',
+      durationMinutes: 60,
+    );
+
+    await expectLater(add(), throwsA(isA<AppError>()));
+    await add();
+    await add();
+
+    final bodies = verify(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, dynamic>>();
+    expect(bodies[0]['client_request_id'], bodies[1]['client_request_id']);
+    expect(
+      bodies[2]['client_request_id'],
+      isNot(bodies[1]['client_request_id']),
+    );
   });
 
   test('a FAILED mutation does not make readers re-fetch', () async {

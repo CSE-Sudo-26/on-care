@@ -137,9 +137,18 @@ def send_to_coach(
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="빈 메시지는 보낼 수 없습니다.")
-    return trainer_service.send_message(
-        db, trainer_id, member.id, "member", text, viewer="member",
-    )
+    try:
+        return trainer_service.send_message(
+            db,
+            trainer_id,
+            member.id,
+            "member",
+            text,
+            viewer="member",
+            client_request_id=payload.client_request_id,
+        )
+    except trainer_service.IdempotencyConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/me/coach/chat/read")

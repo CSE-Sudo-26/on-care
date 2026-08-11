@@ -98,19 +98,25 @@
 | PUT | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 부분 수정(이름·시간·종류·사유) |
 | DELETE | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 철회 |
 | GET | `/trainer/clients/{member_id}/chat?before=&before_id=` | 채팅 스레드(커서 페이지네이션) |
-| POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 |
+| POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 (`client_request_id?`) |
 | POST | `/trainer/clients/{member_id}/chat/read` | 읽음 처리 |
 | GET | `/trainer/chat/unread` | 회원별 미확인 수 |
 | GET | `/trainer/schedule?date=` | 하루 타임라인 |
 | GET | `/trainer/schedule?from=&to=&member_id=` | 구간 조회 / 고객 필터 |
 | GET | `/trainer/schedule/booked-dates` | 예약 있는 날짜 |
-| POST | `/trainer/schedule` | 예약 생성(예정) |
+| POST | `/trainer/schedule` | 예약 생성(예정, `client_request_id?`) |
 | PUT | `/trainer/schedule/{id}` | 예약 수정 |
 | DELETE | `/trainer/schedule/{id}` | 예약 삭제 |
 | POST | `/trainer/schedule/{id}/complete` | 세션 완료(예정→완료) |
 | POST | `/trainer/clients/{member_id}/ai-coach` | 담당 고객 데이터 기반 AI 코칭 질의 |
 | GET | `/trainer/clients/{member_id}/report?week_start=` | 주간 리포트(어느 요일을 줘도 그 주 월요일로 정규화) |
 | POST | `/trainer/clients/{member_id}/report/send` | 리포트를 회원 채팅 스레드로 전송 |
+
+채팅 발신과 스케줄 생성의 `client_request_id`는 선택값이다. 클라이언트는 한
+사용자 행동에 한 번 생성하고 응답 유실 뒤 재시도에서 같은 값을 보낸다. 같은 사용자·
+동작·키·payload면 처음 생성된 결과를 다시 반환하고, 같은 키에 다른 payload면
+`409`다. 키가 없는 구버전 요청은 기존처럼 매번 새 행을 만든다. 채팅은 발신자까지
+scope에 포함해 회원과 트레이너가 우연히 같은 키를 만들어도 충돌하지 않는다.
 
 ### 스케줄 구간 조회 (`from`/`to`)
 
@@ -177,7 +183,7 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 | GET | `/me/coach/sessions` | 내 PT 세션(최근 100건) |
 | GET | `/me/coach/chat` | 채팅 스레드 |
 | GET | `/me/coach/chat/unread` | 미확인 수 |
-| POST | `/me/coach/chat` | 코치에게 메시지 전송 |
+| POST | `/me/coach/chat` | 코치에게 메시지 전송 (`client_request_id?`) |
 | POST | `/me/coach/chat/read` | 읽음 처리 |
 | DELETE | `/me/coach` | **헬스장 + 담당 트레이너** 해제(멱등, 204) |
 | DELETE | `/me/coach/trainer` | **담당 트레이너만** 해제 — 헬스장은 유지(멱등, 204) |

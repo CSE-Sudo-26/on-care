@@ -34,7 +34,8 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    repo = DioChatRepository(dio);
+    var requestId = 0;
+    repo = DioChatRepository(dio, requestIdFactory: () => 'req-${++requestId}');
   });
 
   test('watchThread parses the message list (oldest→newest)', () async {
@@ -183,9 +184,44 @@ void main() {
     verify(
       () => dio.post<Map<String, Object?>>(
         '/trainer/clients/m1/chat',
-        data: <String, Object?>{'text': '안녕하세요'},
+        data: <String, Object?>{'text': '안녕하세요', 'client_request_id': 'req-1'},
       ),
     ).called(1);
+  });
+
+  test('a failed send reuses its key; a later send gets a new key', () async {
+    var calls = 0;
+    when(
+      () => dio.post<Map<String, Object?>>(
+        '/trainer/clients/m1/chat',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) throw _httpError(503, '/trainer/clients/m1/chat');
+      return _ok<Map<String, Object?>>(<String, Object?>{
+        'id': 'x',
+      }, '/trainer/clients/m1/chat');
+    });
+
+    await expectLater(
+      repo.sendTrainerMessage(clientId: 'm1', text: '재시도'),
+      throwsA(isA<AppError>()),
+    );
+    await repo.sendTrainerMessage(clientId: 'm1', text: '재시도');
+    await repo.sendTrainerMessage(clientId: 'm1', text: '재시도');
+
+    final bodies = verify(
+      () => dio.post<Map<String, Object?>>(
+        '/trainer/clients/m1/chat',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, Object?>>();
+    expect(bodies[0]['client_request_id'], bodies[1]['client_request_id']);
+    expect(
+      bodies[2]['client_request_id'],
+      isNot(bodies[1]['client_request_id']),
+    );
   });
 
   test('sendTrainerMessage skips the network call for blank text', () async {
@@ -288,7 +324,7 @@ void main() {
     verify(
       () => dio.post<Map<String, Object?>>(
         '/trainer/clients/$encoded/chat',
-        data: <String, Object?>{'text': 'hi'},
+        data: <String, Object?>{'text': 'hi', 'client_request_id': 'req-1'},
       ),
     ).called(1);
     verify(

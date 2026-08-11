@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/features/member_coach/data/repositories/dio_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 
@@ -30,7 +31,11 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    repo = DioMemberCoachRepository(dio);
+    var requestId = 0;
+    repo = DioMemberCoachRepository(
+      dio,
+      requestIdFactory: () => 'req-${++requestId}',
+    );
   });
 
   test('fetchCoach returns the coach', () async {
@@ -164,12 +169,44 @@ void main() {
     verify(
       () => dio.post<Map<String, Object?>>(
         '/me/coach/chat',
-        data: <String, Object?>{'text': '좋아요'},
+        data: <String, Object?>{'text': '좋아요', 'client_request_id': 'req-1'},
       ),
     ).called(1);
 
     await repo.sendMessage('   ');
     verifyNoMoreInteractions(dio);
+  });
+
+  test('send retry keeps its request id and success rotates it', () async {
+    var calls = 0;
+    when(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) throw _httpError(503, '/me/coach/chat');
+      return _ok<Map<String, Object?>>(<String, Object?>{
+        'id': 'x',
+      }, '/me/coach/chat');
+    });
+
+    await expectLater(repo.sendMessage('재시도'), throwsA(isA<AppError>()));
+    await repo.sendMessage('재시도');
+    await repo.sendMessage('재시도');
+
+    final bodies = verify(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, Object?>>();
+    expect(bodies[0]['client_request_id'], bodies[1]['client_request_id']);
+    expect(
+      bodies[2]['client_request_id'],
+      isNot(bodies[1]['client_request_id']),
+    );
   });
 
   test('unreadCount reads the unread field', () async {
