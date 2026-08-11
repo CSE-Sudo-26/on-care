@@ -21,16 +21,20 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+import time
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.core.config import get_settings
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
+from app.services.coach import personal_ingest
+from app.services.coach.rag import has_personal_doc
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +302,134 @@ def seed_member_health_data() -> None:
         _seed_schedule(db, valid)
     finally:
         db.close()
+
+
+def ingest_seeded_documents() -> None:
+    """시드가 **전부** 끝난 뒤 호출한다 — `init_db` 의 마지막 시드 단계.
+
+    이 함수 안에서 부르면 안 된다. 확장 회원(4~15)의 기록은 `seed_roster_metrics`
+    가 이 뒤에 만들기 때문에, 여기서 훑으면 첫 기동에 그들 문서가 통째로 빠진다
+    (재기동해야 채워졌다 — 실제로 그렇게 나왔다).
+    """
+    db: Session = SessionLocal()
+    try:
+        _ingest_seeded_documents(db, _valid_member_ids(db))
+    finally:
+        db.close()
+
+
+def _ingest_seeded_documents(db: Session, valid: set[str]) -> None:
+    """시드 기록을 개인 RAG 문서로 적재한다(멱등) — #604.
+
+    적재는 원래 실시간 API 경로에서만 일어난다. 시드는 테이블에 직접 insert 하므로
+    데모 계정에는 개인 문서가 하나도 없었고, 그래서 비대칭이 생겼다:
+      * 트레이너 루틴 생성 — `chat_messages` 를 직접 조회해 시드 대화를 본다
+      * 회원 앱 AI 코치 — RAG 만 보므로 시드 식단·운동·대화를 못 본다
+    데모에서 "이번 주 운동 어땠어?" 라고 물으면 기록이 있는데도 일반론이 나왔다.
+
+    멱등은 `source_ref`(#603)로 판정한다 — 이미 적재된 기록은 임베딩을 다시 부르지
+    않는다. 그래서 비용이 드는 것은 사실상 최초 기동 한 번뿐이다.
+    """
+    settings = get_settings()
+    if not settings.seed_rag_ingest or not settings.rag_auto_ingest:
+        return
+
+    started = time.monotonic()
+    ingested = 0
+    for member_id in sorted(valid):
+        ingested += _ingest_member_documents(db, member_id)
+
+    if ingested:
+        logger.info(
+            "시드 개인 RAG 적재: %d건 (%.1fs). 이미 적재된 기록은 건너뜀.",
+            ingested, time.monotonic() - started,
+        )
+
+
+#: 시드가 만든 행의 id 접두사. 이 접두사로만 좁히는 이유가 있다 — 사용자가 앱에서
+#: 남긴 기록은 실시간 경로가 이미 적재했고, 그중 #603 이전에 적재된 문서는
+#: `source_ref` 가 NULL 이라 멱등 판정에 걸리지 않는다. 전체를 훑으면 그런 기록이
+#: 두 벌씩 검색된다.
+_SEED_ID_PREFIX = "seed-"
+
+
+def _ingest_member_documents(db: Session, member_id: str) -> int:
+    """한 회원의 시드 식단·운동·대화를 적재하고 적재한 건수를 돌려준다."""
+    count = 0
+
+    for entry in db.scalars(
+        select(models.DietEntry).where(
+            models.DietEntry.user_id == member_id,
+            models.DietEntry.id.like(f"{_SEED_ID_PREFIX}%"),
+        )
+    ).all():
+        count += _ingested(
+            personal_ingest.record_diet,
+            db, member_id, date=entry.date, foods=_entry_foods(entry),
+            total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
+            sugar_g=entry.sugar_g, source_ref=entry.id,
+        )
+
+    for session in db.scalars(
+        select(models.ExerciseSession).where(
+            models.ExerciseSession.user_id == member_id,
+            models.ExerciseSession.id.like(f"{_SEED_ID_PREFIX}%"),
+        )
+    ).all():
+        count += _ingested(
+            personal_ingest.record_exercise,
+            db, member_id, date=_session_date(session),
+            exercise_type=session.type, minutes=session.minutes,
+            calories=session.calories, intensity=session.intensity,
+            source_ref=session.id,
+        )
+
+    for msg in db.scalars(
+        select(models.ChatMessage).where(
+            models.ChatMessage.member_id == member_id,
+            models.ChatMessage.id.like(f"{_SEED_ID_PREFIX}%"),
+        )
+    ).all():
+        count += _ingested(
+            personal_ingest.record_chat,
+            db, member_id, sender=msg.sender, text=msg.body,
+            date=clock.to_seoul(msg.created_at).date().isoformat(),
+            source_ref=msg.id,
+        )
+
+    return count
+
+
+def _ingested(record, db: Session, member_id: str, **fields) -> int:
+    """`once` 경로로 적재하고 실제로 새로 넣었으면 1을 돌려준다.
+
+    적재 여부를 여기서 미리 확인하지 않는다 — 확인과 삽입이 갈라지면 두 인스턴스가
+    동시에 기동할 때 같은 기록의 청크가 두 벌 들어간다. `ensure_personal_text` 가
+    잠금 안에서 확인까지 하므로, 우리는 문서 수 변화로 새로 넣었는지만 센다.
+    """
+    before = has_personal_doc(db, member_id, fields["source_ref"])
+    record(db, member_id, once=True, **fields)
+    return 0 if before else int(has_personal_doc(db, member_id, fields["source_ref"]))
+
+
+def _entry_foods(entry: models.DietEntry) -> list[dict]:
+    """저장된 foods_json → 리스트. 깨진 값이면 빈 목록(시드가 기동을 막으면 안 된다)."""
+    try:
+        value = json.loads(entry.foods_json or "[]")
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def _session_date(session: models.ExerciseSession) -> str:
+    """세션의 실제 날짜. 저장은 (주 시작 + 요일 라벨)로 쪼개져 있다."""
+    try:
+        monday = date.fromisoformat(session.week_start)
+        return (
+            monday + timedelta(days=_WEEKDAY_INDEX[session.day_label])
+        ).isoformat()
+    except (ValueError, KeyError):
+        return session.week_start
 
 
 def _seed_schedule(db: Session, valid: set[str]) -> None:

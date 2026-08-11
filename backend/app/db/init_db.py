@@ -61,6 +61,11 @@ def init_db() -> None:
         # 경고가 동작할 최소 기록만 따로 채운다(#572).
         from app.db.seed_roster import seed_roster_metrics
         seed_roster_metrics()
+        # 시드 기록을 개인 RAG 문서로 적재(#604). **모든 시드가 끝난 뒤**여야 한다 —
+        # 확장 회원(4~15)의 기록은 바로 위에서 만들어지므로, 앞에서 훑으면 첫 기동에
+        # 그들 문서가 통째로 빠지고 재기동해야 채워진다.
+        from app.db.seed_member_data import ingest_seeded_documents
+        ingest_seeded_documents()
 
     _promote_admins()  # ADMIN_EMAILS 사용자를 관리자로 승격(멱등)
 

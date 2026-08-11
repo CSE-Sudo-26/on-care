@@ -66,6 +66,22 @@ def purge_personal(db: Session, user_id: str, source_ref: str) -> int:
     return result.rowcount or 0
 
 
+def has_personal_doc(db: Session, user_id: str, source_ref: str) -> bool:
+    """이 기록이 이미 적재됐는가 (#604).
+
+    시드 적재의 멱등 판정에 쓴다. 기동할 때마다 같은 기록을 다시 임베딩하면 비용도
+    비용이지만 같은 내용이 여러 벌 검색돼 상위를 독차지한다.
+    """
+    return db.scalar(
+        select(CoachDocument.id)
+        .where(
+            CoachDocument.user_id == user_id,
+            CoachDocument.source_ref == source_ref,
+        )
+        .limit(1)
+    ) is not None
+
+
 def _lock_source_ref(db: Session, user_id: str, source_ref: str) -> None:
     """이 기록의 문서 교체를 트랜잭션 끝까지 직렬화한다.
 
@@ -103,6 +119,43 @@ def replace_personal_text(
             CoachDocument.source_ref == source_ref,
         )
     )
+    for chunk, vec in zip(chunks, vectors, strict=True):
+        db.add(CoachDocument(
+            user_id=user_id, domain=domain, source=source,
+            title=title, content=chunk, embedding=vec, source_ref=source_ref,
+        ))
+    db.commit()
+    return len(chunks)
+
+
+def ensure_personal_text(
+    db: Session, user_id: str, text: str, *, domain: str, source: str,
+    source_ref: str, title: str = "",
+) -> int:
+    """아직 적재되지 않았을 때만 적재한다. 이미 있으면 0 (#604).
+
+    확인과 삽입이 갈라져 있으면 안 된다. `has_personal_doc` 로 먼저 보고 따로
+    `ingest_personal_text` 를 부르면, 두 인스턴스가 동시에 기동할 때 둘 다 "없다"를
+    보고 같은 기록의 청크를 두 벌 넣는다. 유니크 제약으로는 막을 수 없다 — 청킹
+    때문에 한 기록이 여러 행이라 (user_id, source_ref) 가 원래 중복이다.
+
+    잠금 전에 한 번 더 확인하는 이유는 비용이다. 이 함수는 기동할 때마다 이미
+    적재된 기록 전부에 대해 불리므로, 흔한 경우(이미 있음)를 잠금 없이 끝낸다.
+    """
+    if has_personal_doc(db, user_id, source_ref):
+        return 0
+
+    _lock_source_ref(db, user_id, source_ref)
+    # 잠금을 잡는 사이 다른 인스턴스가 넣었을 수 있다. 잠금 안에서 다시 본다.
+    if has_personal_doc(db, user_id, source_ref):
+        db.commit()  # 잠금 해제 — 이 트랜잭션에서 더 할 일이 없다.
+        return 0
+
+    chunks = chunk_text(text)
+    if not chunks:
+        db.commit()
+        return 0
+    vectors = get_embedder().embed(chunks)
     for chunk, vec in zip(chunks, vectors, strict=True):
         db.add(CoachDocument(
             user_id=user_id, domain=domain, source=source,
