@@ -107,12 +107,10 @@ class SessionController extends StateNotifier<SessionState> {
         return;
       }
       // 그 밖의 응답·연결 실패는 일시적으로 본다. 토큰은 남겨 둔다.
-      _setToken(null);
-      state = const SessionState(status: SessionStatus.signedOut);
+      _keepTokensAndSignOut();
     } catch (_) {
       if (!mounted || _userActionStarted) return;
-      _setToken(null);
-      state = const SessionState(status: SessionStatus.signedOut);
+      _keepTokensAndSignOut();
     }
   }
 
@@ -126,18 +124,32 @@ class SessionController extends StateNotifier<SessionState> {
         data: <String, Object?>{'refresh_token': refresh},
       );
       data = res.data;
-    } catch (_) {
+    } on DioException catch (e) {
       // 회전이 실패했다 — 다만 느린 호출 중에 사용자가 로그인·데모를 시작했을 수
       // 있으니 그 결과를 덮지 않는다.
-      if (_userActionStarted) return;
-      await _expire();
+      if (!mounted || _userActionStarted) return;
+      // 확인 요청과 같은 기준을 쓴다: **명시적인 401/403 만 세션의 끝이다.**
+      // 갱신이 연결 실패나 서버 오류로 끝난 것을 만료로 처리하면, 잠깐 네트워크가
+      // 끊긴 사용자에게 재로그인을 요구하게 된다(리뷰).
+      final int? code = e.response?.statusCode;
+      if (code == 401 || code == 403) {
+        await _expire();
+      } else {
+        _keepTokensAndSignOut();
+      }
+      return;
+    } catch (_) {
+      if (!mounted || _userActionStarted) return;
+      _keepTokensAndSignOut();
       return;
     }
     if (!mounted || _userActionStarted) return;
 
     final String access = (data?['access_token'] as String?) ?? '';
     if (access.isEmpty) {
-      await _expire();
+      // 200 인데 토큰이 없다 — 서버 계약이 깨진 것이지 세션이 끝난 것이 아니다.
+      // 토큰을 남겨 두면 다음 실행에서 다시 시도할 수 있다.
+      _keepTokensAndSignOut();
       return;
     }
     // 갱신 토큰을 새로 주지 않는 서버도 있다. 그때는 쓰던 것을 유지해야 다음 만료
@@ -160,8 +172,19 @@ class SessionController extends StateNotifier<SessionState> {
     );
   }
 
+  /// 이번에는 못 들어갔지만 세션이 끝난 것은 아니다 — 저장된 토큰을 남긴 채
+  /// 로그인 화면으로 보낸다. 다음 실행에서 다시 시도한다.
+  void _keepTokensAndSignOut() {
+    _setToken(null);
+    state = const SessionState(status: SessionStatus.signedOut);
+  }
+
   /// 세션이 정말 끝났다 — 저장된 토큰을 지우고 로그인 화면으로 보낸다.
   Future<void> _expire() async {
+    // **지우기 전에** 사용자 행동을 확인한다. 느린 복구 중에 로그인이 끝났다면
+    // 저장소에는 방금 받은 토큰이 들어 있다. 뒤늦게 도착한 만료가 그것을 지우면
+    // 화면은 로그인 상태인데 저장소만 비어, 다음 실행에서 로그아웃된다(리뷰).
+    if (!mounted || _userActionStarted) return;
     try {
       await _ref.read(secureTokenStoreProvider).clear();
     } catch (_) {}

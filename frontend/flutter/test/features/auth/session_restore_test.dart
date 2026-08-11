@@ -9,7 +9,7 @@
 ///  * 유효한지 확인하고 들어간다.
 ///  * 만료면 갱신 토큰으로 한 번 회전한다.
 ///  * 갱신까지 죽었으면 저장 토큰을 지우고 로그인 화면으로 보낸다.
-///  * 네트워크가 잠깐 안 되는 것과 세션이 끝난 것을 구분한다 — 전자는 토큰을 지키다.
+///  * 네트워크가 잠깐 안 되는 것과 세션이 끝난 것을 구분한다 — 전자는 토큰을 지킨다.
 library;
 
 import 'package:dio/dio.dart';
@@ -285,7 +285,7 @@ void main() {
     expect(refreshCalls, 1);
   });
 
-  test('네트워크가 안 되면 로그아웃 상태로 두되 토큰은 지키다', () async {
+  test('네트워크가 안 되면 로그아웃 상태로 두되 토큰은 지킨다', () async {
     final script = _ScriptedDio(<String, List<_Reply>>{
       'GET /users/me': <_Reply>[const _Reply.connectionError()],
     });
@@ -319,6 +319,105 @@ void main() {
     );
     final store = container.read(secureTokenStoreProvider);
     expect(await store.readAccessToken(), 'stored-access');
+  });
+
+  test('갱신 요청이 연결 실패로 끝나면 토큰을 지키지 않고 남긴다', () async {
+    final script = _ScriptedDio(<String, List<_Reply>>{
+      'GET /users/me': <_Reply>[const _Reply.status(401)],
+      'POST /auth/refresh': <_Reply>[const _Reply.connectionError()],
+    });
+    final container = _container(script.build());
+
+    container.read(sessionControllerProvider.notifier);
+    await _settle(container);
+
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.signedOut,
+    );
+    // 접근 토큰이 만료됐어도 갱신이 **거부된 것은 아니다.** 네트워크가 잠깐 끊긴
+    // 것을 만료로 처리하면 재로그인을 강요하게 된다(리뷰).
+    final store = container.read(secureTokenStoreProvider);
+    expect(await store.readAccessToken(), 'stored-access');
+    expect(await store.readRefreshToken(), 'stored-refresh');
+  });
+
+  test('갱신 요청이 서버 오류로 끝나도 토큰을 남긴다', () async {
+    final script = _ScriptedDio(<String, List<_Reply>>{
+      'GET /users/me': <_Reply>[const _Reply.status(401)],
+      'POST /auth/refresh': <_Reply>[const _Reply.status(500)],
+    });
+    final container = _container(script.build());
+
+    container.read(sessionControllerProvider.notifier);
+    await _settle(container);
+
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.signedOut,
+    );
+    final store = container.read(secureTokenStoreProvider);
+    expect(await store.readAccessToken(), 'stored-access');
+    expect(await store.readRefreshToken(), 'stored-refresh');
+  });
+
+  test('갱신이 200 을 주고도 토큰을 빠뜨리면 세션을 끝내지 않는다', () async {
+    final script = _ScriptedDio(<String, List<_Reply>>{
+      'GET /users/me': <_Reply>[const _Reply.status(401)],
+      // 계약이 깨진 응답이지 세션이 끝난 것은 아니다.
+      'POST /auth/refresh': <_Reply>[const _Reply.ok(<String, Object?>{})],
+    });
+    final container = _container(script.build());
+
+    container.read(sessionControllerProvider.notifier);
+    await _settle(container);
+
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.signedOut,
+    );
+    final store = container.read(secureTokenStoreProvider);
+    expect(await store.readAccessToken(), 'stored-access');
+  });
+
+  // 이 테스트가 고정하는 것은 **결과**다 — 복구가 만료로 흘러가는 도중에 로그인이
+  // 끝나면, 끝난 뒤 저장소에 로그인 토큰이 남아 있어야 한다.
+  //
+  // 만료 직전 확인과 `clear()` 사이의 좁은 틈(가드를 지난 뒤 사용자가 로그인하는
+  // 경우)까지는 이 테스트로 재현되지 않는다. 그 틈은 `_expire()` 가 지우기 전에도
+  // 확인하도록 해서 좁혔고, 결정론적으로 재현할 방법이 없어 테스트로 못 박지 않았다.
+  test('복구가 만료로 흘러가도 그 사이 끝난 로그인의 토큰이 남는다', () async {
+    final script = _ScriptedDio(<String, List<_Reply>>{
+      // 복구는 만료 → 갱신 거부 순으로 흘러 결국 _expire 에 닿는다.
+      'GET /users/me': <_Reply>[const _Reply.status(401)],
+      'POST /auth/refresh': <_Reply>[const _Reply.status(401)],
+      'POST /auth/login': <_Reply>[
+        const _Reply.ok(<String, Object?>{
+          'access_token': 'fresh-access',
+          'refresh_token': 'fresh-refresh',
+        }),
+      ],
+    });
+    final container = _container(
+      script.build(delay: const Duration(milliseconds: 30)),
+    );
+
+    final SessionController controller = container.read(
+      sessionControllerProvider.notifier,
+    );
+    // 복구가 아직 갱신 단계에 있는 사이 로그인이 끝난다.
+    await controller.login(email: 'member@example.com', password: 'pw');
+    // 뒤늦은 만료가 도착하고도 남을 만큼 기다린다.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.authenticated,
+    );
+    // 화면만 로그인 상태이고 저장소는 비어 있으면, 다음 실행에서 로그아웃된다.
+    final store = container.read(secureTokenStoreProvider);
+    expect(await store.readAccessToken(), 'fresh-access');
+    expect(await store.readRefreshToken(), 'fresh-refresh');
   });
 
   test('복구 중 사용자가 데모로 들어가면 복구가 그것을 덮지 않는다', () async {
