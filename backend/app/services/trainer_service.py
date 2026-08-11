@@ -1075,7 +1075,8 @@ def complete_session(
         # 커밋 뒤에 부르는 이유는 record_chat 과 같다 — 적재 실패의 롤백이 응답을
         # 깨뜨리지 않도록, 값은 미리 뽑아 두고 응답도 이미 만들어 둔다.
         personal_ingest.record_exercise(
-            db, exercise_log.user_id, date=s.date, type=exercise_log.type,
+            db, exercise_log.user_id, date=s.date,
+            exercise_type=exercise_log.type,
             minutes=exercise_log.minutes, calories=exercise_log.calories,
             intensity=exercise_log.intensity,
         )
