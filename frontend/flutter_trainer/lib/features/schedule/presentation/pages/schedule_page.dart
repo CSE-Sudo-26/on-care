@@ -14,6 +14,8 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
+import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -258,6 +260,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return PageScaffold(
       title: l.schedTitle,
       subtitle: dateLabel(l, _selectedDay),
+      // 스케줄 asks when someone is next in, so the rows show the next
+      // booking and picking one moves the calendar to that day.
+      headerCenter: const ClientSearchBar(scope: ClientSearchScope.schedule),
       actions: <Widget>[
         if (showToday)
           ActionButton(

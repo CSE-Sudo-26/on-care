@@ -1291,5 +1291,84 @@
         "type": "String"
       }
     }
-  }
+  },
+  "searchClients": "Search clients",
+  "@searchClients": {
+    "description": "Label/tooltip of the console header's client search."
+  },
+  "searchClientsHint": "Search by client name",
+  "searchClear": "Clear search",
+  "searchNoResults": "No client matches “{query}”",
+  "@searchNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchGoClientDetail": "Picking one opens their detail",
+  "@searchGoClientDetail": {
+    "description": "Search dropdown footer: what picking a result does on this tab."
+  },
+  "searchGoSchedule": "Picking one jumps to their next booked day",
+  "searchGoCoaching": "Picking one loads them into AI coaching",
+  "searchGoReport": "Picking one opens their weekly report",
+  "searchNoUpcomingFor": "{name} has nothing booked in the next 4 weeks",
+  "@searchNoUpcomingFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "searchDetailNoIssues": "Nothing to act on today",
+  "searchDetailUnread": "{count} awaiting a reply",
+  "@searchDetailUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchDetailMessage": "{message} · {time}",
+  "@searchDetailMessage": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "searchDetailNextSession": "Next session {date} {time}",
+  "@searchDetailNextSession": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "searchDetailNoUpcoming": "Nothing booked",
+  "searchDetailLastRoutine": "Last routine {when}",
+  "@searchDetailLastRoutine": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "searchDetailNoRoutine": "No routine sent yet",
+  "searchDetailCompletion": "{percent}% completion this week",
+  "@searchDetailCompletion": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "searchDetailNoRecord": "Nothing recorded this week"
 }

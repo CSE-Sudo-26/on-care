@@ -424,6 +424,10 @@ class _InputBar extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: TextField(
+              // The console header carries a 고객 검색 field too, so the
+              // composer is addressable by key rather than by being the
+              // page's only input.
+              key: const ValueKey<String>('client-chat-input'),
               controller: controller,
               enabled: !sending,
               textInputAction: TextInputAction.send,

@@ -1883,4 +1883,72 @@ class AppLocalizationsKo extends AppLocalizations {
   String routineDeleteBody(String name) {
     return '$name 배정이 회원 앱에서도 사라져요.';
   }
+
+  @override
+  String get searchClients => '고객 검색';
+
+  @override
+  String get searchClientsHint => '고객 이름 검색';
+
+  @override
+  String get searchClear => '검색어 지우기';
+
+  @override
+  String searchNoResults(String query) {
+    return '“$query”와 일치하는 고객이 없어요';
+  }
+
+  @override
+  String get searchGoClientDetail => '선택하면 고객 상세가 열려요';
+
+  @override
+  String get searchGoSchedule => '선택하면 다음 예약 날짜로 이동해요';
+
+  @override
+  String get searchGoCoaching => '선택하면 AI 코칭에 불러와요';
+
+  @override
+  String get searchGoReport => '선택하면 주간 리포트를 열어요';
+
+  @override
+  String searchNoUpcomingFor(String name) {
+    return '$name님은 4주 안에 예정된 예약이 없어요';
+  }
+
+  @override
+  String get searchDetailNoIssues => '오늘 이상 없음';
+
+  @override
+  String searchDetailUnread(int count) {
+    return '답장 대기 $count건';
+  }
+
+  @override
+  String searchDetailMessage(String message, String time) {
+    return '$message · $time';
+  }
+
+  @override
+  String searchDetailNextSession(String date, String time) {
+    return '다음 예약 $date $time';
+  }
+
+  @override
+  String get searchDetailNoUpcoming => '예정된 예약 없음';
+
+  @override
+  String searchDetailLastRoutine(String when) {
+    return '마지막 루틴 $when';
+  }
+
+  @override
+  String get searchDetailNoRoutine => '보낸 루틴 없음';
+
+  @override
+  String searchDetailCompletion(int percent) {
+    return '이번 주 이행률 $percent%';
+  }
+
+  @override
+  String get searchDetailNoRecord => '이번 주 기록 없음';
 }

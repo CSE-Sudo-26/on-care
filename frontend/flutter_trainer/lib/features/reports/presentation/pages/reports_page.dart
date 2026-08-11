@@ -13,6 +13,8 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -126,6 +128,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     return PageScaffold(
       title: l.reportsTitle,
       subtitle: l.reportsSubtitle(l.dateMonthDay(_weekStart.month, _weekStart.day)),
+      // 리포트 asks how the week went, so the rows lead with this week's
+      // completion and picking one opens that client's report.
+      headerCenter: const ClientSearchBar(scope: ClientSearchScope.reports),
       actions: <Widget>[
         ActionButton(
           label: l.reportsPrevWeek,

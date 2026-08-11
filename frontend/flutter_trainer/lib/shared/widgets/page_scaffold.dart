@@ -5,7 +5,8 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
 /// Standard frame for a console page: a sticky header (title, optional
-/// subtitle, right-aligned actions) above width-capped content.
+/// subtitle, an optional centred slot, right-aligned actions) above
+/// width-capped content.
 ///
 /// Every top-level page uses this so the header sits at the same height
 /// across branches — switching tabs shouldn't make the title jump.
@@ -17,6 +18,7 @@ class PageScaffold extends StatelessWidget {
     required this.child,
     this.subtitle,
     this.actions = const <Widget>[],
+    this.headerCenter,
     this.maxWidth = AppLayout.wideMaxWidth,
     this.scrollable = true,
     this.contentPadding = const EdgeInsets.all(AppLayout.pagePadding),
@@ -30,6 +32,15 @@ class PageScaffold extends StatelessWidget {
 
   /// Right-aligned header actions.
   final List<Widget> actions;
+
+  /// Widget centred between the title and the actions — the console's
+  /// 고객 검색 bar.
+  ///
+  /// Handed in by the page rather than built here: this frame lives in
+  /// `shared/`, which must not reach into a feature (STRUCTURE.md §2.4).
+  /// It gets whatever width the title and actions leave over, so a
+  /// header with many actions squeezes it instead of overflowing.
+  final Widget? headerCenter;
 
   /// Page body.
   final Widget child;
@@ -57,6 +68,7 @@ class PageScaffold extends StatelessWidget {
           title: title,
           subtitle: subtitle,
           actions: actions,
+          center: headerCenter,
           maxWidth: maxWidth,
         ),
         Expanded(child: body),
@@ -80,12 +92,14 @@ class _Header extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.actions,
+    required this.center,
     required this.maxWidth,
   });
 
   final String title;
   final String? subtitle;
   final List<Widget> actions;
+  final Widget? center;
   final double maxWidth;
 
   @override
@@ -106,7 +120,10 @@ class _Header extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              Expanded(
+              // Flexible, not Expanded: the centre slot is the one that
+              // absorbs the leftover width, so the title takes only what
+              // it needs and the search bar sits mid-header.
+              Flexible(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,6 +150,17 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
+              if (center != null)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: center,
+                  ),
+                )
+              else
+                const Spacer(),
               for (final action in actions) ...<Widget>[
                 const SizedBox(width: AppSpacing.sm),
                 action,

@@ -3505,6 +3505,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} disappears from the client\'s app too.'**
   String routineDeleteBody(String name);
+
+  /// Label/tooltip of the console header's client search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clients'**
+  String get searchClients;
+
+  /// No description provided for @searchClientsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client name'**
+  String get searchClientsHint;
+
+  /// No description provided for @searchClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get searchClear;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No client matches “{query}”'**
+  String searchNoResults(String query);
+
+  /// Search dropdown footer: what picking a result does on this tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking one opens their detail'**
+  String get searchGoClientDetail;
+
+  /// No description provided for @searchGoSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking one jumps to their next booked day'**
+  String get searchGoSchedule;
+
+  /// No description provided for @searchGoCoaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking one loads them into AI coaching'**
+  String get searchGoCoaching;
+
+  /// No description provided for @searchGoReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking one opens their weekly report'**
+  String get searchGoReport;
+
+  /// No description provided for @searchNoUpcomingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has nothing booked in the next 4 weeks'**
+  String searchNoUpcomingFor(String name);
+
+  /// No description provided for @searchDetailNoIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to act on today'**
+  String get searchDetailNoIssues;
+
+  /// No description provided for @searchDetailUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} awaiting a reply'**
+  String searchDetailUnread(int count);
+
+  /// No description provided for @searchDetailMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{message} · {time}'**
+  String searchDetailMessage(String message, String time);
+
+  /// No description provided for @searchDetailNextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Next session {date} {time}'**
+  String searchDetailNextSession(String date, String time);
+
+  /// No description provided for @searchDetailNoUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing booked'**
+  String get searchDetailNoUpcoming;
+
+  /// No description provided for @searchDetailLastRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Last routine {when}'**
+  String searchDetailLastRoutine(String when);
+
+  /// No description provided for @searchDetailNoRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'No routine sent yet'**
+  String get searchDetailNoRoutine;
+
+  /// No description provided for @searchDetailCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% completion this week'**
+  String searchDetailCompletion(int percent);
+
+  /// No description provided for @searchDetailNoRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded this week'**
+  String get searchDetailNoRecord;
 }
 
 class _AppLocalizationsDelegate

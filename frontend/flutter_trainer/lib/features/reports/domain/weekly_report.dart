@@ -1,4 +1,5 @@
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
@@ -100,9 +101,8 @@ WeeklyReport buildWeeklyReport({
   // instead: the screen shows "-", which reads as missing rather than
   // wrong.
   final isThisWeek = start == weekStartOf(today ?? DateTime.now());
-  final recorded = isThisWeek
-      ? client.weekCompletion.where((d) => d > 0).toList()
-      : const <int>[];
+  // Same "recorded days only" rule the 주의 badge and 고객 검색 use.
+  final mean = isThisWeek ? recordedCompletionMean(client) : null;
 
   return WeeklyReport(
     isCurrentWeek: isThisWeek,
@@ -110,9 +110,7 @@ WeeklyReport buildWeeklyReport({
     weekStart: start,
     sessionsBooked: inWeek.length,
     sessionsDone: inWeek.where((s) => s.isDone).length,
-    completionAvg: recorded.isEmpty
-        ? null
-        : (recorded.reduce((a, b) => a + b) / recorded.length).round(),
+    completionAvg: mean?.round(),
     sodiumOverDays: isThisWeek ? client.sodiumOverDays : null,
     sodiumAvg: isThisWeek ? client.sodiumWeekAvg : null,
   );

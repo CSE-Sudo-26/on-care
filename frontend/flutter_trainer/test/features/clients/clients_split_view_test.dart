@@ -122,7 +122,11 @@ void main() {
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'chat'),
     );
-    await tester.enterText(find.byType(TextField), '민수님 오늘 어땠어요?');
+    // 헤더의 고객 검색도 TextField 라, 채팅 입력칸은 키로 집는다.
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('client-chat-input')),
+      '민수님 오늘 어땠어요?',
+    );
     await tester.pump();
 
     await scrollToCard(tester, '이지수');
