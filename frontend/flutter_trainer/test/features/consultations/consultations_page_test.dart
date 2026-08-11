@@ -61,7 +61,7 @@ class _FakeConsultationRepository implements ConsultationRepository {
   Future<int> pendingCount() async => requests.where((r) => r.isPending).length;
 
   @override
-  Future<void> accept(String id) async {
+  Future<void> accept(String id, {ConsultationSchedule? schedule}) async {
     accepted.add(id);
     requests = requests
         .map((r) => r.id == id ? _request(id: id, status: 'accepted') : r)
@@ -172,14 +172,19 @@ void main() {
     await withWideSurface(tester, () async {
       await pumpTrainerApp(tester, token: 'demo-token');
 
-      expect(find.text(navLabel(_ko, consultationsDestination.label)), findsNothing);
+      expect(
+        find.text(navLabel(_ko, consultationsDestination.label)),
+        findsNothing,
+      );
       for (final destination in navDestinations) {
         expect(find.text(navLabel(_ko, destination.label)), findsWidgets);
       }
     });
   });
 
-  testWidgets('the real-API console does show it', (tester) async {
+  testWidgets('the real-API console also keeps the separate row hidden', (
+    tester,
+  ) async {
     await withWideSurface(tester, () async {
       await pumpTrainerApp(
         tester,
@@ -191,7 +196,10 @@ void main() {
         ],
       );
 
-      expect(find.text(navLabel(_ko, consultationsDestination.label)), findsOneWidget);
+      expect(
+        find.text(navLabel(_ko, consultationsDestination.label)),
+        findsNothing,
+      );
     });
   });
 }

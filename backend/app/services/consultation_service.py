@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +15,7 @@ from app.models.models import (
     Place,
     TrainerClient,
     TrainerProfile,
+    TrainerSchedule,
     User,
 )
 from app.schemas.consultation_api import (
@@ -415,7 +416,15 @@ def _link_member_gym(db: Session, member_id: str, gym_id: str | None) -> None:
 
 
 def accept(
-    db: Session, trainer_id: str, consultation_id: str, note: str | None = None
+    db: Session,
+    trainer_id: str,
+    consultation_id: str,
+    note: str | None = None,
+    *,
+    schedule_date: date | None = None,
+    schedule_time: str | None = None,
+    schedule_type: str | None = None,
+    duration_minutes: int | None = None,
 ) -> TrainerConsultationOut:
     """상담을 승인하고 담당 링크를 만든다.
 
@@ -475,6 +484,31 @@ def accept(
     row.decided_by = trainer_id
     row.decided_at = _now()
     row.decision_note = note
+
+    # The schedule inbox sends all four values together (validated by the
+    # request schema).  Keep this in the same transaction as the decision:
+    # a request must never disappear from the inbox without its promised
+    # calendar entry being created.
+    if schedule_date is not None:
+        db.add(
+            TrainerSchedule(
+                id=f"sched-{uuid.uuid4().hex[:12]}",
+                trainer_id=trainer_id,
+                member_id=row.member_id,
+                date=schedule_date.isoformat(),
+                time=schedule_time or "00:00",
+                client_name=db.scalar(
+                    select(User.name).where(User.id == row.member_id)
+                )
+                or "신규 회원",
+                type=schedule_type or "상담",
+                duration_minutes=duration_minutes or 30,
+                status="예정",
+                note=row.message or "",
+                program_json="[]",
+                sort_order=0,
+            )
+        )
 
     trainer_name = db.scalar(select(User.name).where(User.id == trainer_id))
     _notify(

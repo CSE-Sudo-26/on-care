@@ -9,7 +9,7 @@ DB 가 필요하므로 로컬에서는 skip 되고 CI(Postgres) 에서 실행된
 """
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 from uuid import uuid4
 
 import pytest
@@ -25,6 +25,7 @@ from app.models.models import (
     Place,
     TrainerClient,
     TrainerProfile,
+    TrainerSchedule,
     User,
 )
 from app.services import consultation_service
@@ -45,6 +46,10 @@ def _cleanup(db_session):
         .all()
     ]
     if user_ids:
+        db_session.query(TrainerSchedule).filter(
+            (TrainerSchedule.trainer_id.in_(user_ids))
+            | (TrainerSchedule.member_id.in_(user_ids))
+        ).delete(synchronize_session=False)
         db_session.query(ConsultationRequest).filter(
             (ConsultationRequest.member_id.in_(user_ids))
             | (ConsultationRequest.trainer_id.in_(user_ids))
@@ -295,6 +300,52 @@ def test_accept_links_member_into_roster(client, db_session):
     assert link.active is True
     # 요청의 운동 목표가 코칭 목표의 출발점이 된다(빈 목표 줄 방지).
     assert link.goal == "체중 감량"
+
+
+def test_accept_with_schedule_books_consultation_atomically(client, db_session):
+    trainer, trainer_token = _trainer(client, db_session)
+    member_id, member_token = _member(client)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
+    session_date = (date.today() + timedelta(days=2)).isoformat()
+
+    response = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(trainer_token),
+        json={
+            "date": session_date,
+            "time": "19:30",
+            "type": "상담",
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    session = db_session.query(TrainerSchedule).filter_by(
+        trainer_id=trainer.id,
+        member_id=member_id,
+        date=session_date,
+    ).one()
+    assert session.time == "19:30"
+    assert session.type == "상담"
+    assert session.status == "예정"
+
+
+def test_accept_rejects_partial_schedule(client, db_session):
+    trainer, trainer_token = _trainer(client, db_session)
+    _, member_token = _member(client)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
+
+    response = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(trainer_token),
+        json={"date": (date.today() + timedelta(days=2)).isoformat()},
+    )
+
+    assert response.status_code == 422
 
 
 def test_accept_notifies_the_member(client, db_session):

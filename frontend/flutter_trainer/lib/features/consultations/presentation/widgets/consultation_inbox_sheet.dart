@@ -1,0 +1,422 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/radius.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
+
+/// Schedule-tab inbox for member consultation requests.
+///
+/// Returning a date tells the schedule page to jump to the newly created
+/// calendar entry after the sheet closes.
+class ConsultationInboxSheet extends ConsumerWidget {
+  const ConsultationInboxSheet({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final requests = ref.watch(consultationsProvider);
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .82,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      l.consultTitle,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              Text(
+                l.consultEmptyHint,
+                style: const TextStyle(color: AppColors.mutedForeground),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Expanded(
+                child: requests.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, _) => Center(child: Text(l.consultLoadFailed)),
+                  data: (rows) => rows.isEmpty
+                      ? Center(child: Text(l.consultEmptyPending))
+                      : ListView.separated(
+                          itemCount: rows.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, index) =>
+                              _RequestCard(request: rows[index]),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RequestCard extends ConsumerStatefulWidget {
+  const _RequestCard({required this.request});
+
+  final ConsultationRequest request;
+
+  @override
+  ConsumerState<_RequestCard> createState() => _RequestCardState();
+}
+
+class _RequestCardState extends ConsumerState<_RequestCard> {
+  bool _busy = false;
+
+  Future<void> _schedule() async {
+    final booking = await showDialog<_Booking>(
+      context: context,
+      builder: (_) => _ScheduleDialog(request: widget.request),
+    );
+    if (booking == null || !mounted) return;
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
+    try {
+      final schedule = ConsultationSchedule(
+        date: ymd(booking.date),
+        time: booking.time,
+        type: '상담',
+        durationMinutes: booking.durationMinutes,
+      );
+      // Demo mode has no backend transaction, so mirror the accepted request
+      // into the local Drift calendar before finalizing the decision. A failed
+      // calendar write therefore leaves the request pending and retryable.
+      final useMockApi = ref.read(appConfigProvider).useMockApi;
+      if (useMockApi) {
+        await ref
+            .read(scheduleRepositoryProvider)
+            .addSession(
+              date: schedule.date,
+              clientName: widget.request.memberName,
+              clientId: widget.request.memberId,
+              time: schedule.time,
+              type: schedule.type,
+              durationMinutes: schedule.durationMinutes,
+              note: widget.request.message ?? '',
+            );
+      }
+      await acceptConsultation(ref, widget.request.id, schedule: schedule);
+      ref.invalidate(scheduleForDateProvider(schedule.date));
+      ref.invalidate(bookedDatesProvider);
+      if (!mounted) return;
+      Navigator.of(context).pop(schedule.date);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.consultApproved(widget.request.memberName))),
+      );
+    } on AppError catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.consultActionFailed),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.consultActionFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reject() async {
+    final l = AppLocalizations.of(context);
+    final controller = TextEditingController();
+    final note = await showDialog<String?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.consultRejectTitle),
+        content: TextField(
+          controller: controller,
+          maxLength: 500,
+          maxLines: 3,
+          decoration: InputDecoration(hintText: l.consultRejectHint),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.actionCancel),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => TextButton(
+              onPressed: value.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(value.text.trim()),
+              child: Text(l.consultRejectAction),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (note == null || note.isEmpty || !mounted) return;
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await rejectConsultation(ref, widget.request.id, note: note);
+    } on AppError catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.consultActionFailed),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.consultActionFailed)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final request = widget.request;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            request.memberName,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _line(
+            l.consultExerciseGoal,
+            label(exerciseGoalLabels(l), request.goalCode),
+          ),
+          _line(
+            l.consultHealthPurpose,
+            request.purposeDetail == null
+                ? label(healthPurposeLabels(l), request.purposeCode)
+                : '${label(healthPurposeLabels(l), request.purposeCode)} · '
+                      '${request.purposeDetail}',
+          ),
+          _line(
+            l.consultPreferredTime,
+            '${dateLabel(l, request.preferredDate)} · '
+            '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
+          ),
+          if (request.gymName != null) _line(l.consultGym, request.gymName!),
+          if (request.message != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              request.message!,
+              style: const TextStyle(color: AppColors.mutedForeground),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              ActionButton(
+                label: l.consultReject,
+                tone: AppColors.destructive,
+                onPressed: _busy ? null : _reject,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              ActionButton(
+                label: l.schedNewSession,
+                icon: Icons.event_available_outlined,
+                primary: true,
+                onPressed: _busy ? null : _schedule,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _line(String name, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          width: 92,
+          child: Text(
+            name,
+            style: const TextStyle(color: AppColors.subtleForeground),
+          ),
+        ),
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
+}
+
+class _Booking {
+  const _Booking(this.date, this.time, this.durationMinutes);
+
+  final DateTime date;
+  final String time;
+  final int durationMinutes;
+}
+
+class _ScheduleDialog extends StatefulWidget {
+  const _ScheduleDialog({required this.request});
+
+  final ConsultationRequest request;
+
+  @override
+  State<_ScheduleDialog> createState() => _ScheduleDialogState();
+}
+
+class _ScheduleDialogState extends State<_ScheduleDialog> {
+  late DateTime _date;
+  late int _hour = switch (widget.request.preferredTimeCode) {
+    'morning' => 10,
+    'afternoon' => 14,
+    'evening' => 19,
+    _ => 10,
+  };
+  int _minute = 0;
+  int _duration = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = DateUtils.dateOnly(DateTime.now());
+    final lastDate = today.add(const Duration(days: 365));
+    _date = _clampDate(
+      DateUtils.dateOnly(widget.request.preferredDate),
+      today,
+      lastDate,
+    );
+  }
+
+  DateTime _clampDate(DateTime value, DateTime first, DateTime last) {
+    if (value.isBefore(first)) return first;
+    if (value.isAfter(last)) return last;
+    return value;
+  }
+
+  String get _time =>
+      '${_hour.toString().padLeft(2, '0')}:${_minute.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.schedAddTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(widget.request.memberName),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.calendar_today_outlined),
+            label: Text(dateLabel(l, _date)),
+            onPressed: () async {
+              final today = DateUtils.dateOnly(DateTime.now());
+              final lastDate = today.add(const Duration(days: 365));
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _clampDate(_date, today, lastDate),
+                firstDate: today,
+                lastDate: lastDate,
+              );
+              if (picked != null) setState(() => _date = picked);
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  initialValue: _hour,
+                  decoration: InputDecoration(labelText: l.schedFieldTime),
+                  items: <DropdownMenuItem<int>>[
+                    for (var hour = 6; hour <= 22; hour++)
+                      DropdownMenuItem(
+                        value: hour,
+                        child: Text(l.schedHourLabel('$hour')),
+                      ),
+                  ],
+                  onChanged: (value) => setState(() => _hour = value ?? _hour),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  initialValue: _minute,
+                  decoration: InputDecoration(labelText: l.schedMinuteSuffix),
+                  items: <DropdownMenuItem<int>>[
+                    for (final minute in const <int>[0, 15, 30, 45])
+                      DropdownMenuItem(
+                        value: minute,
+                        child: Text(l.schedMinuteLabel('$minute')),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _minute = value ?? _minute),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DropdownButtonFormField<int>(
+            initialValue: _duration,
+            decoration: InputDecoration(labelText: l.schedFieldDuration),
+            items: <DropdownMenuItem<int>>[
+              for (final duration in const <int>[30, 45, 60, 90])
+                DropdownMenuItem(value: duration, child: Text('$duration분')),
+            ],
+            onChanged: (value) =>
+                setState(() => _duration = value ?? _duration),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionCancel),
+        ),
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pop(_Booking(_date, _time, _duration)),
+          child: Text(l.schedAddAction),
+        ),
+      ],
+    );
+  }
+}

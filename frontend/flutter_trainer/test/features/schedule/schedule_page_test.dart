@@ -10,6 +10,8 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
+import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -423,6 +425,109 @@ void main() {
       // rather than an exact count.
       expect(find.text('빈 시간'), findsWidgets);
       expect(find.text('예정'), findsWidgets);
+    });
+
+    testWidgets('consultation inbox opens from the schedule tab', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('상담 요청'));
+      await settle(tester);
+
+      expect(find.text('김하늘'), findsOneWidget);
+      expect(find.text('퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.'), findsOneWidget);
+      expect(find.text('거절'), findsOneWidget);
+      expect(find.text('새 일정'), findsWidgets);
+    });
+
+    testWidgets(
+      'failed demo schedule write keeps the consultation pending for retry',
+      (tester) async {
+        final container = await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.schedule,
+          extraOverrides: <Override>[
+            scheduleRepositoryProvider.overrideWith(
+              (ref) =>
+                  _ThrowingScheduleRepository(ref.watch(appDatabaseProvider)),
+            ),
+          ],
+        );
+        final consultations = container.read(consultationRepositoryProvider);
+
+        await tester.tap(find.text('상담 요청'));
+        await settle(tester);
+        await tester.tap(find.text('새 일정').last);
+        await settle(tester);
+        await tester.tap(find.text('추가하기'));
+        await settle(tester);
+
+        expect(await consultations.pendingCount(), 1);
+        expect((await consultations.fetch()).single.isPending, isTrue);
+        expect(find.text('상담을 처리하지 못했어요'), findsOneWidget);
+      },
+    );
+
+    testWidgets('past preferred date opens a valid consultation date picker', (
+      tester,
+    ) async {
+      final consultations = DemoConsultationRepository(
+        requests: <ConsultationRequest>[
+          ConsultationRequest(
+            id: 'past-consultation',
+            memberId: 'past-member',
+            memberName: '과거희망일 회원',
+            goalCode: 'fitness',
+            purposeCode: 'general',
+            preferredDate: DateTime(2020),
+            preferredTimeCode: 'morning',
+            status: 'pending',
+          ),
+        ],
+      );
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.schedule,
+        extraOverrides: <Override>[
+          consultationRepositoryProvider.overrideWithValue(consultations),
+        ],
+      );
+
+      await tester.tap(find.text('상담 요청'));
+      await settle(tester);
+      await tester.tap(find.text('새 일정').last);
+      await settle(tester);
+      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+      await settle(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+    });
+
+    testWidgets('blank consultation rejection reason cannot be submitted', (
+      tester,
+    ) async {
+      await openSchedule(tester);
+
+      await tester.tap(find.text('상담 요청'));
+      await settle(tester);
+      await tester.tap(find.text('거절'));
+      await settle(tester);
+
+      TextButton rejectButton() =>
+          tester.widget<TextButton>(find.widgetWithText(TextButton, '반려하기'));
+      expect(rejectButton().onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).last, '   ');
+      await tester.pump();
+      expect(rejectButton().onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField).last, '요청 시간 조율 필요');
+      await tester.pump();
+      expect(rejectButton().onPressed, isNotNull);
     });
 
     testWidgets('예약 슬롯 action opens the selected-day management sheet', (

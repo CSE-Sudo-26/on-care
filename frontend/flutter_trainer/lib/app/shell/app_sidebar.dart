@@ -10,7 +10,6 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
-import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/notifications/data/repositories/notification_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -71,10 +70,6 @@ class AppSidebar extends ConsumerWidget {
     // 상담 요청 only exists against the real API — the demo has no member
     // backend to receive requests from, so the row is not built at all
     // there and the demo sidebar stays exactly as it was. (#467)
-    final inbox = ref.watch(consultationInboxEnabledProvider);
-    final pendingConsultations = inbox
-        ? ref.watch(consultationPendingCountProvider).valueOrNull
-        : null;
     // 알림함도 실 API 빌드에서만 — 데모에는 알림을 만드는 회원 백엔드가 없어
     // 늘 비어 있는 행이 하나 더 생길 뿐이다. (#503)
     final notificationInbox = ref.watch(notificationInboxEnabledProvider);
@@ -118,18 +113,6 @@ class AppSidebar extends ConsumerWidget {
                       },
                       onTap: () {
                         onSelect(i);
-                        onNavigate?.call();
-                      },
-                    ),
-                  if (inbox)
-                    _NavTile(
-                      destination: consultationsDestination,
-                      selected:
-                          currentIndex == AppShell.consultationsBranchIndex,
-                      expanded: expanded,
-                      badgeCount: pendingConsultations,
-                      onTap: () {
-                        onSelect(AppShell.consultationsBranchIndex);
                         onNavigate?.call();
                       },
                     ),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date as Date
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -22,7 +23,7 @@ class ConsultationCreate(BaseModel):
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None = Field(default=None, max_length=500)
-    preferred_date: date
+    preferred_date: Date
     preferred_time_slot: PreferredTimeSlot
     message: str | None = Field(default=None, max_length=2000)
 
@@ -78,6 +79,30 @@ class ConsultationDecision(BaseModel):
         return value
 
 
+class ConsultationAccept(ConsultationDecision):
+    """Accept a request and optionally book its first consultation session.
+
+    Older clients may still send only ``note``.  The trainer schedule inbox
+    sends the complete schedule tuple so accepting and booking are atomic.
+    """
+
+    date: Date | None = None
+    time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    type: str | None = Field(default=None, min_length=1, max_length=30)
+    duration_minutes: int | None = Field(default=None, ge=15, le=600)
+
+    @model_validator(mode="after")
+    def _schedule_is_complete(self) -> ConsultationAccept:
+        values = (self.date, self.time, self.type, self.duration_minutes)
+        if any(value is not None for value in values) and not all(
+            value is not None for value in values
+        ):
+            raise ValueError(
+                "일정을 등록하려면 date, time, type, duration_minutes가 모두 필요합니다."
+            )
+        return self
+
+
 class ConsultationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,7 +118,7 @@ class ConsultationOut(BaseModel):
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None
-    preferred_date: date
+    preferred_date: Date
     preferred_time_slot: PreferredTimeSlot
     message: str | None
     status: str

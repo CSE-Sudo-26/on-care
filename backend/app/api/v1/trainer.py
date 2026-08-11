@@ -26,6 +26,7 @@ from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import Notification, TrainerClient, TrainerProfile
 from app.schemas.consultation_api import (
+    ConsultationAccept,
     ConsultationDecision,
     ConsultationStatusFilter,
     TrainerConsultationOut,
@@ -783,12 +784,29 @@ def trainer_consultations_pending_count(
 )
 def trainer_accept_consultation(
     consultation_id: str,
-    payload: ConsultationDecision,
+    payload: ConsultationAccept,
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> TrainerConsultationOut:
     """상담을 승인하고 회원을 담당 고객으로 편입한다."""
-    return _decide(consultation_service.accept, db, trainer.id, consultation_id, payload)
+    try:
+        return consultation_service.accept(
+            db,
+            trainer.id,
+            consultation_id,
+            note=payload.note,
+            schedule_date=payload.date,
+            schedule_time=payload.time,
+            schedule_type=payload.type,
+            duration_minutes=payload.duration_minutes,
+        )
+    except consultation_service.ConsultationNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (
+        consultation_service.ConsultationAlreadyDecided,
+        consultation_service.MemberAlreadyCoached,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post(
