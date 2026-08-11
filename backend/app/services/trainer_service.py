@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, or_, select, tuple_, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import clock
@@ -610,11 +611,43 @@ def delete_routine(
     db.commit()
 
 
+def _routine_out(rt: TrainerRoutine) -> RoutineOut:
+    return RoutineOut(
+        id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
+        reason=rt.reason, source=rt.source,
+    )
+
+
+def find_routine_by_client_request(
+    db: Session, trainer_id: str, member_id: str, client_request_id: str
+) -> TrainerRoutine | None:
+    return db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            TrainerRoutine.client_request_id == client_request_id,
+        )
+    )
+
+
 def assign_routine(
     db: Session, trainer_id: str, member_id: str,
     name: str, minutes: int, type_: str, reason: str, source: str,
+    client_request_id: str | None = None,
 ) -> RoutineOut:
-    """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영."""
+    """회원에게 루틴 배정. 로스터 last_routine 은 build_roster 가 최신 루틴을 읽어 반영.
+
+    [client_request_id] 가 오면 그 전송 시도에 대해 멱등하다. 같은 키로 다시
+    호출하면 새로 만들지 않고 먼저 저장된 배정을 그대로 돌려준다 — 전송 도중
+    끊겨 클라이언트가 재시도해도 회원에게 루틴이 두 번 배정되지 않는다(#581).
+    """
+    if client_request_id:
+        existing = find_routine_by_client_request(
+            db, trainer_id, member_id, client_request_id
+        )
+        if existing is not None:
+            return _routine_out(existing)
+
     # 이 회원 루틴들의 현재 최대 sort_order + 1 로 끝에 붙인다. timestamp 방식은 시드(0..n)와
     # 의미가 섞이고, 같은 초에 배정된 둘은 순서가 비결정적이었다(리뷰 #279).
     max_order = db.scalar(
@@ -631,9 +664,26 @@ def assign_routine(
         reason=reason,
         source=source,
         sort_order=(max_order or 0) + 1,
+        client_request_id=client_request_id,
         created_at=datetime.now(timezone.utc),
     )
     db.add(rt)
+    # 알림을 붙이기 **전에** 삽입을 flush 한다. 같은 키의 동시 요청 둘이 나란히 위
+    # 조회를 통과하면 유니크 제약이 한쪽을 막는데, 그 충돌을 여기서 잡아야 진 쪽이
+    # 알림까지 중복으로 쌓지 않는다(회원이 같은 배정 알림을 두 번 받지 않는다).
+    # queue() 는 내부 조회를 하므로 그때 autoflush 로 터지면 이 지점을 지나친다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = find_routine_by_client_request(
+                db, trainer_id, member_id, client_request_id
+            )
+            if existing is not None:
+                return _routine_out(existing)
+        raise
+
     # 배정은 회원이 앱을 열기 전에는 알 수 없는 변화다(#489).
     notification_service.queue(
         db,
@@ -644,10 +694,7 @@ def assign_routine(
     )
     db.commit()
     db.refresh(rt)
-    return RoutineOut(
-        id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
-        reason=rt.reason, source=rt.source,
-    )
+    return _routine_out(rt)
 
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----
@@ -1076,7 +1123,8 @@ def complete_session(
         # 커밋 뒤에 부르는 이유는 record_chat 과 같다 — 적재 실패의 롤백이 응답을
         # 깨뜨리지 않도록, 값은 미리 뽑아 두고 응답도 이미 만들어 둔다.
         personal_ingest.record_exercise(
-            db, exercise_log.user_id, date=s.date, type=exercise_log.type,
+            db, exercise_log.user_id, date=s.date,
+            exercise_type=exercise_log.type,
             minutes=exercise_log.minutes, calories=exercise_log.calories,
             intensity=exercise_log.intensity, source_ref=exercise_log.id,
             # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라

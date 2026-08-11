@@ -20,6 +20,7 @@ import json
 import uuid
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.models import AiConversation, AiMessage
@@ -75,7 +76,22 @@ def get_or_create_active(
         id=_new_id("aiconv"), user_id=user_id, trainer_id=trainer_id
     )
     db.add(convo)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 같은 (회원, 트레이너) 요청이 동시에 생성되면 부분 유니크 인덱스에서
+        # 한쪽만 이긴다. 실패한 세션을 정리한 뒤 승자가 만든 스레드를 반환한다.
+        db.rollback()
+        winner = db.scalar(
+            select(AiConversation)
+            .where(*_active_thread_filter(user_id, trainer_id))
+            .order_by(AiConversation.created_at.desc())
+            .limit(1)
+        )
+        if winner is None:
+            # FK 위반 등 활성 스레드 경쟁이 아닌 무결성 오류는 숨기지 않는다.
+            raise
+        return winner
     db.refresh(convo)
     return convo
 
@@ -122,6 +138,16 @@ def append_exchange(
     그러면 정렬이 랜덤한 id 순으로 무너져 답변이 질문보다 먼저 보인다.
     """
     convo = get_or_create_active(db, user_id, trainer_id=trainer_id)
+    # 대화 한 행을 순번 할당용 mutex 로 쓴다. PostgreSQL 에서는 같은 스레드의
+    # 동시 append 가 여기서 직렬화되므로 max(seq)를 읽고 두 메시지를 커밋할 때까지
+    # 다른 요청이 같은 순번을 가져갈 수 없다.
+    convo = db.scalar(
+        select(AiConversation)
+        .where(AiConversation.id == convo.id)
+        .with_for_update()
+    )
+    if convo is None:
+        raise RuntimeError("활성 AI 대화 스레드가 저장 중 삭제되었습니다.")
     # 빈 대화면 max 가 NULL 이라 coalesce 로 -1 → 첫 순번이 0 이 된다.
     next_seq = db.scalar(
         select(func.coalesce(func.max(AiMessage.seq), -1) + 1).where(

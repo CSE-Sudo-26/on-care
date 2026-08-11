@@ -187,6 +187,70 @@ def test_chat_grounded_generations_are_counted(client, monkeypatch):
     assert metrics.snapshot()["counters"]["routine_options.with_chat_context"] == 1
 
 
+def test_a_provider_config_typo_is_infra_not_contract(client, monkeypatch):
+    """COACH_LLM 오타는 ValueError 지만 설정 문제다 — 프롬프트를 봐도 안 고쳐진다.
+
+    `get_coach_llm()` 이 던지는 "알 수 없는 코치 LLM" 을 계약 위반으로 세면
+    지표를 보고 프롬프트·스키마만 뒤지게 된다(CodeRabbit PR#600 리뷰).
+    """
+    from app.services import trainer_routine_options_service as svc
+
+    token = _trainer_token(client)
+    member_id = _first_client_id(client, token)
+
+    def _unknown_provider(*_a, **_k):
+        raise ValueError("알 수 없는 코치 LLM: 'gemni'. 사용 가능: ['openai', 'gemini']")
+
+    monkeypatch.setattr(svc, "get_coach_llm", _unknown_provider)
+    metrics.reset()
+
+    assert _generate(client, token, member_id).json()["generated_by"] == "rule"
+
+    counters = metrics.snapshot()["counters"]
+    assert counters["routine_options.fallback{reason=infra}"] == 1
+    assert "routine_options.fallback{reason=contract}" not in counters
+
+
+def test_a_new_member_without_history_is_not_counted_as_a_fallback(
+    client, db_session
+):
+    """LLM 을 부를 이유가 없던 것과 LLM 이 실패한 것은 다르다.
+
+    같은 칸에 세면 신규 가입이 몰릴 때 폴백률이 치솟아 AI 가 죽은 것처럼 보인다
+    (CodeRabbit PR#600 리뷰).
+    """
+    import uuid
+
+    from sqlalchemy import delete
+
+    from app.core.security import hash_password
+    from app.models.models import User
+
+    email = f"metrics-newbie-{uuid.uuid4().hex[:8]}@example.com"
+    user = User(
+        id=f"user-{uuid.uuid4().hex[:12]}", email=email, name="신규",
+        hashed_password=hash_password("pw!"), role="member",
+    )
+    db_session.add(user)
+    db_session.commit()
+    try:
+        token = client.post(
+            "/v1/auth/login", data={"username": email, "password": "pw!"}
+        ).json()["access_token"]
+        metrics.reset()
+
+        client.get("/v1/diet/recommendations", headers=_headers(token))
+
+        counters = metrics.snapshot()["counters"]
+        assert counters["diet_recommendations.generated{by=no_data}"] == 1
+        assert not any(
+            k.startswith("diet_recommendations.fallback") for k in counters
+        )
+    finally:
+        db_session.execute(delete(User).where(User.id == user.id))
+        db_session.commit()
+
+
 # ---- 노출 엔드포인트 ----
 
 def test_metrics_endpoint_requires_authentication(client):

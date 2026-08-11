@@ -117,7 +117,7 @@ def add_session(
     # 응답을 다 만든 뒤 적재한다(#586). 실패하면 personal_ingest 가 세션을 롤백하는데,
     # 그때 row 가 만료되면 적재 실패가 기록 저장 실패로 번진다. 커밋은 이미 끝났다.
     personal_ingest.record_exercise(
-        db, current_user.id, date=_session_date(row), type=row.type,
+        db, current_user.id, date=_session_date(row), exercise_type=row.type,
         minutes=row.minutes, calories=row.calories, intensity=row.intensity,
         source_ref=row.id,
     )
@@ -164,7 +164,7 @@ def update_session(
     # 30분을 45분으로 고쳤으면 코치도 45분으로 알아야 한다(#603). 지우지 않고
     # 덧붙이면 두 수치가 함께 검색돼 안 고치느니만 못하다.
     personal_ingest.record_exercise(
-        db, current_user.id, date=_session_date(row), type=row.type,
+        db, current_user.id, date=_session_date(row), exercise_type=row.type,
         minutes=row.minutes, calories=row.calories, intensity=row.intensity,
         source_ref=row.id, replace=True,
     )

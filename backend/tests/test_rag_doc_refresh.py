@@ -198,6 +198,99 @@ def test_deleting_a_meal_forgets_its_evidence(client, db_session):
     assert _docs_for(db_session, entry_id) == []
 
 
+# ---- 교체의 원자성 (CodeRabbit PR#607 리뷰) ----
+
+def test_a_failed_embedding_leaves_the_old_documents_intact(
+    client, db_session, monkeypatch
+):
+    """임베딩이 실패해도 기존 근거가 사라지면 안 된다.
+
+    예전엔 purge 를 먼저 커밋하고 ingest 를 따로 커밋해서, 그 사이에 임베딩이
+    실패하면 기존 청크를 되살릴 방법이 없었다.
+    """
+    user_id = "user-demo"
+    ref = "atomicity-probe-1"
+    rag.replace_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+    before = [d.content for d in _docs_for(db_session, ref)]
+    assert before, "먼저 적재돼 있어야 이 테스트가 의미를 갖는다"
+
+    class _BrokenEmbedder:
+        def embed(self, chunks):
+            raise RuntimeError("embedder down")
+
+    monkeypatch.setattr(rag, "get_embedder", lambda *a, **k: _BrokenEmbedder())
+
+    try:
+        rag.replace_personal_text(
+            db_session, user_id, "2026-08-11 운동 기록: 걷기 45분.",
+            domain="exercise", source="exercise", source_ref=ref,
+        )
+    except RuntimeError:
+        pass
+    db_session.rollback()
+    db_session.expire_all()
+
+    assert [d.content for d in _docs_for(db_session, ref)] == before
+
+
+def test_replacing_never_exposes_a_moment_with_no_evidence(client, db_session):
+    """삭제와 삽입이 한 트랜잭션이어야 한다 — 따로 커밋하면 근거가 빈 순간이 생긴다."""
+    user_id = "user-demo"
+    ref = "atomicity-probe-2"
+    rag.replace_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+
+    # 커밋 직전에 세션이 들고 있는 새 문서 수를 기록한다. 세션은 autoflush=False 라
+    # SELECT 로는 대기 중인 삽입이 안 보이므로 `session.new` 를 직접 본다.
+    pending_at_commit: list[int] = []
+    original = db_session.commit
+
+    def _counting_commit():
+        pending_at_commit.append(
+            sum(isinstance(obj, CoachDocument) for obj in db_session.new)
+        )
+        original()
+
+    db_session.commit = _counting_commit  # type: ignore[method-assign]
+    try:
+        rag.replace_personal_text(
+            db_session, user_id, "2026-08-11 운동 기록: 걷기 45분.",
+            domain="exercise", source="exercise", source_ref=ref,
+        )
+    finally:
+        db_session.commit = original  # type: ignore[method-assign]
+
+    # 커밋은 한 번뿐이고, 그 한 번에 삭제와 새 문서가 함께 실린다.
+    assert len(pending_at_commit) == 1
+    assert pending_at_commit[0] > 0
+    db_session.expire_all()
+    assert "45분" in _docs_for(db_session, ref)[0].content
+
+
+def test_emptying_a_record_clears_its_evidence(client, db_session):
+    """기록이 비워진 것도 반영해야 할 변화다 — 옛 문서가 남으면 안 된다."""
+    user_id = "user-demo"
+    ref = "atomicity-probe-3"
+    rag.replace_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+    assert _docs_for(db_session, ref)
+
+    rag.replace_personal_text(
+        db_session, user_id, "   ", domain="exercise", source="exercise",
+        source_ref=ref,
+    )
+    db_session.expire_all()
+
+    assert _docs_for(db_session, ref) == []
+
+
 # ---- 회귀 방어 ----
 
 def test_public_documents_keep_a_null_reference(client, db_session):
