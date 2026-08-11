@@ -316,8 +316,11 @@ def test_unresponsive_llm_gives_up_within_the_timeout(monkeypatch, blocking_llm)
     elapsed = time.monotonic() - started
 
     assert blocking_llm.entered.is_set(), "LLM 을 부르지도 않아 타임아웃이 검증되지 않았다"
-    # 상한을 넘기지 않는다는 것이 요점이다. 스케줄링 지연을 감안해 여유를 둔다.
-    assert elapsed < 5.0, f"타임아웃이 걸리지 않았다({elapsed:.1f}s)"
+    # 상한을 **설정값 기준**으로 잡는다. 고정 상수로 두면 타임아웃이 그 아래
+    # 아무 값으로 회귀해도(예: 설정을 무시하고 4초) 테스트가 그대로 통과한다.
+    # 여유 2초는 CI 러너에서 스레드가 뜨는 시간 몫이다.
+    limit = trainer_routine_options_service.LLM_TIMEOUT_SEC + 2.0
+    assert elapsed < limit, f"타임아웃이 걸리지 않았다({elapsed:.1f}s > {limit:.1f}s)"
 
 
 def test_saturated_pool_falls_back_without_waiting(monkeypatch, blocking_llm):
@@ -446,3 +449,48 @@ def test_guard_failures_return_a_rule_fallback_and_are_counted_apart(
         and k != f"routine_options.fallback{{reason={reason}}}"
     ]
     assert not other_reasons, f"사유가 섞였다: {other_reasons}"
+
+
+def test_slot_is_returned_to_the_semaphore_it_was_taken_from(monkeypatch, blocking_llm):
+    """워커는 자리를 딴 그 인스턴스에 돌려준다 — 전역이 바뀌어도.
+
+    워커가 `_llm_slots` 전역을 다시 읽으면, 그 사이 전역이 교체됐을 때 잡지도 않은
+    세마포어를 풀어 준다. 원래 자리는 영영 안 돌아오고, 교체된 쪽은 초기값을 넘겨
+    `BoundedSemaphore` 가 ValueError 를 던진다.
+    """
+    original = threading.BoundedSemaphore(1)
+    replacement = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(trainer_routine_options_service, "_llm_slots", original)
+    monkeypatch.setattr(trainer_routine_options_service, "LLM_TIMEOUT_SEC", 0.3)
+
+    with pytest.raises(FutureTimeout):
+        trainer_routine_options_service._call_llm("prompt")
+
+    # 호출부가 떠난 뒤 전역이 갈린다. 아직 워커는 블로킹 중이다.
+    monkeypatch.setattr(trainer_routine_options_service, "_llm_slots", replacement)
+    blocking_llm.released.set()
+
+    assert original.acquire(timeout=5), "자리를 딴 세마포어에 돌려주지 않았다"
+    # 교체본은 건드리지 않았어야 한다. 건드렸다면 초과 release 로 이미 깨졌다.
+    assert replacement.acquire(blocking=False), "엉뚱한 세마포어를 풀어 줬다"
+
+
+def test_slot_is_returned_when_scheduling_fails(monkeypatch):
+    """`submit()` 이 실패하면 워커가 돌지 않으므로 자리를 여기서 돌려줘야 한다.
+
+    돌려주지 않으면 실패 한 번마다 동시 호출 한도가 영구히 1씩 줄어, 끝내 모든
+    요청이 포화로 떨어진다.
+    """
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(trainer_routine_options_service, "_llm_slots", slots)
+
+    class _DeadExecutor:
+        def submit(self, fn):
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+    monkeypatch.setattr(trainer_routine_options_service, "_executor", _DeadExecutor())
+
+    with pytest.raises(RuntimeError):
+        trainer_routine_options_service._call_llm("prompt")
+
+    assert slots.acquire(blocking=False), "스케줄링 실패로 자리가 누수됐다"

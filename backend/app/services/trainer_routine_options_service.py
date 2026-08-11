@@ -304,7 +304,12 @@ def _call_llm(prompt: str):
     를 통해 올라와, 호출부의 `except (ValidationError, RoutineContractError)` 와
     타임아웃을 구분하는 자리가 흐려진다.
     """
-    if not _llm_slots.acquire(blocking=False):
+    # 자리를 딴 세마포어 **인스턴스**를 지역에 붙잡아 둔다. 워커가 전역을 다시 읽으면,
+    # 그 사이 전역이 교체됐을 때(테스트의 monkeypatch 가 그렇게 한다) 잡지도 않은
+    # 세마포어를 풀어 준다 — 원래 자리는 영영 안 돌아오고, 교체된 쪽은 초기값을 넘겨
+    # `BoundedSemaphore` 가 ValueError 를 던진다.
+    slots = _llm_slots
+    if not slots.acquire(blocking=False):
         raise LLMBusyError("LLM 동시 호출 한도 초과 — 규칙 폴백")
 
     def _call():
@@ -319,9 +324,17 @@ def _call_llm(prompt: str):
             )
         finally:
             # 타임아웃으로 호출부가 떠난 뒤라도 작업이 끝나면 자리를 반드시 돌려준다.
-            _llm_slots.release()
+            slots.release()
 
-    return _executor.submit(_call).result(timeout=LLM_TIMEOUT_SEC)
+    try:
+        future = _executor.submit(_call)
+    except RuntimeError:
+        # 스케줄링 자체가 실패하면 워커가 돌지 않아 위 `finally` 도 없다. 여기서
+        # 돌려주지 않으면 실패 한 번마다 동시 호출 한도가 영구히 1씩 줄어, 끝내
+        # 모든 요청이 포화로 떨어진다(인터프리터 종료 중 submit 이 이 경로다).
+        slots.release()
+        raise
+    return future.result(timeout=LLM_TIMEOUT_SEC)
 
 
 def _generate_with_llm(
