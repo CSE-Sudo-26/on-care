@@ -120,6 +120,9 @@ class ChatMessageOut(BaseModel):
 class ChatSendRequest(BaseModel):
     # 상한만 둔다(빈/공백은 라우터에서 trim 후 400). 과도한 길이는 여기서 422.
     text: str = Field(max_length=2000)
+    # 발신 시도당 한 번 만들고 재시도에서 재사용한다. 선택값이라 구버전 앱도
+    # 기존처럼 전송할 수 있다.
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 RoutineType = Literal["걷기", "유산소", "근력", "요가", "스트레칭", "기타"]
@@ -277,6 +280,7 @@ class ScheduleCreateRequest(BaseModel):
     duration_minutes: int = Field(default=0, ge=0, le=600)
     note: str = Field(default="", max_length=500)
     program: list[ProgramItem] = Field(default_factory=list, max_length=30)
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
 
     _v_date = field_validator("date")(_validate_ymd)
     _v_time = field_validator("time")(_validate_hhmm)

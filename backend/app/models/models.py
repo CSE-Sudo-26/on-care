@@ -736,11 +736,25 @@ class ChatMessage(Base):
     )
     sender: Mapped[str] = mapped_column(String(20))  # trainer|member
     body: Mapped[str] = mapped_column(Text)
+    # 한 번의 발신 시도에 클라이언트가 붙이는 멱등키. NULL 은 기존 앱 요청이며
+    # 유니크 제약 밖에 남는다. sender 까지 scope 에 넣어 양방향이 같은 문자열 키를
+    # 우연히 만들어도 서로 충돌하지 않게 한다.
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id",
+            "member_id",
+            "sender",
+            "client_request_id",
+            name="uq_chat_messages_client_request",
+        ),
     )
 
 
@@ -771,8 +785,19 @@ class TrainerSchedule(Base):
     note: Mapped[str] = mapped_column(Text, default="")
     program_json: Mapped[str] = mapped_column(Text, default="[]")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # 트레이너의 예약 생성 시도 단위 멱등키. 다른 create operation 과는 테이블이
+    # 달라 같은 문자열을 써도 충돌하지 않는다. NULL 은 구버전 요청 호환용이다.
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id",
+            "client_request_id",
+            name="uq_trainer_schedule_client_request",
+        ),
     )
 
 

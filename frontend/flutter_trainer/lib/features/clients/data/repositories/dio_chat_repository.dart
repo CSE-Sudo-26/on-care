@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
+import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/chat_dtos.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -17,10 +18,14 @@ class DioChatRepository implements ChatRepository {
   DioChatRepository(
     this._dio, {
     this.pollInterval = const Duration(seconds: 3),
+    this.requestIdFactory = newClientRequestId,
   });
 
   final Dio _dio;
   final Duration pollInterval;
+  final String Function() requestIdFactory;
+  final Map<({String clientId, String text}), String> _pendingRequestIds =
+      <({String clientId, String text}), String>{};
 
   @override
   Stream<List<ClientChatMessage>> watchThread(String clientId) =>
@@ -59,13 +64,21 @@ class DioChatRepository implements ChatRepository {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final encodedId = Uri.encodeComponent(clientId);
+    final payload = (clientId: clientId, text: trimmed);
+    final requestId = _pendingRequestIds.putIfAbsent(payload, requestIdFactory);
     try {
       await _dio.post<Map<String, Object?>>(
         '/trainer/clients/$encodedId/chat',
-        data: <String, Object?>{'text': trimmed},
+        data: <String, Object?>{
+          'text': trimmed,
+          'client_request_id': requestId,
+        },
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    }
+    if (_pendingRequestIds[payload] == requestId) {
+      _pendingRequestIds.remove(payload);
     }
   }
 

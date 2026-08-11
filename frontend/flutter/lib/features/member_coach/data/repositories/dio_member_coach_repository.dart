@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/core/utils/active_polling_stream.dart';
+import 'package:oncare/core/utils/request_id.dart';
 import 'package:oncare/features/member_coach/data/dtos/member_coach_dtos.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
@@ -13,10 +14,13 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   DioMemberCoachRepository(
     this._dio, {
     this.pollInterval = const Duration(seconds: 3),
-  });
+    String Function() requestIdFactory = newClientRequestId,
+  }) : _requestIdFactory = requestIdFactory;
 
   final Dio _dio;
   final Duration pollInterval;
+  final String Function() _requestIdFactory;
+  final Map<String, String> _pendingRequestIds = <String, String>{};
 
   @override
   Future<MemberCoach?> fetchCoach() async {
@@ -64,13 +68,23 @@ class DioMemberCoachRepository implements MemberCoachRepository {
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    final requestId = _pendingRequestIds.putIfAbsent(
+      trimmed,
+      _requestIdFactory,
+    );
     try {
       await _dio.post<Map<String, Object?>>(
         '/me/coach/chat',
-        data: <String, Object?>{'text': trimmed},
+        data: <String, Object?>{
+          'text': trimmed,
+          'client_request_id': requestId,
+        },
       );
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    }
+    if (_pendingRequestIds[trimmed] == requestId) {
+      _pendingRequestIds.remove(trimmed);
     }
   }
 

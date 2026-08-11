@@ -326,10 +326,18 @@ def trainer_send_chat(
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="빈 메시지는 보낼 수 없습니다.")
-    return trainer_service.send_message(
-        db, trainer.id, member_id, "trainer", text,
-        notify=notification_service.TRAINER_MESSAGE,
-    )
+    try:
+        return trainer_service.send_message(
+            db,
+            trainer.id,
+            member_id,
+            "trainer",
+            text,
+            notify=notification_service.TRAINER_MESSAGE,
+            client_request_id=payload.client_request_id,
+        )
+    except trainer_service.IdempotencyConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/trainer/clients/{member_id}/chat/read")
@@ -529,13 +537,22 @@ def trainer_create_session(
     """예약 추가(status 예정). member_id 를 주면 담당 고객이어야 한다(아니면 404)."""
     if payload.member_id:
         _require_client(db, trainer.id, payload.member_id)
-    return trainer_service.create_session(
-        db, trainer.id,
-        date=payload.date, time=payload.time, client_name=payload.client_name,
-        member_id=payload.member_id, type_=payload.type,
-        duration_minutes=payload.duration_minutes, note=payload.note,
-        program=payload.program,
-    )
+    try:
+        return trainer_service.create_session(
+            db,
+            trainer.id,
+            date=payload.date,
+            time=payload.time,
+            client_name=payload.client_name,
+            member_id=payload.member_id,
+            type_=payload.type,
+            duration_minutes=payload.duration_minutes,
+            note=payload.note,
+            program=payload.program,
+            client_request_id=payload.client_request_id,
+        )
+    except trainer_service.IdempotencyConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.put(
