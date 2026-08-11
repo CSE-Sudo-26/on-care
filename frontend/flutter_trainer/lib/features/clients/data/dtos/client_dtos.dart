@@ -19,7 +19,7 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     active: json['active'] == true,
     calories: _int(json['calories']),
     sodiumMg: _int(json['sodium_mg']),
-    sugarG: _int(json['sugar_g']),
+    sugarG: _double(json['sugar_g']),
     carbsG: _double(json['carbs_g']),
     proteinG: _double(json['protein_g']),
     fatG: _double(json['fat_g']),

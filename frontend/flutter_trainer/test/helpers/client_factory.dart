@@ -12,7 +12,7 @@ TrainerClient makeClient({
   bool active = true,
   int calories = 1800,
   int sodiumMg = 1500,
-  int sugarG = 30,
+  double sugarG = 30,
   String lastMessage = '안녕하세요',
   String lastTime = '방금',
   String lastRoutine = '오늘',
