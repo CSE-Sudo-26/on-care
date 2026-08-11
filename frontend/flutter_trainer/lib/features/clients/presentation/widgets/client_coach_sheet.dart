@@ -16,7 +16,8 @@ Future<void> showClientCoachSheet(
 }) {
   return showDialog<void>(
     context: context,
-    builder: (_) => _ClientCoachSheet(memberId: memberId, clientName: clientName),
+    builder: (_) =>
+        _ClientCoachSheet(memberId: memberId, clientName: clientName),
   );
 }
 
@@ -81,7 +82,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
   Future<void> _ask() async {
     final String message = _question.text.trim();
     // 빈 질문은 서버도 400 이다. 왕복할 이유가 없다.
-    if (message.isEmpty || _asking) return;
+    if (message.isEmpty || _asking || _restoring) return;
 
     setState(() {
       _asking = true;
@@ -185,7 +186,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
                 controller: _question,
                 maxLines: 3,
                 maxLength: 1000,
-                enabled: !_asking,
+                enabled: !_asking && !_restoring,
                 onSubmitted: (_) => _ask(),
                 decoration: InputDecoration(
                   hintText: l.coachSheetHint,
@@ -213,7 +214,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
         ActionButton(
           label: _turns.isEmpty ? l.coachSheetAsk : l.coachSheetAskAgain,
           primary: true,
-          onPressed: _asking ? null : _ask,
+          onPressed: _asking || _restoring ? null : _ask,
         ),
       ],
     );

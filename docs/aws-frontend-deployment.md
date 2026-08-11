@@ -17,8 +17,8 @@ Flutter 회원 앱과 트레이너 웹을 하나의 private S3 버킷에 올리�
 AWS CloudShell에서 브랜치를 받은 뒤 템플릿을 먼저 검증합니다.
 
 ```bash
-git clone https://github.com/CSE-Sudo-26/sudo-capstone-project.git
-cd sudo-capstone-project
+git clone https://github.com/CSE-Sudo-26/on-care.git
+cd on-care
 git switch feat/aws-frontend-deployment
 
 aws cloudformation validate-template \
@@ -57,6 +57,17 @@ aws cloudformation deploy \
     ExistingGitHubOidcProviderArn=arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com \
   --region ap-northeast-2
 ```
+
+> **이미 생성된 스택을 갱신하는 경우 주의합니다.** `aws cloudformation deploy`는 `--parameter-overrides`에 없는 파라미터를 이전 값 그대로 유지합니다. 저장소 이름이 `sudo-capstone-project`에서 `on-care`로 바뀌었으므로, 이름 변경 이전에 만들어진 스택은 템플릿의 `GitHubRepository` 기본값을 갱신해도 이전 값을 계속 씁니다. 이 경우 OIDC 신뢰 조건의 `sub`가 옛 저장소를 가리켜 배포 워크플로가 자격 증명을 받지 못하므로, 아래처럼 값을 명시해 한 번 갱신해야 합니다.
+>
+> ```bash
+> aws cloudformation deploy \
+>   --template-file infra/frontend-hosting.yml \
+>   --stack-name oncare-frontend \
+>   --capabilities CAPABILITY_IAM \
+>   --parameter-overrides GitHubRepository=on-care \
+>   --region ap-northeast-2
+> ```
 
 CloudFront 배포가 포함되어 있어 스택 생성에는 몇 분이 걸릴 수 있습니다. 완료되면 출력값을 확인합니다.
 

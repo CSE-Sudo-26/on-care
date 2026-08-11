@@ -66,7 +66,11 @@ class _FakeRoutineRepository implements TrainerRoutineRepository {
   };
 
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {}
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {}
 
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) {

@@ -132,7 +132,7 @@ _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높�
 
 
 def record_exercise(
-    db: Session, user_id: str, *, date: str, type: str, minutes: int,
+    db: Session, user_id: str, *, date: str, exercise_type: str, minutes: int,
     calories: int, intensity: str, source_ref: str | None = None,
     replace: bool = False,
 ) -> None:
@@ -146,7 +146,8 @@ def record_exercise(
     둘 다 '내가 한 운동'이고, 주간 집계도 이미 둘을 합쳐서 보여준다(#499).
     """
     text = (
-        f"{date} 운동 기록: {_EXERCISE_TYPE_KR.get(type, type)} {minutes}분, "
+        f"{date} 운동 기록: "
+        f"{_EXERCISE_TYPE_KR.get(exercise_type, exercise_type)} {minutes}분, "
         f"{calories}kcal, 강도 {_EXERCISE_INTENSITY_KR.get(intensity, intensity)}."
     )
     _safe(
