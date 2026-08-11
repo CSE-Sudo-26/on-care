@@ -138,28 +138,38 @@ def test_only_seeded_rows_are_swept(client, db_session, monkeypatch):
 
     #603 이전에 적재된 문서는 `source_ref` 가 NULL 이라 멱등 판정에 걸리지 않으므로,
     전체를 훑으면 그런 기록이 두 벌씩 검색된다.
+
+    적재 판정을 항상 False 로 만들어 sweep 이 실제로 무엇을 훑는지 본다 — 그러지
+    않으면 기동 시드가 이미 전부 적재해 둔 탓에 잡히는 게 하나도 없고, 빈 목록에
+    대한 all(...) 이 True 라 필터를 검증하지 못한다(CodeRabbit PR#612 리뷰).
     """
+    member_id = _seed_member_ids(db_session)[0]
+
+    # 시드가 아닌 회원 기록을 하나 심는다 — 필터가 이걸 건너뛰어야 한다.
+    from app.models.models import ExerciseSession
+
+    db_session.add(
+        ExerciseSession(
+            id="user-made-not-seed-1", user_id=member_id,
+            week_start="2026-08-10", day_label="월", type="cardio",
+            minutes=30, calories=200, intensity="moderate",
+        )
+    )
+    db_session.commit()
+
     captured: list[str | None] = []
-    monkeypatch.setattr(
-        seed_member_data.personal_ingest,
-        "record_diet",
-        lambda db, uid, **kw: captured.append(kw.get("source_ref")),
-    )
-    monkeypatch.setattr(
-        seed_member_data.personal_ingest,
-        "record_exercise",
-        lambda db, uid, **kw: captured.append(kw.get("source_ref")),
-    )
-    monkeypatch.setattr(
-        seed_member_data.personal_ingest,
-        "record_chat",
-        lambda db, uid, **kw: captured.append(kw.get("source_ref")),
-    )
+    monkeypatch.setattr(seed_member_data, "has_personal_doc", lambda *a, **k: False)
+    for name in ("record_diet", "record_exercise", "record_chat"):
+        monkeypatch.setattr(
+            seed_member_data.personal_ingest, name,
+            lambda db, uid, **kw: captured.append(kw.get("source_ref")),
+        )
 
-    members = _seed_member_ids(db_session)
-    seed_member_data._ingest_member_documents(db_session, members[0])
+    seed_member_data._ingest_member_documents(db_session, member_id)
 
+    assert captured, "적재 판정을 껐으므로 시드 기록이 잡혀야 한다"
     assert all(ref and ref.startswith("seed-") for ref in captured)
+    assert "user-made-not-seed-1" not in captured
 
 
 def test_the_sweep_is_skippable(client, db_session, monkeypatch):
@@ -177,3 +187,63 @@ def test_the_sweep_is_skippable(client, db_session, monkeypatch):
     seed_member_data._ingest_seeded_documents(db_session, {"user-demo"})
 
     assert called == []
+
+
+# ---- 적재의 원자성 (CodeRabbit PR#612 리뷰) ----
+
+def test_ensure_checks_and_inserts_inside_one_lock(client, db_session):
+    """확인과 삽입이 갈라지면 동시 기동이 같은 기록을 두 벌 넣는다.
+
+    확인을 밖에서 하고 삽입을 따로 부르면, 두 인스턴스가 모두 "없다"를 보고 각자
+    넣는다. 유니크 제약으로는 못 막는다 — 청킹 때문에 한 기록이 여러 행이라
+    (user_id, source_ref) 는 원래 중복이다.
+    """
+    from app.services.coach.rag import ensure_personal_text
+
+    user_id = "user-demo"
+    ref = "ensure-probe-1"
+
+    first = ensure_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+    second = ensure_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+
+    assert first > 0, "처음에는 적재돼야 한다"
+    assert second == 0, "두 번째 호출은 아무것도 넣지 않는다"
+    assert _doc_count_for_ref(db_session, ref) == first
+
+
+def test_ensure_does_not_embed_when_the_record_is_already_indexed(
+    client, db_session, monkeypatch
+):
+    """이미 있으면 임베딩을 부르지 않는다 — 기동마다 전량 재임베딩하면 의미가 없다."""
+    from app.services.coach import rag
+
+    user_id = "user-demo"
+    ref = "ensure-probe-2"
+    rag.ensure_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    )
+
+    def _boom(*_a, **_k):
+        raise AssertionError("이미 적재된 기록에 임베딩을 불렀다")
+
+    monkeypatch.setattr(rag, "get_embedder", _boom)
+
+    assert rag.ensure_personal_text(
+        db_session, user_id, "2026-08-11 운동 기록: 걷기 30분.",
+        domain="exercise", source="exercise", source_ref=ref,
+    ) == 0
+
+
+def _doc_count_for_ref(db, ref: str) -> int:
+    return len(
+        db.scalars(
+            select(CoachDocument.id).where(CoachDocument.source_ref == ref)
+        ).all()
+    )

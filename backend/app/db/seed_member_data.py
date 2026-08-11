@@ -363,14 +363,12 @@ def _ingest_member_documents(db: Session, member_id: str) -> int:
             models.DietEntry.id.like(f"{_SEED_ID_PREFIX}%"),
         )
     ).all():
-        if has_personal_doc(db, member_id, entry.id):
-            continue
-        personal_ingest.record_diet(
+        count += _ingested(
+            personal_ingest.record_diet,
             db, member_id, date=entry.date, foods=_entry_foods(entry),
             total_calories=entry.total_calories, sodium_mg=entry.sodium_mg,
             sugar_g=entry.sugar_g, source_ref=entry.id,
         )
-        count += 1
 
     for session in db.scalars(
         select(models.ExerciseSession).where(
@@ -378,14 +376,13 @@ def _ingest_member_documents(db: Session, member_id: str) -> int:
             models.ExerciseSession.id.like(f"{_SEED_ID_PREFIX}%"),
         )
     ).all():
-        if has_personal_doc(db, member_id, session.id):
-            continue
-        personal_ingest.record_exercise(
-            db, member_id, date=_session_date(session), exercise_type=session.type,
-            minutes=session.minutes, calories=session.calories,
-            intensity=session.intensity, source_ref=session.id,
+        count += _ingested(
+            personal_ingest.record_exercise,
+            db, member_id, date=_session_date(session),
+            exercise_type=session.type, minutes=session.minutes,
+            calories=session.calories, intensity=session.intensity,
+            source_ref=session.id,
         )
-        count += 1
 
     for msg in db.scalars(
         select(models.ChatMessage).where(
@@ -393,16 +390,26 @@ def _ingest_member_documents(db: Session, member_id: str) -> int:
             models.ChatMessage.id.like(f"{_SEED_ID_PREFIX}%"),
         )
     ).all():
-        if has_personal_doc(db, member_id, msg.id):
-            continue
-        personal_ingest.record_chat(
+        count += _ingested(
+            personal_ingest.record_chat,
             db, member_id, sender=msg.sender, text=msg.body,
             date=clock.to_seoul(msg.created_at).date().isoformat(),
             source_ref=msg.id,
         )
-        count += 1
 
     return count
+
+
+def _ingested(record, db: Session, member_id: str, **fields) -> int:
+    """`once` 경로로 적재하고 실제로 새로 넣었으면 1을 돌려준다.
+
+    적재 여부를 여기서 미리 확인하지 않는다 — 확인과 삽입이 갈라지면 두 인스턴스가
+    동시에 기동할 때 같은 기록의 청크가 두 벌 들어간다. `ensure_personal_text` 가
+    잠금 안에서 확인까지 하므로, 우리는 문서 수 변화로 새로 넣었는지만 센다.
+    """
+    before = has_personal_doc(db, member_id, fields["source_ref"])
+    record(db, member_id, once=True, **fields)
+    return 0 if before else int(has_personal_doc(db, member_id, fields["source_ref"]))
 
 
 def _entry_foods(entry: models.DietEntry) -> list[dict]:

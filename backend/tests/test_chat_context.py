@@ -41,8 +41,11 @@ def test_ingested_chat_carries_speaker_label(monkeypatch):
     monkeypatch.setattr(
         personal_ingest,
         "_safe",
-        lambda db, user_id, text, *, domain, source, source_ref=None,
-        replace=False: captured.append((user_id, text, domain)),
+        # **kwargs 로 받는다 — _safe 에 옵션이 하나 늘 때마다 이 페이크가
+        # TypeError 로 깨지는 일을 반복하지 않으려고.
+        lambda db, user_id, text, *, domain, source, **_: captured.append(
+            (user_id, text, domain)
+        ),
     )
 
     personal_ingest.record_chat(
@@ -67,8 +70,7 @@ def test_chat_is_owned_by_the_member_even_when_the_trainer_speaks(monkeypatch):
     monkeypatch.setattr(
         personal_ingest,
         "_safe",
-        lambda db, user_id, text, *, domain, source, source_ref=None,
-        replace=False: captured.append(user_id),
+        lambda db, user_id, text, *, domain, source, **_: captured.append(user_id),
     )
     personal_ingest.record_chat(
         None, "member-1", sender="trainer", text="다음 주 강도를 올려 봅시다",

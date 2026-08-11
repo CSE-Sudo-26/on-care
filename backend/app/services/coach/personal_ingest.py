@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.services.coach import prompt_safety
 from app.services.coach.rag import (
+    ensure_personal_text,
     ingest_personal_text,
     purge_personal,
     replace_personal_text,
@@ -33,10 +34,20 @@ log = logging.getLogger(__name__)
 def _safe(
     db: Session, user_id: str, text: str, *, domain: str, source: str,
     source_ref: str | None = None, replace: bool = False,
+    once: bool = False,
 ) -> None:
     if not get_settings().rag_auto_ingest or not user_id or not text.strip():
         return
     try:
+        # 이미 적재된 기록이면 건너뛴다(#604). 확인과 삽입을 한 트랜잭션으로 묶는
+        # ensure_personal_text 를 쓴다 — 밖에서 has_personal_doc 로 보고 따로 넣으면
+        # 두 인스턴스가 동시에 기동할 때 같은 기록의 청크가 두 벌 들어간다.
+        if once and source_ref:
+            ensure_personal_text(
+                db, user_id, text, domain=domain, source=source,
+                source_ref=source_ref, title="",
+            )
+            return
         # 교체는 지우고 다시 넣는다(#603). 그냥 넣으면 옛 수치 문서가 남아 코치가
         # "30분"과 "45분"을 동시에 근거로 삼는다 — 안 고치느니만 못하다.
         #
@@ -106,7 +117,7 @@ def _chat_is_ingestable(text: str) -> bool:
 
 def record_chat(
     db: Session, member_id: str, *, sender: str, text: str, date: str,
-    source_ref: str | None = None,
+    source_ref: str | None = None, once: bool = False,
 ) -> None:
     """트레이너↔회원 채팅 한 줄을 회원의 개인 문서로 적재한다(#580).
 
@@ -126,7 +137,7 @@ def record_chat(
     speaker = prompt_safety.speaker_label(sender)
     _safe(
         db, member_id, f"{date} 대화 — {speaker}: {text.strip()}",
-        domain="general", source="chat", source_ref=source_ref,
+        domain="general", source="chat", source_ref=source_ref, once=once,
     )
 
 
@@ -146,7 +157,7 @@ _EXERCISE_INTENSITY_KR = {"light": "낮음", "moderate": "보통", "high": "높�
 def record_exercise(
     db: Session, user_id: str, *, date: str, exercise_type: str, minutes: int,
     calories: int, intensity: str, source_ref: str | None = None,
-    replace: bool = False,
+    replace: bool = False, once: bool = False,
 ) -> None:
     """운동 세션 한 건을 개인 문서로 적재한다(#586).
 
@@ -164,7 +175,7 @@ def record_exercise(
     )
     _safe(
         db, user_id, text, domain="exercise", source="exercise",
-        source_ref=source_ref, replace=replace,
+        source_ref=source_ref, replace=replace, once=once,
     )
 
 
@@ -172,6 +183,7 @@ def record_diet(
     db: Session, user_id: str, *, date: str, foods: list[dict],
     total_calories: int, sodium_mg: int, sugar_g: float,
     source_ref: str | None = None, replace: bool = False,
+    once: bool = False,
 ) -> None:
     names = ", ".join(f.get("name", "") for f in foods if f.get("name")) or "식단"
     text = (
@@ -180,5 +192,5 @@ def record_diet(
     )
     _safe(
         db, user_id, text, domain="diet", source="diet",
-        source_ref=source_ref, replace=replace,
+        source_ref=source_ref, replace=replace, once=once,
     )
