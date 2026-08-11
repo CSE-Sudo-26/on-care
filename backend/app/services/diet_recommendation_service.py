@@ -396,6 +396,10 @@ def build_recommendations(
     # 근거가 없으면 LLM 을 부를 이유가 없다. 신규 가입자는 여기서 현재 홈 화면과
     # 동일한 기본 순서를 받는다.
     if not ctx.has_data or not ctx.signals:
+        # `rules` 가 아니라 별도 라벨을 쓴다 — 여기는 AI 가 실패한 게 아니라 부를
+        # 이유가 없었던 경우다. 같은 칸에 세면 신규 가입이 몰릴 때 폴백률이 치솟아
+        # AI 가 죽은 것처럼 보인다. `fallback` 카운터는 올리지 않는다(#583).
+        metrics.incr("diet_recommendations.generated", by="no_data")
         return _response(ctx, _fallback_items(ctx), personalized=False, source="fallback")
 
     # use_llm 을 키에 넣지 않으면 규칙 응답이 LLM 요청에 재사용된다(디버깅·비용 절감용
