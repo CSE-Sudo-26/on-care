@@ -43,6 +43,30 @@ alembic downgrade -1          # 한 단계 롤백
 임베딩 `gemini-embedding-001`(768) · 코치/인식 `gemini-flash-latest` · `.env`: `EMBEDDER=gemini`, `EMBED_DIM=768`.
 검증: `python -m scripts.check_gemini` · `/v1/ai-coach/chat` 응답의 `sources` 가 채워지면 RAG 가 실제로 동작(규칙 폴백 아님).
 
+## AI 폴백 지표
+루틴 생성·식단 추천은 실패해도 규칙 기반으로 조용히 폴백한다 — 사용자는 그럴듯한
+결과를 계속 받으므로 AI 가 죽어도 신고가 들어오지 않는다. 관리자 토큰으로 확인한다:
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:8000/v1/system/metrics
+```
+응답의 `counters` 에 들어오는 키(전체 이름 그대로 조회):
+
+| 키 | 뜻 |
+| --- | --- |
+| `routine_options.generated{by=ai}` | LLM 이 만든 루틴. **0 이면 AI 경로가 죽은 것** |
+| `routine_options.generated{by=rule}` | 폴백으로 만든 루틴 |
+| `routine_options.fallback{reason=contract}` | 응답 규격 위반 → 프롬프트·스키마를 본다 |
+| `routine_options.fallback{reason=infra}` | 키 미설정·설정 오타·네트워크·5xx |
+| `routine_options.with_chat_context` | 채팅 근거가 실린 채 AI 가 성공한 횟수(#580) |
+| `diet_recommendations.generated{by=llm}` | LLM 이 만든 추천 |
+| `diet_recommendations.generated{by=rules}` | LLM 실패 후 규칙으로 만든 추천 |
+| `diet_recommendations.generated{by=no_data}` | 근거가 없어 LLM 을 부르지 않음(신규 가입자) |
+| `diet_recommendations.fallback{reason=busy\|timeout\|error}` | 동시 호출 한도·타임아웃·그 외 실패 |
+
+`durations` 에는 `routine_options.llm_ms` 가 count/avg/max 로 들어온다 — #584 의
+타임아웃 값을 정할 근거다. 관리자는 `.env` 의 `ADMIN_EMAILS` 로 지정한다.
+값은 프로세스 메모리에 있어 재시작하면 사라진다(단일 인스턴스 기준).
+
 ## 프론트 연동 (실서버 전환)
 회원 앱(모바일)·트레이너 웹 **양쪽 모두** 같은 방식으로 전환합니다.
 ```bash

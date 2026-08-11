@@ -25,7 +25,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core import clock
+from app.core import clock, metrics
 from app.data import meal_catalog
 from app.data.meal_catalog import CATALOG, DEFAULT_ORDER, RECOMMENDATION_COUNT, MealItem
 from app.models.models import DietEntry, HealthProfile
@@ -396,6 +396,10 @@ def build_recommendations(
     # 근거가 없으면 LLM 을 부를 이유가 없다. 신규 가입자는 여기서 현재 홈 화면과
     # 동일한 기본 순서를 받는다.
     if not ctx.has_data or not ctx.signals:
+        # `rules` 가 아니라 별도 라벨을 쓴다 — 여기는 AI 가 실패한 게 아니라 부를
+        # 이유가 없었던 경우다. 같은 칸에 세면 신규 가입이 몰릴 때 폴백률이 치솟아
+        # AI 가 죽은 것처럼 보인다. `fallback` 카운터는 올리지 않는다(#583).
+        metrics.incr("diet_recommendations.generated", by="no_data")
         return _response(ctx, _fallback_items(ctx), personalized=False, source="fallback")
 
     # use_llm 을 키에 넣지 않으면 규칙 응답이 LLM 요청에 재사용된다(디버깅·비용 절감용
@@ -408,19 +412,26 @@ def build_recommendations(
     if hit and hit[0] > time.monotonic():
         return hit[1]
 
+    # 계측은 캐시 미스 이후에만 센다(#583) — 세는 대상은 '요청 수'가 아니라 '생성
+    # 시도'다. 캐시 적중까지 세면 TTL 길이가 폴백률을 흔든다.
     if use_llm:
         try:
             response = _response(ctx, _llm_items(ctx), personalized=True, source="llm")
+            metrics.incr("diet_recommendations.generated", by="llm")
             _cache_put(cache_key, response)
             return response
         except LLMBusyError:
+            metrics.incr("diet_recommendations.fallback", reason="busy")
             logger.info("diet recommendation LLM 포화 — 규칙 폴백")
         except FutureTimeout:
+            metrics.incr("diet_recommendations.fallback", reason="timeout")
             logger.warning("diet recommendation LLM timeout (%.1fs) — 규칙 폴백", LLM_TIMEOUT_SEC)
         except Exception:  # noqa: BLE001 - LLM 장애 종류와 무관하게 화면은 떠야 한다
+            metrics.incr("diet_recommendations.fallback", reason="error")
             logger.warning("diet recommendation LLM 실패 — 규칙 폴백", exc_info=True)
 
     # 규칙 폴백도 신호를 반영한 진짜 추천이다(예: 나트륨 과다 → 저나트륨 상위).
+    metrics.incr("diet_recommendations.generated", by="rules")
     response = _response(ctx, _fallback_items(ctx), personalized=True, source="rules")
     _cache_put(cache_key, response)
     return response

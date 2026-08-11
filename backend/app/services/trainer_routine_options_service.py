@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, time, timedelta
+import time
+# `time` 은 stdlib 모듈로 두고(경과 시간 측정), 자정 시각은 별칭으로 받는다.
+from datetime import date, datetime, timedelta
+from datetime import time as time_of_day
 
+from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core import clock
+from app.core import clock, metrics
 from app.models.models import (
     ChatMessage,
     DietEntry,
@@ -166,7 +170,7 @@ def _recent_chat_lines(
     # 못 타고, 드라이버가 파라미터를 varchar 로 넘겨 타입 비교가 깨진다.
     since = datetime.combine(
         today_date - timedelta(days=CHAT_LOOKBACK_DAYS - 1),
-        time.min,
+        time_of_day.min,
         tzinfo=clock.SEOUL,
     )
     rows = db.execute(
@@ -213,15 +217,28 @@ def build_rule_options(
     )
 
 
+class RoutineContractError(ValueError):
+    """LLM 응답이 계약을 어겼다 — 공급자는 살아 있고, 볼 곳은 프롬프트·스키마다.
+
+    `ValueError` 를 통째로 계약 위반으로 잡으면 안 된다. `get_coach_llm()` 은
+    COACH_LLM 값이 오타면 `ValueError("알 수 없는 코치 LLM: ...")` 를 던지는데
+    (`coach/llm.py`), 그건 설정 문제라 프롬프트를 아무리 손봐도 안 고쳐진다.
+    계약 위반만 이 타입으로 좁혀 `reason=contract` 와 `reason=infra` 를 가른다.
+    """
+
+
 def _decode_json_object(text: str) -> dict:
     """LLM이 실수로 붙인 코드펜스·설명 앞뒤를 제거하고 첫 JSON 객체만 읽는다."""
     start = text.find("{")
     end = text.rfind("}")
     if start < 0 or end <= start:
-        raise ValueError("LLM 응답에 JSON 객체가 없습니다.")
-    parsed = json.loads(text[start : end + 1])
+        raise RoutineContractError("LLM 응답에 JSON 객체가 없습니다.")
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except json.JSONDecodeError as exc:
+        raise RoutineContractError(f"LLM 응답 JSON 파싱 실패: {exc}") from exc
     if not isinstance(parsed, dict):
-        raise ValueError("LLM 응답은 JSON 객체여야 합니다.")
+        raise RoutineContractError("LLM 응답은 JSON 객체여야 합니다.")
     return parsed
 
 
@@ -247,7 +264,7 @@ def _generate_with_llm(
         options.plan_a.total_minutes > request.available_minutes
         or options.plan_b.total_minutes > request.available_minutes
     ):
-        raise ValueError("LLM 루틴 시간이 요청 가능한 시간을 초과했습니다.")
+        raise RoutineContractError("LLM 루틴 시간이 요청 가능한 시간을 초과했습니다.")
     return options
 
 
@@ -259,14 +276,55 @@ def generate_routine_options(
 ) -> RoutineOptionsOut:
     analysis = build_member_analysis(db, trainer_id, member_id, request)
     fallback = build_rule_options(analysis, request)
+    started = time.monotonic()
+    had_chat = bool(analysis.recent_messages)
     try:
-        return _generate_with_llm(analysis, request)
-    except Exception:  # noqa: BLE001 — provider/network/JSON failures all fall back
+        options = _generate_with_llm(analysis, request)
+    except (ValidationError, RoutineContractError) as exc:
+        # 계약 위반 — 공급자는 살아 있는데 응답이 규격에 안 맞는다. 프롬프트나
+        # 스키마를 손볼 신호라 인프라 장애와 섞으면 안 된다.
+        # 넓은 ValueError 가 아니라 이 두 타입만 잡는다 — COACH_LLM 오타 같은
+        # 설정 오류도 ValueError 라, 그것까지 계약 위반으로 세면 지표가 엉킨다.
+        _record(started, reason="contract", had_chat_context=had_chat)
         logger.warning(
-            "맞춤 루틴 LLM 생성 실패 — 규칙 기반 폴백 사용 "
-            "(trainer_id=%s, member_id=%s)",
-            trainer_id,
-            member_id,
-            exc_info=True,
+            "맞춤 루틴 LLM 계약 위반 — 규칙 기반 폴백 사용 "
+            "(trainer_id=%s, member_id=%s): %s",
+            trainer_id, member_id, exc,
         )
         return fallback
+    except Exception:  # noqa: BLE001 — 키 미설정·설정 오타·네트워크·5xx, 우리 쪽 버그
+        # 이쪽은 stack trace 를 남긴다. 예전엔 한 덩어리로 삼켜서, 스키마 필드
+        # 이름을 잘못 쓴 버그도 조용히 규칙형으로 내려가 아무도 몰랐다.
+        _record(started, reason="infra", had_chat_context=had_chat)
+        logger.exception(
+            "맞춤 루틴 LLM 호출 실패 — 규칙 기반 폴백 사용 "
+            "(trainer_id=%s, member_id=%s)",
+            trainer_id, member_id,
+        )
+        return fallback
+
+    _record(started, reason=None, had_chat_context=had_chat)
+    return options
+
+
+def _record(
+    started: float, *, reason: str | None, had_chat_context: bool,
+) -> None:
+    """생성 결과를 계측한다(#583).
+
+    소요 시간은 성공·실패 모두 남긴다 — 타임아웃으로 폴백하는 경우 '얼마나 오래
+    기다렸는지'가 #584 의 타임아웃 값을 정하는 근거다.
+    """
+    metrics.observe_ms(
+        "routine_options.llm_ms", (time.monotonic() - started) * 1000
+    )
+    if reason:
+        metrics.incr("routine_options.generated", by="rule")
+        metrics.incr("routine_options.fallback", reason=reason)
+        return
+    metrics.incr("routine_options.generated", by="ai")
+    # 성공했을 때만 센다 — 규칙형은 채팅을 읽지 않으므로, 폴백까지 세면 이 지표가
+    # "채팅 근거가 AI 에 닿았다"는 질문에 거짓으로 답한다(#580 이 실환경에서
+    # 도는지 확인하려고 만든 카운터다).
+    if had_chat_context:
+        metrics.incr("routine_options.with_chat_context")
