@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -66,7 +68,11 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    repo = DioScheduleRepository(dio);
+    var requestId = 0;
+    repo = DioScheduleRepository(
+      dio,
+      requestIdFactory: () => 'req-${++requestId}',
+    );
     addTearDown(repo.dispose);
   });
 
@@ -211,6 +217,97 @@ void main() {
     expect(emissions, hasLength(2));
     expect(emissions.last.map((s) => s.id), <String>['before', 'after']);
     await sub.cancel();
+  });
+
+  test('add retry reuses its request id; next create rotates it', () async {
+    var calls = 0;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) throw _httpError(503, _schedulePath);
+      return _okMap(_schedulePath);
+    });
+
+    Future<void> add() => repo.addSession(
+      date: '2026-08-06',
+      clientName: '김민수',
+      time: '15:00',
+      type: '1:1 PT',
+      durationMinutes: 60,
+    );
+
+    await expectLater(add(), throwsA(isA<AppError>()));
+    await add();
+    await add();
+
+    final bodies = verify(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, dynamic>>();
+    expect(bodies[0]['client_request_id'], bodies[1]['client_request_id']);
+    expect(
+      bodies[2]['client_request_id'],
+      isNot(bodies[1]['client_request_id']),
+    );
+  });
+
+  test('another create does not replace a failed request id', () async {
+    final firstResponse = Completer<Response<Map<String, dynamic>>>();
+    var isFirstAttempt = true;
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) {
+      final data = invocation.namedArguments[#data]! as Map<String, dynamic>;
+      if (data['note'] == '첫 일정' && isFirstAttempt) {
+        isFirstAttempt = false;
+        return firstResponse.future;
+      }
+      return Future<Response<Map<String, dynamic>>>.value(
+        _okMap(_schedulePath),
+      );
+    });
+
+    Future<void> add(String note) => repo.addSession(
+      date: '2026-08-06',
+      clientName: '김민수',
+      time: '15:00',
+      type: '1:1 PT',
+      durationMinutes: 60,
+      note: note,
+    );
+
+    final firstCreate = add('첫 일정');
+    final firstFailure = expectLater(firstCreate, throwsA(isA<AppError>()));
+    await add('두 번째 일정');
+    firstResponse.completeError(_httpError(503, _schedulePath));
+    await firstFailure;
+    await add('첫 일정');
+
+    final bodies = verify(
+      () => dio.post<Map<String, dynamic>>(
+        _schedulePath,
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, dynamic>>();
+    expect(bodies.map((body) => body['note']), <String>[
+      '첫 일정',
+      '두 번째 일정',
+      '첫 일정',
+    ]);
+    expect(bodies[0]['client_request_id'], bodies[2]['client_request_id']);
+    expect(
+      bodies[1]['client_request_id'],
+      isNot(bodies[0]['client_request_id']),
+    );
   });
 
   test('a FAILED mutation does not make readers re-fetch', () async {

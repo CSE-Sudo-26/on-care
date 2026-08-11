@@ -5,11 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 Widget _app(Widget home, {List<Override> overrides = const <Override>[]}) {
   return ProviderScope(
@@ -23,7 +24,7 @@ Widget _app(Widget home, {List<Override> overrides = const <Override>[]}) {
   );
 }
 
-class _PastDateDietRepository extends MockDietRepository {
+class _PastDateDietRepository extends FakeDietRepository {
   _PastDateDietRepository({this.fail = false});
 
   final bool fail;
@@ -129,7 +130,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(900, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final DietDay day =
-        await tester.runAsync(() => MockDietRepository().fetchToday())
+        await tester.runAsync(() => FakeDietRepository().fetchToday())
             as DietDay;
     const UserProfile profile = UserProfile(
       id: 'member',
@@ -166,7 +167,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(340, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final DietDay day =
-          await tester.runAsync(() => MockDietRepository().fetchToday())
+          await tester.runAsync(() => FakeDietRepository().fetchToday())
               as DietDay;
 
       await tester.pumpWidget(_app(Scaffold(body: NutritionSummary(day: day))));
@@ -265,7 +266,7 @@ void main() {
       _app(
         const DietRecordPage(),
         overrides: <Override>[
-          dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+          dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
         ],
       ),
     );
@@ -335,7 +336,7 @@ void main() {
       _app(
         const DietRecordPage(),
         overrides: <Override>[
-          dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+          dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
         ],
       ),
     );
@@ -367,7 +368,7 @@ void main() {
       _app(
         const DietRecordPage(),
         overrides: <Override>[
-          dietRepositoryProvider.overrideWithValue(MockDietRepository()),
+          dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
         ],
       ),
     );

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/features/member_coach/data/repositories/dio_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 
@@ -30,7 +33,11 @@ void main() {
 
   setUp(() {
     dio = _MockDio();
-    repo = DioMemberCoachRepository(dio);
+    var requestId = 0;
+    repo = DioMemberCoachRepository(
+      dio,
+      requestIdFactory: () => 'req-${++requestId}',
+    );
   });
 
   test('fetchCoach returns the coach', () async {
@@ -164,12 +171,90 @@ void main() {
     verify(
       () => dio.post<Map<String, Object?>>(
         '/me/coach/chat',
-        data: <String, Object?>{'text': '좋아요'},
+        data: <String, Object?>{'text': '좋아요', 'client_request_id': 'req-1'},
       ),
     ).called(1);
 
     await repo.sendMessage('   ');
     verifyNoMoreInteractions(dio);
+  });
+
+  test('send retry keeps its request id and success rotates it', () async {
+    var calls = 0;
+    when(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {
+      calls += 1;
+      if (calls == 1) throw _httpError(503, '/me/coach/chat');
+      return _ok<Map<String, Object?>>(<String, Object?>{
+        'id': 'x',
+      }, '/me/coach/chat');
+    });
+
+    await expectLater(repo.sendMessage('재시도'), throwsA(isA<AppError>()));
+    await repo.sendMessage('재시도');
+    await repo.sendMessage('재시도');
+
+    final bodies = verify(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, Object?>>();
+    expect(bodies[0]['client_request_id'], bodies[1]['client_request_id']);
+    expect(
+      bodies[2]['client_request_id'],
+      isNot(bodies[1]['client_request_id']),
+    );
+  });
+
+  test('another message does not replace a failed send request id', () async {
+    final firstResponse = Completer<Response<Map<String, Object?>>>();
+    var isFirstAttempt = true;
+    when(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((invocation) {
+      final data = invocation.namedArguments[#data]! as Map<String, Object?>;
+      if (data['text'] == '첫 메시지' && isFirstAttempt) {
+        isFirstAttempt = false;
+        return firstResponse.future;
+      }
+      return Future<Response<Map<String, Object?>>>.value(
+        _ok<Map<String, Object?>>(<String, Object?>{
+          'id': 'x',
+        }, '/me/coach/chat'),
+      );
+    });
+
+    final firstSend = repo.sendMessage('첫 메시지');
+    final firstFailure = expectLater(firstSend, throwsA(isA<AppError>()));
+    await repo.sendMessage('두 번째 메시지');
+    firstResponse.completeError(_httpError(503, '/me/coach/chat'));
+    await firstFailure;
+    await repo.sendMessage('첫 메시지');
+
+    final bodies = verify(
+      () => dio.post<Map<String, Object?>>(
+        '/me/coach/chat',
+        data: captureAny(named: 'data'),
+      ),
+    ).captured.cast<Map<String, Object?>>();
+    expect(bodies.map((body) => body['text']), <String>[
+      '첫 메시지',
+      '두 번째 메시지',
+      '첫 메시지',
+    ]);
+    expect(bodies[0]['client_request_id'], bodies[2]['client_request_id']);
+    expect(
+      bodies[1]['client_request_id'],
+      isNot(bodies[0]['client_request_id']),
+    );
   });
 
   test('unreadCount reads the unread field', () async {

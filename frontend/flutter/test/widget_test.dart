@@ -13,7 +13,6 @@ import 'package:oncare/core/logging/app_logger.dart';
 import 'package:oncare/features/dashboard/data/repositories/mock_dashboard_repository.dart';
 import 'package:oncare/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
@@ -25,6 +24,8 @@ import 'package:oncare/features/member_coach/domain/repositories/member_coach_re
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/locale_provider.dart';
+
+import 'helpers/fake_diet_repository.dart';
 
 class _CountingMemberCoachRepository extends MockMemberCoachRepository {
   int routineLoads = 0;
@@ -54,16 +55,20 @@ void main() {
       apiBaseUrl: 'https://dev.api.test',
       useMockApi: true,
     );
+    // 식단 탭과 홈 요약이 같은 데이터를 본다 — 아래 두 override 가 공유한다.
+    final FakeDietRepository diet = FakeDietRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
           appConfigProvider.overrideWithValue(config),
           appLoggerProvider.overrideWithValue(Logger(level: Level.off)),
           // Diet repo defaults to DioDietRepository (Stage 9) which
-          // needs a real dio+db. Swap to the in-memory mock here.
-          dietRepositoryProvider.overrideWithValue(
-            MockDietRepository() as DietRepository,
-          ),
+          // needs a real dio+db. Swap to the in-memory fake here.
+          //
+          // 아래 대시보드 override 와 **같은 인스턴스**를 쓴다. 따로 만들면 식단
+          // 탭에서 추가·삭제한 끼니를 홈 요약이 못 보게 되어, 테스트가 실제와
+          // 다른 상태를 검증하게 된다(리뷰).
+          dietRepositoryProvider.overrideWithValue(diet as DietRepository),
           // Same reason — exercise repo defaults to DioExerciseRepository
           // (Stage 9.6); swap to the in-memory mock here.
           exerciseRepositoryProvider.overrideWithValue(
@@ -73,8 +78,7 @@ void main() {
           // 9.8); the smoke test only inspects the nav, so the mock is
           // plenty.
           dashboardRepositoryProvider.overrideWithValue(
-            MockDashboardRepository(MockDietRepository())
-                as DashboardRepository,
+            MockDashboardRepository(diet) as DashboardRepository,
           ),
           if (memberCoachRepository != null)
             memberCoachRepositoryProvider.overrideWithValue(

@@ -36,6 +36,10 @@ from app.services.coach import personal_ingest
 SODIUM_TARGET_MG = 2000
 
 
+class IdempotencyConflict(Exception):
+    """같은 멱등키가 이미 다른 payload 에 사용됐다."""
+
+
 def _today() -> date:
     return clock.today()
 
@@ -365,9 +369,47 @@ def build_chat_thread(
     ]
 
 
+def _chat_out(msg: ChatMessage, viewer: str) -> ChatMessageOut:
+    return ChatMessageOut(
+        id=msg.id,
+        sender=_sender_out(msg.sender, viewer),
+        body=msg.body,
+        time_label=_hhmm(msg.created_at),
+        created_at=_iso(msg.created_at),
+    )
+
+
+def find_message_by_client_request(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    sender: str,
+    client_request_id: str,
+) -> ChatMessage | None:
+    return db.scalar(
+        select(ChatMessage).where(
+            ChatMessage.trainer_id == trainer_id,
+            ChatMessage.member_id == member_id,
+            ChatMessage.sender == sender,
+            ChatMessage.client_request_id == client_request_id,
+        )
+    )
+
+
+def _existing_message_out(
+    message: ChatMessage, *, text: str, viewer: str
+) -> ChatMessageOut:
+    if message.body != text:
+        raise IdempotencyConflict(
+            "같은 client_request_id에 다른 메시지를 보낼 수 없습니다."
+        )
+    return _chat_out(message, viewer)
+
+
 def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
     viewer: str = "trainer", notify: str | None = None,
+    client_request_id: str | None = None,
 ) -> ChatMessageOut:
     """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
     build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다.
@@ -379,15 +421,37 @@ def send_message(
     회원이 보낸 메시지에는 **트레이너 알림**을 남긴다(#503). 사이드바 미읽음 배지는
     지금 보고 있을 때만 눈에 들어오고, 지나가면 다시 볼 자리가 없었다.
     """
+    if client_request_id:
+        existing = find_message_by_client_request(
+            db, trainer_id, member_id, sender, client_request_id
+        )
+        if existing is not None:
+            return _existing_message_out(existing, text=text, viewer=viewer)
+
     msg = ChatMessage(
         id=f"chat-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
         member_id=member_id,
         sender=sender,
         body=text,
+        client_request_id=client_request_id,
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)
+    # 알림을 넣기 전에 DB 유니크 제약을 확인한다. 동시 재시도 중 진 요청이 여기서
+    # 막혀야 회원·트레이너 알림도 한 번만 생성된다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = find_message_by_client_request(
+                db, trainer_id, member_id, sender, client_request_id
+            )
+            if existing is not None:
+                return _existing_message_out(existing, text=text, viewer=viewer)
+        raise
+
     if sender == "member":
         member_name = db.scalar(select(User.name).where(User.id == member_id))
         notification_service.queue_for_trainer(
@@ -412,10 +476,7 @@ def send_message(
         )
     db.commit()
     db.refresh(msg)
-    out = ChatMessageOut(
-        id=msg.id, sender=_sender_out(msg.sender, viewer), body=msg.body,
-        time_label=_hhmm(msg.created_at), created_at=_iso(msg.created_at),
-    )
+    out = _chat_out(msg, viewer)
     # 적재는 응답을 다 만든 뒤에 한다(#580). 실패하면 personal_ingest 가 세션을
     # 롤백하는데, 그때 msg 가 만료돼 응답을 못 만들게 되면 적재 실패가 메시지
     # 발신 실패로 번진다. 커밋은 이미 끝났으니 롤백해도 메시지 자체는 남는다.
@@ -846,11 +907,61 @@ def _dump_program(
     return json.dumps(items, ensure_ascii=False)
 
 
+def _existing_schedule_out(
+    session: TrainerSchedule,
+    *,
+    date: str,
+    time: str,
+    client_name: str,
+    member_id: str | None,
+    type_: str,
+    duration_minutes: int,
+    note: str,
+    program_json: str,
+) -> ScheduleSessionOut:
+    same_payload = (
+        session.date == date
+        and session.time == time
+        and session.client_name == client_name
+        and session.member_id == member_id
+        and session.type == type_
+        and session.duration_minutes == duration_minutes
+        and session.note == note
+        and session.program_json == program_json
+    )
+    if not same_payload:
+        raise IdempotencyConflict(
+            "같은 client_request_id에 다른 스케줄을 생성할 수 없습니다."
+        )
+    return _schedule_out(session)
+
+
 def create_session(
     db: Session, trainer_id: str, *, date: str, time: str, client_name: str,
     member_id: str | None, type_: str, duration_minutes: int, note: str,
-    program: list[ProgramItem],
+    program: list[ProgramItem], client_request_id: str | None = None,
 ) -> ScheduleSessionOut:
+    program_json = _dump_program(program)
+    if client_request_id:
+        existing = db.scalar(
+            select(TrainerSchedule).where(
+                TrainerSchedule.trainer_id == trainer_id,
+                TrainerSchedule.client_request_id == client_request_id,
+            )
+        )
+        if existing is not None:
+            return _existing_schedule_out(
+                existing,
+                date=date,
+                time=time,
+                client_name=client_name,
+                member_id=member_id,
+                type_=type_,
+                duration_minutes=duration_minutes,
+                note=note,
+                program_json=program_json,
+            )
+
     s = TrainerSchedule(
         id=f"sched-{uuid.uuid4().hex[:12]}",
         trainer_id=trainer_id,
@@ -862,10 +973,38 @@ def create_session(
         duration_minutes=duration_minutes,
         status="예정",
         note=note,
-        program_json=_dump_program(program),
+        program_json=program_json,
         sort_order=0,
+        client_request_id=client_request_id,
     )
     db.add(s)
+    # 같은 키의 동시 요청은 유니크 제약으로 하나만 통과시킨 뒤, 패배한 요청은
+    # 승자의 행을 읽어 같은 결과를 반환한다. 알림은 flush 뒤라 중복되지 않는다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = db.scalar(
+                select(TrainerSchedule).where(
+                    TrainerSchedule.trainer_id == trainer_id,
+                    TrainerSchedule.client_request_id == client_request_id,
+                )
+            )
+            if existing is not None:
+                return _existing_schedule_out(
+                    existing,
+                    date=date,
+                    time=time,
+                    client_name=client_name,
+                    member_id=member_id,
+                    type_=type_,
+                    duration_minutes=duration_minutes,
+                    note=note,
+                    program_json=program_json,
+                )
+        raise
+
     # 회원 몫의 일정이 잡혔을 때만 알린다 — 가망 고객('신규 고객 · 상담')처럼
     # member_id 가 없는 슬롯은 알릴 대상 자체가 없다(#489).
     if member_id is not None:
@@ -1122,14 +1261,10 @@ def complete_session(
         # 회원 입장에서 PT 도 '내가 한 운동'이라 코치가 검색할 수 있어야 한다(#586).
         # 커밋 뒤에 부르는 이유는 record_chat 과 같다 — 적재 실패의 롤백이 응답을
         # 깨뜨리지 않도록, 값은 미리 뽑아 두고 응답도 이미 만들어 둔다.
-        personal_ingest.record_exercise(
-            db, exercise_log.user_id, date=s.date,
-            exercise_type=exercise_log.type,
-            minutes=exercise_log.minutes, calories=exercise_log.calories,
-            intensity=exercise_log.intensity, source_ref=exercise_log.id,
-            # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라
-            # (`_derived_exercise_id`), 교체로 두어야 문서가 겹쳐 쌓이지 않는다.
-            replace=True,
+        # PT 완료는 멱등하게 재호출될 수 있고 id 도 슬롯 기준 결정론적이라
+        # (`_derived_exercise_id`), 교체로 두어야 문서가 겹쳐 쌓이지 않는다.
+        personal_ingest.refresh_exercise(
+            db, exercise_log.user_id, session_id=exercise_log.id
         )
     return out
 

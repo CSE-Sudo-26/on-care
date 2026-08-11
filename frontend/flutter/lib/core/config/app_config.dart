@@ -2,24 +2,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum Environment { dev, staging, prod }
 
-/// `REAL_API` 로 켤 수 있는 기능 키 → 실 백엔드로 보낼 경로 접두사.
+/// 실 백엔드로 넘길 엔드포인트 하나 — **메서드까지 함께** 본다.
 ///
-/// 목업 인터셉터가 가로채는 경로 중 **어디까지를 실 서버로 넘길지**를 여기 한 곳에서
+/// 경로 접두사만으로 판정하면 같은 접두사의 읽기까지 함께 열린다. 그것이 실제로
+/// 문제를 만들었기 때문에 메서드를 계약에 넣는다([kRealApiFeatures] 참고).
+class RealApiRoute {
+  /// 이 메서드 + 경로 접두사에 해당하는 요청을 실 백엔드로 보낸다.
+  const RealApiRoute(this.method, this.pathPrefix);
+
+  /// HTTP 메서드. 대문자로 적는다.
+  final String method;
+
+  /// 경로 접두사. `/` 로 시작한다.
+  final String pathPrefix;
+
+  /// [method]/[path] 요청이 이 경로에 해당하는가.
+  bool matches(String method, String path) =>
+      method.toUpperCase() == this.method && path.startsWith(pathPrefix);
+}
+
+/// `REAL_API` 로 켤 수 있는 기능 키 → 실 백엔드로 보낼 엔드포인트.
+///
+/// 목업 인터셉터가 가로채는 요청 중 **어디까지를 실 서버로 넘길지**를 여기 한 곳에서
 /// 정한다. 기능별로 임시 플래그(`REAL_AI_COACH`, `REAL_AUTH` …)를 각각 만들면
 /// `AppConfig` 와 인터셉터라는 같은 파일이 이슈마다 고쳐져 충돌하므로, 키 목록을 받는
 /// 스위치 하나로 통일한다.
 ///
-/// 새 기능을 켤 수 있게 하려면 여기에 키와 경로만 추가하면 된다 — 인터셉터는 손대지
-/// 않는다.
-const Map<String, List<String>> kRealApiFeatures = <String, List<String>>{
-  // AI 코치(온이) 대화·피드백. 리포지토리를 교체하지 않고 인터셉터만 가로채는
-  // 구조라, 경로만 흘려보내면 곧바로 실 Gemini 응답이 된다.
-  'ai-coach': <String>['/ai-coach'],
-  // 소셜 로그인 포함 인증. 실 OAuth 토큰을 서버가 검증하게 하려면 필요하다.
-  'auth': <String>['/auth'],
-  // 식단 기록·분석·추천.
-  'diet': <String>['/diet'],
-};
+/// ## 기준선: 쓰기만 실 서버, 읽기는 로컬 (#616)
+///
+/// 예전에는 키가 경로 접두사였다(`'ai-coach' → '/ai-coach'`). 그러면 켜는 순간 대화
+/// 전송뿐 아니라 **이력 조회까지** 실 서버로 갔고, 두 가지가 깨졌다.
+///
+///  * 코치 화면을 열 때 읽는 초기 이력이 데모 것에서 서버 것으로 바뀐다 — 데모 화면은
+///    스위치와 무관하게 지금 그대로여야 한다.
+///  * 배포 데모는 토큰이 없어 방문자 전원이 데모 계정 하나를 공유한다. 이력을 서버에서
+///    읽으면 다음 방문자가 앞 방문자의 질문을 그대로 보게 된다.
+///
+/// 그래서 여는 것은 **AI 가 실제로 일하는 호출(쓰기)** 뿐이다. 조회는 로컬 인터셉터가
+/// 계속 담당하므로 화면의 초기 상태가 움직이지 않는다.
+///
+/// 새 기능을 켤 수 있게 하려면 여기에 키와 엔드포인트만 추가한다 — 인터셉터는 손대지
+/// 않는다. 추가할 때도 같은 기준을 지킨다: 조회를 여는 것은 그럴 이유를 따로 적을 때뿐이다.
+const Map<String, List<RealApiRoute>> kRealApiFeatures =
+    <String, List<RealApiRoute>>{
+      // AI 코치(온이). 대화 전송만 실 서버로 — 이력·피드백 조회는 로컬이 준다.
+      'ai-coach': <RealApiRoute>[RealApiRoute('POST', '/ai-coach/chat')],
+      // 소셜 로그인 포함 인증. `/auth/*` 는 전부 쓰기(로그인·가입·소셜 교환)라
+      // 접두사 하나로 충분하다.
+      'auth': <RealApiRoute>[RealApiRoute('POST', '/auth')],
+      // 식단 사진 분석만 실 서버로 — 날짜별 조회·추천·수정·삭제는 로컬이 준다.
+      'diet': <RealApiRoute>[RealApiRoute('POST', '/diet/analyze')],
+    };
 
 class AppConfig {
   const AppConfig({
@@ -48,17 +81,21 @@ class AppConfig {
   ///
   /// 비어 있으면(기본값) 지금까지의 데모 동작과 **완전히 동일**하다.
   ///
-  /// 키 → 경로 대응은 [kRealApiFeatures] 참고.
+  /// 키 → 엔드포인트 대응은 [kRealApiFeatures] 참고.
   /// 예: `--dart-define=REAL_API=ai-coach,auth`
   final Set<String> realApiFeatures;
 
-  /// 이 경로를 목업이 아니라 실 백엔드로 보내야 하는가.
-  bool isRealApiPath(String path) {
+  /// 이 요청을 목업이 아니라 실 백엔드로 보내야 하는가.
+  ///
+  /// 경로만이 아니라 [method] 도 함께 받는다 — 같은 접두사의 조회까지 딸려 열리면
+  /// 데모 화면이 바뀌기 때문이다([kRealApiFeatures] 참고).
+  bool isRealApi(String method, String path) {
     if (realApiFeatures.isEmpty) return false;
     for (final String feature in realApiFeatures) {
-      final List<String> prefixes = kRealApiFeatures[feature] ?? const <String>[];
-      for (final String prefix in prefixes) {
-        if (path.startsWith(prefix)) return true;
+      final List<RealApiRoute> routes =
+          kRealApiFeatures[feature] ?? const <RealApiRoute>[];
+      for (final RealApiRoute route in routes) {
+        if (route.matches(method, path)) return true;
       }
     }
     return false;

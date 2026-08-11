@@ -2,20 +2,21 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare/features/diet/data/repositories/mock_diet_repository.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
+
+import '../../helpers/fake_diet_repository.dart';
 
 void main() {
   final MealPhoto photo = MealPhoto.fromBytes(
     Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
   )!;
 
-  group('MockDietRepository keeps CRUD in memory (#294)', () {
+  group('FakeDietRepository keeps CRUD in memory (#294)', () {
     test(
       'fetchByDate returns seeded history and keeps an older date empty',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final now = DateTime.now();
 
         final today = await repo.fetchByDate(now);
@@ -90,7 +91,7 @@ void main() {
     );
 
     test('analyze appends an entry and updates the day totals', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final DietDay before = await repo.fetchToday();
       expect(before.entries.length, 3);
       expect(before.totalCalories, 1067);
@@ -119,7 +120,7 @@ void main() {
     test(
       'analyze is idempotent on a repeated key (no duplicate entry)',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final first = await repo.analyze(
           photo: photo,
           mealType: 'dinner',
@@ -139,7 +140,7 @@ void main() {
     );
 
     test('deleteEntry removes it and restores the totals', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final result = await repo.analyze(
         photo: photo,
         mealType: 'snack',
@@ -159,7 +160,7 @@ void main() {
     test(
       'same key after delete re-adds the entry (cache purged on delete, 리뷰 #294)',
       () async {
-        final repo = MockDietRepository();
+        final repo = FakeDietRepository();
         final first = await repo.analyze(
           photo: photo,
           mealType: 'dinner',
@@ -188,7 +189,7 @@ void main() {
     );
 
     test('updateEntry re-derives day totals and macros', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       await repo.updateEntry(
         id: 'mock-lunch',
         foods: const <FoodItem>[
@@ -226,7 +227,7 @@ void main() {
     });
 
     test('deleteEntry re-derives day macros from remaining entries', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
 
       await repo.deleteEntry('mock-lunch');
 
@@ -247,7 +248,7 @@ void main() {
     });
 
     test('empty entries return zero macros without throwing', () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final DietDay before = await repo.fetchToday();
 
       for (final entry in before.entries) {
@@ -268,7 +269,7 @@ void main() {
   test(
     'realistic seed keeps food, meal and daily nutrition totals aligned',
     () async {
-      final day = await MockDietRepository().fetchToday();
+      final day = await FakeDietRepository().fetchToday();
 
       for (final entry in day.entries) {
         expect(
@@ -351,7 +352,7 @@ void main() {
   );
 
   test('jjamppong is the largest sodium source', () async {
-    final day = await MockDietRepository().fetchToday();
+    final day = await FakeDietRepository().fetchToday();
     final foods = day.entries.expand((DietEntry entry) => entry.foods).toList()
       ..sort((FoodItem a, FoodItem b) => b.sodiumMg.compareTo(a.sodiumMg));
 
@@ -366,7 +367,7 @@ void main() {
   test(
     'historical photo analysis keeps food and meal totals aligned',
     () async {
-      final repo = MockDietRepository();
+      final repo = FakeDietRepository();
       final now = DateTime.now();
       for (final daysAgo in <int>[1, 2]) {
         final day = await repo.fetchByDate(
@@ -402,6 +403,91 @@ void main() {
       }
     },
   );
+
+  group('하루 합계는 항상 항목에서 파생된다 (리뷰)', () {
+    // 예전에는 칼로리·나트륨·당류를 따로 캐시하고 CRUD 마다 증감을 더했다. 경로가
+    // 셋이라 하나만 빠져도 합계가 항목과 어긋나는데, 대역이 그런 상태를 돌려주면
+    // 화면 테스트가 실제와 다른 것을 검증하게 된다.
+
+    test('시드 상태에서 이미 일치한다', () async {
+      final repo = FakeDietRepository();
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('분석으로 추가한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+
+      await repo.analyze(photo: photo, mealType: 'dinner');
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('수정한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+      final DietDay before = await repo.fetchToday();
+
+      await repo.updateEntry(
+        id: before.entries.first.id!,
+        totalCalories: 999,
+        sodiumMg: 111,
+        sugarG: 4.5,
+      );
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('삭제한 뒤에도 일치한다', () async {
+      final repo = FakeDietRepository();
+      final DietDay before = await repo.fetchToday();
+
+      await repo.deleteEntry(before.entries.first.id!);
+
+      _expectTotalsMatchEntries(await repo.fetchToday());
+    });
+
+    test('전부 지우면 0 이 된다 — 캐시가 남아 음수로 고정되지 않는다', () async {
+      final repo = FakeDietRepository();
+      for (final DietEntry entry in (await repo.fetchToday()).entries) {
+        await repo.deleteEntry(entry.id!);
+      }
+
+      final DietDay day = await repo.fetchToday();
+      expect(day.entries, isEmpty);
+      expect(day.totalCalories, 0);
+      expect(day.totalSodiumMg, 0);
+      expect(day.totalSugarG, 0);
+    });
+  });
+}
+
+/// 하루 합계 세 값이 그 날 항목의 합과 같은지 확인한다.
+void _expectTotalsMatchEntries(DietDay day) {
+  expect(
+    day.totalCalories,
+    day.entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.totalCalories,
+    ),
+  );
+  expect(
+    day.totalSodiumMg,
+    day.entries.fold<int>(
+      0,
+      (int sum, DietEntry entry) => sum + entry.sodiumMg,
+    ),
+  );
+  expect(
+    day.totalSugarG,
+    closeTo(
+      day.entries.fold<double>(
+        0,
+        (double sum, DietEntry entry) => sum + entry.sugarG,
+      ),
+      0.001,
+    ),
+  );
+  _expectMacrosMatchEntries(day);
 }
 
 void _expectMacrosMatchEntries(DietDay day) {

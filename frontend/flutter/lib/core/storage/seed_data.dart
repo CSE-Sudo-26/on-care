@@ -5,9 +5,18 @@ import 'package:drift/drift.dart';
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
 
+/// 하루 단위 코치 문구(날짜 → 문장)를 담는 키-값 키.
+///
+/// 끼니가 아니라 **하루**에 붙는 문장이라 `dietEntries` 행에 둘 자리가 없고, 시연용
+/// 날짜 셋뿐이라 테이블을 새로 만들 이유도 없다. 시드가 쓰고 로컬 인터셉터가 읽는다.
+///
+/// 날짜별로 키를 나누지 않고 한 키에 묶는 이유: 시드는 날이 바뀌면 앞으로 미끄러지는데,
+/// 키를 날짜마다 만들면 지난 날짜 키가 계속 쌓인다. 한 키를 통째로 덮어쓰면 그 문제가 없다.
+const String kDietDayMessagesKey = 'diet_day_messages';
+
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v13']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v14']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -38,7 +47,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   final twoDaysAgo = _fmtDate(now.subtract(const Duration(days: 2)));
   final weekStart = _fmtDate(_mondayOfThisWeek(now));
 
-  final seedDate = await db.readValue('seeded_v13');
+  final seedDate = await db.readValue('seeded_v14');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -74,6 +83,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   await db.deleteValue('seeded_v10');
   await db.deleteValue('seeded_v11');
   await db.deleteValue('seeded_v12');
+  // v14: 끼니별 AI 코멘트·사진이 행으로 내려오고 하루 코치 문구가 추가됐다.
+  // 플래그를 올리지 않으면 오늘 이미 시드된 설치가 빈 코멘트를 그대로 들고 있게 된다.
+  await db.deleteValue('seeded_v13');
   // Also clear the curated KV advice so re-seed state is fully reset: this
   // version re-writes it below, but if a later seed drops or renames the key
   // an existing install would otherwise keep the stale text forever.
@@ -111,6 +123,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 217,
           sodiumMg: const Value(221),
           sugarG: const Value(6.3),
+          aiComment: const Value('단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.'),
+          photoAsset: const Value('assets/images/breakfast-scrambled-egg-strawberry.jpg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-lunch',
@@ -132,6 +146,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 750,
           sodiumMg: const Value(3200),
           sugarG: const Value(8.5),
+          aiComment: const Value('정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.'),
+          photoAsset: const Value('assets/images/lunch-jjamppong.jpg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-snack',
@@ -161,6 +177,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 100,
           sodiumMg: const Value(7),
           sugarG: const Value(3.0),
+          aiComment: const Value('당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.'),
+          photoAsset: const Value('assets/images/snack-coffee-nuts.jpg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-yesterday-breakfast',
@@ -190,6 +208,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 355,
           sodiumMg: const Value(101),
           sugarG: const Value(20.0),
+          aiComment: const Value('오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.'),
+          photoAsset: const Value('assets/images/diet-oatmeal-banana.jpeg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-yesterday-lunch',
@@ -210,6 +230,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 315,
           sodiumMg: const Value(395),
           sugarG: const Value(10.0),
+          aiComment: const Value('닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.'),
+          photoAsset: const Value('assets/images/diet-chicken-salad.jpg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-yesterday-dinner',
@@ -239,6 +261,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 610,
           sodiumMg: const Value(1305),
           sugarG: const Value(5.7),
+          aiComment: const Value('밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.'),
+          photoAsset: const Value('assets/images/diet-doenjang-rice.jpeg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-two-days-ago-breakfast',
@@ -268,6 +292,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 320,
           sodiumMg: const Value(80),
           sugarG: const Value(9.0),
+          aiComment: const Value('그릭 요거트의 단백질과 견과류의 불포화지방을 고르게 섭취했어요.'),
+          photoAsset: const Value('assets/images/diet-greek-yogurt-nuts.jpeg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-two-days-ago-lunch',
@@ -288,6 +314,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 610,
           sodiumMg: const Value(900),
           sugarG: const Value(12.0),
+          aiComment: const Value('야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.'),
+          photoAsset: const Value('assets/images/diet-vegetable-bibimbap.jpg'),
         ),
         DietEntriesCompanion.insert(
           id: 'seed-diet-two-days-ago-dinner',
@@ -317,6 +345,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           totalCalories: 675,
           sodiumMg: const Value(510),
           sugarG: const Value(9.0),
+          aiComment: const Value('연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.'),
+          photoAsset: const Value('assets/images/diet-salmon-brown-rice.jpeg'),
         ),
       ]);
     });
@@ -558,7 +588,18 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // 노출한다.
   await db.putValue('dashboard_ai_advice', kDailyCombinedAdviceKey);
 
-  await db.putValue('seeded_v13', today);
+  // 식단 탭의 하루 코치 문구. 시연에 쓰는 세 날짜만 문장을 정해 두고, 그 밖의
+  // 날짜는 인터셉터가 수치를 보고 만든 문구로 대신한다([kDietDayMessagesKey]).
+  await db.putValue(
+    kDietDayMessagesKey,
+    jsonEncode(<String, String>{
+      today: '점심 짬뽕으로 오늘 나트륨 섭취가 많았어요. 저녁은 양념을 줄인 채소와 단백질 위주로 구성해 보세요.',
+      yesterday: '나트륨을 잘 조절했고 단백질도 고르게 섭취한 하루였어요.',
+      twoDaysAgo: '연어와 현미밥으로 탄단지 균형을 잘 맞췄어요.',
+    }),
+  );
+
+  await db.putValue('seeded_v14', today);
 }
 
 String _fmtDate(DateTime d) =>

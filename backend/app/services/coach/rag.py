@@ -11,6 +11,7 @@ STEP 8 챗봇도 retrieve_context() 를 그대로 재사용합니다.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy import text as sa_text
@@ -96,23 +97,36 @@ def _lock_source_ref(db: Session, user_id: str, source_ref: str) -> None:
 
 
 def replace_personal_text(
-    db: Session, user_id: str, text: str, *, domain: str, source: str,
-    source_ref: str, title: str = "",
+    db: Session, user_id: str, *, domain: str, source: str, source_ref: str,
+    load_text: Callable[[], str | None], title: str = "",
 ) -> int:
-    """기록이 바뀌었을 때 그 기록의 개인 문서를 통째로 갈아 끼운다 (#603).
+    """기록이 바뀌었을 때 그 기록의 개인 문서를 통째로 갈아 끼운다 (#603, #614).
 
-    순서가 중요하다:
-      1. **먼저 임베딩한다.** 벡터 생성이 실패해도 이 시점엔 아무것도 지우지 않았다.
-         지우고 나서 임베딩하면 실패했을 때 기존 청크를 되살릴 방법이 없다.
-      2. 삭제와 삽입을 **한 트랜잭션**으로 커밋한다. 둘을 따로 커밋하면 그 사이에
-         검색이 들어와 근거가 하나도 없는 순간을 본다.
+    **본문을 받지 않고 [load_text] 로 받는다.** 잠금을 잡은 뒤 원본 행을 다시 읽어
+    본문을 만들기 때문이다. 값을 미리 받아 두면 이런 일이 생긴다(#614):
 
-    빈 내용이면 기존 문서만 지운다 — 기록이 비워진 것도 반영해야 할 변화다.
+        A: 30분으로 수정 커밋 → B: 45분으로 수정 커밋 → B 적재(45) → A 적재(30)
+
+    DB 는 45분인데 코치가 보는 근거는 30분이 된다. 잠금 안에서 다시 읽으면 두
+    호출 모두 그 시점의 최신 행을 보므로, 늦게 도착한 쪽도 45분을 쓴다.
+
+    나머지 순서는 그대로다:
+      1. 삭제 **전에** 임베딩한다. 벡터 생성이 실패해도 아직 아무것도 지우지 않았다.
+      2. 삭제와 삽입을 **한 트랜잭션**으로 커밋한다. 따로 커밋하면 그 사이에 검색이
+         들어와 근거가 하나도 없는 순간을 본다.
+
+    [load_text] 가 None 이나 빈 문자열을 주면 기존 문서만 지운다 — 원본이 지워졌거나
+    내용이 비워진 것도 반영해야 할 변화다.
+
+    임베딩을 잠금 안에서 돌리므로 그만큼 잠금을 오래 쥔다. 잠금이 기록 하나 단위라
+    경쟁하는 쪽은 **같은 기록을 동시에 고치는 요청**뿐이고, 그건 드물다.
     """
-    chunks = chunk_text(text)
+    _lock_source_ref(db, user_id, source_ref)
+
+    text = load_text()
+    chunks = chunk_text(text) if text else []
     vectors = get_embedder().embed(chunks) if chunks else []
 
-    _lock_source_ref(db, user_id, source_ref)
     db.execute(
         delete(CoachDocument).where(
             CoachDocument.user_id == user_id,

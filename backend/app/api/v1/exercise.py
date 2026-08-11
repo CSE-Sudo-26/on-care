@@ -161,13 +161,10 @@ def update_session(
 
     one = build_current_week([row])["sessions"][0]
     out = ExerciseSessionOut(**one)
-    # 30분을 45분으로 고쳤으면 코치도 45분으로 알아야 한다(#603). 지우지 않고
-    # 덧붙이면 두 수치가 함께 검색돼 안 고치느니만 못하다.
-    personal_ingest.record_exercise(
-        db, current_user.id, date=_session_date(row), exercise_type=row.type,
-        minutes=row.minutes, calories=row.calories, intensity=row.intensity,
-        source_ref=row.id, replace=True,
-    )
+    # 30분을 45분으로 고쳤으면 코치도 45분으로 알아야 한다(#603). 값을 넘기지 않고
+    # id 만 넘기는 이유는 #614 — 갱신은 잠금 안에서 행을 다시 읽어야, 두 수정이
+    # 역순으로 도착해도 최종 문서가 DB 최신값과 어긋나지 않는다.
+    personal_ingest.refresh_exercise(db, current_user.id, session_id=row.id)
     return out
 
 

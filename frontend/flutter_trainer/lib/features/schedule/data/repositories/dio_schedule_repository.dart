@@ -5,9 +5,20 @@ import 'package:dio/dio.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+
+typedef _ScheduleCreatePayload = ({
+  String date,
+  String clientName,
+  String? clientId,
+  String time,
+  String type,
+  int durationMinutes,
+  String note,
+});
 
 /// The trainer's timeline against the FastAPI backend
 /// (`/v1/trainer/schedule*`). Selected when `USE_MOCK_API=false`.
@@ -23,10 +34,14 @@ class DioScheduleRepository implements ScheduleRepository {
   DioScheduleRepository(
     this._dio, {
     this.pollInterval = const Duration(seconds: 5),
+    this.requestIdFactory = newClientRequestId,
   });
 
   final Dio _dio;
   final Duration pollInterval;
+  final String Function() requestIdFactory;
+  final Map<_ScheduleCreatePayload, String> _pendingRequestIds =
+      <_ScheduleCreatePayload, String>{};
 
   final StreamController<void> _revisions = StreamController<void>.broadcast();
 
@@ -104,6 +119,16 @@ class DioScheduleRepository implements ScheduleRepository {
     required int durationMinutes,
     String note = '',
   }) async {
+    final payload = (
+      date: date,
+      clientName: clientName,
+      clientId: clientId,
+      time: time,
+      type: type,
+      durationMinutes: durationMinutes,
+      note: note,
+    );
+    final requestId = _pendingRequestIds.putIfAbsent(payload, requestIdFactory);
     await _mutate(
       () => _dio.post<Map<String, dynamic>>(
         '/trainer/schedule',
@@ -115,9 +140,13 @@ class DioScheduleRepository implements ScheduleRepository {
           'type': type,
           'duration_minutes': durationMinutes,
           'note': note,
+          'client_request_id': requestId,
         },
       ),
     );
+    if (_pendingRequestIds[payload] == requestId) {
+      _pendingRequestIds.remove(payload);
+    }
   }
 
   @override

@@ -91,12 +91,19 @@
 
 | Method | Path | Body / Query | 응답 | Flutter 사용처 |
 | --- | --- | --- | --- | --- |
-| GET | `/diet/days/today` | — | `DietDay` | `MockDietRepository.fetchToday` |
-| GET | `/diet/days/{date}` | `date=YYYY-MM-DD` | `DietDay` | (캘린더 진입 시) |
-| POST | `/diet/entries` | `DietEntry` (without id) | 생성된 `DietEntry` | FAB "식단 추가" |
-| PATCH | `/diet/entries/{id}` | partial `DietEntry` | 갱신된 entry | 식사 수정 |
-| DELETE | `/diet/entries/{id}` | — | `204` | 식사 삭제 |
-| POST | `/diet/photo-scan` | `multipart/form-data: file` | `{candidates: FoodItem[]}` | (Stage 4 후속 — 카메라) |
+| GET | `/diet/days/today` | — | `DietDay` | `DioDietRepository.fetchToday` |
+| GET | `/diet/days/{date}` | `date=YYYY-MM-DD` | `DietDay` | `fetchByDate` — 날짜 이동 |
+| GET | `/diet/recommendations` | — | `MealRecommendations` | 홈 "AI 추천 식단" |
+| POST | `/diet/analyze` | `multipart/form-data: image, meal_type, idempotency_key?` | `{entry_id, analysis}` | 사진으로 식단 추가 |
+| PUT | `/diet/entries/{id}` | partial `DietEntry` | 갱신된 `DietEntry` | 식사 수정 |
+| DELETE | `/diet/entries/{id}` | — | `{status: "deleted"}` | 식사 삭제 |
+
+끼니를 만드는 경로는 **사진 분석 하나뿐이다.** 별도의 생성 엔드포인트는 없다 — 인식
+결과가 곧 기록이고, 사용자가 고칠 것은 수정으로 처리한다. `idempotency_key` 는 응답을
+잃은 재시도가 같은 끼니를 두 번 남기지 않게 한다(요청당 1회 생성해 재시도에 재사용).
+
+데모 빌드에서는 이 표의 모든 경로를 `LocalApiInterceptor` 가 drift 로 답한다. `REAL_API`
+로 분석만 실 백엔드에 맡길 수 있고, 그때도 조회·수정·삭제는 로컬이 답한다.
 
 `DietEntry`:
 ```json
@@ -107,7 +114,9 @@
   "foods": [{ "name": "오트밀", "calories": 220 }],
   "total_calories": 315,
   "sodium_mg": 380,
-  "sugar_g": 18
+  "sugar_g": 18,
+  "ai_comment": "오트밀로 식이섬유를 챙겼어요.",
+  "photo_asset": "assets/images/diet-oatmeal-banana.jpeg"
 }
 ```
 
