@@ -17,6 +17,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_sessio
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -43,9 +44,8 @@ class WorkoutView extends ConsumerWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final history = ref.watch(clientHistoryProvider(client.id));
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final sessions = ref.watch(
-      clientSessionsProvider((id: client.id, name: client.name)),
-    );
+    final sessionKey = (id: client.id, name: client.name);
+    final sessions = ref.watch(clientSessionsProvider(sessionKey));
 
     // Each section owns its own async state. Gating the whole list on
     // the history provider would mean a failing /history takes the
@@ -56,7 +56,10 @@ class WorkoutView extends ConsumerWidget {
       children: <Widget>[
         _AssignedRoutinesCard(clientId: client.id, assigned: assigned),
         const SizedBox(height: AppSpacing.md),
-        _SessionsCard(sessions: sessions),
+        _SessionsCard(
+          sessions: sessions,
+          onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
+        ),
         const SizedBox(height: AppSpacing.md),
         _WeekCompletionCard(week: client.weekCompletion),
         const SizedBox(height: AppSpacing.lg),
@@ -77,7 +80,17 @@ class WorkoutView extends ConsumerWidget {
             ),
           ],
           error: (e, _) => <Widget>[
-            EmptyHint(message: l.workoutLoadFailed),
+            EmptyHint(
+              message: l.workoutLoadFailed,
+              icon: Icons.error_outline,
+              action: ActionButton(
+                key: ValueKey<String>('workout-history-retry-${client.id}'),
+                label: l.actionRetry,
+                onPressed: history.isLoading
+                    ? null
+                    : () => ref.invalidate(clientHistoryProvider(client.id)),
+              ),
+            ),
           ],
           data: (entries) => <Widget>[
             if (entries.isEmpty)
@@ -121,7 +134,17 @@ class _AssignedRoutinesCard extends ConsumerWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => EmptyHint(message: l.routinesLoadFailed),
+        error: (e, _) => EmptyHint(
+          message: l.routinesLoadFailed,
+          icon: Icons.error_outline,
+          action: ActionButton(
+            key: ValueKey<String>('assigned-routines-retry-$clientId'),
+            label: l.actionRetry,
+            onPressed: assigned.isLoading
+                ? null
+                : () => ref.invalidate(assignedRoutinesProvider(clientId)),
+          ),
+        ),
         data: (routines) => routines.isEmpty
             ? EmptyHint(
                 message: l.routinesEmpty,
@@ -200,9 +223,10 @@ class _AssignedRoutinesCard extends ConsumerWidget {
 /// completed. The 스케줄 tab answers the same question by date; this is
 /// the only place it's answered per client.
 class _SessionsCard extends StatelessWidget {
-  const _SessionsCard({required this.sessions});
+  const _SessionsCard({required this.sessions, required this.onRetry});
 
   final AsyncValue<List<ScheduleSession>> sessions;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +241,15 @@ class _SessionsCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-        error: (e, _) => EmptyHint(message: l.scheduleLoadFailed),
+        error: (e, _) => EmptyHint(
+          message: l.scheduleLoadFailed,
+          icon: Icons.error_outline,
+          action: ActionButton(
+            key: const ValueKey<String>('client-sessions-retry'),
+            label: l.actionRetry,
+            onPressed: sessions.isLoading ? null : onRetry,
+          ),
+        ),
         data: (list) => list.isEmpty
             ? EmptyHint(
                 message: l.ptSessionsEmpty,

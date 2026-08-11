@@ -4,9 +4,47 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
+import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
+import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
+
+class _ReportFailsOncePerKeyRepository implements ReportRepository {
+  final Map<String, int> _attempts = <String, int>{};
+  final List<ReportKey> calls = <ReportKey>[];
+
+  @override
+  Stream<WeeklyReport> watch({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) {
+    final key = '${client.id}/${weekStart.toIso8601String()}';
+    calls.add((client: client, weekStart: weekStart));
+    final attempt = (_attempts[key] ?? 0) + 1;
+    _attempts[key] = attempt;
+    if (attempt == 1) {
+      return Stream<WeeklyReport>.error(StateError('report transport detail'));
+    }
+    return Stream<WeeklyReport>.value(
+      buildWeeklyReport(
+        client: client,
+        sessions: const [],
+        weekStart: weekStart,
+      ),
+    );
+  }
+
+  @override
+  Future<void> send({
+    required String clientId,
+    required DateTime weekStart,
+    required String message,
+  }) async {}
+}
 
 /// 리포트 against the seeded roster — the trainer's own week plus one
 /// client's report, and sending it into their chat thread.
@@ -14,6 +52,7 @@ void main() {
   Future<ProviderContainer> openReports(
     WidgetTester tester, {
     String? clientId,
+    List<Override> extraOverrides = const <Override>[],
   }) async {
     tester.view.devicePixelRatio = 1.0;
     tester.view.physicalSize = const Size(1600, 1200);
@@ -23,6 +62,7 @@ void main() {
       tester,
       token: 'demo-trainer-token',
       at: clientId == null ? AppRoutes.reports : AppRoutes.reportFor(clientId),
+      extraOverrides: extraOverrides,
     );
   }
 
@@ -42,6 +82,70 @@ void main() {
   testWidgets('the client query parameter focuses that client', (tester) async {
     await openReports(tester, clientId: 'seed-client-3');
     expect(find.text('박성호님 주간 리포트'), findsOneWidget);
+  });
+
+  testWidgets('a failed client roster retries independently', (tester) async {
+    int attempts = 0;
+    await openReports(
+      tester,
+      clientId: 'seed-client-3',
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith((ref) {
+          attempts++;
+          return attempts == 1
+              ? Stream<List<TrainerClient>>.error(
+                  StateError('client transport detail'),
+                )
+              : Stream<List<TrainerClient>>.value(<TrainerClient>[
+                  makeClient(id: 'seed-client-1', name: '첫 고객'),
+                  makeClient(id: 'seed-client-3', name: '복구 고객'),
+                ]);
+        }),
+      ],
+    );
+
+    expect(find.text('리포트를 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('client transport detail'), findsNothing);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('reports-clients-retry')),
+    );
+    await settle(tester);
+
+    expect(attempts, 2);
+    expect(find.text('복구 고객님 주간 리포트'), findsOneWidget);
+  });
+
+  testWidgets('weekly report retry keeps the selected client and week', (
+    tester,
+  ) async {
+    final repository = _ReportFailsOncePerKeyRepository();
+    await openReports(
+      tester,
+      clientId: 'seed-client-3',
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+
+    await tester.tap(find.text('이전 주'));
+    await settle(tester);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('reports-weekly-retry')),
+    );
+    await settle(tester);
+
+    final retryCalls = repository.calls.sublist(repository.calls.length - 2);
+    expect(retryCalls.map((call) => call.client.id), <String>[
+      'seed-client-3',
+      'seed-client-3',
+    ]);
+    expect(retryCalls.first.weekStart, retryCalls.last.weekStart);
+    expect(
+      retryCalls.last.weekStart,
+      weekStartOf(DateTime.now()).subtract(const Duration(days: 7)),
+    );
+    expect(find.text('박성호님 주간 리포트'), findsOneWidget);
+    expect(find.text('report transport detail'), findsNothing);
   });
 
   testWidgets('picking another client swaps the report', (tester) async {

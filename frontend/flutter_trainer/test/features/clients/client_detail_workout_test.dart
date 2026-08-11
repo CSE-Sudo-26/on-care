@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,6 +9,11 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -19,13 +25,76 @@ const Map<String, String> seedClientIds = <String, String>{
   '박성호': 'seed-client-3',
 };
 
-/// Fails only `watchHistory`; every other read still succeeds.
-class _HistoryFailsRepository extends DriftClientRepository {
-  const _HistoryFailsRepository(super.db);
+/// Fails the first `watchHistory`; every other read still succeeds.
+class _HistoryFailsOnceRepository extends DriftClientRepository {
+  _HistoryFailsOnceRepository(super.db);
+
+  int watchHistoryCalls = 0;
 
   @override
-  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
-      Stream<List<RoutineHistoryEntry>>.error(Exception('history down'));
+  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) {
+    watchHistoryCalls++;
+    if (watchHistoryCalls == 1) {
+      return Stream<List<RoutineHistoryEntry>>.error(
+        Exception('history transport detail'),
+      );
+    }
+    return super.watchHistory(clientId);
+  }
+}
+
+class _AssignedFailsOnceRepository extends MockTrainerRoutineRepository {
+  int watchAssignedCalls = 0;
+
+  @override
+  Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) {
+    watchAssignedCalls++;
+    if (watchAssignedCalls == 1) {
+      return Stream<List<AssignedRoutine>>.error(
+        Exception('routine transport detail'),
+      );
+    }
+    return Stream<List<AssignedRoutine>>.value(const <AssignedRoutine>[
+      AssignedRoutine(
+        id: 'routine-recovered',
+        name: '복구 루틴',
+        minutes: 40,
+        type: '근력',
+        reason: '재시도 검증',
+        source: 'trainer',
+      ),
+    ]);
+  }
+}
+
+class _SessionsFailsOnceRepository extends DriftScheduleRepository {
+  _SessionsFailsOnceRepository(super.db);
+
+  int watchSessionCalls = 0;
+
+  @override
+  Stream<List<ScheduleSession>> watchClientSessions(ScheduleClientKey client) {
+    watchSessionCalls++;
+    if (watchSessionCalls == 1) {
+      return Stream<List<ScheduleSession>>.error(
+        Exception('schedule transport detail'),
+      );
+    }
+    return Stream<List<ScheduleSession>>.value(const <ScheduleSession>[
+      ScheduleSession(
+        id: 'session-recovered',
+        date: '2026-08-11',
+        time: '10:00',
+        clientId: 'seed-client-1',
+        clientName: '김민수',
+        type: '복구 PT',
+        durationMinutes: 50,
+        status: ScheduleStatus.upcoming,
+        note: '',
+        program: <ProgramItem>[],
+      ),
+    ]);
+  }
 }
 
 void main() {
@@ -118,13 +187,14 @@ void main() {
       // 배정된 루틴 and the PT sessions used to be their own tab, so they
       // stayed reachable when the history endpoint was down. Gating the
       // whole list on the history provider silently undid that.
-      await pumpTrainerApp(
+      final container = await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.clientDetail(seedClientIds['김민수']!, section: 'workout'),
         extraOverrides: <Override>[
           clientRepositoryProvider.overrideWith(
-            (ref) => _HistoryFailsRepository(ref.watch(appDatabaseProvider)),
+            (ref) =>
+                _HistoryFailsOnceRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
       );
@@ -138,6 +208,75 @@ void main() {
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(find.text('운동 기록을 불러오지 못했어요'), 150);
       expect(find.text('운동 기록을 불러오지 못했어요'), findsOneWidget);
+      expect(find.text('history transport detail'), findsNothing);
+
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('workout-history-retry-seed-client-1'),
+        ),
+      );
+      await settle(tester);
+      await tester.scrollUntilVisible(find.text('7/12 (오늘)'), 150);
+
+      final repository =
+          container.read(clientRepositoryProvider)
+              as _HistoryFailsOnceRepository;
+      expect(repository.watchHistoryCalls, 2);
+      expect(find.text('7/12 (오늘)'), findsOneWidget);
+    });
+
+    testWidgets('배정 루틴 실패만 재시도해 다른 영역을 보존한다', (tester) async {
+      final repository = _AssignedFailsOnceRepository();
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          trainerRoutineRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+
+      expect(find.text('루틴을 불러오지 못했어요'), findsOneWidget);
+      expect(find.text('PT 프로그램 이력'), findsOneWidget);
+      await tester.tap(
+        find.byKey(
+          const ValueKey<String>('assigned-routines-retry-seed-client-1'),
+        ),
+      );
+      await settle(tester);
+
+      expect(repository.watchAssignedCalls, 2);
+      expect(find.text('복구 루틴'), findsOneWidget);
+      expect(find.text('PT 프로그램 이력'), findsOneWidget);
+    });
+
+    testWidgets('PT 일정 실패만 재시도해 다른 영역을 보존한다', (tester) async {
+      final container = await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          scheduleRepositoryProvider.overrideWith(
+            (ref) =>
+                _SessionsFailsOnceRepository(ref.watch(appDatabaseProvider)),
+          ),
+        ],
+      );
+
+      expect(find.text('일정을 불러오지 못했어요'), findsOneWidget);
+      expect(find.text('배정된 루틴'), findsOneWidget);
+      final retry = find.byKey(const ValueKey<String>('client-sessions-retry'));
+      await tester.drag(find.byType(ListView).last, const Offset(0, -180));
+      await tester.pump();
+      await tester.tap(retry);
+      await settle(tester);
+
+      final repository =
+          container.read(scheduleRepositoryProvider)
+              as _SessionsFailsOnceRepository;
+      expect(repository.watchSessionCalls, 2);
+      expect(find.textContaining('복구 PT'), findsOneWidget);
+      expect(find.text('이번 주 완료율'), findsOneWidget);
     });
   });
 }
