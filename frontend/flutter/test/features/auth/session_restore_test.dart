@@ -132,7 +132,14 @@ Future<void> _settle(ProviderContainer container) async {
     if (container.read(sessionControllerProvider).status !=
         SessionStatus.unknown) {
       // 상태가 정해진 뒤에도 저장소 정리 같은 후속 작업이 남아 있을 수 있다.
-      await Future<void>.delayed(Duration.zero);
+      //
+      // 한 틱만 기다리면 지금은 통과한다 — 만료가 지우기를 먼저, 상태 변경을 나중에
+      // 하기 때문이다. 그 순서가 바뀌면 저장소를 확인하는 테스트가 간헐적으로
+      // 깨진다. secure storage 는 MethodChannel 을 거쳐서 마이크로태스크 한 틱으로
+      // 완료가 보장되지 않는다(리뷰).
+      for (var tick = 0; tick < 5; tick++) {
+        await Future<void>.delayed(Duration.zero);
+      }
       return;
     }
     await Future<void>.delayed(Duration.zero);
