@@ -16,7 +16,15 @@ import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routin
 ///  * [DioTrainerRoutineRepository] — the real FastAPI backend.
 abstract interface class TrainerRoutineRepository {
   /// Assigns [routine] to [memberId] (POST /trainer/clients/{id}/routines).
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine);
+  ///
+  /// [clientRequestId] 는 **전송 시도**의 멱등키다. 재시도할 때 같은 값을 다시
+  /// 넘기면 회원에게 같은 루틴이 두 번 배정되지 않는다(#581). 새 내용을 보낼
+  /// 때만 새로 만든다 — 매 호출 새로 만들면 아무것도 막지 못한다.
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  });
 
   /// The member's currently assigned routines (newest first).
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId);
@@ -45,7 +53,11 @@ class MockTrainerRoutineRepository implements TrainerRoutineRepository {
   const MockTrainerRoutineRepository();
 
   @override
-  Future<void> assignRoutine(String memberId, AssignedRoutine routine) async {}
+  Future<void> assignRoutine(
+    String memberId,
+    AssignedRoutine routine, {
+    String? clientRequestId,
+  }) async {}
 
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>

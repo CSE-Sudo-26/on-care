@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -58,6 +58,11 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
   bool _sending = false;
   bool _showAddExercise = false;
   bool _sent = false;
+
+  /// 진행 중인 전송 시도의 멱등키. 실패 후 재시도는 이 값을 그대로 다시 쓰고,
+  /// 전송이 성공하면 비운다 — 그래야 재시도가 중복 배정을 만들지 않으면서도
+  /// 다음 전송은 별개의 배정이 된다(#581).
+  String? _sendRequestId;
   RoutineOptions? _options;
   int _stage = 0;
   int _maxReachedStage = 0;
@@ -221,6 +226,11 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     final messenger = ScaffoldMessenger.of(context);
     final routine = _composeRoutine(l);
 
+    // 이 전송 시도의 멱등키. 실패해서 트레이너가 다시 누르면 **같은 키**가 다시
+    // 나가므로, 앞 시도가 서버에 이미 커밋됐더라도 중복 배정되지 않는다(#581).
+    // 성공한 뒤에만 비워 다음 전송이 새 배정이 되게 한다.
+    _sendRequestId ??= newClientRequestId();
+
     setState(() => _sending = true);
     try {
       // Assigning the routine IS the delivery — the member receives it via
@@ -229,27 +239,18 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
       // the legacy single-shot editor's _send in ai_routine_page.dart).
       await ref
           .read(trainerRoutineRepositoryProvider)
-          .assignRoutine(widget.client.id, routine);
-    } catch (e) {
+          .assignRoutine(
+            widget.client.id,
+            routine,
+            clientRequestId: _sendRequestId,
+          );
+    } catch (_) {
       if (!mounted) return;
       setState(() => _sending = false);
-      // A network/timeout failure is AMBIGUOUS: the backend may already
-      // have committed the assign before the client gave up waiting for a
-      // response (POST /routines is not idempotent — every attempt inserts
-      // a new row). Blindly telling the trainer to "다시 시도" risks a
-      // duplicate routine landing on the member's app, so this case gets a
-      // different message asking them to verify first (review; a real
-      // fix needs a backend idempotency/dedup key — tracked separately).
-      final ambiguousOutcome = e is NetworkError;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            ambiguousOutcome
-                ? l.coachSendNoResponse
-                : l.coachSendFailed,
-          ),
-        ),
-      );
+      // 네트워크 실패는 결과를 알 수 없다 — 서버가 이미 커밋한 뒤 응답만 유실됐을
+      // 수 있다. 다만 멱등키를 함께 보내므로 **같은 키로 재시도해도 중복 배정이
+      // 되지 않는다**(#581). 그래서 "먼저 확인하라" 대신 재시도를 안내한다.
+      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
       return;
     }
 
@@ -257,6 +258,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
     setState(() {
       _sending = false;
       _sent = true;
+      _sendRequestId = null; // 다음 전송은 새 배정이다.
     });
     messenger.showSnackBar(
       SnackBar(content: Text(l.aiRoutineSent(widget.client.name))),

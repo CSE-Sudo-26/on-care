@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -87,6 +87,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// A homework send is in flight (blocks re-entry, disables the button).
   bool _sending = false;
 
+  /// 진행 중인 전송 시도의 멱등키와 그 대상 회원. 실패 후 재시도는 같은 키를
+  /// 다시 쓰고(중복 배정 방지), 성공하거나 대상이 바뀌면 새로 잡는다(#581).
+  String? _sendRequestId;
+  String? _sendRequestFor;
+
   /// A schedule registration just succeeded (drives the 3s flash).
   bool _registered = false;
   // Every client whose registration is in flight. Multiple clients may save
@@ -156,6 +161,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     // the starting client, not whoever is on screen when it resolves
     // (review PR 239).
     final sentFor = client.id;
+    // 이 전송 시도의 멱등키. 실패 후 다시 누르면 같은 키가 나가므로 앞 시도가
+    // 이미 서버에 커밋됐어도 중복 배정되지 않는다(#581). 대상 회원이 바뀌면
+    // 다른 배정이므로 키도 새로 잡는다.
+    if (_sendRequestId == null || _sendRequestFor != sentFor) {
+      _sendRequestId = newClientRequestId();
+      _sendRequestFor = sentFor;
+    }
     setState(() => _sending = true);
     try {
       // Assigning the routine IS the delivery — the member receives it via
@@ -164,33 +176,27 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       // shown in the member's routine feed, not as a chat bubble.
       await ref
           .read(trainerRoutineRepositoryProvider)
-          .assignRoutine(client.id, _summaryRoutine(items, total + custom));
-    } catch (e) {
+          .assignRoutine(
+            client.id,
+            _summaryRoutine(items, total + custom),
+            clientRequestId: _sendRequestId,
+          );
+    } catch (_) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
-      // A network/timeout failure is AMBIGUOUS: the backend may already
-      // have committed the assign before the client gave up waiting for a
-      // response (POST /routines is not idempotent — every attempt inserts
-      // a new row). Blindly telling the trainer to "다시 시도" risks a
-      // duplicate routine landing on the member's app, so this case gets a
-      // different message asking them to verify first (review; a real
-      // fix needs a backend idempotency/dedup key — tracked separately).
-      final ambiguousOutcome = e is NetworkError;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            ambiguousOutcome
-                ? l.coachSendNoResponse
-                : l.coachSendFailed,
-          ),
-        ),
-      );
+      // 네트워크 실패는 결과를 알 수 없지만, 멱등키를 함께 보내므로 **같은 키로
+      // 재시도해도 중복 배정이 되지 않는다**(#581). 그래서 "먼저 확인하라" 대신
+      // 재시도를 안내한다.
+      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
       return;
     }
     if (!mounted || !_isStillSelected(sentFor)) return;
     setState(() {
       _sending = false;
       _sent = true;
+      // 성공했으니 다음 전송은 새 배정이다.
+      _sendRequestId = null;
+      _sendRequestFor = null;
     });
     _sentTimer?.cancel();
     // Mock: after the confirmation, reset the edits for the next round.
