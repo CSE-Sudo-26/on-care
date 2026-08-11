@@ -868,7 +868,7 @@ class _DietSummaryCard extends StatelessWidget {
                 value: client.sugarG,
                 unit: 'g',
                 color: AppColors.accentDark,
-                warn: client.sugarG > sugarTargetG,
+                warn: client.sugarOverBudget,
               ),
             ],
           ),

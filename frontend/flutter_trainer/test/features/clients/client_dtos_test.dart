@@ -3,21 +3,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
-TrainerClient _client(String id, {required int sodiumMg}) => TrainerClient(
-  id: id,
-  name: id,
-  avatar: id.substring(0, 1),
-  goal: '',
-  lastMessage: '',
-  lastTime: '',
-  active: true,
-  calories: 0,
-  sodiumMg: sodiumMg,
-  sugarG: 0,
-  lastRoutine: '',
-  weekCompletion: const <int>[],
-  sodiumWeek: const <int>[],
-);
+TrainerClient _client(String id, {required int sodiumMg, double sugarG = 0}) =>
+    TrainerClient(
+      id: id,
+      name: id,
+      avatar: id.substring(0, 1),
+      goal: '',
+      lastMessage: '',
+      lastTime: '',
+      active: true,
+      calories: 0,
+      sodiumMg: sodiumMg,
+      sugarG: sugarG,
+      lastRoutine: '',
+      weekCompletion: const <int>[],
+      sodiumWeek: const <int>[],
+    );
 
 void main() {
   group('trainerClientFromJson', () {
@@ -32,7 +33,7 @@ void main() {
         'active': true,
         'calories': 1800,
         'sodium_mg': 2100,
-        'sugar_g': 40,
+        'sugar_g': 17.8,
         'carbs_g': 150.5,
         'protein_g': 90,
         'fat_g': 48.25,
@@ -44,12 +45,19 @@ void main() {
       expect(c.id, 'm1');
       expect(c.name, '김민수');
       expect(c.sodiumMg, 2100);
+      expect(c.sugarG, 17.8);
       expect(c.carbsG, 150.5);
       expect(c.proteinG, 90);
       expect(c.fatG, 48.25);
       expect(c.sodiumOverBudget, isTrue); // 2100 > 2000 target
       expect(c.weekCompletion, <int>[100, 80, 0, 60, 90, 0, 0]);
       expect(c.sodiumWeek, <int>[1900, 2200, 2100]);
+    });
+
+    test('normalizes an integer sugar value to double', () {
+      final c = trainerClientFromJson(<String, Object?>{'sugar_g': 17});
+
+      expect(c.sugarG, 17.0);
     });
 
     test('tolerates double-encoded numbers and missing lists (web JSON)', () {
@@ -162,6 +170,23 @@ void main() {
       ]);
 
       expect(ordered.map((c) => c.sodiumMg).toList(), <int>[2500, 2600, 500]);
+    });
+  });
+
+  group('sugar warning threshold', () {
+    test('keeps the existing strict greater-than rule for decimal values', () {
+      expect(
+        _client('under', sodiumMg: 0, sugarG: 49.9).sugarOverBudget,
+        isFalse,
+      );
+      expect(
+        _client('equal', sodiumMg: 0, sugarG: 50).sugarOverBudget,
+        isFalse,
+      );
+      expect(
+        _client('over', sodiumMg: 0, sugarG: 50.1).sugarOverBudget,
+        isTrue,
+      );
     });
   });
 }

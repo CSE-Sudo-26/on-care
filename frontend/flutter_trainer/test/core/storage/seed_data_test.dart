@@ -52,8 +52,21 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v7'), _todayString());
+      expect(await db.readValue('trainer_seeded_v8'), _todayString());
     });
+
+    test(
+      '김민수 sugar matches the member mock and survives drift roundtrip',
+      () async {
+        await seedIfEmpty(db);
+
+        final minsu = await (db.select(
+          db.trainerClients,
+        )..where((c) => c.id.equals('seed-client-1'))).getSingle();
+        // frontend/flutter's current MockDietRepository daily total is 17.8g.
+        expect(minsu.sugarG, 17.8);
+      },
+    );
 
     // The roster is a fixture for the *charts*, not just the list — its
     // whole point is that every state the console can render is reachable
@@ -157,13 +170,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v7', '2020-01-01');
+      await db.putValue('trainer_seeded_v8', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v7'), _todayString());
+      expect(await db.readValue('trainer_seeded_v8'), _todayString());
     });
 
     test(
@@ -252,7 +265,7 @@ void main() {
 
         // Simulate an older build: already seeded TODAY under a previous
         // flag, plus a runtime (non-seed) client that must survive.
-        await db.putValue('trainer_seeded_v1', today);
+        await db.putValue('trainer_seeded_v7', today);
         await db
             .into(db.trainerClients)
             .insert(
@@ -286,7 +299,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v7'), today);
+        expect(await db.readValue('trainer_seeded_v8'), today);
       },
     );
 
@@ -308,7 +321,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v7', '2020-01-01');
+      await db.putValue('trainer_seeded_v8', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

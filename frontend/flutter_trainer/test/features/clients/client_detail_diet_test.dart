@@ -62,6 +62,7 @@ void main() {
           .firstWhere((client) => client.id == 'seed-client-1');
       expect(minsu.calories, 1067);
       expect(minsu.sodiumMg, 3428);
+      expect(minsu.sugarG, 17.8);
       expect(minsu.carbsG, 120);
       expect(minsu.proteinG, 45);
       expect(minsu.fatG, 45);
@@ -155,6 +156,17 @@ void main() {
         find.descendant(of: sodiumTile, matching: find.text('mg 초과')),
         findsOneWidget,
       );
+      final sugarTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricSugar,
+      );
+      expect(
+        find.descendant(of: sugarTile, matching: find.text('17.8')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sugarTile, matching: find.text('g')),
+        findsOneWidget,
+      );
       // The detail header plus the 7-day trend card push every meal card
       // down, so reach them by scrolling.
       await tester.scrollUntilVisible(find.text('아침'), 150);
@@ -175,6 +187,21 @@ void main() {
         150,
       );
       expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
+    });
+
+    testWidgets('integer-valued sugar keeps the existing compact format', (
+      tester,
+    ) async {
+      await openDiet(tester, '이지수');
+
+      final sugarTile = find.byWidgetPredicate(
+        (widget) => widget is MetricTile && widget.label == _ko.metricSugar,
+      );
+      expect(
+        find.descendant(of: sugarTile, matching: find.text('38')),
+        findsOneWidget,
+      );
+      expect(find.text('38.0'), findsNothing);
     });
 
     testWidgets('a recorded 0g meal remains a meal instead of empty state', (

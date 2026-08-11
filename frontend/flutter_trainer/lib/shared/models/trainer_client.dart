@@ -57,7 +57,7 @@ class TrainerClient {
   final int sodiumMg;
 
   /// Today's sugar (g).
-  final int sugarG;
+  final double sugarG;
 
   /// Today's carbohydrate intake (g).
   final double carbsG;
@@ -82,6 +82,9 @@ class TrainerClient {
   /// Sodium exceeds the [sodiumTargetMg] daily target — surfaced as a
   /// warning on the list card and counted by the AI summary.
   bool get sodiumOverBudget => sodiumMg > sodiumTargetMg;
+
+  /// Sugar exceeds the [sugarTargetG] daily target.
+  bool get sugarOverBudget => sugarG > sugarTargetG;
 
   /// Days in [sodiumWeek] that were over the daily target.
   int get sodiumOverDays =>

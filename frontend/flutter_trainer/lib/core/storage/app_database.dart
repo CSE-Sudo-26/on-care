@@ -28,7 +28,7 @@ class TrainerClients extends Table {
   BoolColumn get active => boolean().withDefault(const Constant(true))();
   IntColumn get caloriesToday => integer()();
   IntColumn get sodiumMg => integer()();
-  IntColumn get sugarG => integer()();
+  RealColumn get sugarG => real()();
   RealColumn get carbsG => real().withDefault(const Constant(0))();
   RealColumn get proteinG => real().withDefault(const Constant(0))();
   RealColumn get fatG => real().withDefault(const Constant(0))();
@@ -174,7 +174,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -204,6 +204,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(clientDietEntries, clientDietEntries.carbsG);
         await m.addColumn(clientDietEntries, clientDietEntries.proteinG);
         await m.addColumn(clientDietEntries, clientDietEntries.fatG);
+      }
+      if (from < 5) {
+        // #565 sugar_g: INTEGER -> REAL. SQLite keeps non-integral values
+        // stored in an INTEGER-affinity column as REAL, so rebuilding this
+        // table would only add data-loss risk. Existing integers are read by
+        // drift as doubles (for example 17 -> 17.0), while the v5 declaration
+        // lets new values retain their fractional part.
       }
     },
   );

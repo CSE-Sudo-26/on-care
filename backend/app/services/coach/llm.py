@@ -13,6 +13,15 @@ from functools import lru_cache
 from app.core.config import get_settings
 from app.services.coach.llm_base import CoachLLM, LLMResult
 
+#: 짧은 JSON 한 건을 받을 때 쓰는 기본 사고 예산.
+#:
+#: 지연을 지배하는 값이라 호출부마다 따로 정하면 한쪽만 느려진다(실제로 루틴 생성
+#: 경로가 이 값을 넘기지 않아 상시 폴백으로 떨어졌다 — #579). 근거 실측은 아래
+#: `GeminiCoachLLM.generate` 주석에 있다.
+#:
+#: **`json_mode=True` 와 반드시 함께 쓴다.** json_mode 만 켜면 오히려 크게 느려진다.
+DEFAULT_THINKING_BUDGET = 128
+
 
 class OpenAICoachLLM(CoachLLM):
     name = "openai"

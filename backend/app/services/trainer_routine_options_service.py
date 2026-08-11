@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
 # `time` 은 stdlib 모듈로 두고(경과 시간 측정), 자정 시각은 별칭으로 받는다.
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from datetime import date, datetime, timedelta
 from datetime import time as time_of_day
 
@@ -33,9 +35,59 @@ from app.schemas.trainer_api import (
 )
 from app.services import routine_ai
 from app.services.coach import prompt_safety
-from app.services.coach.llm import get_coach_llm
+from app.services.coach.llm import DEFAULT_THINKING_BUDGET, get_coach_llm
 
 logger = logging.getLogger(__name__)
+
+
+class LLMBusyError(RuntimeError):
+    """LLM 동시 호출 한도가 차서 호출을 시도조차 하지 않았음을 알린다.
+
+    "실패"와 구분해야 로그에서 장애와 포화를 헷갈리지 않는다.
+    """
+
+
+#: LLM 응답을 기다리는 최대 시간(초).
+#:
+#: 생성 왕복이 실측 3~6초다(#579, 근거는 `config.py` 의 `routine_options_per_minute`
+#: 주석). 최악 실측의 두 배를 여유로 잡았다 — 6초에 바짝 붙이면 정상 호출이
+#: 산발적으로 잘려 트레이너가 이유 없이 규칙형을 받는다.
+#:
+#: 상한이 있다는 것 자체가 요점이다. 이 값이 없으면 끊어 주는 건 SDK 의 HTTP
+#: 타임아웃뿐인데 Gemini 30초, OpenAI/LiteLLM 60초라 워커 하나가 그만큼 묶인다.
+LLM_TIMEOUT_SEC = 12.0
+
+#: 사고 예산. 지연을 지배하는 값이라 호출부마다 따로 두지 않는다(#579).
+LLM_THINKING_BUDGET = DEFAULT_THINKING_BUDGET
+
+#: 동시에 진행할 LLM 호출 수.
+LLM_MAX_CONCURRENCY = 4
+
+#: 왜 식단 추천(`diet_recommendation_service`)과 같은 코드를 공통 헬퍼로 뽑지 않았나.
+#:
+#: 1. **풀을 공유하면 안 된다.** 헬퍼 하나에 executor·세마포어를 두면 홈 화면
+#:    추천이 몰릴 때 트레이너 루틴 생성이 같이 굶는다. 서로 무관한 기능이 서로의
+#:    포화에 끌려가는 건 중복을 없앤 대가로 치르기엔 비싸다.
+#: 2. 호출부마다 인스턴스를 만드는 헬퍼라면 1 은 피하지만, 그러려면 식단 쪽을 함께
+#:    고쳐야 한다. 그쪽 포화 테스트가 모듈 전역 `_llm_slots` 를 monkeypatch 하고
+#:    있어 테스트까지 따라 바뀐다 — 루틴 경로 버그를 고치는 이슈가 이미 검증된
+#:    코드를 건드리는 범위로 번진다.
+#: 3. 두 경로는 튜닝이 다르다(여긴 12초, 식단은 6초). 값이 갈리면 공통화의 이득도
+#:    그만큼 줄어든다.
+#:
+#: 세 번째 호출부가 생기면 그때 인스턴스형 헬퍼로 뽑는 편이 낫다.
+_executor = ThreadPoolExecutor(
+    max_workers=LLM_MAX_CONCURRENCY, thread_name_prefix="routine-options-llm"
+)
+
+#: 진행 중인 LLM 호출 수를 워커 수로 제한한다.
+#:
+#: `future.result(timeout=...)` 은 **기다리기를 포기할 뿐 작업을 취소하지 않는다.**
+#: 그래서 느린 호출이 몰리면 워커가 전부 묶이고 이후 submit 은 무한 큐에 쌓인다.
+#: 그 상태에서는 새 요청이 LLM 을 불러 보지도 못한 채 큐에서 타임아웃까지 기다렸다
+#: 폴백한다 — 규칙형만 나오면서 응답만 매번 느려진다.
+#: 빈 자리가 없으면 기다리지 않고 곧장 규칙 폴백으로 내려간다.
+_llm_slots = threading.BoundedSemaphore(LLM_MAX_CONCURRENCY)
 
 #: 프롬프트에 싣는 최근 대화 범위. 넓히면 오래된 통증 호소가 이미 나은 뒤에도
 #: 계속 루틴을 눌러 버리고, 좁히면 지난주 부상이 사라진다.
@@ -242,6 +294,49 @@ def _decode_json_object(text: str) -> dict:
     return parsed
 
 
+def _call_llm(prompt: str):
+    """LLM 호출 + 타임아웃. 실패는 호출부가 잡아 규칙 폴백으로 내린다.
+
+    빈 워커가 없으면 큐에서 기다리지 않고 즉시 실패시킨다(`_llm_slots` 주석 참고).
+    기다려 봐야 타임아웃이고, 그동안 요청 스레드만 붙잡아 두기 때문이다.
+
+    응답 파싱은 일부러 이 밖에 둔다 — 워커 안에서 파싱하면 계약 위반이 `Future`
+    를 통해 올라와, 호출부의 `except (ValidationError, RoutineContractError)` 와
+    타임아웃을 구분하는 자리가 흐려진다.
+    """
+    # 자리를 딴 세마포어 **인스턴스**를 지역에 붙잡아 둔다. 워커가 전역을 다시 읽으면,
+    # 그 사이 전역이 교체됐을 때(테스트의 monkeypatch 가 그렇게 한다) 잡지도 않은
+    # 세마포어를 풀어 준다 — 원래 자리는 영영 안 돌아오고, 교체된 쪽은 초기값을 넘겨
+    # `BoundedSemaphore` 가 ValueError 를 던진다.
+    slots = _llm_slots
+    if not slots.acquire(blocking=False):
+        raise LLMBusyError("LLM 동시 호출 한도 초과 — 규칙 폴백")
+
+    def _call():
+        try:
+            # json_mode 와 사고 예산은 **반드시 함께** 넘긴다. 기본값(사고 켜짐)으로는
+            # 이 짧은 JSON 하나에도 10초 이상 걸려 클라이언트가 먼저 끊고 규칙형만
+            # 보게 된다. json_mode 만 켜면 오히려 더 느려진다(실측은 coach/llm.py).
+            return get_coach_llm().generate(
+                _SYSTEM_PROMPT, prompt,
+                json_mode=True,
+                thinking_budget=LLM_THINKING_BUDGET,
+            )
+        finally:
+            # 타임아웃으로 호출부가 떠난 뒤라도 작업이 끝나면 자리를 반드시 돌려준다.
+            slots.release()
+
+    try:
+        future = _executor.submit(_call)
+    except RuntimeError:
+        # 스케줄링 자체가 실패하면 워커가 돌지 않아 위 `finally` 도 없다. 여기서
+        # 돌려주지 않으면 실패 한 번마다 동시 호출 한도가 영구히 1씩 줄어, 끝내
+        # 모든 요청이 포화로 떨어진다(인터프리터 종료 중 submit 이 이 경로다).
+        slots.release()
+        raise
+    return future.result(timeout=LLM_TIMEOUT_SEC)
+
+
 def _generate_with_llm(
     analysis: RoutineOptionAnalysisOut,
     request: RoutineOptionsRequest,
@@ -255,7 +350,7 @@ def _generate_with_llm(
         },
         ensure_ascii=False,
     )
-    result = get_coach_llm().generate(_SYSTEM_PROMPT, prompt)
+    result = _call_llm(prompt)
     payload = _decode_json_object(result.text)
     payload["analysis"] = analysis.model_dump()
     payload["generated_by"] = "ai"
@@ -280,6 +375,26 @@ def generate_routine_options(
     had_chat = bool(analysis.recent_messages)
     try:
         options = _generate_with_llm(analysis, request)
+    except LLMBusyError:
+        # 포화 — 장애가 아니다. 부르지 않았으니 stack trace 도 남길 게 없다.
+        # 이 값이 자주 오르면 늘릴 것은 타임아웃이 아니라 동시성 한도다.
+        _record(started, reason="busy", had_chat_context=had_chat)
+        logger.info(
+            "맞춤 루틴 LLM 포화 — 규칙 기반 폴백 사용 (trainer_id=%s, member_id=%s)",
+            trainer_id, member_id,
+        )
+        return fallback
+    except FutureTimeout:
+        # 공급자가 살아는 있는데 제 시간에 못 준다. 계약 위반도 인프라 장애도
+        # 아니라서 따로 센다 — 셋을 섞으면 "프롬프트를 볼지, 한도를 올릴지,
+        # 공급자를 볼지"를 지표에서 가릴 수 없다.
+        _record(started, reason="timeout", had_chat_context=had_chat)
+        logger.warning(
+            "맞춤 루틴 LLM 타임아웃(%.1fs) — 규칙 기반 폴백 사용 "
+            "(trainer_id=%s, member_id=%s)",
+            LLM_TIMEOUT_SEC, trainer_id, member_id,
+        )
+        return fallback
     except (ValidationError, RoutineContractError) as exc:
         # 계약 위반 — 공급자는 살아 있는데 응답이 규격에 안 맞는다. 프롬프트나
         # 스키마를 손볼 신호라 인프라 장애와 섞으면 안 된다.
