@@ -234,6 +234,8 @@
   "clientsSeeAll": "See all",
   "clientsNameRequired": "Enter a name",
   "clientsAddFailed": "Couldn't add the client. Please try again",
+  "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
+  "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
   "clientsDuplicateName": "A client with that name already exists",
   "clientsAddTitle": "Add a client",
   "clientsNameLabel": "Client name",

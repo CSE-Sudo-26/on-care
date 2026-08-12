@@ -87,6 +87,7 @@ class HealthProfile(Base):
     birth_date: Mapped[str] = mapped_column(String(10), default="")  # YYYY-MM-DD
     gender: Mapped[str] = mapped_column(String(10), default="")  # male|female|other
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # 일일 영양 목표(식단 관리용)
     daily_calories: Mapped[int | None] = mapped_column(Integer, nullable=True)

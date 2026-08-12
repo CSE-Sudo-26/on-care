@@ -8,6 +8,7 @@
 
 데이터 엔드포인트(/users/me*)는 토큰 없으면 데모 사용자로 동작.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -24,15 +25,28 @@ from app.api.deps import CurrentUser, RequireMember
 from app.core.rate_limit import rate_limit
 from app.services.audit import client_ip, record as audit
 from app.core.security import (
-    create_access_token, create_refresh_token, decode_refresh_token,
-    hash_password, verify_password,
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+    verify_password,
 )
 from app.db.session import get_db
 from app.models.models import HealthProfile, User
 from app.schemas.user import (
-    HealthGoalsUpdate, HealthProfileBrief, OnboardingRequest, ProfileUpdate,
-    ProfileView, RefreshRequest, RiskInfo, SettingItem, Token, TrainerRegister,
-    UserHealth, UserMe, UserRegister,
+    HealthGoalsUpdate,
+    HealthProfileBrief,
+    OnboardingRequest,
+    ProfileUpdate,
+    ProfileView,
+    RefreshRequest,
+    RiskInfo,
+    SettingItem,
+    Token,
+    TrainerRegister,
+    UserHealth,
+    UserMe,
+    UserRegister,
 )
 from app.services import reservation_service, trainer_signup_service
 from app.services.health_service import DEMO_SETTINGS
@@ -54,7 +68,9 @@ def get_my_health(
 
     # risk: 저장된 프로필 있으면 사용, 없으면 데모 기본값(프론트 mock 과 동일)
     if profile and profile.risk_title:
-        risk = RiskInfo(title=profile.risk_title, body=profile.risk_body, level=profile.risk_level)
+        risk = RiskInfo(
+            title=profile.risk_title, body=profile.risk_body, level=profile.risk_level
+        )
         points = profile.activity_points
         rank = profile.activity_rank
     else:
@@ -77,6 +93,7 @@ def get_my_health(
 
 # ---- 프로필 / 온보딩 / 탈퇴 ----
 
+
 def _get_or_create_profile(db: Session, user: User) -> HealthProfile:
     """사용자의 HealthProfile 을 가져오거나(없으면) 생성한다."""
     profile = user.health_profile
@@ -97,6 +114,7 @@ def _profile_view(user: User) -> ProfileView:
         birth_date=p.birth_date if p else "",
         gender=p.gender if p else "",
         height_cm=p.height_cm if p else None,
+        weight_kg=p.weight_kg if p else None,
         conditions=p.conditions if p else "",
         goals=p.goals if p else "",
         daily_calories=p.daily_calories if p else None,
@@ -106,9 +124,7 @@ def _profile_view(user: User) -> ProfileView:
         daily_protein_g=p.daily_protein_g if p else None,
         daily_fat_g=p.daily_fat_g if p else None,
         weekly_workout_goal=p.weekly_workout_goal if p else None,
-        weekly_exercise_minutes_goal=(
-            p.weekly_exercise_minutes_goal if p else None
-        ),
+        weekly_exercise_minutes_goal=(p.weekly_exercise_minutes_goal if p else None),
         weekly_burn_goal=p.weekly_burn_goal if p else None,
         onboarded=p.onboarded if p else False,
     )
@@ -177,10 +193,16 @@ def update_me(
         user.name = data["name"]
 
     profile = _get_or_create_profile(db, user)
-    if "phone" in data and data["phone"] is not None:
-        profile.phone = data["phone"]
-    if "birth_date" in data and data["birth_date"] is not None:
-        profile.birth_date = data["birth_date"]
+    for field in (
+        "phone",
+        "birth_date",
+        "gender",
+        "height_cm",
+        "weight_kg",
+        "goals",
+    ):
+        if field in data:
+            setattr(profile, field, data[field])
 
     db.commit()
     db.refresh(user)
@@ -194,15 +216,14 @@ def delete_me(
 ) -> dict:
     """회원 탈퇴. 예약 좌석을 복구한 뒤 프로필·식단·운동·일정·알림·
     소셜계정·개인 코치문서를 함께 삭제한다."""
-    reservation_service.cancel_member_reservations_for_account_deletion(
-        db, user.id
-    )
+    reservation_service.cancel_member_reservations_for_account_deletion(db, user.id)
     db.delete(user)
     db.commit()
     return {"status": "deleted"}
 
 
 # ---- 인증 (Stage 4 대비, 지금도 동작) ----
+
 
 @router.post(
     "/auth/register",
@@ -217,7 +238,13 @@ def register(
 ) -> UserMe:
     exists = db.scalar(select(User).where(User.email == payload.email))
     if exists:
-        audit(db, event="auth.register", ip=client_ip(request), success=False, detail=payload.email)
+        audit(
+            db,
+            event="auth.register",
+            ip=client_ip(request),
+            success=False,
+            detail=payload.email,
+        )
         raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.")
     user = User(
         id=f"user-{uuid.uuid4().hex[:12]}",
@@ -230,9 +257,13 @@ def register(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.") from None
+        raise HTTPException(
+            status_code=409, detail="이미 가입된 이메일입니다."
+        ) from None
     db.refresh(user)
-    audit(db, event="auth.register", user_id=user.id, ip=client_ip(request), success=True)
+    audit(
+        db, event="auth.register", user_id=user.id, ip=client_ip(request), success=True
+    )
     return UserMe(id=user.id, name=user.name, email=user.email)
 
 
@@ -305,8 +336,16 @@ def login(
         or not user.is_active
         or not verify_password(form.password, user.hashed_password)
     ):
-        audit(db, event="auth.login", ip=client_ip(request), success=False, detail=form.username)
-        raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
+        audit(
+            db,
+            event="auth.login",
+            ip=client_ip(request),
+            success=False,
+            detail=form.username,
+        )
+        raise HTTPException(
+            status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다."
+        )
     audit(db, event="auth.login", user_id=user.id, ip=client_ip(request), success=True)
     return Token(
         access_token=create_access_token(user.id),

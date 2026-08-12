@@ -77,6 +77,58 @@ class TrainerClientOut(BaseModel):
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
 
 
+class MemberHealthProfileOut(BaseModel):
+    member_id: str
+    member_name: str
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    gender: str = ""
+    conditions: str = ""
+    goals: str = ""
+    daily_calories: int | None = None
+    daily_sodium_mg: int | None = None
+    daily_sugar_g: int | None = None
+    daily_carbs_g: int | None = None
+    daily_protein_g: int | None = None
+    daily_fat_g: int | None = None
+    weekly_workout_goal: int | None = None
+    weekly_exercise_minutes_goal: int | None = None
+    weekly_burn_goal: int | None = None
+
+
+class MemberHealthProfileUpdate(PartialUpdate):
+    height_cm: float | None = Field(default=None, ge=50, le=300)
+    weight_kg: float | None = Field(default=None, ge=20, le=500)
+    gender: str | None = Field(default=None, pattern="^(male|female|other|)$")
+    conditions: str | None = Field(default=None, max_length=1000)
+    goals: str | None = Field(default=None, max_length=500)
+    daily_calories: int | None = Field(default=None, ge=500, le=10000)
+    daily_sodium_mg: int | None = Field(default=None, ge=0, le=50000)
+    daily_sugar_g: int | None = Field(default=None, ge=0, le=1000)
+    daily_carbs_g: int | None = Field(default=None, ge=0, le=2000)
+    daily_protein_g: int | None = Field(default=None, ge=0, le=1000)
+    daily_fat_g: int | None = Field(default=None, ge=0, le=1000)
+    weekly_workout_goal: int | None = Field(default=None, ge=0, le=21)
+    weekly_exercise_minutes_goal: int | None = Field(default=None, ge=0, le=10080)
+    weekly_burn_goal: int | None = Field(default=None, ge=0, le=100000)
+
+    nullable_fields: ClassVar[frozenset[str]] = frozenset(
+        {
+            "height_cm",
+            "weight_kg",
+            "daily_calories",
+            "daily_sodium_mg",
+            "daily_sugar_g",
+            "daily_carbs_g",
+            "daily_protein_g",
+            "daily_fat_g",
+            "weekly_workout_goal",
+            "weekly_exercise_minutes_goal",
+            "weekly_burn_goal",
+        }
+    )
+
+
 class ClientDietEntryOut(BaseModel):
     """고객 식단 서브탭 한 끼 — 프론트 ClientDietEntry 계약 정렬."""
     meal: str        # 아침|점심|저녁|간식
@@ -196,6 +248,14 @@ ROUTINE_CHAT_MAX_MESSAGES = 10
 
 class RoutineOptionAnalysisOut(BaseModel):
     goal: str
+    member_goal: str = ""
+    conditions: str = ""
+    gender: str = ""
+    height_cm: float | None = None
+    weight_kg: float | None = None
+    weekly_workout_goal: int | None = None
+    weekly_exercise_minutes_goal: int | None = None
+    weekly_burn_goal: int | None = None
     sodium_today_mg: int = Field(ge=0)
     sodium_over_target: bool
     avg_completion_rate: int = Field(ge=0, le=100)

@@ -332,6 +332,16 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   late final TextEditingController _birth = TextEditingController(
     text: widget.initial.birthDate,
   );
+  late String _gender = widget.initial.gender;
+  late final TextEditingController _height = TextEditingController(
+    text: widget.initial.heightCm?.toString() ?? '',
+  );
+  late final TextEditingController _weight = TextEditingController(
+    text: widget.initial.weightKg?.toString() ?? '',
+  );
+  late final TextEditingController _goals = TextEditingController(
+    text: widget.initial.goals,
+  );
   bool _saving = false;
 
   @override
@@ -340,6 +350,9 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     _email.dispose();
     _phone.dispose();
     _birth.dispose();
+    _height.dispose();
+    _weight.dispose();
+    _goals.dispose();
     super.dispose();
   }
 
@@ -357,6 +370,10 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             email: _email.text.trim(),
             phone: _phone.text.trim(),
             birthDate: _birth.text.trim(),
+            gender: _gender,
+            heightCm: num.tryParse(_height.text.trim()),
+            weightKg: num.tryParse(_weight.text.trim()),
+            goals: _goals.text.trim(),
           );
       // Sheet dismissed mid-save → don't touch ref/pop the page below.
       if (!mounted) return;
@@ -397,6 +414,34 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           controller: _birth,
           hintText: '1996-03-21',
         ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _gender.isEmpty ? null : _gender,
+          decoration: InputDecoration(labelText: l.myFieldGender),
+          items: <DropdownMenuItem<String>>[
+            DropdownMenuItem(value: 'male', child: Text(l.onboardGenderMale)),
+            DropdownMenuItem(
+              value: 'female',
+              child: Text(l.onboardGenderFemale),
+            ),
+            DropdownMenuItem(value: 'other', child: Text(l.onboardGenderOther)),
+          ],
+          onChanged: (value) => setState(() => _gender = value ?? ''),
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          label: l.myFieldHeight,
+          controller: _height,
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 12),
+        _SheetField(
+          label: l.myFieldWeight,
+          controller: _weight,
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 12),
+        _SheetField(label: l.myFieldGoals, controller: _goals),
       ]),
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
@@ -702,9 +747,7 @@ class _NotificationSettingsPageState
       // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
       // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
       setState(() => _local[key] = previous);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('알림 설정을 저장하지 못했어요')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('알림 설정을 저장하지 못했어요')));
     }
   }
 

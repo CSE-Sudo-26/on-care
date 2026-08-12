@@ -2426,6 +2426,30 @@ abstract class AppLocalizations {
   /// **'Date of birth'**
   String get myFieldBirth;
 
+  /// No description provided for @myFieldGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get myFieldGender;
+
+  /// No description provided for @myFieldHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get myFieldHeight;
+
+  /// No description provided for @myFieldWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get myFieldWeight;
+
+  /// No description provided for @myFieldGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Health and exercise goals'**
+  String get myFieldGoals;
+
   /// No description provided for @myNotifDietLog.
   ///
   /// In en, this message translates to:
@@ -3296,6 +3320,12 @@ abstract class AppLocalizations {
   /// **'Height (cm)'**
   String get onboardHeightHint;
 
+  /// No description provided for @onboardWeightHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get onboardWeightHint;
+
   /// No description provided for @onboardHealthTitle.
   ///
   /// In en, this message translates to:
@@ -3319,6 +3349,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tell us what you want to achieve. You can change this later.'**
   String get onboardGoalSubtitle;
+
+  /// No description provided for @onboardGoalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Health and exercise goals'**
+  String get onboardGoalHint;
 
   /// No description provided for @onboardSodiumGoalHint.
   ///

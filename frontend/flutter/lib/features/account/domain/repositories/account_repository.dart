@@ -27,7 +27,9 @@ abstract class AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
+    num? weightKg,
     String? conditions,
+    String? goals,
     int? dailySodiumMg,
   });
 
@@ -37,5 +39,9 @@ abstract class AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
+    String? gender,
+    num? heightCm,
+    num? weightKg,
+    String? goals,
   });
 }

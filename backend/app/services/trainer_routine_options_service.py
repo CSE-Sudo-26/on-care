@@ -22,6 +22,7 @@ from app.core import clock, metrics
 from app.models.models import (
     ChatMessage,
     DietEntry,
+    HealthProfile,
     RoutineHistory,
     TrainerClient,
     TrainerRoutine,
@@ -194,11 +195,31 @@ def build_member_analysis(
         .order_by(TrainerRoutine.created_at.desc(), TrainerRoutine.id.desc())
         .limit(1)
     )
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member_id)
+    )
+    sodium_target = (
+        profile.daily_sodium_mg
+        if profile is not None and profile.daily_sodium_mg is not None
+        else 2000
+    )
 
     return RoutineOptionAnalysisOut(
         goal=link.goal,
+        member_goal=profile.goals if profile is not None else "",
+        conditions=profile.conditions if profile is not None else "",
+        gender=profile.gender if profile is not None else "",
+        height_cm=profile.height_cm if profile is not None else None,
+        weight_kg=profile.weight_kg if profile is not None else None,
+        weekly_workout_goal=(
+            profile.weekly_workout_goal if profile is not None else None
+        ),
+        weekly_exercise_minutes_goal=(
+            profile.weekly_exercise_minutes_goal if profile is not None else None
+        ),
+        weekly_burn_goal=profile.weekly_burn_goal if profile is not None else None,
         sodium_today_mg=sodium,
-        sodium_over_target=sodium > routine_ai.SODIUM_TARGET_MG,
+        sodium_over_target=sodium > sodium_target,
         avg_completion_rate=round(float(completion or 0)),
         latest_routine=latest.name if latest is not None else "-",
         note=request.trainer_note.strip(),

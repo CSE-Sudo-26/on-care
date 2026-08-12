@@ -24,7 +24,7 @@ from app.core.config import get_settings
 from app.core.rate_limit import rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
-from app.models.models import Notification, TrainerClient, TrainerProfile
+from app.models.models import HealthProfile, Notification, TrainerClient, TrainerProfile, User
 from app.schemas.consultation_api import (
     ConsultationAccept,
     ConsultationDecision,
@@ -34,6 +34,7 @@ from app.schemas.consultation_api import (
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachMessageOut, ClientCoachOut,
     ClientCoachRequest, ClientDietEntryOut,
+    MemberHealthProfileOut, MemberHealthProfileUpdate,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
@@ -247,6 +248,73 @@ def trainer_clients(
     """담당 고객 로스터. 각 카드의 오늘 영양소와 나트륨 추세는
     회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유."""
     return trainer_service.build_roster(db, trainer.id)
+
+
+def _member_health_out(db: Session, member_id: str) -> MemberHealthProfileOut:
+    member = db.get(User, member_id)
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member_id)
+    )
+    values = {
+        field: getattr(profile, field) if profile is not None else None
+        for field in (
+            "height_cm",
+            "weight_kg",
+            "daily_calories",
+            "daily_sodium_mg",
+            "daily_sugar_g",
+            "daily_carbs_g",
+            "daily_protein_g",
+            "daily_fat_g",
+            "weekly_workout_goal",
+            "weekly_exercise_minutes_goal",
+            "weekly_burn_goal",
+        )
+    }
+    return MemberHealthProfileOut(
+        member_id=member_id,
+        member_name=member.name if member is not None else "",
+        gender=profile.gender if profile is not None else "",
+        conditions=profile.conditions if profile is not None else "",
+        goals=profile.goals if profile is not None else "",
+        **values,
+    )
+
+
+@router.get(
+    "/trainer/clients/{member_id}/health-profile",
+    response_model=MemberHealthProfileOut,
+)
+def trainer_member_health_profile(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberHealthProfileOut:
+    _require_client(db, trainer.id, member_id)
+    return _member_health_out(db, member_id)
+
+
+@router.put(
+    "/trainer/clients/{member_id}/health-profile",
+    response_model=MemberHealthProfileOut,
+)
+def trainer_update_member_health_profile(
+    member_id: str,
+    payload: MemberHealthProfileUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> MemberHealthProfileOut:
+    _require_client(db, trainer.id, member_id)
+    profile = db.scalar(
+        select(HealthProfile).where(HealthProfile.user_id == member_id)
+    )
+    if profile is None:
+        profile = HealthProfile(user_id=member_id)
+        db.add(profile)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(profile, field, value)
+    db.commit()
+    return _member_health_out(db, member_id)
 
 
 @router.get("/trainer/clients/{member_id}/diet", response_model=list[ClientDietEntryOut])

@@ -4,10 +4,13 @@ RAG(retrieve)로 개인+공공 근거를 모아 LLM 으로 대화형 답변을 �
 LLM 키가 없거나 실패하면 검색 기반(추출형) 답변으로 폴백해, 키 없이도 근거 있는 응답을 준다.
 개인/공공 격리·도메인 필터는 retrieve 가 이미 보장한다.
 """
+
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.models import HealthProfile
 from app.services.coach import grounding, prompt_safety
 from app.services.coach.llm import get_coach_llm
 from app.services.coach.rag import retrieve
@@ -54,6 +57,23 @@ def _build_user_prompt(context: str, history: list, message: str) -> str:
     return "\n\n".join(parts)
 
 
+def _profile_context(db: Session, user_id: str) -> str:
+    profile = db.scalar(select(HealthProfile).where(HealthProfile.user_id == user_id))
+    if profile is None:
+        return ""
+    values = [
+        f"성별: {profile.gender or '미입력'}",
+        f"키: {profile.height_cm or '미입력'}cm",
+        f"체중: {profile.weight_kg or '미입력'}kg",
+        f"건강 상태: {profile.conditions or '미입력'}",
+        f"회원 목표: {profile.goals or '미입력'}",
+        f"주간 운동 횟수 목표: {profile.weekly_workout_goal if profile.weekly_workout_goal is not None else '미입력'}",
+        f"주간 운동 시간 목표: {profile.weekly_exercise_minutes_goal if profile.weekly_exercise_minutes_goal is not None else '미입력'}분",
+        f"주간 소모 칼로리 목표: {profile.weekly_burn_goal if profile.weekly_burn_goal is not None else '미입력'}kcal",
+    ]
+    return "[현재 회원 프로필과 목표]\n- " + "\n- ".join(values)
+
+
 def _fallback_reply(hits: dict) -> str:
     """LLM 없이 검색 결과만으로 만드는 근거 기반 답변."""
     pub = hits["public"]
@@ -69,7 +89,10 @@ def _fallback_reply(hits: dict) -> str:
 
 
 def answer(
-    db: Session, user_id: str, message: str, history: list | None = None,
+    db: Session,
+    user_id: str,
+    message: str,
+    history: list | None = None,
 ) -> tuple[str, list[str]]:
     """(답변 텍스트, 근거 공공문서 제목들) 반환."""
     history = history or []
@@ -78,7 +101,12 @@ def answer(
 
     try:
         llm = get_coach_llm()
-        prompt = _build_user_prompt(_format_context(hits), history, message)
+        context = "\n\n".join(
+            part
+            for part in (_profile_context(db, user_id), _format_context(hits))
+            if part
+        )
+        prompt = _build_user_prompt(context, history, message)
         text = llm.generate(_SYSTEM, prompt).text.strip()
         if text:
             return text, sources

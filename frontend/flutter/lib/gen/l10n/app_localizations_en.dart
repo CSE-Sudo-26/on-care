@@ -1309,6 +1309,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myFieldBirth => 'Date of birth';
 
   @override
+  String get myFieldGender => 'Gender';
+
+  @override
+  String get myFieldHeight => 'Height (cm)';
+
+  @override
+  String get myFieldWeight => 'Weight (kg)';
+
+  @override
+  String get myFieldGoals => 'Health and exercise goals';
+
+  @override
   String get myNotifDietLog => 'Diet log reminder';
 
   @override
@@ -1778,6 +1790,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardHeightHint => 'Height (cm)';
 
   @override
+  String get onboardWeightHint => 'Weight (kg)';
+
+  @override
   String get onboardHealthTitle => 'Health conditions';
 
   @override
@@ -1790,6 +1805,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardGoalSubtitle =>
       'Tell us what you want to achieve. You can change this later.';
+
+  @override
+  String get onboardGoalHint => 'Health and exercise goals';
 
   @override
   String get onboardSodiumGoalHint => 'Daily sodium goal (mg)';

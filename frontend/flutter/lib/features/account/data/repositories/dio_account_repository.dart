@@ -23,7 +23,9 @@ class DioAccountRepository implements AccountRepository {
     String? birthDate,
     String? gender,
     num? heightCm,
+    num? weightKg,
     String? conditions,
+    String? goals,
     int? dailySodiumMg,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
@@ -32,7 +34,9 @@ class DioAccountRepository implements AccountRepository {
         'birth_date': ?birthDate,
         'gender': ?gender,
         'height_cm': ?heightCm,
+        'weight_kg': ?weightKg,
         'conditions': ?conditions,
+        'goals': ?goals,
         'daily_sodium_mg': ?dailySodiumMg,
       },
     );
@@ -45,6 +49,10 @@ class DioAccountRepository implements AccountRepository {
     String? email,
     String? phone,
     String? birthDate,
+    String? gender,
+    num? heightCm,
+    num? weightKg,
+    String? goals,
   }) async {
     final res = await _dio.put<Map<String, Object?>>(
       '/users/me',
@@ -53,6 +61,10 @@ class DioAccountRepository implements AccountRepository {
         'email': ?email,
         'phone': ?phone,
         'birth_date': ?birthDate,
+        'gender': ?gender,
+        'height_cm': ?heightCm,
+        'weight_kg': ?weightKg,
+        'goals': ?goals,
       },
     );
     return UserProfile.fromJson(res.data!);

@@ -18,6 +18,7 @@ import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -148,6 +149,16 @@ class _FixedClientRepository implements ClientRepository {
       Stream.value(const <RoutineHistoryEntry>[]);
 
   @override
+  Future<MemberHealthProfile> fetchHealthProfile(String clientId) async =>
+      MemberHealthProfile(memberId: clientId, memberName: '회원');
+
+  @override
+  Future<MemberHealthProfile> updateHealthProfile(
+    String clientId,
+    Map<String, Object?> values,
+  ) => fetchHealthProfile(clientId);
+
+  @override
   Future<bool> clientNameExists(String name) async => false;
 
   @override
@@ -163,7 +174,6 @@ class _FixedClientRepository implements ClientRepository {
 /// ambiguous (network) failure message from the generic one (subin21cc
 /// review Major#2a).
 class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
-
   @override
   Future<void> updateRoutine(
     String memberId,

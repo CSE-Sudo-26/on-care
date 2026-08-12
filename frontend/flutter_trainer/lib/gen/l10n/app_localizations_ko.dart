@@ -346,6 +346,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddFailed => '등록에 실패했어요. 다시 시도해 주세요';
 
   @override
+  String get memberHealthLoadFailed => '회원 정보를 불러오지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get memberHealthSaveFailed => '회원 정보를 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
 
   @override

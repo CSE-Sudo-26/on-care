@@ -1,16 +1,23 @@
 """프로필 / 온보딩 / 건강 목표 / 회원 탈퇴 — DB 필요(로컬 skip, CI 실행)."""
+
 from __future__ import annotations
 
 from uuid import uuid4
+
+import pytest
 
 
 def _register_and_login(client, name: str = "테스터") -> tuple[str, str]:
     """가입+로그인 후 (access_token, email) 반환."""
     email = f"prof-{uuid4().hex[:8]}@oncare.com"
     password = "pw-12345!"
-    r = client.post("/v1/auth/register", json={"email": email, "password": password, "name": name})
+    r = client.post(
+        "/v1/auth/register", json={"email": email, "password": password, "name": name}
+    )
     assert r.status_code == 201, r.text
-    login = client.post("/v1/auth/login", data={"username": email, "password": password})
+    login = client.post(
+        "/v1/auth/login", data={"username": email, "password": password}
+    )
     assert login.status_code == 200, login.text
     return login.json()["access_token"], email
 
@@ -26,6 +33,7 @@ def test_onboarding_saves_profile_and_marks_done(client):
         "birth_date": "1990-01-15",
         "gender": "male",
         "height_cm": 175.0,
+        "weight_kg": 72.5,
         "conditions": "고혈압, 당뇨 전단계",
         "goals": "혈압 정상화",
         "daily_calories": 2000,
@@ -38,6 +46,7 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert p["name"] == "온보딩유저"
     assert p["conditions"] == "고혈압, 당뇨 전단계"
     assert p["height_cm"] == 175.0
+    assert p["weight_kg"] == 72.5
     assert p["daily_calories"] == 2000
 
     # GET 으로도 동일하게 조회돼야 한다
@@ -45,6 +54,24 @@ def test_onboarding_saves_profile_and_marks_done(client):
     assert got.status_code == 200
     assert got.json()["onboarded"] is True
     assert got.json()["daily_sodium_mg"] == 2000
+
+
+@pytest.mark.parametrize(
+    "invalid_body",
+    [
+        {"gender": "invalid"},
+        {"height_cm": 49},
+        {"height_cm": 301},
+    ],
+)
+def test_onboarding_rejects_invalid_gender_and_height(client, invalid_body):
+    token, _ = _register_and_login(client)
+    response = client.post(
+        "/v1/users/me/onboarding",
+        json=invalid_body,
+        headers=_auth(token),
+    )
+    assert response.status_code == 422, response.text
 
 
 def test_update_me_changes_name_and_phone(client):
@@ -60,6 +87,46 @@ def test_update_me_changes_name_and_phone(client):
 
     me = client.get("/v1/users/me", headers=_auth(token))
     assert me.json()["name"] == "새이름"
+
+
+def test_update_me_changes_body_profile_and_goal(client):
+    token, _ = _register_and_login(client)
+    response = client.put(
+        "/v1/users/me",
+        json={
+            "gender": "female",
+            "height_cm": 163.5,
+            "weight_kg": 54.2,
+            "goals": "주 3회 근력 운동",
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    profile = response.json()
+    assert profile["gender"] == "female"
+    assert profile["height_cm"] == 163.5
+    assert profile["weight_kg"] == 54.2
+    assert profile["goals"] == "주 3회 근력 운동"
+
+    cleared = client.put(
+        "/v1/users/me",
+        json={"height_cm": None, "weight_kg": None},
+        headers=_auth(token),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["height_cm"] is None
+    assert cleared.json()["weight_kg"] is None
+
+
+def test_update_me_still_rejects_null_for_non_nullable_profile_fields(client):
+    token, _ = _register_and_login(client)
+    for field in ("phone", "birth_date", "gender", "goals"):
+        response = client.put(
+            "/v1/users/me",
+            json={field: None},
+            headers=_auth(token),
+        )
+        assert response.status_code == 422, (field, response.text)
 
 
 def test_update_me_duplicate_email_conflicts_409(client):
@@ -107,7 +174,9 @@ def test_delete_me_removes_account(client):
     assert r.json()["status"] == "deleted"
 
     # 계정이 사라졌으므로 재로그인 불가
-    again = client.post("/v1/auth/login", data={"username": email, "password": "pw-12345!"})
+    again = client.post(
+        "/v1/auth/login", data={"username": email, "password": "pw-12345!"}
+    )
     assert again.status_code == 401
 
 
