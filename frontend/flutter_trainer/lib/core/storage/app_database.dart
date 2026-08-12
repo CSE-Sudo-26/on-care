@@ -231,11 +231,6 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
-
-  /// Deletes a key.
-  Future<void> deleteValue(String key) {
-    return (delete(appKeyValues)..where((t) => t.key.equals(key))).go();
-  }
 }
 
 /// Provides the trainer [AppDatabase], closing it on dispose.

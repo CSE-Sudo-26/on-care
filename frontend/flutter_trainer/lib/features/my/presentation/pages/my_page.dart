@@ -1086,7 +1086,7 @@ class _CertsCard extends StatelessWidget {
   }
 }
 
-/// "이번 달 통계" — warm gradient block with 담당 고객(live count) /
+/// "이번 달 통계" — 남색 그라데이션 블록. 담당 고객(live count) /
 /// 완료 세션 / 루틴 전송 (mock figures from the Figma).
 class _StatsCard extends StatelessWidget {
   const _StatsCard({required this.clientCount});
