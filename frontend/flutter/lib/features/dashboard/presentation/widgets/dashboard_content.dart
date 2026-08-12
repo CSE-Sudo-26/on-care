@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/dashboard/presentation/ai_advice_text.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -517,16 +519,24 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                               children: <Widget>[
                                 SizedBox(
                                   height: 68,
-                                  child: CustomPaint(
-                                    size: Size.infinite,
-                                    painter: _TrendChartPainter(
-                                      cur: cfg.cur,
-                                      goal: cfg.goal,
-                                      ticks: cfg.ticks,
-                                      lo: lo,
-                                      hi: hi,
-                                      todayIndex: todayIdx,
-                                    ),
+                                  // 지표를 바꾸면 선을 처음부터 다시 그려 값이
+                                  // 바뀐 것을 눈으로 따라가게 한다. stagger 가
+                                  // 없는 차트라 커브는 기본값(감속)을 쓴다.
+                                  child: ChartReveal(
+                                    replayKey: _tab,
+                                    builder: (BuildContext context, double t) =>
+                                        CustomPaint(
+                                          size: Size.infinite,
+                                          painter: _TrendChartPainter(
+                                            cur: cfg.cur,
+                                            goal: cfg.goal,
+                                            ticks: cfg.ticks,
+                                            lo: lo,
+                                            hi: hi,
+                                            todayIndex: todayIdx,
+                                            progress: t,
+                                          ),
+                                        ),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -928,15 +938,23 @@ class _ExerciseCard extends ConsumerWidget {
                       SizedBox(
                         key: const ValueKey<String>('dashboard-exercise-chart'),
                         height: 96,
-                        child: CustomPaint(
-                          size: Size.infinite,
-                          painter: _ExerciseBarPainter(
-                            data: week,
-                            lo: lo,
-                            hi: hi,
-                            todayIndex: todayIdx,
-                            color: FigmaColors.primary,
-                          ),
+                        child: ChartReveal(
+                          duration: AppMotion.chartGrow,
+                          // 막대마다 시작 시점을 어긋나게 하므로(chartStagger)
+                          // 마스터 진행도는 선형으로 받는다.
+                          curve: Curves.linear,
+                          builder: (BuildContext context, double t) =>
+                              CustomPaint(
+                                size: Size.infinite,
+                                painter: _ExerciseBarPainter(
+                                  data: week,
+                                  lo: lo,
+                                  hi: hi,
+                                  todayIndex: todayIdx,
+                                  color: FigmaColors.primary,
+                                  progress: t,
+                                ),
+                              ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1329,6 +1347,7 @@ class _TrendChartPainter extends CustomPainter {
     required this.lo,
     required this.hi,
     required this.todayIndex,
+    this.progress = 1,
   });
 
   final List<double> cur;
@@ -1339,6 +1358,10 @@ class _TrendChartPainter extends CustomPainter {
 
   /// 이번 주 꺾은선은 오늘까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
   final int todayIndex;
+
+  /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
+  /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1369,40 +1392,79 @@ class _TrendChartPainter extends CustomPainter {
 
     // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
     // 포인트마다 값을 같은 색으로 표기한다.
-    final Path line = Path()..moveTo(pts.first.dx, pts.first.dy);
-    for (final Offset p in pts.skip(1)) {
-      line.lineTo(p.dx, p.dy);
+    // 진입 애니메이션: 펜이 월요일에서 오늘 쪽으로 이동하는 만큼만 선을 잇는다.
+    // drawn 은 "그려진 구간 수"(0 = 첫 점만, lastIdx = 전체).
+    final double p = progress.clamp(0.0, 1.0);
+    final double drawn = lastIdx * p;
+    if (lastIdx > 0) {
+      final Path line = Path()..moveTo(pts.first.dx, pts.first.dy);
+      final int whole = drawn.floor().clamp(0, lastIdx);
+      for (int i = 1; i <= whole; i++) {
+        line.lineTo(pts[i].dx, pts[i].dy);
+      }
+      if (whole < lastIdx) {
+        final Offset tip = Offset.lerp(
+          pts[whole],
+          pts[whole + 1],
+          drawn - whole,
+        )!;
+        line.lineTo(tip.dx, tip.dy);
+      }
+      canvas.drawPath(
+        line,
+        Paint()
+          ..color = _nutLineGray
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round,
+      );
     }
-    canvas.drawPath(
-      line,
-      Paint()
-        ..color = _nutLineGray
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round,
-    );
 
     for (int i = 0; i <= lastIdx; i++) {
+      // 선이 이 점에 닿기 직전부터 짧게 페이드인한다.
+      final double a = lastIdx == 0
+          ? p
+          : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
+      if (a <= 0) continue;
       final Color sc = _nutStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2);
-      _text(canvas, _metricNumber(cur[i]), pts[i], w, sc);
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
+      _text(canvas, _metricNumber(cur[i]), pts[i], w, sc, alpha: a);
     }
   }
 
-  void _dot(Canvas c, Offset o, Color color, {double r = 3.0}) {
-    c.drawCircle(o, r + 1.3, Paint()..color = Colors.white); // 흰 테두리(halo)
-    c.drawCircle(o, r, Paint()..color = color); // 상태색으로 채운 데이터 포인트
+  void _dot(
+    Canvas c,
+    Offset o,
+    Color color, {
+    double r = 3.0,
+    double alpha = 1,
+  }) {
+    // 흰 테두리(halo)
+    c.drawCircle(
+      o,
+      r + 1.3,
+      Paint()..color = Colors.white.withValues(alpha: alpha),
+    );
+    // 상태색으로 채운 데이터 포인트
+    c.drawCircle(o, r, Paint()..color = color.withValues(alpha: alpha));
   }
 
-  void _text(Canvas c, String s, Offset at, double w, Color color) {
+  void _text(
+    Canvas c,
+    String s,
+    Offset at,
+    double w,
+    Color color, {
+    double alpha = 1,
+  }) {
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: s,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: color.withValues(alpha: alpha),
         ),
       ),
       textDirection: ui.TextDirection.ltr,
@@ -1421,7 +1483,8 @@ class _TrendChartPainter extends CustomPainter {
       old.ticks != ticks ||
       old.lo != lo ||
       old.hi != hi ||
-      old.todayIndex != todayIndex;
+      old.todayIndex != todayIndex ||
+      old.progress != progress;
 }
 
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
@@ -1434,6 +1497,7 @@ class _ExerciseBarPainter extends CustomPainter {
     required this.hi,
     required this.todayIndex,
     required this.color,
+    this.progress = 1,
   });
 
   final List<double> data;
@@ -1443,6 +1507,10 @@ class _ExerciseBarPainter extends CustomPainter {
   /// 오늘 요일 인덱스(0=월 … 6=일). 마지막 막대 고정이 아니라 이 막대를 강조한다.
   final int todayIndex;
   final Color color;
+
+  /// 0 → 1 진입 애니메이션 진행도(선형). 막대는 월요일부터 차례로 바닥에서
+  /// 자라 오르고, 값 라벨은 해당 막대와 함께 페이드인한다.
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1464,7 +1532,10 @@ class _ExerciseBarPainter extends CustomPainter {
 
     for (int i = 0; i < n; i++) {
       final double v = data[i];
-      final double bh = ((v - lo) / span) * (h - labelGap);
+      // 막대별 진행도. 높이와 라벨 투명도를 같이 몰아 올리면 막대가
+      // 자라면서 값이 따라 붙는 것처럼 보인다.
+      final double t = chartStagger(progress, i, n);
+      final double bh = ((v - lo) / span) * (h - labelGap) * t;
       final double cx = slot * i + slot / 2;
       final double top = h - bh;
       final bool today = i == todayIndex;
@@ -1483,7 +1554,9 @@ class _ExerciseBarPainter extends CustomPainter {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
-            color: today ? color : const Color(0xFF9AA6B2),
+            color: (today ? color : const Color(0xFF9AA6B2)).withValues(
+              alpha: t,
+            ),
           ),
         ),
         textDirection: ui.TextDirection.ltr,
@@ -1500,7 +1573,8 @@ class _ExerciseBarPainter extends CustomPainter {
       old.lo != lo ||
       old.hi != hi ||
       old.todayIndex != todayIndex ||
-      old.color != color;
+      old.color != color ||
+      old.progress != progress;
 }
 
 // ───────────────────────────────────────────────────── recommended meals ──
@@ -1842,11 +1916,7 @@ class _ScheduleCard extends ConsumerWidget {
                 session.date!.day,
               ) ==
               today)
-            ScheduleItem(
-              time: session.time,
-              title: session.type,
-              emoji: '🏋️',
-            ),
+            ScheduleItem(time: session.time, title: session.type, emoji: '🏋️'),
     ];
   }
 

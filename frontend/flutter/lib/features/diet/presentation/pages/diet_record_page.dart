@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/design_system/tokens/motion.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -833,10 +835,17 @@ class _NutritionProgressBar extends StatelessWidget {
                 ),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: constraints.maxWidth * progress.clamp(0.0, 1.0),
-                    height: barHeight,
-                    child: ColoredBox(color: color),
+                  // 날짜를 옮기거나 식단을 추가해 값이 바뀌면 0에서 다시
+                  // 채운다 — 숫자만 조용히 갈리지 않도록.
+                  child: ChartReveal(
+                    duration: AppMotion.meterFill,
+                    replayKey: progress,
+                    builder: (BuildContext context, double t) => SizedBox(
+                      width:
+                          constraints.maxWidth * progress.clamp(0.0, 1.0) * t,
+                      height: barHeight,
+                      child: ColoredBox(color: color),
+                    ),
                   ),
                 ),
               ],
@@ -1067,10 +1076,14 @@ class _VerticalNutritionProgressBar extends StatelessWidget {
             const Positioned.fill(child: ColoredBox(color: FigmaColors.track)),
             Align(
               alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                width: barWidth,
-                height: barHeight * progress.clamp(0.0, 1.0),
-                child: ColoredBox(color: color),
+              child: ChartReveal(
+                duration: AppMotion.meterFill,
+                replayKey: progress,
+                builder: (BuildContext context, double t) => SizedBox(
+                  width: barWidth,
+                  height: barHeight * progress.clamp(0.0, 1.0) * t,
+                  child: ColoredBox(color: color),
+                ),
               ),
             ),
           ],
