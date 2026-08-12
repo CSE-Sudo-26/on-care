@@ -14,6 +14,7 @@ import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_h
 import 'package:oncare/features/my_health/domain/entities/health_history.dart';
 import 'package:oncare/features/my_health/presentation/controllers/my_health_controller.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
+import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -58,6 +59,8 @@ class MyHealthPage extends ConsumerWidget {
                   title: l.myTabTitle,
                   trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => context.push(AppRoutes.notification),
+                  bellHasUnread:
+                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
                 const SizedBox(height: 4),

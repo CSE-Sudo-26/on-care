@@ -21,6 +21,7 @@ import 'package:oncare/features/exercise/presentation/controllers/exercise_contr
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
+import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
@@ -60,12 +61,19 @@ class DashboardContent extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 108),
           children: <Widget>[
-            FigmaTabHeader(
-              title: 'On - Care',
-              leading: const HeartLogo(),
-              trailingAction: const TrainerChatHeaderButton(),
-              onBell: onNotificationTap,
-              onCalendar: onCalendarTap,
+            // 벨 배지는 서버 미읽음을 본다. 이 build 에는 ref 가 없어 여기서만
+            // 지역적으로 얻는다 — 헤더 전체를 다시 그리지 않는다.
+            Consumer(
+              builder: (BuildContext context, WidgetRef ref, Widget? _) =>
+FigmaTabHeader(
+                  title: 'On - Care',
+                  leading: const HeartLogo(),
+                  trailingAction: const TrainerChatHeaderButton(),
+                  onBell: onNotificationTap,
+                  bellHasUnread:
+                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
+                  onCalendar: onCalendarTap,
+                ),
             ),
             const SizedBox(height: 8),
             Consumer(

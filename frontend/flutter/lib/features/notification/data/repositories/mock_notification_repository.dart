@@ -51,4 +51,8 @@ class MockNotificationRepository implements NotificationRepository {
 
   @override
   Future<void> markAllRead() async {}
+
+  @override
+  Future<int> unreadCount() async =>
+      demoAlerts.where((AlertItem a) => !a.read).length;
 }

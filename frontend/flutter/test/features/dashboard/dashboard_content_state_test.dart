@@ -16,6 +16,7 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
+import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
 void main() {
@@ -167,7 +168,13 @@ void main() {
   testWidgets('home uses the shared tab header and notification style', (
     WidgetTester tester,
   ) async {
-    await pumpDashboard(tester, load: () async => liveSummary);
+    await pumpDashboard(
+      tester,
+      load: () async => liveSummary,
+      extraOverrides: <Override>[
+        notificationUnreadProvider.overrideWith((ref) => Stream<int>.value(2)),
+      ],
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(FigmaTabHeader), findsOneWidget);
@@ -180,8 +187,32 @@ void main() {
             widget.icon == Icons.notifications_none_rounded,
       ),
     );
+    // 점은 이제 **서버 미읽음을 따른다.** 예전에는 항상 켜져 있어서 읽을 것이
+    // 없어도 남았다(#636).
     expect(notificationButton.showDot, isTrue);
     expect(notificationButton.dotColor, FigmaColors.orange);
+  });
+
+  testWidgets('읽지 않은 알림이 없으면 벨에 점이 없다', (WidgetTester tester) async {
+    await pumpDashboard(
+      tester,
+      load: () async => liveSummary,
+      extraOverrides: <Override>[
+        notificationUnreadProvider.overrideWith(
+          (ref) => Stream<int>.value(0),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final FigmaCircleButton bell = tester.widget(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is FigmaCircleButton &&
+            widget.icon == Icons.notifications_none_rounded,
+      ),
+    );
+    expect(bell.showDot, isFalse);
   });
 
   testWidgets('shows error state', (WidgetTester tester) async {
