@@ -24,7 +24,15 @@ from app.core.config import get_settings
 from app.core.rate_limit import rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
-from app.models.models import HealthProfile, Notification, TrainerClient, TrainerProfile, User
+from app.models.models import (
+    ExerciseSession,
+    HealthProfile,
+    Notification,
+    TrainerClient,
+    TrainerProfile,
+    User,
+)
+from app.schemas.exercise_api import ExerciseSessionOut, ExerciseWeekResponse
 from app.schemas.consultation_api import (
     ConsultationAccept,
     ConsultationDecision,
@@ -50,6 +58,7 @@ from app.services import (
     trainer_service,
 )
 from app.services.coach import conversation
+from app.services.exercise_service import build_current_week, monday_of_this_week_str
 from app.services.coach.chat import answer as coach_answer
 
 router = APIRouter(tags=["trainer"])
@@ -342,6 +351,30 @@ def trainer_client_history(
     """담당 고객의 운동 완료 기록(최신순). 타 트레이너 기록/메모는 제외한다."""
     _require_client(db, trainer.id, member_id)
     return trainer_service.build_client_history(db, member_id, trainer.id)
+
+
+@router.get(
+    "/trainer/clients/{member_id}/exercise-week",
+    response_model=ExerciseWeekResponse,
+)
+def trainer_client_exercise_week(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ExerciseWeekResponse:
+    """Return the member's current-week exercise totals and daily trends."""
+    _require_client(db, trainer.id, member_id)
+    rows = db.scalars(
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == member_id,
+            ExerciseSession.week_start == monday_of_this_week_str(),
+        )
+    ).all()
+    data = build_current_week(list(rows))
+    return ExerciseWeekResponse(
+        sessions=[ExerciseSessionOut(**row) for row in data.pop("sessions")],
+        **data,
+    )
 
 
 # ---- 채팅 (트레이너↔회원) ----

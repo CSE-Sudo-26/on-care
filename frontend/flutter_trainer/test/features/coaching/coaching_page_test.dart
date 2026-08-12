@@ -18,6 +18,7 @@ import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
 import 'package:oncare_trainer/features/auth/domain/repositories/trainer_auth_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -157,6 +158,15 @@ class _FixedClientRepository implements ClientRepository {
     String clientId,
     Map<String, Object?> values,
   ) => fetchHealthProfile(clientId);
+  @override
+  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async =>
+      const ClientExerciseWeek(
+        dayLabels: <String>[],
+        dailyMinutes: <int>[],
+        dailyCalories: <int>[],
+        totalMinutes: 0,
+        totalCalories: 0,
+      );
 
   @override
   Future<bool> clientNameExists(String name) async => false;

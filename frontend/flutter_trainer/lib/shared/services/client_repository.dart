@@ -10,8 +10,9 @@ import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
     show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
-import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
@@ -45,6 +46,7 @@ abstract interface class ClientRepository {
     String clientId,
     Map<String, Object?> values,
   );
+  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId);
 
   /// Demo-only roster mutations — the backend roster comes from
   /// trainer↔member links, so these are unsupported against the real API.
@@ -255,6 +257,27 @@ class DriftClientRepository implements ClientRepository {
     return fetchHealthProfile(clientId);
   }
 
+  @override
+  Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async {
+    final row = await (_db.select(
+      _db.trainerClients,
+    )..where((table) => table.id.equals(clientId))).getSingle();
+    final completion = (jsonDecode(row.weekCompletionJson) as List<Object?>)
+        .map((value) => (value as num).toInt())
+        .toList(growable: false);
+    final minutes = completion
+        .map((rate) => rate == 0 ? 0 : (30 * rate / 100).round())
+        .toList(growable: false);
+    final calories = minutes.map((value) => value * 6).toList(growable: false);
+    return ClientExerciseWeek(
+      dayLabels: const ['월', '화', '수', '목', '금', '토', '일'],
+      dailyMinutes: minutes,
+      dailyCalories: calories,
+      totalMinutes: minutes.fold(0, (sum, value) => sum + value),
+      totalCalories: calories.fold(0, (sum, value) => sum + value),
+    );
+  }
+
   /// A client's meals for the 식단 sub-tab, in seeded order (아침 → 저녁).
   @override
   Stream<List<ClientDietEntry>> watchDiet(String clientId) {
@@ -410,4 +433,9 @@ final clientDietProvider = StreamProvider.family<List<ClientDietEntry>, String>(
 final clientHistoryProvider =
     StreamProvider.family<List<RoutineHistoryEntry>, String>((ref, clientId) {
       return ref.watch(clientRepositoryProvider).watchHistory(clientId);
+    });
+
+final clientExerciseWeekProvider =
+    FutureProvider.family<ClientExerciseWeek, String>((ref, clientId) {
+      return ref.watch(clientRepositoryProvider).fetchExerciseWeek(clientId);
     });
