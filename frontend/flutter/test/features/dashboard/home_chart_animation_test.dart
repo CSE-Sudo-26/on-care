@@ -5,9 +5,6 @@
 /// 가 다시 거짓이 되는 것으로 "그리고 멈춘다"를 못박는다.
 library;
 
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +20,8 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/painter_ink.dart';
 
 void main() {
   const DashboardSummary summary = DashboardSummary(
@@ -99,25 +98,6 @@ void main() {
         .painter!;
   }
 
-  /// painter 를 실제로 래스터화해 칠해진 픽셀 수를 센다. 막대가 자라 오르면
-  /// 잉크가 늘어나므로, "정말 커지고 있는가"를 좌표가 아니라 그림으로 확인한다.
-  /// `toImage` 는 진짜 비동기라 반드시 `runAsync` 안에서 불러야 한다.
-  Future<int> inkOf(CustomPainter painter, Size size) async {
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    painter.paint(Canvas(recorder), size);
-    final ui.Image image = await recorder.endRecording().toImage(
-      size.width.ceil(),
-      size.height.ceil(),
-    );
-    final ByteData pixels = (await image.toByteData())!;
-    image.dispose();
-    int ink = 0;
-    for (int i = 3; i < pixels.lengthInBytes; i += 4) {
-      if (pixels.getUint8(i) > 0) ink++;
-    }
-    return ink;
-  }
-
   testWidgets('주간 운동 막대는 바닥에서 위로 자란다', (WidgetTester tester) async {
     await pumpHome(tester);
     final Size size = tester.getSize(exerciseChart);
@@ -130,9 +110,9 @@ void main() {
 
     final List<int> ink = (await tester.runAsync(() async {
       return <int>[
-        await inkOf(atStart, size),
-        await inkOf(midway, size),
-        await inkOf(settled, size),
+        await painterInk(atStart, size),
+        await painterInk(midway, size),
+        await painterInk(settled, size),
       ];
     }))!;
 

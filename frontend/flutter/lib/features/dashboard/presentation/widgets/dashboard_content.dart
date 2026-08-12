@@ -520,10 +520,10 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                                 SizedBox(
                                   height: 68,
                                   // 지표를 바꾸면 선을 처음부터 다시 그려 값이
-                                  // 바뀐 것을 눈으로 따라가게 한다.
+                                  // 바뀐 것을 눈으로 따라가게 한다. stagger 가
+                                  // 없는 차트라 커브는 기본값(감속)을 쓴다.
                                   child: ChartReveal(
                                     replayKey: _tab,
-                                    curve: Curves.linear,
                                     builder: (BuildContext context, double t) =>
                                         CustomPaint(
                                           size: Size.infinite,

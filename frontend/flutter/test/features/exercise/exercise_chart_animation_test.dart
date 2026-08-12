@@ -5,9 +5,6 @@
 /// 있는가"를 확인한다 — `shouldRepaint` 만으로는 방향을 알 수 없다.
 library;
 
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +20,8 @@ import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+
+import '../../helpers/painter_ink.dart';
 
 void main() {
   // 요일마다 세 종류가 모두 있는 주 — 도넛에 세 조각, 막대에 세 층이 쌓인다.
@@ -95,22 +94,6 @@ void main() {
         .painter!;
   }
 
-  Future<int> inkOf(CustomPainter painter, Size size) async {
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    painter.paint(Canvas(recorder), size);
-    final ui.Image image = await recorder.endRecording().toImage(
-      size.width.ceil(),
-      size.height.ceil(),
-    );
-    final ByteData pixels = (await image.toByteData())!;
-    image.dispose();
-    int ink = 0;
-    for (int i = 3; i < pixels.lengthInBytes; i += 4) {
-      if (pixels.getUint8(i) > 0) ink++;
-    }
-    return ink;
-  }
-
   testWidgets('오늘 도넛은 원을 따라 점점 그려진다', (WidgetTester tester) async {
     await pumpExercise(tester);
     await tester.tap(find.text('오늘'));
@@ -125,9 +108,9 @@ void main() {
 
     final List<int> ink = (await tester.runAsync(() async {
       return <int>[
-        await inkOf(atStart, size),
-        await inkOf(midway, size),
-        await inkOf(settled, size),
+        await painterInk(atStart, size),
+        await painterInk(midway, size),
+        await painterInk(settled, size),
       ];
     }))!;
 
@@ -148,9 +131,9 @@ void main() {
 
     final List<int> ink = (await tester.runAsync(() async {
       return <int>[
-        await inkOf(atStart, size),
-        await inkOf(midway, size),
-        await inkOf(settled, size),
+        await painterInk(atStart, size),
+        await painterInk(midway, size),
+        await painterInk(settled, size),
       ];
     }))!;
 
@@ -180,7 +163,10 @@ void main() {
     final CustomPainter midway = chartPainter(tester);
 
     final List<int> ink = (await tester.runAsync(() async {
-      return <int>[await inkOf(atStart, size), await inkOf(midway, size)];
+      return <int>[
+        await painterInk(atStart, size),
+        await painterInk(midway, size),
+      ];
     }))!;
     expect(ink[1], greaterThan(ink[0]), reason: '월간 막대가 다시 자라지 않았다');
 
