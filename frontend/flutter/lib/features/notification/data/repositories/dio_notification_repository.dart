@@ -31,7 +31,13 @@ class DioNotificationRepository implements NotificationRepository {
     final res = await _dio.get<Map<String, Object?>>(
       '/notifications/unread-count',
     );
-    return (res.data?['count'] as num?)?.toInt() ?? 0;
+    final Object? raw = res.data?['count'];
+    // 잘못된 응답을 0 으로 삼키면 **읽지 않은 알림이 있는데도 배지가 꺼진다.**
+    // 던져서 폴링이 마지막 좋은 값을 유지하게 한다(연결 실패와 같은 취급).
+    if (raw is! num || raw < 0) {
+      throw const FormatException('unread-count 응답이 올바르지 않습니다');
+    }
+    return raw.toInt();
   }
 
   static AlertItem _fromJson(Map<String, Object?> json) {

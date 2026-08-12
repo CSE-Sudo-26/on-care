@@ -38,21 +38,32 @@ const List<AlertItem> demoAlerts = <AlertItem>[
   ),
 ];
 
-/// 데모/로컬 모드용 [NotificationRepository]. 목록은 [demoAlerts] 고정이고,
-/// 읽음 변이는 세션 메모리(컨트롤러 state)에서만 처리하므로 no-op 이다.
+/// 데모/로컬 모드용 [NotificationRepository].
+///
+/// 목록은 [demoAlerts] 로 시작하고 읽음 처리를 **세션 동안 기억한다.** 예전에는
+/// 읽음이 no-op 이라, 미읽음 수를 물으면 늘 처음 상태를 답했다 — 데모에서 "모두 읽음"
+/// 을 눌러도 벨의 점이 남아, 목록과 배지가 서로 다른 말을 했다(리뷰).
 class MockNotificationRepository implements NotificationRepository {
-  const MockNotificationRepository();
+  MockNotificationRepository();
+
+  List<AlertItem> _items = List<AlertItem>.of(demoAlerts);
 
   @override
-  Future<List<AlertItem>> fetchAll() async => demoAlerts;
+  Future<List<AlertItem>> fetchAll() async => List<AlertItem>.of(_items);
 
   @override
-  Future<void> markRead(String id) async {}
+  Future<void> markRead(String id) async {
+    _items = _items
+        .map((AlertItem a) => a.id == id ? a.copyWith(read: true) : a)
+        .toList();
+  }
 
   @override
-  Future<void> markAllRead() async {}
+  Future<void> markAllRead() async {
+    _items = _items.map((AlertItem a) => a.copyWith(read: true)).toList();
+  }
 
   @override
   Future<int> unreadCount() async =>
-      demoAlerts.where((AlertItem a) => !a.read).length;
+      _items.where((AlertItem a) => !a.read).length;
 }

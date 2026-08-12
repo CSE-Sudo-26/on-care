@@ -69,11 +69,14 @@ class NotificationController extends StateNotifier<NotificationState> {
           .map((AlertItem i) => i.id == id ? i.copyWith(read: true) : i)
           .toList(),
     );
-    onChanged?.call();
     try {
       await _repo.markRead(id);
     } catch (_) {
       // 낙관적 업데이트 유지 — 영속화 실패는 다음 로드에서 정정된다.
+    } finally {
+      // **쓰기가 끝난 뒤에** 다시 센다. 먼저 부르면 서버가 아직 옛 수를 답해,
+      // 배지가 다음 폴링까지 틀린 채로 남는다(리뷰).
+      onChanged?.call();
     }
   }
 
@@ -81,11 +84,12 @@ class NotificationController extends StateNotifier<NotificationState> {
     state = NotificationState(
       items: state.items.map((AlertItem i) => i.copyWith(read: true)).toList(),
     );
-    onChanged?.call();
     try {
       await _repo.markAllRead();
     } catch (_) {
       // 낙관적 업데이트 유지.
+    } finally {
+      onChanged?.call();
     }
   }
 
@@ -109,7 +113,7 @@ class NotificationController extends StateNotifier<NotificationState> {
 /// 데모/로컬 모드는 목, 실모드는 백엔드(`/notifications`) 리포.
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   if (ref.watch(appConfigProvider).useMockApi) {
-    return const MockNotificationRepository();
+    return MockNotificationRepository();
   }
   return DioNotificationRepository(ref.watch(dioProvider));
 }, name: 'notificationRepository');

@@ -54,6 +54,10 @@ class _ScriptedRepo implements NotificationRepository {
   /// 조회를 붙잡아 두었다가 테스트가 풀어 주게 한다(겹침 검증용).
   Completer<void>? gate;
 
+  /// 읽음 쓰기를 붙잡아 둔다. 쓰기가 끝나기 전에 미읽음을 다시 세면 서버가 옛 수를
+  /// 답하므로, 그 순서를 검증하는 데 쓴다.
+  Completer<void>? writeGate;
+
   void serve(List<AlertItem> items) => _items = items;
 
   @override
@@ -66,6 +70,7 @@ class _ScriptedRepo implements NotificationRepository {
 
   @override
   Future<void> markRead(String id) async {
+    if (writeGate != null) await writeGate!.future;
     _items = _items
         .map((AlertItem i) => i.id == id ? i.copyWith(read: true) : i)
         .toList();
@@ -195,6 +200,34 @@ void main() {
     await _settle();
 
     // 다음 폴링을 기다리면 목록과 배지가 잠시 어긋나 보인다.
+    expect(repo.unreadCalls, greaterThan(before));
+  });
+
+  test('쓰기가 끝나기 전에는 미읽음을 다시 세지 않는다', () async {
+    final repo = _ScriptedRepo(<AlertItem>[_alert('a'), _alert('b')])
+      ..writeGate = Completer<void>();
+    final container = _container(repo);
+
+    container.listen<AsyncValue<int>>(
+      notificationUnreadProvider,
+      (AsyncValue<int>? _, AsyncValue<int> _) {},
+      fireImmediately: true,
+    );
+    await container.read(notificationControllerProvider.notifier).refresh();
+    await _settle();
+    final int before = repo.unreadCalls;
+
+    final Future<void> pending = container
+        .read(notificationControllerProvider.notifier)
+        .markRead('a');
+    await _settle();
+    // 아직 서버에 반영되지 않았다. 여기서 다시 세면 옛 수를 받아 배지가 다음
+    // 폴링까지 틀린 채로 남는다(리뷰).
+    expect(repo.unreadCalls, before);
+
+    repo.writeGate!.complete();
+    await pending;
+    await _settle();
     expect(repo.unreadCalls, greaterThan(before));
   });
 
