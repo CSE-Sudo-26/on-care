@@ -52,7 +52,6 @@ void main() {
 
       final state = container.read(sessionControllerProvider);
       expect(state.status, SessionStatus.signedOut);
-      expect(state.canEnterApp, isFalse);
       expect(state.profile, isNull);
     });
 
@@ -366,8 +365,6 @@ void main() {
 
       final state = container.read(sessionControllerProvider);
       expect(state.status, SessionStatus.demo);
-      expect(state.canEnterApp, isTrue);
-      expect(state.isAuthenticated, isFalse);
       expect(
         await container.read(secureTokenStoreProvider).readAccessToken(),
         isNull,

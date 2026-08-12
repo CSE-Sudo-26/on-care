@@ -30,12 +30,4 @@ class SessionState {
 
   /// The signed-in trainer's profile, or `null` when not authenticated.
   final TrainerProfile? profile;
-
-  /// Whether the trainer is logged in with a token.
-  bool get isAuthenticated => status == SessionStatus.authenticated;
-
-  /// Whether the app content is reachable — either a real (mock) login
-  /// or demo mode. The router's auth gate keys off this.
-  bool get canEnterApp =>
-      status == SessionStatus.authenticated || status == SessionStatus.demo;
 }

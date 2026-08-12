@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -114,13 +115,12 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
       setState(() {
         // 서버가 준 사유가 있으면 그대로(서버 문구의 다국어는 별건), 없으면
         // 오류 종류에 맞는 문구를 화면이 붙인다. (#501)
-        _error =
-            e.message ??
-            switch (e) {
-              NotFoundError() => l.coachNotMyClient,
-              ValidationError() => l.coachDemoUnavailable,
-              _ => l.coachAskFailed,
-            };
+        final fallback = switch (e) {
+          NotFoundError() => l.coachNotMyClient,
+          ValidationError() => l.coachDemoUnavailable,
+          _ => l.coachAskFailed,
+        };
+        _error = serverDetailOr(l, e.message, fallback);
         _asking = false;
       });
     }

@@ -200,9 +200,17 @@ class _MyPageState extends ConsumerState<MyPage> {
   String _saveFailureMessage(Object error, {required bool profileSaved}) {
     final AppLocalizations l = AppLocalizations.of(context);
     final detail = error is AppError ? error.message : null;
-    if (!profileSaved) return detail ?? l.myProfileSaveFailed;
-    final partial = l.myGymChangeFailed;
-    return detail == null ? partial : '$partial $detail';
+    if (profileSaved) {
+      final localizedDetail = serverDetailOr(l, detail, '');
+      return localizedDetail.isEmpty
+          ? l.myGymChangeFailed
+          : '${l.myGymChangeFailed} $localizedDetail';
+    }
+    return serverDetailOr(
+      l,
+      detail,
+      l.myProfileSaveFailed,
+    );
   }
 
   void _applySavedProfile(TrainerProfile saved) {
@@ -254,7 +262,7 @@ class _MyPageState extends ConsumerState<MyPage> {
     } on AppError catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(e.message ?? l.myDeleteFailed)),
+        SnackBar(content: Text(serverDetailOr(l, e.message, l.myDeleteFailed))),
       );
       return;
     }
@@ -1078,7 +1086,7 @@ class _CertsCard extends StatelessWidget {
   }
 }
 
-/// "이번 달 통계" — warm gradient block with 담당 고객(live count) /
+/// "이번 달 통계" — 남색 그라데이션 블록. 담당 고객(live count) /
 /// 완료 세션 / 루틴 전송 (mock figures from the Figma).
 class _StatsCard extends StatelessWidget {
   const _StatsCard({required this.clientCount});

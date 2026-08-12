@@ -30,14 +30,11 @@
   "navCoaching": "AI coaching",
   "navReports": "Reports",
   "navConsultations": "Requests",
-  "navMy": "My page",
   "actionSave": "Save",
   "actionCancel": "Cancel",
   "actionEdit": "Edit",
   "actionDelete": "Delete",
   "actionClose": "Close",
-  "actionConfirm": "Confirm",
-  "actionSend": "Send",
   "actionRetry": "Retry",
   "actionRefresh": "Refresh",
   "actionChange": "Change",
@@ -234,6 +231,8 @@
   "clientsSeeAll": "See all",
   "clientsNameRequired": "Enter a name",
   "clientsAddFailed": "Couldn't add the client. Please try again",
+  "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
+  "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
   "clientsDuplicateName": "A client with that name already exists",
   "clientsAddTitle": "Add a client",
   "clientsNameLabel": "Client name",
@@ -297,8 +296,6 @@
   },
   "chatDemoNotified": "The client app was notified",
   "chatInputHint": "Type a message...",
-  "coachSheetThisClient": "this client",
-  "coachSheetLoadFailed": "Couldn't load AI coaching",
   "coachSheetTitle": "Coaching for {name}",
   "@coachSheetTitle": {
     "placeholders": {
@@ -638,7 +635,6 @@
   "schedFieldClient": "Client",
   "schedFieldType": "Type",
   "schedFieldTime": "Time",
-  "schedHourSuffix": ":00",
   "schedMinuteSuffix": "min",
   "schedFieldDuration": "Duration",
   "schedNote": "Trainer's note",
@@ -807,7 +803,6 @@
   "myGymName": "Gym name",
   "myGymAddress": "Address",
   "myGymHours": "Hours",
-  "myGymPhone": "Phone",
   "myGymOpen": "Open now",
   "myGymListFailed": "Couldn't load the gym list.",
   "myNoGym": "No gym",
@@ -836,20 +831,7 @@
   "myPwConfirm": "Confirm new password",
   "myPwChanging": "Changing…",
   "myPwChangeAction": "Change",
-  "myProfileEmpty": "The profile response was empty.",
-  "myInputInvalid": "Please check your input.",
-  "myGymConflict": "That conflicts with your current gym.",
-  "myGymNotFound": "Gym not found.",
-  "myPwDemoUnavailable": "Password changes aren't available in demo mode",
   "mySettingsSaveFailed": "Couldn't save your settings. Please try again in a moment",
-  "myYearsSuffix": "{years} years",
-  "@myYearsSuffix": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
   "routineTypeWalking": "Walking",
   "@routineTypeWalking": {
     "description": "Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes."
@@ -868,8 +850,6 @@
   "intensityHigh": "High",
   "coachTitle": "AI coaching",
   "coachSubtitle": "Routines built from diet and health data",
-  "coachSendDone": "Sent",
-  "coachSendNoResponse": "No response came back. Check the client's received routines before sending again",
   "coachSendFailed": "Couldn't send. Please try again",
   "coachCustomRoutine": "AI custom routine",
   "coachNeedOneExercise": "Add at least one exercise",
@@ -937,17 +917,6 @@
     }
   },
   "coachTemplates": "Program templates",
-  "coachTemplateSummary": "{count} exercises · {minutes} min",
-  "@coachTemplateSummary": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
   "coachSentHistory": "Sent history",
   "coachHistoryFailed": "Couldn't load history",
   "coachHistoryEmpty": "You haven't sent any programs yet",
@@ -988,7 +957,6 @@
       }
     }
   },
-  "aiTagRecommended": "Suggested",
   "aiTagExisting": "Existing suggestion",
   "aiTagCustom": "Custom",
   "aiExistingBlurb": "The existing suggestion, based on their recent meals and workouts.",
@@ -1041,41 +1009,8 @@
   "aiGoal": "Goal",
   "aiTodaySodium": "Sodium today",
   "aiOverTarget": " · over target",
-  "aiBasisCompletion": "{goal} · based on {rate}% completion",
-  "@aiBasisCompletion": {
-    "placeholders": {
-      "goal": {
-        "type": "String"
-      },
-      "rate": {
-        "type": "int"
-      }
-    }
-  },
   "aiBasisRuleBased": " · rule-based",
   "aiChatEvidenceTitle": "Recent conversation used",
-  "aiTotalMinutesIntensity": "{total} min total · {intensity} intensity",
-  "@aiTotalMinutesIntensity": {
-    "placeholders": {
-      "total": {
-        "type": "int"
-      },
-      "intensity": {
-        "type": "String"
-      }
-    }
-  },
-  "aiExerciseBullet": "· {name} · {minutes} min ",
-  "@aiExerciseBullet": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
   "aiEditOption": "Edit {option}",
   "@aiEditOption": {
     "placeholders": {
@@ -1163,11 +1098,7 @@
       }
     }
   },
-  "clientNoGoal": "No goal set",
-  "clientNoChat": "No messages yet",
-  "chatJustNow": "Just now",
   "chartNotEnoughData": "Not enough data yet",
-  "reportEmptyResponse": "The report response was empty",
   "authErrInvalidCredentials": "That email or password isn't right.",
   "authErrEmailTaken": "That email is already registered.",
   "authErrInviteCodeInvalid": "That invite code isn't valid. Please check with your gym.",
@@ -1179,7 +1110,6 @@
   "coachDemoUnavailable": "AI coaching isn't available in demo mode",
   "coachNotMyClient": "That isn't one of your clients",
   "coachAskFailed": "Couldn't send your question",
-  "consultDemoUnavailable": "Consultation actions aren't available in demo mode",
   "slotCapacityRange": "Capacity must be between 1 and 100.",
   "slotFutureOnly": "Booking slots can only be set for future times.",
   "slotNotFound": "Booking slot not found.",

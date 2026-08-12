@@ -29,6 +29,7 @@ abstract class AccountRepository {
     num? heightCm,
     num? weightKg,
     String? conditions,
+    String? goals,
     int? dailySodiumMg,
   });
 

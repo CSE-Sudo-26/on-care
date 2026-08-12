@@ -25,6 +25,7 @@ class DioAccountRepository implements AccountRepository {
     num? heightCm,
     num? weightKg,
     String? conditions,
+    String? goals,
     int? dailySodiumMg,
   }) async {
     final res = await _dio.post<Map<String, Object?>>(
@@ -35,6 +36,7 @@ class DioAccountRepository implements AccountRepository {
         'height_cm': ?heightCm,
         'weight_kg': ?weightKg,
         'conditions': ?conditions,
+        'goals': ?goals,
         'daily_sodium_mg': ?dailySodiumMg,
       },
     );

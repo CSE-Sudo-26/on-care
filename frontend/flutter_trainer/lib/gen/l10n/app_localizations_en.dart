@@ -45,9 +45,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navConsultations => 'Requests';
 
   @override
-  String get navMy => 'My page';
-
-  @override
   String get actionSave => 'Save';
 
   @override
@@ -61,12 +58,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionClose => 'Close';
-
-  @override
-  String get actionConfirm => 'Confirm';
-
-  @override
-  String get actionSend => 'Send';
 
   @override
   String get actionRetry => 'Retry';
@@ -354,6 +345,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsAddFailed => 'Couldn\'t add the client. Please try again';
 
   @override
+  String get memberHealthLoadFailed =>
+      'Couldn\'t load the member profile. Please try again';
+
+  @override
+  String get memberHealthSaveFailed =>
+      'Couldn\'t save the member profile. Please try again';
+
+  @override
   String get clientsDuplicateName => 'A client with that name already exists';
 
   @override
@@ -456,12 +455,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputHint => 'Type a message...';
-
-  @override
-  String get coachSheetThisClient => 'this client';
-
-  @override
-  String get coachSheetLoadFailed => 'Couldn\'t load AI coaching';
 
   @override
   String coachSheetTitle(String name) {
@@ -919,9 +912,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldTime => 'Time';
 
   @override
-  String get schedHourSuffix => ':00';
-
-  @override
   String get schedMinuteSuffix => 'min';
 
   @override
@@ -1217,9 +1207,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGymHours => 'Hours';
 
   @override
-  String get myGymPhone => 'Phone';
-
-  @override
   String get myGymOpen => 'Open now';
 
   @override
@@ -1267,29 +1254,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myPwChangeAction => 'Change';
 
   @override
-  String get myProfileEmpty => 'The profile response was empty.';
-
-  @override
-  String get myInputInvalid => 'Please check your input.';
-
-  @override
-  String get myGymConflict => 'That conflicts with your current gym.';
-
-  @override
-  String get myGymNotFound => 'Gym not found.';
-
-  @override
-  String get myPwDemoUnavailable =>
-      'Password changes aren\'t available in demo mode';
-
-  @override
   String get mySettingsSaveFailed =>
       'Couldn\'t save your settings. Please try again in a moment';
-
-  @override
-  String myYearsSuffix(int years) {
-    return '$years years';
-  }
 
   @override
   String get routineTypeWalking => 'Walking';
@@ -1335,13 +1301,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachSubtitle => 'Routines built from diet and health data';
-
-  @override
-  String get coachSendDone => 'Sent';
-
-  @override
-  String get coachSendNoResponse =>
-      'No response came back. Check the client\'s received routines before sending again';
 
   @override
   String get coachSendFailed => 'Couldn\'t send. Please try again';
@@ -1434,11 +1393,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachTemplates => 'Program templates';
 
   @override
-  String coachTemplateSummary(int count, int minutes) {
-    return '$count exercises · $minutes min';
-  }
-
-  @override
   String get coachSentHistory => 'Sent history';
 
   @override
@@ -1475,9 +1429,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String aiReasonGoal(String goal, String last) {
     return 'Based on the $goal goal and recent $last activity.';
   }
-
-  @override
-  String get aiTagRecommended => 'Suggested';
 
   @override
   String get aiTagExisting => 'Existing suggestion';
@@ -1554,25 +1505,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiOverTarget => ' · over target';
 
   @override
-  String aiBasisCompletion(String goal, int rate) {
-    return '$goal · based on $rate% completion';
-  }
-
-  @override
   String get aiBasisRuleBased => ' · rule-based';
 
   @override
   String get aiChatEvidenceTitle => 'Recent conversation used';
-
-  @override
-  String aiTotalMinutesIntensity(int total, String intensity) {
-    return '$total min total · $intensity intensity';
-  }
-
-  @override
-  String aiExerciseBullet(String name, int minutes) {
-    return '· $name · $minutes min ';
-  }
 
   @override
   String aiEditOption(String option) {
@@ -1727,19 +1663,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clientNoGoal => 'No goal set';
-
-  @override
-  String get clientNoChat => 'No messages yet';
-
-  @override
-  String get chatJustNow => 'Just now';
-
-  @override
   String get chartNotEnoughData => 'Not enough data yet';
-
-  @override
-  String get reportEmptyResponse => 'The report response was empty';
 
   @override
   String get authErrInvalidCredentials =>
@@ -1778,10 +1702,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachAskFailed => 'Couldn\'t send your question';
-
-  @override
-  String get consultDemoUnavailable =>
-      'Consultation actions aren\'t available in demo mode';
 
   @override
   String get slotCapacityRange => 'Capacity must be between 1 and 100.';

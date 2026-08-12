@@ -45,9 +45,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navConsultations => '상담 요청';
 
   @override
-  String get navMy => '내 정보';
-
-  @override
   String get actionSave => '저장';
 
   @override
@@ -61,12 +58,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get actionClose => '닫기';
-
-  @override
-  String get actionConfirm => '확인';
-
-  @override
-  String get actionSend => '보내기';
 
   @override
   String get actionRetry => '다시 시도';
@@ -346,6 +337,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddFailed => '등록에 실패했어요. 다시 시도해 주세요';
 
   @override
+  String get memberHealthLoadFailed => '회원 정보를 불러오지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get memberHealthSaveFailed => '회원 정보를 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
 
   @override
@@ -448,12 +445,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatInputHint => '메시지 입력...';
-
-  @override
-  String get coachSheetThisClient => '이 회원';
-
-  @override
-  String get coachSheetLoadFailed => 'AI 코칭을 불러오지 못했어요';
 
   @override
   String coachSheetTitle(String name) {
@@ -899,9 +890,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldTime => '시간';
 
   @override
-  String get schedHourSuffix => '시';
-
-  @override
   String get schedMinuteSuffix => '분';
 
   @override
@@ -1189,9 +1177,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGymHours => '운영 시간';
 
   @override
-  String get myGymPhone => '연락처';
-
-  @override
   String get myGymOpen => '영업 중';
 
   @override
@@ -1238,27 +1223,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myPwChangeAction => '변경하기';
 
   @override
-  String get myProfileEmpty => '프로필 응답이 비어 있습니다.';
-
-  @override
-  String get myInputInvalid => '입력값을 확인해 주세요.';
-
-  @override
-  String get myGymConflict => '현재 소속 상태와 충돌합니다.';
-
-  @override
-  String get myGymNotFound => '헬스장을 찾을 수 없습니다.';
-
-  @override
-  String get myPwDemoUnavailable => '데모 모드에서는 비밀번호를 변경할 수 없어요';
-
-  @override
   String get mySettingsSaveFailed => '설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
-
-  @override
-  String myYearsSuffix(int years) {
-    return '$years년';
-  }
 
   @override
   String get routineTypeWalking => '걷기';
@@ -1304,13 +1269,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachSubtitle => '식단 · 건강 데이터 기반 루틴 생성';
-
-  @override
-  String get coachSendDone => '전송 완료';
-
-  @override
-  String get coachSendNoResponse =>
-      '응답을 받지 못했어요. 고객의 받은 루틴을 확인한 뒤 필요한 경우에만 다시 보내주세요';
 
   @override
   String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';
@@ -1400,11 +1358,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTemplates => '프로그램 템플릿';
 
   @override
-  String coachTemplateSummary(int count, int minutes) {
-    return '$count개 · $minutes분';
-  }
-
-  @override
   String get coachSentHistory => '전송 이력';
 
   @override
@@ -1439,9 +1392,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String aiReasonGoal(String goal, String last) {
     return '$goal 목표와 최근 $last 기록을 고려했어요.';
   }
-
-  @override
-  String get aiTagRecommended => '추천';
 
   @override
   String get aiTagExisting => '기존 AI 추천';
@@ -1515,25 +1465,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiOverTarget => ' · 목표 초과';
 
   @override
-  String aiBasisCompletion(String goal, int rate) {
-    return '$goal · 완료율 $rate% 기준';
-  }
-
-  @override
   String get aiBasisRuleBased => ' · 규칙 기반 생성';
 
   @override
   String get aiChatEvidenceTitle => '참고한 최근 대화';
-
-  @override
-  String aiTotalMinutesIntensity(int total, String intensity) {
-    return '총 $total분 · 강도 $intensity';
-  }
-
-  @override
-  String aiExerciseBullet(String name, int minutes) {
-    return '· $name · $minutes분 ';
-  }
 
   @override
   String aiEditOption(String option) {
@@ -1685,19 +1620,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get clientNoGoal => '목표 설정 전';
-
-  @override
-  String get clientNoChat => '아직 대화가 없어요';
-
-  @override
-  String get chatJustNow => '방금';
-
-  @override
   String get chartNotEnoughData => '데이터가 아직 부족해요';
-
-  @override
-  String get reportEmptyResponse => '리포트 응답이 비어 있어요';
 
   @override
   String get authErrInvalidCredentials => '이메일 또는 비밀번호가 올바르지 않습니다.';
@@ -1731,9 +1654,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachAskFailed => '질문을 보낼 수 없어요';
-
-  @override
-  String get consultDemoUnavailable => '데모 모드에서는 상담을 처리할 수 없어요';
 
   @override
   String get slotCapacityRange => '정원은 1명 이상 100명 이하이어야 합니다.';

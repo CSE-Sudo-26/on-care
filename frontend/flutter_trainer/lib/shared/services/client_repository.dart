@@ -193,16 +193,32 @@ class DriftClientRepository implements ClientRepository {
     final row = await (_db.select(
       _db.trainerClients,
     )..where((table) => table.id.equals(clientId))).getSingle();
+    final savedJson = await _db.readValue('member_health_profile:$clientId');
+    final saved = savedJson == null
+        ? const <String, Object?>{}
+        : jsonDecode(savedJson) as Map<String, Object?>;
     return MemberHealthProfile(
       memberId: clientId,
       memberName: row.name,
-      heightCm: 175,
-      weightKg: 72,
-      gender: 'male',
-      goals: row.goal,
-      weeklyWorkoutGoal: 3,
-      weeklyExerciseMinutesGoal: 150,
-      weeklyBurnGoal: 1500,
+      heightCm: saved.containsKey('height_cm')
+          ? (saved['height_cm'] as num?)?.toDouble()
+          : 175,
+      weightKg: saved.containsKey('weight_kg')
+          ? (saved['weight_kg'] as num?)?.toDouble()
+          : 72,
+      gender: saved['gender'] as String? ?? 'male',
+      conditions: saved['conditions'] as String? ?? '',
+      goals: saved['goals'] as String? ?? row.goal,
+      weeklyWorkoutGoal: saved.containsKey('weekly_workout_goal')
+          ? (saved['weekly_workout_goal'] as num?)?.toInt()
+          : 3,
+      weeklyExerciseMinutesGoal:
+          saved.containsKey('weekly_exercise_minutes_goal')
+          ? (saved['weekly_exercise_minutes_goal'] as num?)?.toInt()
+          : 150,
+      weeklyBurnGoal: saved.containsKey('weekly_burn_goal')
+          ? (saved['weekly_burn_goal'] as num?)?.toInt()
+          : 1500,
     );
   }
 
@@ -210,7 +226,36 @@ class DriftClientRepository implements ClientRepository {
   Future<MemberHealthProfile> updateHealthProfile(
     String clientId,
     Map<String, Object?> values,
-  ) async => fetchHealthProfile(clientId);
+  ) async {
+    final current = await fetchHealthProfile(clientId);
+    Object? value(String key, Object? fallback) =>
+        values.containsKey(key) ? values[key] : fallback;
+    final saved = <String, Object?>{
+      'height_cm': value('height_cm', current.heightCm),
+      'weight_kg': value('weight_kg', current.weightKg),
+      'gender': value('gender', current.gender),
+      'conditions': value('conditions', current.conditions),
+      'goals': value('goals', current.goals),
+      'weekly_workout_goal': value(
+        'weekly_workout_goal',
+        current.weeklyWorkoutGoal,
+      ),
+      'weekly_exercise_minutes_goal': value(
+        'weekly_exercise_minutes_goal',
+        current.weeklyExerciseMinutesGoal,
+      ),
+      'weekly_burn_goal': value('weekly_burn_goal', current.weeklyBurnGoal),
+    };
+    await _db.putValue('member_health_profile:$clientId', jsonEncode(saved));
+    if (values.containsKey('goals')) {
+      await (_db.update(
+        _db.trainerClients,
+      )..where((table) => table.id.equals(clientId))).write(
+        TrainerClientsCompanion(goal: Value(values['goals'] as String? ?? '')),
+      );
+    }
+    return fetchHealthProfile(clientId);
+  }
 
   @override
   Future<ClientExerciseWeek> fetchExerciseWeek(String clientId) async {

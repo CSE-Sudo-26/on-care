@@ -170,12 +170,6 @@ abstract class AppLocalizations {
   /// **'Requests'**
   String get navConsultations;
 
-  /// No description provided for @navMy.
-  ///
-  /// In en, this message translates to:
-  /// **'My page'**
-  String get navMy;
-
   /// No description provided for @actionSave.
   ///
   /// In en, this message translates to:
@@ -205,18 +199,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get actionClose;
-
-  /// No description provided for @actionConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm'**
-  String get actionConfirm;
-
-  /// No description provided for @actionSend.
-  ///
-  /// In en, this message translates to:
-  /// **'Send'**
-  String get actionSend;
 
   /// No description provided for @actionRetry.
   ///
@@ -722,6 +704,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t add the client. Please try again'**
   String get clientsAddFailed;
 
+  /// No description provided for @memberHealthLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the member profile. Please try again'**
+  String get memberHealthLoadFailed;
+
+  /// No description provided for @memberHealthSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the member profile. Please try again'**
+  String get memberHealthSaveFailed;
+
   /// No description provided for @clientsDuplicateName.
   ///
   /// In en, this message translates to:
@@ -913,18 +907,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type a message...'**
   String get chatInputHint;
-
-  /// No description provided for @coachSheetThisClient.
-  ///
-  /// In en, this message translates to:
-  /// **'this client'**
-  String get coachSheetThisClient;
-
-  /// No description provided for @coachSheetLoadFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t load AI coaching'**
-  String get coachSheetLoadFailed;
 
   /// No description provided for @coachSheetTitle.
   ///
@@ -1712,12 +1694,6 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get schedFieldTime;
 
-  /// No description provided for @schedHourSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **':00'**
-  String get schedHourSuffix;
-
   /// No description provided for @schedMinuteSuffix.
   ///
   /// In en, this message translates to:
@@ -2252,12 +2228,6 @@ abstract class AppLocalizations {
   /// **'Hours'**
   String get myGymHours;
 
-  /// No description provided for @myGymPhone.
-  ///
-  /// In en, this message translates to:
-  /// **'Phone'**
-  String get myGymPhone;
-
   /// No description provided for @myGymOpen.
   ///
   /// In en, this message translates to:
@@ -2342,47 +2312,11 @@ abstract class AppLocalizations {
   /// **'Change'**
   String get myPwChangeAction;
 
-  /// No description provided for @myProfileEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'The profile response was empty.'**
-  String get myProfileEmpty;
-
-  /// No description provided for @myInputInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Please check your input.'**
-  String get myInputInvalid;
-
-  /// No description provided for @myGymConflict.
-  ///
-  /// In en, this message translates to:
-  /// **'That conflicts with your current gym.'**
-  String get myGymConflict;
-
-  /// No description provided for @myGymNotFound.
-  ///
-  /// In en, this message translates to:
-  /// **'Gym not found.'**
-  String get myGymNotFound;
-
-  /// No description provided for @myPwDemoUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Password changes aren\'t available in demo mode'**
-  String get myPwDemoUnavailable;
-
   /// No description provided for @mySettingsSaveFailed.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t save your settings. Please try again in a moment'**
   String get mySettingsSaveFailed;
-
-  /// No description provided for @myYearsSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **'{years} years'**
-  String myYearsSuffix(int years);
 
   /// Display label for the '걷기' routine type. The stored/wire value stays Korean — see kRoutineTypes.
   ///
@@ -2473,18 +2407,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Routines built from diet and health data'**
   String get coachSubtitle;
-
-  /// No description provided for @coachSendDone.
-  ///
-  /// In en, this message translates to:
-  /// **'Sent'**
-  String get coachSendDone;
-
-  /// No description provided for @coachSendNoResponse.
-  ///
-  /// In en, this message translates to:
-  /// **'No response came back. Check the client\'s received routines before sending again'**
-  String get coachSendNoResponse;
 
   /// No description provided for @coachSendFailed.
   ///
@@ -2636,12 +2558,6 @@ abstract class AppLocalizations {
   /// **'Program templates'**
   String get coachTemplates;
 
-  /// No description provided for @coachTemplateSummary.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} exercises · {minutes} min'**
-  String coachTemplateSummary(int count, int minutes);
-
   /// No description provided for @coachSentHistory.
   ///
   /// In en, this message translates to:
@@ -2701,12 +2617,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Based on the {goal} goal and recent {last} activity.'**
   String aiReasonGoal(String goal, String last);
-
-  /// No description provided for @aiTagRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'Suggested'**
-  String get aiTagRecommended;
 
   /// No description provided for @aiTagExisting.
   ///
@@ -2834,12 +2744,6 @@ abstract class AppLocalizations {
   /// **' · over target'**
   String get aiOverTarget;
 
-  /// No description provided for @aiBasisCompletion.
-  ///
-  /// In en, this message translates to:
-  /// **'{goal} · based on {rate}% completion'**
-  String aiBasisCompletion(String goal, int rate);
-
   /// No description provided for @aiBasisRuleBased.
   ///
   /// In en, this message translates to:
@@ -2851,18 +2755,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recent conversation used'**
   String get aiChatEvidenceTitle;
-
-  /// No description provided for @aiTotalMinutesIntensity.
-  ///
-  /// In en, this message translates to:
-  /// **'{total} min total · {intensity} intensity'**
-  String aiTotalMinutesIntensity(int total, String intensity);
-
-  /// No description provided for @aiExerciseBullet.
-  ///
-  /// In en, this message translates to:
-  /// **'· {name} · {minutes} min '**
-  String aiExerciseBullet(String name, int minutes);
 
   /// No description provided for @aiEditOption.
   ///
@@ -3140,35 +3032,11 @@ abstract class AppLocalizations {
   /// **'{unit} over'**
   String metricOverBy(String unit);
 
-  /// No description provided for @clientNoGoal.
-  ///
-  /// In en, this message translates to:
-  /// **'No goal set'**
-  String get clientNoGoal;
-
-  /// No description provided for @clientNoChat.
-  ///
-  /// In en, this message translates to:
-  /// **'No messages yet'**
-  String get clientNoChat;
-
-  /// No description provided for @chatJustNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Just now'**
-  String get chatJustNow;
-
   /// No description provided for @chartNotEnoughData.
   ///
   /// In en, this message translates to:
   /// **'Not enough data yet'**
   String get chartNotEnoughData;
-
-  /// No description provided for @reportEmptyResponse.
-  ///
-  /// In en, this message translates to:
-  /// **'The report response was empty'**
-  String get reportEmptyResponse;
 
   /// No description provided for @authErrInvalidCredentials.
   ///
@@ -3235,12 +3103,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t send your question'**
   String get coachAskFailed;
-
-  /// No description provided for @consultDemoUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Consultation actions aren\'t available in demo mode'**
-  String get consultDemoUnavailable;
 
   /// No description provided for @slotCapacityRange.
   ///
