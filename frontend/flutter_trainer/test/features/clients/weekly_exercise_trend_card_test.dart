@@ -4,8 +4,25 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 void main() {
+  test('counts every session when multiple workouts occur on one day', () {
+    final week = ClientExerciseWeek.fromJson(<String, Object?>{
+      'day_labels': <String>['월'],
+      'daily_minutes': <int>[60],
+      'daily_calories': <int>[420],
+      'total_minutes': 60,
+      'total_calories': 420,
+      'sessions': <Object?>[
+        <String, Object?>{'duration_minutes': 30},
+        <String, Object?>{'duration_minutes': 30},
+      ],
+    });
+
+    expect(week.workoutCount, 2);
+  });
+
   testWidgets('shows weekly count, time, and calorie trend', (tester) async {
     const week = ClientExerciseWeek(
       dayLabels: ['월', '화', '수', '목', '금', '토', '일'],
@@ -15,10 +32,15 @@ void main() {
       totalCalories: 810,
     );
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
-            child: WeeklyExerciseTrendCard(week: AsyncData(week)),
+            child: WeeklyExerciseTrendCard(
+              week: const AsyncData(week),
+              onRetry: () {},
+            ),
           ),
         ),
       ),
@@ -43,5 +65,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('180kcal'), findsOneWidget);
     expect(find.text('360kcal'), findsOneWidget);
+  });
+
+  testWidgets('retries only when the error action is pressed', (tester) async {
+    var retries = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ko'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: WeeklyExerciseTrendCard(
+            week: AsyncError(Exception('network'), StackTrace.empty),
+            onRetry: () => retries++,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('weekly-exercise-retry')),
+    );
+    expect(retries, 1);
   });
 }

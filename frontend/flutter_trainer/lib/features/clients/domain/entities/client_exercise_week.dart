@@ -5,6 +5,7 @@ class ClientExerciseWeek {
     required this.dailyCalories,
     required this.totalMinutes,
     required this.totalCalories,
+    this.sessionCount,
   });
 
   final List<String> dayLabels;
@@ -12,8 +13,10 @@ class ClientExerciseWeek {
   final List<int> dailyCalories;
   final int totalMinutes;
   final int totalCalories;
+  final int? sessionCount;
 
-  int get workoutCount => dailyMinutes.where((minutes) => minutes > 0).length;
+  int get workoutCount =>
+      sessionCount ?? dailyMinutes.where((minutes) => minutes > 0).length;
 
   factory ClientExerciseWeek.fromJson(Map<String, Object?> json) {
     List<int> ints(String key) =>
@@ -29,6 +32,7 @@ class ClientExerciseWeek {
       dailyCalories: ints('daily_calories'),
       totalMinutes: (json['total_minutes'] as num?)?.toInt() ?? 0,
       totalCalories: (json['total_calories'] as num?)?.toInt() ?? 0,
+      sessionCount: (json['sessions'] as List<Object?>?)?.length,
     );
   }
 }

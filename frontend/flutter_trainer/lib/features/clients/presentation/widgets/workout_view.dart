@@ -63,7 +63,10 @@ class WorkoutView extends ConsumerWidget {
           onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
         ),
         const SizedBox(height: AppSpacing.md),
-        WeeklyExerciseTrendCard(week: exerciseWeek),
+        WeeklyExerciseTrendCard(
+          week: exerciseWeek,
+          onRetry: () => ref.invalidate(clientExerciseWeekProvider(client.id)),
+        ),
         const SizedBox(height: AppSpacing.md),
         _WeekCompletionCard(week: client.weekCompletion),
         const SizedBox(height: AppSpacing.lg),

@@ -6,12 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
 class WeeklyExerciseTrendCard extends StatefulWidget {
-  const WeeklyExerciseTrendCard({super.key, required this.week});
+  const WeeklyExerciseTrendCard({
+    super.key,
+    required this.week,
+    required this.onRetry,
+  });
 
   final AsyncValue<ClientExerciseWeek> week;
+  final VoidCallback onRetry;
 
   @override
   State<WeeklyExerciseTrendCard> createState() =>
@@ -31,7 +38,14 @@ class _WeeklyExerciseTrendCardState extends State<WeeklyExerciseTrendCard> {
         height: 160,
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
-      error: (_, _) => const EmptyHint(message: '주간 운동 추이를 불러오지 못했습니다.'),
+      error: (_, _) => EmptyHint(
+        message: '주간 운동 추이를 불러오지 못했습니다.',
+        action: ActionButton(
+          key: const ValueKey<String>('weekly-exercise-retry'),
+          label: AppLocalizations.of(context).actionRetry,
+          onPressed: widget.onRetry,
+        ),
+      ),
       data: (week) => Column(
         children: [
           Row(
