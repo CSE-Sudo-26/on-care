@@ -59,6 +59,44 @@ void main() {
     expect(state.unreadCount, greaterThan(0));
   });
 
+  test('데모 알림도 갈 곳을 갖는다', () {
+    // 목적지가 없으면 데모에서는 눌러도 읽음 처리만 된다 — 구현돼 있는 이동
+    // 기능이 데모에서만 없는 것처럼 보인다. (#667)
+    final container = _container();
+    addTearDown(container.dispose);
+    final List<AlertItem> items = container
+        .read(notificationControllerProvider)
+        .items;
+
+    expect(
+      items.where((AlertItem i) => i.action?.isNavigable ?? false),
+      isNotEmpty,
+    );
+    // 갈 곳 없는 알림도 목록에는 남는다 — 사라지거나 엉뚱한 곳으로 가지 않는다.
+    expect(items.where((AlertItem i) => i.action == null), isNotEmpty);
+  });
+
+  test('읽어도 갈 곳은 남는다', () {
+    // `copyWith` 가 action 을 흘리면, 한 번 읽은 알림은 다시 눌러도 이동하지
+    // 않는다 — 목록에는 그대로 있으니 원인을 찾기 어렵다.
+    final container = _container();
+    addTearDown(container.dispose);
+    final notifier = container.read(notificationControllerProvider.notifier);
+    final AlertItem target = container
+        .read(notificationControllerProvider)
+        .items
+        .firstWhere((AlertItem i) => i.action != null);
+
+    notifier.markRead(target.id);
+
+    final AlertItem after = container
+        .read(notificationControllerProvider)
+        .items
+        .firstWhere((AlertItem i) => i.id == target.id);
+    expect(after.read, isTrue);
+    expect(after.action?.target, target.action?.target);
+  });
+
   test('markRead toggles a single item', () {
     final container = _container();
     addTearDown(container.dispose);
