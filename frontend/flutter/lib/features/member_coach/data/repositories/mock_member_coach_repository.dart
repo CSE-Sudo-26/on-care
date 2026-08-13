@@ -183,6 +183,36 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   Future<List<CoachRoutine>> fetchRoutines() async =>
       List<CoachRoutine>.unmodifiable(_routines);
 
+  @override
+  Future<CoachRoutine> completeRoutine(
+    String routineId, {
+    required int minutes,
+    String intensity = 'moderate',
+    String memberNote = '',
+  }) async {
+    final int index = _routines.indexWhere(
+      (CoachRoutine routine) => routine.id == routineId,
+    );
+    if (index < 0) throw StateError('Routine not found.');
+    final CoachRoutine current = _routines[index];
+    if (current.completed) return current;
+    final CoachRoutine completed = CoachRoutine(
+      id: current.id,
+      name: current.name,
+      minutes: current.minutes,
+      type: current.type,
+      reason: current.reason,
+      source: current.source,
+      completed: true,
+      completedAt: DateTime.now(),
+      completedMinutes: minutes,
+      completedIntensity: intensity,
+      memberNote: memberNote.trim(),
+    );
+    _routines[index] = completed;
+    return completed;
+  }
+
   /// 데모에는 트레이너가 잡은 일정이 없다. (#490)
   ///
   /// 시드로 만들어 넣지 않는 이유: 데모 홈에 없던 카드가 생겨 화면이 지금과

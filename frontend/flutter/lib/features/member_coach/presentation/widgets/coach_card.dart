@@ -199,57 +199,263 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
   }
 }
 
-class _RecommendedExerciseRow extends StatelessWidget {
+class _RecommendedExerciseRow extends ConsumerStatefulWidget {
   const _RecommendedExerciseRow({required this.routine});
 
   final CoachRoutine routine;
 
   @override
+  ConsumerState<_RecommendedExerciseRow> createState() =>
+      _RecommendedExerciseRowState();
+}
+
+class _RecommendedExerciseRowState
+    extends ConsumerState<_RecommendedExerciseRow> {
+  bool _saving = false;
+
+  Future<void> _complete() async {
+    final CoachRoutine routine = widget.routine;
+    final _RoutineCompletionInput? input =
+        await showDialog<_RoutineCompletionInput>(
+          context: context,
+          builder: (_) => _RoutineCompletionDialog(
+            initialMinutes: routine.minutes > 0 ? routine.minutes : 1,
+          ),
+        );
+    if (input == null || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(memberCoachRepositoryProvider)
+          .completeRoutine(
+            routine.id,
+            minutes: input.minutes,
+            memberNote: input.note,
+          );
+      ref.invalidate(coachRoutinesProvider);
+      ref.invalidate(exerciseWeekProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('운동 기록에 반영했어요')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('완료 기록에 실패했어요. 다시 시도해 주세요')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final CoachRoutine routine = widget.routine;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: FigmaColors.statBg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  routine.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.ink,
-                  ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      routine.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                    if (routine.reason.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        routine.reason,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (routine.reason.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 2),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
                   Text(
-                    routine.reason,
+                    '${routine.type} · '
+                    '${routine.completedMinutes ?? routine.minutes}분',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.foreground,
+                      fontWeight: FontWeight.w700,
+                      color: FigmaColors.primary,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  if (routine.completed)
+                    const Row(
+                      children: <Widget>[
+                        Icon(Icons.check_circle, size: 16, color: Colors.green),
+                        SizedBox(width: 4),
+                        Text('수행 완료'),
+                      ],
+                    )
+                  else
+                    SizedBox(
+                      height: 30,
+                      child: OutlinedButton(
+                        key: Key('completeRoutine-${routine.id}'),
+                        onPressed: _saving ? null : _complete,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        child: _saving
+                            ? const SizedBox.square(
+                                dimension: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('수행 완료'),
+                      ),
+                    ),
                 ],
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            '${routine.type} · ${routine.minutes}분',
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.primary,
+          if (routine.memberNote.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Text('내 메모: ${routine.memberNote}'),
+          ],
+          if (routine.trainerFeedback.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            Container(
+              key: Key('routineFeedback-${routine.id}'),
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: FigmaColors.softBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '트레이너 피드백: ${routine.trainerFeedback}',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: FigmaColors.ink,
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _RoutineCompletionInput {
+  const _RoutineCompletionInput({required this.minutes, required this.note});
+
+  final int minutes;
+  final String note;
+}
+
+class _RoutineCompletionDialog extends StatefulWidget {
+  const _RoutineCompletionDialog({required this.initialMinutes});
+
+  final int initialMinutes;
+
+  @override
+  State<_RoutineCompletionDialog> createState() =>
+      _RoutineCompletionDialogState();
+}
+
+class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _minutesController;
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _minutesController = TextEditingController(
+      text: '${widget.initialMinutes}',
+    );
+  }
+
+  @override
+  void dispose() {
+    _minutesController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('루틴 수행 완료'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextFormField(
+              key: const Key('routineCompletionMinutes'),
+              controller: _minutesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '실제 수행 시간(분)'),
+              validator: (String? value) {
+                final int? minutes = int.tryParse(value ?? '');
+                return minutes == null || minutes < 1 || minutes > 600
+                    ? '1~600분 사이로 입력해 주세요'
+                    : null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: const Key('routineCompletionNote'),
+              controller: _noteController,
+              maxLength: 1000,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: '메모(선택)',
+                hintText: '힘들었던 점이나 몸 상태를 남겨 보세요',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          key: const Key('confirmRoutineCompletion'),
+          onPressed: () {
+            if (!(_formKey.currentState?.validate() ?? false)) return;
+            Navigator.of(context).pop(
+              _RoutineCompletionInput(
+                minutes: int.parse(_minutesController.text),
+                note: _noteController.text,
+              ),
+            );
+          },
+          child: const Text('완료 기록'),
+        ),
+      ],
     );
   }
 }

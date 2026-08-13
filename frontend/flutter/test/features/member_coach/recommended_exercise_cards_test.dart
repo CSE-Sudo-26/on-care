@@ -168,6 +168,52 @@ void main() {
     );
   });
 
+  testWidgets('배정 루틴 완료를 기록하고 완료 상태를 갱신한다', (WidgetTester tester) async {
+    final MockMemberCoachRepository repository = MockMemberCoachRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(repository),
+          myTrainerProvider.overrideWith((ref) async => _assignedTrainer),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CoachCard())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('completeRoutine-seed-r2')));
+    await tester.pumpAndSettle();
+    expect(find.text('루틴 수행 완료'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('routineCompletionNote')),
+      '허리는 편안했어요',
+    );
+    await tester.tap(find.byKey(const Key('confirmRoutineCompletion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
+    expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
+    expect(find.byKey(const Key('completeRoutine-seed-r2')), findsNothing);
+  });
+
+  testWidgets('완료한 루틴에 트레이너 피드백을 표시한다', (WidgetTester tester) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      CoachRoutine(
+        id: 'done',
+        name: '완료 루틴',
+        minutes: 20,
+        type: '근력',
+        reason: '',
+        source: 'trainer',
+        completed: true,
+        trainerFeedback: '자세가 좋았어요',
+      ),
+    ]);
+
+    expect(find.text('트레이너 피드백: 자세가 좋았어요'), findsOneWidget);
+    expect(find.byKey(const Key('routineFeedback-done')), findsOneWidget);
+  });
+
   testWidgets('각 출처의 추천 운동이 없으면 안내 문구를 표시한다', (WidgetTester tester) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[]);
 

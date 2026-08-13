@@ -23,6 +23,14 @@ CoachRoutine coachRoutineFromJson(Map<String, Object?> json) {
     type: _str(json['type']),
     reason: _str(json['reason']),
     source: _str(json['source']),
+    completed: json['completed'] == true,
+    completedAt: DateTime.tryParse(_str(json['completed_at'])),
+    completedMinutes: json['completed_minutes'] is num
+        ? (json['completed_minutes']! as num).toInt()
+        : null,
+    completedIntensity: json['completed_intensity'] as String?,
+    memberNote: _str(json['member_note']),
+    trainerFeedback: _str(json['trainer_feedback']),
   );
 }
 

@@ -106,7 +106,7 @@ class WorkoutView extends ConsumerWidget {
                 icon: Icons.fitness_center_outlined,
               ),
             for (final entry in entries) ...<Widget>[
-              _HistoryCard(entry: entry),
+              _HistoryCard(clientId: client.id, entry: entry),
               const SizedBox(height: AppSpacing.md),
             ],
           ],
@@ -534,14 +534,46 @@ class _LegendDot extends StatelessWidget {
 
 /// A single workout record: date/kind, completion donut, exercise lines
 /// (skipped ones struck through), client feedback, trainer note.
-class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({required this.entry});
+class _HistoryCard extends ConsumerStatefulWidget {
+  const _HistoryCard({required this.clientId, required this.entry});
 
+  final String clientId;
   final RoutineHistoryEntry entry;
+
+  @override
+  ConsumerState<_HistoryCard> createState() => _HistoryCardState();
+}
+
+class _HistoryCardState extends ConsumerState<_HistoryCard> {
+  bool _saving = false;
+
+  Future<void> _editFeedback() async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String? feedback = await showDialog<String>(
+      context: context,
+      builder: (_) => _FeedbackDialog(initialValue: widget.entry.trainerNote),
+    );
+    if (feedback == null || !mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(clientRepositoryProvider)
+          .updateHistoryFeedback(widget.clientId, widget.entry.id, feedback);
+      ref.invalidate(clientHistoryProvider(widget.clientId));
+      messenger.showSnackBar(SnackBar(content: Text(l.routineFeedbackSaved)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l.routineFeedbackFailed)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final RoutineHistoryEntry entry = widget.entry;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -599,8 +631,76 @@ class _HistoryCard extends StatelessWidget {
               color: AppColors.warning,
             ),
           ],
+          if (entry.assignedRoutineId != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ActionButton(
+                key: ValueKey<String>('routine-feedback-${entry.id}'),
+                label: entry.trainerNote.isEmpty
+                    ? l.routineFeedbackWrite
+                    : l.routineFeedbackEdit,
+                onPressed: _saving ? null : _editFeedback,
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _FeedbackDialog extends StatefulWidget {
+  const _FeedbackDialog({required this.initialValue});
+
+  final String initialValue;
+
+  @override
+  State<_FeedbackDialog> createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<_FeedbackDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.routineFeedbackTitle),
+      content: TextField(
+        key: const ValueKey<String>('routine-feedback-input'),
+        controller: _controller,
+        autofocus: true,
+        maxLength: 2000,
+        maxLines: 5,
+        decoration: InputDecoration(hintText: l.routineFeedbackHint),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionCancel),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('routine-feedback-save'),
+          onPressed: () {
+            final String text = _controller.text.trim();
+            if (text.isNotEmpty) Navigator.of(context).pop(text);
+          },
+          child: Text(l.actionSave),
+        ),
+      ],
     );
   }
 }

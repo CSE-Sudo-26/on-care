@@ -41,6 +41,11 @@ abstract interface class ClientRepository {
 
   Stream<List<ClientDietEntry>> watchDiet(String clientId);
   Stream<List<RoutineHistoryEntry>> watchHistory(String clientId);
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  );
   Future<MemberHealthProfile> fetchHealthProfile(String clientId);
   Future<MemberHealthProfile> updateHealthProfile(
     String clientId,
@@ -63,6 +68,15 @@ class DriftClientRepository implements ClientRepository {
   const DriftClientRepository(this._db);
 
   final AppDatabase _db;
+
+  @override
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  ) => throw UnsupportedError(
+    'Assigned-routine feedback is available from the backend only.',
+  );
 
   @override
   bool get supportsRosterMutations => true;

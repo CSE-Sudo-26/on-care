@@ -101,6 +101,28 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   );
 
   @override
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  ) async {
+    final String path =
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/history/'
+        '${Uri.encodeComponent(historyId)}/feedback';
+    try {
+      final Response<Map<String, Object?>> response = await _dio.put(
+        path,
+        data: <String, Object?>{'feedback': feedback.trim()},
+      );
+      final Map<String, Object?>? data = response.data;
+      if (data == null) throw const FormatException('Missing history row.');
+      return routineHistoryEntryFromJson(data);
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+  }
+
+  @override
   Future<MemberHealthProfile> fetchHealthProfile(String clientId) async {
     try {
       final response = await _dio.get<Map<String, Object?>>(

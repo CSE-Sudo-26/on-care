@@ -150,9 +150,18 @@ def build_current_week(rows: list) -> dict:
             "minutes": r.minutes, "calories": r.calories,
             "intensity": getattr(r, "intensity", "moderate") or "moderate",
             "source": getattr(r, "source", "member") or "member",
+            "assigned_routine_id": getattr(r, "assigned_routine_id", None),
+            "assigned_routine_name": getattr(r, "assigned_routine_name", "") or "",
+            "member_note": getattr(r, "member_note", "") or "",
+            "trainer_feedback": getattr(r, "trainer_feedback", "") or "",
+            "completed_at": getattr(r, "completed_at", None),
             "date_label": _date_label_for_day(r.day_label),
             "time_label": _default_time_label(r.type),
-            "items": _default_items(r.type),
+            "items": (
+                [getattr(r, "assigned_routine_name", "")]
+                if getattr(r, "assigned_routine_name", "")
+                else _default_items(r.type)
+            ),
         })
 
     # 최근 요일 먼저

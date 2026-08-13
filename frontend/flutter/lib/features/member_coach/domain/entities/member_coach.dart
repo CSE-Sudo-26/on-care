@@ -30,6 +30,12 @@ class CoachRoutine {
     required this.type,
     required this.reason,
     required this.source,
+    this.completed = false,
+    this.completedAt,
+    this.completedMinutes,
+    this.completedIntensity,
+    this.memberNote = '',
+    this.trainerFeedback = '',
   });
 
   final String id;
@@ -40,6 +46,12 @@ class CoachRoutine {
 
   /// `ai` (AI-suggested) or `trainer` (hand-assigned).
   final String source;
+  final bool completed;
+  final DateTime? completedAt;
+  final int? completedMinutes;
+  final String? completedIntensity;
+  final String memberNote;
+  final String trainerFeedback;
 
   bool get isTrainerRecommended => source == 'trainer';
   bool get isAiRecommended => source == 'ai';

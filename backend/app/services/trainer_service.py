@@ -293,21 +293,49 @@ def build_client_history(
         .limit(limit)
     ).all()
 
-    out: list[RoutineHistoryOut] = []
+    assigned_rows = db.scalars(
+        select(ExerciseSession).where(
+            ExerciseSession.user_id == member_id,
+            ExerciseSession.source == "assigned_routine",
+            ExerciseSession.assigned_trainer_id == trainer_id,
+        )
+        .order_by(ExerciseSession.completed_at.desc(), ExerciseSession.created_at.desc())
+        .limit(limit)
+    ).all()
+
+    dated: list[tuple[str, float, RoutineHistoryOut]] = []
     for r in rows:
         try:
             exercises = json.loads(r.exercises_json) if r.exercises_json else []
         except json.JSONDecodeError:
             exercises = []
-        out.append(RoutineHistoryOut(
+        dated.append((r.date, clock.to_seoul(r.created_at).timestamp(), RoutineHistoryOut(
+            id=r.id,
             date_label=history_date_label(r.date),
             label=r.kind_label,
             completion_rate=r.completion_rate,
             exercises=exercises,
             client_feedback=r.client_feedback,
             trainer_note=r.trainer_note,
-        ))
-    return out
+        )))
+    for r in assigned_rows:
+        completed_at = r.completed_at or r.created_at
+        day = clock.to_seoul(completed_at).date().isoformat()
+        dated.append((day, clock.to_seoul(completed_at).timestamp(), RoutineHistoryOut(
+            id=r.id,
+            date_label=history_date_label(day),
+            label=r.assigned_routine_name or "배정 루틴 수행",
+            completion_rate=100,
+            exercises=[
+                f"{r.assigned_routine_name or r.type} · {r.minutes}분 · {r.intensity}"
+            ],
+            client_feedback=r.member_note,
+            trainer_note=r.trainer_feedback,
+            assigned_routine_id=r.assigned_routine_id,
+            completed_at=completed_at,
+        )))
+    dated.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return [item[2] for item in dated[:limit]]
 
 
 # ---- 채팅 (트레이너↔회원, 양방향 공유 스레드) ----
@@ -596,13 +624,18 @@ def build_routines(db: Session, member_id: str, trainer_id: str) -> list[Routine
         .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
         .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
     ).all()
-    return [
-        RoutineOut(
-            id=r.id, name=r.name, minutes=r.minutes, type=r.type,
-            reason=r.reason, source=r.source,
-        )
-        for r in rows
-    ]
+    routine_ids = [row.id for row in rows]
+    completed = {}
+    if routine_ids:
+        completed = {
+            row.assigned_routine_id: row
+            for row in db.scalars(
+                select(ExerciseSession).where(
+                    ExerciseSession.assigned_routine_id.in_(routine_ids)
+                )
+            ).all()
+        }
+    return [_routine_out(row, completed.get(row.id)) for row in rows]
 
 
 class RoutineNotFound(Exception):
@@ -649,10 +682,12 @@ def update_routine(
             setattr(routine, field, fields[field])
     db.commit()
     db.refresh(routine)
-    return RoutineOut(
-        id=routine.id, name=routine.name, minutes=routine.minutes,
-        type=routine.type, reason=routine.reason, source=routine.source,
+    completion = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.assigned_routine_id == routine.id
+        )
     )
+    return _routine_out(routine, completion)
 
 
 def delete_routine(
@@ -672,10 +707,130 @@ def delete_routine(
     db.commit()
 
 
-def _routine_out(rt: TrainerRoutine) -> RoutineOut:
+def _routine_out(
+    rt: TrainerRoutine, completion: ExerciseSession | None = None
+) -> RoutineOut:
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
+        completed=completion is not None,
+        completed_at=completion.completed_at if completion is not None else None,
+        completed_minutes=completion.minutes if completion is not None else None,
+        completed_intensity=completion.intensity if completion is not None else None,
+        member_note=completion.member_note if completion is not None else "",
+        trainer_feedback=(
+            completion.trainer_feedback if completion is not None else ""
+        ),
+    )
+
+
+_ROUTINE_EXERCISE_TYPES = {
+    "걷기": "walking",
+    "유산소": "cardio",
+    "근력": "strength",
+    "요가": "yoga",
+    "스트레칭": "stretching",
+    "기타": "other",
+}
+
+
+def complete_assigned_routine(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    routine_id: str,
+    *,
+    minutes: int,
+    intensity: str,
+    member_note: str,
+) -> RoutineOut:
+    """배정 하나를 회원 운동 기록 한 건으로 완료한다.
+
+    `assigned_routine_id` unique 제약이 더블 탭·재전송을 같은 기록으로
+    모은다. 이름은 스냅샷이라 이후 배정 수정·철회에 흔들리지 않는다.
+    """
+    routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    existing = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.assigned_routine_id == routine_id
+        )
+    )
+    if existing is not None:
+        return _routine_out(routine, existing)
+
+    completed_at = clock.now()
+    exercise_type = _ROUTINE_EXERCISE_TYPES.get(routine.type, "other")
+    row = ExerciseSession(
+        id=f"assigned-ex-{uuid.uuid4().hex[:12]}",
+        user_id=member_id,
+        week_start=exercise_service.monday_of_str(completed_at.date().isoformat()),
+        day_label=exercise_service.weekday_label_of(completed_at.date().isoformat()),
+        type=exercise_type,
+        minutes=minutes,
+        calories=exercise_service.estimate_calories(
+            exercise_type, minutes, intensity
+        ),
+        intensity=intensity,
+        source="assigned_routine",
+        assigned_routine_id=routine.id,
+        assigned_trainer_id=trainer_id,
+        assigned_routine_name=routine.name,
+        member_note=member_note.strip(),
+        completed_at=completed_at,
+    )
+    db.add(row)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = db.scalar(
+            select(ExerciseSession).where(
+                ExerciseSession.assigned_routine_id == routine_id
+            )
+        )
+        if existing is None:
+            raise
+        return _routine_out(routine, existing)
+    db.refresh(row)
+    personal_ingest.refresh_exercise(db, member_id, session_id=row.id)
+    return _routine_out(routine, row)
+
+
+def update_assigned_routine_feedback(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    history_id: str,
+    feedback: str,
+) -> RoutineHistoryOut:
+    """현재 담당 트레이너가 자신이 배정한 수행 기록에 피드백한다."""
+    row = db.scalar(
+        select(ExerciseSession).where(
+            ExerciseSession.id == history_id,
+            ExerciseSession.user_id == member_id,
+            ExerciseSession.source == "assigned_routine",
+            ExerciseSession.assigned_trainer_id == trainer_id,
+        )
+    )
+    if row is None:
+        raise RoutineNotFound("배정 루틴 수행 기록을 찾을 수 없습니다.")
+    row.trainer_feedback = feedback.strip()
+    db.commit()
+    db.refresh(row)
+    completed_at = row.completed_at or row.created_at
+    day = clock.to_seoul(completed_at).date().isoformat()
+    return RoutineHistoryOut(
+        id=row.id,
+        date_label=history_date_label(day),
+        label=row.assigned_routine_name or "배정 루틴 수행",
+        completion_rate=100,
+        exercises=[
+            f"{row.assigned_routine_name or row.type} · {row.minutes}분 · {row.intensity}"
+        ],
+        client_feedback=row.member_note,
+        trainer_note=row.trainer_feedback,
+        assigned_routine_id=row.assigned_routine_id,
+        completed_at=completed_at,
     )
 
 

@@ -14,6 +14,14 @@ abstract interface class MemberCoachRepository {
   /// Routines the coach has assigned (newest first).
   Future<List<CoachRoutine>> fetchRoutines();
 
+  /// Records an assigned routine once in the member's exercise history.
+  Future<CoachRoutine> completeRoutine(
+    String routineId, {
+    required int minutes,
+    String intensity = 'moderate',
+    String memberNote = '',
+  });
+
   /// PT sessions the coach booked. The trainer owns the schedule — the
   /// member reads it only. (#490)
   Future<List<CoachSession>> fetchSessions();

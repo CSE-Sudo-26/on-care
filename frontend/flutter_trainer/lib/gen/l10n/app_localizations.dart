@@ -3475,6 +3475,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing recorded this week'**
   String get searchDetailNoRecord;
+
+  /// No description provided for @routineFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout feedback'**
+  String get routineFeedbackTitle;
+
+  /// No description provided for @routineFeedbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write coaching feedback for the member'**
+  String get routineFeedbackHint;
+
+  /// No description provided for @routineFeedbackWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Write feedback'**
+  String get routineFeedbackWrite;
+
+  /// No description provided for @routineFeedbackEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit feedback'**
+  String get routineFeedbackEdit;
+
+  /// No description provided for @routineFeedbackSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback saved'**
+  String get routineFeedbackSaved;
+
+  /// No description provided for @routineFeedbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save feedback. Please try again'**
+  String get routineFeedbackFailed;
 }
 
 class _AppLocalizationsDelegate
