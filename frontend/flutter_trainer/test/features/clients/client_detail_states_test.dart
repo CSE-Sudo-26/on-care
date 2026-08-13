@@ -150,7 +150,7 @@ void main() {
       // proves it participates in keyboard traversal (was unreachable as
       // a bare GestureDetector).
       var reached = false;
-      for (var i = 0; i < 12 && !reached; i++) {
+      for (var i = 0; i < 24 && !reached; i++) {
         await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         await tester.pump();
         reached = undongFocused();

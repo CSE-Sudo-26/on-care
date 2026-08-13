@@ -26,6 +26,9 @@ class AppRoutes {
   /// 스케줄 — day / week calendar.
   static const String schedule = '/schedule';
 
+  /// 메시지 — roster-backed two-pane conversation workspace.
+  static const String messages = '/messages';
+
   /// AI 코칭 — routine generation, templates, send history.
   static const String coaching = '/coaching';
 
@@ -107,6 +110,13 @@ class AppRoutes {
   static String clientsFiltered(String filter) => Uri(
     path: clients,
     queryParameters: <String, String>{'f': filter},
+  ).toString();
+
+  /// Builds the standalone 메시지 workspace with an optional selected client
+  /// and conversation filter (`all` | `unread` | `attention`).
+  static String messagesFor(String? clientId, {String? filter}) => Uri(
+    path: messages,
+    queryParameters: <String, String>{'client': ?clientId, 'f': ?filter},
   ).toString();
 
   /// Builds the AI 코칭 workspace with [clientId] preselected.

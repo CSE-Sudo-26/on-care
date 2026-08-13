@@ -173,13 +173,14 @@ void main() {
     expect(currentLocation(tester), AppRoutes.coaching);
   });
 
-  testWidgets('the weekly chart renders one bar per weekday', (tester) async {
+  testWidgets('the dashboard renders derived tasks without fake completion', (
+    tester,
+  ) async {
     await openDashboard(tester);
 
-    expect(find.text('주간 세션 이행률'), findsOneWidget);
-    for (final day in const <String>['월', '화', '수', '목', '금', '토', '일']) {
-      expect(find.text(day), findsWidgets, reason: '$day 막대 라벨이 없어요');
-    }
+    expect(find.text('오늘 할 일'), findsOneWidget);
+    expect(find.textContaining('확인 필요'), findsWidgets);
+    expect(find.textContaining('/ 5 완료'), findsNothing);
   });
 
   group('AttentionCard.sectionFor', () {

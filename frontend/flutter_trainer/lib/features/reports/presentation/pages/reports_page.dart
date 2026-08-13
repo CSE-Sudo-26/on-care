@@ -82,7 +82,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     });
   }
 
-  Future<void> _send(WeeklyReport report) async {
+  Future<void> _send(WeeklyReport report, String message) async {
     final AppLocalizations l = AppLocalizations.of(context);
     final id = report.client.id;
     if (_sending != null || _sent.contains(id)) return;
@@ -92,11 +92,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     try {
       await ref
           .read(reportRepositoryProvider)
-          .send(
-            clientId: id,
-            weekStart: report.weekStart,
-            message: reportMessage(l, report),
-          );
+          .send(clientId: id, weekStart: report.weekStart, message: message);
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = null);
@@ -456,7 +452,7 @@ class _ClientReport extends StatelessWidget {
   final WeeklyReport report;
   final bool sent;
   final bool sending;
-  final ValueChanged<WeeklyReport> onSend;
+  final void Function(WeeklyReport report, String message) onSend;
 
   @override
   Widget build(BuildContext context) {
@@ -509,6 +505,18 @@ class _ClientReport extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
+          _WeekComparison(report: report),
+          const SizedBox(height: AppSpacing.lg),
+          _FeedbackEditor(
+            key: ValueKey<String>(
+              'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
+            ),
+            initialText: reportMessage(l, report),
+            sent: sent,
+            sending: sending,
+            onSend: (message) => onSend(report, message),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             l.reportsCompletionByDay,
             style: TextStyle(
@@ -555,37 +563,434 @@ class _ClientReport extends StatelessWidget {
             // chart above — drawing it under a past week's dates would
             // put today's numbers in a report the trainer can send.
             EmptyHint(message: l.reportsNoLastWeekSodium),
-          const SizedBox(height: AppSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: const BoxDecoration(
-              color: AppColors.inputBackground,
-              borderRadius: BorderRadius.all(AppRadius.md),
-            ),
-            child: Text(
-              reportMessage(l, report),
+          const SizedBox(height: AppSpacing.md),
+          _FourWeekTrend(report: report),
+          const SizedBox(height: AppSpacing.md),
+          const _ReportAiCard(),
+          const SizedBox(height: AppSpacing.md),
+          const _UnsupportedExportActions(),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeekComparison extends ConsumerWidget {
+  const _WeekComparison({required this.report});
+
+  final WeeklyReport report;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final previousStart = report.weekStart.subtract(const Duration(days: 7));
+    final previous = ref.watch(
+      weeklyReportProvider((client: report.client, weekStart: previousStart)),
+    );
+    final before = previous.valueOrNull;
+    final completionDelta = _delta(report.completionAvg, before?.completionAvg);
+    final sodiumDelta = _delta(report.sodiumAvg, before?.sodiumAvg);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: const BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.all(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            l.reportsComparisonTitle,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (previous.isLoading)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (previous.hasError)
+            Text(
+              l.reportsPreviousLoadFailed,
               style: const TextStyle(
-                fontSize: 13,
-                height: 1.6,
-                fontWeight: FontWeight.w500,
-                color: AppColors.mutedForeground,
+                color: AppColors.warning,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
               ),
+            )
+          else
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ComparisonMetric(
+                    label: l.reportsCompletionAvg,
+                    current: _percent(report.completionAvg),
+                    previous: _percent(before?.completionAvg),
+                    delta: completionDelta == null
+                        ? null
+                        : '${completionDelta >= 0 ? '+' : ''}$completionDelta%p',
+                    positive: completionDelta == null || completionDelta >= 0,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _ComparisonMetric(
+                    label: l.reportsAverageSodium,
+                    current: report.sodiumAvg == null
+                        ? '-'
+                        : '${report.sodiumAvg}mg',
+                    previous: before?.sodiumAvg == null
+                        ? '-'
+                        : '${before!.sodiumAvg}mg',
+                    delta: sodiumDelta == null
+                        ? null
+                        : '${sodiumDelta >= 0 ? '+' : ''}${sodiumDelta}mg',
+                    positive: sodiumDelta == null || sodiumDelta <= 0,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  static int? _delta(int? current, int? previous) =>
+      current == null || previous == null ? null : current - previous;
+
+  static String _percent(int? value) => value == null ? '-' : '$value%';
+}
+
+class _ComparisonMetric extends StatelessWidget {
+  const _ComparisonMetric({
+    required this.label,
+    required this.current,
+    required this.previous,
+    required this.delta,
+    required this.positive,
+  });
+
+  final String label;
+  final String current;
+  final String previous;
+  final String? delta;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.all(AppRadius.sm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.subtleForeground,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ActionButton(
-              label: sent
-                  ? l.reportsSendStateSent
-                  : (sending ? l.reportsSendStateSending : l.reportsSendAction),
-              icon: sent ? Icons.check : Icons.send_outlined,
-              primary: true,
-              onPressed: sent || sending ? null : () => onSend(report),
+          const SizedBox(height: 3),
+          Row(
+            children: <Widget>[
+              Text(
+                current,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (delta != null) ...<Widget>[
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  delta!,
+                  style: TextStyle(
+                    color: positive ? AppColors.success : AppColors.overTarget,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          Text(
+            l.reportsPreviousValue(previous),
+            style: const TextStyle(
+              color: AppColors.subtleForeground,
+              fontSize: 10.5,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FeedbackEditor extends StatefulWidget {
+  const _FeedbackEditor({
+    super.key,
+    required this.initialText,
+    required this.sent,
+    required this.sending,
+    required this.onSend,
+  });
+
+  final String initialText;
+  final bool sent;
+  final bool sending;
+  final ValueChanged<String> onSend;
+
+  @override
+  State<_FeedbackEditor> createState() => _FeedbackEditorState();
+}
+
+class _FeedbackEditorState extends State<_FeedbackEditor> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialText,
+  );
+
+  bool get _canSend => _controller.text.trim().isNotEmpty;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l.reportsFeedbackTitle,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Tooltip(
+              message: l.reportsFeedbackSaveUnsupported,
+              child: ActionButton(
+                label: l.reportsFeedbackSave,
+                onPressed: null,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        TextField(
+          controller: _controller,
+          onChanged: (_) => setState(() {}),
+          minLines: 4,
+          maxLines: 7,
+          decoration: InputDecoration(
+            hintText: l.reportsFeedbackHint,
+            helperText: l.reportsFeedbackHelper,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ActionButton(
+            label: widget.sent
+                ? l.reportsSendStateSent
+                : (widget.sending
+                      ? l.reportsSendStateSending
+                      : l.reportsSendAction),
+            icon: widget.sent ? Icons.check : Icons.send_outlined,
+            primary: true,
+            onPressed: widget.sent || widget.sending || !_canSend
+                ? null
+                : () {
+                    final text = _controller.text.trim();
+                    if (text.isEmpty) return;
+                    widget.onSend(text);
+                  },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FourWeekTrend extends ConsumerWidget {
+  const _FourWeekTrend({required this.report});
+
+  final WeeklyReport report;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final reports = <AsyncValue<WeeklyReport>>[
+      for (var offset = 3; offset >= 0; offset--)
+        ref.watch(
+          weeklyReportProvider((
+            client: report.client,
+            weekStart: report.weekStart.subtract(Duration(days: 7 * offset)),
+          )),
+        ),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            l.reportsTrendTitle,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              for (var index = 0; index < reports.length; index++)
+                Expanded(
+                  child: _TrendBar(
+                    label: l.reportsTrendWeek(index + 1),
+                    value: reports[index].valueOrNull?.completionAvg,
+                    loading: reports[index].isLoading,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendBar extends StatelessWidget {
+  const _TrendBar({
+    required this.label,
+    required this.value,
+    required this.loading,
+  });
+
+  final String label;
+  final int? value;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Text(
+          loading ? '…' : (value == null ? '-' : '$value%'),
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 36,
+          height: value == null ? 12 : 18 + value!.clamp(0, 100) * 0.55,
+          decoration: BoxDecoration(
+            color: value == null
+                ? AppColors.inputBackground
+                : AppColors.primary.withValues(alpha: 0.25 + 0.007 * value!),
+            borderRadius: const BorderRadius.vertical(top: AppRadius.sm),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.subtleForeground,
+            fontSize: 10.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReportAiCard extends StatelessWidget {
+  const _ReportAiCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.aiCardGradientStart,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        border: Border.all(color: AppColors.aiCardGradientEnd),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  l.reportsAiTitle,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  l.reportsAiUnavailable,
+                  style: const TextStyle(
+                    color: AppColors.mutedForeground,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnsupportedExportActions extends StatelessWidget {
+  const _UnsupportedExportActions();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Tooltip(
+          message: l.reportsPdfUnsupported,
+          child: ActionButton(
+            label: l.reportsPdfLabel,
+            icon: Icons.picture_as_pdf_outlined,
+            onPressed: null,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Tooltip(
+          message: l.reportsPrintUnsupported,
+          child: ActionButton(
+            label: l.reportsPrintLabel,
+            icon: Icons.print_outlined,
+            onPressed: null,
+          ),
+        ),
+      ],
     );
   }
 }

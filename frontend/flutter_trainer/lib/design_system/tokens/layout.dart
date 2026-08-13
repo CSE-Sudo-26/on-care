@@ -11,7 +11,7 @@ class AppLayout {
   // --- Sidebar ---
 
   /// Width of the expanded sidebar (brand + labelled nav + profile).
-  static const double sidebarWidth = 248;
+  static const double sidebarWidth = 232;
 
   /// Width of the collapsed icon-only rail (labels move to tooltips).
   static const double sidebarRailWidth = 76;
@@ -42,11 +42,11 @@ class AppLayout {
   static const double twoColumnBreakpoint = 1080;
 
   /// Fixed width of a list column inside a split layout.
-  static const double splitListWidth = 340;
+  static const double splitListWidth = 380;
 
   /// Horizontal padding around page content.
   static const double pagePadding = 24;
 
   /// Height of the sticky page header (title + actions).
-  static const double pageHeaderHeight = 64;
+  static const double pageHeaderHeight = 88;
 }

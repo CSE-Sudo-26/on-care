@@ -43,8 +43,8 @@ class AppColors {
   static const Color bannerEnd = Color(0xFFD6E7F3);
 
   // --- Surface / text ---
-  /// App canvas behind cards (mock uses `#F8FAFC`).
-  static const Color background = Color(0xFFF8FAFC);
+  /// App canvas behind cards (final trainer wireframe uses `#F5F7FA`).
+  static const Color background = Color(0xFFF5F7FA);
 
   static const Color card = Color(0xFFFFFFFF);
   static const Color cardForeground = Color(0xFF1A1A1A);

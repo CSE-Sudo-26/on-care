@@ -3511,6 +3511,516 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save feedback. Please try again'**
   String get routineFeedbackFailed;
+
+  /// No description provided for @navOperationsGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations'**
+  String get navOperationsGroup;
+
+  /// No description provided for @navCoachingGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Coaching'**
+  String get navCoachingGroup;
+
+  /// No description provided for @dashTodayTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s tasks'**
+  String get dashTodayTasks;
+
+  /// No description provided for @dashTasksReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'All reviewed'**
+  String get dashTasksReviewed;
+
+  /// No description provided for @dashTasksNeedReview.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} to review'**
+  String dashTasksNeedReview(int count);
+
+  /// No description provided for @dashTasksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no new coaching tasks to review.'**
+  String get dashTasksEmpty;
+
+  /// No description provided for @navMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get navMessages;
+
+  /// No description provided for @messagesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange coaching updates with clients and follow up quickly'**
+  String get messagesSubtitle;
+
+  /// No description provided for @messagesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load conversations.'**
+  String get messagesLoadFailed;
+
+  /// No description provided for @messagesConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get messagesConversations;
+
+  /// No description provided for @messagesSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clients or messages'**
+  String get messagesSearchHint;
+
+  /// No description provided for @messagesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations match these filters.'**
+  String get messagesEmpty;
+
+  /// No description provided for @messagesFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get messagesFilterAll;
+
+  /// No description provided for @messagesFilterUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get messagesFilterUnread;
+
+  /// No description provided for @messagesFilterAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get messagesFilterAttention;
+
+  /// No description provided for @messagesFilterUnreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread {count}'**
+  String messagesFilterUnreadCount(int count);
+
+  /// No description provided for @messagesBackToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation list'**
+  String get messagesBackToList;
+
+  /// No description provided for @messagesProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get messagesProgram;
+
+  /// No description provided for @messagesSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get messagesSchedule;
+
+  /// No description provided for @messagesRecentWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent workout {value}'**
+  String messagesRecentWorkout(String value);
+
+  /// No description provided for @messagesNoCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'No completion record this week'**
+  String get messagesNoCompletion;
+
+  /// No description provided for @messagesCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% completion this week'**
+  String messagesCompletion(int percent);
+
+  /// No description provided for @messagesClientDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Client details'**
+  String get messagesClientDetail;
+
+  /// No description provided for @messagesSelectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a client from the list to start a conversation.'**
+  String get messagesSelectPrompt;
+
+  /// No description provided for @clientQuickMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get clientQuickMessages;
+
+  /// No description provided for @clientQuickProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get clientQuickProgram;
+
+  /// No description provided for @clientQuickSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add schedule'**
+  String get clientQuickSchedule;
+
+  /// No description provided for @clientHealthGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Body profile & goals'**
+  String get clientHealthGoals;
+
+  /// No description provided for @clientTrainerMemoUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer memo storage isn\'t supported yet.'**
+  String get clientTrainerMemoUnsupported;
+
+  /// No description provided for @clientTrainerMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo'**
+  String get clientTrainerMemo;
+
+  /// No description provided for @dashTaskReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get dashTaskReply;
+
+  /// No description provided for @dashTaskDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get dashTaskDiet;
+
+  /// No description provided for @dashTaskWorkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get dashTaskWorkout;
+
+  /// No description provided for @dashTaskReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review {name}: {alert}'**
+  String dashTaskReview(String alert, String name);
+
+  /// No description provided for @programEditorDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'{goal} program'**
+  String programEditorDefaultName(String goal);
+
+  /// No description provided for @programEditorDefaultSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Session A'**
+  String get programEditorDefaultSession;
+
+  /// No description provided for @programEditorSaveUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-session program storage isn\'t supported yet.'**
+  String get programEditorSaveUnsupported;
+
+  /// No description provided for @programEditorAssignUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'The server currently supports flat routine assignments only.'**
+  String get programEditorAssignUnsupported;
+
+  /// No description provided for @programEditorAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to client'**
+  String get programEditorAssign;
+
+  /// No description provided for @programEditorInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Program information'**
+  String get programEditorInfo;
+
+  /// No description provided for @programEditorName.
+  ///
+  /// In en, this message translates to:
+  /// **'Program name'**
+  String get programEditorName;
+
+  /// No description provided for @programEditorGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal (optional)'**
+  String get programEditorGoal;
+
+  /// No description provided for @programEditorPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period (optional)'**
+  String get programEditorPeriod;
+
+  /// No description provided for @programEditorMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Program memo (optional)'**
+  String get programEditorMemo;
+
+  /// No description provided for @programEditorAiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply AI coaching suggestions to the first session as a local draft.'**
+  String get programEditorAiHint;
+
+  /// No description provided for @programEditorApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to editor'**
+  String get programEditorApply;
+
+  /// No description provided for @programEditorExerciseConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout structure'**
+  String get programEditorExerciseConfig;
+
+  /// No description provided for @programEditorAddSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Add session'**
+  String get programEditorAddSession;
+
+  /// No description provided for @programEditorSessionName.
+  ///
+  /// In en, this message translates to:
+  /// **'Session {letter}'**
+  String programEditorSessionName(String letter);
+
+  /// No description provided for @programEditorLocalBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a local draft. Saving and assigning multi-session programs requires the new Program API.'**
+  String get programEditorLocalBanner;
+
+  /// No description provided for @programEditorSessionUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move session up'**
+  String get programEditorSessionUp;
+
+  /// No description provided for @programEditorSessionDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move session down'**
+  String get programEditorSessionDown;
+
+  /// No description provided for @programEditorSessionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete session'**
+  String get programEditorSessionDelete;
+
+  /// No description provided for @programEditorSessionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exercises to build this session.'**
+  String get programEditorSessionEmpty;
+
+  /// No description provided for @programEditorExerciseSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search exercises or enter one'**
+  String get programEditorExerciseSearch;
+
+  /// No description provided for @programEditorAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get programEditorAdd;
+
+  /// No description provided for @programEditorAddExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Add exercise'**
+  String get programEditorAddExercise;
+
+  /// No description provided for @programEditorExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get programEditorExercise;
+
+  /// No description provided for @programEditorExerciseUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move exercise up'**
+  String get programEditorExerciseUp;
+
+  /// No description provided for @programEditorExerciseDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move exercise down'**
+  String get programEditorExerciseDown;
+
+  /// No description provided for @programEditorExerciseDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete exercise'**
+  String get programEditorExerciseDelete;
+
+  /// No description provided for @programEditorSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets'**
+  String get programEditorSets;
+
+  /// No description provided for @programEditorReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps'**
+  String get programEditorReps;
+
+  /// No description provided for @programEditorWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight kg'**
+  String get programEditorWeight;
+
+  /// No description provided for @programEditorDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Time min'**
+  String get programEditorDuration;
+
+  /// No description provided for @programEditorDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance m'**
+  String get programEditorDistance;
+
+  /// No description provided for @programEditorRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest sec'**
+  String get programEditorRest;
+
+  /// No description provided for @programEditorExerciseMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo'**
+  String get programEditorExerciseMemo;
+
+  /// No description provided for @reportsComparisonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This week vs last week'**
+  String get reportsComparisonTitle;
+
+  /// No description provided for @reportsPreviousLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load last week\'s data.'**
+  String get reportsPreviousLoadFailed;
+
+  /// No description provided for @reportsAverageSodium.
+  ///
+  /// In en, this message translates to:
+  /// **'Average sodium'**
+  String get reportsAverageSodium;
+
+  /// No description provided for @reportsPreviousValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Last week {value}'**
+  String reportsPreviousValue(String value);
+
+  /// No description provided for @reportsFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer feedback'**
+  String get reportsFeedbackTitle;
+
+  /// No description provided for @reportsFeedbackSaveUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback draft storage isn\'t supported yet.'**
+  String get reportsFeedbackSaveUnsupported;
+
+  /// No description provided for @reportsFeedbackSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save feedback'**
+  String get reportsFeedbackSave;
+
+  /// No description provided for @reportsFeedbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write coaching feedback for the client.'**
+  String get reportsFeedbackHint;
+
+  /// No description provided for @reportsFeedbackHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft isn\'t stored on the server. Sending delivers it through the existing chat.'**
+  String get reportsFeedbackHelper;
+
+  /// No description provided for @reportsTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout completion · Last 4 weeks'**
+  String get reportsTrendTitle;
+
+  /// No description provided for @reportsTrendWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {index}'**
+  String reportsTrendWeek(int index);
+
+  /// No description provided for @reportsAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI coaching assistant · Report summary'**
+  String get reportsAiTitle;
+
+  /// No description provided for @reportsAiUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available after the report summary API is connected. No summary is generated now.'**
+  String get reportsAiUnavailable;
+
+  /// No description provided for @reportsPdfUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF generation isn\'t supported yet.'**
+  String get reportsPdfUnsupported;
+
+  /// No description provided for @reportsPdfLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Shareable PDF'**
+  String get reportsPdfLabel;
+
+  /// No description provided for @reportsPrintUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Available after PDF/print report snapshots are supported.'**
+  String get reportsPrintUnsupported;
+
+  /// No description provided for @reportsPrintLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Print'**
+  String get reportsPrintLabel;
 }
 
 class _AppLocalizationsDelegate

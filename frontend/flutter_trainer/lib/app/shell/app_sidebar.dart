@@ -58,6 +58,7 @@ class AppSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     // Badges are live counters, not decoration: they're the reason a
     // trainer looks at the sidebar between tasks.
     final unread = ref
@@ -96,7 +97,13 @@ class AppSidebar extends ConsumerWidget {
                   vertical: AppSpacing.sm,
                 ),
                 children: <Widget>[
-                  for (var i = 0; i < navDestinations.length; i++)
+                  for (var i = 0; i < navDestinations.length; i++) ...<Widget>[
+                    if (expanded && (i == 0 || i == 4))
+                      _NavGroupLabel(
+                        label: i == 0
+                            ? l.navOperationsGroup
+                            : l.navCoachingGroup,
+                      ),
                     _NavTile(
                       destination: navDestinations[i],
                       selected: currentIndex == i,
@@ -116,6 +123,7 @@ class AppSidebar extends ConsumerWidget {
                         onNavigate?.call();
                       },
                     ),
+                  ],
                   if (notificationInbox)
                     _NavTile(
                       destination: notificationsDestination,
@@ -141,6 +149,32 @@ class AppSidebar extends ConsumerWidget {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavGroupLabel extends StatelessWidget {
+  const _NavGroupLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.subtleForeground,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

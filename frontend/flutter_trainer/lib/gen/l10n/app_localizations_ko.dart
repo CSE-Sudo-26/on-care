@@ -1887,4 +1887,280 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFeedbackFailed => '피드백을 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get navOperationsGroup => '운영';
+
+  @override
+  String get navCoachingGroup => '코칭';
+
+  @override
+  String get dashTodayTasks => '오늘 할 일';
+
+  @override
+  String get dashTasksReviewed => '모두 확인했어요';
+
+  @override
+  String dashTasksNeedReview(int count) {
+    return '$count개 확인 필요';
+  }
+
+  @override
+  String get dashTasksEmpty => '새로 확인할 코칭 업무가 없어요.';
+
+  @override
+  String get navMessages => '메시지';
+
+  @override
+  String get messagesSubtitle => '회원과 코칭 내용을 주고받고 빠르게 후속 조치하세요';
+
+  @override
+  String get messagesLoadFailed => '대화 목록을 불러오지 못했어요.';
+
+  @override
+  String get messagesConversations => '대화';
+
+  @override
+  String get messagesSearchHint => '회원 이름 또는 메시지 검색';
+
+  @override
+  String get messagesEmpty => '조건에 맞는 대화가 없어요.';
+
+  @override
+  String get messagesFilterAll => '전체';
+
+  @override
+  String get messagesFilterUnread => '읽지 않음';
+
+  @override
+  String get messagesFilterAttention => '관리 필요';
+
+  @override
+  String messagesFilterUnreadCount(int count) {
+    return '읽지 않음 $count';
+  }
+
+  @override
+  String get messagesBackToList => '대화 목록';
+
+  @override
+  String get messagesProgram => '프로그램';
+
+  @override
+  String get messagesSchedule => '일정';
+
+  @override
+  String messagesRecentWorkout(String value) {
+    return '최근 운동 $value';
+  }
+
+  @override
+  String get messagesNoCompletion => '주간 이행률 기록 없음';
+
+  @override
+  String messagesCompletion(int percent) {
+    return '주간 이행률 $percent%';
+  }
+
+  @override
+  String get messagesClientDetail => '회원 상세';
+
+  @override
+  String get messagesSelectPrompt => '왼쪽 목록에서 대화할 회원을 선택하세요.';
+
+  @override
+  String get clientQuickMessages => '메시지';
+
+  @override
+  String get clientQuickProgram => '프로그램';
+
+  @override
+  String get clientQuickSchedule => '일정 등록';
+
+  @override
+  String get clientHealthGoals => '회원 신체·목표 관리';
+
+  @override
+  String get clientTrainerMemoUnsupported => '트레이너 메모 저장 API가 아직 없어요.';
+
+  @override
+  String get clientTrainerMemo => '메모';
+
+  @override
+  String get dashTaskReply => '답장';
+
+  @override
+  String get dashTaskDiet => '식단';
+
+  @override
+  String get dashTaskWorkout => '운동';
+
+  @override
+  String dashTaskReview(String alert, String name) {
+    return '$name $alert 확인';
+  }
+
+  @override
+  String programEditorDefaultName(String goal) {
+    return '$goal 프로그램';
+  }
+
+  @override
+  String get programEditorDefaultSession => '세션 A';
+
+  @override
+  String get programEditorSaveUnsupported => '다중 세션 프로그램 저장 API가 아직 없어요.';
+
+  @override
+  String get programEditorAssignUnsupported => '현재 서버는 평면 루틴 배정만 지원해요.';
+
+  @override
+  String get programEditorAssign => '회원에게 배정';
+
+  @override
+  String get programEditorInfo => '프로그램 정보';
+
+  @override
+  String get programEditorName => '프로그램명';
+
+  @override
+  String get programEditorGoal => '목표 (선택)';
+
+  @override
+  String get programEditorPeriod => '기간 (선택)';
+
+  @override
+  String get programEditorMemo => '프로그램 메모 (선택)';
+
+  @override
+  String get programEditorAiHint => 'AI 코칭 보조 제안을 첫 세션에 로컬 초안으로 반영할 수 있어요.';
+
+  @override
+  String get programEditorApply => '편집기에 반영';
+
+  @override
+  String get programEditorExerciseConfig => '운동 구성';
+
+  @override
+  String get programEditorAddSession => '세션 추가';
+
+  @override
+  String programEditorSessionName(String letter) {
+    return '세션 $letter';
+  }
+
+  @override
+  String get programEditorLocalBanner =>
+      '로컬 편집 상태입니다. 다중 세션 저장·배정은 신규 Program API 연결 후 사용할 수 있어요.';
+
+  @override
+  String get programEditorSessionUp => '세션 위로 이동';
+
+  @override
+  String get programEditorSessionDown => '세션 아래로 이동';
+
+  @override
+  String get programEditorSessionDelete => '세션 삭제';
+
+  @override
+  String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
+
+  @override
+  String get programEditorExerciseSearch => '운동 이름 검색 또는 직접 입력';
+
+  @override
+  String get programEditorAdd => '추가';
+
+  @override
+  String get programEditorAddExercise => '운동 추가';
+
+  @override
+  String get programEditorExercise => '운동';
+
+  @override
+  String get programEditorExerciseUp => '운동 위로 이동';
+
+  @override
+  String get programEditorExerciseDown => '운동 아래로 이동';
+
+  @override
+  String get programEditorExerciseDelete => '운동 삭제';
+
+  @override
+  String get programEditorSets => '세트';
+
+  @override
+  String get programEditorReps => '횟수';
+
+  @override
+  String get programEditorWeight => '중량 kg';
+
+  @override
+  String get programEditorDuration => '시간 분';
+
+  @override
+  String get programEditorDistance => '거리 m';
+
+  @override
+  String get programEditorRest => '휴식 초';
+
+  @override
+  String get programEditorExerciseMemo => '메모';
+
+  @override
+  String get reportsComparisonTitle => '이번 주 vs 지난 주';
+
+  @override
+  String get reportsPreviousLoadFailed => '지난주 데이터를 불러오지 못했어요.';
+
+  @override
+  String get reportsAverageSodium => '평균 나트륨';
+
+  @override
+  String reportsPreviousValue(String value) {
+    return '지난주 $value';
+  }
+
+  @override
+  String get reportsFeedbackTitle => '트레이너 피드백';
+
+  @override
+  String get reportsFeedbackSaveUnsupported => '피드백 초안 저장 API가 아직 없어요.';
+
+  @override
+  String get reportsFeedbackSave => '피드백 저장';
+
+  @override
+  String get reportsFeedbackHint => '회원에게 전달할 코칭 피드백을 작성하세요.';
+
+  @override
+  String get reportsFeedbackHelper => '초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.';
+
+  @override
+  String get reportsTrendTitle => '운동 이행률 추세 · 최근 4주';
+
+  @override
+  String reportsTrendWeek(int index) {
+    return '$index주';
+  }
+
+  @override
+  String get reportsAiTitle => 'AI 코칭 보조 · 리포트 요약';
+
+  @override
+  String get reportsAiUnavailable =>
+      '실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.';
+
+  @override
+  String get reportsPdfUnsupported => 'PDF 생성 API가 아직 없어요.';
+
+  @override
+  String get reportsPdfLabel => '회원 공유용 PDF';
+
+  @override
+  String get reportsPrintUnsupported =>
+      'PDF/인쇄용 report snapshot 지원 후 사용할 수 있어요.';
+
+  @override
+  String get reportsPrintLabel => '인쇄';
 }

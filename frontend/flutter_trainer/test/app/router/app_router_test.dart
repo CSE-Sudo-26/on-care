@@ -75,6 +75,13 @@ void main() {
         '/clients/x/${AppRoutes.defaultClientSection}',
       );
     });
+
+    test('messages deep link preserves client and filter', () {
+      expect(
+        AppRoutes.messagesFor('seed-client-1', filter: 'unread'),
+        '/messages?client=seed-client-1&f=unread',
+      );
+    });
   });
 
   group('app shell', () {

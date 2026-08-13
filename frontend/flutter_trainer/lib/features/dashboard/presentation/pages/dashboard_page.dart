@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -16,7 +17,6 @@ import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
@@ -90,24 +90,44 @@ class DashboardPage extends ConsumerWidget {
                   wide: wide,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                if (wide)
-                  // Deliberately NOT IntrinsicHeight: the two columns are
-                  // independent card stacks, `start` already stops them
-                  // stretching, and the weekday chart uses a LayoutBuilder
-                  // — which reports a 0 intrinsic height, so IntrinsicHeight
-                  // sized the row short and the chart overflowed it.
+                if (wide) ...<Widget>[
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Expanded(flex: 15, child: _LeftColumn(summary: summary)),
+                      const Expanded(flex: 15, child: TodayTimelineCard()),
                       const SizedBox(width: AppSpacing.lg),
-                      Expanded(flex: 10, child: _RightColumn(summary: summary)),
+                      Expanded(
+                        flex: 10,
+                        child: _TodayTasksCard(entries: summary.attention),
+                      ),
                     ],
-                  )
-                else ...<Widget>[
-                  _LeftColumn(summary: summary),
+                  ),
                   const SizedBox(height: AppSpacing.lg),
-                  _RightColumn(summary: summary),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 15,
+                        child: AttentionCard(
+                          entries: summary.attention,
+                          maxRows: 5,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        flex: 10,
+                        child: AiSummaryCard(summary: summary),
+                      ),
+                    ],
+                  ),
+                ] else ...<Widget>[
+                  const TodayTimelineCard(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _TodayTasksCard(entries: summary.attention),
+                  const SizedBox(height: AppSpacing.lg),
+                  AttentionCard(entries: summary.attention),
+                  const SizedBox(height: AppSpacing.lg),
+                  AiSummaryCard(summary: summary),
                 ],
               ],
             );
@@ -118,38 +138,138 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-class _LeftColumn extends StatelessWidget {
-  const _LeftColumn({required this.summary});
+class _TodayTasksCard extends StatelessWidget {
+  const _TodayTasksCard({required this.entries});
 
-  final DashboardSummary summary;
+  final List<AttentionClient> entries;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const TodayTimelineCard(),
-        const SizedBox(height: AppSpacing.lg),
-        _WeeklyCompletionCard(values: summary.weeklyCompletion),
-      ],
+    final l = AppLocalizations.of(context);
+    final tasks = entries.take(4).toList();
+    return SectionCard(
+      title: l.dashTodayTasks,
+      trailing: Text(
+        tasks.isEmpty
+            ? l.dashTasksReviewed
+            : l.dashTasksNeedReview(tasks.length),
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      child: tasks.isEmpty
+          ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
+          : Column(
+              children: <Widget>[
+                for (final entry in tasks)
+                  _TaskRow(
+                    entry: entry,
+                    onTap: () {
+                      if (entry.primary == ClientAlert.unanswered) {
+                        context.go(AppRoutes.messagesFor(entry.client.id));
+                        return;
+                      }
+                      context.go(
+                        AppRoutes.clientDetail(
+                          entry.client.id,
+                          section: AttentionCard.sectionFor(entry.primary),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
     );
   }
 }
 
-class _RightColumn extends StatelessWidget {
-  const _RightColumn({required this.summary});
+class _TaskRow extends StatelessWidget {
+  const _TaskRow({required this.entry, required this.onTap});
 
-  final DashboardSummary summary;
+  final AttentionClient entry;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        AttentionCard(entries: summary.attention),
-        const SizedBox(height: AppSpacing.lg),
-        AiSummaryCard(summary: summary),
-      ],
+    final l = AppLocalizations.of(context);
+    final alert = entry.primary;
+    final tone = switch (alert) {
+      ClientAlert.unanswered => AppColors.primary,
+      ClientAlert.sodiumOver => AppColors.overTarget,
+      ClientAlert.lowCompletion => AppColors.warning,
+    };
+    final type = switch (alert) {
+      ClientAlert.unanswered => l.dashTaskReply,
+      ClientAlert.sodiumOver => l.dashTaskDiet,
+      ClientAlert.lowCompletion => l.dashTaskWorkout,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.md),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.md),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.borderStrong),
+              borderRadius: const BorderRadius.all(AppRadius.md),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.borderStrong),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.12),
+                    borderRadius: const BorderRadius.all(AppRadius.pill),
+                  ),
+                  child: Text(
+                    type,
+                    style: TextStyle(
+                      color: tone,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l.dashTaskReview(alert.label(l), entry.client.name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppColors.subtleForeground,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -200,7 +320,7 @@ class _KpiRow extends StatelessWidget {
         hint: summary.unreadTotal > 0
             ? l.dashWaitingClients(summary.unreadClients)
             : l.dashAllReplied,
-        onTap: () => context.go(AppRoutes.clientsFiltered('unread')),
+        onTap: () => context.go(AppRoutes.messagesFor(null, filter: 'unread')),
       ),
       StatCard(
         label: l.dashAttentionClients,
@@ -251,53 +371,6 @@ class _KpiRow extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// Mean routine completion per weekday across the roster.
-class _WeeklyCompletionCard extends StatelessWidget {
-  const _WeeklyCompletionCard({required this.values});
-
-  final List<int> values;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 평균도 지난 요일만으로 낸다. 아직 오지 않은 날을 0으로 함께 나누면
-    // 주 초반에는 실제보다 낮은 이행률이 나온다.
-    final elapsed = elapsedWeekdays(DateTime.now());
-    final counted = values.take(elapsed).toList();
-    final average = counted.isEmpty
-        ? null
-        : (counted.reduce((a, b) => a + b) / counted.length).round();
-    return SectionCard(
-      title: l.dashWeeklyCompletion,
-      icon: Icons.bar_chart,
-      trailing: average == null
-          ? null
-          : Text(
-              l.dashAveragePercent(average),
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-      child: values.isEmpty
-          ? EmptyHint(
-              message: l.dashNoRecordsThisWeek,
-              icon: Icons.bar_chart_outlined,
-            )
-          : BarSeriesChart(
-              values: values,
-              labels: weekdayLabels(l),
-              maxValue: 100,
-              showValues: true,
-              valueSuffix: '%',
-              highlightIndex: elapsed - 1,
-              pendingFromIndex: elapsed,
-            ),
     );
   }
 }
