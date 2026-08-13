@@ -30,9 +30,23 @@ router = APIRouter(tags=["notifications"])
 
 # 알림 카테고리 → 바로가기 액션(프론트 라우트 힌트). system 은 액션 없음.
 _ACTION_BY_CATEGORY: dict[str, NotificationAction] = {
+    # 성격만 나타내던 기존 값들.
     "reminder": NotificationAction(label="기록하러 가기", target="dashboard"),
     "health_check": NotificationAction(label="일정 보기", target="schedule"),
     "achievement": NotificationAction(label="대시보드 보기", target="dashboard"),
+    # 트레이너가 한 일 — 예전에는 전부 `system` 으로 뭉쳐 갈 곳이 없었다(#636).
+    notification_service.MEMBER_COACH_CHAT: NotificationAction(
+        label="대화 보기", target="coach_chat"
+    ),
+    notification_service.MEMBER_ROUTINE: NotificationAction(
+        label="운동 보기", target="exercise"
+    ),
+    notification_service.MEMBER_SCHEDULE: NotificationAction(
+        label="일정 보기", target="schedule"
+    ),
+    notification_service.MEMBER_CONSULTATION: NotificationAction(
+        label="트레이너 보기", target="exercise"
+    ),
 }
 
 

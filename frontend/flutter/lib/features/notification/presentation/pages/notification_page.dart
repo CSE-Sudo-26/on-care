@@ -7,6 +7,7 @@ import 'package:oncare/design_system/atoms/app_card.dart';
 import 'package:oncare/design_system/theme/app_theme.dart';
 import 'package:oncare/design_system/tokens/spacing.dart';
 import 'package:oncare/features/notification/domain/entities/alert_item.dart';
+import 'package:oncare/features/notification/presentation/alert_navigation.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/empty_state.dart';
@@ -102,9 +103,15 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
                 ),
               );
             }
+            final AlertItem item = state.items[i - (showRetry ? 1 : 0)];
             return _AlertTile(
-              item: state.items[i - (showRetry ? 1 : 0)],
-              onTap: () => notifier.markRead(state.items[i - (showRetry ? 1 : 0)].id),
+              item: item,
+              // 읽음 처리를 기다리지 않고 이동한다 — 서버 왕복 동안 화면이 멈춰
+              // 있으면 누른 것이 먹지 않은 것처럼 보인다.
+              onTap: () {
+                notifier.markRead(item.id);
+                openAlertTarget(context, ref, item);
+              },
             );
           },
         ),
