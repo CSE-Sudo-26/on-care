@@ -47,7 +47,7 @@ _ALLOWED_INTENSITIES = {"light", "moderate", "high"}
 
 
 def _reject_if_derived(row: ExerciseSession) -> None:
-    """트레이너 PT 완료로 파생된 기록은 회원이 고칠 수 없다. (#499)
+    """트레이너 PT/배정 루틴에서 파생된 기록은 회원이 고칠 수 없다. (#499, #638)
 
     404 가 아니라 409 다 — 기록은 분명히 존재하고 회원 것이며, 화면에도 보인다.
     없는 척하면 앱이 목록에서 사라진 줄 알고 잘못 갱신한다. 삭제하려면 트레이너가
@@ -56,7 +56,7 @@ def _reject_if_derived(row: ExerciseSession) -> None:
     if row.source != "member":
         raise HTTPException(
             status_code=409,
-            detail="트레이너가 완료 처리한 PT 기록은 수정하거나 삭제할 수 없습니다.",
+            detail="코칭에서 생성된 운동 기록은 수정하거나 삭제할 수 없습니다.",
         )
 
 

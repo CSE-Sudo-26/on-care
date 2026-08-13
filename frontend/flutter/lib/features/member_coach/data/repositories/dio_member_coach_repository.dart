@@ -40,6 +40,32 @@ class DioMemberCoachRepository implements MemberCoachRepository {
       _getList('/me/coach/routines', coachRoutineFromJson);
 
   @override
+  Future<CoachRoutine> completeRoutine(
+    String routineId, {
+    required int minutes,
+    String intensity = 'moderate',
+    String memberNote = '',
+  }) async {
+    try {
+      final Response<Map<String, Object?>> response = await _dio.post(
+        '/me/coach/routines/$routineId/complete',
+        data: <String, Object?>{
+          'minutes': minutes,
+          'intensity': intensity,
+          'member_note': memberNote.trim(),
+        },
+      );
+      final Map<String, Object?>? data = response.data;
+      if (data == null) {
+        throw const FormatException('Missing completed routine.');
+      }
+      return coachRoutineFromJson(data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Future<List<CoachSession>> fetchSessions() =>
       _getList('/me/coach/sessions', coachSessionFromJson);
 

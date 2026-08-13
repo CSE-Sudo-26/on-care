@@ -1293,5 +1293,11 @@
       }
     }
   },
-  "searchDetailNoRecord": "Nothing recorded this week"
+  "searchDetailNoRecord": "Nothing recorded this week",
+  "routineFeedbackTitle": "Workout feedback",
+  "routineFeedbackHint": "Write coaching feedback for the member",
+  "routineFeedbackWrite": "Write feedback",
+  "routineFeedbackEdit": "Edit feedback",
+  "routineFeedbackSaved": "Feedback saved",
+  "routineFeedbackFailed": "Could not save feedback. Please try again"
 }

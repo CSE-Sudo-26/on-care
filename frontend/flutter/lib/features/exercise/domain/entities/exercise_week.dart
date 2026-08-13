@@ -29,25 +29,23 @@ ExerciseType _exerciseTypeFromString(String s) => ExerciseType.values
 /// 가벼움 / 보통 / 높음 chips and the `_intensityFactor` multipliers.
 enum ExerciseIntensity { light, moderate, high }
 
-ExerciseIntensity _exerciseIntensityFromString(String? s) =>
-    ExerciseIntensity.values.firstWhere(
-      (i) => i.name == s,
-      orElse: () => ExerciseIntensity.moderate,
-    );
+ExerciseIntensity _exerciseIntensityFromString(String? s) => ExerciseIntensity
+    .values
+    .firstWhere((i) => i.name == s, orElse: () => ExerciseIntensity.moderate);
 
 /// 이 기록을 누가 만들었는가.
 ///
-/// [ExerciseSource.trainerPt] 는 트레이너가 PT 세션을 완료 처리해 서버가 파생시킨
-/// 기록이다(#499). 근거가 트레이너에게 있어 회원이 고칠 수 없고, 서버도 수정·삭제를
-/// 409 로 거절한다 — 화면에서 편집 동작을 감추는 것은 그 규칙을 앞당겨 보여주는 것뿐이다.
-enum ExerciseSource { member, trainerPt }
+/// [ExerciseSource.trainerPt]와 [ExerciseSource.assignedRoutine]은 코칭 흐름에서
+/// 파생된 기록이다(#499, #638). 회원의 일반 수기 기록이 아니므로 편집하지 못한다.
+enum ExerciseSource { member, trainerPt, assignedRoutine }
 
-/// 서버 계약값(`member`|`trainer_pt`) → [ExerciseSource].
+/// 서버 계약값(`member`|`trainer_pt`|`assigned_routine`) → [ExerciseSource].
 ///
 /// 모르는 값과 누락은 [ExerciseSource.member] 로 떨어뜨린다. 이 필드를 모르는
 /// 예전 응답(그리고 데모/목 경로)에서 기록이 통째로 잠기면 안 된다.
 ExerciseSource _exerciseSourceFromString(String? s) => switch (s) {
   'trainer_pt' => ExerciseSource.trainerPt,
+  'assigned_routine' => ExerciseSource.assignedRoutine,
   _ => ExerciseSource.member,
 };
 
@@ -63,6 +61,11 @@ class ExerciseSession {
     this.timeLabel,
     this.items = const <String>[],
     this.source = ExerciseSource.member,
+    this.assignedRoutineId,
+    this.assignedRoutineName = '',
+    this.memberNote = '',
+    this.trainerFeedback = '',
+    this.completedAt,
   });
 
   final String? id;
@@ -90,7 +93,13 @@ class ExerciseSession {
   /// 기록의 출처. 기본값은 회원이 직접 남긴 것.
   final ExerciseSource source;
 
-  /// 회원이 이 기록을 고칠 수 있는가. 트레이너가 완료 처리한 PT 기록은 불가.
+  final String? assignedRoutineId;
+  final String assignedRoutineName;
+  final String memberNote;
+  final String trainerFeedback;
+  final DateTime? completedAt;
+
+  /// 회원이 직접 남긴 일반 기록만 편집할 수 있다.
   bool get isEditable => source == ExerciseSource.member;
 
   factory ExerciseSession.fromJson(Map<String, Object?> json) =>
@@ -107,6 +116,11 @@ class ExerciseSession {
             .cast<String>()
             .toList(),
         source: _exerciseSourceFromString(json['source'] as String?),
+        assignedRoutineId: json['assigned_routine_id'] as String?,
+        assignedRoutineName: json['assigned_routine_name'] as String? ?? '',
+        memberNote: json['member_note'] as String? ?? '',
+        trainerFeedback: json['trainer_feedback'] as String? ?? '',
+        completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
       );
 }
 
