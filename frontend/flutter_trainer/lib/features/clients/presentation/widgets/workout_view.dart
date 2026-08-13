@@ -26,6 +26,10 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
+const workoutWeekCompletionCardKey = ValueKey<String>(
+  'workout-week-completion-card',
+);
+
 /// 운동 — the whole prescription→execution loop for one client, in the
 /// order the trainer reasons about it.
 ///
@@ -420,6 +424,7 @@ class _WeekCompletionCard extends StatelessWidget {
         : (counted.reduce((a, b) => a + b) / counted.length).round();
 
     return Container(
+      key: workoutWeekCompletionCardKey,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.card,

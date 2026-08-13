@@ -9,6 +9,8 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart'
+    show workoutWeekCompletionCardKey;
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -267,7 +269,13 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.text('이번 주 완료율'), findsOneWidget);
-      expect(find.text('$expected%'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(workoutWeekCompletionCardKey),
+          matching: find.text('$expected%'),
+        ),
+        findsOneWidget,
+      );
       // '완료' is also a PT session's status in the card above, so the
       // legend is matched loosely; 부분/미완료 are legend-only.
       expect(find.text('완료'), findsWidgets);
