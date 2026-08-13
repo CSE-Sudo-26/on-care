@@ -36,7 +36,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navSchedule => '스케줄';
 
   @override
-  String get navCoaching => 'AI 코칭';
+  String get navCoaching => '프로그램';
 
   @override
   String get navReports => '리포트';
@@ -309,7 +309,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsNew => '신규 고객';
 
   @override
-  String get clientsTitle => '고객';
+  String get clientsTitle => '회원 관리';
+
+  @override
+  String get clientsManagementAttention => '관리 필요';
+
+  @override
+  String get clientsSortPriority => '정렬: 관리 우선';
+
+  @override
+  String get clientsSortName => '정렬: 이름순';
+
+  @override
+  String clientsToolbarCount(int shown, int active) {
+    return '$shown명 · 활성 $active명';
+  }
 
   @override
   String get clientsPickHint => '왼쪽에서 고객을 선택하면\n대화·식단·운동 기록이 여기에 열려요';
@@ -696,9 +710,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsTitle => '리포트';
 
   @override
-  String reportsSubtitle(String week) {
-    return '$week 주차 · 운영 지표와 고객 리포트';
-  }
+  String get reportsSubtitle => '이번 주 변화를 정리하고 회원에게 전달할 리포트를 작성하세요';
 
   @override
   String get reportsPrevWeek => '이전 주';
@@ -1265,10 +1277,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get intensityHigh => '높음';
 
   @override
-  String get coachTitle => 'AI 코칭';
+  String get coachTitle => '프로그램';
 
   @override
-  String get coachSubtitle => '식단 · 건강 데이터 기반 루틴 생성';
+  String get coachSubtitle => '회원별 운동 프로그램을 만들고 배정·관리하세요';
+
+  @override
+  String get coachMemberPrograms => '회원별 프로그램';
+
+  @override
+  String get coachMemberSummary => '회원 요약';
+
+  @override
+  String get reportsDataInsufficient => '데이터 부족';
+
+  @override
+  String get reportsAnalysisAvailable => '분석 가능';
+
+  @override
+  String get reportsFeedbackComplete => '피드백 완료';
+
+  @override
+  String get reportsFeedbackPending => '피드백 미작성';
+
+  @override
+  String get reportsThisWeek => '이번 주';
+
+  @override
+  String reportsAnalysisCount(int total, int available) {
+    return '전체 $total명 · 분석 가능 $available명';
+  }
 
   @override
   String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';

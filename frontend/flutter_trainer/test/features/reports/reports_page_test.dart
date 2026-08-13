@@ -85,9 +85,8 @@ void main() {
     await openReports(tester);
 
     expect(find.text('리포트'), findsWidgets);
-    expect(find.text('이번 주 세션'), findsOneWidget);
-    expect(find.text('완료'), findsWidgets);
-    expect(find.text('프로그램 준비'), findsOneWidget);
+    expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
+    expect(find.text('트레이너 피드백'), findsOneWidget);
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
   });

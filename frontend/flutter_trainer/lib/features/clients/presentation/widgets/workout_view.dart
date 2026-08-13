@@ -37,10 +37,13 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 /// happened session by session.
 class WorkoutView extends ConsumerWidget {
   /// Creates the workout view for [client].
-  const WorkoutView({super.key, required this.client});
+  const WorkoutView({super.key, required this.client, this.embedded = false});
 
   /// The client whose history is shown (carries weekCompletion).
   final TrainerClient client;
+
+  /// When true, lets the member detail own the single page scroll.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,65 +58,67 @@ class WorkoutView extends ConsumerWidget {
     // the history provider would mean a failing /history takes the
     // routines and the PT sessions down with it — and those two used to
     // be their own tab, reachable whether or not the history loaded.
+    final children = <Widget>[
+      _AssignedRoutinesCard(clientId: client.id, assigned: assigned),
+      const SizedBox(height: AppSpacing.md),
+      _SessionsCard(
+        sessions: sessions,
+        onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
+      ),
+      const SizedBox(height: AppSpacing.md),
+      WeeklyExerciseTrendCard(
+        week: exerciseWeek,
+        onRetry: () => ref.invalidate(clientExerciseWeekProvider(client.id)),
+      ),
+      const SizedBox(height: AppSpacing.md),
+      _WeekCompletionCard(week: client.weekCompletion),
+      const SizedBox(height: AppSpacing.lg),
+      Text(
+        l.workoutRecords,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.subtleForeground,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      ...history.when(
+        loading: () => const <Widget>[
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+        ],
+        error: (e, _) => <Widget>[
+          EmptyHint(
+            message: l.workoutLoadFailed,
+            icon: Icons.error_outline,
+            action: ActionButton(
+              key: ValueKey<String>('workout-history-retry-${client.id}'),
+              label: l.actionRetry,
+              onPressed: history.isLoading
+                  ? null
+                  : () => ref.invalidate(clientHistoryProvider(client.id)),
+            ),
+          ),
+        ],
+        data: (entries) => <Widget>[
+          if (entries.isEmpty)
+            EmptyHint(
+              message: l.workoutEmpty,
+              icon: Icons.fitness_center_outlined,
+            ),
+          for (final entry in entries) ...<Widget>[
+            _HistoryCard(clientId: client.id, entry: entry),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ],
+      ),
+    ];
+    if (embedded) return Column(children: children);
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      children: <Widget>[
-        _AssignedRoutinesCard(clientId: client.id, assigned: assigned),
-        const SizedBox(height: AppSpacing.md),
-        _SessionsCard(
-          sessions: sessions,
-          onRetry: () => ref.invalidate(clientSessionsProvider(sessionKey)),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        WeeklyExerciseTrendCard(
-          week: exerciseWeek,
-          onRetry: () => ref.invalidate(clientExerciseWeekProvider(client.id)),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _WeekCompletionCard(week: client.weekCompletion),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          l.workoutRecords,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ...history.when(
-          loading: () => const <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-          ],
-          error: (e, _) => <Widget>[
-            EmptyHint(
-              message: l.workoutLoadFailed,
-              icon: Icons.error_outline,
-              action: ActionButton(
-                key: ValueKey<String>('workout-history-retry-${client.id}'),
-                label: l.actionRetry,
-                onPressed: history.isLoading
-                    ? null
-                    : () => ref.invalidate(clientHistoryProvider(client.id)),
-              ),
-            ),
-          ],
-          data: (entries) => <Widget>[
-            if (entries.isEmpty)
-              EmptyHint(
-                message: l.workoutEmpty,
-                icon: Icons.fitness_center_outlined,
-              ),
-            for (final entry in entries) ...<Widget>[
-              _HistoryCard(clientId: client.id, entry: entry),
-              const SizedBox(height: AppSpacing.md),
-            ],
-          ],
-        ),
-      ],
+      children: children,
     );
   }
 }

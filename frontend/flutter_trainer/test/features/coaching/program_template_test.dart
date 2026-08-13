@@ -48,8 +48,25 @@ void main() {
       );
     }
 
+    Future<void> revealTemplate(WidgetTester tester, String name) async {
+      await tester.scrollUntilVisible(
+        find.text(name),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byKey(
+                const ValueKey<String>('coaching-program-page-scroll'),
+              ),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+    }
+
     testWidgets('the library lists the built-in templates', (tester) async {
       await openCoaching(tester);
+
+      await revealTemplate(tester, programTemplates.first.name);
 
       expect(find.text('프로그램 템플릿'), findsOneWidget);
       expect(find.text(programTemplates.first.name), findsOneWidget);
@@ -63,6 +80,12 @@ void main() {
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
 
       final template = programTemplates.first;
+      await revealTemplate(tester, template.name);
+      await tester.drag(
+        find.byKey(const ValueKey<String>('coaching-program-page-scroll')),
+        const Offset(0, -240),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text(template.name));
       await settle(tester);
 
@@ -75,11 +98,10 @@ void main() {
       expect(find.text('트레이너 추가'), findsWidgets);
     });
 
-    testWidgets('전송 이력 tells the trainer what this client already got', (
-      tester,
-    ) async {
+    testWidgets('중복 전송 이력 대신 회원 요약을 한 번만 보여 준다', (tester) async {
       await openCoaching(tester);
-      expect(find.text('전송 이력'), findsOneWidget);
+      expect(find.text('회원 요약'), findsOneWidget);
+      expect(find.text('전송 이력'), findsNothing);
     });
   });
 }

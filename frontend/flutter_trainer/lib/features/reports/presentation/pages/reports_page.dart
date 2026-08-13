@@ -13,8 +13,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -22,7 +21,6 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 리포트 — the week, from two angles.
@@ -121,12 +119,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
     return PageScaffold(
       title: l.reportsTitle,
-      subtitle: l.reportsSubtitle(
-        l.dateMonthDay(_weekStart.month, _weekStart.day),
-      ),
-      // 리포트 asks how the week went, so the rows lead with this week's
-      // completion and picking one opens that client's report.
-      headerCenter: const ClientSearchBar(scope: ClientSearchScope.reports),
+      subtitle: l.reportsSubtitle,
       actions: <Widget>[
         ActionButton(
           label: l.reportsPrevWeek,
@@ -175,26 +168,17 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           // The week query covers every client; each consumer filters.
           // A failed load leaves it empty rather than blanking the page —
           // the client-side figures below are still meaningful.
-          final sessions = weekSessions.valueOrNull ?? const [];
-
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              _TrainerStats(
-                stats: buildTrainerWeekStats(
-                  sessions: sessions,
-                  clients: clients,
-                ),
-                loading: weekSessions.isLoading,
-              ),
-              const SizedBox(height: AppSpacing.lg),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final wide =
-                      constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
+                      constraints.maxWidth >= AppLayout.splitBreakpoint;
                   final picker = _ClientPicker(
                     clients: clients,
                     selectedId: selected.id,
+                    sentClientIds: _sent,
                     onSelect: _selectClient,
                   );
                   // The report itself comes from the repository: local
@@ -251,7 +235,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      SizedBox(width: 260, child: picker),
+                      SizedBox(width: 292, child: picker),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(child: report),
                     ],
@@ -278,114 +262,50 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 }
 
-/// The trainer's own week.
-class _TrainerStats extends StatelessWidget {
-  const _TrainerStats({required this.stats, required this.loading});
-
-  final TrainerWeekStats stats;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    String value(int n) => loading ? '-' : '$n';
-    final rate = stats.completionRate;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final AppLocalizations l = AppLocalizations.of(context);
-        final cards = <Widget>[
-          StatCard(
-            label: l.reportsSessionsThisWeek,
-            value: value(stats.sessionsBooked),
-            unit: l.unitTimes,
-            icon: Icons.event_note_outlined,
-          ),
-          StatCard(
-            label: l.legendDone,
-            value: value(stats.sessionsDone),
-            unit: l.unitTimes,
-            icon: Icons.check_circle_outline,
-            tone: StatTone.positive,
-            hint: rate == null || loading
-                ? null
-                : l.reportsCompletionRate(rate),
-          ),
-          StatCard(
-            label: l.reportsProgramReady,
-            value: value(stats.programsSent),
-            unit: l.dashUnitCount,
-            icon: Icons.assignment_outlined,
-            hint: l.reportsSessionsWithRoutine,
-          ),
-          StatCard(
-            label: l.reportsActiveClients,
-            value: '${stats.activeClients}',
-            unit: l.dashUnitPeople,
-            icon: Icons.groups_outlined,
-          ),
-        ];
-        final wide = constraints.maxWidth >= AppLayout.twoColumnBreakpoint;
-        // IntrinsicHeight so every card in a row matches the tallest —
-        // only some carry a hint line, and without this the row reads as
-        // four cards of four different heights.
-        if (wide) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                for (var i = 0; i < cards.length; i++) ...<Widget>[
-                  if (i > 0) const SizedBox(width: AppSpacing.md),
-                  Expanded(child: cards[i]),
-                ],
-              ],
-            ),
-          );
-        }
-        return Column(
-          children: <Widget>[
-            for (var i = 0; i < cards.length; i += 2) ...<Widget>[
-              if (i > 0) const SizedBox(height: AppSpacing.md),
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(child: cards[i]),
-                    const SizedBox(width: AppSpacing.md),
-                    if (i + 1 < cards.length)
-                      Expanded(child: cards[i + 1])
-                    else
-                      const Spacer(),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _ClientPicker extends StatelessWidget {
   const _ClientPicker({
     required this.clients,
     required this.selectedId,
+    required this.sentClientIds,
     required this.onSelect,
   });
 
   final List<TrainerClient> clients;
   final String selectedId;
+  final Set<String> sentClientIds;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return SectionCard(
-      title: l.reportsPickClient,
+      title: l.reportsThisWeek,
       icon: Icons.people_outline,
       dense: true,
       child: Column(
         children: <Widget>[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            decoration: const BoxDecoration(
+              color: AppColors.inputBackground,
+              borderRadius: BorderRadius.all(AppRadius.md),
+            ),
+            child: Text(
+              l.reportsAnalysisCount(
+                clients.length,
+                clients
+                    .where((client) => recordedCompletionMean(client) != null)
+                    .length,
+              ),
+              style: const TextStyle(
+                color: AppColors.subtleForeground,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           for (final client in clients)
             Padding(
               padding: const EdgeInsets.only(bottom: 3),
@@ -407,18 +327,36 @@ class _ClientPicker extends StatelessWidget {
                         ClientAvatar(label: client.avatar, size: 26),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
-                          child: Text(
-                            client.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: client.id == selectedId
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: AppColors.foreground,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                client.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: client.id == selectedId
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              Text(
+                                recordedCompletionMean(client) == null
+                                    ? l.reportsDataInsufficient
+                                    : l.reportsAnalysisAvailable,
+                                style: const TextStyle(
+                                  color: AppColors.subtleForeground,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
+                        _ReportStatusBadge(
+                          sent: sentClientIds.contains(client.id),
+                          hasData: recordedCompletionMean(client) != null,
                         ),
                       ],
                     ),
@@ -427,6 +365,49 @@ class _ClientPicker extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReportStatusBadge extends StatelessWidget {
+  const _ReportStatusBadge({required this.sent, required this.hasData});
+
+  final bool sent;
+  final bool hasData;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final String label;
+    final Color foreground;
+    final Color background;
+    if (!hasData) {
+      label = l.reportsDataInsufficient;
+      foreground = AppColors.warning;
+      background = AppColors.warning.withValues(alpha: 0.12);
+    } else if (sent) {
+      label = l.reportsFeedbackComplete;
+      foreground = AppColors.success;
+      background = AppColors.success.withValues(alpha: 0.12);
+    } else {
+      label = l.reportsFeedbackPending;
+      foreground = AppColors.warning;
+      background = AppColors.warning.withValues(alpha: 0.12);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: const BorderRadius.all(AppRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -458,27 +439,40 @@ class _ClientReport extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final client = report.client;
-    return SectionCard(
-      title: l.reportsClientWeekly(client.name),
-      icon: Icons.description_outlined,
-      trailing: Text(
-        report.rangeLabel(l),
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppColors.subtleForeground,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SectionCard(
+          title: l.reportsClientWeekly(client.name),
+          icon: Icons.description_outlined,
+          trailing: Text(
+            report.rangeLabel(l),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.subtleForeground,
+            ),
+          ),
+          child: _WeekComparison(report: report),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(
+          title: l.reportsFeedbackTitle,
+          child: _FeedbackEditor(
+            key: ValueKey<String>(
+              'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
+            ),
+            initialText: reportMessage(l, report),
+            sent: sent,
+            sending: sending,
+            onSend: (message) => onSend(report, message),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(
+          title: l.reportsWeekly,
+          child: Row(
             children: <Widget>[
-              _Figure(
-                label: l.reportsPtSessions,
-                value: '${report.sessionsDone}/${report.sessionsBooked}',
-                unit: l.unitTimes,
-              ),
               _Figure(
                 label: l.reportsCompletionAvg,
                 value: report.completionAvg == null
@@ -491,10 +485,12 @@ class _ClientReport extends StatelessWidget {
                 ),
               ),
               _Figure(
+                label: l.reportsPtSessions,
+                value: '${report.sessionsDone}/${report.sessionsBooked}',
+                unit: l.unitTimes,
+              ),
+              _Figure(
                 label: l.reportsSodiumOver,
-                // "-" for a past week: the roster only aggregates the
-                // current one, so anything else would be this week's
-                // number under last week's dates.
                 value: report.sodiumOverDays?.toString() ?? '-',
                 unit: l.unitDays,
                 tone: _verdictTone(
@@ -504,73 +500,55 @@ class _ClientReport extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _WeekComparison(report: report),
-          const SizedBox(height: AppSpacing.lg),
-          _FeedbackEditor(
-            key: ValueKey<String>(
-              'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
-            ),
-            initialText: reportMessage(l, report),
-            sent: sent,
-            sending: sending,
-            onSend: (message) => onSend(report, message),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(
+          title: l.reportsCompletionByDay,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (!report.isCurrentWeek)
+                EmptyHint(message: l.reportsNoLastWeekDaily)
+              else if (client.weekCompletion.length == weekdayCount)
+                BarSeriesChart(
+                  values: client.weekCompletion,
+                  labels: weekdayLabels(AppLocalizations.of(context)),
+                  maxValue: 100,
+                  height: 80,
+                  showValues: true,
+                  valueSuffix: '%',
+                  pendingFromIndex: elapsedWeekdays(DateTime.now()),
+                )
+              else
+                EmptyHint(message: l.reportsNoWorkoutsThisWeek),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                l.reportsSodiumTrend,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (report.isCurrentWeek)
+                Sparkline(
+                  values: client.sodiumWeek,
+                  threshold: sodiumTargetMg,
+                  height: 56,
+                )
+              else
+                EmptyHint(message: l.reportsNoLastWeekSodium),
+              const SizedBox(height: AppSpacing.md),
+              _FourWeekTrend(report: report),
+            ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            l.reportsCompletionByDay,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.subtleForeground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (!report.isCurrentWeek)
-            // 요일별 시리즈는 이번 주 것뿐이다. 지난 주 제목 아래 이번 주
-            // 막대를 그리면 트레이너가 그대로 고객에게 보낸다.
-            EmptyHint(message: l.reportsNoLastWeekDaily)
-          else if (client.weekCompletion.length == weekdayCount)
-            BarSeriesChart(
-              values: client.weekCompletion,
-              labels: weekdayLabels(AppLocalizations.of(context)),
-              maxValue: 100,
-              height: 80,
-              showValues: true,
-              valueSuffix: '%',
-              pendingFromIndex: elapsedWeekdays(DateTime.now()),
-            )
-          else
-            EmptyHint(message: l.reportsNoWorkoutsThisWeek),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            l.reportsSodiumTrend,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.subtleForeground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (report.isCurrentWeek)
-            Sparkline(
-              values: client.sodiumWeek,
-              threshold: sodiumTargetMg,
-              height: 56,
-            )
-          else
-            // `sodiumWeek` is this week's series, same as the weekday
-            // chart above — drawing it under a past week's dates would
-            // put today's numbers in a report the trainer can send.
-            EmptyHint(message: l.reportsNoLastWeekSodium),
-          const SizedBox(height: AppSpacing.md),
-          _FourWeekTrend(report: report),
-          const SizedBox(height: AppSpacing.md),
-          const _ReportAiCard(),
-          const SizedBox(height: AppSpacing.md),
-          const _UnsupportedExportActions(),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const _ReportAiCard(),
+        const SizedBox(height: AppSpacing.md),
+        const _UnsupportedExportActions(),
+      ],
     );
   }
 }
@@ -766,25 +744,12 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                l.reportsFeedbackTitle,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            Tooltip(
-              message: l.reportsFeedbackSaveUnsupported,
-              child: ActionButton(
-                label: l.reportsFeedbackSave,
-                onPressed: null,
-              ),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: Tooltip(
+            message: l.reportsFeedbackSaveUnsupported,
+            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         TextField(

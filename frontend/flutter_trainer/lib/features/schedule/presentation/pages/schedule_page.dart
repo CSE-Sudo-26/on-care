@@ -14,8 +14,6 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -63,6 +61,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// Whether the week grid is showing.
   late bool _weekView = widget.view == 'week';
 
+  /// Session shown in the week view's detail panel.
+  String? _selectedSessionId;
+
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// Parses a `YYYY-MM-DD` route parameter, falling back to today. A
@@ -94,6 +95,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void _selectDay(DateTime day, {bool toTimeline = false}) {
     setState(() {
       _selectedDay = _dateOnly(day);
+      _selectedSessionId = null;
       if (toTimeline) _weekView = false;
     });
     context.go(
@@ -297,9 +299,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return PageScaffold(
       title: l.schedTitle,
       subtitle: dateLabel(l, _selectedDay),
-      // 스케줄 asks when someone is next in, so the rows show the next
-      // booking and picking one moves the calendar to that day.
-      headerCenter: const ClientSearchBar(scope: ClientSearchScope.schedule),
       actions: <Widget>[
         if (showToday)
           ActionButton(
@@ -392,17 +391,132 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
             ),
-            data: (sessions) => _WeekGrid(
-              start: start,
-              sessions: sessions,
-              selectedDay: _selectedDay,
-              onPickDay: (d) => _selectDay(d, toTimeline: true),
-              onPickSession: (s) {
-                final day = DateTime.tryParse(s.date);
-                if (day != null) _selectDay(day, toTimeline: true);
-              },
-            ),
+            data: (sessions) {
+              ScheduleSession? selected;
+              for (final session in sessions) {
+                if (session.id == _selectedSessionId) selected = session;
+              }
+              if (selected == null) {
+                for (final session in sessions) {
+                  if (session.date == _selectedYmd) {
+                    selected = session;
+                    break;
+                  }
+                }
+              }
+
+              final grid = _WeekGrid(
+                start: start,
+                sessions: sessions,
+                selectedDay: _selectedDay,
+                onPickDay: _selectDay,
+                onPickSession: (session) {
+                  final day = DateTime.tryParse(session.date);
+                  if (day == null) return;
+                  setState(() {
+                    _selectedDay = _dateOnly(day);
+                    _selectedSessionId = session.id;
+                    _expanded.add(session.id);
+                  });
+                  context.go(
+                    AppRoutes.scheduleView('week', date: session.date),
+                  );
+                },
+              );
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 980) return grid;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Expanded(child: grid),
+                      const VerticalDivider(
+                        width: 1,
+                        color: AppColors.borderStrong,
+                      ),
+                      SizedBox(width: 340, child: _buildWeekDetail(selected)),
+                    ],
+                  );
+                },
+              );
+            },
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeekDetail(ScheduleSession? session) {
+    final l = AppLocalizations.of(context);
+    if (session == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text(
+            l.schedEmptyDay,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.mutedForeground),
+          ),
+        ),
+      );
+    }
+
+    final day = DateTime.tryParse(session.date) ?? _selectedDay;
+    final today = _dateOnly(DateTime.now());
+    final isFuture = day.isAfter(today);
+    final dateText = day == today
+        ? l.labelToday
+        : l.dateMonthDay(day.month, day.day);
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: <Widget>[
+        Text(
+          l.schedTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SessionCard(
+          session: session,
+          expanded: true,
+          sent: _sent.contains(session.id),
+          flashing: _flash == session.id,
+          onToggle: () {},
+          onSend: () => _send(session),
+          onEditSchedule: () => setState(() {
+            _editingScheduleId = session.id;
+            _editingProgramId = null;
+          }),
+          onEditProgram: () => setState(() {
+            _editingProgramId = session.id;
+            _editingScheduleId = null;
+          }),
+          onDelete: () => _confirmDelete(session),
+          onChat: () => _openChat(session),
+          onComplete: (session.isUpcoming && !isFuture)
+              ? () => _confirmComplete(session)
+              : null,
+          programDateLabel: dateText,
+          inlineEditor: _editingScheduleId == session.id
+              ? _SessionSheet(
+                  key: ValueKey<String>('week-session-editor-${session.id}'),
+                  clientNames: clients.map((client) => client.name).toList(),
+                  date: session.date,
+                  existing: session,
+                  inline: true,
+                  onSaved: () => setState(() => _editingScheduleId = null),
+                  onCancel: () => setState(() => _editingScheduleId = null),
+                )
+              : _editingProgramId == session.id
+              ? _ProgramEditor(
+                  key: ValueKey<String>('week-program-editor-${session.id}'),
+                  session: session,
+                  onSaved: () => setState(() => _editingProgramId = null),
+                  onCancel: () => setState(() => _editingProgramId = null),
+                )
+              : null,
         ),
       ],
     );

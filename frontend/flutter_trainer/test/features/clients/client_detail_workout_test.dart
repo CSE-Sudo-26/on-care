@@ -192,6 +192,11 @@ void main() {
   });
 
   group('WorkoutView', () {
+    Finder detailScrollable(String clientId) => find.descendant(
+      of: find.byKey(ValueKey<String>('client-detail-scroll-$clientId')),
+      matching: find.byType(Scrollable),
+    );
+
     Future<void> openWorkout(WidgetTester tester, String clientName) async {
       await pumpTrainerApp(
         tester,
@@ -256,7 +261,11 @@ void main() {
       // The tab now opens on the routines it absorbed from the old 루틴
       // tab, so the completion card starts below the fold.
       expect(find.text('배정된 루틴'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('이번 주 완료율'), 150);
+      await tester.scrollUntilVisible(
+        find.text('이번 주 완료율'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('이번 주 완료율'), findsOneWidget);
       expect(find.text('$expected%'), findsOneWidget);
       // '완료' is also a PT session's status in the card above, so the
@@ -304,7 +313,11 @@ void main() {
       await tester.scrollUntilVisible(find.text('이번 주 완료율'), 150);
       expect(find.text('이번 주 완료율'), findsOneWidget);
       // The failure is reported in place, where the history would be.
-      await tester.scrollUntilVisible(find.text('운동 기록을 불러오지 못했어요'), 150);
+      await tester.scrollUntilVisible(
+        find.text('운동 기록을 불러오지 못했어요'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('운동 기록을 불러오지 못했어요'), findsOneWidget);
       expect(find.text('history transport detail'), findsNothing);
 
@@ -314,7 +327,11 @@ void main() {
         ),
       );
       await settle(tester);
-      await tester.scrollUntilVisible(find.text('7/12 (오늘)'), 150);
+      await tester.scrollUntilVisible(
+        find.text('7/12 (오늘)'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
 
       final repository =
           container.read(clientRepositoryProvider)
@@ -364,8 +381,11 @@ void main() {
       expect(find.text('일정을 불러오지 못했어요'), findsOneWidget);
       expect(find.text('배정된 루틴'), findsOneWidget);
       final retry = find.byKey(const ValueKey<String>('client-sessions-retry'));
-      await tester.drag(find.byType(ListView).last, const Offset(0, -180));
-      await tester.pump();
+      await tester.scrollUntilVisible(
+        retry,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       await tester.tap(retry);
       await settle(tester);
 
@@ -377,7 +397,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('이번 주 완료율'),
         200,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.text('이번 주 완료율'), findsOneWidget);
     });

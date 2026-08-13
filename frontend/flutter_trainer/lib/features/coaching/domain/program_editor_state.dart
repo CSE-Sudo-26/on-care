@@ -40,7 +40,11 @@ class ProgramEditorState {
     name: programName,
     goal: clientGoal,
     sessions: <ProgramSessionDraft>[
-      ProgramSessionDraft(id: 'session-1', name: sessionName, exercises: const []),
+      ProgramSessionDraft(
+        id: 'session-1',
+        name: sessionName,
+        exercises: const [],
+      ),
     ],
   );
 }
@@ -78,6 +82,8 @@ class ProgramExerciseDraft {
     this.rest = '60',
     this.rpe = '',
     this.memo = '',
+    this.type = '근력',
+    this.source = 'trainer',
   });
 
   final String id;
@@ -90,6 +96,8 @@ class ProgramExerciseDraft {
   final String rest;
   final String rpe;
   final String memo;
+  final String type;
+  final String source;
 
   ProgramExerciseDraft copyWith({
     String? name,
@@ -101,6 +109,8 @@ class ProgramExerciseDraft {
     String? rest,
     String? rpe,
     String? memo,
+    String? type,
+    String? source,
   }) => ProgramExerciseDraft(
     id: id,
     name: name ?? this.name,
@@ -112,5 +122,7 @@ class ProgramExerciseDraft {
     rest: rest ?? this.rest,
     rpe: rpe ?? this.rpe,
     memo: memo ?? this.memo,
+    type: type ?? this.type,
+    source: source ?? this.source,
   );
 }

@@ -36,7 +36,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSchedule => 'Schedule';
 
   @override
-  String get navCoaching => 'AI coaching';
+  String get navCoaching => 'Programs';
 
   @override
   String get navReports => 'Reports';
@@ -316,7 +316,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientsNew => 'New client';
 
   @override
-  String get clientsTitle => 'Clients';
+  String get clientsTitle => 'Member management';
+
+  @override
+  String get clientsManagementAttention => 'Needs attention';
+
+  @override
+  String get clientsSortPriority => 'Sort: priority';
+
+  @override
+  String get clientsSortName => 'Sort: name';
+
+  @override
+  String clientsToolbarCount(int shown, int active) {
+    return '$shown members · $active active';
+  }
 
   @override
   String get clientsPickHint =>
@@ -711,9 +725,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsTitle => 'Reports';
 
   @override
-  String reportsSubtitle(String week) {
-    return 'Week of $week · operating metrics and client reports';
-  }
+  String get reportsSubtitle =>
+      'Summarize this week\'s changes and prepare a report to share';
 
   @override
   String get reportsPrevWeek => 'Previous week';
@@ -1297,10 +1310,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get intensityHigh => 'High';
 
   @override
-  String get coachTitle => 'AI coaching';
+  String get coachTitle => 'Programs';
 
   @override
-  String get coachSubtitle => 'Routines built from diet and health data';
+  String get coachSubtitle =>
+      'Create, assign, and manage exercise programs for each member';
+
+  @override
+  String get coachMemberPrograms => 'Programs by member';
+
+  @override
+  String get coachMemberSummary => 'Member summary';
+
+  @override
+  String get reportsDataInsufficient => 'Insufficient data';
+
+  @override
+  String get reportsAnalysisAvailable => 'Ready to analyze';
+
+  @override
+  String get reportsFeedbackComplete => 'Feedback complete';
+
+  @override
+  String get reportsFeedbackPending => 'Feedback pending';
+
+  @override
+  String get reportsThisWeek => 'This week';
+
+  @override
+  String reportsAnalysisCount(int total, int available) {
+    return '$total total · $available ready';
+  }
 
   @override
   String get coachSendFailed => 'Couldn\'t send. Please try again';

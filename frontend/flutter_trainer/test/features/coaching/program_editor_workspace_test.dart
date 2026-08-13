@@ -29,7 +29,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         locale: Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -38,6 +38,10 @@ void main() {
             child: ProgramEditorWorkspace(
               clientGoal: '체중 감량',
               aiSuggestions: duplicateSuggestions,
+              registerOffset: 0,
+              onRegisterOffsetChanged: (_) {},
+              onAssignFlat: (_) async {},
+              onRegisterFlat: (_) async {},
             ),
           ),
         ),
@@ -54,10 +58,7 @@ void main() {
     await tester.tap(find.text('편집기에 반영'));
     await tester.pump();
 
-    final exerciseFields = tester
-        .widgetList<TextFormField>(find.byType(TextFormField))
-        .where((field) => field.initialValue == '스쿼트');
-    expect(exerciseFields, hasLength(1));
+    expect(find.text('스쿼트'), findsOneWidget);
   });
 
   testWidgets('editing a draft metric keeps keyboard focus across rebuilds', (
@@ -65,6 +66,12 @@ void main() {
   ) async {
     await pumpEditor(tester);
     await tester.tap(find.text('편집기에 반영'));
+    await tester.pump();
+
+    final editMenu = tester.widget<PopupMenuButton<String>>(
+      find.byKey(const ValueKey<String>('exercise-edit-exercise-2')),
+    );
+    editMenu.onSelected?.call('edit');
     await tester.pump();
 
     final field = find.byKey(const ValueKey<String>('exercise-2-sets'));

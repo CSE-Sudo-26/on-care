@@ -11,8 +11,7 @@ import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -28,7 +27,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 /// when there isn't. Selection lives in the URL
 /// (`/clients/<id>/<section>`), so refresh, back/forward and shared
 /// links all restore the same view — including which sub-tab was open.
-class ClientsPage extends ConsumerWidget {
+class ClientsPage extends ConsumerStatefulWidget {
   /// Creates the roster page. [selectedId]/[section] come from the path,
   /// [filter] from the `f` query parameter.
   const ClientsPage({super.key, this.selectedId, this.section, this.filter});
@@ -41,6 +40,19 @@ class ClientsPage extends ConsumerWidget {
 
   /// Roster filter from the URL.
   final String? filter;
+
+  @override
+  ConsumerState<ClientsPage> createState() => _ClientsPageState();
+}
+
+enum _ManagementFilter { all, attention, active, dormant }
+
+enum _ClientSort { priority, name }
+
+class _ClientsPageState extends ConsumerState<ClientsPage> {
+  String _query = '';
+  _ManagementFilter _managementFilter = _ManagementFilter.all;
+  _ClientSort _sort = _ClientSort.priority;
 
   Future<void> _openAddClientSheet(BuildContext context) {
     return showModalBottomSheet<void>(
@@ -55,7 +67,7 @@ class ClientsPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     // Priority ordering: sodium-over clients first, then recent chat.
     final clientsAsync = ref.watch(prioritizedClientsProvider);
@@ -67,17 +79,15 @@ class ClientsPage extends ConsumerWidget {
     final canManageRoster = ref
         .watch(clientRepositoryProvider)
         .supportsRosterMutations;
-    final activeFilter = clientFilterFrom(filter);
+    final activeFilter = clientFilterFrom(widget.filter);
 
     final Widget page = clientsAsync.when(
       loading: () => _Frame(
         subtitle: null,
-        section: section,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => _Frame(
         subtitle: null,
-        section: section,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -99,19 +109,41 @@ class ClientsPage extends ConsumerWidget {
       ),
       data: (all) {
         final AppLocalizations l = AppLocalizations.of(context);
-        final list = applyClientFilter(all, activeFilter, unread: unread);
+        var list = applyClientFilter(all, activeFilter, unread: unread);
+        final normalizedQuery = _query.trim().toLowerCase();
+        list = list
+            .where((client) {
+              if (normalizedQuery.isNotEmpty &&
+                  !client.name.toLowerCase().contains(normalizedQuery)) {
+                return false;
+              }
+              switch (_managementFilter) {
+                case _ManagementFilter.all:
+                  return true;
+                case _ManagementFilter.attention:
+                  return healthAlertsFor(client).isNotEmpty ||
+                      (unread[client.id] ?? 0) > 0;
+                case _ManagementFilter.active:
+                  return client.active;
+                case _ManagementFilter.dormant:
+                  return !client.active;
+              }
+            })
+            .toList(growable: false);
+        if (_sort == _ClientSort.name) {
+          list = [...list]..sort((a, b) => a.name.compareTo(b.name));
+        }
         // An id that isn't on the roster (deleted client, stale link) is
         // NOT collapsed away: the detail view says "고객을 찾을 수 없어요"
         // instead. Silently showing the roster while the URL still names
         // a client reads as data loss.
-        final selected = selectedId;
+        final selected = widget.selectedId;
 
         return _Frame(
           subtitle: l.clientsCountSummary(
             all.length,
             all.where((c) => c.active).length,
           ),
-          section: section,
           actions: <Widget>[
             if (canManageRoster)
               ActionButton(
@@ -124,54 +156,71 @@ class ClientsPage extends ConsumerWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
-
               final listView = _RosterList(
                 clients: list,
                 unread: unread,
                 selectedId: selected,
                 filter: activeFilter,
                 totalCount: all.length,
-                onOpen: (id) =>
-                    context.go(AppRoutes.clientDetail(id, section: section)),
+                onOpen: (id) => context.go(
+                  AppRoutes.clientDetail(id, section: widget.section),
+                ),
                 onClearFilter: () => context.go(AppRoutes.clients),
               );
-
-              if (!wide) {
-                // Narrow: the detail replaces the list entirely — a
-                // 340px column plus a panel would leave neither usable.
-                if (selected == null) return listView;
-                return ClientDetailView(
+              final Widget body;
+              if (!wide && selected != null) {
+                body = ClientDetailView(
                   clientId: selected,
-                  section: section,
+                  section: widget.section,
                   showBack: true,
                   onSectionChange: (next) => context.go(
                     AppRoutes.clientDetail(selected, section: next),
                   ),
                   onClose: () => context.go(AppRoutes.clients),
                 );
+              } else if (!wide) {
+                body = listView;
+              } else {
+                body = Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    SizedBox(width: AppLayout.splitListWidth, child: listView),
+                    const VerticalDivider(
+                      width: 1,
+                      color: AppColors.borderStrong,
+                    ),
+                    Expanded(
+                      child: selected == null
+                          ? const _NoSelection()
+                          : ClientDetailView(
+                              clientId: selected,
+                              section: widget.section,
+                              showBack: false,
+                              onSectionChange: (next) => context.go(
+                                AppRoutes.clientDetail(selected, section: next),
+                              ),
+                              onClose: () => context.go(AppRoutes.clients),
+                            ),
+                    ),
+                  ],
+                );
               }
-
-              return Row(
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  SizedBox(width: AppLayout.splitListWidth, child: listView),
-                  const VerticalDivider(
-                    width: 1,
-                    color: AppColors.borderStrong,
-                  ),
-                  Expanded(
-                    child: selected == null
-                        ? const _NoSelection()
-                        : ClientDetailView(
-                            clientId: selected,
-                            section: section,
-                            showBack: false,
-                            onSectionChange: (next) => context.go(
-                              AppRoutes.clientDetail(selected, section: next),
-                            ),
-                            onClose: () => context.go(AppRoutes.clients),
-                          ),
-                  ),
+                  if (wide || selected == null)
+                    _MemberManagementToolbar(
+                      query: _query,
+                      managementFilter: _managementFilter,
+                      sort: _sort,
+                      shownCount: list.length,
+                      activeCount: all.where((client) => client.active).length,
+                      onQueryChanged: (value) => setState(() => _query = value),
+                      onFilterChanged: (value) =>
+                          setState(() => _managementFilter = value),
+                      onSortChanged: (value) => setState(() => _sort = value),
+                    ),
+                  Expanded(child: body),
                 ],
               );
             },
@@ -187,6 +236,180 @@ class ClientsPage extends ConsumerWidget {
         }
       },
       child: page,
+    );
+  }
+}
+
+class _MemberManagementToolbar extends StatelessWidget {
+  const _MemberManagementToolbar({
+    required this.query,
+    required this.managementFilter,
+    required this.sort,
+    required this.shownCount,
+    required this.activeCount,
+    required this.onQueryChanged,
+    required this.onFilterChanged,
+    required this.onSortChanged,
+  });
+
+  final String query;
+  final _ManagementFilter managementFilter;
+  final _ClientSort sort;
+  final int shownCount;
+  final int activeCount;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<_ManagementFilter> onFilterChanged;
+  final ValueChanged<_ClientSort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.pagePadding,
+        AppSpacing.lg,
+        AppLayout.pagePadding,
+        AppSpacing.md,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final search = SizedBox(
+            width: constraints.maxWidth >= 900 ? 420 : constraints.maxWidth,
+            child: TextField(
+              key: const ValueKey<String>('clients-roster-search'),
+              onChanged: onQueryChanged,
+              decoration: InputDecoration(
+                hintText: l.searchClientsHint,
+                prefixIcon: const Icon(Icons.search, size: 19),
+              ),
+            ),
+          );
+          final controls = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              _ToolbarMenu<_ManagementFilter>(
+                value: managementFilter,
+                label: _managementLabel(l, managementFilter),
+                items: _ManagementFilter.values,
+                itemLabel: (value) => _managementLabel(l, value),
+                onSelected: onFilterChanged,
+              ),
+              _ToolbarMenu<_ClientSort>(
+                value: sort,
+                label: _sortLabel(l, sort),
+                items: _ClientSort.values,
+                itemLabel: (value) => _sortLabel(l, value),
+                onSelected: onSortChanged,
+              ),
+              Text(
+                l.clientsToolbarCount(shownCount, activeCount),
+                style: const TextStyle(
+                  color: AppColors.subtleForeground,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+          if (constraints.maxWidth < 900) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                search,
+                const SizedBox(height: AppSpacing.sm),
+                controls,
+              ],
+            );
+          }
+          return Row(
+            children: <Widget>[
+              search,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: controls),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _managementLabel(AppLocalizations l, _ManagementFilter value) {
+    switch (value) {
+      case _ManagementFilter.all:
+        return l.filterAll;
+      case _ManagementFilter.attention:
+        return l.clientsManagementAttention;
+      case _ManagementFilter.active:
+        return l.clientActive;
+      case _ManagementFilter.dormant:
+        return l.clientDormant;
+    }
+  }
+
+  String _sortLabel(AppLocalizations l, _ClientSort value) {
+    switch (value) {
+      case _ClientSort.priority:
+        return l.clientsSortPriority;
+      case _ClientSort.name:
+        return l.clientsSortName;
+    }
+  }
+}
+
+class _ToolbarMenu<T> extends StatelessWidget {
+  const _ToolbarMenu({
+    required this.value,
+    required this.label,
+    required this.items,
+    required this.itemLabel,
+    required this.onSelected,
+  });
+
+  final T value;
+  final String label;
+  final List<T> items;
+  final String Function(T value) itemLabel;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<T>(
+      initialValue: value,
+      onSelected: onSelected,
+      color: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.md),
+      ),
+      itemBuilder: (context) => <PopupMenuEntry<T>>[
+        for (final item in items)
+          PopupMenuItem<T>(value: item, child: Text(itemLabel(item))),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: value == items.first
+              ? AppColors.inputBackground
+              : AppColors.accentSurface,
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(width: 3),
+            const Icon(Icons.arrow_drop_down, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -230,16 +453,12 @@ class _Frame extends StatelessWidget {
   const _Frame({
     required this.subtitle,
     required this.child,
-    this.section,
     this.actions = const <Widget>[],
   });
 
   final String? subtitle;
   final Widget child;
 
-  /// Sub-tab currently open, handed to the search bar so picking another
-  /// client keeps the trainer on 식단/운동 rather than resetting.
-  final String? section;
   final List<Widget> actions;
 
   @override
@@ -248,10 +467,6 @@ class _Frame extends StatelessWidget {
     return PageScaffold(
       title: l.clientsTitle,
       subtitle: subtitle,
-      headerCenter: ClientSearchBar(
-        scope: ClientSearchScope.clients,
-        clientSection: section,
-      ),
       actions: actions,
       scrollable: false,
       contentPadding: EdgeInsets.zero,

@@ -155,7 +155,7 @@ abstract class AppLocalizations {
   /// No description provided for @navCoaching.
   ///
   /// In en, this message translates to:
-  /// **'AI coaching'**
+  /// **'Programs'**
   String get navCoaching;
 
   /// No description provided for @navReports.
@@ -659,8 +659,32 @@ abstract class AppLocalizations {
   /// No description provided for @clientsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Clients'**
+  /// **'Member management'**
   String get clientsTitle;
+
+  /// No description provided for @clientsManagementAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get clientsManagementAttention;
+
+  /// No description provided for @clientsSortPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort: priority'**
+  String get clientsSortPriority;
+
+  /// No description provided for @clientsSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort: name'**
+  String get clientsSortName;
+
+  /// No description provided for @clientsToolbarCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} members · {active} active'**
+  String clientsToolbarCount(int shown, int active);
 
   /// No description provided for @clientsPickHint.
   ///
@@ -1349,8 +1373,8 @@ abstract class AppLocalizations {
   /// No description provided for @reportsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Week of {week} · operating metrics and client reports'**
-  String reportsSubtitle(String week);
+  /// **'Summarize this week\'s changes and prepare a report to share'**
+  String get reportsSubtitle;
 
   /// No description provided for @reportsPrevWeek.
   ///
@@ -2399,14 +2423,62 @@ abstract class AppLocalizations {
   /// No description provided for @coachTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI coaching'**
+  /// **'Programs'**
   String get coachTitle;
 
   /// No description provided for @coachSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Routines built from diet and health data'**
+  /// **'Create, assign, and manage exercise programs for each member'**
   String get coachSubtitle;
+
+  /// No description provided for @coachMemberPrograms.
+  ///
+  /// In en, this message translates to:
+  /// **'Programs by member'**
+  String get coachMemberPrograms;
+
+  /// No description provided for @coachMemberSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Member summary'**
+  String get coachMemberSummary;
+
+  /// No description provided for @reportsDataInsufficient.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient data'**
+  String get reportsDataInsufficient;
+
+  /// No description provided for @reportsAnalysisAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to analyze'**
+  String get reportsAnalysisAvailable;
+
+  /// No description provided for @reportsFeedbackComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback complete'**
+  String get reportsFeedbackComplete;
+
+  /// No description provided for @reportsFeedbackPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback pending'**
+  String get reportsFeedbackPending;
+
+  /// No description provided for @reportsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get reportsThisWeek;
+
+  /// No description provided for @reportsAnalysisCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} total · {available} ready'**
+  String reportsAnalysisCount(int total, int available);
 
   /// No description provided for @coachSendFailed.
   ///

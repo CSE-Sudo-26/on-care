@@ -17,15 +17,14 @@ import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
-import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -33,18 +32,6 @@ import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-
-/// A trainer-added exercise (kept in-memory like the mock).
-class _CustomExercise {
-  const _CustomExercise({
-    required this.name,
-    required this.minutes,
-    required this.type,
-  });
-  final String name;
-  final int minutes;
-  final String type;
-}
 
 /// AI 코칭 — the workspace where a client's data becomes a routine.
 ///
@@ -71,18 +58,12 @@ class CoachingPage extends ConsumerStatefulWidget {
 class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// Selected client; null until clients load (defaults to the first).
   late String? _clientId = widget.clientId;
-  final Map<String, int> _minuteEdits = <String, int>{};
-  final Map<String, String> _nameEdits = <String, String>{};
   final Map<String, String> _typeEdits = <String, String>{};
-
-  /// AI suggestions the trainer removed for this round (in-memory,
-  /// like the other edits).
-  final Set<String> _removed = <String>{};
-  String? _editingNameId;
-  final List<_CustomExercise> _custom = <_CustomExercise>[];
   final Map<String, List<AiRoutineItem>> _generatedRecommendations =
       <String, List<AiRoutineItem>>{};
-  bool _showAddForm = false;
+  ProgramTemplate? _appliedTemplate;
+  int _templateRevision = 0;
+  int _editorRevision = 0;
   bool _showOptionsFlow = false;
   bool _sent = false;
   Timer? _sentTimer;
@@ -127,18 +108,15 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     setState(() {
       _clientId = id;
       // A different client gets a clean slate, like the mock.
-      _minuteEdits.clear();
-      _nameEdits.clear();
       _typeEdits.clear();
-      _removed.clear();
-      _editingNameId = null;
-      _custom.clear();
-      _showAddForm = false;
       _showOptionsFlow = false;
       _sent = false;
       _sending = false;
       _registered = false;
       _registerOffset = 0;
+      _appliedTemplate = null;
+      _templateRevision = 0;
+      _editorRevision = 0;
       // NOTE: _registeringClientIds is intentionally NOT cleared — writes
       // for other clients keep being tracked while the selection changes.
     });
@@ -146,50 +124,32 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     _registerTimer?.cancel();
   }
 
-  Future<void> _send(TrainerClient client, List<AiRoutineItem> items) async {
-    if (_sent || _sending) return;
-    final program = _composeProgram(items);
-    if (program.isEmpty) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    // messenger 와 같이 await 전에 잡아 둔다.
-    final AppLocalizations l = AppLocalizations.of(context);
-    final total = items
-        .where((i) => !_removed.contains(i.id))
-        .fold<int>(0, (sum, i) => sum + (_minuteEdits[i.id] ?? i.minutes));
-    final custom = _custom.fold<int>(0, (sum, c) => sum + c.minutes);
-
-    // Capture who this send is for: the trainer can switch clients while
-    // it saves, and the 전송 완료 flash + edit-reset timer must land on
-    // the starting client, not whoever is on screen when it resolves
-    // (review PR 239).
+  bool _isStillSelected(String clientId) =>
+      _clientId == null || _clientId == clientId;
+  Future<void> _assignDraft(
+    TrainerClient client,
+    ProgramEditorState draft,
+  ) async {
+    if (_sent || _sending || !_isFlatDraftSupported(draft)) return;
     final sentFor = client.id;
-    // 이 전송 시도의 멱등키. 실패 후 다시 누르면 같은 키가 나가므로 앞 시도가
-    // 이미 서버에 커밋됐어도 중복 배정되지 않는다(#581). 대상 회원이 바뀌면
-    // 다른 배정이므로 키도 새로 잡는다.
     if (_sendRequestId == null || _sendRequestFor != sentFor) {
       _sendRequestId = newClientRequestId();
       _sendRequestFor = sentFor;
     }
     setState(() => _sending = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
     try {
-      // Assigning the routine IS the delivery — the member receives it via
-      // /me/coach/routines (and, in demo mode, MockTrainerRoutineRepository
-      // succeeds silently). No chat note is sent here: routine delivery is
-      // shown in the member's routine feed, not as a chat bubble.
       await ref
           .read(trainerRoutineRepositoryProvider)
           .assignRoutine(
             client.id,
-            _summaryRoutine(items, total + custom),
+            _draftRoutine(draft),
             clientRequestId: _sendRequestId,
           );
     } catch (_) {
       if (!mounted || !_isStillSelected(sentFor)) return;
       setState(() => _sending = false);
-      // 네트워크 실패는 결과를 알 수 없지만, 멱등키를 함께 보내므로 **같은 키로
-      // 재시도해도 중복 배정이 되지 않는다**(#581). 그래서 "먼저 확인하라" 대신
-      // 재시도를 안내한다.
       messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
       return;
     }
@@ -197,112 +157,35 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     setState(() {
       _sending = false;
       _sent = true;
-      // 성공했으니 다음 전송은 새 배정이다.
       _sendRequestId = null;
       _sendRequestFor = null;
     });
     _sentTimer?.cancel();
-    // Mock: after the confirmation, reset the edits for the next round.
     _sentTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       setState(() {
         _sent = false;
-        _custom.clear();
-        _minuteEdits.clear();
-        _nameEdits.clear();
-        _typeEdits.clear();
-        _removed.clear();
-        // Close any editing UI too — otherwise an open name editor or
-        // add-form would survive the "next round" reset (PR review).
-        _editingNameId = null;
-        _showAddForm = false;
+        _editorRevision++;
       });
     });
   }
 
-  /// The composed routine (edited AI items minus removed, plus custom)
-  /// in the shared schedule API/domain shape.
-  List<ProgramItem> _composeProgram(List<AiRoutineItem> items) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return <ProgramItem>[
-      for (final item in items)
-        if (!_removed.contains(item.id))
-          ProgramItem(
-            name: _nameEdits[item.id] ?? item.name,
-            sets: 1,
-            reps: l.minutesShort(_minuteEdits[item.id] ?? item.minutes),
-            weight: '-',
-          ),
-      for (final c in _custom)
-        ProgramItem(
-          name: c.name,
-          sets: 1,
-          reps: l.minutesShort(c.minutes),
-          weight: '-',
-        ),
-    ];
-  }
-
-  /// A single summary [AssignedRoutine] for the real routine-assign API
-  /// (`RoutineOut` is one routine, not a per-exercise program): [type] and
-  /// [source] come from [summaryTypeAndSource] (extracted so the
-  /// all-custom-exercises path is directly unit-testable — review) and the
-  /// reason lists the exercise names.
-  AssignedRoutine _summaryRoutine(List<AiRoutineItem> items, int totalMinutes) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final active = items.where((i) => !_removed.contains(i.id)).toList();
-    final result = summaryTypeAndSource(
-      aiItemTypes: <String>[for (final i in active) _typeEdits[i.id] ?? i.type],
-      customItemTypes: <String>[for (final c in _custom) c.type],
-    );
-    final names = <String>[
-      for (final i in active) _nameEdits[i.id] ?? i.name,
-      for (final c in _custom) c.name,
-    ];
-    return AssignedRoutine(
-      id: '',
-      name: l.coachCustomRoutine,
-      minutes: totalMinutes,
-      type: result.type,
-      reason: names.join(', '),
-      source: result.source,
-    );
-  }
-
-  /// Writes the routine onto today's schedule (attach to the client's
-  /// 예정 session, or book a new slot) and flashes a confirmation.
-  /// Whether [clientId] is still the client on screen. `_clientId` is
-  /// null until the trainer picks someone (the first client is shown by
-  /// default), so null means "still the initial selection".
-  bool _isStillSelected(String clientId) =>
-      _clientId == null || _clientId == clientId;
-
-  Future<void> _registerToSchedule(
+  Future<void> _registerDraft(
     TrainerClient client,
-    List<AiRoutineItem> items,
+    ProgramEditorState draft,
   ) async {
-    // Block a duplicate for THIS client — either just registered, or one
-    // is already in flight for them.
-    if (_registered || _registeringClientIds.contains(client.id)) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final program = _composeProgram(items);
-    if (program.isEmpty) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      // Every exercise was removed — tell the trainer instead of a
-      // silent no-op (review PR 220).
-      messenger.showSnackBar(SnackBar(content: Text(l.coachNeedOneExercise)));
+    if (!_isFlatDraftSupported(draft) ||
+        _registered ||
+        _registeringClientIds.contains(client.id)) {
       return;
     }
+    final registeredFor = client.id;
     final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
     final now = DateTime.now();
-    // Today uses the next full hour (capped at the final 23:00 slot); a
-    // future date starts at 10:00, preserving the existing coaching UX.
     final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
     final time = '${hour.toString().padLeft(2, '0')}:00';
-    // Remember who this write is for — the trainer can switch clients
-    // while it saves, and the result must not be attributed to the new
-    // one (review PR 220).
-    final registeredFor = client.id;
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
     setState(() => _registeringClientIds.add(registeredFor));
     try {
       await ref
@@ -312,32 +195,67 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             clientId: client.id,
             clientName: client.name,
             time: time,
-            program: program,
+            program: _draftProgram(draft),
           );
     } catch (_) {
       if (!mounted) return;
-      // Clear the guard for this client so it can be retried.
-      if (_registeringClientIds.contains(registeredFor)) {
-        setState(() => _registeringClientIds.remove(registeredFor));
-      }
-      // Only surface the error if that client is still on screen.
+      setState(() => _registeringClientIds.remove(registeredFor));
       if (_isStillSelected(registeredFor)) {
-        final AppLocalizations l = AppLocalizations.of(context);
         messenger.showSnackBar(SnackBar(content: Text(l.coachScheduleFailed)));
       }
       return;
     }
     if (!mounted) return;
-    if (_registeringClientIds.contains(registeredFor)) {
-      setState(() => _registeringClientIds.remove(registeredFor));
-    }
-    // Attribute the success flash only to the client it was started for.
-    if (!_isStillSelected(registeredFor)) return;
-    setState(() => _registered = true);
+    setState(() {
+      _registeringClientIds.remove(registeredFor);
+      if (_isStillSelected(registeredFor)) _registered = true;
+    });
     _registerTimer?.cancel();
     _registerTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _registered = false);
     });
+  }
+
+  bool _isFlatDraftSupported(ProgramEditorState draft) =>
+      draft.sessions.length == 1 && draft.sessions.single.exercises.isNotEmpty;
+
+  List<ProgramItem> _draftProgram(ProgramEditorState draft) => <ProgramItem>[
+    for (final exercise in draft.sessions.single.exercises)
+      ProgramItem(
+        name: exercise.name,
+        sets: int.tryParse(exercise.sets) ?? 1,
+        reps: exercise.duration.trim().isNotEmpty
+            ? '${exercise.duration}분'
+            : exercise.reps,
+        weight: exercise.weight.trim().isEmpty ? '-' : exercise.weight,
+      ),
+  ];
+
+  AssignedRoutine _draftRoutine(ProgramEditorState draft) {
+    final exercises = draft.sessions.single.exercises;
+    final summary = summaryTypeAndSource(
+      aiItemTypes: <String>[
+        for (final exercise in exercises)
+          if (exercise.source == 'ai') exercise.type,
+      ],
+      customItemTypes: <String>[
+        for (final exercise in exercises)
+          if (exercise.source != 'ai') exercise.type,
+      ],
+    );
+    final minutes = exercises.fold<int>(
+      0,
+      (total, exercise) =>
+          total + (int.tryParse(exercise.duration.trim()) ?? 0),
+    );
+    return AssignedRoutine(
+      id: '',
+      name: draft.name,
+      minutes: minutes,
+      type: summary.type,
+      reason: exercises.map((exercise) => exercise.name).join(', '),
+      source: summary.source,
+    );
   }
 
   @override
@@ -348,10 +266,6 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return PageScaffold(
       title: l.coachTitle,
       subtitle: l.coachSubtitle,
-      // The workspace's own picker is a horizontal strip of everyone;
-      // search is how a trainer with a long roster reaches the client
-      // they already have in mind. The rows show what was last sent.
-      headerCenter: const ClientSearchBar(scope: ClientSearchScope.coaching),
       scrollable: false,
       contentPadding: EdgeInsets.zero,
       child: clientsAsync.when(
@@ -398,41 +312,63 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                   ],
                 );
               }
-              // Wide: client/diet overview docks left, the routine
-              // editor gets its own column.
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              return ListView(
+                key: const ValueKey<String>('coaching-program-page-scroll'),
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.pagePadding,
+                  AppSpacing.lg,
+                  AppLayout.pagePadding,
+                  AppSpacing.xxl,
+                ),
                 children: <Widget>[
-                  SizedBox(
-                    width: AppLayout.splitListWidth,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppLayout.pagePadding,
-                        AppSpacing.lg,
-                        AppLayout.pagePadding,
-                        AppSpacing.xxl,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 260,
+                        child: _MemberProgramList(
+                          clients: clients,
+                          selectedId: selected.id,
+                          onSelect: _selectClient,
+                        ),
                       ),
-                      children: <Widget>[
-                        ..._contextChildren(l, clients, selected),
-                        const SizedBox(height: AppSpacing.lg),
-                        ..._libraryChildren(selected),
-                      ],
-                    ),
-                  ),
-                  const VerticalDivider(
-                    width: 1,
-                    color: AppColors.borderStrong,
-                  ),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppLayout.pagePadding,
-                        AppSpacing.lg,
-                        AppLayout.pagePadding,
-                        AppSpacing.xxl,
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            ..._editorChildren(selected, showAssistant: false),
+                            const SizedBox(height: AppSpacing.lg),
+                            _TemplateCard(
+                              onApply: (template) => setState(() {
+                                _appliedTemplate = template;
+                                _templateRevision++;
+                                _registered = false;
+                                _sent = false;
+                              }),
+                            ),
+                          ],
+                        ),
                       ),
-                      children: _editorChildren(selected),
-                    ),
+                      const SizedBox(width: AppSpacing.lg),
+                      SizedBox(
+                        width: 260,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _ProgramMemberSummary(client: selected),
+                            const SizedBox(height: AppSpacing.lg),
+                            _DietSummaryCard(client: selected),
+                            const SizedBox(height: AppSpacing.lg),
+                            _AiAssistantPrompt(
+                              clientName: selected.name,
+                              onTap: () =>
+                                  setState(() => _showOptionsFlow = true),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -486,18 +422,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return <Widget>[
       _TemplateCard(
         onApply: (template) => setState(() {
-          // Templates append to whatever is already composed rather than
-          // replacing it — the trainer usually wants the AI's base plus a
-          // known block, not one or the other.
-          for (final exercise in template.exercises) {
-            _custom.add(
-              _CustomExercise(
-                name: exercise.name,
-                minutes: exercise.minutes,
-                type: exercise.type,
-              ),
-            );
-          }
+          _appliedTemplate = template;
+          _templateRevision++;
           _registered = false;
           _sent = false;
         }),
@@ -508,7 +434,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   }
 
   /// The routine editor column (right column on wide).
-  List<Widget> _editorChildren(TrainerClient client) {
+  List<Widget> _editorChildren(
+    TrainerClient client, {
+    bool showAssistant = true,
+  }) {
     final AppLocalizations l = AppLocalizations.of(context);
     final routineAsync = ref.watch(
       aiRoutineProvider((id: client.id, name: client.name)),
@@ -573,207 +502,87 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  if (showAssistant) ...<Widget>[
+                    _AiAssistantPrompt(
+                      clientName: client.name,
+                      onTap: () => setState(() => _showOptionsFlow = true),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   ProgramEditorWorkspace(
-                    key: ValueKey<String>('program-editor-${client.id}'),
+                    key: ValueKey<String>(
+                      'program-editor-${client.id}-$_editorRevision',
+                    ),
                     clientGoal: client.goal,
                     aiSuggestions:
                         _generatedRecommendations[client.id] ?? items,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          '기존 루틴 배정',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '현재 backend contract로 실제 전송 가능',
-                        style: TextStyle(
-                          color: AppColors.success,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _AiAssistantPrompt(
-                    clientName: client.name,
-                    onTap: () => setState(() => _showOptionsFlow = true),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  for (final item
-                      in _generatedRecommendations[client.id] ?? items)
-                    if (!_removed.contains(item.id)) ...<Widget>[
-                      _RoutineCard(
-                        name: _nameEdits[item.id] ?? item.name,
-                        minutes: _minuteEdits[item.id] ?? item.minutes,
-                        type: item.type,
-                        reason: item.reason,
-                        isCustom: false,
-                        editingName: _editingNameId == item.id,
-                        onNameTap: () =>
-                            setState(() => _editingNameId = item.id),
-                        onNameChanged: (v) => _nameEdits[item.id] = v,
-                        onNameDone: () => setState(() => _editingNameId = null),
-                        onMinutes: (m) =>
-                            setState(() => _minuteEdits[item.id] = m),
-                        onType: (type) =>
-                            setState(() => _typeEdits[item.id] = type),
-                        // AI suggestions can be dropped from this round too.
-                        onDelete: () => setState(() {
-                          _removed.add(item.id);
-                          if (_editingNameId == item.id) _editingNameId = null;
-                        }),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                  for (var i = 0; i < _custom.length; i++) ...<Widget>[
-                    _RoutineCard(
-                      name: _custom[i].name,
-                      minutes: _custom[i].minutes,
-                      type: _custom[i].type,
-                      reason: l.coachTrainerAdded,
-                      isCustom: true,
-                      editingName: _editingNameId == 'custom-$i',
-                      onNameTap: () =>
-                          setState(() => _editingNameId = 'custom-$i'),
-                      onNameChanged: (name) {
-                        final current = _custom[i];
-                        _custom[i] = _CustomExercise(
-                          name: name,
-                          minutes: current.minutes,
-                          type: current.type,
-                        );
-                      },
-                      onNameDone: () => setState(() => _editingNameId = null),
-                      onMinutes: (minutes) => setState(() {
-                        final current = _custom[i];
-                        _custom[i] = _CustomExercise(
-                          name: current.name,
-                          minutes: minutes,
-                          type: current.type,
-                        );
-                      }),
-                      onType: (type) => setState(() {
-                        final current = _custom[i];
-                        _custom[i] = _CustomExercise(
-                          name: current.name,
-                          minutes: current.minutes,
-                          type: type,
-                        );
-                      }),
-                      onDelete: () => setState(() => _custom.removeAt(i)),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
-                  const SizedBox(height: AppSpacing.xs),
-                  _showAddForm
-                      ? _AddExerciseForm(
-                          onCancel: () => setState(() => _showAddForm = false),
-                          onAdd: (name, minutes, type) => setState(() {
-                            _custom.add(
-                              _CustomExercise(
-                                name: name,
-                                minutes: minutes,
-                                type: type,
-                              ),
-                            );
-                            _showAddForm = false;
-                          }),
-                        )
-                      : _AddExerciseButton(
-                          onTap: () => setState(() => _showAddForm = true),
-                        ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Two destinations: homework to the client's app (mock),
-                  // or today's PT session program (real drift write that the
-                  // 스케줄 탭 picks up live).
-                  _SendButton(
-                    clientName: client.name,
-                    // Disabled while routine delivery is in flight so a
-                    // second tap cannot create a duplicate assignment.
-                    sent: _sent || _sending,
-                    onSend: () => _send(
-                      client,
-                      _generatedRecommendations[client.id] ?? items,
-                    ),
+                    template: _appliedTemplate,
+                    templateRevision: _templateRevision,
+                    assigning: _sending || _sent,
+                    registering:
+                        _registered ||
+                        _registeringClientIds.contains(client.id),
+                    registerOffset: _registerOffset,
+                    onRegisterOffsetChanged: (offset) => setState(() {
+                      _registerOffset = offset;
+                      _registered = false;
+                    }),
+                    onAssignFlat: (draft) => _assignDraft(client, draft),
+                    onRegisterFlat: (draft) => _registerDraft(client, draft),
                   ),
                   if (_sent)
                     Padding(
-                      padding: EdgeInsets.only(top: AppSpacing.sm),
-                      child: Text(
-                        l.coachClientNotified,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success,
-                        ),
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
+                      child: Column(
+                        children: <Widget>[
+                          Text(
+                            l.coachSentToClient(client.name),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          Text(
+                            l.coachClientNotified,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  const SizedBox(height: AppSpacing.sm),
-                  // Which day the routine lands on (오늘 … +6일).
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: <Widget>[
-                        for (var i = 0; i < 7; i++) ...<Widget>[
-                          _DateChip(
-                            offset: i,
-                            selected: _registerOffset == i,
-                            onTap: () => setState(() {
-                              _registerOffset = i;
-                              _registered = false;
-                            }),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _RegisterButton(
-                    // Disabled just after registering, or while THIS client's
-                    // registration is in flight, so a second tap can't queue a
-                    // duplicate session (review PR 220).
-                    registered:
-                        _registered ||
-                        _registeringClientIds.contains(client.id),
-                    icon: _registered
-                        ? Icons.check_rounded
-                        : Icons.calendar_today_outlined,
-                    label: _registered
-                        ? l.coachRegisteredOn(
-                            _dateChipLabel(l, _registerOffset),
-                          )
-                        : l.coachRegisterOn(_dateChipLabel(l, _registerOffset)),
-                    onTap: () => _registerToSchedule(
-                      client,
-                      _generatedRecommendations[client.id] ?? items,
-                    ),
-                  ),
                   if (_registered)
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.sm),
-                      child: Text(
-                        // Match the button's day label — 오늘/내일/'M/D' — so a
-                        // future-day registration isn't described as 오늘
-                        // (CodeRabbit review).
-                        l.coachFindInSchedule(
-                          _dateChipLabel(l, _registerOffset),
-                        ),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success,
-                        ),
+                      child: Column(
+                        children: <Widget>[
+                          Text(
+                            l.coachRegisteredOn(
+                              _dateChipLabel(l, _registerOffset),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          Text(
+                            l.coachFindInSchedule(
+                              _dateChipLabel(l, _registerOffset),
+                            ),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -789,6 +598,209 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         fontSize: 12.5,
         fontWeight: FontWeight.w600,
         color: AppColors.subtleForeground,
+      ),
+    );
+  }
+}
+
+class _MemberProgramList extends StatefulWidget {
+  const _MemberProgramList({
+    required this.clients,
+    required this.selectedId,
+    required this.onSelect,
+  });
+
+  final List<TrainerClient> clients;
+  final String selectedId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_MemberProgramList> createState() => _MemberProgramListState();
+}
+
+class _MemberProgramListState extends State<_MemberProgramList> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final query = _query.trim().toLowerCase();
+    final clients = widget.clients
+        .where((client) => client.name.toLowerCase().contains(query))
+        .toList(growable: false);
+    return SectionCard(
+      title: l.coachMemberPrograms,
+      dense: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          TextField(
+            key: const ValueKey<String>('program-member-search'),
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: l.searchClientsHint,
+              prefixIcon: const Icon(Icons.search, size: 18),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final client in clients)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Material(
+                color: client.id == widget.selectedId
+                    ? AppColors.accentSurface
+                    : Colors.transparent,
+                borderRadius: const BorderRadius.all(AppRadius.md),
+                child: InkWell(
+                  onTap: () => widget.onSelect(client.id),
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          client.name,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          client.lastRoutine == '-'
+                              ? client.goal
+                              : client.lastRoutine,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.mutedForeground,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          recordedCompletionMean(client) == null
+                              ? l.reportsDataInsufficient
+                              : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramMemberSummary extends StatelessWidget {
+  const _ProgramMemberSummary({required this.client});
+
+  final TrainerClient client;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final alerts = healthAlertsFor(client);
+    final completion = recordedCompletionMean(client)?.round();
+    return SectionCard(
+      title: l.coachMemberSummary,
+      dense: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              ClientAvatar(label: client.avatar, size: 42),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      client.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      client.goal,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.mutedForeground,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SummaryLine(
+            label: l.dashAttentionClients,
+            value: alerts.isEmpty ? '-' : alerts.first.label(l),
+            warning: alerts.isNotEmpty,
+          ),
+          _SummaryLine(label: l.aiGoal, value: client.goal),
+          _SummaryLine(
+            label: l.reportsCompletionAvg,
+            value: completion == null ? '-' : '$completion%',
+          ),
+          _SummaryLine(label: l.aiRecentRoutine, value: client.lastRoutine),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({
+    required this.label,
+    required this.value,
+    this.warning = false,
+  });
+
+  final String label;
+  final String value;
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.subtleForeground,
+              fontSize: 10.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: warning ? AppColors.overTarget : AppColors.foreground,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1005,417 +1017,6 @@ class _AiAssistantPrompt extends StatelessWidget {
 }
 
 /// One routine card — AI and trainer-added items share the same editor.
-class _RoutineCard extends StatelessWidget {
-  const _RoutineCard({
-    required this.name,
-    required this.minutes,
-    required this.type,
-    required this.reason,
-    required this.isCustom,
-    this.editingName = false,
-    this.onNameTap,
-    this.onNameChanged,
-    this.onNameDone,
-    this.onMinutes,
-    this.onType,
-    this.onDelete,
-  });
-
-  final String name;
-  final int minutes;
-  final String type;
-  final String reason;
-  final bool isCustom;
-  final bool editingName;
-  final VoidCallback? onNameTap;
-  final ValueChanged<String>? onNameChanged;
-  final VoidCallback? onNameDone;
-  final ValueChanged<int>? onMinutes;
-  final ValueChanged<String>? onType;
-  final VoidCallback? onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    const accent = AppColors.accent;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (onType == null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: const BorderRadius.all(AppRadius.pill),
-                  ),
-                  child: Text(
-                    type,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: accent,
-                    ),
-                  ),
-                ),
-              if (onType == null) const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: editingName
-                    ? _NameEditField(
-                        initial: name,
-                        onChanged: onNameChanged,
-                        onDone: onNameDone,
-                      )
-                    : GestureDetector(
-                        onTap: onNameTap,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.foreground,
-                              ),
-                            ),
-                            if (!isCustom)
-                              Text(
-                                l.coachTapToEdit,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.disabledForeground,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-              ),
-              if (onDelete != null)
-                GestureDetector(
-                  onTap: onDelete,
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(
-                      Icons.close,
-                      size: 14,
-                      color: AppColors.subtleForeground,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Padding(
-                padding: EdgeInsets.only(top: 1),
-                child: Icon(
-                  Icons.lightbulb_outline,
-                  size: 12,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  reason,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.subtleForeground,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (onType != null) ...<Widget>[
-            RoutineCategoryChips(
-              keyPrefix: 'routine-card-$name-category',
-              value: type,
-              onChanged: onType!,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-          if (onMinutes != null)
-            RoutineMinutesSlider(
-              key: ValueKey<String>('routine-minutes-$name'),
-              minutes: minutes,
-              onChanged: onMinutes!,
-            )
-          else
-            Text(
-              l.minutesShort(minutes),
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.accent,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Inline name editor with a properly owned controller (creating a
-/// TextEditingController inside build leaks it and resets state on
-/// rebuild — /code-review finding).
-class _NameEditField extends StatefulWidget {
-  const _NameEditField({
-    required this.initial,
-    required this.onChanged,
-    required this.onDone,
-  });
-
-  final String initial;
-  final ValueChanged<String>? onChanged;
-  final VoidCallback? onDone;
-
-  @override
-  State<_NameEditField> createState() => _NameEditFieldState();
-}
-
-class _NameEditFieldState extends State<_NameEditField> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.initial,
-  )..selection = TextSelection.collapsed(offset: widget.initial.length);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      autofocus: true,
-      controller: _controller,
-      onChanged: widget.onChanged,
-      onSubmitted: (_) => widget.onDone?.call(),
-      onTapOutside: (_) => widget.onDone?.call(),
-      style: const TextStyle(
-        fontSize: 13.5,
-        fontWeight: FontWeight.w700,
-        color: AppColors.foreground,
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: AppColors.accentSurface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 6,
-        ),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(AppRadius.sm),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-}
-
-class _AddExerciseButton extends StatelessWidget {
-  const _AddExerciseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Material(
-      color: AppColors.accentSurface,
-      borderRadius: const BorderRadius.all(AppRadius.card),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        child: Container(
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
-          ),
-          child: Text(
-            l.coachAddExerciseManually,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.accent,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The "운동 추가" form — member-app style type chips and duration slider.
-class _AddExerciseForm extends StatefulWidget {
-  const _AddExerciseForm({required this.onCancel, required this.onAdd});
-
-  final VoidCallback onCancel;
-  final void Function(String name, int minutes, String type) onAdd;
-
-  @override
-  State<_AddExerciseForm> createState() => _AddExerciseFormState();
-}
-
-class _AddExerciseFormState extends State<_AddExerciseForm> {
-  final TextEditingController _name = TextEditingController();
-  String _type = '근력';
-  int _minutes = 30;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            l.progAddExercise,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.foreground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const ValueKey<String>('custom-exercise-name'),
-            controller: _name,
-            decoration: InputDecoration(
-              hintText: l.coachExerciseNameHint,
-              hintStyle: const TextStyle(color: AppColors.mutedForeground),
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.background,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.all(AppRadius.md),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          RoutineCategoryChips(
-            keyPrefix: 'custom-exercise-category',
-            value: _type,
-            onChanged: (type) => setState(() => _type = type),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          RoutineMinutesSlider(
-            key: const ValueKey<String>('custom-exercise-minutes'),
-            minutes: _minutes,
-            onChanged: (minutes) => setState(() {
-              _minutes = minutes;
-            }),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _FormButton(
-                  label: l.actionCancel,
-                  background: AppColors.inputBackground,
-                  foreground: AppColors.subtleForeground,
-                  onTap: widget.onCancel,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _FormButton(
-                  label: l.schedAddAction,
-                  background: AppColors.accent,
-                  foreground: AppColors.accentForeground,
-                  onTap: () {
-                    final name = _name.text.trim();
-                    if (name.isEmpty) return;
-                    widget.onAdd(name, _minutes, _type);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FormButton extends StatelessWidget {
-  const _FormButton({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: background,
-      borderRadius: const BorderRadius.all(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: Container(
-          height: 38,
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: foreground,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Label for a register-day offset (오늘/내일/M/D).
 String _dateChipLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
@@ -1424,143 +1025,6 @@ String _dateChipLabel(AppLocalizations l, int offset) {
 }
 
 /// One selectable register-day chip.
-class _DateChip extends StatelessWidget {
-  const _DateChip({
-    required this.offset,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final int offset;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: 4,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.inputBackground,
-          borderRadius: const BorderRadius.all(AppRadius.pill),
-        ),
-        child: Text(
-          _dateChipLabel(AppLocalizations.of(context), offset),
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: selected
-                ? AppColors.primaryForeground
-                : AppColors.subtleForeground,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Secondary action — registers the routine as the chosen day's PT
-/// session program on the 스케줄 tab.
-class _RegisterButton extends StatelessWidget {
-  const _RegisterButton({
-    required this.registered,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final bool registered;
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = registered ? AppColors.success : AppColors.accent;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: const BorderRadius.all(AppRadius.card),
-      child: InkWell(
-        onTap: registered ? null : onTap,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        child: Container(
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.all(AppRadius.card),
-            border: Border.all(color: color.withValues(alpha: 0.5)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(icon, size: 15, color: color),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SendButton extends StatelessWidget {
-  const _SendButton({
-    required this.clientName,
-    required this.sent,
-    required this.onSend,
-  });
-
-  final String clientName;
-  final bool sent;
-  final VoidCallback onSend;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Material(
-      color: sent ? AppColors.success : AppColors.primary,
-      borderRadius: const BorderRadius.all(AppRadius.card),
-      child: InkWell(
-        onTap: sent ? null : onSend,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        child: Container(
-          height: 50,
-          alignment: Alignment.center,
-          child: IconLabel(
-            icon: sent ? Icons.check_circle : Icons.send_outlined,
-            label: sent
-                ? l.coachSentToClient(clientName)
-                : l.coachReviewAndSend(clientName),
-            color: AppColors.primaryForeground,
-            fontSize: 15,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 프로그램 템플릿 — the trainer's own reusable blocks, one tap away.
-///
-/// The AI covers "what does this client's data suggest?"; templates
-/// cover "what do I always do for this kind of client?". Applying one
-/// appends its exercises to the composed routine.
 class _TemplateCard extends StatelessWidget {
   const _TemplateCard({required this.onApply});
 
@@ -1573,67 +1037,75 @@ class _TemplateCard extends StatelessWidget {
       title: l.coachTemplates,
       icon: Icons.dashboard_customize_outlined,
       dense: true,
-      child: Column(
-        children: <Widget>[
-          for (final template in programTemplates)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Material(
-                color: AppColors.inputBackground,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                child: InkWell(
-                  onTap: () => onApply(template),
-                  borderRadius: const BorderRadius.all(AppRadius.md),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                template.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.foreground,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 680 ? 3 : 1;
+          final width =
+              (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+          return Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: <Widget>[
+              for (final template in programTemplates)
+                SizedBox(
+                  width: width,
+                  child: Material(
+                    color: AppColors.inputBackground,
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: InkWell(
+                      onTap: () => onApply(template),
+                      borderRadius: const BorderRadius.all(AppRadius.md),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: Text(
+                                    template.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.foreground,
+                                    ),
+                                  ),
                                 ),
+                                const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 17,
+                                  color: AppColors.primary,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              l.coachTemplateSummaryWithGoal(
+                                template.goal,
+                                template.exercises.length,
+                                template.totalMinutes,
                               ),
-                              Text(
-                                l.coachTemplateSummaryWithGoal(
-                                  template.goal,
-                                  template.exercises.length,
-                                  template.totalMinutes,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.subtleForeground,
-                                ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.subtleForeground,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Icon(
-                          Icons.add_circle_outline,
-                          size: 17,
-                          color: AppColors.primary,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
