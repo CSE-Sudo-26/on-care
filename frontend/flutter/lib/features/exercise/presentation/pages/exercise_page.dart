@@ -247,7 +247,10 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
           ),
           const SizedBox(height: 8),
           if (!atToday)
-            const _ExerciseOtherDay()
+            // 고른 날짜가 이번 주면 이미 받아 둔 주간 데이터에서, 지난 주면 그
+            // 주를 따로 받아 그날의 기록을 그린다. 예전에는 데이터를 보지도 않고
+            // "기록이 없어요"만 그려, 시드가 있는 날조차 비어 보였다(#671).
+            _ExerciseSelectedDay(thisWeek: week, date: _selected)
           else ...<Widget>[
             // 1) 이번 주 운동 요약
             Padding(
@@ -476,10 +479,208 @@ class _Arrow extends StatelessWidget {
   }
 }
 
-/// Shown when a non-today date is selected in the 운동 주간 달력 — mirrors the
-/// 식단 탭's empty state (same copy, 식단→운동).
-class _ExerciseOtherDay extends StatelessWidget {
-  const _ExerciseOtherDay();
+/// 운동 주간 달력에서 오늘이 아닌 날짜를 골랐을 때 그 날의 기록.
+///
+/// 고른 날짜가 이번 주면 이미 받아 둔 [thisWeek] 에서 그대로 읽고(추가 요청
+/// 없음), 지난 주면 그 주를 따로 받는다. 정말 기록이 없는 날에만 빈 문구를
+/// 남긴다.
+class _ExerciseSelectedDay extends ConsumerWidget {
+  const _ExerciseSelectedDay({required this.thisWeek, required this.date});
+
+  final ExerciseWeek thisWeek;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DateTime weekStart = mondayOfWeek(date);
+    final DateTime thisMonday = mondayOfWeek(DateTime.now());
+    if (weekStart == thisMonday) {
+      return _ExerciseDayDetail(week: thisWeek, date: date);
+    }
+    return ref
+        .watch(exercisePastWeekProvider(weekStart))
+        .when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            ),
+          ),
+          error: (Object e, StackTrace _) => const _ExerciseDayEmpty(),
+          data: (ExerciseWeek week) =>
+              _ExerciseDayDetail(week: week, date: date),
+        );
+  }
+}
+
+/// 하루치 운동 요약 — 시간·소모 칼로리·유형별 시간과 그날의 세션 목록.
+class _ExerciseDayDetail extends StatelessWidget {
+  const _ExerciseDayDetail({required this.week, required this.date});
+
+  final ExerciseWeek week;
+  final DateTime date;
+
+  double _at(List<double> series, int i) =>
+      i >= 0 && i < series.length ? series[i] : 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final int i = date.weekday - 1; // 0 = 월
+    final double minutes = _at(week.dailyMinutes, i);
+    if (minutes <= 0) return const _ExerciseDayEmpty();
+
+    final double calories = _at(week.dailyCalories, i);
+    final String dayLabel = i < week.dayLabels.length ? week.dayLabels[i] : '';
+    final List<ExerciseSession> sessions = week.sessions
+        .where((ExerciseSession s) => s.dayLabel == dayLabel)
+        .toList();
+    final List<(String, double)> breakdown = <(String, double)>[
+      (l.exTypeCardio, _at(week.cardioMinutes, i)),
+      (l.exTypeStrength, _at(week.strengthMinutes, i)),
+      (l.exTypeStretching, _at(week.stretchingMinutes, i)),
+    ].where(((String, double) e) => e.$2 > 0).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            '${date.month}월 ${date.day}일 ${l.pageExerciseTitle}',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _StatCard(
+                  label: l.exStatTime,
+                  value: '${minutes.round()}',
+                  unit: l.unitMinutes,
+                  accent: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StatCard(
+                  label: l.exStatCalories,
+                  value: NumberFormat('#,###').format(calories.round()),
+                  unit: l.unitKcal,
+                  accent: true,
+                ),
+              ),
+            ],
+          ),
+          if (breakdown.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: kCardShadow,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (final (String label, double m) in breakdown)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: <Widget>[
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${m.round()}${l.unitMinutes}',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (sessions.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            for (final ExerciseSession s in sessions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: FigmaColors.softBlue,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          _exerciseTypeLabel(l, s.type),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: FigmaColors.ink,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${s.minutes}${l.unitMinutes} · '
+                        '${NumberFormat('#,###').format(s.calories)} ${l.unitKcal}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 운동 유형 → 화면 라벨. 유형별 분해 카드와 같은 문구를 쓴다.
+String _exerciseTypeLabel(AppLocalizations l, ExerciseType type) =>
+    switch (type) {
+      ExerciseType.cardio || ExerciseType.walking => l.exTypeCardio,
+      ExerciseType.strength => l.exTypeStrength,
+      ExerciseType.stretching || ExerciseType.yoga => l.exTypeStretching,
+      ExerciseType.other => l.exTypeCardio,
+    };
+
+/// 정말로 기록이 없는 날 — 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 낀다.
+class _ExerciseDayEmpty extends StatelessWidget {
+  const _ExerciseDayEmpty();
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +689,6 @@ class _ExerciseOtherDay extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Center(
         child: Text(
-          // 식단 탭과 같은 문구를 공유하고 섹션 이름만 바꿔 끼운다.
           l.otherDateEmpty(l.pageExerciseTitle),
           textAlign: TextAlign.center,
           style: const TextStyle(

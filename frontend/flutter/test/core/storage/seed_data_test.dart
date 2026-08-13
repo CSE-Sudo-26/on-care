@@ -45,7 +45,15 @@ void main() {
       expect(diet.where((r) => r.date == today).length, 3);
       expect(diet.where((r) => r.date == _daysAgoString(1)).length, 3);
       expect(diet.where((r) => r.date == _daysAgoString(2)).length, 3);
-      expect(diet.where((r) => r.date == _daysAgoString(3)), isEmpty);
+      // 큐레이션 사흘 앞으로도 기록이 이어진다 — 날짜를 옮기면 대부분
+      // 비어 있던 데모 문제(#671).
+      expect(diet.where((r) => r.date == _daysAgoString(3)), isNotEmpty);
+      expect(diet.where((r) => r.date == _daysAgoString(30)), isNotEmpty);
+      expect(
+        diet.where((r) => r.date == _daysAgoString(kDemoDietHistoryDays + 5)),
+        isEmpty,
+        reason: '히스토리는 한 달치까지만 채운다',
+      );
       final salmonDinner = diet.firstWhere(
         (row) => row.id == 'seed-diet-two-days-ago-dinner',
       );
@@ -75,7 +83,21 @@ void main() {
             .toSet(),
         <String>{'breakfast', 'lunch', 'snack'},
       );
-      expect(diet.where((row) => row.mealType == 'snack').length, 1);
+      // 큐레이션 사흘 중 간식은 오늘 하루뿐이다(과거 히스토리는 별도).
+      expect(
+        diet
+            .where(
+              (row) =>
+                  row.mealType == 'snack' &&
+                  <String>[
+                    today,
+                    _daysAgoString(1),
+                    _daysAgoString(2),
+                  ].contains(row.date),
+            )
+            .length,
+        1,
+      );
       // Schedule seeds a couple of events on today (for the dashboard's
       // "오늘의 일정") plus a few spread across the current month (for the
       // calendar). All stay within the current month so the date-slide
@@ -98,7 +120,65 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v14'), today);
+      expect(await db.readValue('seeded_v15'), today);
+    });
+
+    test('과거 식단은 날짜마다 값이 달라 추이가 직선이 되지 않는다', () async {
+      await seedIfEmpty(db);
+      final diet = await db.select(db.dietEntries).get();
+
+      final Map<String, int> caloriesByDate = <String, int>{};
+      for (int offset = 3; offset < 3 + kDemoDietHistoryDays; offset++) {
+        final String date = _daysAgoString(offset);
+        final int kcal = diet
+            .where((r) => r.date == date)
+            .fold<int>(0, (int sum, r) => sum + r.totalCalories);
+        if (kcal > 0) caloriesByDate[date] = kcal;
+      }
+
+      expect(caloriesByDate.length, greaterThan(20));
+      expect(
+        caloriesByDate.values.toSet().length,
+        greaterThan(3),
+        reason: '모든 날이 같은 칼로리면 주간·월간 추이가 직선이 된다',
+      );
+      // 기록이 통째로 없는 날도 남겨 둔다 — 빈 화면이 맞게 동작하는지 데모에서
+      // 볼 수 있어야 한다.
+      expect(
+        caloriesByDate.length,
+        lessThan(kDemoDietHistoryDays),
+        reason: '기록 없는 날이 최소 하나는 남아야 한다',
+      );
+    });
+
+    test('지난 주 운동 세션도 시드된다', () async {
+      await seedIfEmpty(db);
+      final exercise = await db.select(db.exerciseSessions).get();
+
+      final DateTime now = DateTime.now();
+      final DateTime thisMonday = DateTime(
+        now.year,
+        now.month,
+        now.day - (now.weekday - 1),
+      );
+      final Set<String> weekStarts = exercise
+          .map((r) => r.weekStart)
+          .toSet();
+
+      for (int weeksAgo = 0; weeksAgo <= kDemoExerciseHistoryWeeks; weeksAgo++) {
+        final DateTime monday = thisMonday.subtract(
+          Duration(days: 7 * weeksAgo),
+        );
+        final String key =
+            '${monday.year.toString().padLeft(4, '0')}-'
+            '${monday.month.toString().padLeft(2, '0')}-'
+            '${monday.day.toString().padLeft(2, '0')}';
+        expect(
+          weekStarts,
+          contains(key),
+          reason: '$weeksAgo주 전 운동 기록이 있어야 한다',
+        );
+      }
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
@@ -164,7 +244,7 @@ void main() {
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v14', '2020-01-01');
+      await db.putValue('seeded_v15', '2020-01-01');
 
       await seedIfEmpty(db);
 
@@ -172,7 +252,7 @@ void main() {
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
       expect(diet.where((r) => r.date == today).length, 3);
-      expect(await db.readValue('seeded_v14'), today);
+      expect(await db.readValue('seeded_v15'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -199,7 +279,7 @@ void main() {
 
       // Legacy flag cleared, current flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v14'), _todayString());
+      expect(await db.readValue('seeded_v15'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -229,7 +309,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v14', '2020-01-01');
+      await db.putValue('seeded_v15', '2020-01-01');
       await seedIfEmpty(db);
 
       final diet = await db.select(db.dietEntries).get();

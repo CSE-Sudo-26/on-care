@@ -35,6 +35,22 @@ final exerciseWeekProvider = FutureProvider<ExerciseWeek>((ref) {
   return ref.watch(exerciseRepositoryProvider).fetchThisWeek();
 }, name: 'exerciseWeek');
 
+/// 그 주의 월요일. 주 단위 조회의 키다.
+DateTime mondayOfWeek(DateTime date) {
+  final DateTime d = DateTime(date.year, date.month, date.day);
+  return d.subtract(Duration(days: d.weekday - 1));
+}
+
+/// 지난 주 운동 기록. 이번 주는 [exerciseWeekViewProvider] 가 담당하므로 여기서
+/// 다루지 않는다 — 오늘 체크한 AI 추천 운동이 더해진 값과 두 벌이 되면 같은 주가
+/// 화면마다 다른 수치를 갖게 된다(#671).
+final exercisePastWeekProvider = FutureProvider.family<ExerciseWeek, DateTime>((
+  ref,
+  DateTime weekStart,
+) {
+  return ref.watch(exerciseRepositoryProvider).fetchWeek(weekStart);
+}, name: 'exercisePastWeek');
+
 /// Today's activity delta for one AI recommendation. Shared so the exercise
 /// tab's check and the home "주간 추이" chart read the same numbers.
 class AiRoutineDelta {

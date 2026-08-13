@@ -158,3 +158,72 @@ def test_update_session_rejects_bad_type(client):
         headers=h,
     )
     assert r.status_code == 400
+
+
+def test_week_start_query_returns_that_week(client):
+    """`week_start` 로 지난 주를 조회한다 (#671).
+
+    앱이 지난 날짜를 고르면 그 주를 받아 하루치를 그린다. 파라미터가 없던 때는
+    조회가 이번 주 하나뿐이라 지난 기록을 볼 방법이 없었다.
+    """
+    from datetime import date, timedelta
+
+    from app.services.exercise_service import monday_of_this_week_str
+
+    h = _login(client)
+    client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 30, "calories": 200, "day_label": "월"},
+        headers=h,
+    )
+
+    this_monday = date.fromisoformat(monday_of_this_week_str())
+    last_monday = this_monday - timedelta(days=7)
+
+    # 지난 주에는 기록이 없다 — 이번 주 값이 새어 나오면 안 된다.
+    past = client.get(
+        "/v1/exercise/weeks/current",
+        params={"week_start": last_monday.isoformat()},
+        headers=h,
+    )
+    assert past.status_code == 200, past.text
+    assert past.json()["total_minutes"] == 0
+
+    # 이번 주를 명시해도 파라미터 없이 부른 것과 같다.
+    current = client.get(
+        "/v1/exercise/weeks/current",
+        params={"week_start": this_monday.isoformat()},
+        headers=h,
+    )
+    assert current.json()["total_minutes"] == 30
+
+
+def test_week_start_accepts_any_day_of_that_week(client):
+    """월요일이 아닌 날짜를 줘도 그 날이 속한 주로 맞춘다."""
+    from datetime import date, timedelta
+
+    from app.services.exercise_service import monday_of_this_week_str
+
+    h = _login(client)
+    client.post(
+        "/v1/exercise/sessions",
+        json={"type": "cardio", "minutes": 25, "calories": 150, "day_label": "월"},
+        headers=h,
+    )
+
+    thursday = date.fromisoformat(monday_of_this_week_str()) + timedelta(days=3)
+    r = client.get(
+        "/v1/exercise/weeks/current",
+        params={"week_start": thursday.isoformat()},
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["total_minutes"] == 25
+
+
+def test_week_start_rejects_malformed_date(client):
+    h = _login(client)
+    r = client.get(
+        "/v1/exercise/weeks/current", params={"week_start": "2026-13-99"}, headers=h
+    )
+    assert r.status_code == 422

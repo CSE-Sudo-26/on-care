@@ -204,4 +204,83 @@ void main() {
     );
     expect(res.statusCode, 400);
   });
+
+  test('week_start 로 지난 주를 조회한다 (#671)', () async {
+    // 지난 주 월요일에 세션 하나. 이번 주 시드와 섞이면 안 된다.
+    final DateTime lastMonday = DateTime.parse(
+      _currentMonday(),
+    ).subtract(const Duration(days: 7));
+    final String lastWeek =
+        '${lastMonday.year.toString().padLeft(4, '0')}-'
+        '${lastMonday.month.toString().padLeft(2, '0')}-'
+        '${lastMonday.day.toString().padLeft(2, '0')}';
+    await db
+        .into(db.exerciseSessions)
+        .insert(
+          ExerciseSessionsCompanion.insert(
+            id: 'ex-last-mon',
+            weekStart: lastWeek,
+            dayLabel: '월',
+            type: 'cardio',
+            minutes: 20,
+            calories: 140,
+          ),
+        );
+
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': lastWeek},
+    );
+    expect(res.data!['total_minutes'], 20);
+    expect((res.data!['sessions']! as List<Object?>).length, 1);
+
+    // 파라미터가 없으면 예전 그대로 이번 주다.
+    final current = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+    );
+    expect(current.data!['total_minutes'], isNot(20));
+  });
+
+  test('지난 주 세션의 date_label 은 오늘/어제로 잘못 붙지 않는다 (#671)', () async {
+    final DateTime lastMonday = DateTime.parse(
+      _currentMonday(),
+    ).subtract(const Duration(days: 7));
+    final String lastWeek =
+        '${lastMonday.year.toString().padLeft(4, '0')}-'
+        '${lastMonday.month.toString().padLeft(2, '0')}-'
+        '${lastMonday.day.toString().padLeft(2, '0')}';
+    await db
+        .into(db.exerciseSessions)
+        .insert(
+          ExerciseSessionsCompanion.insert(
+            id: 'ex-last-tue',
+            weekStart: lastWeek,
+            dayLabel: '화',
+            type: 'cardio',
+            minutes: 30,
+            calories: 200,
+          ),
+        );
+
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': lastWeek},
+    );
+    final sessions = (res.data!['sessions']! as List<Object?>)
+        .cast<Map<String, Object?>>();
+    final DateTime lastTuesday = lastMonday.add(const Duration(days: 1));
+    expect(
+      sessions.single['date_label'],
+      '${lastTuesday.month}월 ${lastTuesday.day}일',
+    );
+  });
+
+  test('week_start 형식이 깨지면 400 이다', () async {
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': 'not-a-date'},
+      options: Options(validateStatus: (int? s) => true),
+    );
+    expect(res.statusCode, 400);
+  });
 }

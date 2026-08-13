@@ -261,7 +261,7 @@ class LocalApiInterceptor extends Interceptor {
       'minutes': minutes,
       'calories': calories,
       'intensity': intensity,
-      'date_label': _dateLabelForDayLabel(dayLabel),
+      'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),
       'time_label': _defaultTimeLabel(type),
       'items': _defaultItems(type),
     });
@@ -813,8 +813,20 @@ class LocalApiInterceptor extends Interceptor {
     '일',
   ];
 
+  /// GET /exercise/weeks/current[?week_start=YYYY-MM-DD]
+  ///
+  /// `week_start` 없이 부르면 이번 주다(예전 동작 그대로). 운동 탭이 주를 뒤로
+  /// 넘길 때 그 주의 월요일을 실어 보낸다(#671) — 그 전에는 조회 경로가 이번
+  /// 주 하나뿐이라 지난주를 받아올 방법이 없었다.
   Future<Response<Object?>> _exerciseCurrentWeek(RequestOptions options) async {
-    final weekStart = _mondayOfThisWeekString();
+    final Object? requested = options.queryParameters['week_start'];
+    final String? requestedWeek = requested is String && requested.isNotEmpty
+        ? requested
+        : null;
+    if (requestedWeek != null && !_isDateString(requestedWeek)) {
+      return _badRequest(options, 'week_start must be YYYY-MM-DD');
+    }
+    final weekStart = requestedWeek ?? _mondayOfThisWeekString();
     final rows = await (_db.select(
       _db.exerciseSessions,
     )..where((t) => t.weekStart.equals(weekStart))).get();
@@ -868,7 +880,7 @@ class LocalApiInterceptor extends Interceptor {
         // Date/time labels are synthesized here so the React-style
         // session list ("오늘", "어제", "MM월 DD일") works without
         // a schema migration on the drift `exerciseSessions` table.
-        'date_label': _dateLabelForDayLabel(r.dayLabel),
+        'date_label': _dateLabelForDayLabel(r.dayLabel, weekStart),
         'time_label': _defaultTimeLabel(r.type),
         'items': _defaultItems(r.type),
       });
@@ -933,20 +945,21 @@ class LocalApiInterceptor extends Interceptor {
     return best;
   }
 
-  /// "오늘 / 어제 / N요일 / MM월 DD일" for a given weekday label.
-  String _dateLabelForDayLabel(String dayLabel) {
-    final now = DateTime.now();
-    final todayIdx = now.weekday - 1; // 0=Mon
+  /// "오늘 / 어제 / MM월 DD일" for a weekday label inside [weekStart]'s week.
+  ///
+  /// 요일만으로는 어느 주인지 알 수 없어 지난주 기록에도 '오늘'이 붙던 문제가
+  /// 있었다. 주의 월요일에서 실제 날짜를 되짚어 오늘과 견준다.
+  String _dateLabelForDayLabel(String dayLabel, String weekStart) {
     final dayIdx = _weekdayLabels.indexOf(dayLabel);
-    if (dayIdx < 0) return dayLabel;
-    final delta = todayIdx - dayIdx;
+    final monday = DateTime.tryParse(weekStart);
+    if (dayIdx < 0 || monday == null) return dayLabel;
+    final date = monday.add(Duration(days: dayIdx));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final delta = today.difference(DateTime(date.year, date.month, date.day)).inDays;
     if (delta == 0) return '오늘';
     if (delta == 1) return '어제';
-    if (delta > 1 && delta <= 6) {
-      final date = now.subtract(Duration(days: delta));
-      return '${date.month}월 ${date.day}일';
-    }
-    return '$dayLabel요일';
+    return '${date.month}월 ${date.day}일';
   }
 
   String _defaultTimeLabel(String type) => switch (type) {
@@ -1013,7 +1026,7 @@ class LocalApiInterceptor extends Interceptor {
       'minutes': minutes,
       'calories': calories,
       'intensity': intensity,
-      'date_label': _dateLabelForDayLabel(dayLabel),
+      'date_label': _dateLabelForDayLabel(dayLabel, _mondayOfThisWeekString()),
       'time_label': _defaultTimeLabel(type),
       'items': _defaultItems(type),
     });

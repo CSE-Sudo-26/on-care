@@ -64,11 +64,12 @@
 
 | Method | Path | 응답 핵심 필드 |
 |---|---|---|
-| GET | `/exercise/weeks/current` | `{ sessions[], daily_minutes[7], daily_calories[7], cardio_minutes[7], strength_minutes[7], stretching_minutes[7], day_labels[7], total_minutes, total_calories, streak_days, ai_coach_message }` |
+| GET | `/exercise/weeks/current` | 질의 `?week_start=YYYY-MM-DD`(생략 시 이번 주) → `{ sessions[], daily_minutes[7], daily_calories[7], cardio_minutes[7], strength_minutes[7], stretching_minutes[7], day_labels[7], total_minutes, total_calories, streak_days, ai_coach_message }` |
 | POST | `/exercise/sessions` | 입력 `{ type, minutes(>0), calories, intensity(light\|moderate\|high), day_label? }` → 생성된 `sessions[]` 항목 |
 | PUT | `/exercise/sessions/{id}` | 입력 동일(부분 갱신) → 갱신된 항목 |
 
 `sessions[]`: `{ id(str), day_label, type(cardio|strength|yoga|walking), minutes, calories, intensity(light|moderate|high), source(member|trainer_pt), date_label, time_label, items[str] }`
+`week_start`: 그 주의 월요일. 월요일이 아닌 날짜를 줘도 그 날이 속한 주로 맞춘다. 형식이 깨지면 422. 회원 앱이 지난 날짜를 골랐을 때 그 주를 받는다. (#671)
 `intensity`: 생략 시 `moderate`. 수정 시트가 저장된 강도로 복원되고 칼로리 추정 배수(0.85/1.0/1.2)의 근거가 된다.
 `source`: 생략 시 `member`. `trainer_pt` 는 트레이너가 PT 세션을 완료 처리해 서버가 파생시킨 기록(id 는 `sched-ex-{session_id}`)으로, 근거가 트레이너에게 있어 **회원의 PUT/DELETE 는 409** 로 거절된다. 지우려면 트레이너가 그 세션을 삭제해야 하고 그러면 이 기록도 함께 사라진다. (#499)
 `day_labels`: `["월","화","수","목","금","토","일"]`

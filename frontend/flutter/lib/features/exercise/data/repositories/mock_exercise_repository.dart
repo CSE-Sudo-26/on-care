@@ -16,7 +16,8 @@ class MockExerciseRepository implements ExerciseRepository {
   /// [today] defaults to the real date; tests inject a fixed date so the
   /// date-relative seed stays deterministic.
   MockExerciseRepository({DateTime? today})
-    : _todayIdx = (today ?? DateTime.now()).weekday - 1 {
+    : _today = _dateOnly(today ?? DateTime.now()),
+      _todayIdx = (today ?? DateTime.now()).weekday - 1 {
     _sessions.addAll(_seed(_todayIdx));
     _totalCalories = _sessions.fold<int>(
       0,
@@ -26,6 +27,11 @@ class MockExerciseRepository implements ExerciseRepository {
 
   /// Today's weekday index (0 = Mon … 6 = Sun).
   final int _todayIdx;
+
+  /// 자정으로 자른 오늘. 지난 주 조회가 몇 주 전인지 세는 기준이다.
+  final DateTime _today;
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   static const List<String> _dayLabels = <String>[
     '월',
@@ -103,6 +109,75 @@ class MockExerciseRepository implements ExerciseRepository {
   }
 
   @override
+  Future<ExerciseWeek> fetchWeek(DateTime weekStart) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final int weeksAgo = _weeksAgo(weekStart);
+    // 이번 주(또는 미래)는 CRUD 가 반영된 살아 있는 주다.
+    if (weeksAgo <= 0) return _buildWeek();
+    return _pastWeek(weeksAgo);
+  }
+
+  /// [weekStart] 가 이번 주에서 몇 주 전인지. 이번 주면 0.
+  int _weeksAgo(DateTime weekStart) {
+    final DateTime thisMonday = _today.subtract(Duration(days: _todayIdx));
+    final int days = thisMonday.difference(_dateOnly(weekStart)).inDays;
+    return days <= 0 ? 0 : (days / 7).round();
+  }
+
+  /// 지난 주의 기록. 주마다 조금씩 다른 값이라야 주간 비교가 뜻을 갖는다 —
+  /// 오래된 주일수록 조금 적게(요즘 늘고 있다), 그리고 주마다 쉬는 날이 하루씩
+  /// 밀린다. 인메모리 CRUD 는 이번 주에만 적용되므로 여기서는 파생값만 만든다.
+  ExerciseWeek _pastWeek(int weeksAgo) {
+    const List<(ExerciseType, int, int)> dayPlan = <(ExerciseType, int, int)>[
+      (ExerciseType.cardio, 35, 260),
+      (ExerciseType.strength, 15, 105),
+      (ExerciseType.stretching, 10, 40),
+    ];
+    final double scale = (1 - weeksAgo * 0.1).clamp(0.4, 1.0);
+    final int restDay = weeksAgo % 7; // 주마다 쉬는 요일이 하나씩 밀린다.
+    final List<ExerciseSession> sessions = <ExerciseSession>[];
+    for (int i = 0; i < _dayLabels.length; i++) {
+      if (i == restDay) continue;
+      int k = 0;
+      for (final (ExerciseType type, int min, int kcal) in dayPlan) {
+        // 요일마다 종목 구성이 조금씩 달라지도록 한 종목씩 건너뛴다.
+        if ((i + k) % 3 == 2) {
+          k++;
+          continue;
+        }
+        final int minutes = (min * scale).round();
+        if (minutes <= 0) {
+          k++;
+          continue;
+        }
+        sessions.add(
+          ExerciseSession(
+            id: 'past-$weeksAgo-$i-${k++}',
+            dayLabel: _dayLabels[i],
+            dateLabel: _dateLabel(weeksAgo, i),
+            type: type,
+            minutes: minutes,
+            calories: (kcal * scale).round(),
+          ),
+        );
+      }
+    }
+    return _weekFrom(
+      sessions,
+      aiCoachMessage: '지난 기록이에요. 이번 주와 견줘 보면 흐름이 보여요.',
+    );
+  }
+
+  /// 지난 주 어느 요일의 "M월 D일" 라벨.
+  String _dateLabel(int weeksAgo, int dayIdx) {
+    final DateTime monday = _today.subtract(
+      Duration(days: _todayIdx + 7 * weeksAgo),
+    );
+    final DateTime date = monday.add(Duration(days: dayIdx));
+    return '${date.month}월 ${date.day}일';
+  }
+
+  @override
   Future<ExerciseSession> addSession({
     required ExerciseType type,
     required int minutes,
@@ -169,7 +244,21 @@ class MockExerciseRepository implements ExerciseRepository {
   /// 요일별 시간·칼로리·유형별 시간·총분·연속일을 [_sessions]에서 계산한다.
   /// daily/dailyCal 은 그 날 모든 세션의 합이고, 유형별 버킷 합도 같은 세션에서
   /// 나오므로 `daily[i] == cardio[i] + strength[i] + stretching[i]` 가 성립한다.
-  ExerciseWeek _buildWeek() {
+  ExerciseWeek _buildWeek() => _weekFrom(
+    _sessions,
+    // 이번 주 총 칼로리만 CRUD 델타로 따로 유지된다(세션 합과 어긋날 수 있는
+    // 시드 헤드라인이라 그대로 넘긴다).
+    totalCalories: _totalCalories,
+    aiCoachMessage: _aiCoachMessage,
+  );
+
+  /// [sessions] 에서 한 주의 파생값을 만든다. 이번 주와 지난 주가 같은 규칙을
+  /// 쓰므로 두 화면의 수치 정의가 어긋나지 않는다.
+  ExerciseWeek _weekFrom(
+    List<ExerciseSession> sessions, {
+    int? totalCalories,
+    required String aiCoachMessage,
+  }) {
     final int n = _dayLabels.length;
     final List<double> daily = List<double>.filled(n, 0);
     final List<double> dailyCal = List<double>.filled(n, 0);
@@ -178,7 +267,7 @@ class MockExerciseRepository implements ExerciseRepository {
     final List<double> stretching = List<double>.filled(n, 0);
     int totalMinutes = 0;
 
-    for (final ExerciseSession s in _sessions) {
+    for (final ExerciseSession s in sessions) {
       final int i = _dayLabels.indexOf(s.dayLabel);
       if (i >= 0) {
         daily[i] += s.minutes;
@@ -196,10 +285,12 @@ class MockExerciseRepository implements ExerciseRepository {
       stretchingMinutes: stretching,
       dayLabels: List<String>.of(_dayLabels),
       totalMinutes: totalMinutes,
-      totalCalories: _totalCalories,
+      totalCalories:
+          totalCalories ??
+          sessions.fold<int>(0, (int a, ExerciseSession s) => a + s.calories),
       streakDays: longestActiveStreak(daily),
-      aiCoachMessage: _aiCoachMessage,
-      sessions: List<ExerciseSession>.of(_sessions),
+      aiCoachMessage: aiCoachMessage,
+      sessions: List<ExerciseSession>.of(sessions),
     );
   }
 
