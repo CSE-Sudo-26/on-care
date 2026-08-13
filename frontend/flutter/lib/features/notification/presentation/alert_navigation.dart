@@ -27,12 +27,20 @@ Future<void> openAlertTarget(
 
   switch (action.target) {
     case AlertTarget.coachChat:
-      // 대화는 코치 정보를 알아야 열 수 있다. 아직 못 받았으면 이동하지 않는다 —
-      // 이름 없는 빈 대화창을 여느니 알림 목록에 남는 편이 낫다.
       ref
         ..invalidate(coachChatProvider)
         ..invalidate(coachUnreadProvider);
-      final String? name = ref.read(memberCoachProvider).valueOrNull?.name;
+      // 대화는 코치 정보를 알아야 열 수 있다. 들고 있는 값을 그냥 읽으면 안 된다 —
+      // 아직 로딩 중이거나, 트레이너가 붙기 전에 받아 둔 `null` 이 남아 있으면
+      // 눌러도 아무 일이 없다. 코치가 보낸 알림인데 코치를 모른다고 답하는 꼴이다.
+      // 그래서 새로 받아 온 뒤에 판단한다.
+      String? name;
+      try {
+        name = (await ref.refresh(memberCoachProvider.future))?.name;
+      } on Exception {
+        // 못 받으면 이동하지 않는다. 이름 없는 빈 대화창을 여느니 제자리가 낫다.
+        return;
+      }
       if (name == null || !context.mounted) return;
       await openTrainerChatPage(context, trainerName: name);
     case AlertTarget.exercise:
