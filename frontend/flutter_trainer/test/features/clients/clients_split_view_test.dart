@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 
 import '../../helpers/pump_app.dart';
@@ -68,6 +70,27 @@ void main() {
     expect(find.text('메시지'), findsWidgets);
     expect(find.text('식단'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
+  });
+
+  testWidgets('the roster card has visible space before the detail panel', (
+    tester,
+  ) async {
+    await openWide(tester);
+    await tester.tap(card('김민수'));
+    await settle(tester);
+
+    final cardRect = tester.getRect(find.byType(ClientCard).first);
+    final detailRect = tester.getRect(find.byType(ClientDetailView));
+
+    expect(
+      detailRect.left - cardRect.right,
+      AppSpacing.lg,
+      reason: '목록 카드의 우측 테두리와 그림자가 잘리지 않아야 한다',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('clients-master-detail-gap')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('picking a client does not expose the parent roster during '

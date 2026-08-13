@@ -295,6 +295,18 @@ void main() {
       // is under target is further down a now-long, lazily built list.
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('박성호'), findsOneWidget);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('clients-roster-search')),
+            )
+            .dx,
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('client-seed-client-1')),
+            )
+            .dx,
+      );
       await tester.scrollUntilVisible(
         find.text('이지수'),
         150,

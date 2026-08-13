@@ -78,7 +78,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       scrollable: false,
       contentPadding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppSpacing.md,
+        AppLayout.pagePadding,
         AppLayout.pagePadding,
         AppLayout.pagePadding,
       ),
@@ -154,7 +154,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                       onSelected: _selectClient,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: selected == null
                         ? const _EmptyThread()

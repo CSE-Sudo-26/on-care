@@ -178,6 +178,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 selectedId: selected,
                 filter: activeFilter,
                 totalCount: all.length,
+                trailingPadding: wide ? AppSpacing.sm : 0,
                 onOpen: (id) => context.go(
                   AppRoutes.clientDetail(id, section: widget.section),
                 ),
@@ -201,9 +202,9 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     SizedBox(width: AppLayout.splitListWidth, child: listView),
-                    const VerticalDivider(
-                      width: 1,
-                      color: AppColors.borderStrong,
+                    const SizedBox(
+                      key: ValueKey<String>('clients-master-detail-gap'),
+                      width: AppSpacing.sm,
                     ),
                     Expanded(
                       child: selected == null
@@ -236,7 +237,19 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                           setState(() => _managementFilter = value),
                       onSortChanged: (value) => setState(() => _sort = value),
                     ),
-                  Expanded(child: body),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppLayout.pagePadding,
+                        wide || selected == null
+                            ? AppSpacing.lg
+                            : AppLayout.pagePadding,
+                        AppLayout.pagePadding,
+                        0,
+                      ),
+                      child: body,
+                    ),
+                  ),
                 ],
               );
             },
@@ -283,9 +296,9 @@ class _MemberManagementToolbar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppSpacing.lg,
         AppLayout.pagePadding,
-        AppSpacing.md,
+        AppLayout.pagePadding,
+        0,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -532,6 +545,7 @@ class _RosterList extends StatelessWidget {
     required this.selectedId,
     required this.filter,
     required this.totalCount,
+    required this.trailingPadding,
     required this.onOpen,
     required this.onClearFilter,
   });
@@ -541,6 +555,7 @@ class _RosterList extends StatelessWidget {
   final String? selectedId;
   final ClientFilter filter;
   final int totalCount;
+  final double trailingPadding;
   final ValueChanged<String> onOpen;
   final VoidCallback onClearFilter;
 
@@ -548,11 +563,11 @@ class _RosterList extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.xxl,
+      padding: EdgeInsets.fromLTRB(
+        0,
+        0,
+        trailingPadding,
+        AppLayout.pagePadding,
       ),
       children: <Widget>[
         if (filter != ClientFilter.all) ...<Widget>[

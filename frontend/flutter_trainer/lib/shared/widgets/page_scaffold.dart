@@ -58,8 +58,10 @@ class PageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final body = scrollable
-        ? SingleChildScrollView(padding: contentPadding, child: _capped(child))
-        : Padding(padding: contentPadding, child: _capped(child));
+        ? SingleChildScrollView(
+            child: _capped(Padding(padding: contentPadding, child: child)),
+          )
+        : _capped(Padding(padding: contentPadding, child: child));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

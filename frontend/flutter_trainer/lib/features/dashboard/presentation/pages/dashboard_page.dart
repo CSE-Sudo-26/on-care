@@ -334,7 +334,7 @@ class _KpiRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (var i = 0; i < cards.length; i++) ...<Widget>[
-              if (i > 0) const SizedBox(width: AppSpacing.md),
+              if (i > 0) const SizedBox(width: AppSpacing.lg),
               Expanded(child: cards[i]),
             ],
           ],
@@ -344,13 +344,13 @@ class _KpiRow extends StatelessWidget {
     return Column(
       children: <Widget>[
         for (var i = 0; i < cards.length; i += 2) ...<Widget>[
-          if (i > 0) const SizedBox(height: AppSpacing.md),
+          if (i > 0) const SizedBox(height: AppSpacing.lg),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 Expanded(child: cards[i]),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.lg),
                 if (i + 1 < cards.length)
                   Expanded(child: cards[i + 1])
                 else

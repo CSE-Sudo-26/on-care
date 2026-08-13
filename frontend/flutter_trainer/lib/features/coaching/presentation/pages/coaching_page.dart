@@ -293,9 +293,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppLayout.pagePadding,
-                    AppSpacing.lg,
                     AppLayout.pagePadding,
-                    AppSpacing.xxl,
+                    AppLayout.pagePadding,
+                    AppLayout.pagePadding,
                   ),
                   children: <Widget>[
                     // Single column: context, then the editor, then the
@@ -313,9 +313,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 key: const ValueKey<String>('coaching-program-page-scroll'),
                 padding: const EdgeInsets.fromLTRB(
                   AppLayout.pagePadding,
-                  AppSpacing.lg,
                   AppLayout.pagePadding,
-                  AppSpacing.xxl,
+                  AppLayout.pagePadding,
+                  AppLayout.pagePadding,
                 ),
                 children: <Widget>[
                   Row(

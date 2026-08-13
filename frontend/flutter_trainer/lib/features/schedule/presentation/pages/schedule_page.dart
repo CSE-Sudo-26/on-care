@@ -506,7 +506,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppLayout.pagePadding,
-            AppSpacing.md,
+            AppLayout.pagePadding,
             AppLayout.pagePadding,
             AppSpacing.sm,
           ),
@@ -534,7 +534,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         AppLayout.pagePadding,
         AppSpacing.sm,
         AppLayout.pagePadding,
-        AppSpacing.xxl,
+        AppLayout.pagePadding,
       ),
       children: <Widget>[
         ...schedule.when(
@@ -1396,7 +1396,7 @@ class _WeekNav extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppSpacing.md,
+        AppLayout.pagePadding,
         AppLayout.pagePadding,
         AppSpacing.sm,
       ),
