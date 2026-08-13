@@ -1246,6 +1246,69 @@ def register_program(
     return _schedule_out(session), True
 
 
+def _member_visible_slot(s: TrainerSchedule) -> tuple[str, str, str, int]:
+    """회원이 약속을 지키려고 아는 값들. 이 넷 중 하나라도 달라지면 알린다.
+
+    메모(`note`)·프로그램은 트레이너의 준비물이라 빠져 있다 — 그것까지 알리면
+    알림함이 같은 일정으로 차고, 정작 시각이 바뀐 알림이 묻힌다. (#664)
+    """
+    return (s.date, s.time, s.type, s.duration_minutes)
+
+
+def _slot_body(slot: tuple[str, str, str, int]) -> str:
+    date, time, type_, _ = slot
+    return f"{date} {time} · {type_}"
+
+
+def _notify_schedule_changed(
+    db: Session,
+    *,
+    session: TrainerSchedule,
+    before_member_id: str | None,
+    before_slot: tuple[str, str, str, int],
+) -> None:
+    """바뀐 일정을 회원에게 알린다. **커밋하지 않는다.**
+
+    등록만 알리고 변경·취소를 알리지 않으면, 회원은 "새 일정이 등록되었어요" 를
+    믿고 이미 옮겨진 시간에 나간다. 취소 알림이 등록 알림보다 중요하다. (#664)
+    """
+    after_slot = _member_visible_slot(session)
+
+    if before_member_id == session.member_id:
+        if session.member_id is None or before_slot == after_slot:
+            return
+        notification_service.queue(
+            db,
+            member_id=session.member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="일정이 변경되었어요",
+            body=_slot_body(after_slot),
+        )
+        return
+
+    # 다른 회원에게 넘긴 일정. 넘겨받은 쪽만 알리면 원래 회원은 약속이 사라진
+    # 줄 모른 채 그 시간에 나간다 — 양쪽 모두 알린다.
+    if before_member_id is not None:
+        notification_service.queue(
+            db,
+            member_id=before_member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="일정이 취소되었어요",
+            body=_slot_body(before_slot),
+        )
+    if session.member_id is not None:
+        notification_service.queue(
+            db,
+            member_id=session.member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="새 일정이 등록되었어요",
+            body=_slot_body(after_slot),
+        )
+
+
 def update_session(
     db: Session, trainer_id: str, session_id: str, fields: dict
 ) -> ScheduleSessionOut | None:
@@ -1257,6 +1320,10 @@ def update_session(
     s = _get_owned_session(db, trainer_id, session_id)
     if s is None:
         return None
+    # 회원에게 알릴지 판단하려면 **바꾸기 전** 값을 들고 있어야 한다. 넘긴
+    # 일정의 취소 알림에는 옛 시각을 써야 회원이 어느 약속인지 안다.
+    before_member_id = s.member_id
+    before_slot = _member_visible_slot(s)
     # A reservation owns the booking coordinates and lifecycle, so changing
     # its time/member/type/duration through the general schedule API would
     # desynchronise the slot and remaining count. The trainer may still add
@@ -1284,6 +1351,12 @@ def update_session(
         s.note = fields["note"]
     if "program" in fields and fields["program"] is not None:
         s.program_json = _dump_program(fields["program"])
+    _notify_schedule_changed(
+        db,
+        session=s,
+        before_member_id=before_member_id,
+        before_slot=before_slot,
+    )
     db.commit()
     db.refresh(s)
     return _schedule_out(s)
@@ -1308,6 +1381,17 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
         derived = db.get(ExerciseSession, _derived_exercise_id(s.id))
         if derived is not None:
             db.delete(derived)
+    # 아직 오지 않은 약속만 알린다. 이미 끝난 PT 의 기록 정리까지 알리면 회원은
+    # 지난 일을 취소 통보로 받는다. (#664)
+    if s.member_id is not None and s.status != "완료":
+        notification_service.queue(
+            db,
+            member_id=s.member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="일정이 취소되었어요",
+            body=_slot_body(_member_visible_slot(s)),
+        )
     db.delete(s)
     db.commit()
     return True

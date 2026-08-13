@@ -267,6 +267,135 @@ def test_a_schedule_without_a_member_notifies_nobody(client, db_session):
     assert _titles(client, member_token) == []
 
 
+# --- 일정 변경·취소 (#664) ---------------------------------------------------
+
+
+def _schedule(client, trainer_token: str, member_id: str | None, **overrides):
+    """일정을 하나 만들고 그 id 를 준다."""
+    payload = {
+        "date": (clock.today() + timedelta(days=1)).isoformat(),
+        "time": "10:00",
+        "client_name": "알림 회원" if member_id else "신규 고객",
+        "member_id": member_id,
+        "type": "1:1 PT",
+        "duration_minutes": 50,
+        "note": "",
+        "program": [],
+    }
+    payload.update(overrides)
+    created = client.post(
+        "/v1/trainer/schedule", headers=_auth(trainer_token), json=payload
+    )
+    assert created.status_code == 201, created.text
+    return created.json()["id"]
+
+
+def test_moving_a_session_tells_the_member(client, db_session):
+    """시각이 바뀌면 알린다 — 등록만 알리면 회원은 옛 시간에 나간다."""
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, member_id)
+
+    moved = client.put(
+        f"/v1/trainer/schedule/{session_id}",
+        headers=_auth(trainer_token),
+        json={"time": "15:00"},
+    )
+
+    assert moved.status_code == 200, moved.text
+    assert "일정이 변경되었어요" in _titles(client, member_token)
+
+
+def test_editing_only_the_note_tells_nobody(client, db_session):
+    """메모는 트레이너의 준비물이다. 알리면 알림함이 같은 일정으로 찬다."""
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, member_id)
+    before = _titles(client, member_token)
+
+    edited = client.put(
+        f"/v1/trainer/schedule/{session_id}",
+        headers=_auth(trainer_token),
+        json={"note": "스쿼트 자세 확인"},
+    )
+
+    assert edited.status_code == 200, edited.text
+    assert _titles(client, member_token) == before
+
+
+def test_cancelling_a_session_tells_the_member(client, db_session):
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, member_id)
+
+    removed = client.delete(
+        f"/v1/trainer/schedule/{session_id}", headers=_auth(trainer_token)
+    )
+
+    assert removed.status_code in (200, 204), removed.text
+    assert "일정이 취소되었어요" in _titles(client, member_token)
+
+
+def test_unassigning_a_member_tells_that_member(client, db_session):
+    """배정을 풀면 회원 쪽에서는 약속이 사라진다 — 취소와 같다."""
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, member_id)
+
+    unassigned = client.put(
+        f"/v1/trainer/schedule/{session_id}",
+        headers=_auth(trainer_token),
+        json={"member_id": ""},
+    )
+
+    assert unassigned.status_code == 200, unassigned.text
+    assert "일정이 취소되었어요" in _titles(client, member_token)
+
+
+def test_assigning_an_empty_slot_tells_the_new_member(client, db_session):
+    """비어 있던 슬롯에 회원이 들어오면 그 회원에게는 새 일정이다."""
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, None, type="상담")
+
+    assigned = client.put(
+        f"/v1/trainer/schedule/{session_id}",
+        headers=_auth(trainer_token),
+        json={"member_id": member_id},
+    )
+
+    assert assigned.status_code == 200, assigned.text
+    assert "새 일정이 등록되었어요" in _titles(client, member_token)
+
+
+def test_cancelling_an_empty_slot_tells_nobody(client, db_session):
+    trainer_token, _, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, None, type="상담")
+
+    removed = client.delete(
+        f"/v1/trainer/schedule/{session_id}", headers=_auth(trainer_token)
+    )
+
+    assert removed.status_code in (200, 204), removed.text
+    assert _titles(client, member_token) == []
+
+
+def test_a_schedule_change_can_be_switched_off(client, db_session):
+    """운동 알림을 끄면 변경 알림도 오지 않는다 — 등록 알림과 같은 종류다."""
+    trainer_token, member_id, member_token, _ = _pair(client, db_session)
+    session_id = _schedule(client, trainer_token, member_id)
+    client.put(
+        "/v1/users/me/notification-settings",
+        headers=_auth(member_token),
+        json={"exercise_reminder": False},
+    )
+    before = _titles(client, member_token)
+
+    moved = client.put(
+        f"/v1/trainer/schedule/{session_id}",
+        headers=_auth(trainer_token),
+        json={"time": "16:00"},
+    )
+
+    assert moved.status_code == 200, moved.text
+    assert _titles(client, member_token) == before
+
+
 def test_a_settings_read_failure_still_delivers_the_message(
     client, db_session, monkeypatch
 ):
