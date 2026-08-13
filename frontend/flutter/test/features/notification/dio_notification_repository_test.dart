@@ -128,7 +128,7 @@ void main() {
       expect(item.action?.isNavigable, isFalse);
     });
 
-    test('계약이 깨진 action 하나가 목록 전체를 무너뜨리지 않는다', () async {
+    test('계약이 깨진 action 이 목록 전체를 무너뜨리지 않는다', () async {
       final repo = DioNotificationRepository(
         _dio(<Object?>[
           <String, Object?>{
@@ -144,6 +144,17 @@ void main() {
           },
           <String, Object?>{
             'id': 'n2',
+            'title': '깨진 target',
+            'body': '본문',
+            'time_ago': '방금',
+            'category': 'system',
+            'read': false,
+            // target 도 같은 위험을 갖는다. label 만 검사하면 여기서 다시
+            // TypeError 가 나므로 두 자리를 따로 지킨다.
+            'action': <String, Object?>{'label': '어딘가로', 'target': 42},
+          },
+          <String, Object?>{
+            'id': 'n3',
             'title': '정상',
             'body': '본문',
             'time_ago': '방금',
@@ -154,9 +165,11 @@ void main() {
       );
 
       final List<AlertItem> items = await repo.fetchAll();
-      expect(items, hasLength(2));
-      expect(items.first.action, isNull);
-      expect(items.last.title, '정상');
+      expect(items, hasLength(3));
+      // 깨진 것은 action 만 잃고, 알림 자체는 목록에 남는다.
+      expect(items[0].action, isNull);
+      expect(items[1].action, isNull);
+      expect(items[2].title, '정상');
     });
 
     test('action 이 없는 알림도 그대로 실린다', () async {
