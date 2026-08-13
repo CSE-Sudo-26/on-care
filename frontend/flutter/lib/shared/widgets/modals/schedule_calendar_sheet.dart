@@ -178,10 +178,12 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                       // 비율로 잡으면 6주짜리 달의 마지막 주가 남은 높이를
                       // 넘겨 잘렸다 — 스크롤도 꺼져 있어 8월이 22일에서
                       // 끝나 보이던 원인이다(#669).
-                      final int rows = (days.length / 7).ceil();
+                      // _daysInGrid 가 앞뒤를 채워 항상 7의 배수를 돌려주므로
+                      // 나누어떨어진다.
+                      final int rows = days.length ~/ 7;
                       final double rowHeight = math.max(
                         _minRowHeight,
-                        constraints.maxHeight / math.max(rows, 1),
+                        constraints.maxHeight / rows,
                       );
                       return GridView.builder(
                         // 최소 높이에 걸려 다 담기지 않는 경우에만 스크롤이
@@ -224,10 +226,6 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                               ),
                             ),
                             padding: const EdgeInsets.all(4),
-                            // 칸 높이는 남은 공간에서 정해지므로 일정이 여럿인
-                            // 날은 칩이 칸을 넘길 수 있다. 넘치는 칩은 잘라내되
-                            // (clip) 레이아웃 경고 없이 날짜 숫자는 항상 남긴다.
-                            clipBehavior: Clip.hardEdge,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -239,36 +237,55 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
+                                // 칸 높이는 남은 공간에서 정해지므로 일정이
+                                // 여럿인 날은 칩이 칸을 넘길 수 있다. 넘치는
+                                // 만큼은 ClipRect 가 잘라내고, OverflowBox 가
+                                // Column 에 무한 높이를 줘 오버플로 경고 없이
+                                // 그린다. 날짜 숫자는 언제나 남는다.
+                                //
+                                // 칸마다 ListView 를 두면 한 달에 스크롤 뷰가
+                                // 35~42개 생긴다 — 자르기만 하는 데 치르는
+                                // 값으로는 너무 비싸다.
                                 Expanded(
-                                  child: ListView(
-                                    padding: EdgeInsets.zero,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    children: <Widget>[
-                                      for (final ScheduleEvent e in dayEvents)
-                                        Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 2,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: scheduleCategoryColor(
-                                              e.category,
+                                  child: ClipRect(
+                                    child: OverflowBox(
+                                      alignment: Alignment.topLeft,
+                                      maxHeight: double.infinity,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          for (final ScheduleEvent e
+                                              in dayEvents)
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 2,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: scheduleCategoryColor(
+                                                  e.category,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '${e.time} ${e.title}'.trim(),
+                                                style: const TextStyle(
+                                                  fontSize: 9,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '${e.time} ${e.title}'.trim(),
-                                            style: const TextStyle(fontSize: 9),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                    ],
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
