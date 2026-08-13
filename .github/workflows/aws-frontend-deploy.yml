@@ -33,6 +33,11 @@ jobs:
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
+          # Flutter 를 고정한다. `channel: stable` 만 두면 새 stable 이 나온 순간
+          # 아무도 코드를 건드리지 않았는데 CI 가 깨진다 — 실제로 3.47.0 에서
+          # riverpod_lint 가 새 문법을 몰라 분석 도중 매달렸다(#659). 올릴 때는
+          # 의도적으로 올린다.
+          flutter-version: '3.44.9'
           cache: true
 
       - name: Check Flutter version
