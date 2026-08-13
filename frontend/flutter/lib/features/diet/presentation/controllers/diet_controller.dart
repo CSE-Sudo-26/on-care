@@ -4,6 +4,7 @@ import 'package:oncare/core/network/dio_client.dart';
 import 'package:oncare/features/diet/data/repositories/dio_diet_repository.dart';
 import 'package:oncare/features/diet/data/sources/image_picker_meal_photo_picker.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
+import 'package:oncare/features/diet/domain/entities/diet_period.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/domain/repositories/meal_photo_picker.dart';
@@ -38,6 +39,43 @@ final _dietByDateFamily = FutureProvider.family<DietDay, DateTime>((ref, date) {
 FutureProvider<DietDay> dietByDateProvider(DateTime date) {
   return _dietByDateFamily(DateTime(date.year, date.month, date.day));
 }
+
+/// 기간 조회의 키. 양끝을 포함한다(from ≤ 날짜 ≤ to).
+typedef DietDateRange = ({DateTime from, DateTime to});
+
+/// 이번 주·이번 달 식단 집계.
+///
+/// 새 엔드포인트를 두지 않고 하루 조회를 기간만큼 모은다. 날짜별 응답은 이미
+/// [dietByDateProvider] 가 캐시하므로, 하루 뷰에서 본 값과 기간 뷰의 그 날
+/// 막대가 **같은 응답**에서 나온다 — 따로 집계하면 조용히 어긋난다.
+final dietPeriodProvider = FutureProvider.family<DietPeriod, DietDateRange>((
+  ref,
+  DietDateRange range,
+) async {
+  final DateTime from = DateTime(
+    range.from.year,
+    range.from.month,
+    range.from.day,
+  );
+  final DateTime to = DateTime(range.to.year, range.to.month, range.to.day);
+  final int span = to.difference(from).inDays;
+  final List<DateTime> dates = <DateTime>[
+    for (int i = 0; i <= span; i++)
+      DateTime(from.year, from.month, from.day + i),
+  ];
+  // watch 는 await 이전에 모두 걸어 둔다 — 하루라도 바뀌면 기간 값도 다시
+  // 계산되고, 요청은 순차가 아니라 한꺼번에 나간다.
+  final List<Future<DietDay>> pending = <Future<DietDay>>[
+    for (final DateTime d in dates) ref.watch(dietByDateProvider(d).future),
+  ];
+  final List<DietDay> days = await Future.wait(pending);
+  return DietPeriod(
+    days: <DietPeriodDay>[
+      for (int i = 0; i < dates.length; i++)
+        DietPeriodDay.from(dates[i], days[i]),
+    ],
+  );
+}, name: 'dietPeriod');
 
 /// 홈 "AI 추천 식단" — GET /diet/recommendations.
 ///

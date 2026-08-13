@@ -12,6 +12,7 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
+import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -105,9 +106,13 @@ String _formatInt(int v) => v.toString().replaceAllMapped(
   (Match _) => ',',
 );
 
+/// 식단 탭이 보여주는 기간. 운동 탭의 `운동 현황` 토글과 같은 뜻·같은 순서다.
+enum DietPeriodTab { day, week, month }
+
 class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   int _weekShift = 0; // whole-week steps away from today
   late DateTime _selected;
+  DietPeriodTab _period = DietPeriodTab.day;
 
   DateTime get _today {
     final DateTime n = DateTime.now();
@@ -124,6 +129,20 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final DateTime first = DateTime(d.year, d.month);
     final int offset = first.weekday - 1; // days from Monday
     return ((d.day + offset - 1) / 7).floor() + 1;
+  }
+
+  /// 기간 뷰가 집계할 날짜 범위. 이번 주는 월~일, 이번 달은 1일~말일이다.
+  /// 아직 오지 않은 날도 범위에 넣는다 — 빈 칸이 남아야 한 주·한 달의 모양이
+  /// 그대로 읽힌다(평균은 기록이 있는 날만으로 낸다).
+  DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) {
+    if (tab == DietPeriodTab.month) {
+      return (
+        from: DateTime(today.year, today.month),
+        to: DateTime(today.year, today.month + 1, 0),
+      );
+    }
+    final DateTime monday = today.subtract(Duration(days: today.weekday - 1));
+    return (from: monday, to: monday.add(const Duration(days: 6)));
   }
 
   @override
@@ -161,27 +180,40 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
-                _DateStrip(
-                  days: days,
-                  today: today,
-                  selected: _selected,
-                  weekLabel: l.dietWeekLabel(
-                    center.month,
-                    _weekOfMonth(center),
-                  ),
-                  showTodayButton: !atToday,
-                  onSelect: (DateTime d) => setState(() => _selected = d),
-                  onPrev: () => setState(() => _weekShift -= 1),
-                  onNext: _weekShift >= 0
-                      ? null
-                      : () => setState(() => _weekShift += 1),
-                  onToday: () => setState(() {
-                    _weekShift = 0;
-                    _selected = today;
-                  }),
+                // 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에
+                // 없었다 — 운동 탭과 같은 기간 토글을 둔다(#670).
+                _PeriodTabs(
+                  active: _period,
+                  onChanged: (DietPeriodTab t) => setState(() => _period = t),
                 ),
-                const SizedBox(height: 8),
-                diet.when(
+                if (_period != DietPeriodTab.day) ...<Widget>[
+                  const SizedBox(height: 4),
+                  DietPeriodView(
+                    range: _rangeFor(_period, today),
+                    profile: profile,
+                  ),
+                ] else ...<Widget>[
+                  _DateStrip(
+                    days: days,
+                    today: today,
+                    selected: _selected,
+                    weekLabel: l.dietWeekLabel(
+                      center.month,
+                      _weekOfMonth(center),
+                    ),
+                    showTodayButton: !atToday,
+                    onSelect: (DateTime d) => setState(() => _selected = d),
+                    onPrev: () => setState(() => _weekShift -= 1),
+                    onNext: _weekShift >= 0
+                        ? null
+                        : () => setState(() => _weekShift += 1),
+                    onToday: () => setState(() {
+                      _weekShift = 0;
+                      _selected = today;
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  diet.when(
                   loading: () => const _DietLoading(),
                   error: (Object e, StackTrace _) => _DietError(
                     onRetry: () {
@@ -208,10 +240,73 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                             ),
                           ],
                         ),
-                ),
+                  ),
+                ],
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────── period tabs ──
+
+/// 오늘 / 이번 주 / 이번 달. 운동 탭의 기간 토글과 같은 문구를 공유해 두 탭의
+/// 조작이 어긋나지 않게 한다.
+class _PeriodTabs extends StatelessWidget {
+  const _PeriodTabs({required this.active, required this.onChanged});
+
+  final DietPeriodTab active;
+  final ValueChanged<DietPeriodTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final Map<DietPeriodTab, String> labels = <DietPeriodTab, String>{
+      DietPeriodTab.day: l.exToday,
+      DietPeriodTab.week: l.exThisWeek,
+      DietPeriodTab.month: l.exThisMonth,
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: FigmaColors.statBg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          children: <Widget>[
+            for (final DietPeriodTab tab in DietPeriodTab.values)
+              Expanded(
+                child: GestureDetector(
+                  key: Key('diet-period-tab-${tab.name}'),
+                  onTap: () => onChanged(tab),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: active == tab ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: active == tab ? kCardShadow : null,
+                    ),
+                    child: Text(
+                      labels[tab]!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: active == tab
+                            ? FigmaColors.primary
+                            : AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
