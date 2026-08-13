@@ -193,6 +193,7 @@ class _TaskRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final alert = entry.primary;
     final tone = switch (alert) {
       ClientAlert.unanswered => AppColors.primary,
@@ -200,9 +201,9 @@ class _TaskRow extends StatelessWidget {
       ClientAlert.lowCompletion => AppColors.warning,
     };
     final type = switch (alert) {
-      ClientAlert.unanswered => '답장',
-      ClientAlert.sodiumOver => '식단',
-      ClientAlert.lowCompletion => '운동',
+      ClientAlert.unanswered => l.dashTaskReply,
+      ClientAlert.sodiumOver => l.dashTaskDiet,
+      ClientAlert.lowCompletion => l.dashTaskWorkout,
     };
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -250,7 +251,7 @@ class _TaskRow extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '${entry.client.name} ${alert.label(AppLocalizations.of(context))} 확인',
+                    l.dashTaskReview(alert.label(l), entry.client.name),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

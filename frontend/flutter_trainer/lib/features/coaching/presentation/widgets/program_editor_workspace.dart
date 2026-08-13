@@ -5,6 +5,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 
@@ -28,12 +29,24 @@ class ProgramEditorWorkspace extends StatefulWidget {
 }
 
 class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
-  late ProgramEditorState _draft = ProgramEditorState.initial(
-    widget.clientGoal,
-  );
+  late ProgramEditorState _draft;
+  var _initialized = false;
   String? _addingToSession;
   final TextEditingController _exerciseName = TextEditingController();
   var _nextId = 2;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    final l = AppLocalizations.of(context);
+    _draft = ProgramEditorState.initial(
+      clientGoal: widget.clientGoal,
+      programName: l.programEditorDefaultName(widget.clientGoal),
+      sessionName: l.programEditorDefaultSession,
+    );
+    _initialized = true;
+  }
 
   @override
   void dispose() {
@@ -43,19 +56,20 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SectionCard(
       title: _draft.name,
       trailing: Wrap(
         spacing: AppSpacing.xs,
         children: <Widget>[
           Tooltip(
-            message: '다중 세션 프로그램 저장 API가 아직 없어요.',
-            child: const ActionButton(label: '저장', onPressed: null),
+            message: l.programEditorSaveUnsupported,
+            child: ActionButton(label: l.actionSave, onPressed: null),
           ),
           Tooltip(
-            message: '현재 서버는 평면 루틴 배정만 지원해요.',
-            child: const ActionButton(
-              label: '회원에게 배정',
+            message: l.programEditorAssignUnsupported,
+            child: ActionButton(
+              label: l.programEditorAssign,
               primary: true,
               onPressed: null,
             ),
@@ -67,9 +81,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
         children: <Widget>[
           _UnsupportedBanner(),
           const SizedBox(height: AppSpacing.md),
-          const Text(
-            '프로그램 정보',
-            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+          Text(
+            l.programEditorInfo,
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -77,19 +91,22 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               _DraftField(
-                label: '프로그램명',
+                fieldId: 'program-name',
+                label: l.programEditorName,
                 value: _draft.name,
                 width: 220,
                 onChanged: (value) => _update(_draft.copyWith(name: value)),
               ),
               _DraftField(
-                label: '목표 (선택)',
+                fieldId: 'program-goal',
+                label: l.programEditorGoal,
                 value: _draft.goal,
                 width: 180,
                 onChanged: (value) => _update(_draft.copyWith(goal: value)),
               ),
               _DraftField(
-                label: '기간 (선택)',
+                fieldId: 'program-period',
+                label: l.programEditorPeriod,
                 value: _draft.period,
                 width: 150,
                 onChanged: (value) => _update(_draft.copyWith(period: value)),
@@ -98,7 +115,8 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _DraftField(
-            label: '프로그램 메모 (선택)',
+            fieldId: 'program-memo',
+            label: l.programEditorMemo,
             value: _draft.memo,
             width: double.infinity,
             onChanged: (value) => _update(_draft.copyWith(memo: value)),
@@ -119,10 +137,10 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                     size: 18,
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'AI 코칭 보조 제안을 첫 세션에 로컬 초안으로 반영할 수 있어요.',
-                      style: TextStyle(
+                      l.programEditorAiHint,
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -130,7 +148,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
                     ),
                   ),
                   ActionButton(
-                    label: '편집기에 반영',
+                    label: l.programEditorApply,
                     onPressed: _applyAiSuggestions,
                   ),
                 ],
@@ -140,14 +158,17 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Text(
-                  '운동 구성',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                  l.programEditorExerciseConfig,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               ActionButton(
-                label: '세션 추가',
+                label: l.programEditorAddSession,
                 icon: Icons.add,
                 onPressed: _addSession,
               ),
@@ -202,6 +223,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   }
 
   void _addSession() {
+    final l = AppLocalizations.of(context);
     final id = 'session-${_nextId++}';
     _update(
       _draft.copyWith(
@@ -209,7 +231,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
           ..._draft.sessions,
           ProgramSessionDraft(
             id: id,
-            name: '세션 ${String.fromCharCode(64 + _draft.sessions.length + 1)}',
+            name: l.programEditorSessionName(
+              String.fromCharCode(64 + _draft.sessions.length + 1),
+            ),
             exercises: const <ProgramExerciseDraft>[],
           ),
         ],
@@ -286,7 +310,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     final existingNames = first.exercises.map((item) => item.name).toSet();
     final additions = <ProgramExerciseDraft>[
       for (final item in widget.aiSuggestions)
-        if (!existingNames.contains(item.name))
+        if (existingNames.add(item.name))
           ProgramExerciseDraft(
             id: 'exercise-${_nextId++}',
             name: item.name,
@@ -307,6 +331,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
 class _UnsupportedBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -314,14 +339,14 @@ class _UnsupportedBanner extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
       ),
-      child: const Row(
+      child: Row(
         children: <Widget>[
-          Icon(Icons.info_outline, color: AppColors.warning, size: 17),
-          SizedBox(width: AppSpacing.sm),
+          const Icon(Icons.info_outline, color: AppColors.warning, size: 17),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              '로컬 편집 상태입니다. 다중 세션 저장·배정은 신규 Program API 연결 후 사용할 수 있어요.',
-              style: TextStyle(
+              l.programEditorLocalBanner,
+              style: const TextStyle(
                 color: AppColors.mutedForeground,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
@@ -374,6 +399,7 @@ class _SessionEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: const BoxDecoration(
@@ -404,17 +430,17 @@ class _SessionEditor extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: '세션 위로 이동',
+                tooltip: l.programEditorSessionUp,
                 onPressed: canMoveUp ? onMoveUp : null,
                 icon: const Icon(Icons.keyboard_arrow_up, size: 18),
               ),
               IconButton(
-                tooltip: '세션 아래로 이동',
+                tooltip: l.programEditorSessionDown,
                 onPressed: canMoveDown ? onMoveDown : null,
                 icon: const Icon(Icons.keyboard_arrow_down, size: 18),
               ),
               IconButton(
-                tooltip: '세션 삭제',
+                tooltip: l.programEditorSessionDelete,
                 onPressed: canDelete ? onDelete : null,
                 color: AppColors.destructive,
                 icon: const Icon(Icons.delete_outline, size: 18),
@@ -422,10 +448,10 @@ class _SessionEditor extends StatelessWidget {
             ],
           ),
           if (session.exercises.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Text(
-                '운동을 추가해 세션을 구성하세요.',
+                l.programEditorSessionEmpty,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.subtleForeground,
@@ -457,17 +483,17 @@ class _SessionEditor extends StatelessWidget {
                     controller: exerciseNameController,
                     autofocus: true,
                     onSubmitted: (_) => onConfirmAdd(),
-                    decoration: const InputDecoration(
-                      hintText: '운동 이름 검색 또는 직접 입력',
-                      prefixIcon: Icon(Icons.search, size: 18),
+                    decoration: InputDecoration(
+                      hintText: l.programEditorExerciseSearch,
+                      prefixIcon: const Icon(Icons.search, size: 18),
                     ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                ActionButton(label: '취소', onPressed: onCancelAdd),
+                ActionButton(label: l.actionCancel, onPressed: onCancelAdd),
                 const SizedBox(width: AppSpacing.xs),
                 ActionButton(
-                  label: '추가',
+                  label: l.programEditorAdd,
                   primary: true,
                   onPressed: onConfirmAdd,
                 ),
@@ -475,7 +501,7 @@ class _SessionEditor extends StatelessWidget {
             )
           else
             ActionButton(
-              label: '운동 추가',
+              label: l.programEditorAddExercise,
               icon: Icons.add,
               onPressed: onStartAdd,
             ),
@@ -506,6 +532,7 @@ class _ExerciseEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -525,7 +552,8 @@ class _ExerciseEditor extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: _DraftField(
-                  label: '운동',
+                  fieldId: '${exercise.id}-name',
+                  label: l.programEditorExercise,
                   value: exercise.name,
                   width: double.infinity,
                   onChanged: (value) =>
@@ -533,17 +561,17 @@ class _ExerciseEditor extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: '운동 위로 이동',
+                tooltip: l.programEditorExerciseUp,
                 onPressed: canMoveUp ? onMoveUp : null,
                 icon: const Icon(Icons.keyboard_arrow_up, size: 18),
               ),
               IconButton(
-                tooltip: '운동 아래로 이동',
+                tooltip: l.programEditorExerciseDown,
                 onPressed: canMoveDown ? onMoveDown : null,
                 icon: const Icon(Icons.keyboard_arrow_down, size: 18),
               ),
               IconButton(
-                tooltip: '운동 삭제',
+                tooltip: l.programEditorExerciseDelete,
                 onPressed: onDelete,
                 color: AppColors.destructive,
                 icon: const Icon(Icons.delete_outline, size: 18),
@@ -555,27 +583,51 @@ class _ExerciseEditor extends StatelessWidget {
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: <Widget>[
-              _metric('세트', exercise.sets, (v) => exercise.copyWith(sets: v)),
-              _metric('횟수', exercise.reps, (v) => exercise.copyWith(reps: v)),
               _metric(
-                '중량 kg',
+                '${exercise.id}-sets',
+                l.programEditorSets,
+                exercise.sets,
+                (v) => exercise.copyWith(sets: v),
+              ),
+              _metric(
+                '${exercise.id}-reps',
+                l.programEditorReps,
+                exercise.reps,
+                (v) => exercise.copyWith(reps: v),
+              ),
+              _metric(
+                '${exercise.id}-weight',
+                l.programEditorWeight,
                 exercise.weight,
                 (v) => exercise.copyWith(weight: v),
               ),
               _metric(
-                '시간 분',
+                '${exercise.id}-duration',
+                l.programEditorDuration,
                 exercise.duration,
                 (v) => exercise.copyWith(duration: v),
               ),
               _metric(
-                '거리 m',
+                '${exercise.id}-distance',
+                l.programEditorDistance,
                 exercise.distance,
                 (v) => exercise.copyWith(distance: v),
               ),
-              _metric('휴식 초', exercise.rest, (v) => exercise.copyWith(rest: v)),
-              _metric('RPE', exercise.rpe, (v) => exercise.copyWith(rpe: v)),
+              _metric(
+                '${exercise.id}-rest',
+                l.programEditorRest,
+                exercise.rest,
+                (v) => exercise.copyWith(rest: v),
+              ),
+              _metric(
+                '${exercise.id}-rpe',
+                'RPE',
+                exercise.rpe,
+                (v) => exercise.copyWith(rpe: v),
+              ),
               _DraftField(
-                label: '메모',
+                fieldId: '${exercise.id}-memo',
+                label: l.programEditorExerciseMemo,
                 value: exercise.memo,
                 width: 180,
                 onChanged: (value) => onChanged(exercise.copyWith(memo: value)),
@@ -588,10 +640,12 @@ class _ExerciseEditor extends StatelessWidget {
   }
 
   Widget _metric(
+    String fieldId,
     String label,
     String value,
     ProgramExerciseDraft Function(String) update,
   ) => _DraftField(
+    fieldId: fieldId,
     label: label,
     value: value,
     width: 82,
@@ -601,12 +655,14 @@ class _ExerciseEditor extends StatelessWidget {
 
 class _DraftField extends StatelessWidget {
   const _DraftField({
+    required this.fieldId,
     required this.label,
     required this.value,
     required this.width,
     required this.onChanged,
   });
 
+  final String fieldId;
   final String label;
   final String value;
   final double width;
@@ -617,7 +673,7 @@ class _DraftField extends StatelessWidget {
     return SizedBox(
       width: width,
       child: TextFormField(
-        key: ValueKey<String>('$label-$value'),
+        key: ValueKey<String>(fieldId),
         initialValue: value,
         onChanged: onChanged,
         decoration: InputDecoration(labelText: label, isDense: true),

@@ -32,11 +32,15 @@ class ProgramEditorState {
     sessions: sessions ?? this.sessions,
   );
 
-  factory ProgramEditorState.initial(String clientGoal) => ProgramEditorState(
-    name: '$clientGoal 프로그램',
+  factory ProgramEditorState.initial({
+    required String clientGoal,
+    required String programName,
+    required String sessionName,
+  }) => ProgramEditorState(
+    name: programName,
     goal: clientGoal,
-    sessions: const <ProgramSessionDraft>[
-      ProgramSessionDraft(id: 'session-1', name: '세션 A', exercises: []),
+    sessions: <ProgramSessionDraft>[
+      ProgramSessionDraft(id: 'session-1', name: sessionName, exercises: const []),
     ],
   );
 }

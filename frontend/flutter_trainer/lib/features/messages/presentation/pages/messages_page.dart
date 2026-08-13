@@ -18,16 +18,22 @@ import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 enum _ConversationFilter {
-  all('all', '전체'),
-  unread('unread', '읽지 않음'),
-  attention('attention', '관리 필요');
+  all('all'),
+  unread('unread'),
+  attention('attention');
 
-  const _ConversationFilter(this.value, this.label);
+  const _ConversationFilter(this.value);
 
   final String value;
-  final String label;
+
+  String label(AppLocalizations l) => switch (this) {
+    _ConversationFilter.all => l.messagesFilterAll,
+    _ConversationFilter.unread => l.messagesFilterUnread,
+    _ConversationFilter.attention => l.messagesFilterAttention,
+  };
 
   static _ConversationFilter parse(String? value) => values.firstWhere(
     (item) => item.value == value,
@@ -60,14 +66,15 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
         ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
     final filter = _ConversationFilter.parse(widget.filter);
 
     return PageScaffold(
-      title: '메시지',
-      subtitle: '회원과 코칭 내용을 주고받고 빠르게 후속 조치하세요',
+      title: l.navMessages,
+      subtitle: l.messagesSubtitle,
       scrollable: false,
       contentPadding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
@@ -78,10 +85,10 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       child: clientsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => EmptyHint(
-          message: '대화 목록을 불러오지 못했어요.',
+          message: l.messagesLoadFailed,
           icon: Icons.error_outline,
           action: ActionButton(
-            label: '다시 시도',
+            label: l.actionRetry,
             onPressed: () => ref.invalidate(clientsProvider),
           ),
         ),
@@ -126,7 +133,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                 }
                 return _ThreadPanel(
                   client: selected,
-                  onBack: () => context.go(AppRoutes.messages),
+                  onBack: () => context.go(
+                    AppRoutes.messagesFor(null, filter: widget.filter),
+                  ),
                 );
               }
               return Row(
@@ -194,20 +203,21 @@ class _ConversationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.md,
               AppSpacing.md,
               AppSpacing.sm,
             ),
             child: Text(
-              '대화',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              l.messagesConversations,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
           Padding(
@@ -215,9 +225,9 @@ class _ConversationList extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onQueryChanged,
-              decoration: const InputDecoration(
-                hintText: '회원 이름 또는 메시지 검색',
-                prefixIcon: Icon(Icons.search, size: 18),
+              decoration: InputDecoration(
+                hintText: l.messagesSearchHint,
+                prefixIcon: const Icon(Icons.search, size: 18),
               ),
             ),
           ),
@@ -230,8 +240,10 @@ class _ConversationList extends StatelessWidget {
                 for (final item in _ConversationFilter.values) ...<Widget>[
                   _FilterChip(
                     label: item == _ConversationFilter.unread
-                        ? '${item.label} ${unread.values.where((n) => n > 0).length}'
-                        : item.label,
+                        ? l.messagesFilterUnreadCount(
+                            unread.values.where((n) => n > 0).length,
+                          )
+                        : item.label(l),
                     selected: filter == item,
                     onTap: () => onFilterChanged(item),
                   ),
@@ -245,8 +257,8 @@ class _ConversationList extends StatelessWidget {
           const Divider(height: 1, color: AppColors.borderStrong),
           Expanded(
             child: clients.isEmpty
-                ? const EmptyHint(
-                    message: '조건에 맞는 대화가 없어요.',
+                ? EmptyHint(
+                    message: l.messagesEmpty,
                     icon: Icons.forum_outlined,
                   )
                 : ListView.separated(
@@ -427,6 +439,7 @@ class _ThreadPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final completion = recordedCompletionMean(client)?.round();
     final alerts = healthAlertsFor(client);
     return _Panel(
@@ -439,7 +452,7 @@ class _ThreadPanel extends StatelessWidget {
               children: <Widget>[
                 if (onBack != null) ...<Widget>[
                   IconButton(
-                    tooltip: '대화 목록',
+                    tooltip: l.messagesBackToList,
                     onPressed: onBack,
                     icon: const Icon(Icons.arrow_back),
                   ),
@@ -469,12 +482,12 @@ class _ThreadPanel extends StatelessWidget {
                   ),
                 ),
                 ActionButton(
-                  label: '프로그램',
+                  label: l.messagesProgram,
                   onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 ActionButton(
-                  label: '일정',
+                  label: l.messagesSchedule,
                   onPressed: () => context.go(AppRoutes.scheduleView('week')),
                 ),
               ],
@@ -490,16 +503,21 @@ class _ThreadPanel extends StatelessWidget {
               spacing: AppSpacing.lg,
               runSpacing: AppSpacing.xs,
               children: <Widget>[
-                Text('최근 운동 ${client.lastRoutine}', style: _signalStyle),
                 Text(
-                  completion == null ? '주간 이행률 기록 없음' : '주간 이행률 $completion%',
+                  l.messagesRecentWorkout(client.lastRoutine),
+                  style: _signalStyle,
+                ),
+                Text(
+                  completion == null
+                      ? l.messagesNoCompletion
+                      : l.messagesCompletion(completion),
                   style: _signalStyle,
                 ),
                 if (alerts.isNotEmpty) AlertBadge(alert: alerts.first),
                 TextButton(
                   onPressed: () =>
                       context.go(AppRoutes.clientDetail(client.id)),
-                  child: const Text('회원 상세'),
+                  child: Text(l.messagesClientDetail),
                 ),
               ],
             ),
@@ -530,9 +548,10 @@ class _EmptyThread extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _Panel(
+    final l = AppLocalizations.of(context);
+    return _Panel(
       child: EmptyHint(
-        message: '왼쪽 목록에서 대화할 회원을 선택하세요.',
+        message: l.messagesSelectPrompt,
         icon: Icons.chat_bubble_outline,
       ),
     );

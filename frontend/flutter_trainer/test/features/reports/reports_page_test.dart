@@ -9,6 +9,7 @@ import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
@@ -182,6 +183,24 @@ void main() {
     expect(find.textContaining('주간 리포트'), findsWidgets);
     expect(find.textContaining('PT 세션'), findsWidgets);
     expect(find.text('고객에게 전송'), findsOneWidget);
+  });
+
+  testWidgets('empty feedback cannot be sent', (tester) async {
+    await openReports(tester);
+    await revealSendAction(tester);
+
+    final feedback = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.hintText == '회원에게 전달할 코칭 피드백을 작성하세요.',
+    );
+    await tester.enterText(feedback, '   ');
+    await tester.pump();
+
+    final button = tester.widget<ActionButton>(
+      find.widgetWithText(ActionButton, '고객에게 전송'),
+    );
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('전송 delivers the report into the client chat thread', (

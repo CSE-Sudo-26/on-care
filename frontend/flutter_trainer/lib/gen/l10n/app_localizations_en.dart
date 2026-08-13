@@ -1964,4 +1964,269 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashTasksEmpty => 'There are no new coaching tasks to review.';
+
+  @override
+  String get navMessages => 'Messages';
+
+  @override
+  String get messagesSubtitle =>
+      'Exchange coaching updates with clients and follow up quickly';
+
+  @override
+  String get messagesLoadFailed => 'Couldn\'t load conversations.';
+
+  @override
+  String get messagesConversations => 'Conversations';
+
+  @override
+  String get messagesSearchHint => 'Search clients or messages';
+
+  @override
+  String get messagesEmpty => 'No conversations match these filters.';
+
+  @override
+  String get messagesFilterAll => 'All';
+
+  @override
+  String get messagesFilterUnread => 'Unread';
+
+  @override
+  String get messagesFilterAttention => 'Needs attention';
+
+  @override
+  String messagesFilterUnreadCount(int count) {
+    return 'Unread $count';
+  }
+
+  @override
+  String get messagesBackToList => 'Conversation list';
+
+  @override
+  String get messagesProgram => 'Program';
+
+  @override
+  String get messagesSchedule => 'Schedule';
+
+  @override
+  String messagesRecentWorkout(String value) {
+    return 'Recent workout $value';
+  }
+
+  @override
+  String get messagesNoCompletion => 'No completion record this week';
+
+  @override
+  String messagesCompletion(int percent) {
+    return '$percent% completion this week';
+  }
+
+  @override
+  String get messagesClientDetail => 'Client details';
+
+  @override
+  String get messagesSelectPrompt =>
+      'Select a client from the list to start a conversation.';
+
+  @override
+  String get clientQuickMessages => 'Messages';
+
+  @override
+  String get clientQuickProgram => 'Program';
+
+  @override
+  String get clientQuickSchedule => 'Add schedule';
+
+  @override
+  String get clientHealthGoals => 'Body profile & goals';
+
+  @override
+  String get clientTrainerMemoUnsupported =>
+      'Trainer memo storage isn\'t supported yet.';
+
+  @override
+  String get clientTrainerMemo => 'Memo';
+
+  @override
+  String get dashTaskReply => 'Reply';
+
+  @override
+  String get dashTaskDiet => 'Diet';
+
+  @override
+  String get dashTaskWorkout => 'Workout';
+
+  @override
+  String dashTaskReview(String alert, String name) {
+    return 'Review $name: $alert';
+  }
+
+  @override
+  String programEditorDefaultName(String goal) {
+    return '$goal program';
+  }
+
+  @override
+  String get programEditorDefaultSession => 'Session A';
+
+  @override
+  String get programEditorSaveUnsupported =>
+      'Multi-session program storage isn\'t supported yet.';
+
+  @override
+  String get programEditorAssignUnsupported =>
+      'The server currently supports flat routine assignments only.';
+
+  @override
+  String get programEditorAssign => 'Assign to client';
+
+  @override
+  String get programEditorInfo => 'Program information';
+
+  @override
+  String get programEditorName => 'Program name';
+
+  @override
+  String get programEditorGoal => 'Goal (optional)';
+
+  @override
+  String get programEditorPeriod => 'Period (optional)';
+
+  @override
+  String get programEditorMemo => 'Program memo (optional)';
+
+  @override
+  String get programEditorAiHint =>
+      'Apply AI coaching suggestions to the first session as a local draft.';
+
+  @override
+  String get programEditorApply => 'Apply to editor';
+
+  @override
+  String get programEditorExerciseConfig => 'Workout structure';
+
+  @override
+  String get programEditorAddSession => 'Add session';
+
+  @override
+  String programEditorSessionName(String letter) {
+    return 'Session $letter';
+  }
+
+  @override
+  String get programEditorLocalBanner =>
+      'This is a local draft. Saving and assigning multi-session programs requires the new Program API.';
+
+  @override
+  String get programEditorSessionUp => 'Move session up';
+
+  @override
+  String get programEditorSessionDown => 'Move session down';
+
+  @override
+  String get programEditorSessionDelete => 'Delete session';
+
+  @override
+  String get programEditorSessionEmpty =>
+      'Add exercises to build this session.';
+
+  @override
+  String get programEditorExerciseSearch => 'Search exercises or enter one';
+
+  @override
+  String get programEditorAdd => 'Add';
+
+  @override
+  String get programEditorAddExercise => 'Add exercise';
+
+  @override
+  String get programEditorExercise => 'Exercise';
+
+  @override
+  String get programEditorExerciseUp => 'Move exercise up';
+
+  @override
+  String get programEditorExerciseDown => 'Move exercise down';
+
+  @override
+  String get programEditorExerciseDelete => 'Delete exercise';
+
+  @override
+  String get programEditorSets => 'Sets';
+
+  @override
+  String get programEditorReps => 'Reps';
+
+  @override
+  String get programEditorWeight => 'Weight kg';
+
+  @override
+  String get programEditorDuration => 'Time min';
+
+  @override
+  String get programEditorDistance => 'Distance m';
+
+  @override
+  String get programEditorRest => 'Rest sec';
+
+  @override
+  String get programEditorExerciseMemo => 'Memo';
+
+  @override
+  String get reportsComparisonTitle => 'This week vs last week';
+
+  @override
+  String get reportsPreviousLoadFailed => 'Couldn\'t load last week\'s data.';
+
+  @override
+  String get reportsAverageSodium => 'Average sodium';
+
+  @override
+  String reportsPreviousValue(String value) {
+    return 'Last week $value';
+  }
+
+  @override
+  String get reportsFeedbackTitle => 'Trainer feedback';
+
+  @override
+  String get reportsFeedbackSaveUnsupported =>
+      'Feedback draft storage isn\'t supported yet.';
+
+  @override
+  String get reportsFeedbackSave => 'Save feedback';
+
+  @override
+  String get reportsFeedbackHint => 'Write coaching feedback for the client.';
+
+  @override
+  String get reportsFeedbackHelper =>
+      'The draft isn\'t stored on the server. Sending delivers it through the existing chat.';
+
+  @override
+  String get reportsTrendTitle => 'Workout completion · Last 4 weeks';
+
+  @override
+  String reportsTrendWeek(int index) {
+    return 'Week $index';
+  }
+
+  @override
+  String get reportsAiTitle => 'AI coaching assistant · Report summary';
+
+  @override
+  String get reportsAiUnavailable =>
+      'Available after the report summary API is connected. No summary is generated now.';
+
+  @override
+  String get reportsPdfUnsupported => 'PDF generation isn\'t supported yet.';
+
+  @override
+  String get reportsPdfLabel => 'Shareable PDF';
+
+  @override
+  String get reportsPrintUnsupported =>
+      'Available after PDF/print report snapshots are supported.';
+
+  @override
+  String get reportsPrintLabel => 'Print';
 }

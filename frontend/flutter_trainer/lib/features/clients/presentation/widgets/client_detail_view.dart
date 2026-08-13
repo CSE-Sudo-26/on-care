@@ -290,18 +290,18 @@ class _Header extends ConsumerWidget {
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               ActionButton(
-                label: '메시지',
+                label: l.clientQuickMessages,
                 icon: Icons.chat_bubble_outline,
                 onPressed: () => context.go(AppRoutes.messagesFor(client.id)),
               ),
               ActionButton(
-                label: '프로그램',
+                label: l.clientQuickProgram,
                 icon: Icons.fitness_center_outlined,
                 primary: true,
                 onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
               ),
               ActionButton(
-                label: '일정 등록',
+                label: l.clientQuickSchedule,
                 icon: Icons.calendar_month_outlined,
                 onPressed: () => context.go(AppRoutes.scheduleView('week')),
               ),
@@ -311,7 +311,7 @@ class _Header extends ConsumerWidget {
                 onPressed: () => context.go(AppRoutes.reportFor(client.id)),
               ),
               ActionButton(
-                label: '회원 신체·목표 관리',
+                label: l.clientHealthGoals,
                 icon: Icons.badge_outlined,
                 onPressed: () => showMemberHealthProfileDialog(
                   context,
@@ -319,10 +319,10 @@ class _Header extends ConsumerWidget {
                   repository: ref.read(clientRepositoryProvider),
                 ),
               ),
-              const Tooltip(
-                message: '트레이너 메모 저장 API가 아직 없어요.',
+              Tooltip(
+                message: l.clientTrainerMemoUnsupported,
                 child: ActionButton(
-                  label: '메모',
+                  label: l.clientTrainerMemo,
                   icon: Icons.edit_note_outlined,
                   onPressed: null,
                 ),

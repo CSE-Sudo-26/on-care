@@ -582,6 +582,7 @@ class _WeekComparison extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final previousStart = report.weekStart.subtract(const Duration(days: 7));
     final previous = ref.watch(
       weeklyReportProvider((client: report.client, weekStart: previousStart)),
@@ -598,17 +599,17 @@ class _WeekComparison extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '이번 주 vs 지난 주',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          Text(
+            l.reportsComparisonTitle,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (previous.isLoading)
             const LinearProgressIndicator(minHeight: 2)
           else if (previous.hasError)
-            const Text(
-              '지난주 데이터를 불러오지 못했어요.',
-              style: TextStyle(
+            Text(
+              l.reportsPreviousLoadFailed,
+              style: const TextStyle(
                 color: AppColors.warning,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
@@ -619,7 +620,7 @@ class _WeekComparison extends ConsumerWidget {
               children: <Widget>[
                 Expanded(
                   child: _ComparisonMetric(
-                    label: '운동 이행률',
+                    label: l.reportsCompletionAvg,
                     current: _percent(report.completionAvg),
                     previous: _percent(before?.completionAvg),
                     delta: completionDelta == null
@@ -631,7 +632,7 @@ class _WeekComparison extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: _ComparisonMetric(
-                    label: '평균 나트륨',
+                    label: l.reportsAverageSodium,
                     current: report.sodiumAvg == null
                         ? '-'
                         : '${report.sodiumAvg}mg',
@@ -674,6 +675,7 @@ class _ComparisonMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: const BoxDecoration(
@@ -715,7 +717,7 @@ class _ComparisonMetric extends StatelessWidget {
             ],
           ),
           Text(
-            '지난주 $previous',
+            l.reportsPreviousValue(previous),
             style: const TextStyle(
               color: AppColors.subtleForeground,
               fontSize: 10.5,
@@ -750,6 +752,8 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
     text: widget.initialText,
   );
 
+  bool get _canSend => _controller.text.trim().isNotEmpty;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -758,41 +762,53 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Expanded(
+            Expanded(
               child: Text(
-                '트레이너 피드백',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+                l.reportsFeedbackTitle,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             Tooltip(
-              message: '피드백 초안 저장 API가 아직 없어요.',
-              child: const ActionButton(label: '피드백 저장', onPressed: null),
+              message: l.reportsFeedbackSaveUnsupported,
+              child: ActionButton(
+                label: l.reportsFeedbackSave,
+                onPressed: null,
+              ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
         TextField(
           controller: _controller,
+          onChanged: (_) => setState(() {}),
           minLines: 4,
           maxLines: 7,
-          decoration: const InputDecoration(
-            hintText: '회원에게 전달할 코칭 피드백을 작성하세요.',
-            helperText: '초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.',
+          decoration: InputDecoration(
+            hintText: l.reportsFeedbackHint,
+            helperText: l.reportsFeedbackHelper,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Align(
           alignment: Alignment.centerRight,
           child: ActionButton(
-            label: widget.sent ? '전송됨' : (widget.sending ? '전송 중' : '고객에게 전송'),
+            label: widget.sent
+                ? l.reportsSendStateSent
+                : (widget.sending
+                      ? l.reportsSendStateSending
+                      : l.reportsSendAction),
             icon: widget.sent ? Icons.check : Icons.send_outlined,
             primary: true,
-            onPressed: widget.sent || widget.sending
+            onPressed: widget.sent || widget.sending || !_canSend
                 ? null
                 : () {
                     final text = _controller.text.trim();
@@ -813,6 +829,7 @@ class _FourWeekTrend extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final reports = <AsyncValue<WeeklyReport>>[
       for (var offset = 3; offset >= 0; offset--)
         ref.watch(
@@ -832,9 +849,9 @@ class _FourWeekTrend extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            '운동 이행률 추세 · 최근 4주',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          Text(
+            l.reportsTrendTitle,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -843,7 +860,7 @@ class _FourWeekTrend extends ConsumerWidget {
               for (var index = 0; index < reports.length; index++)
                 Expanded(
                   child: _TrendBar(
-                    label: '${index + 1}주',
+                    label: l.reportsTrendWeek(index + 1),
                     value: reports[index].valueOrNull?.completionAvg,
                     loading: reports[index].isLoading,
                   ),
@@ -905,6 +922,7 @@ class _ReportAiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -912,26 +930,26 @@ class _ReportAiCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border.all(color: AppColors.aiCardGradientEnd),
       ),
-      child: const Row(
+      child: Row(
         children: <Widget>[
-          Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
-          SizedBox(width: AppSpacing.sm),
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'AI 코칭 보조 · 리포트 요약',
-                  style: TextStyle(
+                  l.reportsAiTitle,
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  '실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.',
-                  style: TextStyle(
+                  l.reportsAiUnavailable,
+                  style: const TextStyle(
                     color: AppColors.mutedForeground,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
@@ -951,22 +969,23 @@ class _UnsupportedExportActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final l = AppLocalizations.of(context);
+    return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
         Tooltip(
-          message: 'PDF 생성 API가 아직 없어요.',
+          message: l.reportsPdfUnsupported,
           child: ActionButton(
-            label: '회원 공유용 PDF',
+            label: l.reportsPdfLabel,
             icon: Icons.picture_as_pdf_outlined,
             onPressed: null,
           ),
         ),
-        SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: AppSpacing.sm),
         Tooltip(
-          message: 'PDF/인쇄용 report snapshot 지원 후 사용할 수 있어요.',
+          message: l.reportsPrintUnsupported,
           child: ActionButton(
-            label: '인쇄',
+            label: l.reportsPrintLabel,
             icon: Icons.print_outlined,
             onPressed: null,
           ),

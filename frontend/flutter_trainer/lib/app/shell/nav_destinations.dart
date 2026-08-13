@@ -77,7 +77,7 @@ String navLabel(AppLocalizations l, NavLabel label) => switch (label) {
   NavLabel.dashboard => l.navDashboard,
   NavLabel.clients => l.navClients,
   NavLabel.schedule => l.navSchedule,
-  NavLabel.messages => l.localeName == 'ko' ? '메시지' : 'Messages',
+  NavLabel.messages => l.navMessages,
   NavLabel.coaching => l.navCoaching,
   NavLabel.reports => l.navReports,
   NavLabel.consultations => l.navConsultations,
