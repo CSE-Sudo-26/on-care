@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -563,8 +565,18 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
           .updateHistoryFeedback(widget.clientId, widget.entry.id, feedback);
       ref.invalidate(clientHistoryProvider(widget.clientId));
       messenger.showSnackBar(SnackBar(content: Text(l.routineFeedbackSaved)));
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l.routineFeedbackFailed)));
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(
+              l,
+              error is AppError ? error.message : null,
+              l.routineFeedbackFailed,
+            ),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }

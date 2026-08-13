@@ -39,7 +39,7 @@ ExerciseIntensity _exerciseIntensityFromString(String? s) => ExerciseIntensity
 /// 파생된 기록이다(#499, #638). 회원의 일반 수기 기록이 아니므로 편집하지 못한다.
 enum ExerciseSource { member, trainerPt, assignedRoutine }
 
-/// 서버 계약값(`member`|`trainer_pt`) → [ExerciseSource].
+/// 서버 계약값(`member`|`trainer_pt`|`assigned_routine`) → [ExerciseSource].
 ///
 /// 모르는 값과 누락은 [ExerciseSource.member] 로 떨어뜨린다. 이 필드를 모르는
 /// 예전 응답(그리고 데모/목 경로)에서 기록이 통째로 잠기면 안 된다.

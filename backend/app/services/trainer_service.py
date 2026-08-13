@@ -321,19 +321,13 @@ def build_client_history(
     for r in assigned_rows:
         completed_at = r.completed_at or r.created_at
         day = clock.to_seoul(completed_at).date().isoformat()
-        dated.append((day, clock.to_seoul(completed_at).timestamp(), RoutineHistoryOut(
-            id=r.id,
-            date_label=history_date_label(day),
-            label=r.assigned_routine_name or "배정 루틴 수행",
-            completion_rate=100,
-            exercises=[
-                f"{r.assigned_routine_name or r.type} · {r.minutes}분 · {r.intensity}"
-            ],
-            client_feedback=r.member_note,
-            trainer_note=r.trainer_feedback,
-            assigned_routine_id=r.assigned_routine_id,
-            completed_at=completed_at,
-        )))
+        dated.append(
+            (
+                day,
+                clock.to_seoul(completed_at).timestamp(),
+                _assigned_history_out(r),
+            )
+        )
     dated.sort(key=lambda item: (item[0], item[1]), reverse=True)
     return [item[2] for item in dated[:limit]]
 
@@ -803,7 +797,11 @@ def update_assigned_routine_feedback(
     history_id: str,
     feedback: str,
 ) -> RoutineHistoryOut:
-    """현재 담당 트레이너가 자신이 배정한 수행 기록에 피드백한다."""
+    """활성 담당 관계가 확인된 트레이너가 자신이 배정한 기록에 피드백한다.
+
+    API 계층은 현재 활성 담당 관계를 먼저 확인하고, 여기서는 수행 스냅샷의
+    배정 트레이너까지 일치하는지 추가로 검증한다(#638).
+    """
     row = db.scalar(
         select(ExerciseSession).where(
             ExerciseSession.id == history_id,
@@ -817,6 +815,11 @@ def update_assigned_routine_feedback(
     row.trainer_feedback = feedback.strip()
     db.commit()
     db.refresh(row)
+    return _assigned_history_out(row)
+
+
+def _assigned_history_out(row: ExerciseSession) -> RoutineHistoryOut:
+    """배정 루틴 수행을 조회·수정 응답에서 공유하는 이력 계약으로 변환한다."""
     completed_at = row.completed_at or row.created_at
     day = clock.to_seoul(completed_at).date().isoformat()
     return RoutineHistoryOut(

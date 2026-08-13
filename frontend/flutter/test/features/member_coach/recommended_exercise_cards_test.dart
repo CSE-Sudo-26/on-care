@@ -188,12 +188,16 @@ void main() {
       find.byKey(const Key('routineCompletionNote')),
       '허리는 편안했어요',
     );
+    await tester.tap(find.text('높음'));
     await tester.tap(find.byKey(const Key('confirmRoutineCompletion')));
     await tester.pumpAndSettle();
 
+    final CoachRoutine completed = (await repository.fetchRoutines())
+        .firstWhere((CoachRoutine routine) => routine.id == 'seed-r2');
     expect(find.text('운동 기록에 반영했어요'), findsOneWidget);
     expect(find.text('내 메모: 허리는 편안했어요'), findsOneWidget);
     expect(find.byKey(const Key('completeRoutine-seed-r2')), findsNothing);
+    expect(completed.completedIntensity, 'high');
   });
 
   testWidgets('완료한 루틴에 트레이너 피드백을 표시한다', (WidgetTester tester) async {

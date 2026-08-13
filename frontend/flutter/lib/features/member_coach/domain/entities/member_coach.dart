@@ -55,6 +55,28 @@ class CoachRoutine {
 
   bool get isTrainerRecommended => source == 'trainer';
   bool get isAiRecommended => source == 'ai';
+
+  CoachRoutine copyWith({
+    bool? completed,
+    DateTime? completedAt,
+    int? completedMinutes,
+    String? completedIntensity,
+    String? memberNote,
+    String? trainerFeedback,
+  }) => CoachRoutine(
+    id: id,
+    name: name,
+    minutes: minutes,
+    type: type,
+    reason: reason,
+    source: source,
+    completed: completed ?? this.completed,
+    completedAt: completedAt ?? this.completedAt,
+    completedMinutes: completedMinutes ?? this.completedMinutes,
+    completedIntensity: completedIntensity ?? this.completedIntensity,
+    memberNote: memberNote ?? this.memberNote,
+    trainerFeedback: trainerFeedback ?? this.trainerFeedback,
+  );
 }
 
 /// A PT session the coach booked for the member — `/me/coach/sessions`.

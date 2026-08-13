@@ -144,6 +144,23 @@ def test_completion_feedback_and_history_share_one_record(client, assigned_routi
     ).status_code == 409
 
 
+@pytest.mark.parametrize("minutes", [0, -5, 601])
+def test_completion_rejects_out_of_range_minutes(
+    client, assigned_routine, minutes
+):
+    """앱을 거치지 않은 완료 요청도 서버의 1~600분 계약을 지킨다."""
+    _, routine = assigned_routine
+    member_headers = _headers(_login(client, "jisu@oncare.com"))
+
+    response = client.post(
+        f"/v1/me/coach/routines/{routine['id']}/complete",
+        headers=member_headers,
+        json={"minutes": minutes},
+    )
+
+    assert response.status_code == 422, response.text
+
+
 def test_snapshot_and_feedback_survive_routine_deletion(client, assigned_routine):
     trainer_token, routine = assigned_routine
     member_headers = _headers(_login(client, "jisu@oncare.com"))

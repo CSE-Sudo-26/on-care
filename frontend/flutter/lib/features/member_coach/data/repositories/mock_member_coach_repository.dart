@@ -196,13 +196,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     if (index < 0) throw StateError('Routine not found.');
     final CoachRoutine current = _routines[index];
     if (current.completed) return current;
-    final CoachRoutine completed = CoachRoutine(
-      id: current.id,
-      name: current.name,
-      minutes: current.minutes,
-      type: current.type,
-      reason: current.reason,
-      source: current.source,
+    final CoachRoutine completed = current.copyWith(
       completed: true,
       completedAt: DateTime.now(),
       completedMinutes: minutes,

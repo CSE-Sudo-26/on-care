@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/errors/app_error.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -231,6 +232,7 @@ class _RecommendedExerciseRowState
           .completeRoutine(
             routine.id,
             minutes: input.minutes,
+            intensity: input.intensity,
             memberNote: input.note,
           );
       ref.invalidate(coachRoutinesProvider);
@@ -240,11 +242,20 @@ class _RecommendedExerciseRowState
           context,
         ).showSnackBar(const SnackBar(content: Text('운동 기록에 반영했어요')));
       }
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('completeRoutine failed: $error\n$stackTrace');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('완료 기록에 실패했어요. 다시 시도해 주세요')),
-        );
+        if (error is NotFoundError) {
+          ref.invalidate(coachRoutinesProvider);
+        }
+        final String message = switch (error) {
+          NotFoundError() => '이 루틴은 더 이상 없어요. 목록을 새로 불러와 주세요',
+          NetworkError() => '네트워크 연결을 확인하고 다시 시도해 주세요',
+          _ => '완료 기록에 실패했어요.',
+        };
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -366,9 +377,14 @@ class _RecommendedExerciseRowState
 }
 
 class _RoutineCompletionInput {
-  const _RoutineCompletionInput({required this.minutes, required this.note});
+  const _RoutineCompletionInput({
+    required this.minutes,
+    required this.intensity,
+    required this.note,
+  });
 
   final int minutes;
+  final String intensity;
   final String note;
 }
 
@@ -386,6 +402,7 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _minutesController;
   final TextEditingController _noteController = TextEditingController();
+  String _intensity = 'moderate';
 
   @override
   void initState() {
@@ -424,6 +441,21 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               },
             ),
             const SizedBox(height: 12),
+            const Align(alignment: Alignment.centerLeft, child: Text('수행 강도')),
+            const SizedBox(height: 6),
+            SegmentedButton<String>(
+              key: const Key('routineCompletionIntensity'),
+              segments: const <ButtonSegment<String>>[
+                ButtonSegment<String>(value: 'light', label: Text('가벼움')),
+                ButtonSegment<String>(value: 'moderate', label: Text('보통')),
+                ButtonSegment<String>(value: 'high', label: Text('높음')),
+              ],
+              selected: <String>{_intensity},
+              onSelectionChanged: (Set<String> selected) {
+                setState(() => _intensity = selected.single);
+              },
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               key: const Key('routineCompletionNote'),
               controller: _noteController,
@@ -449,6 +481,7 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
             Navigator.of(context).pop(
               _RoutineCompletionInput(
                 minutes: int.parse(_minutesController.text),
+                intensity: _intensity,
                 note: _noteController.text,
               ),
             );
