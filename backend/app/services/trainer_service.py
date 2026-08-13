@@ -473,6 +473,8 @@ def send_message(
                 else f"{trainer_name or '트레이너'} 트레이너의 메시지"
             ),
             body=text,
+            # 리포트도 대화 스레드로 도착한다 — 별도 리포트 함이 없다.
+            category=notification_service.MEMBER_COACH_CHAT,
         )
     db.commit()
     db.refresh(msg)
@@ -572,6 +574,8 @@ def delete_trainer_account(db: Session, trainer: User) -> None:
             db,
             member_id=member_id,
             kind=notification_service.TRAINER_MESSAGE,
+            # 새 트레이너를 찾는 화면으로 보낸다.
+            category=notification_service.MEMBER_CONSULTATION,
             title="담당 트레이너 연결이 해제되었어요",
             body=f"{trainer_name} 트레이너가 서비스를 떠났습니다. 새 트레이너를 찾아보세요.",
         )
@@ -581,6 +585,7 @@ def delete_trainer_account(db: Session, trainer: User) -> None:
             db,
             member_id=member_id,
             kind=notification_service.TRAINER_MESSAGE,
+            category=notification_service.MEMBER_SCHEDULE,
             title="예약한 수업이 취소되었어요",
             body=f"{trainer_name} 트레이너가 서비스를 떠나 예약이 취소되었습니다.",
         )
@@ -750,6 +755,7 @@ def assign_routine(
         db,
         member_id=member_id,
         kind=notification_service.EXERCISE,
+        category=notification_service.MEMBER_ROUTINE,
         title="새 운동 루틴이 배정되었어요",
         body=f"{name} · {minutes}분",
     )
@@ -1012,6 +1018,7 @@ def create_session(
             db,
             member_id=member_id,
             kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
             title="새 일정이 등록되었어요",
             body=f"{date} {time} · {type_}",
         )

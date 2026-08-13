@@ -40,8 +40,15 @@ DEFAULTS: dict[str, bool] = {
     WEEKLY_REPORT: False,
 }
 
-#: 알림 종류 → 목록에 실릴 category. 앱은 이 값으로 이동 경로를 고른다
-#: (`notifications._ACTION_BY_CATEGORY`).
+#: 알림 종류 → 목록에 실릴 기본 category.
+#:
+#: **`kind` 는 목적지가 아니라 알림 수신 설정 키다.** 같은 키로 서로 다른 곳을
+#: 가리키는 알림이 나간다 — 루틴 배정과 일정 등록이 둘 다 `EXERCISE` 이고, 연결
+#: 해제와 예약 취소가 둘 다 `TRAINER_MESSAGE` 다. 그래서 여기서 유도한 값만으로는
+#: 앱이 갈 곳을 정할 수 없다(#636).
+#:
+#: 호출부가 `queue(category=...)` 로 목적지를 밝히면 그 값이 우선한다. 이 표는
+#: 밝히지 않은 호출부를 위한 기본값이다.
 _CATEGORY: dict[str, str] = {
     TRAINER_MESSAGE: "system",
     EXERCISE: "reminder",
@@ -142,6 +149,7 @@ def queue(
     kind: str,
     title: str,
     body: str = "",
+    category: str | None = None,
 ) -> Notification | None:
     """알림을 세션에 **추가만** 한다(커밋하지 않는다). 꺼져 있으면 None.
 
@@ -152,6 +160,10 @@ def queue(
     별도 실패 모드를 만들지 않는다는 뜻이기도 하다 — 여기서 하는 일은 `db.add`
     뿐이라 원래 요청을 새로 실패시킬 여지가 없다. 외부 발송(푸시)은 이 함수
     바깥의 일이다(#474).
+
+    [category] 는 **회원이 이 알림을 누르면 갈 곳**이다. `kind` 로는 정할 수 없어
+    호출부가 밝힌다([_CATEGORY] 참고). 앱이 모르는 값을 받으면 목록에는 싣고 이동만
+    하지 않으므로, 새 값을 더해도 기존 앱이 깨지지 않는다.
     """
     if not wants(db, member_id, kind):
         return None
@@ -160,7 +172,7 @@ def queue(
         user_id=member_id,
         title=title,
         body=body,
-        category=_CATEGORY.get(kind, "system"),
+        category=category or _CATEGORY.get(kind, "system"),
         read=False,
     )
     db.add(notification)
@@ -177,6 +189,16 @@ def unread_count(db: Session, member_id: str) -> int:
     ).all()
     return len(rows)
 
+
+#: 회원 알림의 목적지. `Notification.category` 에 그대로 저장되고, 앱이 이 값에
+#: 붙은 action 을 보고 이동한다(`notifications._ACTION_BY_CATEGORY`).
+#:
+#: 기존 값(reminder·health_check·achievement·system)은 "성격" 에 가깝고 목적지를
+#: 구분하지 못했다. 트레이너가 한 일은 모두 `system` 으로 뭉쳐 갈 곳이 없었다(#636).
+MEMBER_COACH_CHAT = "coach_chat"
+MEMBER_ROUTINE = "routine"
+MEMBER_SCHEDULE = "member_schedule"
+MEMBER_CONSULTATION = "consultation_result"
 
 #: 트레이너 알림의 종류. `Notification.category` 에 그대로 저장되고, 트레이너 앱이
 #: 이 값으로 어디로 이동할지 정한다. 회원 알림의 category 집합

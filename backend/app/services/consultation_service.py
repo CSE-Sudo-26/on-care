@@ -387,6 +387,13 @@ def _notify(db: Session, *, user_id: str, title: str, body: str) -> None:
 
     승인·거절은 회원이 앱을 열어 보기 전에는 알 수 없는 변화라 알림이 결과 전달의
     유일한 경로다. 푸시 발송은 이번 범위 밖이며 여기서는 행만 남긴다.
+
+    category 를 `system` 이 아니라 상담 결과로 밝히는 이유: 앱이 이 값으로 갈 곳을
+    정한다. `system` 은 목적지가 없어, 승인 알림을 눌러도 담당 트레이너 화면으로
+    갈 수 없었다(#636).
+
+    수신 설정을 보지 않는 것은 의도다 — 내가 보낸 요청의 처리 결과는 끌 수 있는
+    알림이 아니다. 그래서 `notification_service.queue` 가 아니라 여기서 직접 만든다.
     """
     db.add(
         Notification(
@@ -394,7 +401,7 @@ def _notify(db: Session, *, user_id: str, title: str, body: str) -> None:
             user_id=user_id,
             title=title,
             body=body,
-            category="system",
+            category=notification_service.MEMBER_CONSULTATION,
             read=False,
         )
     )
