@@ -227,13 +227,15 @@ def test_only_owner_can_complete_or_write_feedback(
         hashed_password="unused",
         role="trainer",
     )
+    db_session.add(other_trainer)
+    db_session.flush()  # TrainerClient.trainer_id FK 부모를 먼저 반영한다.
     link = TrainerClient(
         id=f"tc-{uuid4().hex[:12]}",
         trainer_id=other_trainer_id,
         member_id=MEMBER_ID,
         active=False,
     )
-    db_session.add_all([other_trainer, link])
+    db_session.add(link)
     db_session.commit()
     try:
         denied_feedback = client.put(
