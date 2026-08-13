@@ -285,22 +285,46 @@ class _Header extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Row(
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: <Widget>[
-              Expanded(
-                child: ActionButton(
-                  label: l.dashCreateAiRoutine,
-                  icon: Icons.auto_awesome,
-                  primary: true,
-                  onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
+              ActionButton(
+                label: '메시지',
+                icon: Icons.chat_bubble_outline,
+                onPressed: () => context.go(AppRoutes.messagesFor(client.id)),
+              ),
+              ActionButton(
+                label: '프로그램',
+                icon: Icons.fitness_center_outlined,
+                primary: true,
+                onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
+              ),
+              ActionButton(
+                label: '일정 등록',
+                icon: Icons.calendar_month_outlined,
+                onPressed: () => context.go(AppRoutes.scheduleView('week')),
+              ),
+              ActionButton(
+                label: l.clientWeeklyReport,
+                icon: Icons.insights_outlined,
+                onPressed: () => context.go(AppRoutes.reportFor(client.id)),
+              ),
+              ActionButton(
+                label: '회원 신체·목표 관리',
+                icon: Icons.badge_outlined,
+                onPressed: () => showMemberHealthProfileDialog(
+                  context,
+                  memberId: client.id,
+                  repository: ref.read(clientRepositoryProvider),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
+              const Tooltip(
+                message: '트레이너 메모 저장 API가 아직 없어요.',
                 child: ActionButton(
-                  label: l.clientWeeklyReport,
-                  icon: Icons.insights_outlined,
-                  onPressed: () => context.go(AppRoutes.reportFor(client.id)),
+                  label: '메모',
+                  icon: Icons.edit_note_outlined,
+                  onPressed: null,
                 ),
               ),
             ],
@@ -308,16 +332,6 @@ class _Header extends ConsumerWidget {
           // AI 코칭 상담(#497)은 실 API 모드에서만 — 데모에는 근거로 삼을 회원
           // 기록이 없어 무엇을 물어도 의미 있는 답이 나오지 않는다. 기존 두
           // 버튼 행은 그대로 두고 아래에 붙여, 데모 헤더가 지금과 같게 남는다.
-          const SizedBox(height: AppSpacing.sm),
-          ActionButton(
-            label: '회원 신체·목표 관리',
-            icon: Icons.badge_outlined,
-            onPressed: () => showMemberHealthProfileDialog(
-              context,
-              memberId: client.id,
-              repository: ref.read(clientRepositoryProvider),
-            ),
-          ),
           if (ref.watch(clientCoachEnabledProvider)) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             ActionButton(

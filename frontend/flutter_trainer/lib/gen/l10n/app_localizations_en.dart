@@ -1944,4 +1944,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get routineFeedbackFailed =>
       'Could not save feedback. Please try again';
+
+  @override
+  String get navOperationsGroup => 'Operations';
+
+  @override
+  String get navCoachingGroup => 'Coaching';
+
+  @override
+  String get dashTodayTasks => 'Today\'s tasks';
+
+  @override
+  String get dashTasksReviewed => 'All reviewed';
+
+  @override
+  String dashTasksNeedReview(int count) {
+    return '$count to review';
+  }
+
+  @override
+  String get dashTasksEmpty => 'There are no new coaching tasks to review.';
 }

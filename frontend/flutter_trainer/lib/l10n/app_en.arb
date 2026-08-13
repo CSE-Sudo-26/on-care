@@ -1299,5 +1299,16 @@
   "routineFeedbackWrite": "Write feedback",
   "routineFeedbackEdit": "Edit feedback",
   "routineFeedbackSaved": "Feedback saved",
-  "routineFeedbackFailed": "Could not save feedback. Please try again"
+  "routineFeedbackFailed": "Could not save feedback. Please try again",
+  "navOperationsGroup": "Operations",
+  "navCoachingGroup": "Coaching",
+  "dashTodayTasks": "Today's tasks",
+  "dashTasksReviewed": "All reviewed",
+  "dashTasksNeedReview": "{count} to review",
+  "@dashTasksNeedReview": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashTasksEmpty": "There are no new coaching tasks to review."
 }

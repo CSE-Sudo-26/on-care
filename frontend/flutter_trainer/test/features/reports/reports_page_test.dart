@@ -49,6 +49,18 @@ class _ReportFailsOncePerKeyRepository implements ReportRepository {
 /// 리포트 against the seeded roster — the trainer's own week plus one
 /// client's report, and sending it into their chat thread.
 void main() {
+  Future<void> revealSendAction(WidgetTester tester) async {
+    for (var attempt = 0; attempt < 6; attempt++) {
+      if (find.text('고객에게 전송').evaluate().isNotEmpty) break;
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -320));
+      await tester.pump();
+    }
+    if (find.text('고객에게 전송').evaluate().isNotEmpty) {
+      await tester.ensureVisible(find.text('고객에게 전송'));
+      await tester.pump();
+    }
+  }
+
   Future<ProviderContainer> openReports(
     WidgetTester tester, {
     String? clientId,
@@ -134,16 +146,19 @@ void main() {
     );
     await settle(tester);
 
-    final retryCalls = repository.calls.sublist(repository.calls.length - 2);
-    expect(retryCalls.map((call) => call.client.id), <String>[
-      'seed-client-3',
-      'seed-client-3',
-    ]);
-    expect(retryCalls.first.weekStart, retryCalls.last.weekStart);
-    expect(
-      retryCalls.last.weekStart,
-      weekStartOf(DateTime.now()).subtract(const Duration(days: 7)),
-    );
+    final selectedWeek = weekStartOf(
+      DateTime.now(),
+    ).subtract(const Duration(days: 7));
+    final selectedCalls = repository.calls
+        .where(
+          (call) =>
+              call.client.id == 'seed-client-3' &&
+              call.weekStart == selectedWeek,
+        )
+        .toList();
+    // Comparison/trend cards legitimately request adjacent weeks too. The
+    // failed selected week itself must still be retried without losing scope.
+    expect(selectedCalls.length, greaterThanOrEqualTo(2));
     expect(find.text('박성호님 주간 리포트'), findsOneWidget);
     expect(find.text('report transport detail'), findsNothing);
   });
@@ -160,6 +175,7 @@ void main() {
     tester,
   ) async {
     await openReports(tester);
+    await revealSendAction(tester);
 
     // The preview box is the message body itself, so the trainer can
     // read it before sending rather than discovering it in the thread.
@@ -172,6 +188,7 @@ void main() {
     tester,
   ) async {
     final container = await openReports(tester);
+    await revealSendAction(tester);
 
     await tester.tap(find.text('고객에게 전송'));
     await settle(tester);
@@ -208,6 +225,7 @@ void main() {
         ),
       ],
     );
+    await revealSendAction(tester);
 
     await tester.tap(find.text('고객에게 전송'));
     await settle(tester);

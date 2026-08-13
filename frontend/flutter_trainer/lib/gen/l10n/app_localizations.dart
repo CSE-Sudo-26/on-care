@@ -3511,6 +3511,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save feedback. Please try again'**
   String get routineFeedbackFailed;
+
+  /// No description provided for @navOperationsGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations'**
+  String get navOperationsGroup;
+
+  /// No description provided for @navCoachingGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Coaching'**
+  String get navCoachingGroup;
+
+  /// No description provided for @dashTodayTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s tasks'**
+  String get dashTodayTasks;
+
+  /// No description provided for @dashTasksReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'All reviewed'**
+  String get dashTasksReviewed;
+
+  /// No description provided for @dashTasksNeedReview.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} to review'**
+  String dashTasksNeedReview(int count);
+
+  /// No description provided for @dashTasksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no new coaching tasks to review.'**
+  String get dashTasksEmpty;
 }
 
 class _AppLocalizationsDelegate

@@ -189,22 +189,43 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text(l.schedDeleteTitle, style: TextStyle(fontSize: 17)),
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Row(
+          children: <Widget>[
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.destructive.withValues(alpha: 0.1),
+                borderRadius: const BorderRadius.all(AppRadius.md),
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                color: AppColors.destructive,
+                size: 19,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(l.schedDeleteTitle, style: const TextStyle(fontSize: 17)),
+          ],
+        ),
         content: Text(
           l.schedDeleteConfirm(s.time, s.clientName),
           style: const TextStyle(fontSize: 14),
         ),
         actions: <Widget>[
-          TextButton(
+          ActionButton(
+            label: l.actionCancel,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l.actionCancel),
           ),
-          TextButton(
+          ActionButton(
+            label: l.actionDelete,
+            primary: true,
+            tone: AppColors.destructive,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              l.actionDelete,
-              style: TextStyle(color: AppColors.destructive),
-            ),
           ),
         ],
       ),
@@ -253,7 +274,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       context.go(AppRoutes.clients);
       return;
     }
-    context.go(AppRoutes.clientDetail(match.first.id, section: 'chat'));
+    context.go(AppRoutes.messagesFor(match.first.id));
   }
 
   String get _selectedYmd => ymd(_selectedDay);
@@ -561,7 +582,29 @@ class _CompleteDialogState extends State<_CompleteDialog> {
     final s = widget.session;
     return AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text(l.schedCompleteTitle, style: TextStyle(fontSize: 17)),
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.card),
+      ),
+      title: Row(
+        children: <Widget>[
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.all(AppRadius.md),
+            ),
+            child: const Icon(
+              Icons.task_alt,
+              color: AppColors.success,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(l.schedCompleteTitle, style: const TextStyle(fontSize: 17)),
+        ],
+      ),
       content: SizedBox(
         width: 320,
         child: Column(
@@ -584,13 +627,14 @@ class _CompleteDialogState extends State<_CompleteDialog> {
         ),
       ),
       actions: <Widget>[
-        TextButton(
+        ActionButton(
+          label: l.actionCancel,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.actionCancel),
         ),
-        TextButton(
+        ActionButton(
+          label: l.schedCompleteAction,
+          primary: true,
           onPressed: () => Navigator.of(context).pop(_memo.text.trim()),
-          child: Text(l.schedCompleteAction),
         ),
       ],
     );

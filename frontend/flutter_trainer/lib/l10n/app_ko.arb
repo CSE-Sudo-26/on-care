@@ -571,5 +571,11 @@
   "routineFeedbackWrite": "피드백 작성",
   "routineFeedbackEdit": "피드백 수정",
   "routineFeedbackSaved": "피드백을 저장했어요",
-  "routineFeedbackFailed": "피드백을 저장하지 못했어요. 다시 시도해 주세요"
+  "routineFeedbackFailed": "피드백을 저장하지 못했어요. 다시 시도해 주세요",
+  "navOperationsGroup": "운영",
+  "navCoachingGroup": "코칭",
+  "dashTodayTasks": "오늘 할 일",
+  "dashTasksReviewed": "모두 확인했어요",
+  "dashTasksNeedReview": "{count}개 확인 필요",
+  "dashTasksEmpty": "새로 확인할 코칭 업무가 없어요."
 }

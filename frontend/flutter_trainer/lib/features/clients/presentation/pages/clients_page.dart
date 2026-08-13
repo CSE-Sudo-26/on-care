@@ -346,6 +346,7 @@ class _RosterList extends StatelessWidget {
               client: client,
               selected: client.id == selectedId,
               unread: unread[client.id] ?? 0,
+              compact: true,
               onTap: () => onOpen(client.id),
             ),
             const SizedBox(height: AppSpacing.md),

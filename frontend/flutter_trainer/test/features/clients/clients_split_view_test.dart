@@ -191,7 +191,9 @@ void main() {
     );
     if (firstUnderTarget >= 0) {
       expect(
-        rendered.skip(firstUnderTarget).every((c) => !c.client.sodiumOverBudget),
+        rendered
+            .skip(firstUnderTarget)
+            .every((c) => !c.client.sodiumOverBudget),
         isTrue,
         reason: '나트륨 초과 고객이 목표 이내 고객보다 아래에 오면 안 된다',
       );
@@ -234,7 +236,7 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('나트륨 초과'), findsOneWidget);
+    expect(find.text('나트륨 초과'), findsWidgets);
     expect(
       find.byKey(const ValueKey<String>('client-chat-button')),
       findsOneWidget,

@@ -81,7 +81,7 @@ void main() {
 
     expect(find.text('AI에게 묻기'), findsNothing);
     // 기존 두 액션은 그대로다.
-    expect(find.text('AI 루틴 만들기'), findsWidgets);
+    expect(find.text('프로그램'), findsWidgets);
     expect(find.text('주간 리포트'), findsWidgets);
   });
 

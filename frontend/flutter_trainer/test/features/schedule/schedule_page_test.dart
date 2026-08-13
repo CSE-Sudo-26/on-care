@@ -1,5 +1,3 @@
-import 'dart:ui' show Tristate;
-
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -927,7 +925,9 @@ void main() {
       expect(find.text('오늘'), findsOneWidget);
     });
 
-    testWidgets('채팅 chip jumps to the client detail chat', (tester) async {
+    testWidgets('채팅 chip jumps to the standalone message thread', (
+      tester,
+    ) async {
       await openSchedule(tester);
 
       await tester.scrollUntilVisible(find.text('박성호'), 120);
@@ -949,15 +949,9 @@ void main() {
 
       // Client detail opened on the chat section — the header's message
       // button reads as selected, standing in for the tab it replaced.
-      expect(find.text('운동'), findsOneWidget);
       expect(
-        tester
-            .getSemantics(
-              find.byKey(const ValueKey<String>('client-chat-button')),
-            )
-            .flagsCollection
-            .isSelected,
-        Tristate.isTrue,
+        find.byKey(const ValueKey<String>('messages-thread-seed-client-3')),
+        findsOneWidget,
       );
       // The thread auto-scrolls to the newest message; drag back up so
       // the lazily-built banner at the top of the thread exists.

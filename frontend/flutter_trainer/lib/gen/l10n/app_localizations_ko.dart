@@ -1887,4 +1887,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routineFeedbackFailed => '피드백을 저장하지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get navOperationsGroup => '운영';
+
+  @override
+  String get navCoachingGroup => '코칭';
+
+  @override
+  String get dashTodayTasks => '오늘 할 일';
+
+  @override
+  String get dashTasksReviewed => '모두 확인했어요';
+
+  @override
+  String dashTasksNeedReview(int count) {
+    return '$count개 확인 필요';
+  }
+
+  @override
+  String get dashTasksEmpty => '새로 확인할 코칭 업무가 없어요.';
 }

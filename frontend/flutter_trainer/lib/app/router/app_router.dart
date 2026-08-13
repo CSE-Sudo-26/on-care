@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.
 import 'package:oncare_trainer/features/coaching/presentation/pages/coaching_page.dart';
 import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:oncare_trainer/features/messages/presentation/pages/messages_page.dart';
 import 'package:oncare_trainer/features/my/presentation/pages/my_page.dart';
 import 'package:oncare_trainer/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
@@ -114,6 +115,17 @@ GoRouter buildAppRouter({
                 builder: (context, state) => SchedulePage(
                   view: state.uri.queryParameters['v'],
                   date: state.uri.queryParameters['d'],
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.messages,
+                builder: (context, state) => MessagesPage(
+                  clientId: state.uri.queryParameters['client'],
+                  filter: state.uri.queryParameters['f'],
                 ),
               ),
             ],

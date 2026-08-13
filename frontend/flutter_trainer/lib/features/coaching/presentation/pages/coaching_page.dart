@@ -19,6 +19,7 @@ import 'package:oncare_trainer/features/coaching/domain/entities/routine_options
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
@@ -572,6 +573,35 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  ProgramEditorWorkspace(
+                    key: ValueKey<String>('program-editor-${client.id}'),
+                    clientGoal: client.goal,
+                    aiSuggestions:
+                        _generatedRecommendations[client.id] ?? items,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          '기존 루틴 배정',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '현재 backend contract로 실제 전송 가능',
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   _AiAssistantPrompt(
                     clientName: client.name,
                     onTap: () => setState(() => _showOptionsFlow = true),
