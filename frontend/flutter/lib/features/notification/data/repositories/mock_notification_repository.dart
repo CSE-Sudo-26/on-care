@@ -6,6 +6,10 @@ import 'package:oncare/features/notification/domain/repositories/notification_re
 /// 실서비스(실로그인) 화면은 `/notifications` 백엔드를 읽지만, 데모 둘러보기는
 /// 기존과 동일하게 보이도록 이 하드코딩 목록을 유지한다. 컨트롤러가 목 모드에서
 /// 이 목록을 즉시 시드로 사용한다.
+///
+/// 각 알림은 실서버가 내려 주는 것과 같은 모양의 목적지(`action`)를 갖는다 —
+/// 없으면 데모에서는 눌러도 읽음 처리만 되어, 구현돼 있는 이동 기능이 없는 것처럼
+/// 보인다(#667). 목록의 생김새는 달라지지 않는다: `action` 은 그려지지 않는다.
 const List<AlertItem> demoAlerts = <AlertItem>[
   AlertItem(
     id: 'a1',
@@ -13,6 +17,7 @@ const List<AlertItem> demoAlerts = <AlertItem>[
     body: '점심 짬뽕으로 오늘 나트륨이 3,421mg까지 올랐어요. 물을 충분히 드세요.',
     timeAgo: '10분 전',
     category: AlertCategory.reminder,
+    action: AlertAction(label: '식단 보기', target: AlertTarget.diet),
   ),
   AlertItem(
     id: 'a2',
@@ -20,6 +25,7 @@ const List<AlertItem> demoAlerts = <AlertItem>[
     body: '오늘 18:00 김트레이너와 12회차 PT를 마쳤어요!',
     timeAgo: '1시간 전',
     category: AlertCategory.achievement,
+    action: AlertAction(label: '운동 기록 보기', target: AlertTarget.exercise),
   ),
   AlertItem(
     id: 'a3',
@@ -27,6 +33,7 @@ const List<AlertItem> demoAlerts = <AlertItem>[
     body: '마무리로 어깨 회전근개 스트레칭을 꼭 해주세요.',
     timeAgo: '2시간 전',
     category: AlertCategory.reminder,
+    action: AlertAction(label: '대화 보기', target: AlertTarget.coachChat),
   ),
   AlertItem(
     id: 'a4',
@@ -35,6 +42,8 @@ const List<AlertItem> demoAlerts = <AlertItem>[
     timeAgo: '어제',
     category: AlertCategory.system,
     read: true,
+    // 갈 곳을 일부러 주지 않는다. **목적지 없는 알림이 목록에서 사라지거나
+    // 엉뚱한 곳으로 가지 않는지**를 데모에서도 볼 수 있어야 한다.
   ),
 ];
 
