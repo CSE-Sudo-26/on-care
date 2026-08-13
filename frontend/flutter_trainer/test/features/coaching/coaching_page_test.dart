@@ -150,6 +150,13 @@ class _FixedClientRepository implements ClientRepository {
       Stream.value(const <RoutineHistoryEntry>[]);
 
   @override
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  ) async => throw UnsupportedError('not used');
+
+  @override
   Future<MemberHealthProfile> fetchHealthProfile(String clientId) async =>
       MemberHealthProfile(memberId: clientId, memberName: '회원');
 

@@ -1925,4 +1925,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchDetailNoRecord => 'Nothing recorded this week';
+
+  @override
+  String get routineFeedbackTitle => 'Workout feedback';
+
+  @override
+  String get routineFeedbackHint => 'Write coaching feedback for the member';
+
+  @override
+  String get routineFeedbackWrite => 'Write feedback';
+
+  @override
+  String get routineFeedbackEdit => 'Edit feedback';
+
+  @override
+  String get routineFeedbackSaved => 'Feedback saved';
+
+  @override
+  String get routineFeedbackFailed =>
+      'Could not save feedback. Please try again';
 }

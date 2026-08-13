@@ -99,17 +99,23 @@ void main() {
 
     test('maps a history entry with exercises list', () {
       final h = routineHistoryEntryFromJson(<String, Object?>{
+        'id': 'assigned-ex-r1',
         'date_label': '7/12 (오늘)',
         'label': 'PT 세션',
         'completion_rate': 80,
         'exercises': <Object?>['스쿼트 3세트', '✗ 런지'],
         'client_feedback': '무릎이 조금 아팠어요',
         'trainer_note': '강도 조절',
+        'assigned_routine_id': 'r1',
+        'completed_at': '2026-08-13T10:00:00Z',
       });
       expect(h.dateLabel, '7/12 (오늘)');
       expect(h.completionRate, 80);
       expect(h.exercises, <String>['스쿼트 3세트', '✗ 런지']);
       expect(h.trainerNote, '강도 조절');
+      expect(h.id, 'assigned-ex-r1');
+      expect(h.assignedRoutineId, 'r1');
+      expect(h.completedAt, DateTime.utc(2026, 8, 13, 10));
     });
   });
 

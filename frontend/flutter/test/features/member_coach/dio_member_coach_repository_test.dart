@@ -79,6 +79,42 @@ void main() {
     expect(routines.single.name, '저강도 유산소');
   });
 
+  test(
+    'completeRoutine posts the result and returns completion state',
+    () async {
+      when(
+        () => dio.post<Map<String, Object?>>(
+          '/me/coach/routines/r1/complete',
+          data: <String, Object?>{
+            'minutes': 35,
+            'intensity': 'moderate',
+            'member_note': '마지막 세트가 힘들었어요',
+          },
+        ),
+      ).thenAnswer(
+        (_) async => _ok<Map<String, Object?>>(<String, Object?>{
+          'id': 'r1',
+          'name': '코어 운동',
+          'minutes': 30,
+          'type': '근력',
+          'reason': '',
+          'source': 'trainer',
+          'completed': true,
+          'member_note': '마지막 세트가 힘들었어요',
+        }, '/me/coach/routines/r1/complete'),
+      );
+
+      final CoachRoutine completed = await repo.completeRoutine(
+        'r1',
+        minutes: 35,
+        memberNote: '  마지막 세트가 힘들었어요  ',
+      );
+
+      expect(completed.completed, isTrue);
+      expect(completed.memberNote, '마지막 세트가 힘들었어요');
+    },
+  );
+
   test('fetchChat parses and sorts the thread oldest first', () async {
     when(() => dio.get<List<dynamic>>('/me/coach/chat')).thenAnswer(
       (_) async => Response<List<dynamic>>(

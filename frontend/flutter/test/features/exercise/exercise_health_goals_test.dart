@@ -74,6 +74,13 @@ class _SessionMemberCoachRepository implements MemberCoachRepository {
   @override
   Future<List<CoachRoutine>> fetchRoutines() async => const <CoachRoutine>[];
   @override
+  Future<CoachRoutine> completeRoutine(
+    String routineId, {
+    required int minutes,
+    String intensity = 'moderate',
+    String memberNote = '',
+  }) async => throw UnsupportedError('not used');
+  @override
   Future<List<CoachSession>> fetchSessions() async => sessions;
   @override
   Future<List<CoachMessage>> fetchChat() async => const <CoachMessage>[];

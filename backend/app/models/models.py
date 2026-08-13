@@ -199,11 +199,27 @@ class ExerciseSession(Base):
     intensity: Mapped[str] = mapped_column(
         String(20), default="moderate", server_default="moderate"
     )
-    #: 이 기록을 누가 만들었나. member=회원이 직접 남김, trainer_pt=트레이너가 PT
-    #: 세션을 완료 처리해 파생된 기록. 파생 기록은 근거가 트레이너에게 있어 회원이
-    #: 고칠 수 없고(#499), 화면에서도 수기 기록과 구분해 보여준다.
+    #: 이 기록을 누가 만들었나. member=회원 수기, trainer_pt=PT 완료 파생,
+    #: assigned_routine=배정 루틴 수행. 파생 기록은 일반 수기 기록처럼 회원이
+    #: 고치거나 지울 수 없다(#499, #638).
     source: Mapped[str] = mapped_column(
         String(20), default="member", server_default="member"
+    )
+    # 배정 루틴 수행이면 원본 id와 당시 내용을 함께 보존한다. 루틴이 나중에
+    # 수정·철회돼도 이미 끝낸 운동 기록은 당시 내용으로 남아야 한다(#638).
+    assigned_routine_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    assigned_trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    assigned_routine_name: Mapped[str] = mapped_column(
+        String(100), default="", server_default=""
+    )
+    member_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    trainer_feedback: Mapped[str] = mapped_column(Text, default="", server_default="")
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

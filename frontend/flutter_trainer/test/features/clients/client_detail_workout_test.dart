@@ -43,6 +43,47 @@ class _HistoryFailsOnceRepository extends DriftClientRepository {
   }
 }
 
+class _FeedbackRepository extends DriftClientRepository {
+  _FeedbackRepository(super.db)
+    : entry = const RoutineHistoryEntry(
+        id: 'assigned-ex-r1',
+        dateLabel: '8/13 (오늘)',
+        label: '코어 운동',
+        completionRate: 100,
+        exercises: <String>['코어 운동 · 30분'],
+        clientFeedback: '마지막 세트가 힘들었어요',
+        trainerNote: '',
+        assignedRoutineId: 'r1',
+      );
+
+  RoutineHistoryEntry entry;
+  int updateCalls = 0;
+
+  @override
+  Stream<List<RoutineHistoryEntry>> watchHistory(String clientId) =>
+      Stream<List<RoutineHistoryEntry>>.value(<RoutineHistoryEntry>[entry]);
+
+  @override
+  Future<RoutineHistoryEntry> updateHistoryFeedback(
+    String clientId,
+    String historyId,
+    String feedback,
+  ) async {
+    updateCalls += 1;
+    entry = RoutineHistoryEntry(
+      id: entry.id,
+      dateLabel: entry.dateLabel,
+      label: entry.label,
+      completionRate: entry.completionRate,
+      exercises: entry.exercises,
+      clientFeedback: entry.clientFeedback,
+      trainerNote: feedback,
+      assignedRoutineId: entry.assignedRoutineId,
+    );
+    return entry;
+  }
+}
+
 class _AssignedFailsOnceRepository extends MockTrainerRoutineRepository {
   int watchAssignedCalls = 0;
 
@@ -161,6 +202,42 @@ void main() {
         ),
       );
     }
+
+    testWidgets('배정 루틴 수행 기록에 피드백을 작성하고 수정한다', (tester) async {
+      late _FeedbackRepository repository;
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+        extraOverrides: <Override>[
+          clientRepositoryProvider.overrideWith((ref) {
+            repository = _FeedbackRepository(ref.watch(appDatabaseProvider));
+            return repository;
+          }),
+        ],
+      );
+
+      final Finder feedbackButton = find.byKey(
+        const ValueKey<String>('routine-feedback-assigned-ex-r1'),
+      );
+      await tester.scrollUntilVisible(feedbackButton, 150);
+      await tester.ensureVisible(feedbackButton);
+      await settle(tester);
+      await tester.tap(feedbackButton);
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('routine-feedback-input')),
+        '자세가 안정적이었어요',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('routine-feedback-save')),
+      );
+      await settle(tester);
+
+      expect(repository.updateCalls, 1);
+      expect(find.text('자세가 안정적이었어요'), findsOneWidget);
+      expect(find.text('피드백 수정'), findsOneWidget);
+    });
 
     testWidgets('김민수 averages only the weekdays that have happened', (
       tester,

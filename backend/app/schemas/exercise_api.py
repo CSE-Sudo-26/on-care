@@ -1,5 +1,6 @@
 """운동 API 스키마 — 프론트 _exerciseCurrentWeek 계약 정렬."""
 from __future__ import annotations
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -13,10 +14,15 @@ class ExerciseSessionOut(BaseModel):
     date_label: str
     time_label: str
     items: list[str]
-    # 이 기록을 누가 만들었나. member=회원이 직접 남김, trainer_pt=트레이너가 PT
-    # 세션을 완료해 파생된 기록. 앱은 이 값으로 배지를 붙이고 수정·삭제를 감춘다.
+    # 기록 출처: member | trainer_pt | assigned_routine. 앱은 파생 기록을
+    # 수기 기록과 구분하고 수정·삭제를 감춘다.
     # 기본값이 있어야 이 필드를 모르는 기존 클라이언트가 깨지지 않는다. (#499)
     source: str = "member"
+    assigned_routine_id: str | None = None
+    assigned_routine_name: str = ""
+    member_note: str = ""
+    trainer_feedback: str = ""
+    completed_at: datetime | None = None
 
 
 class ExerciseWeekResponse(BaseModel):
@@ -42,3 +48,11 @@ class ExerciseSessionCreate(BaseModel):
     calories: int = Field(0, ge=0)
     intensity: str = "moderate"  # light|moderate|high
     day_label: str | None = None
+
+
+class AssignedRoutineCompleteRequest(BaseModel):
+    """회원이 배정 루틴을 실제 수행한 결과."""
+
+    minutes: int = Field(..., gt=0, le=600)
+    intensity: str = "moderate"
+    member_note: str = Field(default="", max_length=1000)

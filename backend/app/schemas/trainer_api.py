@@ -142,12 +142,15 @@ class ClientDietEntryOut(BaseModel):
 
 class RoutineHistoryOut(BaseModel):
     """고객 운동기록 서브탭 항목 — 프론트 RoutineHistoryEntry 계약 정렬."""
+    id: str = ""
     date_label: str          # "7/12 (오늘)"
     label: str               # "PT 세션 · 트레이너 지도"
     completion_rate: int     # 0..100
     exercises: list[str]
     client_feedback: str
     trainer_note: str
+    assigned_routine_id: str | None = None
+    completed_at: _datetime | None = None
 
 
 # 채팅 sender 출력 허용값 — 뷰어 관점(_sender_out): 트레이너 앱은 trainer|client,
@@ -189,6 +192,12 @@ class RoutineOut(BaseModel):
     type: RoutineType
     reason: str
     source: RoutineSource
+    completed: bool = False
+    completed_at: _datetime | None = None
+    completed_minutes: int | None = None
+    completed_intensity: str | None = None
+    member_note: str = ""
+    trainer_feedback: str = ""
 
 
 class RoutineAssignRequest(BaseModel):
@@ -221,6 +230,10 @@ class RoutineUpdateRequest(PartialUpdate):
     minutes: int | None = Field(default=None, ge=0, le=600)
     type: RoutineType | None = None
     reason: str | None = Field(default=None, max_length=200)
+
+
+class RoutineFeedbackRequest(BaseModel):
+    feedback: str = Field(min_length=1, max_length=2000)
 
 
 RoutineIntensityPreference = Literal["low", "moderate", "high"]

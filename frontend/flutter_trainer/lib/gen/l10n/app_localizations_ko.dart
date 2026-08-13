@@ -1869,4 +1869,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get searchDetailNoRecord => '이번 주 기록 없음';
+
+  @override
+  String get routineFeedbackTitle => '수행 피드백';
+
+  @override
+  String get routineFeedbackHint => '회원에게 전할 코칭 피드백을 입력해 주세요';
+
+  @override
+  String get routineFeedbackWrite => '피드백 작성';
+
+  @override
+  String get routineFeedbackEdit => '피드백 수정';
+
+  @override
+  String get routineFeedbackSaved => '피드백을 저장했어요';
+
+  @override
+  String get routineFeedbackFailed => '피드백을 저장하지 못했어요. 다시 시도해 주세요';
 }

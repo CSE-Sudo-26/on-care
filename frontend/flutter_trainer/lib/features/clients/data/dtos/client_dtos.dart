@@ -45,12 +45,15 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
 /// `GET /v1/trainer/clients/{id}/history` element → [RoutineHistoryEntry].
 RoutineHistoryEntry routineHistoryEntryFromJson(Map<String, Object?> json) {
   return RoutineHistoryEntry(
+    id: _str(json['id']),
     dateLabel: _str(json['date_label']),
     label: _str(json['label']),
     completionRate: _int(json['completion_rate']),
     exercises: _strList(json['exercises']),
     clientFeedback: _str(json['client_feedback']),
     trainerNote: _str(json['trainer_note']),
+    assignedRoutineId: _nullableStr(json['assigned_routine_id']),
+    completedAt: DateTime.tryParse(_str(json['completed_at'])),
   );
 }
 
@@ -90,6 +93,8 @@ List<TrainerClient> prioritizeClients(
 }
 
 String _str(Object? v) => v is String ? v : '';
+
+String? _nullableStr(Object? v) => v is String && v.isNotEmpty ? v : null;
 
 int _int(Object? v) => v is num ? v.toInt() : 0;
 

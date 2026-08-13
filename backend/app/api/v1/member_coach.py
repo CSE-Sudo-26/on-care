@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, RequireMember
 from app.db.session import get_db
+from app.schemas.exercise_api import AssignedRoutineCompleteRequest
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, MemberCoachOut, RoutineOut, ScheduleSessionOut,
 )
@@ -82,6 +83,34 @@ def my_routines(
 ) -> list[RoutineOut]:
     """트레이너/AI가 나에게 배정한 루틴."""
     return trainer_service.build_member_routines(db, current_user.id)
+
+
+@router.post(
+    "/me/coach/routines/{routine_id}/complete",
+    response_model=RoutineOut,
+)
+def complete_my_routine(
+    routine_id: str,
+    payload: AssignedRoutineCompleteRequest,
+    member: RequireMember,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """나에게 배정된 루틴을 회원 운동 기록으로 한 번만 완료한다."""
+    if payload.intensity not in {"light", "moderate", "high"}:
+        raise HTTPException(status_code=400, detail="허용되지 않는 운동 강도입니다.")
+    trainer_id = _my_trainer_or_404(db, member.id)
+    try:
+        return trainer_service.complete_assigned_routine(
+            db,
+            trainer_id,
+            member.id,
+            routine_id,
+            minutes=payload.minutes,
+            intensity=payload.intensity,
+            member_note=payload.member_note,
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/me/coach/sessions", response_model=list[ScheduleSessionOut])

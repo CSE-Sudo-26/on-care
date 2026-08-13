@@ -28,9 +28,21 @@ void main() {
       'type': '유산소',
       'reason': '혈압 안정',
       'source': 'ai',
+      'completed': true,
+      'completed_at': '2026-08-13T10:00:00Z',
+      'completed_minutes': 25,
+      'completed_intensity': 'high',
+      'member_note': '힘들었어요',
+      'trainer_feedback': '잘했어요',
     });
     expect(r.minutes, 20);
     expect(r.source, 'ai');
+    expect(r.completed, isTrue);
+    expect(r.completedAt, DateTime.utc(2026, 8, 13, 10));
+    expect(r.completedMinutes, 25);
+    expect(r.completedIntensity, 'high');
+    expect(r.memberNote, '힘들었어요');
+    expect(r.trainerFeedback, '잘했어요');
   });
 
   group('coachMessageFromJson (member viewpoint)', () {
