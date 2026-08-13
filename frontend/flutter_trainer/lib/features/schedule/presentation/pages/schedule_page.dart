@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,8 +12,6 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -63,6 +59,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// Whether the week grid is showing.
   late bool _weekView = widget.view == 'week';
 
+  /// Session shown in the week view's detail panel.
+  String? _selectedSessionId;
+
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   /// Parses a `YYYY-MM-DD` route parameter, falling back to today. A
@@ -94,6 +93,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void _selectDay(DateTime day, {bool toTimeline = false}) {
     setState(() {
       _selectedDay = _dateOnly(day);
+      _selectedSessionId = null;
       if (toTimeline) _weekView = false;
     });
     context.go(
@@ -105,36 +105,13 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   }
 
   final Set<String> _expanded = <String>{};
-  final Set<String> _sent = <String>{};
   String? _editingScheduleId;
   String? _editingProgramId;
-  // 단일 플래시: 연속 전송 시 직전 카드의 확인 플래시는 새 플래시로
-  // 대체된다(의도된 단순화 — 전송 결과는 l.schedSent 칩으로 남는다).
-  String? _flash;
-  Timer? _flashTimer;
-
-  @override
-  void dispose() {
-    _flashTimer?.cancel();
-    super.dispose();
-  }
 
   void _toggle(ScheduleSession s) {
     if (!s.expandable) return;
     setState(() {
       _expanded.contains(s.id) ? _expanded.remove(s.id) : _expanded.add(s.id);
-    });
-  }
-
-  void _send(ScheduleSession s) {
-    if (_sent.contains(s.id)) return;
-    setState(() {
-      _sent.add(s.id);
-      _flash = s.id;
-    });
-    _flashTimer?.cancel();
-    _flashTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _flash = null);
     });
   }
 
@@ -297,9 +274,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return PageScaffold(
       title: l.schedTitle,
       subtitle: dateLabel(l, _selectedDay),
-      // 스케줄 asks when someone is next in, so the rows show the next
-      // booking and picking one moves the calendar to that day.
-      headerCenter: const ClientSearchBar(scope: ClientSearchScope.schedule),
       actions: <Widget>[
         if (showToday)
           ActionButton(
@@ -392,17 +366,133 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                 style: TextStyle(color: AppColors.mutedForeground),
               ),
             ),
-            data: (sessions) => _WeekGrid(
-              start: start,
-              sessions: sessions,
-              selectedDay: _selectedDay,
-              onPickDay: (d) => _selectDay(d, toTimeline: true),
-              onPickSession: (s) {
-                final day = DateTime.tryParse(s.date);
-                if (day != null) _selectDay(day, toTimeline: true);
-              },
-            ),
+            data: (sessions) {
+              ScheduleSession? selected;
+              for (final session in sessions) {
+                if (session.id == _selectedSessionId &&
+                    session.date == _selectedYmd) {
+                  selected = session;
+                  break;
+                }
+              }
+              if (selected == null) {
+                for (final session in sessions) {
+                  if (session.date == _selectedYmd) {
+                    selected = session;
+                    break;
+                  }
+                }
+              }
+
+              final grid = _WeekGrid(
+                start: start,
+                sessions: sessions,
+                selectedDay: _selectedDay,
+                onPickDay: _selectDay,
+                onPickSession: (session) {
+                  final day = DateTime.tryParse(session.date);
+                  if (day == null) return;
+                  setState(() {
+                    _selectedDay = _dateOnly(day);
+                    _selectedSessionId = session.id;
+                    _expanded.add(session.id);
+                  });
+                  context.go(
+                    AppRoutes.scheduleView('week', date: session.date),
+                  );
+                },
+              );
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 980) return grid;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Expanded(child: grid),
+                      const VerticalDivider(
+                        width: 1,
+                        color: AppColors.borderStrong,
+                      ),
+                      SizedBox(width: 340, child: _buildWeekDetail(selected)),
+                    ],
+                  );
+                },
+              );
+            },
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeekDetail(ScheduleSession? session) {
+    final l = AppLocalizations.of(context);
+    if (session == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text(
+            l.schedEmptyDay,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.mutedForeground),
+          ),
+        ),
+      );
+    }
+
+    final day = DateTime.tryParse(session.date) ?? _selectedDay;
+    final today = _dateOnly(DateTime.now());
+    final isFuture = day.isAfter(today);
+    final dateText = day == today
+        ? l.labelToday
+        : l.dateMonthDay(day.month, day.day);
+    final clients = ref.read(clientsProvider).valueOrNull ?? const [];
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: <Widget>[
+        Text(
+          l.schedTitle,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SessionCard(
+          session: session,
+          expanded: true,
+          onToggle: () {},
+          onEditSchedule: () => setState(() {
+            _editingScheduleId = session.id;
+            _editingProgramId = null;
+          }),
+          onEditProgram: () => setState(() {
+            _editingProgramId = session.id;
+            _editingScheduleId = null;
+          }),
+          onDelete: () => _confirmDelete(session),
+          onChat: () => _openChat(session),
+          onComplete: (session.isUpcoming && !isFuture)
+              ? () => _confirmComplete(session)
+              : null,
+          programDateLabel: dateText,
+          inlineEditor: _editingScheduleId == session.id
+              ? _SessionSheet(
+                  key: ValueKey<String>('week-session-editor-${session.id}'),
+                  clientNames: clients.map((client) => client.name).toList(),
+                  date: session.date,
+                  existing: session,
+                  inline: true,
+                  onSaved: () => setState(() => _editingScheduleId = null),
+                  onCancel: () => setState(() => _editingScheduleId = null),
+                )
+              : _editingProgramId == session.id
+              ? _ProgramEditor(
+                  key: ValueKey<String>('week-program-editor-${session.id}'),
+                  session: session,
+                  onSaved: () => setState(() => _editingProgramId = null),
+                  onCancel: () => setState(() => _editingProgramId = null),
+                )
+              : null,
         ),
       ],
     );
@@ -416,7 +506,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppLayout.pagePadding,
-            AppSpacing.md,
+            AppLayout.pagePadding,
             AppLayout.pagePadding,
             AppSpacing.sm,
           ),
@@ -444,7 +534,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         AppLayout.pagePadding,
         AppSpacing.sm,
         AppLayout.pagePadding,
-        AppSpacing.xxl,
+        AppLayout.pagePadding,
       ),
       children: <Widget>[
         ...schedule.when(
@@ -510,10 +600,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         _TimelineRow(
           session: s,
           expanded: _expanded.contains(s.id),
-          sent: _sent.contains(s.id),
-          flashing: _flash == s.id,
           onToggle: () => _toggle(s),
-          onSend: () => _send(s),
           onEditSchedule: () => setState(() {
             _editingScheduleId = s.id;
             _editingProgramId = null;
@@ -1309,7 +1396,7 @@ class _WeekNav extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppSpacing.md,
+        AppLayout.pagePadding,
         AppLayout.pagePadding,
         AppSpacing.sm,
       ),
@@ -1708,10 +1795,7 @@ class _TimelineRow extends StatelessWidget {
   const _TimelineRow({
     required this.session,
     required this.expanded,
-    required this.sent,
-    required this.flashing,
     required this.onToggle,
-    required this.onSend,
     required this.onEditSchedule,
     required this.onEditProgram,
     required this.onDelete,
@@ -1723,10 +1807,7 @@ class _TimelineRow extends StatelessWidget {
 
   final ScheduleSession session;
   final bool expanded;
-  final bool sent;
-  final bool flashing;
   final VoidCallback onToggle;
-  final VoidCallback onSend;
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
   final VoidCallback onDelete;
@@ -1765,10 +1846,7 @@ class _TimelineRow extends StatelessWidget {
               : _SessionCard(
                   session: session,
                   expanded: expanded,
-                  sent: sent,
-                  flashing: flashing,
                   onToggle: onToggle,
-                  onSend: onSend,
                   onEditSchedule: onEditSchedule,
                   onEditProgram: onEditProgram,
                   onDelete: onDelete,
@@ -1812,10 +1890,7 @@ class _SessionCard extends StatelessWidget {
   const _SessionCard({
     required this.session,
     required this.expanded,
-    required this.sent,
-    required this.flashing,
     required this.onToggle,
-    required this.onSend,
     required this.onEditSchedule,
     required this.onEditProgram,
     required this.onDelete,
@@ -1827,10 +1902,7 @@ class _SessionCard extends StatelessWidget {
 
   final ScheduleSession session;
   final bool expanded;
-  final bool sent;
-  final bool flashing;
   final VoidCallback onToggle;
-  final VoidCallback onSend;
   final VoidCallback onEditSchedule;
   final VoidCallback onEditProgram;
   final VoidCallback onDelete;
@@ -1851,9 +1923,7 @@ class _SessionCard extends StatelessWidget {
         borderRadius: const BorderRadius.all(AppRadius.card),
         boxShadow: kCardShadow,
         border: Border.all(
-          color: sent
-              ? AppColors.success.withValues(alpha: 0.4)
-              : s.isDone
+          color: s.isDone
               ? AppColors.border
               : AppColors.accent.withValues(alpha: 0.35),
         ),
@@ -1905,12 +1975,7 @@ class _SessionCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (sent)
-                    const Padding(
-                      padding: EdgeInsets.only(right: AppSpacing.sm),
-                      child: _SentBadge(),
-                    ),
-                  _StatusChip(status: s.status, sent: sent),
+                  _StatusChip(status: s.status),
                   if (s.expandable) ...<Widget>[
                     const SizedBox(width: AppSpacing.xs),
                     Icon(
@@ -1967,9 +2032,6 @@ class _SessionCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                       _SendButton(
                         clientName: s.clientName,
-                        sent: sent,
-                        flashing: flashing,
-                        onSend: onSend,
                         dateLabel: programDateLabel,
                       ),
                     ],
@@ -1984,22 +2046,15 @@ class _SessionCard extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status, required this.sent});
+  const _StatusChip({required this.status});
 
   final String status;
-  final bool sent;
 
   @override
   Widget build(BuildContext context) {
     final done = status == ScheduleStatus.done;
-    final Color fg = done
-        ? (sent ? AppColors.success : AppColors.disabledForeground)
-        : AppColors.accent;
-    final Color bg = done
-        ? (sent
-              ? AppColors.success.withValues(alpha: 0.1)
-              : AppColors.inputBackground)
-        : AppColors.accentSurface;
+    final Color fg = done ? AppColors.disabledForeground : AppColors.accent;
+    final Color bg = done ? AppColors.inputBackground : AppColors.accentSurface;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -2194,31 +2249,6 @@ class _ManageRow extends StatelessWidget {
   }
 }
 
-/// "전송됨" marker on a session row.
-class _SentBadge extends StatelessWidget {
-  const _SentBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(Icons.check, size: 11, color: AppColors.success),
-        SizedBox(width: 2),
-        Text(
-          l.schedSent,
-          style: TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.success,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _ActionChip extends StatelessWidget {
   const _ActionChip({
     super.key,
@@ -2324,62 +2354,44 @@ class _NoteBox extends StatelessWidget {
 }
 
 class _SendButton extends StatelessWidget {
-  const _SendButton({
-    required this.clientName,
-    required this.sent,
-    required this.flashing,
-    required this.onSend,
-    required this.dateLabel,
-  });
+  const _SendButton({required this.clientName, required this.dateLabel});
 
   final String clientName;
-  final bool sent;
-  final bool flashing;
-  final VoidCallback onSend;
   final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String label = flashing
-        ? l.schedSentToClient
-        : sent
-        ? l.schedSentTo(clientName)
-        : l.schedSentProgramTo(clientName, dateLabel);
-    final fg = sent ? AppColors.success : AppColors.primaryForeground;
-    return Material(
-      color: sent
-          ? AppColors.success.withValues(alpha: 0.1)
-          : AppColors.primary,
-      borderRadius: const BorderRadius.all(AppRadius.lg),
-      child: InkWell(
-        onTap: sent ? null : onSend,
-        borderRadius: const BorderRadius.all(AppRadius.lg),
-        child: Container(
-          height: 42,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                sent || flashing ? Icons.check_circle : Icons.send_outlined,
-                size: 15,
-                color: fg,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: fg,
-                  ),
+    return Tooltip(
+      message: l.schedSendUnsupported,
+      child: Container(
+        height: 42,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: AppColors.inputBackground,
+          borderRadius: BorderRadius.all(AppRadius.lg),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(
+              Icons.send_outlined,
+              size: 15,
+              color: AppColors.disabledForeground,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                l.schedSentProgramTo(clientName, dateLabel),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.disabledForeground,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

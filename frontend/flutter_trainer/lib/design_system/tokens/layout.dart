@@ -44,7 +44,7 @@ class AppLayout {
   /// Fixed width of a list column inside a split layout.
   static const double splitListWidth = 380;
 
-  /// Horizontal padding around page content.
+  /// Outer padding around top-level page content.
   static const double pagePadding = 24;
 
   /// Height of the sticky page header (title + actions).

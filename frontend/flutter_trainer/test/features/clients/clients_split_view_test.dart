@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 
 import '../../helpers/pump_app.dart';
@@ -63,11 +65,32 @@ void main() {
     await tester.tap(card('김민수'));
     await settle(tester);
 
-    // Panel opened in place — sub-tabs visible, no push (no back button).
+    // Panel opened in place with the unified detail, no push.
     expect(find.text('운동'), findsOneWidget);
-    expect(find.text('채팅'), findsOneWidget);
+    expect(find.text('메시지'), findsWidgets);
     expect(find.text('식단'), findsOneWidget);
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
+  });
+
+  testWidgets('the roster card has visible space before the detail panel', (
+    tester,
+  ) async {
+    await openWide(tester);
+    await tester.tap(card('김민수'));
+    await settle(tester);
+
+    final cardRect = tester.getRect(find.byType(ClientCard).first);
+    final detailRect = tester.getRect(find.byType(ClientDetailView));
+
+    expect(
+      detailRect.left - cardRect.right,
+      AppSpacing.lg,
+      reason: '목록 카드의 우측 테두리와 그림자가 잘리지 않아야 한다',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('clients-master-detail-gap')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('picking a client does not expose the parent roster during '
@@ -95,7 +118,7 @@ void main() {
     await settle(tester);
     expect(find.text('운동'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byTooltip('패널 닫기'));
     await settle(tester);
 
     expect(find.text('운동'), findsNothing);
@@ -109,49 +132,38 @@ void main() {
 
     await tester.tap(card('김민수'));
     await settle(tester);
-    await goTo(
-      tester,
-      AppRoutes.clientDetail('seed-client-1', section: 'chat'),
-    );
-    // 김민수 스레드는 3일치라 열면 맨 아래에서 시작한다 — 위쪽 배너는 아직
-    // 만들어지지 않았으므로 나올 때까지 끌어올린다. (#543)
-    final Finder minsuBanner = find.textContaining('AI가 김민수님의');
-    for (int i = 0; i < 40 && minsuBanner.evaluate().isEmpty; i++) {
-      await tester.drag(find.byType(ListView).last, const Offset(0, 300));
-      await tester.pump();
-    }
-    expect(minsuBanner, findsOneWidget);
+    expect(find.text('3428'), findsWidgets);
 
     await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));
     await settle(tester);
 
-    expect(find.textContaining('AI가 이지수님의'), findsOneWidget);
-    expect(find.textContaining('AI가 김민수님의'), findsNothing);
+    expect(find.text('3428'), findsNothing);
     // Still embedded — no full-screen push happened.
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
   });
 
-  testWidgets('a chat draft does not leak into another client', (tester) async {
+  testWidgets('the detail scroll state does not leak into another client', (
+    tester,
+  ) async {
     await openWide(tester);
 
-    await goTo(
-      tester,
-      AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+    await tester.tap(card('김민수'));
+    await settle(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('client-detail-scroll-seed-client-1')),
+      findsOneWidget,
     );
-    // 헤더의 고객 검색도 TextField 라, 채팅 입력칸은 키로 집는다.
-    await tester.enterText(
-      find.byKey(const ValueKey<String>('client-chat-input')),
-      '민수님 오늘 어땠어요?',
-    );
-    await tester.pump();
 
     await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));
     await settle(tester);
 
-    // The composer resets with the client — no cross-client draft.
-    expect(find.text('민수님 오늘 어땠어요?'), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('client-detail-scroll-seed-client-2')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the section stays put when switching clients', (tester) async {
@@ -209,7 +221,7 @@ void main() {
     await tester.tap(card('김민수'));
     await settle(tester);
 
-    final ctx = tester.element(find.text('운동'));
+    final ctx = tester.element(find.text('식단'));
     final uri = GoRouterState.of(ctx).uri;
     // Path-based, not `?c=`: refresh, back/forward and shared links all
     // restore the same client AND the same sub-tab.
@@ -237,10 +249,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('나트륨 초과'), findsWidgets);
-    expect(
-      find.byKey(const ValueKey<String>('client-chat-button')),
-      findsOneWidget,
-    );
+    expect(find.text('메시지'), findsOneWidget);
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (

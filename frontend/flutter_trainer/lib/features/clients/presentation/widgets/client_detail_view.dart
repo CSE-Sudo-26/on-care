@@ -8,7 +8,6 @@ import 'package:oncare_trainer/features/clients/data/repositories/client_coach_r
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
@@ -36,25 +35,10 @@ List<String> clientSectionLabels(AppLocalizations l) => <String>[
 /// 로케일과 무관하다.
 const int clientSectionCount = 2;
 
-/// The client detail body — a header that answers "how is this person
-/// doing right now?" plus the 식단/운동 sub-tabs.
-///
-/// The header carries only the alert badges from the former 개요 tab. Detailed
-/// nutrition values live in 식단 and workout trends live in 운동, avoiding a
-/// duplicate summary while keeping actionable signals such as 나트륨 초과
-/// visible from every section.
-///
-/// Chat rides at the end of the sub-tab row rather than being a third equal
-/// tab: 식단 and 운동 are things you *read* about this person, chatting is
-/// something you *do* with them, and opening it marks the thread read. It
-/// hugs its content behind a divider so that difference is visible, while
-/// still living in the row that owns "which section am I in". It stays
-/// addressable either way (see [AppRoutes.clientChatSection]).
-///
-/// The active sub-tab is **owned by the URL**, not by this widget: the
-/// dashboard links straight to a client's 식단 when sodium is over, and
-/// that only works if the section is addressable. [onSectionChange] asks
-/// the host to navigate; this widget never holds tab state.
+/// The trainer-only 360° detail: identity and actions stay above one scroll
+/// containing workout and diet evidence. The route section only determines
+/// which evidence appears first, so existing deep links remain meaningful
+/// without duplicating the full chat surface owned by `/messages`.
 class ClientDetailView extends ConsumerWidget {
   /// Creates the detail body for [clientId].
   const ClientDetailView({
@@ -89,13 +73,6 @@ class ClientDetailView extends ConsumerWidget {
         ? s
         : AppRoutes.defaultClientSection;
   }
-
-  /// Index into [AppRoutes.clientTabSections], or `-1` while the chat is
-  /// open — chat has no tab, so no tab is selected then.
-  int get _tabIndex => AppRoutes.clientTabSections.indexOf(_section);
-
-  /// Whether the chat thread is the open section.
-  bool get _chatOpen => _section == AppRoutes.clientChatSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -133,6 +110,18 @@ class ClientDetailView extends ConsumerWidget {
         }
         final client = match.first;
 
+        final workoutFirst = _section == 'workout';
+        final diet = DietView(
+          key: ValueKey<String>('diet-$clientId'),
+          client: client,
+          embedded: true,
+        );
+        final workout = WorkoutView(
+          key: ValueKey<String>('workout-$clientId'),
+          client: client,
+          embedded: true,
+        );
+
         return Column(
           children: <Widget>[
             _Header(
@@ -154,41 +143,53 @@ class ClientDetailView extends ConsumerWidget {
                         .setClientActive(client.id, !client.active)
                   : null,
             ),
-            _SubTabs(
-              current: _tabIndex,
-              onChanged: (i) => onSectionChange(AppRoutes.clientTabSections[i]),
-              clientName: client.name,
-              unread: unread[client.id] ?? 0,
-              chatOpen: _chatOpen,
-              onOpenChat: () => onSectionChange(AppRoutes.clientChatSection),
+            Expanded(
+              child: SingleChildScrollView(
+                key: ValueKey<String>('client-detail-scroll-$clientId'),
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _DetailSectionLabel(
+                      label: workoutFirst
+                          ? l.clientTabWorkout
+                          : l.clientTabDiet,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    workoutFirst ? workout : diet,
+                    const SizedBox(height: AppSpacing.xl),
+                    _DetailSectionLabel(
+                      label: workoutFirst
+                          ? l.clientTabDiet
+                          : l.clientTabWorkout,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    workoutFirst ? diet : workout,
+                  ],
+                ),
+              ),
             ),
-            Expanded(child: _body(client)),
           ],
         );
       },
     );
   }
+}
 
-  Widget _body(TrainerClient client) {
-    // Key the sub-views by client so per-client state (chat draft,
-    // scroll position) resets when the split view swaps clients —
-    // otherwise a message drafted for one client would linger in
-    // another client's composer.
-    final key = ValueKey<String>(clientId);
-    switch (_section) {
-      case AppRoutes.clientChatSection:
-        return ChatView(
-          key: key,
-          clientId: clientId,
-          clientAvatar: client.avatar,
-          clientName: client.name,
-        );
-      case 'workout':
-        return WorkoutView(key: key, client: client);
-      default:
-        return DietView(key: key, client: client);
-    }
-  }
+class _DetailSectionLabel extends StatelessWidget {
+  const _DetailSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    label,
+    style: const TextStyle(
+      color: AppColors.foreground,
+      fontSize: 15,
+      fontWeight: FontWeight.w800,
+    ),
+  );
 }
 
 /// Fallback body for the error and not-found states: a message, an
@@ -444,214 +445,6 @@ class _Header extends ConsumerWidget {
             onPressed: onClose,
           ),
       ],
-    );
-  }
-}
-
-/// The 채팅 entry point, rendered as the trailing segment of [_SubTabs].
-///
-/// Wears the tabs' selected-state language (same height, same radius, same
-/// accent fill) so one row speaks one visual grammar, but hugs its content
-/// instead of sharing the width — chat is a destination, not a peer view.
-///
-/// Carries the unread count so the trainer can see there's something
-/// waiting without opening the thread (opening it marks it read).
-class _ChatSegment extends StatelessWidget {
-  const _ChatSegment({
-    required this.clientName,
-    required this.unread,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String clientName;
-  final int unread;
-
-  /// Whether the chat thread is the open section.
-  final bool selected;
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final Color fg = selected
-        ? AppColors.accentForeground
-        : AppColors.subtleForeground;
-    return Semantics(
-      button: true,
-      selected: selected,
-      // Same exclusive group as the content tabs — a screen reader reads all
-      // three as one set of destinations, which is what they now are.
-      inMutuallyExclusiveGroup: true,
-      // The visible parts (l.clientChat + the bare count) would otherwise be
-      // announced after this label, reading as "…채팅, 안 읽은 메시지
-      // 1개, 채팅, 1". One node, one sentence — so the tap action has to
-      // ride along here too, since the InkWell's own node is excluded.
-      excludeSemantics: true,
-      onTap: onTap,
-      label: unread > 0
-          ? l.clientChatWithUnread(clientName, unread)
-          : l.clientChatWith(clientName),
-      child: Material(
-        color: selected ? AppColors.accent : AppColors.inputBackground,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        child: InkWell(
-          key: const ValueKey<String>('client-chat-button'),
-          onTap: onTap,
-          borderRadius: const BorderRadius.all(AppRadius.md),
-          child: Container(
-            height: 32,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(Icons.send_rounded, size: 15, color: fg),
-                const SizedBox(width: 5),
-                Text(
-                  l.clientChat,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: fg,
-                  ),
-                ),
-                if (unread > 0) ...<Widget>[
-                  const SizedBox(width: 5),
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 16),
-                    height: 16,
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.accentForeground
-                          : AppColors.primary,
-                      borderRadius: const BorderRadius.all(AppRadius.pill),
-                    ),
-                    child: Text(
-                      '$unread',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: selected
-                            ? AppColors.accent
-                            : AppColors.primaryForeground,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The client's navigation strip: 식단 · 운동 as equal content tabs, then the
-/// chat entry point at the end of the same row.
-///
-/// Chat sits here rather than up in the header because it swaps the body the
-/// way the tabs do — when it lived beside the name, opening it left this row
-/// with nothing selected, which read as a broken tab bar. It is still not a
-/// peer of 식단/운동 (those are views of this person's data; chatting is
-/// something you *do*, and opening it marks the thread read), so the
-/// distinction is carried by shape instead of location: the tabs share the
-/// width, chat hugs its content behind a divider.
-class _SubTabs extends StatelessWidget {
-  const _SubTabs({
-    required this.current,
-    required this.onChanged,
-    required this.clientName,
-    required this.unread,
-    required this.chatOpen,
-    required this.onOpenChat,
-  });
-
-  /// Selected content tab, or -1 while the chat is open.
-  final int current;
-  final ValueChanged<int> onChanged;
-
-  final String clientName;
-
-  /// Messages waiting for a reply, shown on the chat segment.
-  final int unread;
-  final bool chatOpen;
-  final VoidCallback onOpenChat;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    return Container(
-      key: const ValueKey<String>('client-detail-sub-tabs'),
-      color: AppColors.card,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: <Widget>[
-          for (var i = 0; i < clientSectionCount; i++) ...<Widget>[
-            Expanded(
-              // InkWell (over a Material) instead of GestureDetector so the
-              // sub-tabs are keyboard-focusable and activate on Enter/Space
-              // — desktop/web users can traverse them (CodeRabbit review).
-              //
-              // MergeSemantics folds this into the InkWell's own tap/focus
-              // node so a screen reader announces the selected state on the
-              // node it actually reads (review PR 216).
-              child: MergeSemantics(
-                child: Semantics(
-                  button: true,
-                  selected: current == i,
-                  inMutuallyExclusiveGroup: true,
-                  child: Material(
-                    color: current == i
-                        ? AppColors.accent
-                        : AppColors.inputBackground,
-                    borderRadius: const BorderRadius.all(AppRadius.md),
-                    child: InkWell(
-                      onTap: () => onChanged(i),
-                      borderRadius: const BorderRadius.all(AppRadius.md),
-                      child: Container(
-                        height: 32,
-                        alignment: Alignment.center,
-                        child: Text(
-                          clientSectionLabels(l)[i],
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: current == i
-                                ? AppColors.accentForeground
-                                : AppColors.subtleForeground,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (i < clientSectionCount - 1)
-              const SizedBox(width: AppSpacing.xs),
-          ],
-          // Sets chat apart from the content tabs without leaving the row.
-          const SizedBox(width: AppSpacing.sm),
-          Container(width: 1, height: 16, color: AppColors.border),
-          const SizedBox(width: AppSpacing.sm),
-          _ChatSegment(
-            clientName: clientName,
-            unread: unread,
-            selected: chatOpen,
-            onTap: onOpenChat,
-          ),
-        ],
-      ),
     );
   }
 }

@@ -27,7 +27,7 @@
   "navDashboard": "Dashboard",
   "navClients": "Clients",
   "navSchedule": "Schedule",
-  "navCoaching": "AI coaching",
+  "navCoaching": "Programs",
   "navReports": "Reports",
   "navConsultations": "Requests",
   "actionSave": "Save",
@@ -203,7 +203,12 @@
     }
   },
   "clientsNew": "New client",
-  "clientsTitle": "Clients",
+  "clientsTitle": "Member management",
+  "clientsManagementAttention": "Needs attention",
+  "clientsSortPriority": "Sort: priority",
+  "clientsSortName": "Sort: name",
+  "clientsToolbarCount": "{shown} members · {active} active",
+  "@clientsToolbarCount": {"placeholders": {"shown": {"type": "int"}, "active": {"type": "int"}}},
   "clientsPickHint": "Pick a client on the left to open\ntheir chat, meals and workouts here",
   "clientsEmpty": "No clients yet",
   "clientsEmptyForFilter": "No clients match {filter}",
@@ -495,14 +500,7 @@
     }
   },
   "reportsTitle": "Reports",
-  "reportsSubtitle": "Week of {week} · operating metrics and client reports",
-  "@reportsSubtitle": {
-    "placeholders": {
-      "week": {
-        "type": "String"
-      }
-    }
-  },
+  "reportsSubtitle": "Summarize this week's changes and prepare a report to share",
   "reportsPrevWeek": "Previous week",
   "reportsNextWeek": "Next week",
   "reportsLoadFailed": "Couldn't load reports",
@@ -688,6 +686,7 @@
       }
     }
   },
+  "schedSendUnsupported": "Completed program delivery is not supported by the API yet.",
   "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
@@ -848,8 +847,17 @@
   "intensityLight": "Light",
   "intensityModerate": "Moderate",
   "intensityHigh": "High",
-  "coachTitle": "AI coaching",
-  "coachSubtitle": "Routines built from diet and health data",
+  "coachTitle": "Programs",
+  "coachSubtitle": "Create, assign, and manage exercise programs for each member",
+  "coachMemberPrograms": "Programs by member",
+  "coachMemberSummary": "Member summary",
+  "reportsDataInsufficient": "Insufficient data",
+  "reportsAnalysisAvailable": "Ready to analyze",
+  "reportsFeedbackComplete": "Feedback complete",
+  "reportsFeedbackPending": "Feedback pending",
+  "reportsThisWeek": "This week",
+  "reportsAnalysisCount": "{total} total · {available} ready",
+  "@reportsAnalysisCount": {"placeholders": {"total": {"type": "int"}, "available": {"type": "int"}}},
   "coachSendFailed": "Couldn't send. Please try again",
   "coachCustomRoutine": "AI custom routine",
   "coachNeedOneExercise": "Add at least one exercise",

@@ -78,7 +78,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       scrollable: false,
       contentPadding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
-        AppSpacing.md,
+        AppLayout.pagePadding,
         AppLayout.pagePadding,
         AppLayout.pagePadding,
       ),
@@ -154,7 +154,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                       onSelected: _selectClient,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: selected == null
                         ? const _EmptyThread()
@@ -496,27 +496,48 @@ class _ThreadPanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+              vertical: AppSpacing.xs,
             ),
             color: AppColors.accentSurface.withValues(alpha: 0.55),
-            child: Wrap(
-              spacing: AppSpacing.lg,
-              runSpacing: AppSpacing.xs,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Text(
-                  l.messagesRecentWorkout(client.lastRoutine),
-                  style: _signalStyle,
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          l.messagesRecentWorkout(client.lastRoutine),
+                          style: _signalStyle,
+                        ),
+                        const _SignalDivider(),
+                        Text(
+                          completion == null
+                              ? l.messagesNoCompletion
+                              : l.messagesCompletion(completion),
+                          style: _signalStyle,
+                        ),
+                        if (alerts.isNotEmpty) ...<Widget>[
+                          const _SignalDivider(),
+                          AlertBadge(alert: alerts.first),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                Text(
-                  completion == null
-                      ? l.messagesNoCompletion
-                      : l.messagesCompletion(completion),
-                  style: _signalStyle,
-                ),
-                if (alerts.isNotEmpty) AlertBadge(alert: alerts.first),
+                const SizedBox(width: AppSpacing.md),
                 TextButton(
                   onPressed: () =>
                       context.go(AppRoutes.clientDetail(client.id)),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   child: Text(l.messagesClientDetail),
                 ),
               ],
@@ -541,6 +562,18 @@ class _ThreadPanel extends StatelessWidget {
     color: AppColors.mutedForeground,
     fontWeight: FontWeight.w600,
   );
+}
+
+class _SignalDivider extends StatelessWidget {
+  const _SignalDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Container(width: 1, height: 12, color: AppColors.borderStrong),
+    );
+  }
 }
 
 class _EmptyThread extends StatelessWidget {

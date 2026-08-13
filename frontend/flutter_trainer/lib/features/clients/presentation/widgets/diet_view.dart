@@ -20,10 +20,13 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 /// per-meal records, and a conditional AI comment.
 class DietView extends ConsumerWidget {
   /// Creates the diet view for [client].
-  const DietView({super.key, required this.client});
+  const DietView({super.key, required this.client, this.embedded = false});
 
   /// The client whose diet is shown (carries today's totals).
   final TrainerClient client;
+
+  /// When true, lets the member detail own the single page scroll.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,9 +46,8 @@ class DietView extends ConsumerWidget {
               : () => ref.invalidate(clientDietProvider(client.id)),
         ),
       ),
-      data: (meals) => ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: <Widget>[
+      data: (meals) {
+        final children = <Widget>[
           _NutritionSummary(client: client),
           if (client.sodiumWeek.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
@@ -66,8 +68,18 @@ class DietView extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             _AiComment(client: client),
           ],
-        ],
-      ),
+        ];
+        if (embedded) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: children,
+        );
+      },
     );
   }
 }

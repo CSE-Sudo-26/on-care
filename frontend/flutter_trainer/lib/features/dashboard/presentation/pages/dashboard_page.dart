@@ -13,8 +13,6 @@ import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashb
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
@@ -42,21 +40,12 @@ class DashboardPage extends ConsumerWidget {
     return PageScaffold(
       title: l.dashTitle,
       subtitle: dateLabel(l, today),
-      // The dashboard has no per-client surface, so a searched client
-      // opens their 고객 상세 — the row still answers this tab's
-      // question first (무엇을 챙겨야 하나).
-      headerCenter: const ClientSearchBar(scope: ClientSearchScope.dashboard),
       actions: <Widget>[
         ActionButton(
           label: l.dashAddSchedule,
           icon: Icons.add,
-          onPressed: () => context.go(AppRoutes.scheduleView('day')),
-        ),
-        ActionButton(
-          label: l.dashCreateAiRoutine,
-          icon: Icons.auto_awesome,
           primary: true,
-          onPressed: () => context.go(AppRoutes.coaching),
+          onPressed: () => context.go(AppRoutes.scheduleView('day')),
         ),
       ],
       child: summaryAsync.when(
@@ -345,7 +334,7 @@ class _KpiRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (var i = 0; i < cards.length; i++) ...<Widget>[
-              if (i > 0) const SizedBox(width: AppSpacing.md),
+              if (i > 0) const SizedBox(width: AppSpacing.lg),
               Expanded(child: cards[i]),
             ],
           ],
@@ -355,13 +344,13 @@ class _KpiRow extends StatelessWidget {
     return Column(
       children: <Widget>[
         for (var i = 0; i < cards.length; i += 2) ...<Widget>[
-          if (i > 0) const SizedBox(height: AppSpacing.md),
+          if (i > 0) const SizedBox(height: AppSpacing.lg),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 Expanded(child: cards[i]),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.lg),
                 if (i + 1 < cards.length)
                   Expanded(child: cards[i + 1])
                 else

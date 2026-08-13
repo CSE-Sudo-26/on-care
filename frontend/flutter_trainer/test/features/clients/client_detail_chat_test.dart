@@ -309,22 +309,21 @@ void main() {
     });
   });
 
-  group('ClientDetailPage chat', () {
-    testWidgets('a failed thread retries without leaving the client chat', (
+  group('Messages workspace chat', () {
+    testWidgets('a failed thread retries without leaving messages', (
       tester,
     ) async {
       final repository = _ThreadFailsOnceRepository();
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+        at: AppRoutes.messagesFor('seed-client-1'),
         extraOverrides: <Override>[
           chatRepositoryProvider.overrideWithValue(repository),
         ],
       );
 
       expect(find.text('대화를 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('chat transport detail'), findsNothing);
       await tester.tap(
         find.byKey(const ValueKey<String>('chat-retry-seed-client-1')),
       );
@@ -333,11 +332,25 @@ void main() {
       final context = tester.element(find.byType(Navigator).first);
       expect(
         GoRouter.of(context).routeInformationProvider.value.uri.toString(),
-        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+        AppRoutes.messagesFor('seed-client-1'),
       );
       expect(repository.watchCalls, 2);
       expect(find.text('실제 고객 답장'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('legacy client chat deep-link redirects to messages', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+      );
+      final context = tester.element(find.byType(Navigator).first);
+      expect(
+        GoRouter.of(context).routeInformationProvider.value.uri.toString(),
+        AppRoutes.messagesFor('seed-client-1'),
+      );
     });
 
     testWidgets('real chat omits demo-only analysis and sent banners', (
@@ -361,7 +374,7 @@ void main() {
             locale: const Locale('ko'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
+            home: const Scaffold(
               body: ChatView(
                 clientId: 'user-demo',
                 clientAvatar: '김',
@@ -379,168 +392,143 @@ void main() {
       expect(find.textContaining('AI 분석 기반 루틴'), findsNothing);
     });
 
-    /// Opens 김민수's 채팅 section. Addressed explicitly rather than
-    /// relying on it being the default, so these stay honest if the
-    /// landing section changes again.
-    Future<void> openDetail(WidgetTester tester) async {
+    Future<void> openMessages(WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1440, 1024);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
-        at: AppRoutes.clientDetail('seed-client-1', section: 'chat'),
+        at: AppRoutes.messagesFor('seed-client-1'),
       );
     }
 
-    testWidgets('shows the header, sub-tabs, and seeded chat', (tester) async {
-      await openDetail(tester);
-
-      expect(find.text('식단'), findsOneWidget);
-      expect(find.text('운동'), findsOneWidget);
-      // 채팅 is the header button now, not a tab.
-      expect(
-        find.byKey(const ValueKey<String>('client-chat-button')),
-        findsOneWidget,
-      );
-
-      // 스레드는 최신 메시지로 자동 스크롤된다. 위쪽(배너·초기 대화)은 아직
-      // 만들어지지 않았으므로 나올 때까지 끌어올린다 — 3일치로 길어져서
-      // 고정된 한 번의 드래그로는 닿지 않는다.
-      await dragUntil(tester, find.textContaining('AI가 김민수님의'), 300);
-      expect(find.textContaining('AI가 김민수님의'), findsOneWidget);
-      // 같은 이유로 오늘 대화도 한 프레임에 같이 존재하지 않는다. 다시 내려서
-      // 찾는다.
+    testWidgets('shows the conversation list and seeded thread', (
+      tester,
+    ) async {
+      await openMessages(tester);
+      expect(find.text('대화'), findsOneWidget);
+      expect(find.text('김민수'), findsWidgets);
       final reply = find.text('찌개 먹을 때 국물을 많이 마셨나봐요 😅');
       await dragUntil(tester, reply, -300);
       expect(reply, findsOneWidget);
     });
 
     testWidgets('sending a message appends it to the thread', (tester) async {
-      await openDetail(tester);
-
-      await tester.enterText(find.byType(TextField), '다음 세션 때 봐요!');
+      await openMessages(tester);
+      await tester.enterText(find.byType(TextField).last, '다음 세션 때 봐요!');
       await tester.tap(find.byIcon(Icons.send));
       await settle(tester);
-
-      expect(find.text('다음 세션 때 봐요!'), findsOneWidget);
+      // The sent message appears in both the thread and the conversation
+      // preview, keeping the two-pane workspace in sync.
+      expect(find.text('다음 세션 때 봐요!'), findsWidgets);
     });
 
-    testWidgets('mashing send while an insert is in flight stores one '
-        'message', (tester) async {
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        extraOverrides: <Override>[
-          chatRepositoryProvider.overrideWith(
-            (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
-          ),
-        ],
-      );
-      await goTo(
-        tester,
-        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
-      );
+    testWidgets(
+      'mashing send while an insert is in flight stores one message',
+      (tester) async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.messagesFor('seed-client-1'),
+          extraOverrides: <Override>[
+            chatRepositoryProvider.overrideWith(
+              (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
+            ),
+          ],
+        );
+        await tester.enterText(find.byType(TextField).last, '중복 방지 확인');
+        await tester.tap(find.byIcon(Icons.send));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(find.byIcon(Icons.send), warnIfMissed: false);
+        await settle(tester);
+        expect(find.text('중복 방지 확인'), findsOneWidget);
+      },
+    );
 
-      await tester.enterText(find.byType(TextField), '중복 방지 확인');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pump(const Duration(milliseconds: 50));
-      // Second tap lands while the first insert is still awaiting.
-      await tester.tap(
-        find.byIcon(Icons.send),
-        warnIfMissed: false, // button is disabled mid-flight
-      );
-      await settle(tester);
-
-      expect(find.text('중복 방지 확인'), findsOneWidget);
-    });
-
-    testWidgets('leaving the screen during a slow send does not throw', (
+    testWidgets('leaving messages during a slow send does not throw', (
       tester,
     ) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
+        at: AppRoutes.messagesFor('seed-client-1'),
         extraOverrides: <Override>[
           chatRepositoryProvider.overrideWith(
             (ref) => _SlowChatRepository(ref.watch(appDatabaseProvider)),
           ),
         ],
       );
-      await goTo(
-        tester,
-        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
-      );
-
-      await tester.enterText(find.byType(TextField), '이탈 중 전송');
+      await tester.enterText(find.byType(TextField).last, '이탈 중 전송');
       await tester.tap(find.byIcon(Icons.send));
       await tester.pump(const Duration(milliseconds: 50));
-      // Navigate back while the insert is still in flight — the widget
-      // is disposed before the await completes.
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      await goTo(tester, AppRoutes.dashboard);
       await settle(tester);
-
-      // Back on the list without a disposed-controller exception.
-      expect(find.text('고객'), findsWidgets);
+      expect(find.text('대시보드'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a send that FAILS after the screen is disposed does not '
-        'touch a disposed messenger', (tester) async {
-      final gate = Completer<void>();
-      addTearDown(() {
-        if (!gate.isCompleted) gate.complete();
-      });
-      await pumpTrainerApp(
-        tester,
-        token: 'demo-trainer-token',
-        extraOverrides: <Override>[
-          chatRepositoryProvider.overrideWith(
-            (ref) => _ControllableChatRepository(
-              ref.watch(appDatabaseProvider),
-              gate.future,
+    testWidgets(
+      'a failed send after leaving does not touch a disposed messenger',
+      (tester) async {
+        final gate = Completer<void>();
+        addTearDown(() {
+          if (!gate.isCompleted) gate.complete();
+        });
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.messagesFor('seed-client-1'),
+          extraOverrides: <Override>[
+            chatRepositoryProvider.overrideWith(
+              (ref) => _ControllableChatRepository(
+                ref.watch(appDatabaseProvider),
+                gate.future,
+              ),
             ),
+          ],
+        );
+        await tester.enterText(find.byType(TextField).last, '이탈 중 실패');
+        await tester.tap(find.byIcon(Icons.send));
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        gate.completeError(Exception('send failed'));
+        await tester.pump();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'client detail owns one scroll with diet and workout evidence',
+      (tester) async {
+        await pumpTrainerApp(
+          tester,
+          token: 'demo-trainer-token',
+          at: AppRoutes.clientDetail('seed-client-1'),
+        );
+        expect(
+          find.byKey(
+            const ValueKey<String>('client-detail-scroll-seed-client-1'),
           ),
-        ],
-      );
-      await goTo(
-        tester,
-        AppRoutes.clientDetail('seed-client-1', section: 'chat'),
-      );
-
-      await tester.enterText(find.byType(TextField), '이탈 중 실패');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pump(const Duration(milliseconds: 50));
-      // Fully leave the chat (route popped + ChatView disposed) BEFORE
-      // the send resolves.
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
-      await settle(tester);
-      expect(find.text('고객'), findsWidgets);
-
-      // Now fail — the catch must bail on !mounted, not show a snackbar.
-      gate.completeError(Exception('send failed'));
-      await tester.pump();
-      await tester.pump();
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
-    });
-
-    testWidgets('switching sub-tabs shows the 식단 and 운동 views', (tester) async {
-      await openDetail(tester);
-
-      await tester.tap(find.text('식단'));
-      await settle(tester);
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
-
-      await tester.tap(find.text('운동'));
-      await settle(tester);
-      // 운동 now leads with the routines that used to be their own tab,
-      // so the completion card sits below them.
-      expect(find.text('배정된 루틴'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('이번 주 완료율'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('이번 주 완료율'), findsOneWidget);
-    });
+          findsOneWidget,
+        );
+        expect(find.text('오늘 영양 요약'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('배정된 루틴'),
+          250,
+          scrollable: find.descendant(
+            of: find.byKey(
+              const ValueKey<String>('client-detail-scroll-seed-client-1'),
+            ),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(find.text('배정된 루틴'), findsOneWidget);
+      },
+    );
   });
 }

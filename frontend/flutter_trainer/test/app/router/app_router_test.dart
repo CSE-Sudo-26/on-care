@@ -139,5 +139,32 @@ void main() {
       await goTo(tester, AppRoutes.my);
       expect(find.text('자격증 · 인증'), findsOneWidget);
     });
+
+    for (final width in <double>[1280, 1920]) {
+      testWidgets(
+        'the six trainer workspaces fit a ${width.toInt()}px desktop',
+        (tester) async {
+          await withWideSurface(tester, size: Size(width, 1024), () async {
+            await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+            final locations = <String>[
+              AppRoutes.dashboard,
+              AppRoutes.clientDetail('seed-client-1'),
+              AppRoutes.scheduleView('week'),
+              AppRoutes.messagesFor('seed-client-1'),
+              AppRoutes.coachingFor('seed-client-1'),
+              AppRoutes.reportFor('seed-client-1'),
+            ];
+            for (final location in locations) {
+              await goTo(tester, location);
+              expect(
+                tester.takeException(),
+                isNull,
+                reason: '$location overflowed at ${width.toInt()}px',
+              );
+            }
+          });
+        },
+      );
+    }
   });
 }

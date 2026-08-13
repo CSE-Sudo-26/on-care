@@ -204,7 +204,7 @@ void main() {
         ),
       ),
     ]) {
-      testWidgets('${entry.$1} 상태에서도 검색이 현재 고객 하위 탭을 유지한다', (tester) async {
+      testWidgets('${entry.$1} 상태에서도 회원 상세 route를 유지한다', (tester) async {
         await pumpTrainerApp(
           tester,
           token: 'demo-trainer-token',
@@ -214,10 +214,8 @@ void main() {
           ],
         );
 
-        final search = tester.widget<ClientSearchBar>(
-          find.byType(ClientSearchBar),
-        );
-        expect(search.clientSection, 'workout');
+        expect(find.byType(ClientSearchBar), findsNothing);
+        expect(find.text('회원 관리'), findsOneWidget);
       });
     }
 
@@ -290,15 +288,60 @@ void main() {
 
       // The roster header states the size; the coaching signals
       // (나트륨 초과, 오늘 예약) now live on the 대시보드, not here.
-      expect(find.text('고객'), findsWidgets);
-      expect(find.text('15명 · 활성 13명'), findsOneWidget);
+      expect(find.text('회원 관리'), findsWidgets);
+      expect(find.text('15명 · 활성 13명'), findsWidgets);
 
       // Priority order: sodium-over clients come first, so a client who
       // is under target is further down a now-long, lazily built list.
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('박성호'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('이지수'), 150);
-      expect(find.text('이지수'), findsOneWidget);
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('clients-roster-search')),
+            )
+            .dx,
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey<String>('client-seed-client-1')),
+            )
+            .dx,
+      );
+      await tester.scrollUntilVisible(
+        find.text('이지수'),
+        150,
+        scrollable: find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
+      expect(find.text('이지수'), findsWidgets);
+    });
+
+    testWidgets('전체 보기 clears the URL and local search filters', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientsFiltered('attention'),
+      );
+
+      final search = find.byKey(
+        const ValueKey<String>('clients-roster-search'),
+      );
+      await tester.enterText(search, '없는 회원');
+      await tester.pump();
+      expect(tester.widget<TextField>(search).controller?.text, '없는 회원');
+
+      await tester.tap(find.text('전체 보기'));
+      await settle(tester);
+
+      expect(tester.widget<TextField>(search).controller?.text, isEmpty);
+      expect(find.text('김민수'), findsOneWidget);
     });
 
     testWidgets('unread badges show and clear after reading the thread', (
@@ -331,7 +374,7 @@ void main() {
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'chat'),
       );
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      await goTo(tester, AppRoutes.clients);
       await settle(tester);
 
       expect(badgeOf('박성호'), findsNothing);
@@ -349,14 +392,11 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — its 식단/운동 sub-tabs and the 채팅 button are
-      // unique to it.
+      // Detail opened — both evidence sections and the standalone message
+      // action are unique to it.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('client-chat-button')),
-        findsOneWidget,
-      );
+      expect(find.text('메시지'), findsOneWidget);
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {
@@ -369,20 +409,34 @@ void main() {
       await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
-      await tester.enterText(find.byType(TextField).first, '최수진');
-      await tester.enterText(find.byType(TextField).last, '체중 감량');
+      final sheetFields = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(sheetFields.first, '최수진');
+      await tester.enterText(sheetFields.last, '체중 감량');
       await tester.tap(find.text('등록하기'));
       await settle(tester);
 
       // New client appended at the end of the list (0 data, no badge).
       // Scoped to her own card: a seeded brand-new client carries the
       // same "아직 대화가 없어요" placeholder.
-      await tester.scrollUntilVisible(find.text('최수진'), 150);
-      expect(find.text('최수진'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('최수진'),
+        150,
+        scrollable: find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
+      expect(find.text('최수진'), findsWidgets);
       expect(
         find.descendant(
           of: find.ancestor(
-            of: find.text('최수진'),
+            of: find.text('최수진').last,
             matching: find.byType(ClientCard),
           ),
           matching: find.text('아직 대화가 없어요'),
@@ -403,7 +457,11 @@ void main() {
       await tester.tap(find.text('신규 고객'));
       await settle(tester);
 
-      await tester.enterText(find.byType(TextField).first, '김민수');
+      final sheetFields = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(sheetFields.first, '김민수');
       await tester.tap(find.text('등록하기'));
       await settle(tester);
 
@@ -446,10 +504,23 @@ void main() {
         ],
       );
 
-      await tester.scrollUntilVisible(find.text('박성호'), 150);
+      final clientCard = find.byKey(
+        const ValueKey<String>('client-seed-client-3'),
+      );
+      await tester.scrollUntilVisible(
+        clientCard.last,
+        150,
+        scrollable: find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
       expect(find.text('신규 고객'), findsNothing);
 
-      await tester.tap(find.text('박성호'));
+      await tester.tap(clientCard.last);
       await settle(tester);
 
       final statusInkWell = find.byKey(

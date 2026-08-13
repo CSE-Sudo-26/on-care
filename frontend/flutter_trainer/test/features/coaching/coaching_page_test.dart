@@ -28,6 +28,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -294,6 +295,26 @@ class _FakeTrainerAuthRepository implements TrainerAuthRepository {
       seedTrainerProfile;
 }
 
+Finder _exerciseActionMenus() => find.byWidgetPredicate((widget) {
+  final key = widget.key;
+  return widget is PopupMenuButton<String> &&
+      key is ValueKey<String> &&
+      key.value.startsWith('exercise-edit-');
+});
+
+Future<void> _selectExerciseAction(
+  WidgetTester tester,
+  String action, {
+  bool last = false,
+}) async {
+  final finder = last
+      ? _exerciseActionMenus().last
+      : _exerciseActionMenus().first;
+  final menu = tester.widget<PopupMenuButton<String>>(finder);
+  menu.onSelected?.call(action);
+  await tester.pump();
+}
+
 void main() {
   test('real API mode never exposes bundled drift recommendations', () async {
     final container = ProviderContainer(
@@ -425,7 +446,7 @@ void main() {
     ) async {
       await openTab(tester);
 
-      expect(find.text('AI 코칭'), findsWidgets);
+      expect(find.text('프로그램'), findsWidgets);
       // 김민수 (3428mg, over) → cardio-boost verdict.
       expect(find.text('AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
       expect(find.text('17.8'), findsOneWidget);
@@ -504,22 +525,22 @@ void main() {
       await openTab(tester);
 
       await tester.scrollUntilVisible(
-        find.text('＋ 운동 직접 추가'),
+        find.text('운동 추가'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
+      await tester.ensureVisible(find.text('운동 추가'));
       await tester.pump();
-      await tester.tap(find.text('＋ 운동 직접 추가'));
+      await tester.tap(find.text('운동 추가'));
       await tester.pump();
 
       await tester.enterText(
         find.byKey(const ValueKey<String>('custom-exercise-name')),
         '레그프레스 5세트',
       );
-      await tester.ensureVisible(find.text('추가하기'));
+      await tester.ensureVisible(find.text('추가'));
       await tester.pump();
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await tester.pump();
       // The new custom card may land below the fold.
       await tester.scrollUntilVisible(
@@ -529,11 +550,9 @@ void main() {
       );
 
       expect(find.text('레그프레스 5세트'), findsOneWidget);
-      expect(find.text('트레이너 추가'), findsOneWidget);
 
       // Delete it again.
-      await tester.tap(find.byIcon(Icons.close).last);
-      await tester.pump();
+      await _selectExerciseAction(tester, 'delete', last: true);
       expect(find.text('레그프레스 5세트'), findsNothing);
     });
 
@@ -542,13 +561,13 @@ void main() {
 
       // Open the add form, then send with it still open.
       await tester.scrollUntilVisible(
-        find.text('＋ 운동 직접 추가'),
+        find.text('운동 추가'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
+      await tester.ensureVisible(find.text('운동 추가'));
       await tester.pump();
-      await tester.tap(find.text('＋ 운동 직접 추가'));
+      await tester.tap(find.text('운동 추가'));
       await tester.pump();
       expect(
         find.byKey(const ValueKey<String>('custom-exercise-name')),
@@ -558,13 +577,13 @@ void main() {
       // The open form's TextField adds an inner Scrollable — target the
       // page ListView explicitly.
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 4)); // reset window
@@ -574,11 +593,11 @@ void main() {
         findsNothing,
       );
       await tester.scrollUntilVisible(
-        find.text('＋ 운동 직접 추가'),
+        find.text('운동 추가'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('＋ 운동 직접 추가'), findsOneWidget);
+      expect(find.text('운동 추가'), findsOneWidget);
     });
 
     testWidgets('an AI suggestion can be removed for this round', (
@@ -587,12 +606,7 @@ void main() {
       await openTab(tester);
 
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
-      // Every card carries an X now — the first belongs to the first
-      // AI suggestion.
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
-      await tester.pump();
-      await tester.tap(find.byIcon(Icons.close).first);
-      await tester.pump();
+      await _selectExerciseAction(tester, 'delete');
       expect(find.text('저강도 유산소 (걷기)'), findsNothing);
 
       // Switching clients and back restores the full suggestion list.
@@ -643,13 +657,13 @@ void main() {
       await openTab(tester);
 
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await settle(tester);
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
 
@@ -706,20 +720,20 @@ void main() {
       await openTab(tester);
 
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await tester.pump();
 
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
       expect(find.text('고객 앱에 알림이 전송됐어요'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4)); // reset window
-      expect(find.textContaining('검토 완료'), findsOneWidget);
+      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
     });
 
     testWidgets('mashing 스케줄 등록 registers only once', (tester) async {
@@ -825,13 +839,13 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
@@ -914,13 +928,13 @@ void main() {
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await tester.pump(const Duration(milliseconds: 50));
 
       await tester.scrollUntilVisible(
@@ -935,21 +949,21 @@ void main() {
 
       // Make a fresh edit on 이지수 while 김민수's send is still in flight.
       await tester.scrollUntilVisible(
-        find.text('＋ 운동 직접 추가'),
+        find.text('운동 추가'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
+      await tester.ensureVisible(find.text('운동 추가'));
       await tester.pump();
-      await tester.tap(find.text('＋ 운동 직접 추가'));
+      await tester.tap(find.text('운동 추가'));
       await tester.pump();
       await tester.enterText(
         find.byKey(const ValueKey<String>('custom-exercise-name')),
         '레그프레스 5세트',
       );
-      await tester.ensureVisible(find.text('추가하기'));
+      await tester.ensureVisible(find.text('추가'));
       await tester.pump();
-      await tester.tap(find.text('추가하기'));
+      await tester.tap(find.text('추가'));
       await tester.pump();
       await settle(tester); // let 김민수's send + reset window elapse
 
@@ -972,11 +986,8 @@ void main() {
       await openTab(tester);
 
       // Remove all three seeded AI suggestions for 김민수.
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
-      await tester.pump();
       for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byIcon(Icons.close).first);
-        await tester.pump();
+        await _selectExerciseAction(tester, 'delete');
       }
 
       await tester.scrollUntilVisible(
@@ -986,10 +997,8 @@ void main() {
       );
       await tester.ensureVisible(find.text('오늘 PT 스케줄에 등록'));
       await tester.pump();
-      await tester.tap(find.text('오늘 PT 스케줄에 등록'));
-      await tester.pump();
-
-      expect(find.text('운동을 하나 이상 추가해 주세요'), findsOneWidget);
+      final disabledAction = find.widgetWithText(ActionButton, '오늘 PT 스케줄에 등록');
+      expect(tester.widget<ActionButton>(disabledAction).onPressed, isNull);
     });
   });
 
@@ -1085,13 +1094,13 @@ void main() {
 
     Future<void> tapSend(WidgetTester tester) async {
       await tester.scrollUntilVisible(
-        find.textContaining('님에게 전송'),
+        find.text('회원에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.textContaining('님에게 전송'));
+      await tester.ensureVisible(find.text('회원에게 배정'));
       await tester.pump();
-      await tester.tap(find.textContaining('님에게 전송'));
+      await tester.tap(find.text('회원에게 배정'));
       await settle(tester);
     }
 
@@ -1188,30 +1197,19 @@ void main() {
       (tester) async {
         final routineRepo = await openRealApiTab(tester);
 
-        // Remove all 3 seeded AI suggestions for 김민수. Scroll each delete
-        // icon into view first — the new AI-assistant prompt banner above
-        // the routine cards can push the first card below the fold.
+        // Remove all 3 seeded AI suggestions for 김민수.
         for (var i = 0; i < 3; i++) {
-          final closeIcon = find.byIcon(Icons.close).first;
-          await tester.scrollUntilVisible(
-            closeIcon,
-            150,
-            scrollable: find.byType(Scrollable).first,
-          );
-          await tester.ensureVisible(closeIcon);
-          await tester.pump();
-          await tester.tap(closeIcon);
-          await tester.pump();
+          await _selectExerciseAction(tester, 'delete');
         }
 
         await tester.scrollUntilVisible(
-          find.text('＋ 운동 직접 추가'),
+          find.text('운동 추가'),
           150,
           scrollable: find.byType(Scrollable).first,
         );
-        await tester.ensureVisible(find.text('＋ 운동 직접 추가'));
+        await tester.ensureVisible(find.text('운동 추가'));
         await tester.pump();
-        await tester.tap(find.text('＋ 운동 직접 추가'));
+        await tester.tap(find.text('운동 추가'));
         await tester.pump();
 
         await tester.enterText(
@@ -1221,13 +1219,15 @@ void main() {
         // Default category is 근력 — switch to 스트레칭 so the assigned
         // type is provably derived from the custom exercise, not a
         // coincidental default.
-        await tester.tap(
-          find.byKey(const ValueKey<String>('custom-exercise-category-스트레칭')),
+        final stretching = find.byKey(
+          const ValueKey<String>('custom-exercise-category-스트레칭'),
         );
+        final chip = tester.widget<ChoiceChip>(stretching);
+        chip.onSelected?.call(true);
         await tester.pump();
-        await tester.ensureVisible(find.text('추가하기'));
+        await tester.ensureVisible(find.text('추가'));
         await tester.pump();
-        await tester.tap(find.text('추가하기'));
+        await tester.tap(find.text('추가'));
         await tester.pump();
 
         await tapSend(tester);

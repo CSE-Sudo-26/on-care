@@ -45,6 +45,13 @@ String? sessionRedirect(SessionStatus status, String location) {
 String? clientSectionRedirect(String? id) =>
     id == null ? null : AppRoutes.clientDetail(id);
 
+/// Keeps legacy client-chat links working while `/messages` owns the only
+/// full thread UI.
+String? clientChatRedirect(String? id, String? section) {
+  if (id == null || section != AppRoutes.clientChatSection) return null;
+  return AppRoutes.messagesFor(id);
+}
+
 /// Builds the trainer routing tree: a seven-branch [StatefulShellRoute]
 /// behind an auth gate, plus the auth routes.
 ///
@@ -96,6 +103,10 @@ GoRouter buildAppRouter({
                   // a pushed screen — one widget owns the layout choice.
                   GoRoute(
                     path: AppRoutes.clientDetailPattern,
+                    redirect: (context, state) => clientChatRedirect(
+                      state.pathParameters['id'],
+                      state.pathParameters['section'],
+                    ),
                     pageBuilder: (context, state) => NoTransitionPage<void>(
                       child: ClientsPage(
                         selectedId: state.pathParameters['id'],

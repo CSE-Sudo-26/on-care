@@ -85,9 +85,8 @@ void main() {
     await openReports(tester);
 
     expect(find.text('리포트'), findsWidgets);
-    expect(find.text('이번 주 세션'), findsOneWidget);
-    expect(find.text('완료'), findsWidgets);
-    expect(find.text('프로그램 준비'), findsOneWidget);
+    expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
+    expect(find.text('트레이너 피드백'), findsOneWidget);
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
   });
@@ -166,6 +165,11 @@ void main() {
 
   testWidgets('picking another client swaps the report', (tester) async {
     await openReports(tester);
+
+    // The API does not expose saved feedback status. Session-local send state
+    // must not be presented as a persistent member-list status.
+    expect(find.text('피드백 미작성'), findsNothing);
+    expect(find.text('피드백 완료'), findsNothing);
 
     await tester.tap(find.text('이지수').last);
     await settle(tester);
