@@ -119,7 +119,12 @@ class WorkoutView extends ConsumerWidget {
         ],
       ),
     ];
-    if (embedded) return Column(children: children);
+    if (embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: children,

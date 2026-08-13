@@ -107,9 +107,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final canUseFlatApi =
-        _draft.sessions.length == 1 &&
-        _draft.sessions.single.exercises.isNotEmpty;
+    final canUseFlatApi = _draft.supportsFlatRoutine;
     return SectionCard(
       title: _draft.name,
       dense: true,

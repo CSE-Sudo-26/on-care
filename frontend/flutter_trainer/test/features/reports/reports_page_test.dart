@@ -166,6 +166,11 @@ void main() {
   testWidgets('picking another client swaps the report', (tester) async {
     await openReports(tester);
 
+    // The API does not expose saved feedback status. Session-local send state
+    // must not be presented as a persistent member-list status.
+    expect(find.text('피드백 미작성'), findsNothing);
+    expect(find.text('피드백 완료'), findsNothing);
+
     await tester.tap(find.text('이지수').last);
     await settle(tester);
     expect(find.text('이지수님 주간 리포트'), findsOneWidget);

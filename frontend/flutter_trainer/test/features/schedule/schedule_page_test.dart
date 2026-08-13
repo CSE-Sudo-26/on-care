@@ -425,6 +425,31 @@ void main() {
       expect(find.text('예정'), findsWidgets);
     });
 
+    testWidgets('week detail follows the URL date after selecting a session', (
+      tester,
+    ) async {
+      final today = DateTime.now();
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.scheduleView('week', date: ymd(today)),
+      );
+
+      await tester.tap(find.text('김민수').first);
+      await settle(tester);
+      await goTo(
+        tester,
+        AppRoutes.scheduleView(
+          'week',
+          date: ymd(today.add(const Duration(days: 1))),
+        ),
+      );
+
+      // The old selected card still appears once in the week's grid, but it
+      // must not be duplicated in the detail panel for tomorrow.
+      expect(find.text('김민수'), findsOneWidget);
+    });
+
     testWidgets('consultation inbox opens from the schedule tab', (
       tester,
     ) async {
@@ -541,41 +566,32 @@ void main() {
       expect(find.text('열기'), findsOneWidget);
     });
 
-    testWidgets('completed session expands to program, note, and send flow', (
-      tester,
-    ) async {
-      await openSchedule(tester);
+    testWidgets(
+      'completed session shows program and disables unsupported send',
+      (tester) async {
+        await openSchedule(tester);
 
-      // Expand 김민수 (완료).
-      await tester.tap(find.text('김민수'));
-      await tester.pump();
-      await tester.scrollUntilVisible(
-        find.textContaining('오늘 PT 프로그램 전송'),
-        150,
-      );
-      expect(find.text('레그프레스'), findsOneWidget);
-      expect(find.text('카프레이즈'), findsOneWidget);
-      expect(find.text('트레이너 메모'), findsOneWidget);
-      expect(find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'), findsOneWidget);
+        // Expand 김민수 (완료).
+        await tester.tap(find.text('김민수'));
+        await tester.pump();
+        await tester.scrollUntilVisible(
+          find.textContaining('오늘 PT 프로그램 전송'),
+          150,
+        );
+        expect(find.text('레그프레스'), findsOneWidget);
+        expect(find.text('카프레이즈'), findsOneWidget);
+        expect(find.text('트레이너 메모'), findsOneWidget);
+        expect(find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'), findsOneWidget);
 
-      // Send → confirmation flash → persistent sent state, no re-send.
-      // Make sure the button is FULLY on-screen (a partially clipped
-      // widget makes tap() miss its hit test).
-      await tester.ensureVisible(find.textContaining('오늘 PT 프로그램 전송'));
-      await tester.pump();
-      await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
-      await tester.pump();
-      expect(find.text('고객 앱으로 전송 완료!'), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 3)); // flash expires
-      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
-      expect(find.textContaining('오늘 PT 프로그램 전송'), findsNothing);
-
-      // Tapping the sent button again is a no-op (stays sent).
-      await tester.tap(find.text('김민수님에게 전송됨'));
-      await tester.pump();
-      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
-    });
+        final sendLabel = find.textContaining('오늘 PT 프로그램 전송');
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(of: sendLabel, matching: find.byType(Tooltip)),
+        );
+        expect(tooltip.message, '완료 프로그램 전송 API가 아직 없어 전송할 수 없어요.');
+        expect(find.text('고객 앱으로 전송 완료!'), findsNothing);
+        expect(find.text('김민수님에게 전송됨'), findsNothing);
+      },
+    );
 
     testWidgets('예정 session expands to the plan preview with manage '
         'actions', (tester) async {
@@ -759,7 +775,7 @@ void main() {
       expect(find.text('신규 고객'), findsNothing);
     });
 
-    testWidgets('program send does not create a trainer chat bubble', (
+    testWidgets('unsupported program send does not create a chat bubble', (
       tester,
     ) async {
       await openSchedule(tester);
@@ -770,14 +786,8 @@ void main() {
         find.textContaining('오늘 PT 프로그램 전송'),
         150,
       );
-      await tester.ensureVisible(find.textContaining('오늘 PT 프로그램 전송'));
-      await tester.pump();
-      await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
-      await settle(tester);
-      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
-
-      // Program status stays in the schedule UI rather than appearing as a
-      // trainer-authored blue chat bubble.
+      // There is no delivery endpoint, so merely rendering the disabled
+      // action must not manufacture a trainer-authored chat event.
       await goTo(
         tester,
         AppRoutes.clientDetail('seed-client-1', section: 'chat'),
@@ -1009,7 +1019,7 @@ void main() {
       expect(duration, 30);
     });
 
-    testWidgets('program status does not depend on the chat repository', (
+    testWidgets('unsupported program action does not call chat repository', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -1029,13 +1039,8 @@ void main() {
         find.textContaining('오늘 PT 프로그램 전송'),
         150,
       );
-      await tester.ensureVisible(find.textContaining('오늘 PT 프로그램 전송'));
-      await tester.pump();
-      await tester.tap(find.textContaining('오늘 PT 프로그램 전송'));
-      await settle(tester);
-
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
-      expect(find.text('김민수님에게 전송됨'), findsOneWidget);
+      expect(find.text('김민수님에게 전송됨'), findsNothing);
     });
 
     testWidgets('a failed save shows a snackbar and keeps the sheet open', (

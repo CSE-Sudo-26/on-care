@@ -18,6 +18,20 @@ class ProgramEditorState {
   final String memo;
   final List<ProgramSessionDraft> sessions;
 
+  /// Whether this draft can be represented by the current flat routine API.
+  bool get supportsFlatRoutine {
+    if (sessions.length != 1 || sessions.single.exercises.isEmpty) {
+      return false;
+    }
+    for (final exercise in sessions.single.exercises) {
+      final nameLength = exercise.name.trim().length;
+      final sets = int.tryParse(exercise.sets.trim());
+      if (nameLength < 1 || nameLength > 100 || sets == null) return false;
+      if (sets < 0 || sets > 99) return false;
+    }
+    return true;
+  }
+
   ProgramEditorState copyWith({
     String? name,
     String? goal,

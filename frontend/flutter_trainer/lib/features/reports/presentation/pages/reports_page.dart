@@ -178,7 +178,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   final picker = _ClientPicker(
                     clients: clients,
                     selectedId: selected.id,
-                    sentClientIds: _sent,
                     onSelect: _selectClient,
                   );
                   // The report itself comes from the repository: local
@@ -266,13 +265,11 @@ class _ClientPicker extends StatelessWidget {
   const _ClientPicker({
     required this.clients,
     required this.selectedId,
-    required this.sentClientIds,
     required this.onSelect,
   });
 
   final List<TrainerClient> clients;
   final String selectedId;
-  final Set<String> sentClientIds;
   final ValueChanged<String> onSelect;
 
   @override
@@ -354,10 +351,6 @@ class _ClientPicker extends StatelessWidget {
                             ],
                           ),
                         ),
-                        _ReportStatusBadge(
-                          sent: sentClientIds.contains(client.id),
-                          hasData: recordedCompletionMean(client) != null,
-                        ),
                       ],
                     ),
                   ),
@@ -365,49 +358,6 @@ class _ClientPicker extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _ReportStatusBadge extends StatelessWidget {
-  const _ReportStatusBadge({required this.sent, required this.hasData});
-
-  final bool sent;
-  final bool hasData;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final String label;
-    final Color foreground;
-    final Color background;
-    if (!hasData) {
-      label = l.reportsDataInsufficient;
-      foreground = AppColors.warning;
-      background = AppColors.warning.withValues(alpha: 0.12);
-    } else if (sent) {
-      label = l.reportsFeedbackComplete;
-      foreground = AppColors.success;
-      background = AppColors.success.withValues(alpha: 0.12);
-    } else {
-      label = l.reportsFeedbackPending;
-      foreground = AppColors.warning;
-      background = AppColors.warning.withValues(alpha: 0.12);
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: const BorderRadius.all(AppRadius.pill),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: foreground,
-          fontSize: 9.5,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }

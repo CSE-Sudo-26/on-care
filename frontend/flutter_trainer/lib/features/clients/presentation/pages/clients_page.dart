@@ -50,9 +50,25 @@ enum _ManagementFilter { all, attention, active, dormant }
 enum _ClientSort { priority, name }
 
 class _ClientsPageState extends ConsumerState<ClientsPage> {
+  final TextEditingController _queryController = TextEditingController();
   String _query = '';
   _ManagementFilter _managementFilter = _ManagementFilter.all;
   _ClientSort _sort = _ClientSort.priority;
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  void _clearFilters() {
+    _queryController.clear();
+    setState(() {
+      _query = '';
+      _managementFilter = _ManagementFilter.all;
+    });
+    context.go(AppRoutes.clients);
+  }
 
   Future<void> _openAddClientSheet(BuildContext context) {
     return showModalBottomSheet<void>(
@@ -165,7 +181,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 onOpen: (id) => context.go(
                   AppRoutes.clientDetail(id, section: widget.section),
                 ),
-                onClearFilter: () => context.go(AppRoutes.clients),
+                onClearFilter: _clearFilters,
               );
               final Widget body;
               if (!wide && selected != null) {
@@ -210,7 +226,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 children: <Widget>[
                   if (wide || selected == null)
                     _MemberManagementToolbar(
-                      query: _query,
+                      queryController: _queryController,
                       managementFilter: _managementFilter,
                       sort: _sort,
                       shownCount: list.length,
@@ -242,7 +258,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
 
 class _MemberManagementToolbar extends StatelessWidget {
   const _MemberManagementToolbar({
-    required this.query,
+    required this.queryController,
     required this.managementFilter,
     required this.sort,
     required this.shownCount,
@@ -252,7 +268,7 @@ class _MemberManagementToolbar extends StatelessWidget {
     required this.onSortChanged,
   });
 
-  final String query;
+  final TextEditingController queryController;
   final _ManagementFilter managementFilter;
   final _ClientSort sort;
   final int shownCount;
@@ -277,6 +293,7 @@ class _MemberManagementToolbar extends StatelessWidget {
             width: constraints.maxWidth >= 900 ? 420 : constraints.maxWidth,
             child: TextField(
               key: const ValueKey<String>('clients-roster-search'),
+              controller: queryController,
               onChanged: onQueryChanged,
               decoration: InputDecoration(
                 hintText: l.searchClientsHint,

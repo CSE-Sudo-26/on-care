@@ -130,7 +130,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     TrainerClient client,
     ProgramEditorState draft,
   ) async {
-    if (_sent || _sending || !_isFlatDraftSupported(draft)) return;
+    if (_sent || _sending || !draft.supportsFlatRoutine) return;
     final sentFor = client.id;
     if (_sendRequestId == null || _sendRequestFor != sentFor) {
       _sendRequestId = newClientRequestId();
@@ -174,7 +174,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     TrainerClient client,
     ProgramEditorState draft,
   ) async {
-    if (!_isFlatDraftSupported(draft) ||
+    if (!draft.supportsFlatRoutine ||
         _registered ||
         _registeringClientIds.contains(client.id)) {
       return;
@@ -216,14 +216,11 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     });
   }
 
-  bool _isFlatDraftSupported(ProgramEditorState draft) =>
-      draft.sessions.length == 1 && draft.sessions.single.exercises.isNotEmpty;
-
   List<ProgramItem> _draftProgram(ProgramEditorState draft) => <ProgramItem>[
     for (final exercise in draft.sessions.single.exercises)
       ProgramItem(
-        name: exercise.name,
-        sets: int.tryParse(exercise.sets) ?? 1,
+        name: exercise.name.trim(),
+        sets: int.parse(exercise.sets.trim()),
         reps: exercise.duration.trim().isNotEmpty
             ? '${exercise.duration}분'
             : exercise.reps,

@@ -1010,6 +1010,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get schedSendUnsupported =>
+      'Completed program delivery is not supported by the API yet.';
+
+  @override
   String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
 
   @override

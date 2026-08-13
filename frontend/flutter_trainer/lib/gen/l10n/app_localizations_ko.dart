@@ -986,6 +986,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get schedSendUnsupported => '완료 프로그램 전송 API가 아직 없어 전송할 수 없어요.';
+
+  @override
   String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
 
   @override

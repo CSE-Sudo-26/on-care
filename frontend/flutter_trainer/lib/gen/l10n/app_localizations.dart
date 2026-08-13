@@ -1874,6 +1874,12 @@ abstract class AppLocalizations {
   /// **'Sent {name} the PT program for {date}'**
   String schedSentProgramTo(String name, String date);
 
+  /// No description provided for @schedSendUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed program delivery is not supported by the API yet.'**
+  String get schedSendUnsupported;
+
   /// No description provided for @slotCapacityInvalid.
   ///
   /// In en, this message translates to:

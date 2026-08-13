@@ -686,6 +686,7 @@
       }
     }
   },
+  "schedSendUnsupported": "Completed program delivery is not supported by the API yet.",
   "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",

@@ -309,6 +309,29 @@ void main() {
       expect(find.text('이지수'), findsWidgets);
     });
 
+    testWidgets('전체 보기 clears the URL and local search filters', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientsFiltered('attention'),
+      );
+
+      final search = find.byKey(
+        const ValueKey<String>('clients-roster-search'),
+      );
+      await tester.enterText(search, '없는 회원');
+      await tester.pump();
+      expect(tester.widget<TextField>(search).controller?.text, '없는 회원');
+
+      await tester.tap(find.text('전체 보기'));
+      await settle(tester);
+
+      expect(tester.widget<TextField>(search).controller?.text, isEmpty);
+      expect(find.text('김민수'), findsOneWidget);
+    });
+
     testWidgets('unread badges show and clear after reading the thread', (
       tester,
     ) async {
