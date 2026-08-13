@@ -128,6 +128,37 @@ void main() {
       expect(item.action?.isNavigable, isFalse);
     });
 
+    test('계약이 깨진 action 하나가 목록 전체를 무너뜨리지 않는다', () async {
+      final repo = DioNotificationRepository(
+        _dio(<Object?>[
+          <String, Object?>{
+            'id': 'n1',
+            'title': '깨진 action',
+            'body': '본문',
+            'time_ago': '방금',
+            'category': 'system',
+            'read': false,
+            // label 이 문자열이 아니다. 캐스팅하면 여기서 TypeError 가 나고
+            // 멀쩡한 아래 알림까지 함께 사라진다.
+            'action': <String, Object?>{'label': 42, 'target': 'dashboard'},
+          },
+          <String, Object?>{
+            'id': 'n2',
+            'title': '정상',
+            'body': '본문',
+            'time_ago': '방금',
+            'category': 'reminder',
+            'read': false,
+          },
+        ]),
+      );
+
+      final List<AlertItem> items = await repo.fetchAll();
+      expect(items, hasLength(2));
+      expect(items.first.action, isNull);
+      expect(items.last.title, '정상');
+    });
+
     test('action 이 없는 알림도 그대로 실린다', () async {
       final repo = DioNotificationRepository(
         _dio(<Object?>[

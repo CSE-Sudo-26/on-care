@@ -60,9 +60,14 @@ class DioNotificationRepository implements NotificationRepository {
   /// 서버가 준 행동 유도. 없으면 null — 읽음 처리만 하는 알림이다.
   static AlertAction? _actionFrom(Object? raw) {
     if (raw is! Map<String, Object?>) return null;
-    final label = (raw['label'] as String?) ?? '';
-    final target = raw['target'] as String?;
-    if (label.isEmpty || target == null) return null;
+    // 캐스팅하지 않고 확인만 한다. 계약이 깨진 action 하나가 `TypeError` 를 던지면
+    // **알림 목록 전체가 실패한다** — 그 한 건만 버리고 나머지는 보여 준다(리뷰).
+    //
+    // 미읽음 수와 반대로 판단하는 이유: 그쪽은 값 하나라 던지면 폴링이 마지막 좋은
+    // 값을 유지한다. 여기서 던지면 멀쩡한 알림까지 함께 사라진다.
+    final Object? label = raw['label'];
+    final Object? target = raw['target'];
+    if (label is! String || label.isEmpty || target is! String) return null;
     return AlertAction(label: label, target: _targetFrom(target));
   }
 
