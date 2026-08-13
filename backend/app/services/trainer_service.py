@@ -1246,10 +1246,12 @@ def register_program(
     return _schedule_out(session), True
 
 
-#: 회원이 약속을 지키려고 아는 값들. 이 넷 중 하나라도 달라지면 알린다.
-#: 메모(`note`)·프로그램은 트레이너의 준비물이라 빠져 있다 — 그것까지 알리면
-#: 알림함이 같은 일정으로 차고, 정작 시각이 바뀐 알림이 묻힌다.
 def _member_visible_slot(s: TrainerSchedule) -> tuple[str, str, str, int]:
+    """회원이 약속을 지키려고 아는 값들. 이 넷 중 하나라도 달라지면 알린다.
+
+    메모(`note`)·프로그램은 트레이너의 준비물이라 빠져 있다 — 그것까지 알리면
+    알림함이 같은 일정으로 차고, 정작 시각이 바뀐 알림이 묻힌다. (#664)
+    """
     return (s.date, s.time, s.type, s.duration_minutes)
 
 
