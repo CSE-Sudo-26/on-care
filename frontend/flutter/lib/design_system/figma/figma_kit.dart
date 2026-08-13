@@ -276,6 +276,7 @@ class FigmaTabHeader extends StatelessWidget {
     this.leading,
     this.onBell,
     this.onCalendar,
+    this.bellHasUnread = false,
   });
 
   final String title;
@@ -283,6 +284,10 @@ class FigmaTabHeader extends StatelessWidget {
   final Widget? leading;
   final VoidCallback? onBell;
   final VoidCallback? onCalendar;
+
+  /// 벨에 미읽음 점을 띄울지. 예전에는 항상 켜져 있어서 읽을 것이 없어도 점이
+  /// 남았다 — 화면이 서버 상태를 받아 넘긴다(디자인 시스템은 알림을 모른다).
+  final bool bellHasUnread;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +311,7 @@ class FigmaTabHeader extends StatelessWidget {
           ),
           FigmaCircleButton(
             icon: Icons.notifications_none_rounded,
-            showDot: true,
+            showDot: bellHasUnread,
             onTap: onBell,
           ),
           const SizedBox(width: 10),

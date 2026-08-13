@@ -44,6 +44,10 @@ class _RecordingRepo implements NotificationRepository {
 
   @override
   Future<void> markAllRead() async => markAllReadCalls++;
+
+  @override
+  Future<int> unreadCount() async =>
+      _items.where((AlertItem a) => !a.read).length;
 }
 
 void main() {

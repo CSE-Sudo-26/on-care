@@ -13,6 +13,7 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
+import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
@@ -156,6 +157,8 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   title: l.dietTitle,
                   trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => context.push(AppRoutes.notification),
+                  bellHasUnread:
+                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
                 _DateStrip(

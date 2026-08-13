@@ -19,15 +19,51 @@ import 'package:oncare/shared/widgets/empty_state.dart';
       AlertCategory.system => (label: '시스템', tone: AppBadgeTone.neutral),
     };
 
-class NotificationPage extends ConsumerWidget {
+class NotificationPage extends ConsumerStatefulWidget {
   const NotificationPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationPage> createState() => _NotificationPageState();
+}
+
+/// 화면이 살아 있는 동안 서버 상태를 따라간다.
+///
+/// 진입할 때 한 번, 그리고 앱이 앞으로 돌아올 때마다 다시 조회한다. 트레이너가
+/// 무언가 해도 회원 앱을 재시작해야 보이던 문제를 없앤다 — 알림함을 열어 둔 채
+/// 잠깐 다른 앱을 다녀오는 것이 실제로 자주 하는 동작이다.
+class _NotificationPageState extends ConsumerState<NotificationPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // 첫 프레임 뒤에 부른다 — build 중에 provider 를 건드리지 않는다.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  Future<void> _refresh() {
+    if (!mounted) return Future<void>.value();
+    return ref.read(notificationControllerProvider.notifier).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final config = ref.watch(appConfigProvider);
     final state = ref.watch(notificationControllerProvider);
     final notifier = ref.read(notificationControllerProvider.notifier);
+    final bool showRetry = state.failedToLoad;
 
     final Widget page = Scaffold(
       key: const Key('notificationPage'),
@@ -40,23 +76,39 @@ class NotificationPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: state.items.isEmpty
-          ? const EmptyState(
-              icon: Icons.notifications_off_outlined,
-              title: '알림이 없습니다',
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: state.items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (BuildContext ctx, int i) {
-                final item = state.items[i];
-                return _AlertTile(
-                  item: item,
-                  onTap: () => notifier.markRead(item.id),
-                );
-              },
-            ),
+      // 목록이 비어 있어도 당겨서 새로고침할 수 있어야 한다 — 빈 화면이야말로
+      // 다시 받아 보고 싶은 순간이다. 그래서 본문은 항상 스크롤 가능하다.
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount:
+              (showRetry ? 1 : 0) +
+              (state.items.isEmpty ? 1 : state.items.length),
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (BuildContext ctx, int i) {
+            // 조회가 실패해도 **받아 둔 목록은 그대로 둔다.** 맨 위에 사정과 재시도만
+            // 얹는다 — 목록이 사라지면 읽지 않은 알림이 있었는지조차 알 수 없다.
+            if (showRetry && i == 0) {
+              return _RetryBanner(onRetry: _refresh);
+            }
+            if (state.items.isEmpty) {
+              return const SizedBox(
+                height: 320,
+                child: EmptyState(
+                  icon: Icons.notifications_off_outlined,
+                  title: '알림이 없습니다',
+                ),
+              );
+            }
+            return _AlertTile(
+              item: state.items[i - (showRetry ? 1 : 0)],
+              onTap: () => notifier.markRead(state.items[i - (showRetry ? 1 : 0)].id),
+            );
+          },
+        ),
+      ),
       // 가상 푸시는 목/데모 모드 전용 개발 도구 — 실모드에서는 버튼을 숨긴다
       // (서버에 없는 팬텀 알림 방지, 죽은 버튼 방지).
       floatingActionButton: config.useMockApi
@@ -113,6 +165,32 @@ class _AlertTile extends StatelessWidget {
                 Text(item.body, style: theme.textTheme.bodyMedium),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// 조회 실패를 알리고 다시 시도하게 한다.
+class _RetryBanner extends StatelessWidget {
+  const _RetryBanner({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const Key('notificationRetryBanner'),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.cloud_off_rounded, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          const Expanded(child: Text('최신 알림을 불러오지 못했어요')),
+          TextButton(
+            onPressed: () => onRetry(),
+            child: const Text('다시 시도'),
           ),
         ],
       ),
