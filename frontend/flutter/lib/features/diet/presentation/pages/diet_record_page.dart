@@ -271,6 +271,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                             const SizedBox(height: 20),
                             _MealLog(
                               entries: day.entries,
+                              date: _selected,
                               onAdd: () => showDietAddSheet(context),
                               onEditMeal: (DietMeal m) =>
                                   openMealDetailPage(context, m),
@@ -1343,11 +1344,16 @@ class _AiFeedback extends StatelessWidget {
 class _MealLog extends StatelessWidget {
   const _MealLog({
     required this.entries,
+    required this.date,
     required this.onAdd,
     required this.onEditMeal,
   });
 
   final List<DietEntry> entries;
+
+  /// 이 목록이 보여 주는 날. 제목 옆에 함께 적는다.
+  final DateTime date;
+
   final VoidCallback onAdd;
   final ValueChanged<DietMeal> onEditMeal;
 
@@ -1361,12 +1367,26 @@ class _MealLog extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
+              // 제목은 날짜에 매이지 않는다. 이 목록은 늘 **선택한 날**을 보여 주므로
+              // '오늘의 식단' 이면 사흘 전을 골랐을 때 제목이 거짓말이 된다(#687).
+              // 대신 어느 날 기록인지를 옆에 적어 둔다 — 기간 토글을 이번 주로 두면
+              // 7 일짜리 그래프 밑에 하루치 목록이 붙어서, 날짜가 없으면 그 목록이
+              // 무엇인지 읽히지 않는다.
               Text(
-                l.dietTodayMeals,
+                l.dietMealLog,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: FigmaColors.ink,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                MaterialLocalizations.of(context).formatMediumDate(date),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
                 ),
               ),
               const Spacer(),

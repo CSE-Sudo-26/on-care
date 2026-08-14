@@ -184,6 +184,38 @@ void main() {
   });
 
   group('식단 탭 기간 토글', () {
+    testWidgets('끼니 목록 제목은 날짜에 매이지 않고 어느 날 기록인지 함께 적는다 (#687)', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Element context = tester.element(find.byType(DietRecordPage));
+      final AppLocalizations l = AppLocalizations.of(context);
+
+      // 이 목록은 늘 **선택한 날**을 보여 준다. 제목이 '오늘' 을 주장하면 사흘 전을
+      // 골랐을 때 거짓말이 된다 — 그게 #687 이 신고된 경로다.
+      expect(find.text(l.dietMealLog), findsOneWidget);
+      expect(l.dietMealLog.contains('오늘'), isFalse);
+      expect(l.dietMealLog.toLowerCase().contains('today'), isFalse);
+
+      // 대신 어느 날 기록인지가 제목 옆에 적혀 있다. 기간 토글을 이번 주로 두면
+      // 7 일짜리 그래프 밑에 하루치 목록이 붙으므로, 날짜가 없으면 읽히지 않는다.
+      final String todayLabel = MaterialLocalizations.of(
+        context,
+      ).formatMediumDate(DateTime.now());
+      expect(find.text(todayLabel), findsWidgets);
+    });
+
     testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
     ) async {
@@ -217,7 +249,7 @@ void main() {
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
       expect(find.byKey(const Key('nutrition-summary-card')), findsNothing);
       // 날짜 스트립과 끼니 목록은 그대로 남는다 — 운동 탭과 같은 규칙.
-      expect(find.text(l.dietTodayMeals), findsOneWidget);
+      expect(find.text(l.dietMealLog), findsOneWidget);
       expect(find.text(l.dietAddMeal), findsOneWidget);
       // 토글도 제목 줄에 그대로 있다.
       expect(find.byKey(const Key('diet-period-tab-month')), findsOneWidget);
