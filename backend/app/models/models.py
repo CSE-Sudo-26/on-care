@@ -804,6 +804,44 @@ class TrainerRoutine(Base):
     )
 
 
+class TrainerProgramDraft(Base):
+    """트레이너가 저장해 둔 프로그램 초안. 회원에게 배정되기 전의 작업물이다. (#708)
+
+    회원과 묶이지 않는다 — 초안은 "이 트레이너가 만들어 둔 구성"이고, 회원 배정은
+    저장한 초안을 불러와 기존 배정 경로로 보내는 별개의 행동이다. 그래서
+    `member_id` 가 없다.
+
+    **세션 하나만 담는다.** 다중 세션 저장·배정은 이 작업의 범위 밖이라(#708 제외
+    범위) 편집기의 다중 세션 초안은 여전히 저장되지 않는다. 나중에 열 때는
+    세션 테이블을 따로 두거나 이 컬럼들을 배열로 올리게 된다.
+
+    `exercises_json` 은 편집기의 운동 목록을 그대로 담는다
+    (`[{id,name,sets,reps,weight,duration,distance,rest,rpe,memo,type,source}]`).
+    값이 전부 자유 문자열("10회", "60")이라 숫자로 정규화하면 트레이너가 적어 둔
+    표현이 사라진다 — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
+    스케줄의 `program_json` 과 같은 방식이되, 항목이 더 많다.
+    """
+
+    __tablename__ = "trainer_program_drafts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), default="")
+    goal: Mapped[str] = mapped_column(String(200), default="")
+    period: Mapped[str] = mapped_column(String(100), default="")
+    memo: Mapped[str] = mapped_column(Text, default="")
+    session_name: Mapped[str] = mapped_column(String(100), default="")
+    exercises_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class RoutineHistory(Base):
     """회원의 운동 완료 기록 — 프론트 ClientRoutineHistory 대응.
 

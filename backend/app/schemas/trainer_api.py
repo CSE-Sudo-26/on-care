@@ -280,6 +280,97 @@ class RoutineFeedbackRequest(BaseModel):
     feedback: str = Field(min_length=1, max_length=2000)
 
 
+# ---- 프로그램 초안 (#708) ----
+
+#: 운동 항목의 출처. 'ai' 는 AI 제안을 편집기에 반영한 것, 'trainer' 는 트레이너가
+#: 직접 추가한 것. 저장·복원 후에도 이 구분이 남아야 화면이 같은 배지를 그린다.
+ProgramExerciseSource = Literal["ai", "trainer"]
+
+
+class ProgramDraftExercise(BaseModel):
+    """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
+
+    세트·횟수·중량·시간은 **문자열 그대로** 둔다. 편집기가 "10회"·"60"·"20kg"
+    같은 자유 입력을 받으므로 숫자로 정규화하면 트레이너가 적어 둔 표현이 사라진다
+    — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
+    """
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=100)
+    sets: str = Field(default="", max_length=30)
+    reps: str = Field(default="", max_length=30)
+    weight: str = Field(default="", max_length=30)
+    duration: str = Field(default="", max_length=30)
+    distance: str = Field(default="", max_length=30)
+    rest: str = Field(default="", max_length=30)
+    rpe: str = Field(default="", max_length=30)
+    memo: str = Field(default="", max_length=300)
+    type: RoutineType = "근력"
+    source: ProgramExerciseSource = "trainer"
+
+
+#: 초안 하나가 담는 운동 수 상한. 화면이 한 세션에 넣을 수 있는 현실적인 개수를
+#: 훨씬 넘는 값이며, 한 요청이 DB 에 무한정 밀어 넣는 것을 막는다.
+_PROGRAM_DRAFT_MAX_EXERCISES = 50
+
+
+class TrainerProgramDraftOut(BaseModel):
+    """저장된 프로그램 초안."""
+    id: str
+    name: str
+    goal: str
+    period: str
+    memo: str
+    session_name: str
+    exercises: list[ProgramDraftExercise]
+    created_at: _datetime
+    updated_at: _datetime
+
+
+class TrainerProgramDraftSummary(BaseModel):
+    """목록용 요약 — 운동 구성 전체를 싣지 않는다.
+
+    목록은 "무엇을 저장해 뒀나"만 보여 주고, 편집기로 불러올 때 상세를 읽는다.
+    초안 수가 늘어도 목록 응답이 함께 커지지 않는다.
+    """
+    id: str
+    name: str
+    goal: str
+    period: str
+    exercise_count: int
+    updated_at: _datetime
+
+
+class TrainerProgramDraftCreate(BaseModel):
+    """초안 저장 입력."""
+    name: str = Field(min_length=1, max_length=100)
+    goal: str = Field(default="", max_length=200)
+    period: str = Field(default="", max_length=100)
+    memo: str = Field(default="", max_length=2000)
+    session_name: str = Field(default="", max_length=100)
+    #: 운동이 하나도 없는 초안도 저장할 수 있다 — 이름과 목표만 잡아 둔 상태가
+    #: 초안으로서 의미가 있고, 그 상태를 저장하지 못하면 기능이 반쪽이 된다.
+    exercises: list[ProgramDraftExercise] = Field(
+        default_factory=list, max_length=_PROGRAM_DRAFT_MAX_EXERCISES
+    )
+
+
+class TrainerProgramDraftUpdate(PartialUpdate):
+    """초안 부분 수정. 보낸 필드만 반영한다.
+
+    `exercises` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
+    구성 전체를 들고 있고, 부분 병합은 순서가 어긋날 여지만 만든다.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    goal: str | None = Field(default=None, max_length=200)
+    period: str | None = Field(default=None, max_length=100)
+    memo: str | None = Field(default=None, max_length=2000)
+    session_name: str | None = Field(default=None, max_length=100)
+    exercises: list[ProgramDraftExercise] | None = Field(
+        default=None, max_length=_PROGRAM_DRAFT_MAX_EXERCISES
+    )
+
+
 #: 메모 출처. 'trainer' 는 회원 상세에서 직접 쓴 메모, 'chat_insight' 는 채팅에서
 #: 감지한 신호를 저장한 메모다. 회원 상세는 두 종류를 한 목록으로 보여 준다.
 TrainerMemoSource = Literal["trainer", "chat_insight"]

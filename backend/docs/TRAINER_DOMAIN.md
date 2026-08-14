@@ -38,6 +38,7 @@
 | `trainer_clients` | 트레이너↔회원 담당 링크(로스터의 정의) |
 | `trainer_routines` | 트레이너/AI가 회원에게 배정한 루틴 |
 | `trainer_client_memos` | 트레이너가 회원별로 남긴 메모(직접 작성 + 채팅 인사이트, `0036_trainer_memos`) |
+| `trainer_program_drafts` | 트레이너가 저장해 둔 프로그램 초안(회원과 묶이지 않음, `0038_program_drafts`) |
 | `routine_history` | 회원 운동 완료 기록(회원 앱·PT 세션 공용 원본) |
 | `chat_messages` | 트레이너↔회원 1:1 채팅 |
 | `trainer_schedule` | 트레이너 오늘 타임라인(예약→수업→기록 루프) |
@@ -118,6 +119,11 @@
 | POST | `/trainer/clients/{member_id}/memos` | 메모 작성 (`insight_id?` 로 채팅 인사이트 중복 방지) |
 | PUT | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 본문 수정 |
 | DELETE | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 삭제 |
+| GET | `/trainer/programs` | 저장한 프로그램 초안 목록(요약, 최근 수정 먼저) |
+| POST | `/trainer/programs` | 프로그램 초안 저장 |
+| GET | `/trainer/programs/{draft_id}` | 초안 상세(편집기로 불러오기) |
+| PUT | `/trainer/programs/{draft_id}` | 초안 수정(`exercises` 는 통째로 교체) |
+| DELETE | `/trainer/programs/{draft_id}` | 초안 삭제 |
 | GET | `/trainer/clients/{member_id}/chat?before=&before_id=` | 채팅 스레드(커서 페이지네이션) |
 | POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 (`client_request_id?`) |
 | POST | `/trainer/clients/{member_id}/chat/read` | 읽음 처리 |
