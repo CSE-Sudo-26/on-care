@@ -109,258 +109,64 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     // ---- Diet entries (today plus two populated historical days) ----
     await db.batch((Batch b) {
       b.insertAll(db.dietEntries, <DietEntriesCompanion>[
-        DietEntriesCompanion.insert(
+        // 시연에 쓰는 큐레이션 사흘. 음식 구성과 영양 수치는 히스토리와 같은
+        // 템플릿에서 나오고, 여기서는 고정 id·시각·그날의 코치 문구만 덮어쓴다
+        // — 수치를 두 벌로 두면 한쪽만 고쳤을 때 조용히 어긋난다(#677).
+        _mealScrambledEggStrawberry.companion(
+          today,
           id: 'seed-diet-breakfast',
-          date: today,
-          mealType: 'breakfast',
           timeLabel: '08:20',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '스크램블 에그',
-              'calories': 185,
-              'sodium_mg': 220,
-              'sugar_g': 0.8,
-              'carbs_g': 2.0,
-              'protein_g': 13.0,
-              'fat_g': 14.0,
-            },
-            <String, Object?>{
-              'name': '딸기',
-              'calories': 32,
-              'sodium_mg': 1,
-              'sugar_g': 5.5,
-              'carbs_g': 8.0,
-              'protein_g': 0.5,
-              'fat_g': 0.5,
-            },
-          ]),
-          totalCalories: 217,
-          sodiumMg: const Value(221),
-          sugarG: const Value(6.3),
-          aiComment: const Value('단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.'),
-          photoAsset: const Value('assets/images/breakfast-scrambled-egg-strawberry.jpg'),
+          aiComment:
+              '단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.',
         ),
-        DietEntriesCompanion.insert(
+        _mealJjamppong.companion(
+          today,
           id: 'seed-diet-lunch',
-          date: today,
-          mealType: 'lunch',
           timeLabel: '12:40',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '짬뽕',
-              'calories': 750,
-              'sodium_mg': 3200,
-              'sugar_g': 8.5,
-              // 식단 탭과 홈 대시보드가 같은 행을 집계한다.
-              'carbs_g': 107.0,
-              'protein_g': 29.0,
-              'fat_g': 22.5,
-            },
-          ]),
-          totalCalories: 750,
-          sodiumMg: const Value(3200),
-          sugarG: const Value(8.5),
-          aiComment: const Value('정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.'),
-          photoAsset: const Value('assets/images/lunch-jjamppong.jpg'),
+          aiComment:
+              '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
         ),
-        DietEntriesCompanion.insert(
+        _mealCoffeeNuts.companion(
+          today,
           id: 'seed-diet-snack',
-          date: today,
-          mealType: 'snack',
           timeLabel: '15:30',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '아이스 아메리카노',
-              'calories': 10,
-              'sodium_mg': 5,
-              'sugar_g': 0,
-              'carbs_g': 2.0,
-              'protein_g': 0.5,
-              'fat_g': 0.0,
-            },
-            <String, Object?>{
-              'name': '견과류 한 봉',
-              'calories': 90,
-              'sodium_mg': 2,
-              'sugar_g': 3,
-              'carbs_g': 1.0,
-              'protein_g': 2.0,
-              'fat_g': 8.0,
-            },
-          ]),
-          totalCalories: 100,
-          sodiumMg: const Value(7),
-          sugarG: const Value(3.0),
-          aiComment: const Value('당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.'),
-          photoAsset: const Value('assets/images/snack-coffee-nuts.jpg'),
+          aiComment: '당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.',
         ),
-        DietEntriesCompanion.insert(
+        _mealOatmealBanana.companion(
+          yesterday,
           id: 'seed-diet-yesterday-breakfast',
-          date: yesterday,
-          mealType: 'breakfast',
           timeLabel: '08:10',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '오트밀',
-              'calories': 250,
-              'sodium_mg': 100,
-              'sugar_g': 6,
-              'carbs_g': 42.0,
-              'protein_g': 10.0,
-              'fat_g': 6.0,
-            },
-            <String, Object?>{
-              'name': '바나나',
-              'calories': 105,
-              'sodium_mg': 1,
-              'sugar_g': 14,
-              'carbs_g': 27.0,
-              'protein_g': 1.3,
-              'fat_g': 0.4,
-            },
-          ]),
-          totalCalories: 355,
-          sodiumMg: const Value(101),
-          sugarG: const Value(20.0),
-          aiComment: const Value('오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.'),
-          photoAsset: const Value('assets/images/diet-oatmeal-banana.jpeg'),
+          aiComment: '오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.',
         ),
-        DietEntriesCompanion.insert(
+        _mealChickenSalad.companion(
+          yesterday,
           id: 'seed-diet-yesterday-lunch',
-          date: yesterday,
-          mealType: 'lunch',
           timeLabel: '12:30',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '닭가슴살 샐러드',
-              'calories': 315,
-              'sodium_mg': 395,
-              'sugar_g': 10,
-              'carbs_g': 19.0,
-              'protein_g': 34.0,
-              'fat_g': 11.1,
-            },
-          ]),
-          totalCalories: 315,
-          sodiumMg: const Value(395),
-          sugarG: const Value(10.0),
-          aiComment: const Value('닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.'),
-          photoAsset: const Value('assets/images/diet-chicken-salad.jpg'),
+          aiComment: '닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.',
         ),
-        DietEntriesCompanion.insert(
+        _mealDoenjangRiceDinner.companion(
+          yesterday,
           id: 'seed-diet-yesterday-dinner',
-          date: yesterday,
-          mealType: 'dinner',
           timeLabel: '18:45',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '된장찌개',
-              'calories': 300,
-              'sodium_mg': 1300,
-              'sugar_g': 5,
-              'carbs_g': 18.0,
-              'protein_g': 24.0,
-              'fat_g': 15.0,
-            },
-            <String, Object?>{
-              'name': '밥',
-              'calories': 310,
-              'sodium_mg': 5,
-              'sugar_g': 0.7,
-              'carbs_g': 67.0,
-              'protein_g': 6.0,
-              'fat_g': 2.5,
-            },
-          ]),
-          totalCalories: 610,
-          sodiumMg: const Value(1305),
-          sugarG: const Value(5.7),
-          aiComment: const Value('밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.'),
-          photoAsset: const Value('assets/images/diet-doenjang-rice.jpeg'),
+          aiComment: '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
         ),
-        DietEntriesCompanion.insert(
+        _mealGreekYogurtNuts.companion(
+          twoDaysAgo,
           id: 'seed-diet-two-days-ago-breakfast',
-          date: twoDaysAgo,
-          mealType: 'breakfast',
           timeLabel: '08:35',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '그릭 요거트',
-              'calories': 170,
-              'sodium_mg': 75,
-              'sugar_g': 7,
-              'carbs_g': 8.0,
-              'protein_g': 18.0,
-              'fat_g': 8.0,
-            },
-            <String, Object?>{
-              'name': '견과류',
-              'calories': 150,
-              'sodium_mg': 5,
-              'sugar_g': 2,
-              'carbs_g': 6.0,
-              'protein_g': 5.0,
-              'fat_g': 13.0,
-            },
-          ]),
-          totalCalories: 320,
-          sodiumMg: const Value(80),
-          sugarG: const Value(9.0),
-          aiComment: const Value('그릭 요거트의 단백질과 견과류의 불포화지방을 고르게 섭취했어요.'),
-          photoAsset: const Value('assets/images/diet-greek-yogurt-nuts.jpeg'),
+          aiComment: '그릭 요거트의 단백질과 견과류의 불포화지방을 고르게 섭취했어요.',
         ),
-        DietEntriesCompanion.insert(
+        _mealVegetableBibimbap.companion(
+          twoDaysAgo,
           id: 'seed-diet-two-days-ago-lunch',
-          date: twoDaysAgo,
-          mealType: 'lunch',
           timeLabel: '12:20',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '야채비빔밥',
-              'calories': 610,
-              'sodium_mg': 900,
-              'sugar_g': 12,
-              'carbs_g': 92.0,
-              'protein_g': 20.0,
-              'fat_g': 16.0,
-            },
-          ]),
-          totalCalories: 610,
-          sodiumMg: const Value(900),
-          sugarG: const Value(12.0),
-          aiComment: const Value('야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.'),
-          photoAsset: const Value('assets/images/diet-vegetable-bibimbap.jpg'),
+          aiComment: '야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.',
         ),
-        DietEntriesCompanion.insert(
+        _mealSalmonBrownRice.companion(
+          twoDaysAgo,
           id: 'seed-diet-two-days-ago-dinner',
-          date: twoDaysAgo,
-          mealType: 'dinner',
           timeLabel: '18:50',
-          foodsJson: jsonEncode(<Map<String, Object?>>[
-            <String, Object?>{
-              'name': '연어구이',
-              'calories': 395,
-              'sodium_mg': 505,
-              'sugar_g': 9,
-              'carbs_g': 19.0,
-              'protein_g': 35.0,
-              'fat_g': 19.0,
-            },
-            <String, Object?>{
-              'name': '현미밥',
-              'calories': 280,
-              'sodium_mg': 5,
-              'sugar_g': 0,
-              'carbs_g': 58.0,
-              'protein_g': 6.0,
-              'fat_g': 2.0,
-            },
-          ]),
-          totalCalories: 675,
-          sodiumMg: const Value(510),
-          sugarG: const Value(9.0),
-          aiComment: const Value('연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.'),
-          photoAsset: const Value('assets/images/diet-salmon-brown-rice.jpeg'),
+          aiComment: '연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.',
         ),
         // 큐레이션 사흘 앞으로 한 달치를 더 채운다 — 날짜를 옮겨도 기록이
         // 이어지도록(#671).
@@ -678,275 +484,306 @@ class _SeedMeal {
   double get totalSugar =>
       foods.fold<double>(0, (double a, _SeedFood f) => a + f.sugarG);
 
-  DietEntriesCompanion companion(String date) => DietEntriesCompanion.insert(
-    id: 'seed-diet-$date-$slug',
+  /// 이 끼니를 [date] 의 행으로 만든다.
+  ///
+  /// [id]·[timeLabel]·[aiComment] 를 덮어쓸 수 있다. 시연에 쓰는 큐레이션
+  /// 사흘은 고정 id(`seed-diet-lunch` 등)와 그날만의 코치 문구를 갖는데, **음식
+  /// 구성과 영양 수치는 히스토리와 똑같다.** 덮어쓰기를 두어 수치는 한 곳에만
+  /// 남기고 표현만 갈아 끼운다.
+  DietEntriesCompanion companion(
+    String date, {
+    String? id,
+    String? timeLabel,
+    String? aiComment,
+  }) => DietEntriesCompanion.insert(
+    id: id ?? 'seed-diet-$date-$slug',
     date: date,
     mealType: mealType,
-    timeLabel: timeLabel,
+    timeLabel: timeLabel ?? this.timeLabel,
     foodsJson: jsonEncode(<Map<String, Object?>>[
       for (final _SeedFood f in foods) f.toJson(),
     ]),
     totalCalories: totalCalories,
     sodiumMg: Value(totalSodium),
     sugarG: Value(totalSugar),
-    aiComment: Value(aiComment),
+    aiComment: Value(aiComment ?? this.aiComment),
     photoAsset: Value(photoAsset),
   );
 }
 
+const _SeedMeal _mealOatmealBanana = _SeedMeal(
+  slug: 'breakfast',
+  mealType: 'breakfast',
+  timeLabel: '08:05',
+  photoAsset: 'assets/images/diet-oatmeal-banana.jpeg',
+  aiComment: '오트밀로 식이섬유를 챙긴 아침이에요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '오트밀',
+      calories: 250,
+      sodiumMg: 100,
+      sugarG: 6,
+      carbsG: 42,
+      proteinG: 10,
+      fatG: 6,
+    ),
+    _SeedFood(
+      '바나나',
+      calories: 105,
+      sodiumMg: 1,
+      sugarG: 14,
+      carbsG: 27,
+      proteinG: 1.3,
+      fatG: 0.4,
+    ),
+  ],
+);
+
+const _SeedMeal _mealGreekYogurtNuts = _SeedMeal(
+  slug: 'breakfast',
+  mealType: 'breakfast',
+  timeLabel: '08:30',
+  photoAsset: 'assets/images/diet-greek-yogurt-nuts.jpeg',
+  aiComment: '단백질과 불포화지방을 고르게 섭취했어요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '그릭 요거트',
+      calories: 170,
+      sodiumMg: 75,
+      sugarG: 7,
+      carbsG: 8,
+      proteinG: 18,
+      fatG: 8,
+    ),
+    _SeedFood(
+      '견과류',
+      calories: 150,
+      sodiumMg: 5,
+      sugarG: 2,
+      carbsG: 6,
+      proteinG: 5,
+      fatG: 13,
+    ),
+  ],
+);
+
+const _SeedMeal _mealScrambledEggStrawberry = _SeedMeal(
+  slug: 'breakfast',
+  mealType: 'breakfast',
+  timeLabel: '07:50',
+  photoAsset: 'assets/images/breakfast-scrambled-egg-strawberry.jpg',
+  aiComment: '달걀 단백질에 과일로 비타민을 더했어요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '스크램블 에그',
+      calories: 185,
+      sodiumMg: 220,
+      sugarG: 0.8,
+      carbsG: 2,
+      proteinG: 13,
+      fatG: 14,
+    ),
+    _SeedFood(
+      '딸기',
+      calories: 32,
+      sodiumMg: 1,
+      sugarG: 5.5,
+      carbsG: 8,
+      proteinG: 0.5,
+      fatG: 0.5,
+    ),
+  ],
+);
+
 const List<_SeedMeal> _historyBreakfasts = <_SeedMeal>[
-  _SeedMeal(
-    slug: 'breakfast',
-    mealType: 'breakfast',
-    timeLabel: '08:05',
-    photoAsset: 'assets/images/diet-oatmeal-banana.jpeg',
-    aiComment: '오트밀로 식이섬유를 챙긴 아침이에요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '오트밀',
-        calories: 250,
-        sodiumMg: 100,
-        sugarG: 6,
-        carbsG: 42,
-        proteinG: 10,
-        fatG: 6,
-      ),
-      _SeedFood(
-        '바나나',
-        calories: 105,
-        sodiumMg: 1,
-        sugarG: 14,
-        carbsG: 27,
-        proteinG: 1.3,
-        fatG: 0.4,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'breakfast',
-    mealType: 'breakfast',
-    timeLabel: '08:30',
-    photoAsset: 'assets/images/diet-greek-yogurt-nuts.jpeg',
-    aiComment: '단백질과 불포화지방을 고르게 섭취했어요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '그릭 요거트',
-        calories: 170,
-        sodiumMg: 75,
-        sugarG: 7,
-        carbsG: 8,
-        proteinG: 18,
-        fatG: 8,
-      ),
-      _SeedFood(
-        '견과류',
-        calories: 150,
-        sodiumMg: 5,
-        sugarG: 2,
-        carbsG: 6,
-        proteinG: 5,
-        fatG: 13,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'breakfast',
-    mealType: 'breakfast',
-    timeLabel: '07:50',
-    photoAsset: 'assets/images/breakfast-scrambled-egg-strawberry.jpg',
-    aiComment: '달걀 단백질에 과일로 비타민을 더했어요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '스크램블 에그',
-        calories: 185,
-        sodiumMg: 220,
-        sugarG: 0.8,
-        carbsG: 2,
-        proteinG: 13,
-        fatG: 14,
-      ),
-      _SeedFood(
-        '딸기',
-        calories: 32,
-        sodiumMg: 1,
-        sugarG: 5.5,
-        carbsG: 8,
-        proteinG: 0.5,
-        fatG: 0.5,
-      ),
-    ],
-  ),
+  _mealOatmealBanana,
+  _mealGreekYogurtNuts,
+  _mealScrambledEggStrawberry,
 ];
+
+const _SeedMeal _mealChickenSalad = _SeedMeal(
+  slug: 'lunch',
+  mealType: 'lunch',
+  timeLabel: '12:30',
+  photoAsset: 'assets/images/diet-chicken-salad.jpg',
+  aiComment: '닭가슴살과 채소로 단백질·식이섬유를 챙겼어요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '닭가슴살 샐러드',
+      calories: 315,
+      sodiumMg: 395,
+      sugarG: 10,
+      carbsG: 19,
+      proteinG: 34,
+      fatG: 11.1,
+    ),
+  ],
+);
+
+const _SeedMeal _mealVegetableBibimbap = _SeedMeal(
+  slug: 'lunch',
+  mealType: 'lunch',
+  timeLabel: '12:20',
+  photoAsset: 'assets/images/diet-vegetable-bibimbap.jpg',
+  aiComment: '야채가 풍부해요. 고추장을 줄이면 나트륨이 더 좋아져요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '야채비빔밥',
+      calories: 610,
+      sodiumMg: 900,
+      sugarG: 12,
+      carbsG: 92,
+      proteinG: 20,
+      fatG: 16,
+    ),
+  ],
+);
+
+const _SeedMeal _mealJjamppong = _SeedMeal(
+  slug: 'lunch',
+  mealType: 'lunch',
+  timeLabel: '12:50',
+  photoAsset: 'assets/images/lunch-jjamppong.jpg',
+  aiComment: '국물 나트륨이 높은 날이에요. 국물은 남기는 편이 좋아요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '짬뽕',
+      calories: 750,
+      sodiumMg: 3200,
+      sugarG: 8.5,
+      carbsG: 107,
+      proteinG: 29,
+      fatG: 22.5,
+    ),
+  ],
+);
+
+const _SeedMeal _mealDoenjangRiceLunch = _SeedMeal(
+  slug: 'lunch',
+  mealType: 'lunch',
+  timeLabel: '12:10',
+  photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
+  aiComment: '집밥 한 상이에요. 찌개 국물만 조금 남겨 보세요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '된장찌개',
+      calories: 300,
+      sodiumMg: 1300,
+      sugarG: 5,
+      carbsG: 18,
+      proteinG: 24,
+      fatG: 15,
+    ),
+    _SeedFood(
+      '밥',
+      calories: 310,
+      sodiumMg: 5,
+      sugarG: 0.7,
+      carbsG: 67,
+      proteinG: 6,
+      fatG: 2.5,
+    ),
+  ],
+);
 
 const List<_SeedMeal> _historyLunches = <_SeedMeal>[
-  _SeedMeal(
-    slug: 'lunch',
-    mealType: 'lunch',
-    timeLabel: '12:30',
-    photoAsset: 'assets/images/diet-chicken-salad.jpg',
-    aiComment: '닭가슴살과 채소로 단백질·식이섬유를 챙겼어요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '닭가슴살 샐러드',
-        calories: 315,
-        sodiumMg: 395,
-        sugarG: 10,
-        carbsG: 19,
-        proteinG: 34,
-        fatG: 11.1,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'lunch',
-    mealType: 'lunch',
-    timeLabel: '12:20',
-    photoAsset: 'assets/images/diet-vegetable-bibimbap.jpg',
-    aiComment: '야채가 풍부해요. 고추장을 줄이면 나트륨이 더 좋아져요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '야채비빔밥',
-        calories: 610,
-        sodiumMg: 900,
-        sugarG: 12,
-        carbsG: 92,
-        proteinG: 20,
-        fatG: 16,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'lunch',
-    mealType: 'lunch',
-    timeLabel: '12:50',
-    photoAsset: 'assets/images/lunch-jjamppong.jpg',
-    aiComment: '국물 나트륨이 높은 날이에요. 국물은 남기는 편이 좋아요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '짬뽕',
-        calories: 750,
-        sodiumMg: 3200,
-        sugarG: 8.5,
-        carbsG: 107,
-        proteinG: 29,
-        fatG: 22.5,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'lunch',
-    mealType: 'lunch',
-    timeLabel: '12:10',
-    photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
-    aiComment: '집밥 한 상이에요. 찌개 국물만 조금 남겨 보세요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '된장찌개',
-        calories: 300,
-        sodiumMg: 1300,
-        sugarG: 5,
-        carbsG: 18,
-        proteinG: 24,
-        fatG: 15,
-      ),
-      _SeedFood(
-        '밥',
-        calories: 310,
-        sodiumMg: 5,
-        sugarG: 0.7,
-        carbsG: 67,
-        proteinG: 6,
-        fatG: 2.5,
-      ),
-    ],
-  ),
+  _mealChickenSalad,
+  _mealVegetableBibimbap,
+  _mealJjamppong,
+  _mealDoenjangRiceLunch,
 ];
+
+const _SeedMeal _mealSalmonBrownRice = _SeedMeal(
+  slug: 'dinner',
+  mealType: 'dinner',
+  timeLabel: '18:40',
+  photoAsset: 'assets/images/diet-salmon-brown-rice.jpeg',
+  aiComment: '연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '연어구이',
+      calories: 395,
+      sodiumMg: 505,
+      sugarG: 9,
+      carbsG: 19,
+      proteinG: 35,
+      fatG: 19,
+    ),
+    _SeedFood(
+      '현미밥',
+      calories: 280,
+      sodiumMg: 5,
+      sugarG: 0,
+      carbsG: 58,
+      proteinG: 6,
+      fatG: 2,
+    ),
+  ],
+);
+
+const _SeedMeal _mealDoenjangRiceDinner = _SeedMeal(
+  slug: 'dinner',
+  mealType: 'dinner',
+  timeLabel: '19:10',
+  photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
+  aiComment: '포만감은 좋지만 국물 나트륨이 높은 편이에요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '된장찌개',
+      calories: 300,
+      sodiumMg: 1300,
+      sugarG: 5,
+      carbsG: 18,
+      proteinG: 24,
+      fatG: 15,
+    ),
+    _SeedFood(
+      '밥',
+      calories: 310,
+      sodiumMg: 5,
+      sugarG: 0.7,
+      carbsG: 67,
+      proteinG: 6,
+      fatG: 2.5,
+    ),
+  ],
+);
+
+const _SeedMeal _mealChickenSaladSweetPotato = _SeedMeal(
+  slug: 'dinner',
+  mealType: 'dinner',
+  timeLabel: '18:20',
+  photoAsset: 'assets/images/diet-chicken-salad.jpg',
+  aiComment: '가볍게 마무리한 저녁이에요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '닭가슴살 샐러드',
+      calories: 315,
+      sodiumMg: 395,
+      sugarG: 10,
+      carbsG: 19,
+      proteinG: 34,
+      fatG: 11.1,
+    ),
+    _SeedFood(
+      '고구마',
+      calories: 130,
+      sodiumMg: 20,
+      sugarG: 6.5,
+      carbsG: 30,
+      proteinG: 2,
+      fatG: 0.2,
+    ),
+  ],
+);
 
 const List<_SeedMeal> _historyDinners = <_SeedMeal>[
-  _SeedMeal(
-    slug: 'dinner',
-    mealType: 'dinner',
-    timeLabel: '18:40',
-    photoAsset: 'assets/images/diet-salmon-brown-rice.jpeg',
-    aiComment: '연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '연어구이',
-        calories: 395,
-        sodiumMg: 505,
-        sugarG: 9,
-        carbsG: 19,
-        proteinG: 35,
-        fatG: 19,
-      ),
-      _SeedFood(
-        '현미밥',
-        calories: 280,
-        sodiumMg: 5,
-        sugarG: 0,
-        carbsG: 58,
-        proteinG: 6,
-        fatG: 2,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'dinner',
-    mealType: 'dinner',
-    timeLabel: '19:10',
-    photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
-    aiComment: '포만감은 좋지만 국물 나트륨이 높은 편이에요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '된장찌개',
-        calories: 300,
-        sodiumMg: 1300,
-        sugarG: 5,
-        carbsG: 18,
-        proteinG: 24,
-        fatG: 15,
-      ),
-      _SeedFood(
-        '밥',
-        calories: 310,
-        sodiumMg: 5,
-        sugarG: 0.7,
-        carbsG: 67,
-        proteinG: 6,
-        fatG: 2.5,
-      ),
-    ],
-  ),
-  _SeedMeal(
-    slug: 'dinner',
-    mealType: 'dinner',
-    timeLabel: '18:20',
-    photoAsset: 'assets/images/diet-chicken-salad.jpg',
-    aiComment: '가볍게 마무리한 저녁이에요.',
-    foods: <_SeedFood>[
-      _SeedFood(
-        '닭가슴살 샐러드',
-        calories: 315,
-        sodiumMg: 395,
-        sugarG: 10,
-        carbsG: 19,
-        proteinG: 34,
-        fatG: 11.1,
-      ),
-      _SeedFood(
-        '고구마',
-        calories: 130,
-        sodiumMg: 20,
-        sugarG: 6.5,
-        carbsG: 30,
-        proteinG: 2,
-        fatG: 0.2,
-      ),
-    ],
-  ),
+  _mealSalmonBrownRice,
+  _mealDoenjangRiceDinner,
+  _mealChickenSaladSweetPotato,
 ];
 
-const _SeedMeal _historySnack = _SeedMeal(
+const _SeedMeal _mealCoffeeNuts = _SeedMeal(
   slug: 'snack',
   mealType: 'snack',
   timeLabel: '15:40',
@@ -996,23 +833,22 @@ List<DietEntriesCompanion> _historyDietEntries(DateTime now) {
         _historyDinners[offset % _historyDinners.length].companion(date),
       );
     }
-    if (offset % 3 == 0) entries.add(_historySnack.companion(date));
+    if (offset % 3 == 0) entries.add(_mealCoffeeNuts.companion(date));
   }
   return entries;
 }
 
 /// 한 주의 운동 세션 한 벌. `minutes` 는 요일별 유산소·근력·스트레칭 분이다.
 const List<(String day, int cardio, int strength, int stretching)>
-_historyWeekPattern =
-    <(String, int, int, int)>[
-      ('월', 30, 10, 5),
-      ('화', 40, 0, 10),
-      ('수', 0, 0, 0),
-      ('목', 35, 20, 5),
-      ('금', 45, 0, 10),
-      ('토', 25, 30, 15),
-      ('일', 20, 0, 10),
-    ];
+_historyWeekPattern = <(String, int, int, int)>[
+  ('월', 30, 10, 5),
+  ('화', 40, 0, 10),
+  ('수', 0, 0, 0),
+  ('목', 35, 20, 5),
+  ('금', 45, 0, 10),
+  ('토', 25, 30, 15),
+  ('일', 20, 0, 10),
+];
 
 /// 지난 주들의 운동 세션. 주마다 강도를 조금씩 달리해(`scale`) 주간 비교가
 /// 의미를 갖게 한다. 이번 주는 큐레이션 값을 쓰므로 `weeksAgo` 는 1 부터다.

@@ -161,11 +161,13 @@ void main() {
         now.month,
         now.day - (now.weekday - 1),
       );
-      final Set<String> weekStarts = exercise
-          .map((r) => r.weekStart)
-          .toSet();
+      final Set<String> weekStarts = exercise.map((r) => r.weekStart).toSet();
 
-      for (int weeksAgo = 0; weeksAgo <= kDemoExerciseHistoryWeeks; weeksAgo++) {
+      for (
+        int weeksAgo = 0;
+        weeksAgo <= kDemoExerciseHistoryWeeks;
+        weeksAgo++
+      ) {
         final DateTime monday = thisMonday.subtract(
           Duration(days: 7 * weeksAgo),
         );
@@ -173,12 +175,71 @@ void main() {
             '${monday.year.toString().padLeft(4, '0')}-'
             '${monday.month.toString().padLeft(2, '0')}-'
             '${monday.day.toString().padLeft(2, '0')}';
-        expect(
-          weekStarts,
-          contains(key),
-          reason: '$weeksAgo주 전 운동 기록이 있어야 한다',
-        );
+        expect(weekStarts, contains(key), reason: '$weeksAgo주 전 운동 기록이 있어야 한다');
       }
+    });
+
+    test('큐레이션 사흘의 표현(시각·코치 문구·사진)이 그대로 남는다', () async {
+      // 수치를 템플릿 한 곳으로 모으면서(#677) 데모 화면의 문구·사진이 바뀌면
+      // 안 된다. 합계는 다른 테스트가 보므로 여기서는 표현만 못박는다.
+      await seedIfEmpty(db);
+      final diet = await db.select(db.dietEntries).get();
+      DietEntryRow row(String id) => diet.firstWhere((r) => r.id == id);
+
+      expect(row('seed-diet-lunch').timeLabel, '12:40');
+      expect(
+        row('seed-diet-lunch').aiComment,
+        '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
+      );
+      expect(
+        row('seed-diet-lunch').photoAsset,
+        'assets/images/lunch-jjamppong.jpg',
+      );
+
+      expect(row('seed-diet-breakfast').timeLabel, '08:20');
+      expect(row('seed-diet-snack').timeLabel, '15:30');
+      expect(row('seed-diet-yesterday-dinner').timeLabel, '18:45');
+      expect(
+        row('seed-diet-yesterday-dinner').aiComment,
+        '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
+      );
+      expect(row('seed-diet-two-days-ago-dinner').timeLabel, '18:50');
+      expect(
+        row('seed-diet-two-days-ago-dinner').photoAsset,
+        'assets/images/diet-salmon-brown-rice.jpeg',
+      );
+    });
+
+    test('같은 음식은 어느 날짜에 쓰이든 영양 수치가 하나다', () async {
+      // #677 이 없애려는 상태: 큐레이션 쪽과 히스토리 쪽에 같은 음식의 수치가
+      // 두 벌 존재해, 한쪽만 고치면 조용히 갈린다.
+      await seedIfEmpty(db);
+      final diet = await db.select(db.dietEntries).get();
+
+      final Map<String, Set<String>> byFoodName = <String, Set<String>>{};
+      for (final row in diet) {
+        for (final food
+            in (jsonDecode(row.foodsJson) as List<Object?>)
+                .cast<Map<String, Object?>>()) {
+          final String name = food['name']! as String;
+          // 이름을 뺀 나머지(칼로리·나트륨·당류·탄단지)를 지문으로 삼는다.
+          final Map<String, Object?> rest = Map<String, Object?>.of(food)
+            ..remove('name');
+          (byFoodName[name] ??= <String>{}).add(jsonEncode(rest));
+        }
+      }
+
+      final List<String> conflicting = <String>[
+        for (final entry in byFoodName.entries)
+          if (entry.value.length > 1) entry.key,
+      ];
+      expect(
+        conflicting,
+        isEmpty,
+        reason: '같은 음식이 서로 다른 영양 수치로 시드됐다: $conflicting',
+      );
+      // 실제로 여러 날짜에 재사용되는 음식이 있어야 이 검증이 뜻을 갖는다.
+      expect(byFoodName['짬뽕'], isNotNull);
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
