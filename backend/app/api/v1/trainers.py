@@ -49,7 +49,11 @@ def get_trainer(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> TrainerOut:
-    trainer = gym_service.get_trainer(db, trainer_id)
+    """트레이너 상세.
+
+    요청자를 넘기는 이유는 **내 담당 트레이너**만 소속 조건에서 빼기 위해서다(#691).
+    """
+    trainer = gym_service.get_trainer(db, trainer_id, viewer_id=current_user.id)
     if trainer is None:
         raise HTTPException(status_code=404, detail="트레이너를 찾을 수 없습니다.")
     return trainer

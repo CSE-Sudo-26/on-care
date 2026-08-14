@@ -165,7 +165,7 @@ def _to_trainer(
     )
 
 
-def _trainer_query():
+def _trainer_query(*, require_gym: bool = True):
     """디렉터리에 노출할 트레이너 — 상담 대상 조건과 같아야 한다. (#451)
 
     `consultation_service._validate_target` 은 상담 요청 시 트레이너의 소속을
@@ -184,16 +184,23 @@ def _trainer_query():
     소속이 빠진 트레이너를 숨기는 쪽을 골랐다. 상담을 걸 수 없는 트레이너를 목록에
     남기면 회원은 고를 수 있는데 마지막 단계에서만 막히고, 트레이너 앱이 소속을
     채우면(#452) 그대로 다시 노출된다.
+
+    `require_gym=False` 는 **이미 담당으로 배정된 트레이너를 그 회원이 읽을 때**만
+    쓴다(`get_trainer`). 그 자리는 디렉터리 노출이 아니라 이미 맺어진 관계를 읽는
+    것이라 소속 조건이 맞지 않는다. (#691)
     """
-    return (
+    query = (
         select(User, TrainerProfile)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
-        .join(Place, Place.id == TrainerProfile.gym_id)
         .where(
             User.role == "trainer",
             User.is_active.is_(True),
-            Place.category == "fitness",
         )
+    )
+    if not require_gym:
+        return query
+    return query.join(Place, Place.id == TrainerProfile.gym_id).where(
+        Place.category == "fitness"
     )
 
 
@@ -237,9 +244,30 @@ def list_recommended_trainers(
     ]
 
 
-def get_trainer(db: Session, trainer_id: str) -> TrainerOut | None:
+def get_trainer(
+    db: Session, trainer_id: str, *, viewer_id: str | None = None
+) -> TrainerOut | None:
+    """트레이너 상세. 디렉터리 조건에 걸리면 None(라우터에서 404).
+
+    예외가 하나 있다. **요청자의 담당 트레이너**는 소속이 비어도 읽을 수 있다.
+    `/me/coach` 는 `trainer_clients` 기준으로 담당을 그대로 돌려주는데 상세만 소속
+    기준으로 404 를 내면, 회원은 담당이 있다고 표시되면서 그 트레이너를 읽지 못하는
+    상태가 된다 — 예약 패널·코치 카드가 통째로 빠진다. 디렉터리 노출 정책(#451)은
+    그대로 두고 "내 담당"만 예외로 둔다. (#691)
+    """
     row = db.execute(_trainer_query().where(User.id == trainer_id)).first()
+    if row is None and viewer_id is not None and _is_my_coach(db, viewer_id, trainer_id):
+        row = db.execute(
+            _trainer_query(require_gym=False).where(User.id == trainer_id)
+        ).first()
     if row is None:
         return None
     user, profile = row
     return _to_trainer(user, profile)
+
+
+def _is_my_coach(db: Session, member_id: str, trainer_id: str) -> bool:
+    """`trainer_id` 가 이 회원의 현재 담당인가 — `/me/coach` 와 같은 기준(활성 링크)."""
+    from app.services import trainer_service
+
+    return trainer_service.get_member_trainer_id(db, member_id) == trainer_id
