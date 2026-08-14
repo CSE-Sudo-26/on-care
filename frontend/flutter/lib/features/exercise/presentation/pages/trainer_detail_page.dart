@@ -320,6 +320,7 @@ class _TrainerDetails extends StatelessWidget {
             if (!isMyTrainer) ...<Widget>[
               const SizedBox(height: 24),
               FilledButton(
+                key: const Key('consult-start'),
                 onPressed: hasPending
                     ? null
                     : () => context.push(

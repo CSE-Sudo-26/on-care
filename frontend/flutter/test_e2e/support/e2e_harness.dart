@@ -104,21 +104,23 @@ class E2eApi {
   final Dio _dio;
   final Options _auth;
 
+  static Dio _plainDio() => Dio(
+    BaseOptions(
+      // 분석 시점에는 dart-define 이 없어 이 상수가 '' 로 보인다. 기본값과 같다고
+      // 잡히지만, 실행 시에는 러너가 넘긴 주소가 들어온다.
+      // ignore: avoid_redundant_argument_values
+      baseUrl: apiBaseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      // 4xx 를 예외가 아니라 응답으로 받는다 — 예외 케이스 검증이 상태 코드를
+      // 직접 비교하기 때문이다.
+      validateStatus: (int? status) => status != null && status < 500,
+    ),
+  );
+
   static Future<E2eApi> login(String email) async {
-    final Dio dio = Dio(
-      BaseOptions(
-        // 분석 시점에는 dart-define 이 없어 이 상수가 '' 로 보인다. 기본값과 같다고
-        // 잡히지만, 실행 시에는 러너가 넘긴 주소가 들어온다.
-        // ignore: avoid_redundant_argument_values
-        baseUrl: apiBaseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        sendTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-        // 4xx 를 예외가 아니라 응답으로 받는다 — 예외 케이스 검증이 상태 코드를
-        // 직접 비교하기 때문이다.
-        validateStatus: (int? status) => status != null && status < 500,
-      ),
-    );
+    final Dio dio = _plainDio();
     final Response<Map<String, dynamic>> res = await dio
         .post<Map<String, dynamic>>(
           '/auth/login',
@@ -145,6 +147,67 @@ class E2eApi {
       for (final Object? row in res.data ?? const <Object?>[])
         row! as Map<String, dynamic>,
     ];
+  }
+
+  /// 실행마다 새 회원을 만든다. **시드 회원으로는 #640 을 검증할 수 없다** —
+  /// 셋 다 이미 `trainer-demo` 담당이라 "승인이 담당 연결을 만든다" 가 성립하지
+  /// 않고, 승인해 버리면 다음 실행이 같은 상태에서 시작하지 못한다.
+  static Future<String> register(String email, {String? name}) async {
+    final Dio dio = _plainDio();
+    final Response<Map<String, dynamic>> res = await dio
+        .post<Map<String, dynamic>>(
+          '/auth/register',
+          data: <String, String>{
+            'email': email,
+            'password': demoPassword,
+            'name': name ?? 'E2E 회원',
+          },
+        );
+    expect(res.statusCode, 201, reason: '$email 가입 실패: ${res.data}');
+    return res.data!['id']! as String;
+  }
+
+  /// 계정을 지운다. 상담·담당 연결은 회원 행을 따라 함께 사라진다(FK CASCADE).
+  ///
+  /// **일정은 따라 지워지지 않는다** — `trainer_schedule.member_id` 는 SET NULL 이라
+  /// 승인이 만든 상담 일정이 주인 없이 남는다. 그것은 [deleteTrainerSession] 으로
+  /// 트레이너 쪽에서 따로 지운다.
+  Future<void> deleteMe() async {
+    final Response<Object?> res = await _dio.delete<Object?>(
+      '/users/me',
+      options: _auth,
+    );
+    expect(res.statusCode, 200, reason: '계정 삭제 실패: ${res.data}');
+  }
+
+  Future<List<Map<String, dynamic>>> myConsultations() =>
+      _list('/consultations/me');
+
+  /// 대상 트레이너에게 도착한 상담 요청(트레이너 토큰으로 부른다).
+  Future<List<Map<String, dynamic>>> trainerConsultations() =>
+      _list('/trainer/consultations');
+
+  /// 회원이 보는 담당 트레이너. 담당이 없으면 404 라 null 을 준다.
+  Future<Map<String, dynamic>?> myCoach() async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/me/coach', options: _auth);
+    return res.statusCode == 200 ? res.data : null;
+  }
+
+  /// 트레이너 일정 중 이 회원 몫. 승인이 만든 상담 일정을 여기서 확인한다.
+  Future<List<Map<String, dynamic>>> trainerScheduleFor(String memberId) async {
+    final List<Map<String, dynamic>> rows = await _list('/trainer/schedule');
+    return <Map<String, dynamic>>[
+      for (final Map<String, dynamic> row in rows)
+        if (row['member_id'] == memberId) row,
+    ];
+  }
+
+  Future<void> deleteTrainerSession(String sessionId) async {
+    await _dio.delete<Object?>(
+      '/trainer/schedule/$sessionId',
+      options: _auth,
+    );
   }
 
   Future<List<Map<String, dynamic>>> myReservations() =>
@@ -414,6 +477,80 @@ Future<void> openTrainerChat(WidgetTester tester) async {
     }
   }
   expect(page, findsWidgets, reason: '[$e2ePhase] 트레이너 채팅 화면이 열리지 않았습니다.');
+}
+
+/// 헬스장 탭 → 추천 트레이너 카드 → 상세 → 상담 신청 폼.
+///
+/// 폼까지 UI 로 들어간다. 라우트를 직접 push 하면 "회원이 상담을 신청할 수 있다" 가
+/// 아니라 "그 화면이 열린다" 만 검증하게 된다. (#640)
+Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
+  await openGymTab(tester);
+  final Finder card = find.byKey(ValueKey<String>('trainer-card-$targetId'));
+  await pumpUntil(tester, card, step: '추천 트레이너 카드');
+  await tester.ensureVisible(card);
+  await tester.pump();
+  await tester.tap(card);
+
+  final Finder start = find.byKey(const Key('consult-start'));
+  await pumpUntil(tester, start, step: '상담 신청 버튼');
+  await tester.ensureVisible(start);
+  await tester.pump();
+  await tester.tap(start);
+  await pumpUntil(
+    tester,
+    find.byKey(const Key('consult-submit')),
+    step: '상담 신청 폼',
+  );
+}
+
+/// 상담 신청 폼을 채우고 제출한다. 선택지는 **문구가 아니라 자리**로 고른다 —
+/// 문구는 번역이 바뀌면 흔들린다.
+///
+/// 날짜는 달력 다이얼로그가 뜬 뒤 '확인' 을 눌러 **오늘** 로 확정한다. 서버가
+/// 오늘 이전을 거부하므로 오늘이 항상 유효하다.
+Future<void> submitConsultation(
+  WidgetTester tester, {
+  required int goalIndex,
+  required int purposeIndex,
+  required int timeIndex,
+  required String message,
+}) async {
+  Future<void> tapChip(String prefix, int index) async {
+    final Finder chip = find.byKey(ValueKey<String>('$prefix-$index'));
+    await pumpUntil(tester, chip, step: '$prefix 칩');
+    await tester.ensureVisible(chip);
+    await tester.pump();
+    await tester.tap(chip);
+    await tester.pump();
+  }
+
+  await tapChip('consult-goal', goalIndex);
+  await tapChip('consult-purpose', purposeIndex);
+
+  final Finder date = find.byKey(const Key('consult-date'));
+  await tester.ensureVisible(date);
+  await tester.pump();
+  await tester.tap(date);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  final Finder ok = find.text('확인');
+  await pumpUntil(tester, ok, step: '날짜 선택 확인 버튼');
+  await tester.tap(ok.last);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+
+  await tapChip('consult-time', timeIndex);
+
+  final Finder box = find.byKey(const Key('consult-message'));
+  await tester.ensureVisible(box);
+  await tester.pump();
+  await tester.enterText(box, message);
+  await tester.pump();
+
+  final Finder submit = find.byKey(const Key('consult-submit'));
+  await tester.ensureVisible(submit);
+  await tester.pump();
+  await tester.tap(submit);
 }
 
 /// 운동 탭 → 헬스장 서브탭. 담당 트레이너의 예약 패널이 있는 자리다.
