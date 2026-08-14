@@ -2075,7 +2075,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchClientsHint =>
-      'Search clients, goals, recent messages, or last routine sent date';
+      'Clients, goals, recent messages, last routine sent date';
 
   @override
   String get searchClear => 'Clear search';

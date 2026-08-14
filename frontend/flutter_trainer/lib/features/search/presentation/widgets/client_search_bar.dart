@@ -23,16 +23,16 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// Widest the inline field grows. Past this it stops looking like a
-/// header control and starts competing with the page title.
-const double _fieldMaxWidth = 360;
+/// Width cap that keeps the full search scope readable without letting the
+/// field compete with the page title.
+const double _fieldMaxWidth = 520;
 
 /// Narrowest space the inline field is worth rendering in.
 ///
 /// Measured against what the header's title and actions leave over, not
 /// against the viewport: a page with four actions runs out of room long
 /// before a page with one does.
-const double _minInlineWidth = 240;
+const double _minInlineWidth = 400;
 
 /// Height cap of the results card (≈ five rows plus the footer).
 const double _dropdownMaxHeight = 360;
@@ -304,7 +304,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           fillColor: AppColors.inputBackground,
           hintText: l.searchClientsHint,
           hintStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 13,
             color: AppColors.subtleForeground,
           ),
           prefixIcon: const Icon(
@@ -793,7 +793,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                     fillColor: AppColors.card,
                     hintText: l.searchClientsHint,
                     hintStyle: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 13,
                       color: AppColors.subtleForeground,
                     ),
                     prefixIcon: const Icon(

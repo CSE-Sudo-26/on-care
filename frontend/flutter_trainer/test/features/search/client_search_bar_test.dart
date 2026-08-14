@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -44,6 +45,41 @@ void main() {
       GoRouter.of(tester.element(find.byKey(clientSearchFieldKey))).go(route);
       await settle(tester);
       expect(find.byKey(clientSearchFieldKey), findsOneWidget, reason: route);
+    }
+  });
+
+  testWidgets('긴 검색 범위 안내를 생략하지 않는 너비와 글자 크기를 사용한다', (tester) async {
+    await openDesktop(tester, AppRoutes.dashboard);
+
+    for (final route in <String>[
+      AppRoutes.dashboard,
+      AppRoutes.clients,
+      AppRoutes.schedule,
+      AppRoutes.messages,
+      AppRoutes.coaching,
+      AppRoutes.reports,
+    ]) {
+      GoRouter.of(tester.element(find.byKey(clientSearchFieldKey))).go(route);
+      await settle(tester);
+
+      final field = find.byKey(clientSearchFieldKey);
+      final context = tester.element(field);
+      final input = tester.widget<TextField>(field);
+      final hintStyle = input.decoration?.hintStyle;
+      final hint = AppLocalizations.of(context).searchClientsHint;
+      final painter = TextPainter(
+        text: TextSpan(text: hint, style: hintStyle),
+        textDirection: Directionality.of(context),
+        maxLines: 1,
+      )..layout();
+      final availableWidth = tester.getSize(field).width - 40 - 16;
+
+      expect(hintStyle?.fontSize, 13, reason: route);
+      expect(
+        availableWidth,
+        greaterThan(painter.width),
+        reason: '$route: available=$availableWidth, hint=${painter.width}',
+      );
     }
   });
 
