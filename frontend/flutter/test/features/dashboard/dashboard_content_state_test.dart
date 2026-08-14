@@ -18,6 +18,7 @@ import 'package:oncare/features/member_coach/presentation/controllers/member_coa
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 
 void main() {
   const liveSummary = DashboardSummary(
@@ -147,13 +148,14 @@ void main() {
     final paints = tester.widgetList<CustomPaint>(
       find.descendant(of: chart, matching: find.byType(CustomPaint)),
     );
+    // 홈과 식단 탭이 같은 차트를 쓰면서 페인터가 공개 타입이 됐다. 이름을
+    // 문자열로 맞추던 것을 실제 타입으로 바꾼다.
     final CustomPaint trendPaint = paints.firstWhere(
-      (paint) => paint.painter.runtimeType.toString() == '_TrendChartPainter',
+      (paint) => paint.painter is MetricTrendPainter,
     );
-    final dynamic trendPainter = trendPaint.painter;
+    final MetricTrendPainter trendPainter =
+        trendPaint.painter! as MetricTrendPainter;
 
-    // The concrete painter is private to the dashboard widget.
-    // ignore: avoid_dynamic_calls
     expect(trendPainter.cur, <double>[
       1100,
       1200,

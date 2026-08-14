@@ -25,6 +25,7 @@ import 'package:oncare/features/notification/presentation/controllers/notificati
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/coaching_sheet.dart';
+import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
 /// Home's own "/목표(단위)" suffix style. Same look as the shared
@@ -418,9 +419,8 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final AppLocalizations l = AppLocalizations.of(context);
     final Map<_NutTabKind, _NutData> nutrition = _nutritionFor(summary);
     final _NutData cfg = nutrition[_tab]!;
-    final List<String> days = _weekDayLabels(l);
+    final List<String> days = weekDayLabels(l);
     final int todayIdx = _todayIndex();
-    final (double lo, double hi) = _trendScale(cfg, todayIdx);
     final NumberFormat nf = NumberFormat('#,###');
 
     return _HomeCard(
@@ -497,96 +497,16 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                             '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
                       ),
                       const SizedBox(height: 6),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          // 가로축 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
-                          SizedBox(
-                            width: 38,
-                            height: 68,
-                            child: Stack(
-                              children: <Widget>[
-                                for (final double t in cfg.ticks)
-                                  Positioned(
-                                    right: 0,
-                                    top: (68 - ((t - lo) / (hi - lo)) * 68 - 8)
-                                        .clamp(0.0, 52.0),
-                                    child: SizedBox(
-                                      height: 16,
-                                      child: Center(
-                                        child: _AxisLabel(nf.format(t)),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Column(
-                              children: <Widget>[
-                                SizedBox(
-                                  height: 68,
-                                  // 지표를 바꾸면 선을 처음부터 다시 그려 값이
-                                  // 바뀐 것을 눈으로 따라가게 한다. stagger 가
-                                  // 없는 차트라 커브는 기본값(감속)을 쓴다.
-                                  child: ChartReveal(
-                                    replayKey: _tab,
-                                    builder: (BuildContext context, double t) =>
-                                        CustomPaint(
-                                          size: Size.infinite,
-                                          painter: _TrendChartPainter(
-                                            cur: cfg.cur,
-                                            goal: cfg.goal,
-                                            ticks: cfg.ticks,
-                                            lo: lo,
-                                            hi: hi,
-                                            todayIndex: todayIdx,
-                                            progress: t,
-                                          ),
-                                        ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    for (int i = 0; i < days.length; i++)
-                                      if (i == _todayIndex())
-                                        // 오늘: #3EAFDF 원형 안에 흰색 요일 글씨.
-                                        Container(
-                                          width: 18,
-                                          height: 18,
-                                          alignment: Alignment.center,
-                                          decoration: const BoxDecoration(
-                                            color: FigmaColors.primary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Text(
-                                            days[i],
-                                            style: const TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        )
-                                      else
-                                        Text(
-                                          days[i],
-                                          style: const TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.mutedForeground,
-                                          ),
-                                        ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      MetricTrendChart(
+                        values: cfg.cur,
+                        dayLabels: days,
+                        goal: cfg.goal,
+                        ticks: cfg.ticks,
+                        todayIndex: todayIdx,
+                        // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을
+                        // 눈으로 따라가게 한다.
+                        replayKey: _tab,
+                        formatTick: nf.format,
                       ),
                     ],
                   ),
@@ -816,28 +736,6 @@ class _SoftDivider extends StatelessWidget {
 }
 
 /// A tiny right-aligned chart Y-axis value label.
-class _AxisLabel extends StatelessWidget {
-  const _AxisLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.clip,
-      softWrap: false,
-      style: const TextStyle(
-        fontSize: 11.5,
-        fontWeight: FontWeight.w600,
-        color: AppColors.mutedForeground,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────── exercise card ──
-
 /// The full-width 운동 card: activity metrics (time / kcal / count), the burn
 /// goal progress, and a weekly burned-calories trend chart with value labels.
 class _ExerciseCard extends ConsumerWidget {
@@ -875,7 +773,7 @@ class _ExerciseCard extends ConsumerWidget {
       for (int i = 0; i < baseCal.length; i++)
         if (i > todayIdx) 0 else baseCal[i],
     ];
-    final List<String> days = _weekDayLabels(l);
+    final List<String> days = weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
 
@@ -1108,29 +1006,11 @@ class _ExerciseStat extends StatelessWidget {
 
 /// Padded min/max scale for the nutrition line chart. Deliberately excludes a
 /// zero baseline so day-to-day variation reads as a dynamic slope rather than
-/// a nearly flat line.
-(double, double) _trendScale(_NutData c, int todayIndex) {
-  // 데이터와 눈금(ticks)을 모두 포함하도록 스케일을 잡아 눈금선이 항상 보이게 한다.
-  final List<double> all = <double>[...c.cur, ...c.ticks, c.goal];
-  double lo = all.reduce(math.min);
-  double hi = all.reduce(math.max);
-  final double range = (hi - lo) == 0 ? 1 : (hi - lo);
-  hi += range * 0.10;
-  lo -= range * 0.08;
-  // 당류처럼 0이 최소 눈금인 지표는 바닥을 0에 고정.
-  if (c.ticks.isNotEmpty && c.ticks.first <= 0 && lo < 0) lo = 0;
-  return (lo, hi);
-}
-
 /// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
 ///
 /// 지표 카드의 초과·정상 뱃지와 같은 두 색(dangerRed/greenText)만 쓴다 —
 /// 같은 카드 안에서 뱃지는 2단계인데 그래프만 근접(주황) 3단계라, 뱃지가
 /// "정상"인 날의 점이 주황으로 찍혀 서로 다른 이야기를 했다. 이제 점은
-/// 목표를 넘겼는지만 말한다.
-Color _nutStatusColor(double v, double goal) =>
-    v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
-
 /// Padded scale for the exercise bar chart. The baseline sits well below the
 /// smallest bar so the difference between days is visually pronounced.
 (double, double) _barScale(List<double> d) {
@@ -1254,15 +1134,7 @@ const List<double> _demoExerciseWeekCalories = <double>[
   520,
 ];
 
-List<String> _weekDayLabels(AppLocalizations l) => <String>[
-  l.dietWeekdayMon,
-  l.dietWeekdayTue,
-  l.dietWeekdayWed,
-  l.dietWeekdayThu,
-  l.dietWeekdayFri,
-  l.dietWeekdaySat,
-  l.dietWeekdaySun,
-];
+
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
 /// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
@@ -1294,207 +1166,12 @@ HealthIndicator _indicatorFor(DashboardSummary s, _NutTabKind key) =>
 
 // 이번 주 꺾은선(연회색). 선은 배경처럼 물러나고 데이터 포인트(상태색)와 값
 // 라벨이 읽히도록 눈금선보다 아주 조금만 진하게 잡는다.
-const Color _nutLineGray = Color(0xFFDDE2E8);
-
-class _ChartLegend extends StatelessWidget {
-  const _ChartLegend({required this.title, required this.goalText});
-
-  /// "주간 {지표} 추이" — 선택된 지표에 따라 바뀌는 그래프 왼쪽 상단 제목.
-  final String title;
-
-  /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
-  final String goalText;
-
-  @override
-  Widget build(BuildContext context) {
-    // 범례(이번 주/지난 주)는 제거. 왼쪽에 그래프 제목, 오른쪽에 목표 수치를
-    // 카드 우측 끝('자세히 >')과 같은 열로 맞춘다.
-    //
-    // 남는 가로 공간은 제목 쪽 Expanded 가 전부 흡수해야 목표 수치가 그래프
-    // 오른쪽 끝에 붙는다. 목표 수치를 Expanded 로 두면 제목(Flexible)과 공간을
-    // 반씩 나눠 가져 오른쪽 끝에서 한참 못 미친 자리에 멈춘다.
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          goalText,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 14.5,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.primary,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 /// The weekly nutrition trend line: a solid current-week line, solid
 /// horizontal tick gridlines (uniform weight), and value labels on each
 /// point. The goal is shown via the top label + point status colors, not a
 /// separate line. The [lo]/[hi] scale is padded away from zero so the line
 /// reads as a dynamic slope rather than a flat trace.
-class _TrendChartPainter extends CustomPainter {
-  _TrendChartPainter({
-    required this.cur,
-    required this.goal,
-    required this.ticks,
-    required this.lo,
-    required this.hi,
-    required this.todayIndex,
-    this.progress = 1,
-  });
-
-  final List<double> cur;
-  final double goal;
-  final List<double> ticks;
-  final double lo;
-  final double hi;
-
-  /// 이번 주 꺾은선은 오늘까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
-  final int todayIndex;
-
-  /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
-  /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double span = (hi - lo) <= 0 ? 1 : (hi - lo);
-    double dx(int i) => cur.length <= 1 ? w / 2 : (i / (cur.length - 1)) * w;
-    double dy(double v) => h - ((v - lo) / span) * h;
-
-    // 가로 눈금선: 지표별 눈금(ticks) 값마다 그린다.
-    final Paint grid = Paint()
-      ..color = const Color(0xFFEFF3F7)
-      ..strokeWidth = 1;
-    for (final double t in ticks) {
-      if (t < lo || t > hi) continue;
-      final double gy = dy(t);
-      canvas.drawLine(Offset(0, gy), Offset(w, gy), grid);
-    }
-    // 목표선은 따로 그리지 않는다 — 목표값이 눈금과 겹치면 선이 두꺼워 보였다.
-    // 목표는 상단 라벨(목표 N)과 데이터 포인트 상태색으로만 표현한다.
-
-    // 이번 주 선/점은 오늘까지만 그린다 — 아직 오지 않은 요일(=0)을 실제 급락으로
-    // 오해하지 않도록. x 좌표는 여전히 월~일 7칸 기준이라 지난 주 선과 정렬된다.
-    final int lastIdx = todayIndex.clamp(0, cur.length - 1);
-    final List<Offset> pts = <Offset>[
-      for (int i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
-    ];
-
-    // 이번 주 꺾은선은 회색(얇게), 데이터 포인트는 목표 대비 상태색으로 강조하고
-    // 포인트마다 값을 같은 색으로 표기한다.
-    // 진입 애니메이션: 펜이 월요일에서 오늘 쪽으로 이동하는 만큼만 선을 잇는다.
-    // drawn 은 "그려진 구간 수"(0 = 첫 점만, lastIdx = 전체).
-    final double p = progress.clamp(0.0, 1.0);
-    final double drawn = lastIdx * p;
-    if (lastIdx > 0) {
-      final Path line = Path()..moveTo(pts.first.dx, pts.first.dy);
-      final int whole = drawn.floor().clamp(0, lastIdx);
-      for (int i = 1; i <= whole; i++) {
-        line.lineTo(pts[i].dx, pts[i].dy);
-      }
-      if (whole < lastIdx) {
-        final Offset tip = Offset.lerp(
-          pts[whole],
-          pts[whole + 1],
-          drawn - whole,
-        )!;
-        line.lineTo(tip.dx, tip.dy);
-      }
-      canvas.drawPath(
-        line,
-        Paint()
-          ..color = _nutLineGray
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6
-          ..strokeJoin = StrokeJoin.round
-          ..strokeCap = StrokeCap.round,
-      );
-    }
-
-    for (int i = 0; i <= lastIdx; i++) {
-      // 선이 이 점에 닿기 직전부터 짧게 페이드인한다.
-      final double a = lastIdx == 0
-          ? p
-          : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
-      if (a <= 0) continue;
-      final Color sc = _nutStatusColor(cur[i], goal);
-      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
-      _text(canvas, _metricNumber(cur[i]), pts[i], w, sc, alpha: a);
-    }
-  }
-
-  void _dot(
-    Canvas c,
-    Offset o,
-    Color color, {
-    double r = 3.0,
-    double alpha = 1,
-  }) {
-    // 흰 테두리(halo)
-    c.drawCircle(
-      o,
-      r + 1.3,
-      Paint()..color = Colors.white.withValues(alpha: alpha),
-    );
-    // 상태색으로 채운 데이터 포인트
-    c.drawCircle(o, r, Paint()..color = color.withValues(alpha: alpha));
-  }
-
-  void _text(
-    Canvas c,
-    String s,
-    Offset at,
-    double w,
-    Color color, {
-    double alpha = 1,
-  }) {
-    final TextPainter tp = TextPainter(
-      text: TextSpan(
-        text: s,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: color.withValues(alpha: alpha),
-        ),
-      ),
-      textDirection: ui.TextDirection.ltr,
-    )..layout();
-    // 배경 상자 없이 값만 표기한다(포인트 위, 화면 밖으로 나가지 않게 clamp).
-    final double bx = (at.dx - tp.width / 2).clamp(0.0, w - tp.width);
-    double by = at.dy - tp.height - 7;
-    if (by < 0) by = at.dy + 7;
-    tp.paint(c, Offset(bx, by));
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrendChartPainter old) =>
-      old.cur != cur ||
-      old.goal != goal ||
-      old.ticks != ticks ||
-      old.lo != lo ||
-      old.hi != hi ||
-      old.todayIndex != todayIndex ||
-      old.progress != progress;
-}
-
 /// The weekly exercise bar chart. Bars sit on a [lo]/[hi] scale whose baseline
 /// is pushed below the smallest value so day-to-day variation is pronounced;
 /// each bar carries its kcal value label, and today's bar is highlighted.
@@ -1932,7 +1609,7 @@ class _ScheduleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final DateTime now = DateTime.now();
-    final String weekday = _weekDayLabels(l)[now.weekday - 1];
+    final String weekday = weekDayLabels(l)[now.weekday - 1];
     final String todayLabel = l.homeScheduleDate(weekday, now.month, now.day);
     // 트레이너 일정과 내가 만든 일정을 한 목록으로 보여 준다. 시간순으로 섞어야
     // '다음에 뭐가 있는지'를 한 번에 읽을 수 있다.
@@ -2075,6 +1752,52 @@ class _ScheduleItemCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ChartLegend extends StatelessWidget {
+  const _ChartLegend({required this.title, required this.goalText});
+
+  /// "주간 {지표} 추이" — 선택된 지표에 따라 바뀌는 그래프 왼쪽 상단 제목.
+  final String title;
+
+  /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
+  final String goalText;
+
+  @override
+  Widget build(BuildContext context) {
+    // 범례(이번 주/지난 주)는 제거. 왼쪽에 그래프 제목, 오른쪽에 목표 수치를
+    // 카드 우측 끝('자세히 >')과 같은 열로 맞춘다.
+    //
+    // 남는 가로 공간은 제목 쪽 Expanded 가 전부 흡수해야 목표 수치가 그래프
+    // 오른쪽 끝에 붙는다. 목표 수치를 Expanded 로 두면 제목(Flexible)과 공간을
+    // 반씩 나눠 가져 오른쪽 끝에서 한참 못 미친 자리에 멈춘다.
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          goalText,
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w800,
+            color: FigmaColors.primary,
+          ),
+        ),
+      ],
     );
   }
 }
