@@ -62,12 +62,12 @@ def upgrade() -> None:
             "insight_id",
             name="uq_trainer_client_memo_insight",
         ),
-    )
-    op.create_index(
-        "ix_trainer_client_memos_trainer_id",
-        "trainer_client_memos",
-        ["trainer_id"],
-        unique=False,
+        # 허용값 밖의 source 가 한 행이라도 들어가면 응답 스키마 검증이 실패해
+        # 그 회원의 메모 목록 전체가 500 이 된다.
+        sa.CheckConstraint(
+            "source IN ('trainer', 'chat_insight')",
+            name="ck_trainer_client_memo_source",
+        ),
     )
     op.create_index(
         "ix_trainer_client_memos_member_id",
@@ -75,7 +75,8 @@ def upgrade() -> None:
         ["member_id"],
         unique=False,
     )
-    # 목록 조회는 항상 (트레이너, 회원) 쌍으로 좁힌다.
+    # 목록 조회는 항상 (트레이너, 회원) 쌍으로 좁힌다. trainer_id 단독 인덱스는
+    # 이 복합 인덱스가 선행 컬럼으로 커버하므로 따로 만들지 않는다.
     op.create_index(
         "ix_trainer_client_memos_pair",
         "trainer_client_memos",
@@ -88,8 +89,5 @@ def downgrade() -> None:
     op.drop_index("ix_trainer_client_memos_pair", table_name="trainer_client_memos")
     op.drop_index(
         "ix_trainer_client_memos_member_id", table_name="trainer_client_memos"
-    )
-    op.drop_index(
-        "ix_trainer_client_memos_trainer_id", table_name="trainer_client_memos"
     )
     op.drop_table("trainer_client_memos")

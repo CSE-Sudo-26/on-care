@@ -27,6 +27,21 @@ def trainer_token(client) -> str:
     return _login(client, "trainer@oncare.com")
 
 
+def _create_memo(client, token: str, **payload) -> dict:
+    """메모 하나를 만들고 응답 본문을 돌려준다.
+
+    상태 확인 없이 바로 `.json()` 을 쓰면 생성이 4xx 로 실패했을 때 뒤에서
+    `KeyError` 가 나고 실패 이유가 로그에 남지 않는다.
+    """
+    response = client.post(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos",
+        headers=_headers(token),
+        json=payload,
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 @pytest.fixture()
 def cleanup_memos(client, db_session):
     """테스트가 만든 메모만 지운다 — 데모 시드 메모는 건드리지 않는다."""
@@ -44,13 +59,7 @@ def cleanup_memos(client, db_session):
 def test_memo_create_read_update_contract(client, trainer_token, cleanup_memos):
     """작성 → 조회 → 수정이 같은 메모를 가리킨다(다시 조회해도 유지)."""
     body = f"무릎 통증 경과 관찰 {uuid4().hex[:6]}"
-    created = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={"body": body},
-    )
-    assert created.status_code == 201, created.text
-    memo = created.json()
+    memo = _create_memo(client, trainer_token, body=body)
     cleanup_memos.append(memo["id"])
     assert memo["body"] == body
     assert memo["source"] == "trainer"
@@ -80,12 +89,15 @@ def test_memo_create_read_update_contract(client, trainer_token, cleanup_memos):
     assert stored["body"] == f"{body} (수정)"
 
 
-def test_memo_delete_removes_it_from_the_list(client, trainer_token):
-    created = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={"body": f"삭제 대상 {uuid4().hex[:6]}"},
-    ).json()
+def test_memo_delete_removes_it_from_the_list(
+    client, trainer_token, cleanup_memos
+):
+    created = _create_memo(
+        client, trainer_token, body=f"삭제 대상 {uuid4().hex[:6]}"
+    )
+    # 삭제 단정이 먼저 실패해도 이 메모가 DB 에 남아 다른 테스트의 목록·정렬을
+    # 흔들지 않도록 정리 대상에 올려 둔다.
+    cleanup_memos.append(created["id"])
 
     deleted = client.delete(
         f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
@@ -117,21 +129,11 @@ def test_same_chat_insight_saved_twice_keeps_one_memo(
         "insight_id": insight_id,
         "insight_kind": "discomfort",
     }
-    first = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json=payload,
-    )
-    assert first.status_code == 201, first.text
-    cleanup_memos.append(first.json()["id"])
+    first = _create_memo(client, trainer_token, **payload)
+    cleanup_memos.append(first["id"])
 
-    second = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json=payload,
-    )
-    assert second.status_code == 201, second.text
-    assert second.json()["id"] == first.json()["id"]
+    second = _create_memo(client, trainer_token, **payload)
+    assert second["id"] == first["id"]
 
     listed = client.get(
         f"/v1/trainer/clients/{MEMBER_ID}/memos", headers=_headers(trainer_token)
@@ -145,22 +147,18 @@ def test_chat_insight_and_manual_memos_share_one_list(
     client, trainer_token, cleanup_memos
 ):
     """회원 상세 목록이 두 출처를 함께 보여 준다 — 같은 데이터 소스."""
-    manual = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={"body": f"직접 작성 {uuid4().hex[:6]}"},
-    ).json()
+    manual = _create_memo(
+        client, trainer_token, body=f"직접 작성 {uuid4().hex[:6]}"
+    )
     cleanup_memos.append(manual["id"])
-    insight = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={
-            "body": "어깨가 결려요",
-            "source": "chat_insight",
-            "insight_id": f"msg-{uuid4().hex[:8]}:discomfort",
-            "insight_kind": "discomfort",
-        },
-    ).json()
+    insight = _create_memo(
+        client,
+        trainer_token,
+        body="어깨가 결려요",
+        source="chat_insight",
+        insight_id=f"msg-{uuid4().hex[:8]}:discomfort",
+        insight_kind="discomfort",
+    )
     cleanup_memos.append(insight["id"])
 
     listed = client.get(
@@ -173,7 +171,7 @@ def test_chat_insight_and_manual_memos_share_one_list(
     assert ids.index(insight["id"]) < ids.index(manual["id"])
 
 
-def test_blank_memo_is_rejected(client, trainer_token):
+def test_blank_memo_is_rejected(client, trainer_token, cleanup_memos):
     blank = client.post(
         f"/v1/trainer/clients/{MEMBER_ID}/memos",
         headers=_headers(trainer_token),
@@ -181,36 +179,59 @@ def test_blank_memo_is_rejected(client, trainer_token):
     )
     assert blank.status_code == 400
 
-    created = client.post(
+    created = _create_memo(client, trainer_token, body="내용 있음")
+    cleanup_memos.append(created["id"])
+    empty_update = client.put(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
+        headers=_headers(trainer_token),
+        json={},
+    )
+    assert empty_update.status_code == 400
+    blank_update = client.put(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
+        headers=_headers(trainer_token),
+        json={"body": " "},
+    )
+    assert blank_update.status_code == 400
+    # 명시적 null 은 422(부분 수정 규약 #495).
+    null_update = client.put(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
+        headers=_headers(trainer_token),
+        json={"body": None},
+    )
+    assert null_update.status_code == 422
+
+
+def test_mismatched_source_and_insight_id_are_rejected(client, trainer_token):
+    """출처와 중복 방지 키가 어긋난 조합은 422 다.
+
+    키 없는 인사이트 메모는 반복 저장 때마다 늘어나고, 직접 쓴 메모가
+    `insight_id` 를 가지면 그 인사이트의 유니크 키를 대신 차지한다.
+    """
+    missing_key = client.post(
         f"/v1/trainer/clients/{MEMBER_ID}/memos",
         headers=_headers(trainer_token),
-        json={"body": "내용 있음"},
-    ).json()
-    try:
-        empty_update = client.put(
-            f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
-            headers=_headers(trainer_token),
-            json={},
-        )
-        assert empty_update.status_code == 400
-        blank_update = client.put(
-            f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
-            headers=_headers(trainer_token),
-            json={"body": " "},
-        )
-        assert blank_update.status_code == 400
-        # 명시적 null 은 422(부분 수정 규약 #495).
-        null_update = client.put(
-            f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
-            headers=_headers(trainer_token),
-            json={"body": None},
-        )
-        assert null_update.status_code == 422
-    finally:
-        client.delete(
-            f"/v1/trainer/clients/{MEMBER_ID}/memos/{created['id']}",
-            headers=_headers(trainer_token),
-        )
+        json={"body": "무릎이 아파요", "source": "chat_insight"},
+    )
+    assert missing_key.status_code == 422
+
+    stray_key = client.post(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos",
+        headers=_headers(trainer_token),
+        json={
+            "body": "직접 작성",
+            "source": "trainer",
+            "insight_id": f"msg-{uuid4().hex[:8]}:discomfort",
+        },
+    )
+    assert stray_key.status_code == 422
+
+    unknown_source = client.post(
+        f"/v1/trainer/clients/{MEMBER_ID}/memos",
+        headers=_headers(trainer_token),
+        json={"body": "출처 미상", "source": "legacy"},
+    )
+    assert unknown_source.status_code == 422
 
 
 def test_unassigned_trainer_cannot_touch_member_memos(
@@ -220,11 +241,9 @@ def test_unassigned_trainer_cannot_touch_member_memos(
     from app.core.security import create_access_token
     from app.models.models import User
 
-    memo = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={"body": f"남이 보면 안 되는 메모 {uuid4().hex[:6]}"},
-    ).json()
+    memo = _create_memo(
+        client, trainer_token, body=f"남이 보면 안 되는 메모 {uuid4().hex[:6]}"
+    )
 
     other_trainer_id = f"trainer-{uuid4().hex[:10]}"
     other_trainer = User(
@@ -275,11 +294,9 @@ def test_assigned_trainer_cannot_touch_another_members_memo(
         item["id"] for item in roster if item["id"] != MEMBER_ID
     )
 
-    memo = client.post(
-        f"/v1/trainer/clients/{MEMBER_ID}/memos",
-        headers=_headers(trainer_token),
-        json={"body": f"회원 경계 확인 {uuid4().hex[:6]}"},
-    ).json()
+    memo = _create_memo(
+        client, trainer_token, body=f"회원 경계 확인 {uuid4().hex[:6]}"
+    )
     try:
         crossed = client.put(
             f"/v1/trainer/clients/{other_member}/memos/{memo['id']}",

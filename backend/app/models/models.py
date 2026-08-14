@@ -711,9 +711,13 @@ class TrainerClientMemo(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     trainer_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+        # 단독 인덱스를 두지 않는다 — 아래 (trainer_id, member_id) 복합 인덱스가
+        # 선행 컬럼으로 커버한다. 쓰기마다 갱신 비용만 늘 뿐이다.
+        ForeignKey("users.id", ondelete="CASCADE")
     )
     member_id: Mapped[str] = mapped_column(
+        # 회원 삭제 CASCADE 가 이 컬럼으로 행을 찾으므로 단독 인덱스가 필요하다
+        # (복합 인덱스의 선행 컬럼이 아니라 커버되지 않는다).
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     body: Mapped[str] = mapped_column(Text, default="")
@@ -726,12 +730,21 @@ class TrainerClientMemo(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        # 다른 경로(예: 일괄 수정)가 본문을 고쳐도 시각이 따라오도록 onupdate 를
+        # 건다 — TrainerProfile.updated_at 과 같은 규약.
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     __table_args__ = (
         UniqueConstraint(
             "trainer_id", "member_id", "insight_id", name="uq_trainer_client_memo_insight"
+        ),
+        # 응답 스키마(TrainerMemoOut.source)가 두 값만 받으므로, 다른 값이 한 행이라도
+        # 들어가면 그 회원의 메모 **목록 전체**가 검증 실패로 500 이 된다. 입력은
+        # 이미 Literal 로 막지만 DB 에서도 못 박는다.
+        CheckConstraint(
+            "source IN ('trainer', 'chat_insight')",
+            name="ck_trainer_client_memo_source",
         ),
         Index("ix_trainer_client_memos_pair", "trainer_id", "member_id"),
     )

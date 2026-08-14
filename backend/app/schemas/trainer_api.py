@@ -293,6 +293,20 @@ class TrainerMemoCreateRequest(BaseModel):
     insight_id: str | None = Field(default=None, max_length=64)
     insight_kind: str = Field(default="", max_length=32)
 
+    @model_validator(mode="after")
+    def _reject_mismatched_source(self) -> TrainerMemoCreateRequest:
+        """출처와 중복 방지 키가 짝을 이루는지 본다.
+
+        어긋난 두 조합이 조용히 통과하면 각각 다른 방식으로 망가진다 —
+        키 없는 인사이트 메모는 반복 저장 때마다 늘어나고, 직접 쓴 메모가
+        `insight_id` 를 가지면 그 인사이트의 유니크 키를 대신 차지한다.
+        """
+        if self.source == "chat_insight" and not self.insight_id:
+            raise ValueError("chat_insight 메모에는 insight_id가 필요합니다.")
+        if self.source == "trainer" and self.insight_id:
+            raise ValueError("trainer 메모에는 insight_id를 보낼 수 없습니다.")
+        return self
+
 
 class TrainerMemoUpdateRequest(PartialUpdate):
     """메모 부분 수정. 본문만 고칠 수 있다.

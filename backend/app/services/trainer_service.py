@@ -983,8 +983,13 @@ def _memo_out(memo: TrainerClientMemo) -> TrainerMemoOut:
     )
 
 
+#: 메모 목록이 한 번에 내려주는 최대 건수. 메모는 지워지지 않고 쌓이기만 하는
+#: 데이터라, 오래 쓴 계정에서 응답이 무한정 커지는 것을 막는다(알림함과 같은 이유).
+_MEMO_LIMIT = 100
+
+
 def build_memos(db: Session, trainer_id: str, member_id: str) -> list[TrainerMemoOut]:
-    """담당 회원에 대해 내가 남긴 메모(최신 먼저).
+    """담당 회원에 대해 내가 남긴 메모(최신 먼저, 최대 [_MEMO_LIMIT]건).
 
     직접 쓴 메모와 채팅 인사이트 메모를 한 목록으로 돌려준다 — 회원 상세가
     출처와 무관하게 "이 회원에 대해 남긴 기록"을 한 곳에서 보여 준다.
@@ -998,6 +1003,7 @@ def build_memos(db: Session, trainer_id: str, member_id: str) -> list[TrainerMem
             TrainerClientMemo.member_id == member_id,
         )
         .order_by(TrainerClientMemo.created_at.desc(), TrainerClientMemo.id.desc())
+        .limit(_MEMO_LIMIT)
     ).all()
     return [_memo_out(m) for m in rows]
 

@@ -241,6 +241,10 @@ void main() {
       useMockApi: false,
       extraOverrides: <Override>[dioProvider.overrideWithValue(dio)],
     );
+    // autoDispose provider 는 리스너가 없으면 future 가 끝나기 전에 폐기될 수
+    // 있다 — 읽는 동안 구독을 잡아 둔다.
+    final sub = second.listen(trainerMemosProvider('m1'), (_, _) {});
+    addTearDown(sub.close);
     final memos = await second.read(trainerMemosProvider('m1').future);
     expect(memos, hasLength(1));
     expect(memos.single.body, '재로그인 후에도 남아야 하는 메모');
