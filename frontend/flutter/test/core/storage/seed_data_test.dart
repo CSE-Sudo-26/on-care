@@ -204,10 +204,64 @@ void main() {
         '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
       );
       expect(row('seed-diet-two-days-ago-dinner').timeLabel, '18:50');
+
+      // 사진은 큐레이션 쪽에서 덮어쓸 수 없고 템플릿에서 그대로 온다. 히스토리
+      // 템플릿의 사진을 바꾸면 데모 화면이 조용히 바뀌므로 아홉 장을 모두 못박는다.
+      const Map<String, String> photos = <String, String>{
+        'seed-diet-breakfast':
+            'assets/images/breakfast-scrambled-egg-strawberry.jpg',
+        'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
+        'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
+        'seed-diet-yesterday-breakfast':
+            'assets/images/diet-oatmeal-banana.jpeg',
+        'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',
+        'seed-diet-yesterday-dinner': 'assets/images/diet-doenjang-rice.jpeg',
+        'seed-diet-two-days-ago-breakfast':
+            'assets/images/diet-greek-yogurt-nuts.jpeg',
+        'seed-diet-two-days-ago-lunch':
+            'assets/images/diet-vegetable-bibimbap.jpg',
+        'seed-diet-two-days-ago-dinner':
+            'assets/images/diet-salmon-brown-rice.jpeg',
+      };
+      for (final MapEntry<String, String> e in photos.entries) {
+        expect(row(e.key).photoAsset, e.value, reason: e.key);
+      }
+    });
+
+    test('큐레이션 사흘의 행 id 는 고정이다', () async {
+      // companion() 의 id 는 선택 인자다. 큐레이션 호출에서 빠뜨리면
+      // `seed-diet-2026-08-14-lunch` 같은 날짜 id 로 조용히 바뀌는데, 화면과
+      // 테스트가 이 리터럴 id 로 행을 찾는다.
+      await seedIfEmpty(db);
+      final diet = await db.select(db.dietEntries).get();
+      final Set<String> ids = diet.map((r) => r.id).toSet();
+
       expect(
-        row('seed-diet-two-days-ago-dinner').photoAsset,
-        'assets/images/diet-salmon-brown-rice.jpeg',
+        ids,
+        containsAll(<String>[
+          'seed-diet-breakfast',
+          'seed-diet-lunch',
+          'seed-diet-snack',
+          'seed-diet-yesterday-breakfast',
+          'seed-diet-yesterday-lunch',
+          'seed-diet-yesterday-dinner',
+          'seed-diet-two-days-ago-breakfast',
+          'seed-diet-two-days-ago-lunch',
+          'seed-diet-two-days-ago-dinner',
+        ]),
       );
+      // 큐레이션 사흘이 날짜 id 로 새어 나가지 않았는지.
+      for (final String date in <String>[
+        _todayString(),
+        _daysAgoString(1),
+        _daysAgoString(2),
+      ]) {
+        expect(
+          ids.where((String id) => id.startsWith('seed-diet-$date-')),
+          isEmpty,
+          reason: '$date 의 큐레이션 행이 날짜 id 로 만들어졌다',
+        );
+      }
     });
 
     test('같은 음식은 어느 날짜에 쓰이든 영양 수치가 하나다', () async {

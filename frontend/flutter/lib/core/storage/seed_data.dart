@@ -511,6 +511,38 @@ class _SeedMeal {
   );
 }
 
+/// 여러 끼니에 함께 쓰이는 음식. 끼니 상수마다 다시 적으면 이 변경이 없애려는
+/// 중복이 그대로 남는다 — 한 곳에서만 고칠 수 있게 뽑아 둔다.
+const _SeedFood _foodDoenjangJjigae = _SeedFood(
+  '된장찌개',
+  calories: 300,
+  sodiumMg: 1300,
+  sugarG: 5,
+  carbsG: 18,
+  proteinG: 24,
+  fatG: 15,
+);
+
+const _SeedFood _foodRice = _SeedFood(
+  '밥',
+  calories: 310,
+  sodiumMg: 5,
+  sugarG: 0.7,
+  carbsG: 67,
+  proteinG: 6,
+  fatG: 2.5,
+);
+
+const _SeedFood _foodChickenSalad = _SeedFood(
+  '닭가슴살 샐러드',
+  calories: 315,
+  sodiumMg: 395,
+  sugarG: 10,
+  carbsG: 19,
+  proteinG: 34,
+  fatG: 11.1,
+);
+
 const _SeedMeal _mealOatmealBanana = _SeedMeal(
   slug: 'breakfast',
   mealType: 'breakfast',
@@ -607,17 +639,7 @@ const _SeedMeal _mealChickenSalad = _SeedMeal(
   timeLabel: '12:30',
   photoAsset: 'assets/images/diet-chicken-salad.jpg',
   aiComment: '닭가슴살과 채소로 단백질·식이섬유를 챙겼어요.',
-  foods: <_SeedFood>[
-    _SeedFood(
-      '닭가슴살 샐러드',
-      calories: 315,
-      sodiumMg: 395,
-      sugarG: 10,
-      carbsG: 19,
-      proteinG: 34,
-      fatG: 11.1,
-    ),
-  ],
+  foods: <_SeedFood>[_foodChickenSalad],
 );
 
 const _SeedMeal _mealVegetableBibimbap = _SeedMeal(
@@ -664,26 +686,7 @@ const _SeedMeal _mealDoenjangRiceLunch = _SeedMeal(
   timeLabel: '12:10',
   photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
   aiComment: '집밥 한 상이에요. 찌개 국물만 조금 남겨 보세요.',
-  foods: <_SeedFood>[
-    _SeedFood(
-      '된장찌개',
-      calories: 300,
-      sodiumMg: 1300,
-      sugarG: 5,
-      carbsG: 18,
-      proteinG: 24,
-      fatG: 15,
-    ),
-    _SeedFood(
-      '밥',
-      calories: 310,
-      sodiumMg: 5,
-      sugarG: 0.7,
-      carbsG: 67,
-      proteinG: 6,
-      fatG: 2.5,
-    ),
-  ],
+  foods: <_SeedFood>[_foodDoenjangJjigae, _foodRice],
 );
 
 const List<_SeedMeal> _historyLunches = <_SeedMeal>[
@@ -727,26 +730,7 @@ const _SeedMeal _mealDoenjangRiceDinner = _SeedMeal(
   timeLabel: '19:10',
   photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
   aiComment: '포만감은 좋지만 국물 나트륨이 높은 편이에요.',
-  foods: <_SeedFood>[
-    _SeedFood(
-      '된장찌개',
-      calories: 300,
-      sodiumMg: 1300,
-      sugarG: 5,
-      carbsG: 18,
-      proteinG: 24,
-      fatG: 15,
-    ),
-    _SeedFood(
-      '밥',
-      calories: 310,
-      sodiumMg: 5,
-      sugarG: 0.7,
-      carbsG: 67,
-      proteinG: 6,
-      fatG: 2.5,
-    ),
-  ],
+  foods: <_SeedFood>[_foodDoenjangJjigae, _foodRice],
 );
 
 const _SeedMeal _mealChickenSaladSweetPotato = _SeedMeal(
@@ -756,15 +740,7 @@ const _SeedMeal _mealChickenSaladSweetPotato = _SeedMeal(
   photoAsset: 'assets/images/diet-chicken-salad.jpg',
   aiComment: '가볍게 마무리한 저녁이에요.',
   foods: <_SeedFood>[
-    _SeedFood(
-      '닭가슴살 샐러드',
-      calories: 315,
-      sodiumMg: 395,
-      sugarG: 10,
-      carbsG: 19,
-      proteinG: 34,
-      fatG: 11.1,
-    ),
+    _foodChickenSalad,
     _SeedFood(
       '고구마',
       calories: 130,
