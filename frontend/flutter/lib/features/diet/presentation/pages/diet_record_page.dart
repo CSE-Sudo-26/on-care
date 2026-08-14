@@ -489,6 +489,11 @@ class _DateStrip extends StatelessWidget {
                   children: <Widget>[
                     for (final DateTime d in days)
                       _DayCell(
+                        // 날짜 셀을 지목할 수 있어야 '선택한 날' 계약을 테스트가
+                        // 확인할 수 있다(#687).
+                        key: ValueKey<String>(
+                          'diet-day-${d.year}-${d.month}-${d.day}',
+                        ),
                         day: d,
                         isToday: d == today,
                         isSelected: d == selected,
@@ -535,6 +540,7 @@ class _Arrow extends StatelessWidget {
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.day,
+    super.key,
     required this.isToday,
     required this.isSelected,
     required this.onTap,
@@ -1366,27 +1372,43 @@ class _MealLog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            key: const ValueKey<String>('meal-log-header'),
             children: <Widget>[
               // 제목은 날짜에 매이지 않는다. 이 목록은 늘 **선택한 날**을 보여 주므로
               // '오늘의 식단' 이면 사흘 전을 골랐을 때 제목이 거짓말이 된다(#687).
               // 대신 어느 날 기록인지를 옆에 적어 둔다 — 기간 토글을 이번 주로 두면
               // 7 일짜리 그래프 밑에 하루치 목록이 붙어서, 날짜가 없으면 그 목록이
               // 무엇인지 읽히지 않는다.
-              Text(
-                l.dietMealLog,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                MaterialLocalizations.of(context).formatMediumDate(date),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
+              //
+              // 제목+날짜는 남는 폭 안에서 접힌다. 폭이 좁거나 글자 배율이 크면
+              // 셋의 최소 폭 합이 화면을 넘겨 overflow 가 난다. 접히는 쪽은 날짜다 —
+              // 추가 버튼은 늘 눌릴 수 있어야 한다.
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      l.dietMealLog,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.ink,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        MaterialLocalizations.of(context).formatMediumDate(date),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
