@@ -140,4 +140,56 @@ class AppRoutes {
   /// Builds the 내 정보 page on a given [tab] (`profile` | `settings`).
   static String mySection(String tab) =>
       Uri(path: my, queryParameters: <String, String>{'t': tab}).toString();
+
+  // --- Deep-link resume (#701) ---
+
+  /// Query key that parks a destination on the sign-in URL while the
+  /// session is being restored (or logged into).
+  static const String resumeParam = 'from';
+
+  /// The path every in-app location hangs off. Used to recognise a
+  /// destination worth coming back to after the session resolves.
+  static const List<String> _appRoots = <String>[
+    dashboard,
+    clients,
+    schedule,
+    messages,
+    coaching,
+    reports,
+    my,
+    consultations,
+    notifications,
+  ];
+
+  /// Is [location] an in-app destination the app may return to?
+  ///
+  /// Deliberately strict: the value travels through a URL the user (or a
+  /// shared link) controls, so anything with a scheme or an authority is
+  /// rejected — `?from=https://elsewhere` must never become a redirect.
+  /// Unknown paths are rejected too, so a stale link resumes onto the
+  /// 대시보드 rather than the router's error screen.
+  static bool isRestorable(String location) {
+    final uri = Uri.tryParse(location);
+    if (uri == null || uri.hasScheme || uri.hasAuthority) return false;
+    final path = uri.path;
+    return _appRoots.any((root) => path == root || path.startsWith('$root/'));
+  }
+
+  /// The sign-in URL, carrying [location] so the app can resume there
+  /// once the session is known. A location that isn't restorable is
+  /// simply dropped — sign-in still works, it just lands on the 대시보드.
+  static String signInResuming(String location) => isRestorable(location)
+      ? Uri(
+          path: signIn,
+          queryParameters: <String, String>{resumeParam: location},
+        ).toString()
+      : signIn;
+
+  /// The parked destination on an auth URL, or null when there is none
+  /// (or it failed [isRestorable]).
+  static String? resumeTarget(String location) {
+    final from = Uri.tryParse(location)?.queryParameters[resumeParam];
+    if (from == null || !isRestorable(from)) return null;
+    return from;
+  }
 }

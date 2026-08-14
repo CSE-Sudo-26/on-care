@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:oncare_trainer/app/app.dart';
+import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
@@ -30,11 +31,16 @@ const AppConfig kTestAppConfig = AppConfig(
 /// `pumpAndSettle` never reaches an idle frame and times out. Two pumps
 /// (one to build, one to let the stream emit + route transition finish)
 /// are enough for the seeded data to render.
+/// [bootAt] boots the router at a location instead of the platform one —
+/// the widget-test stand-in for opening the console on a deep link (a
+/// browser refresh or a shared URL). It differs from [at], which
+/// navigates *after* the app is up and so never exercises the boot path.
 Future<ProviderContainer> pumpTrainerApp(
   WidgetTester tester, {
   String? token,
   bool seed = true,
   String? at,
+  String? bootAt,
   List<Override> extraOverrides = const <Override>[],
   Locale locale = const Locale('ko'),
 }) async {
@@ -57,6 +63,8 @@ Future<ProviderContainer> pumpTrainerApp(
       appConfigProvider.overrideWithValue(kTestAppConfig),
       sharedPreferencesProvider.overrideWithValue(prefs),
       appDatabaseProvider.overrideWithValue(db),
+      if (bootAt != null)
+        routerInitialLocationProvider.overrideWithValue(bootAt),
       ...extraOverrides,
     ],
   );
@@ -84,6 +92,13 @@ Future<void> goTo(WidgetTester tester, String location) async {
   final context = tester.element(find.byType(Navigator).first);
   GoRouter.of(context).go(location);
   await settle(tester);
+}
+
+/// The location the pumped app is currently showing, query included —
+/// the URL contract a browser refresh has to reproduce.
+String currentLocation(WidgetTester tester) {
+  final context = tester.element(find.byType(Navigator).first);
+  return GoRouter.of(context).routeInformationProvider.value.uri.toString();
 }
 
 /// Runs [body] with a desktop-sized surface so the console renders its
