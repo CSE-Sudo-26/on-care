@@ -51,6 +51,7 @@ from app.schemas.trainer_api import (
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
+    TrainerMemoCreateRequest, TrainerMemoOut, TrainerMemoUpdateRequest,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
@@ -613,6 +614,97 @@ def trainer_delete_routine(
     try:
         trainer_service.delete_routine(db, trainer.id, member_id, routine_id)
     except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
+
+
+# ---- 회원별 트레이너 메모 (#706) ----
+#
+# 회원 상세의 '메모'와 채팅 인사이트 저장이 같은 목록을 쓴다. 모든 경로가
+# `_require_client` 를 지나므로 담당 관계가 없는 트레이너는 남의 회원 메모를
+# 조회·수정·삭제할 수 없다(없는 회원과 똑같이 404).
+
+@router.get("/trainer/clients/{member_id}/memos", response_model=list[TrainerMemoOut])
+def trainer_client_memos(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerMemoOut]:
+    """담당 고객에 대해 내가 남긴 메모 목록(최신 먼저)."""
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_memos(db, trainer.id, member_id)
+
+
+@router.post(
+    "/trainer/clients/{member_id}/memos",
+    response_model=TrainerMemoOut,
+    status_code=201,
+)
+def trainer_create_memo(
+    member_id: str,
+    payload: TrainerMemoCreateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerMemoOut:
+    """담당 고객에 대한 메모 작성.
+
+    `insight_id` 를 보내면 그 채팅 인사이트에 대해 멱등이라 같은 신호를 반복
+    저장해도 메모가 늘지 않는다(201 로 기존 메모가 그대로 돌아온다).
+    """
+    _require_client(db, trainer.id, member_id)
+    body = payload.body.strip()
+    if not body:
+        # 공백만 있는 메모를 성공으로 처리하면 목록에 빈 줄이 쌓인다.
+        raise HTTPException(status_code=400, detail="메모 내용이 필요합니다.")
+    return trainer_service.create_memo(
+        db, trainer.id, member_id,
+        body=body,
+        source=payload.source,
+        insight_id=payload.insight_id,
+        insight_kind=payload.insight_kind,
+    )
+
+
+@router.put(
+    "/trainer/clients/{member_id}/memos/{memo_id}",
+    response_model=TrainerMemoOut,
+)
+def trainer_update_memo(
+    member_id: str,
+    memo_id: str,
+    payload: TrainerMemoUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerMemoOut:
+    """메모 수정(부분). 본문만 바뀐다."""
+    _require_client(db, trainer.id, member_id)
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    if "body" in fields:
+        fields["body"] = fields["body"].strip()
+        if not fields["body"]:
+            raise HTTPException(status_code=400, detail="메모 내용이 필요합니다.")
+    try:
+        return trainer_service.update_memo(
+            db, trainer.id, member_id, memo_id, fields
+        )
+    except trainer_service.MemoNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/clients/{member_id}/memos/{memo_id}")
+def trainer_delete_memo(
+    member_id: str,
+    memo_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """메모 삭제. 트레이너 혼자 보는 기록이라 비활성 상태를 두지 않고 지운다."""
+    _require_client(db, trainer.id, member_id)
+    try:
+        trainer_service.delete_memo(db, trainer.id, member_id, memo_id)
+    except trainer_service.MemoNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "deleted"}
 

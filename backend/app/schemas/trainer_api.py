@@ -280,6 +280,62 @@ class RoutineFeedbackRequest(BaseModel):
     feedback: str = Field(min_length=1, max_length=2000)
 
 
+#: 메모 출처. 'trainer' 는 회원 상세에서 직접 쓴 메모, 'chat_insight' 는 채팅에서
+#: 감지한 신호를 저장한 메모다. 회원 상세는 두 종류를 한 목록으로 보여 준다.
+TrainerMemoSource = Literal["trainer", "chat_insight"]
+
+
+class TrainerMemoOut(BaseModel):
+    """회원별 트레이너 메모. (#706)"""
+    id: str
+    body: str
+    source: TrainerMemoSource
+    #: 채팅 인사이트에서 만든 메모만 값을 갖는다(중복 저장 방지 키).
+    insight_id: str | None = None
+    #: 인사이트 종류(discomfort|negativeFeedback). 직접 쓴 메모는 빈 문자열.
+    insight_kind: str = ""
+    created_at: _datetime
+    updated_at: _datetime
+
+
+class TrainerMemoCreateRequest(BaseModel):
+    """메모 작성 입력.
+
+    `insight_id` 를 보내면 그 인사이트에 대해 멱등하다 — 같은 채팅 신호를 다시
+    저장해도 메모가 늘지 않고 먼저 저장된 메모가 그대로 돌아온다. 직접 쓴 메모는
+    이 값을 보내지 않으므로 같은 내용을 여러 번 남길 수 있다(그것이 기능이다).
+    """
+    body: str = Field(min_length=1, max_length=2000)
+    source: TrainerMemoSource = "trainer"
+    insight_id: str | None = Field(default=None, max_length=64)
+    insight_kind: str = Field(default="", max_length=32)
+
+    @model_validator(mode="after")
+    def _reject_mismatched_source(self) -> TrainerMemoCreateRequest:
+        """출처와 중복 방지 키가 짝을 이루는지 본다.
+
+        어긋난 두 조합이 조용히 통과하면 각각 다른 방식으로 망가진다 —
+        키 없는 인사이트 메모는 반복 저장 때마다 늘어나고, 직접 쓴 메모가
+        `insight_id` 를 가지면 그 인사이트의 유니크 키를 대신 차지한다.
+        """
+        if self.source == "chat_insight" and not self.insight_id:
+            raise ValueError("chat_insight 메모에는 insight_id가 필요합니다.")
+        if self.source == "trainer" and self.insight_id:
+            raise ValueError("trainer 메모에는 insight_id를 보낼 수 없습니다.")
+        return self
+
+
+class TrainerMemoUpdateRequest(PartialUpdate):
+    """메모 부분 수정. 본문만 고칠 수 있다.
+
+    `source`·`insight_id` 는 "이 메모가 어디서 왔나"라는 사실이라 고칠 값이 아니다 —
+    채팅에서 생긴 메모를 손봤다고 직접 쓴 메모가 되지는 않고, `insight_id` 를
+    바꿀 수 있으면 중복 방지 키가 무너진다.
+    """
+
+    body: str | None = Field(default=None, min_length=1, max_length=2000)
+
+
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 

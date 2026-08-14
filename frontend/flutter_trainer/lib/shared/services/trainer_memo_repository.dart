@@ -1,0 +1,155 @@
+import 'dart:convert';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/storage/prefs_provider.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/dio_trainer_memo_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+
+/// Reads and writes the memos a trainer keeps about one member.
+///
+/// Two implementations sit behind this contract (selected by
+/// [trainerMemoRepositoryProvider] via [AppConfig.useMockApi]):
+///  * [LocalTrainerMemoRepository] — browser-local prefs, demo /
+///    `USE_MOCK_API=true`;
+///  * [DioTrainerMemoRepository] — the real FastAPI backend, where memos
+///    survive a re-login and follow the trainer to another browser.
+///
+/// Both the client detail screen and the chat-insight action write through
+/// this one contract, so a memo saved from chat shows up in the client's
+/// memo list and vice versa.
+abstract interface class TrainerMemoRepository {
+  /// This client's memos, newest first.
+  Future<List<TrainerMemo>> fetch(String clientId);
+
+  /// Adds a memo.
+  ///
+  /// Passing [insightId] makes the write idempotent for that chat insight —
+  /// saving the same signal again returns the memo that is already stored
+  /// instead of adding a duplicate.
+  Future<TrainerMemo> create(
+    String clientId, {
+    required String body,
+    TrainerMemoSource source = TrainerMemoSource.trainer,
+    String? insightId,
+    String insightKind = '',
+  });
+
+  /// Rewrites a memo's body. Its source is never rewritten.
+  Future<TrainerMemo> update(String clientId, String memoId, String body);
+
+  Future<void> delete(String clientId, String memoId);
+}
+
+/// Keeps memos in browser-local prefs for the demo build.
+///
+/// The demo has no account behind it, so there is nowhere else to put them.
+/// The insight-id de-duplication is applied here too, which keeps the demo's
+/// "메모 추가됨" state stable across rebuilds of the chat screen.
+class LocalTrainerMemoRepository implements TrainerMemoRepository {
+  const LocalTrainerMemoRepository(this._prefs);
+
+  final SharedPreferences _prefs;
+
+  static String _key(String clientId) => 'trainer_memos:$clientId';
+
+  List<TrainerMemo> _read(String clientId) {
+    final raw = _prefs.getString(_key(clientId));
+    if (raw == null) return const <TrainerMemo>[];
+    try {
+      return (jsonDecode(raw) as List<Object?>)
+          .map(
+            (item) => TrainerMemo.fromJson(
+              (item! as Map<Object?, Object?>).cast<String, Object?>(),
+            ),
+          )
+          .toList();
+    } on Object {
+      // A payload written by an older build is not worth crashing the
+      // screen over — the demo starts from an empty list instead.
+      return const <TrainerMemo>[];
+    }
+  }
+
+  Future<void> _write(String clientId, List<TrainerMemo> memos) {
+    return _prefs.setString(
+      _key(clientId),
+      jsonEncode(memos.map((memo) => memo.toJson()).toList()),
+    );
+  }
+
+  @override
+  Future<List<TrainerMemo>> fetch(String clientId) async {
+    final memos = _read(clientId)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return memos;
+  }
+
+  @override
+  Future<TrainerMemo> create(
+    String clientId, {
+    required String body,
+    TrainerMemoSource source = TrainerMemoSource.trainer,
+    String? insightId,
+    String insightKind = '',
+  }) async {
+    final memos = _read(clientId);
+    if (insightId != null) {
+      final existing = memos.where((memo) => memo.insightId == insightId);
+      if (existing.isNotEmpty) return existing.first;
+    }
+    final now = DateTime.now();
+    final memo = TrainerMemo(
+      id: 'memo-local-${now.microsecondsSinceEpoch}',
+      body: body,
+      source: source,
+      insightId: insightId,
+      insightKind: insightKind,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await _write(clientId, <TrainerMemo>[...memos, memo]);
+    return memo;
+  }
+
+  @override
+  Future<TrainerMemo> update(
+    String clientId,
+    String memoId,
+    String body,
+  ) async {
+    final memos = _read(clientId);
+    final index = memos.indexWhere((memo) => memo.id == memoId);
+    if (index < 0) throw StateError('메모를 찾을 수 없습니다.');
+    final updated = memos[index].copyWith(body: body, updatedAt: DateTime.now());
+    memos[index] = updated;
+    await _write(clientId, memos);
+    return updated;
+  }
+
+  @override
+  Future<void> delete(String clientId, String memoId) async {
+    final memos = _read(clientId)
+      ..removeWhere((memo) => memo.id == memoId);
+    await _write(clientId, memos);
+  }
+}
+
+/// Provides the [TrainerMemoRepository]: the backend-backed source, or the
+/// browser-local one for demo / `USE_MOCK_API=true`.
+final trainerMemoRepositoryProvider = Provider<TrainerMemoRepository>((ref) {
+  final config = ref.watch(appConfigProvider);
+  if (config.useMockApi) {
+    return LocalTrainerMemoRepository(ref.watch(sharedPreferencesProvider));
+  }
+  return DioTrainerMemoRepository(ref.watch(dioProvider));
+});
+
+/// This client's memos, newest first. Invalidate after a write.
+final trainerMemosProvider = FutureProvider.autoDispose
+    .family<List<TrainerMemo>, String>((ref, clientId) async {
+      return ref.watch(trainerMemoRepositoryProvider).fetch(clientId);
+    });

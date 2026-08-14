@@ -37,6 +37,7 @@
 | `trainer_profiles` | 트레이너 프로필(전문분야·경력·소속 짐) |
 | `trainer_clients` | 트레이너↔회원 담당 링크(로스터의 정의) |
 | `trainer_routines` | 트레이너/AI가 회원에게 배정한 루틴 |
+| `trainer_client_memos` | 트레이너가 회원별로 남긴 메모(직접 작성 + 채팅 인사이트, `0036_trainer_memos`) |
 | `routine_history` | 회원 운동 완료 기록(회원 앱·PT 세션 공용 원본) |
 | `chat_messages` | 트레이너↔회원 1:1 채팅 |
 | `trainer_schedule` | 트레이너 오늘 타임라인(예약→수업→기록 루프) |
@@ -56,7 +57,7 @@
 ### 담당 관계(`active`)와 관리 상태(`dormant`)는 다른 축 (#707)
 
 트레이너 웹의 활성/휴면 배지는 `active` 가 아니라 **`dormant`** 다
-(`0036_client_dormant`).
+(`0037_client_dormant`).
 
 | 컬럼 | 뜻 | 누가 바꾸나 | 내려가면 |
 |---|---|---|---|
@@ -113,6 +114,10 @@
 | POST | `/trainer/clients/{member_id}/routines` | 루틴 배정 |
 | PUT | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 부분 수정(이름·시간·종류·사유) |
 | DELETE | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 철회 |
+| GET | `/trainer/clients/{member_id}/memos` | 회원 메모 목록(최신순) |
+| POST | `/trainer/clients/{member_id}/memos` | 메모 작성 (`insight_id?` 로 채팅 인사이트 중복 방지) |
+| PUT | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 본문 수정 |
+| DELETE | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 삭제 |
 | GET | `/trainer/clients/{member_id}/chat?before=&before_id=` | 채팅 스레드(커서 페이지네이션) |
 | POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 (`client_request_id?`) |
 | POST | `/trainer/clients/{member_id}/chat/read` | 읽음 처리 |

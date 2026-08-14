@@ -1178,6 +1178,12 @@ abstract class AppLocalizations {
   /// **'The AI insight was added to the trainer memo.'**
   String get chatInsightMemoSaved;
 
+  /// No description provided for @chatInsightMemoSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add the memo. Please try again.'**
+  String get chatInsightMemoSaveFailed;
+
   /// No description provided for @coachSheetTitle.
   ///
   /// In en, this message translates to:
@@ -3998,17 +4004,71 @@ abstract class AppLocalizations {
   /// **'Body profile & goals'**
   String get clientHealthGoals;
 
-  /// No description provided for @clientTrainerMemoUnsupported.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer memo storage isn\'t supported yet.'**
-  String get clientTrainerMemoUnsupported;
-
   /// No description provided for @clientTrainerMemo.
   ///
   /// In en, this message translates to:
   /// **'Memo'**
   String get clientTrainerMemo;
+
+  /// No description provided for @clientTrainerMemoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memos on {name}'**
+  String clientTrainerMemoTitle(String name);
+
+  /// No description provided for @clientTrainerMemoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note what you want to remember about this member'**
+  String get clientTrainerMemoHint;
+
+  /// No description provided for @clientTrainerMemoAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add memo'**
+  String get clientTrainerMemoAdd;
+
+  /// No description provided for @clientTrainerMemoEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No memos yet.'**
+  String get clientTrainerMemoEmpty;
+
+  /// No description provided for @clientTrainerMemoFromChat.
+  ///
+  /// In en, this message translates to:
+  /// **'From chat'**
+  String get clientTrainerMemoFromChat;
+
+  /// No description provided for @clientTrainerMemoLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load memos. Please try again.'**
+  String get clientTrainerMemoLoadFailed;
+
+  /// No description provided for @clientTrainerMemoSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the memo. Please try again.'**
+  String get clientTrainerMemoSaveFailed;
+
+  /// No description provided for @clientTrainerMemoDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the memo. Please try again.'**
+  String get clientTrainerMemoDeleteFailed;
+
+  /// No description provided for @clientTrainerMemoDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this memo?'**
+  String get clientTrainerMemoDeleteTitle;
+
+  /// No description provided for @clientTrainerMemoDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A deleted memo can\'t be restored.'**
+  String get clientTrainerMemoDeleteBody;
 
   /// No description provided for @dashTaskReply.
   ///

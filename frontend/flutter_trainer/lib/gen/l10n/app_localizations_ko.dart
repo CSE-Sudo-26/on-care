@@ -608,6 +608,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatInsightMemoSaved => 'AI 감지 내용을 트레이너 메모에 추가했어요.';
 
   @override
+  String get chatInsightMemoSaveFailed => '메모에 추가하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
   String coachSheetTitle(String name) {
     return '$name 코칭 상담';
   }
@@ -2170,10 +2173,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientHealthGoals => '고객 신체·목표 관리';
 
   @override
-  String get clientTrainerMemoUnsupported => '트레이너 메모 저장 API가 아직 없어요.';
+  String get clientTrainerMemo => '메모';
 
   @override
-  String get clientTrainerMemo => '메모';
+  String clientTrainerMemoTitle(String name) {
+    return '$name님 메모';
+  }
+
+  @override
+  String get clientTrainerMemoHint => '이 회원에 대해 기억할 내용을 적어 주세요';
+
+  @override
+  String get clientTrainerMemoAdd => '메모 추가';
+
+  @override
+  String get clientTrainerMemoEmpty => '아직 남긴 메모가 없어요.';
+
+  @override
+  String get clientTrainerMemoFromChat => '채팅에서 감지';
+
+  @override
+  String get clientTrainerMemoLoadFailed => '메모를 불러오지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get clientTrainerMemoSaveFailed => '메모를 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get clientTrainerMemoDeleteFailed => '메모를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get clientTrainerMemoDeleteTitle => '메모를 삭제할까요?';
+
+  @override
+  String get clientTrainerMemoDeleteBody => '지운 메모는 되돌릴 수 없어요.';
 
   @override
   String get dashTaskReply => '답장';

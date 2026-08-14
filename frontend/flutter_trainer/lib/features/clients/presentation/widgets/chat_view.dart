@@ -5,8 +5,9 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/messages/data/chat_insight_memo_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/messages/domain/chat_context_insight.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -52,6 +53,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// A send is in flight — blocks re-entry (button mash / IME send)
   /// from inserting the same message twice.
   bool _sending = false;
+
+  /// Insight ids whose memo save is in flight. A memo write is a network
+  /// round trip in API mode, so a second tap before it lands would fire a
+  /// duplicate request.
+  final Set<String> _savingInsights = <String>{};
 
   /// Message count at the last auto-scroll, so the thread only scrolls
   /// when a message actually arrives (not on every rebuild).
@@ -182,17 +188,42 @@ class _ChatViewState extends ConsumerState<ChatView> {
     return out;
   }
 
+  /// Saves a detected signal as a trainer memo on this client.
+  ///
+  /// The memo lands in the same list the client detail screen shows, and the
+  /// insight id makes the write idempotent — a double tap or a retry after a
+  /// dropped response does not add a second memo.
   Future<void> _addInsightMemo(ChatContextInsight insight) async {
-    await ref
-        .read(chatInsightMemoRepositoryProvider)
-        .add(widget.clientId, insight);
-    ref.invalidate(chatInsightMemosProvider(widget.clientId));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).chatInsightMemoSaved),
-      ),
-    );
+    if (!_savingInsights.add(insight.id)) return;
+    try {
+      await ref
+          .read(trainerMemoRepositoryProvider)
+          .create(
+            widget.clientId,
+            body: insight.evidence,
+            source: TrainerMemoSource.chatInsight,
+            insightId: insight.id,
+            insightKind: insight.kind.name,
+          );
+      ref.invalidate(trainerMemosProvider(widget.clientId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).chatInsightMemoSaved),
+        ),
+      );
+    } on Object {
+      // The button stays in its unsaved state so the trainer can try again —
+      // the list is only invalidated on a write that actually landed.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).chatInsightMemoSaveFailed),
+        ),
+      );
+    } finally {
+      _savingInsights.remove(insight.id);
+    }
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>
@@ -216,9 +247,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final showDemoBanners = ref.watch(appConfigProvider).useMockApi;
     final savedInsightIds =
         ref
-            .watch(chatInsightMemosProvider(widget.clientId))
+            .watch(trainerMemosProvider(widget.clientId))
             .valueOrNull
             ?.map((memo) => memo.insightId)
+            .whereType<String>()
             .toSet() ??
         const <String>{};
 

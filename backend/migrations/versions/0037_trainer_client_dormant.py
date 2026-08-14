@@ -5,8 +5,8 @@ takes the member's coach away in the member app. The trainer console's
 활성/휴면 badge is a different question ("am I actively coaching them right
 now?"), so it gets its own column and leaves the link untouched.
 
-Revision ID: 0036_client_dormant
-Revises: 0035_drop_consultation_gym
+Revision ID: 0037_client_dormant
+Revises: 0036_trainer_memos
 """
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0036_client_dormant"
-down_revision: str | Sequence[str] | None = "0035_drop_consultation_gym"
+revision: str = "0037_client_dormant"
+down_revision: str | Sequence[str] | None = "0036_trainer_memos"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
