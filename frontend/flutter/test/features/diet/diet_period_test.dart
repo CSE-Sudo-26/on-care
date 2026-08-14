@@ -240,16 +240,28 @@ void main() {
       expect(find.text(l.dietMealLog), findsOneWidget);
     });
 
-    testWidgets('제목 줄에서 먼저 접히는 것은 날짜다 (#687 리뷰)', (
+    testWidgets('좁은 화면·큰 글자 배율에서 먼저 접히는 것은 날짜다 (#687 리뷰)', (
       WidgetTester tester,
     ) async {
       // 제목·날짜·추가 버튼이 한 줄이라, 폭이 좁거나 글자 배율이 크면 셋의 최소 폭
       // 합이 화면을 넘긴다. 접히는 쪽은 날짜여야 한다 — 추가 버튼이 밀려나면 끼니를
       // 넣을 수 없다.
-      //
-      // 화면 전체로 overflow 예외를 잡는 방식은 쓰지 않는다. 이 페이지는 좁은 폭에서
-      // 기간 토글 줄 등 **이 변경과 무관한 자리**가 이미 넘쳐(320×1.0 에서도 여러 건),
-      // 그 예외까지 함께 잡히면 이 테스트가 무엇을 지키는지 흐려진다.
+      // 폭만 좁힌다. 높이를 넉넉히 두는 이유는 `ListView` 가 보이는 자식만 만들기
+      // 때문이다 — 짧은 화면에서는 끼니 목록이 아래로 밀려 아예 그려지지 않는다.
+      tester.view.physicalSize = const Size(320, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      // 이 화면은 좁은 폭에서 기간 토글 줄 등 **이 변경과 무관한 자리**가 이미
+      // 넘친다(#739). 그 예외까지 테스트를 깨면 여기서 무엇을 지키는지 흐려지므로
+      // 예외는 모아 두고, 제목 줄은 아래에서 **기하로** 확인한다. #739 가 해결되면
+      // 이 수집기를 걷어내고 화면 전체 기준으로 좁힐 수 있다.
+      final List<FlutterErrorDetails> caught = <FlutterErrorDetails>[];
+      final void Function(FlutterErrorDetails)? previous = FlutterError.onError;
+      FlutterError.onError = caught.add;
+
       await tester.pumpWidget(
         _app(
           overrides: <Override>[
@@ -261,6 +273,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // 핸들러는 **여기서** 되돌린다. tearDown 으로 미루면 `expect` 가 먼저 돌아
+      // 프레임워크가 "복구하지 않았다" 며 테스트를 거부한다.
+      FlutterError.onError = previous;
 
       final Element context = tester.element(find.byType(DietRecordPage));
       final AppLocalizations l = AppLocalizations.of(context);
@@ -272,21 +287,42 @@ void main() {
       final Finder header = find.byKey(
         const ValueKey<String>('meal-log-header'),
       );
+      final Finder date = find.descendant(
+        of: header,
+        matching: find.text(todayLabel),
+      );
+      final Finder addButton = find.descendant(
+        of: header,
+        matching: find.text(l.dietAddMeal),
+      );
+      expect(date, findsOneWidget);
+      expect(addButton, findsOneWidget);
 
       // 날짜는 한 줄로 접힌다.
-      final Text dateText = tester.widget<Text>(
-        find.descendant(of: header, matching: find.text(todayLabel)),
-      );
+      final Text dateText = tester.widget<Text>(date);
       expect(dateText.maxLines, 1);
       expect(dateText.overflow, TextOverflow.ellipsis);
 
-      // 제목·날짜는 남는 폭을 나눠 쓰고, 추가 버튼은 접히지 않는다.
+      // 추가 버튼이 제목 줄 안에 남는다 — 밀려나면 끼니를 넣을 수 없다.
+      final Rect headerRect = tester.getRect(header);
+      final Rect addRect = tester.getRect(addButton);
+      expect(addRect.left, greaterThanOrEqualTo(headerRect.left));
+      expect(addRect.right, lessThanOrEqualTo(headerRect.right + 0.5));
+
+      // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
+      expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
+
+      // 제목 줄 자체는 넘치지 않는다.
       expect(
-        find.descendant(of: header, matching: find.byType(Flexible)),
-        findsWidgets,
+        caught.where(
+          (FlutterErrorDetails d) =>
+              d.exceptionAsString().contains('overflowed') &&
+              d.toString().contains('meal-log-header'),
+        ),
+        isEmpty,
+        reason: '제목 줄이 넘쳤습니다.',
       );
       expect(find.text(l.dietMealLog), findsOneWidget);
-      expect(find.text(l.dietAddMeal), findsOneWidget);
     });
 
     testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
