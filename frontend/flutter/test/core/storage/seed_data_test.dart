@@ -179,52 +179,69 @@ void main() {
       }
     });
 
-    test('큐레이션 사흘의 표현(시각·코치 문구·사진)이 그대로 남는다', () async {
-      // 수치를 템플릿 한 곳으로 모으면서(#677) 데모 화면의 문구·사진이 바뀌면
-      // 안 된다. 합계는 다른 테스트가 보므로 여기서는 표현만 못박는다.
+    test('큐레이션 아홉 행의 표현(시각·코치 문구·사진)이 그대로 남는다', () async {
+      // 수치를 템플릿 한 곳으로 모으면서(#677) 데모 화면의 문구·사진·시각이
+      // 바뀌면 안 된다. 합계는 다른 테스트가 보므로 여기서는 표현만 못박는다.
+      // 세 필드를 아홉 행 모두 검증한다 — 일부만 보면 나머지가 조용히 바뀐다.
       await seedIfEmpty(db);
       final diet = await db.select(db.dietEntries).get();
       DietEntryRow row(String id) => diet.firstWhere((r) => r.id == id);
 
-      expect(row('seed-diet-lunch').timeLabel, '12:40');
-      expect(
-        row('seed-diet-lunch').aiComment,
-        '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
-      );
-      expect(
-        row('seed-diet-lunch').photoAsset,
-        'assets/images/lunch-jjamppong.jpg',
-      );
+      const Map<String, (String time, String comment, String photo)> expected =
+          <String, (String, String, String)>{
+            'seed-diet-breakfast': (
+              '08:20',
+              '단백질과 식이섬유의 깔끔한 조합으로, 소금 간과 기름만 조절하면 혈당과 혈압 모두 잡는 우수한 식단입니다.',
+              'assets/images/breakfast-scrambled-egg-strawberry.jpg',
+            ),
+            'seed-diet-lunch': (
+              '12:40',
+              '정제 면과 높은 나트륨으로 혈압·혈당 부담이 매우 크니, 국물은 남기고 야채 위주로 드시는 것이 좋습니다.',
+              'assets/images/lunch-jjamppong.jpg',
+            ),
+            'seed-diet-snack': (
+              '15:30',
+              '당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.',
+              'assets/images/snack-coffee-nuts.jpg',
+            ),
+            'seed-diet-yesterday-breakfast': (
+              '08:10',
+              '오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.',
+              'assets/images/diet-oatmeal-banana.jpeg',
+            ),
+            'seed-diet-yesterday-lunch': (
+              '12:30',
+              '닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.',
+              'assets/images/diet-chicken-salad.jpg',
+            ),
+            'seed-diet-yesterday-dinner': (
+              '18:45',
+              '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
+              'assets/images/diet-doenjang-rice.jpeg',
+            ),
+            'seed-diet-two-days-ago-breakfast': (
+              '08:35',
+              '그릭 요거트의 단백질과 견과류의 불포화지방을 고르게 섭취했어요.',
+              'assets/images/diet-greek-yogurt-nuts.jpeg',
+            ),
+            'seed-diet-two-days-ago-lunch': (
+              '12:20',
+              '야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.',
+              'assets/images/diet-vegetable-bibimbap.jpg',
+            ),
+            'seed-diet-two-days-ago-dinner': (
+              '18:50',
+              '연어의 지방과 현미밥의 복합 탄수화물 조합이 좋아요.',
+              'assets/images/diet-salmon-brown-rice.jpeg',
+            ),
+          };
 
-      expect(row('seed-diet-breakfast').timeLabel, '08:20');
-      expect(row('seed-diet-snack').timeLabel, '15:30');
-      expect(row('seed-diet-yesterday-dinner').timeLabel, '18:45');
-      expect(
-        row('seed-diet-yesterday-dinner').aiComment,
-        '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
-      );
-      expect(row('seed-diet-two-days-ago-dinner').timeLabel, '18:50');
-
-      // 사진은 큐레이션 쪽에서 덮어쓸 수 없고 템플릿에서 그대로 온다. 히스토리
-      // 템플릿의 사진을 바꾸면 데모 화면이 조용히 바뀌므로 아홉 장을 모두 못박는다.
-      const Map<String, String> photos = <String, String>{
-        'seed-diet-breakfast':
-            'assets/images/breakfast-scrambled-egg-strawberry.jpg',
-        'seed-diet-lunch': 'assets/images/lunch-jjamppong.jpg',
-        'seed-diet-snack': 'assets/images/snack-coffee-nuts.jpg',
-        'seed-diet-yesterday-breakfast':
-            'assets/images/diet-oatmeal-banana.jpeg',
-        'seed-diet-yesterday-lunch': 'assets/images/diet-chicken-salad.jpg',
-        'seed-diet-yesterday-dinner': 'assets/images/diet-doenjang-rice.jpeg',
-        'seed-diet-two-days-ago-breakfast':
-            'assets/images/diet-greek-yogurt-nuts.jpeg',
-        'seed-diet-two-days-ago-lunch':
-            'assets/images/diet-vegetable-bibimbap.jpg',
-        'seed-diet-two-days-ago-dinner':
-            'assets/images/diet-salmon-brown-rice.jpeg',
-      };
-      for (final MapEntry<String, String> e in photos.entries) {
-        expect(row(e.key).photoAsset, e.value, reason: e.key);
+      for (final MapEntry<String, (String, String, String)> e
+          in expected.entries) {
+        final DietEntryRow r = row(e.key);
+        expect(r.timeLabel, e.value.$1, reason: '${e.key} 시각');
+        expect(r.aiComment, e.value.$2, reason: '${e.key} 코치 문구');
+        expect(r.photoAsset, e.value.$3, reason: '${e.key} 사진');
       }
     });
 
@@ -270,7 +287,9 @@ void main() {
       await seedIfEmpty(db);
       final diet = await db.select(db.dietEntries).get();
 
-      final Map<String, Set<String>> byFoodName = <String, Set<String>>{};
+      final Map<String, Set<String>> fingerprintsByFood =
+          <String, Set<String>>{};
+      final Map<String, Set<String>> datesByFood = <String, Set<String>>{};
       for (final row in diet) {
         for (final food
             in (jsonDecode(row.foodsJson) as List<Object?>)
@@ -279,12 +298,13 @@ void main() {
           // 이름을 뺀 나머지(칼로리·나트륨·당류·탄단지)를 지문으로 삼는다.
           final Map<String, Object?> rest = Map<String, Object?>.of(food)
             ..remove('name');
-          (byFoodName[name] ??= <String>{}).add(jsonEncode(rest));
+          (fingerprintsByFood[name] ??= <String>{}).add(jsonEncode(rest));
+          (datesByFood[name] ??= <String>{}).add(row.date);
         }
       }
 
       final List<String> conflicting = <String>[
-        for (final entry in byFoodName.entries)
+        for (final entry in fingerprintsByFood.entries)
           if (entry.value.length > 1) entry.key,
       ];
       expect(
@@ -292,8 +312,23 @@ void main() {
         isEmpty,
         reason: '같은 음식이 서로 다른 영양 수치로 시드됐다: $conflicting',
       );
-      // 실제로 여러 날짜에 재사용되는 음식이 있어야 이 검증이 뜻을 갖는다.
-      expect(byFoodName['짬뽕'], isNotNull);
+
+      // 여러 날짜에 실제로 재사용되는 음식이 있어야 위 검증이 뜻을 갖는다.
+      // 존재 여부만 보면 재사용이 사라져도 통과한다(CodeRabbit).
+      final List<String> reused = <String>[
+        for (final entry in datesByFood.entries)
+          if (entry.value.length > 1) entry.key,
+      ];
+      expect(
+        reused,
+        isNotEmpty,
+        reason: '여러 날짜에 쓰이는 음식이 없으면 이 검증이 아무것도 지키지 못한다',
+      );
+      expect(
+        datesByFood['짬뽕']?.length ?? 0,
+        greaterThan(1),
+        reason: '짬뽕은 오늘(큐레이션)과 히스토리 양쪽에 쓰인다',
+      );
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
