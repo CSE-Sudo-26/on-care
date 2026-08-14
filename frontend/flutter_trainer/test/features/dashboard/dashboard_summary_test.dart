@@ -1,15 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/features/dashboard/data/ai_coaching_summary_repository.dart';
+import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 import '../../helpers/client_factory.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
-
-/// 문구 기대값은 로케일을 명시해 읽는다.
-final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// The dashboard's aggregation rules. These decide what the trainer is
 /// told to do first, so they're worth pinning down without a widget.
@@ -176,36 +173,113 @@ void main() {
     });
   });
 
-  group('AiSummaryCard.messageFor', () {
-    test('leads with unanswered messages over every other signal', () {
-      final summary = buildDashboardSummary(
-        clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
-        unread: const <String, int>{'a': 1},
-      );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('답장'));
-    });
+  group('DemoAiCoachingSummaryRepository', () {
+    test(
+      'turns a named client signal into a specific exercise focus',
+      () async {
+        final summary = buildDashboardSummary(
+          clients: <TrainerClient>[
+            makeClient(
+              id: 'a',
+              name: '김민수',
+              sodiumMg: 2500,
+              lastMessage: '무릎이 가볍게 당겨요',
+            ),
+          ],
+          unread: const <String, int>{'a': 1},
+        );
+        final result = await const DemoAiCoachingSummaryRepository().fetch(
+          summary,
+        );
 
-    test('mentions the sodium count when nobody is waiting', () {
+        expect(result.kind, CoachingSummaryKind.attention);
+        expect(result.clients.single.ruleData?.signal, RuleCoachingSignal.knee);
+      },
+    );
+
+    test('includes the sodium value as evidence', () async {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('나트륨'));
-    });
-
-    test('an empty roster gets an onboarding line, not a stat', () {
-      expect(
-        AiSummaryCard.messageFor(_ko, DashboardSummary.empty),
-        contains('담당 고객이 없어요'),
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        summary,
       );
+
+      expect(result.clients.single.ruleData?.sodiumMg, 2500);
+      expect(result.clients.single.ruleData?.sodiumTargetMg, 2000);
     });
 
-    test('a clean roster is told so rather than left blank', () {
+    test('an empty roster gets an onboarding line, not a stat', () async {
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        DashboardSummary.empty,
+      );
+
+      expect(result.headline, isEmpty);
+      expect(result.clients, isEmpty);
+      expect(result.kind, CoachingSummaryKind.noClients);
+    });
+
+    test('a clean roster is told so rather than left blank', () async {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[makeClient(id: 'a')],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('목표 범위 안'));
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        summary,
+      );
+
+      expect(result.kind, CoachingSummaryKind.allOnTrack);
+      expect(result.totalClients, 1);
     });
+
+    test('ordinary body-part words are not treated as pain signals', () async {
+      for (final message in <String>['오늘 하체 운동 완료', '목표를 달성했어요']) {
+        final summary = buildDashboardSummary(
+          clients: <TrainerClient>[makeClient(id: 'a', lastMessage: message)],
+          unread: const <String, int>{'a': 1},
+        );
+        final result = await const DemoAiCoachingSummaryRepository().fetch(
+          summary,
+        );
+        expect(
+          result.clients.single.ruleData?.signal,
+          RuleCoachingSignal.unanswered,
+          reason: message,
+        );
+      }
+    });
+
+    test(
+      'unanswered and low completion keep different coaching signals',
+      () async {
+        final unanswered = buildDashboardSummary(
+          clients: <TrainerClient>[makeClient(id: 'reply')],
+          unread: const <String, int>{'reply': 1},
+        );
+        final lowCompletion = buildDashboardSummary(
+          clients: <TrainerClient>[
+            makeClient(
+              id: 'low',
+              weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
+            ),
+          ],
+          unread: const <String, int>{'low': 1},
+        );
+        final unansweredResult = await const DemoAiCoachingSummaryRepository()
+            .fetch(unanswered);
+        final lowResult = await const DemoAiCoachingSummaryRepository().fetch(
+          lowCompletion,
+        );
+        expect(
+          unansweredResult.clients.single.ruleData?.signal,
+          RuleCoachingSignal.unanswered,
+        );
+        expect(
+          lowResult.clients.single.ruleData?.signal,
+          RuleCoachingSignal.lowCompletion,
+        );
+      },
+    );
   });
 }

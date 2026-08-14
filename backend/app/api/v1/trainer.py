@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import RequireTrainer
 from app.core.config import get_settings
-from app.core.rate_limit import rate_limit
+from app.core.rate_limit import limiter, rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import (
@@ -42,6 +42,7 @@ from app.schemas.consultation_api import (
 from app.schemas.trainer_api import (
     ChatMessageOut, ChatSendRequest, ClientCoachMessageOut, ClientCoachOut,
     ClientCoachRequest, ClientDietEntryOut,
+    DashboardCoachingSummaryOut,
     MemberHealthProfileOut, MemberHealthProfileUpdate,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineFeedbackRequest,
@@ -56,6 +57,7 @@ from app.services import (
     consultation_service,
     diet_photo_service,
     notification_service,
+    trainer_dashboard_coaching_service,
     trainer_routine_options_service,
     trainer_service,
 )
@@ -619,6 +621,28 @@ def trainer_routine_options(
         member_id,
         payload,
     )
+
+
+@router.get(
+    "/trainer/dashboard/coaching-summary",
+    response_model=DashboardCoachingSummaryOut,
+)
+def trainer_dashboard_coaching_summary(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> DashboardCoachingSummaryOut:
+    """식단·운동·건강 프로필·최근 대화를 합친 오늘의 고객별 코칭 요약."""
+    settings = get_settings()
+    if settings.rate_limit_enabled:
+        # 인증된 트레이너 단위로 비용 버킷을 분리해 같은 헬스장/NAT의 사용자가
+        # 서로 한도를 소진하지 않게 한다. 운영의 공유 저장소 전환 전까지는 기존
+        # RateLimiter 인터페이스를 유지한다.
+        limiter.check(
+            f"dashboard-coaching-summary:trainer:{trainer.id}",
+            settings.routine_options_per_minute,
+            60.0,
+        )
+    return trainer_dashboard_coaching_service.generate_summary(db, trainer.id)
 
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----

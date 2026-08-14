@@ -82,7 +82,7 @@ void main() {
     ]);
     await settle(tester);
 
-    expect(find.text('복구 고객'), findsOneWidget);
+    expect(find.text('복구 고객'), findsWidgets);
     expect(find.text('대시보드를 불러오지 못했어요'), findsNothing);
   });
 
@@ -158,17 +158,26 @@ void main() {
     expect(currentLocation(tester), contains('/diet'));
   });
 
-  testWidgets('the AI summary leads with the reply backlog', (tester) async {
-    await openDashboard(tester);
+  testWidgets(
+    'the AI summary names a client and gives a specific exercise focus',
+    (tester) async {
+      await openDashboard(tester);
 
-    expect(find.text('AI 코칭 요약'), findsOneWidget);
-    expect(find.textContaining('답장을 기다리고'), findsOneWidget);
-  });
+      expect(find.text('AI 코칭 요약'), findsOneWidget);
+      expect(find.textContaining('김민수 고객'), findsWidgets);
+      expect(find.text('오늘 운동 중심'), findsWidgets);
+      expect(find.textContaining('중강도 걷기'), findsWidgets);
+      expect(find.text('판단 근거'), findsWidgets);
+    },
+  );
 
   testWidgets('AI 루틴 만들기 opens the coaching workspace', (tester) async {
     await openDashboard(tester);
 
-    await tester.tap(find.text('AI 루틴 만들기').first);
+    final button = find.text('AI 루틴 만들기').first;
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
     await settle(tester);
     expect(currentLocation(tester), AppRoutes.coaching);
   });

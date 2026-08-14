@@ -35,6 +35,7 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final summaryAsync = ref.watch(dashboardSummaryProvider);
+    final coachingSummary = ref.watch(dashboardAiCoachingSummaryProvider);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
     final today = DateTime.now();
 
@@ -94,22 +95,12 @@ class DashboardPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        flex: 15,
-                        child: AttentionCard(
-                          entries: summary.attention,
-                          maxRows: 5,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        flex: 10,
-                        child: AiSummaryCard(summary: summary),
-                      ),
-                    ],
+                  AttentionCard(entries: summary.attention, maxRows: 5),
+                  const SizedBox(height: AppSpacing.lg),
+                  AiSummaryCard(
+                    summary: coachingSummary,
+                    onRetry: () =>
+                        ref.invalidate(dashboardAiCoachingSummaryProvider),
                   ),
                 ] else ...<Widget>[
                   const TodayTimelineCard(),
@@ -118,7 +109,11 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   AttentionCard(entries: summary.attention),
                   const SizedBox(height: AppSpacing.lg),
-                  AiSummaryCard(summary: summary),
+                  AiSummaryCard(
+                    summary: coachingSummary,
+                    onRetry: () =>
+                        ref.invalidate(dashboardAiCoachingSummaryProvider),
+                  ),
                 ],
               ],
             );
