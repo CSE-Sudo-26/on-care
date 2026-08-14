@@ -54,12 +54,6 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
     _Metric.sugar => l.dietUnitG,
   };
 
-  Color _color(_Metric m) => switch (m) {
-    _Metric.calories => FigmaColors.primary,
-    _Metric.sodium => FigmaColors.orange,
-    _Metric.sugar => FigmaColors.sugarPurple,
-  };
-
   double _valueOf(DietPeriodDay d, _Metric m) => switch (m) {
     _Metric.calories => d.calories.toDouble(),
     _Metric.sodium => d.sodiumMg.toDouble(),
@@ -212,7 +206,10 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                   period: period,
                   metricLabel: _label(l, _metric),
                   unit: _unit(l, _metric),
-                  color: _color(_metric),
+                  // 세 지표가 같은 파랑을 쓴다. 지표마다 색이 다르면 같은
+                  // 카드 안에서 버튼(파랑 통일)과 그래프가 서로 다른 말을
+                  // 한다 — 목표를 넘긴 막대만 색으로 튄다(#694).
+                  color: FigmaColors.primary,
                   average: _averageOf(period, _metric),
                   goal: _goalOf(_metric).toDouble(),
                   total: period.days.fold<double>(
