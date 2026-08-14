@@ -215,7 +215,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             '${dateLabel(l, request.preferredDate)} · '
             '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
           ),
-          if (request.gymName != null) _line(l.consultGym, request.gymName!),
           if (request.message != null) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             Text(

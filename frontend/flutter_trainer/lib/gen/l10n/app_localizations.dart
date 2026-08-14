@@ -1118,12 +1118,6 @@ abstract class AppLocalizations {
   /// **'Preferred time'**
   String get consultPreferredTime;
 
-  /// No description provided for @consultGym.
-  ///
-  /// In en, this message translates to:
-  /// **'Gym'**
-  String get consultGym;
-
   /// No description provided for @consultReject.
   ///
   /// In en, this message translates to:

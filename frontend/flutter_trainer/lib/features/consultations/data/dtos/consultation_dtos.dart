@@ -54,7 +54,6 @@ ConsultationRequest consultationRequestFromJson(Map<String, Object?> json) {
     preferredTimeCode: _str(json['preferred_time_slot']),
     message: _nullable(json['message']),
     status: _str(json['status']),
-    gymName: _nullable(json['gym_name']),
     decisionNote: _nullable(json['decision_note']),
   );
 }

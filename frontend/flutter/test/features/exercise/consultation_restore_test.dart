@@ -47,7 +47,6 @@ void main() {
   test('서버 응답이 엔티티로 복원된다', () {
     final r = consultationFromJson(_serverRow);
     expect(r.id, 'consult-abc123');
-    expect(r.targetType, ConsultationTargetType.trainer);
     expect(r.trainerName, '김트레이너');
     // 라벨이 아니라 계약 enum 이어야 화면이 현지화 문구를 만들 수 있다.
     expect(r.exerciseGoal, ExerciseGoal.weightLoss);

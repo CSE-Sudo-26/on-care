@@ -42,9 +42,6 @@ const AppConfig _config = AppConfig(
 ConsultationRequest _request({String trainerId = 'trainer-consult'}) {
   return ConsultationRequest(
     id: 'request-$trainerId',
-    targetType: ConsultationTargetType.trainer,
-    gymId: _gym.id,
-    gymName: _gym.name,
     trainerId: trainerId,
     trainerName: _trainer.name,
     trainerRole: _trainer.role,

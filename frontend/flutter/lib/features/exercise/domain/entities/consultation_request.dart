@@ -1,15 +1,10 @@
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 
-enum ConsultationTargetType { gym, trainer }
-
 enum ConsultationStatus { pending, accepted, rejected }
 
 class ConsultationRequest {
   const ConsultationRequest({
     required this.id,
-    required this.targetType,
-    required this.gymId,
-    required this.gymName,
     required this.trainerId,
     required this.trainerName,
     required this.trainerRole,
@@ -29,9 +24,6 @@ class ConsultationRequest {
   /// 앱과 이어지지 않는다(#327).
   ConsultationRequest copyWith({String? id}) => ConsultationRequest(
     id: id ?? this.id,
-    targetType: targetType,
-    gymId: gymId,
-    gymName: gymName,
     trainerId: trainerId,
     trainerName: trainerName,
     trainerRole: trainerRole,
@@ -48,12 +40,8 @@ class ConsultationRequest {
   );
 
   final String id;
-  final ConsultationTargetType targetType;
-  final String gymId;
-  final String gymName;
 
-  /// Set for trainer-target requests. A gym has several trainers, so pending
-  /// state must be matched on this rather than on [gymId].
+  /// 상담을 받는 트레이너. 요청은 트레이너 한 사람 앞으로만 간다.
   final String? trainerId;
   final String? trainerName;
   final String? trainerRole;
@@ -86,18 +74,10 @@ class ConsultationRequest {
 
 /// `GET /consultations/me` 응답 → 엔티티. (#327)
 ConsultationRequest consultationFromJson(Map<String, Object?> j) {
-  // 새 요청은 언제나 트레이너 대상이다. `gym` 은 폐지된 갈래로, 그때 낸 요청이
-  // 목록에 남아 있어 계속 읽을 수 있어야 한다.
-  final bool isTrainer = j['target_type'] == 'trainer';
   return ConsultationRequest(
     id: j['id']! as String,
-    targetType: isTrainer
-        ? ConsultationTargetType.trainer
-        : ConsultationTargetType.gym,
-    gymId: (j['gym_id'] as String?) ?? '',
-    // 대상이 지워지면 서버가 이름을 못 준다 — 빈 문자열로 두고 화면이 처리한다.
-    gymName: (j['gym_name'] as String?) ?? '',
     trainerId: j['trainer_id'] as String?,
+    // 트레이너가 지워지면 서버가 이름을 못 준다 — null 로 두고 화면이 처리한다.
     trainerName: j['trainer_name'] as String?,
     // 서버는 트레이너 직함을 상담 응답에 담지 않는다. 목록 카드는 이름만 쓴다.
     trainerRole: null,

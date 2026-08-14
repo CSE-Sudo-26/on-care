@@ -578,9 +578,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultPreferredTime => 'Preferred time';
 
   @override
-  String get consultGym => 'Gym';
-
-  @override
   String get consultReject => 'Decline';
 
   @override

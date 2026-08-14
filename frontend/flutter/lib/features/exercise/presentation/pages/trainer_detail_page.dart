@@ -47,7 +47,6 @@ class TrainerDetailPage extends ConsumerWidget {
               ref.watch(myTrainerProvider).valueOrNull?.id == trainer.id,
           hasPending: requests.any(
             (ConsultationRequest request) =>
-                request.targetType == ConsultationTargetType.trainer &&
                 request.trainerId == trainer.id &&
                 request.status == ConsultationStatus.pending,
           ),

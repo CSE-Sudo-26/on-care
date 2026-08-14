@@ -17,7 +17,6 @@ class ConsultationRequest {
     required this.status,
     this.message,
     this.purposeDetail,
-    this.gymName,
     this.decisionNote,
   });
 
@@ -53,9 +52,6 @@ class ConsultationRequest {
 
   /// `pending` | `accepted` | `rejected`.
   final String status;
-
-  /// Gym name carried by retired gym-routed requests; null for new ones.
-  final String? gymName;
 
   /// Rejection reason, once decided.
   final String? decisionNote;

@@ -52,14 +52,9 @@ class _CompletionContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final String targetName =
-        request.targetType == ConsultationTargetType.trainer
-        ? request.trainerName ?? request.gymName
-        : request.gymName;
-    final String targetType =
-        request.targetType == ConsultationTargetType.trainer
-        ? l.exTrainerConsultType
-        : l.exGymConsultType;
+    // 트레이너 이름이 없으면(대상이 지워진 경우) 종류 문구만 남긴다.
+    final String targetName = request.trainerName ?? '';
+    final String targetType = l.exTrainerConsultType;
     final String date = MaterialLocalizations.of(
       context,
     ).formatMediumDate(request.preferredDate);

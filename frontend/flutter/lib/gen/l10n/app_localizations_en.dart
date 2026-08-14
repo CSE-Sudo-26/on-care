@@ -1531,17 +1531,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exConsultTarget => 'Consultation Target';
 
   @override
-  String get exGymConsultType => 'Gym Consultation';
-
-  @override
   String get exTrainerConsultType => 'Trainer Consultation';
 
   @override
   String get exAssignedTrainer => 'Assigned Trainer';
-
-  @override
-  String get exTrainerAssignedLater =>
-      'The gym will confirm and assign a trainer';
 
   @override
   String get exExerciseGoal => 'Exercise Goal';
