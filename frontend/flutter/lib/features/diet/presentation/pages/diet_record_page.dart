@@ -367,7 +367,15 @@ class _NutritionSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+      // 기간 탭에서는 바로 아래가 지표 버튼 줄이다. 간격을 두면 제목·버튼이
+      // 한 덩어리로 읽히지 않고 사이가 비어 보인다. 하루 탭은 아래가 기록
+      // 카드라 원래 간격을 유지한다.
+      padding: EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        period == DietPeriodTab.day ? 10 : 0,
+      ),
       child: Row(
         children: <Widget>[
           // 토글을 카드 오른쪽 끝에 붙인다 — 운동 탭 '운동 현황' 과 같은 자리라

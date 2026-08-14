@@ -120,6 +120,69 @@ void main() {
     });
   });
 
+  group('영양 요약 기간 뷰 배치 (#694)', () {
+    Future<AppLocalizations> pumpWeek(WidgetTester tester) async {
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+      await tester.pumpAndSettle();
+      return AppLocalizations.of(tester.element(find.byType(DietRecordPage)));
+    }
+
+    testWidgets('지표 버튼 셋이 모두 같은 색이다', (WidgetTester tester) async {
+      // 지표마다 색이 다르면 고르기 전부터 셋이 서로 다른 뜻을 가진 것처럼
+      // 보인다. 버튼은 '무엇을 고르는가' 만 말해야 한다.
+      final AppLocalizations l = await pumpWeek(tester);
+
+      // 고른 것과 안 고른 것의 색이 다른 건 정상이다. 비교할 것은 **각 버튼을
+      // 골랐을 때의 색** 이 셋 다 같은가다.
+      final Set<Color?> activeColors = <Color?>{};
+      for (final String label in <String>[
+        l.dietCalories,
+        l.dietSodium,
+        l.dietSugar,
+      ]) {
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        activeColors.add(tester.widget<Text>(find.text(label)).style?.color);
+      }
+
+      expect(
+        activeColors,
+        hasLength(1),
+        reason: '지표 버튼 색이 서로 다릅니다: $activeColors',
+      );
+    });
+
+    testWidgets('날짜 범위가 지표 버튼과 같은 줄에 있다', (WidgetTester tester) async {
+      // 범위가 따로 한 줄을 쓰면 제목·범위·버튼 세 줄이 되어 그래프가 밀린다.
+      final AppLocalizations l = await pumpWeek(tester);
+      final Finder range = find.textContaining(RegExp(r'~|–|-'));
+
+      final Finder rangeInRow = find.descendant(
+        of: find.ancestor(
+          of: find.text(l.dietCalories),
+          matching: find.byType(Row),
+        ),
+        matching: range,
+      );
+      expect(
+        rangeInRow,
+        findsWidgets,
+        reason: '날짜 범위가 지표 버튼과 다른 줄에 있습니다.',
+      );
+    });
+  });
+
   group('식단 탭 기간 토글', () {
     testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
