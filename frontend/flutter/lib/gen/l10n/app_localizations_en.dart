@@ -484,14 +484,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietAiFeedback => 'AI advice';
 
   @override
-  String get dietTodayMeals => 'Today\'s Meals';
+  String get dietMealLog => 'Meal Log';
 
   @override
   String get dietAddMeal => 'Add Meal';
 
   @override
-  String get dietEmptyLog =>
-      'No meals logged yet.\nAdd your first meal with a photo!';
+  String get dietEmptyLog => 'No meals logged.\nAdd a meal with a photo!';
 
   @override
   String get dietPhotoAnalysis => 'Photo Analysis';
