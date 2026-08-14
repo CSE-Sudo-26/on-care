@@ -9,9 +9,9 @@ void main() {
   Future<void> pumpChart(WidgetTester tester, {int? pendingFromIndex}) {
     return tester.pumpWidget(
       MaterialApp(
-          locale: const Locale('ko'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('ko'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: BarSeriesChart(
             values: const <int>[100, 80, 60, 40, 20, 10, 5],
@@ -84,6 +84,32 @@ void main() {
           .toList();
       expect(tracks, isNot(contains(AppColors.overTarget)));
       expect(tracks.where((c) => c == AppColors.border).length, 3);
+    });
+
+    testWidgets('missing comparison values render as unknown, not zero', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BarSeriesChart(
+              values: const <int>[0, 75],
+              labels: const <String>['지난 주', '이번 주'],
+              maxValue: 100,
+              showValues: true,
+              valueSuffix: '%',
+              missingIndices: const <int>{0},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('-'), findsOneWidget);
+      expect(find.text('0%'), findsNothing);
+      expect(find.text('75%'), findsOneWidget);
     });
   });
 }

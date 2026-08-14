@@ -25,6 +25,7 @@ class BarSeriesChart extends StatelessWidget {
     this.valueSuffix = '',
     this.showValues = false,
     this.pendingFromIndex,
+    this.missingIndices = const <int>{},
   }) : assert(values.length == labels.length, 'values/labels 길이가 달라요');
 
   /// Bar values (non-negative).
@@ -56,6 +57,12 @@ class BarSeriesChart extends StatelessWidget {
   /// no value, so a day with no data yet can't be misread as a zero.
   final int? pendingFromIndex;
 
+  /// Indices whose value is unavailable rather than zero.
+  ///
+  /// The empty track and a `-` value keep missing comparison data from being
+  /// misread as a measured zero.
+  final Set<int> missingIndices;
+
   @override
   Widget build(BuildContext context) {
     final pendingFrom = pendingFromIndex ?? values.length;
@@ -81,8 +88,13 @@ class BarSeriesChart extends StatelessWidget {
                       value: values[i],
                       ceiling: ceiling,
                       color: _colorFor(i),
-                      label: showValues ? '${values[i]}$valueSuffix' : null,
+                      label: showValues
+                          ? missingIndices.contains(i)
+                                ? '-'
+                                : '${values[i]}$valueSuffix'
+                          : null,
                       pending: i >= pendingFrom,
+                      missing: missingIndices.contains(i),
                     ),
                   ),
                 ),
@@ -134,6 +146,7 @@ class _Bar extends StatelessWidget {
     required this.color,
     required this.label,
     this.pending = false,
+    this.missing = false,
   });
 
   final int value;
@@ -149,11 +162,14 @@ class _Bar extends StatelessWidget {
   /// `overThreshold`.
   final bool pending;
 
+  /// No measurement exists for this bar.
+  final bool missing;
+
   @override
   Widget build(BuildContext context) {
     // A zero value still draws a 2px stub so the day reads as "recorded,
     // nothing done" rather than "no data".
-    final ratio = pending ? 0.0 : (value / ceiling).clamp(0.0, 1.0);
+    final ratio = pending || missing ? 0.0 : (value / ceiling).clamp(0.0, 1.0);
     return LayoutBuilder(
       builder: (context, constraints) {
         final labelHeight = label == null || pending ? 0.0 : 14.0;
@@ -181,7 +197,7 @@ class _Bar extends StatelessWidget {
             Container(
               height: (plot * ratio).clamp(2.0, plot),
               decoration: BoxDecoration(
-                color: pending ? AppColors.border : color,
+                color: pending || missing ? AppColors.border : color,
                 borderRadius: const BorderRadius.vertical(top: AppRadius.xs),
               ),
             ),

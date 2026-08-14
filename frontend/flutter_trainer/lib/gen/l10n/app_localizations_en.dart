@@ -774,9 +774,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsPrevWeek => 'Previous week';
 
   @override
-  String get reportsNextWeek => 'Next week';
-
-  @override
   String get reportsLoadFailed => 'Couldn\'t load reports';
 
   @override
@@ -2259,6 +2256,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsComparisonTitle => 'This week vs last week';
+
+  @override
+  String get reportsLastWeek => 'Last week';
+
+  @override
+  String get reportsSelectedWeek => 'Selected week';
+
+  @override
+  String get reportsBackToList => 'Client list';
 
   @override
   String get reportsPreviousLoadFailed => 'Couldn\'t load last week\'s data.';
