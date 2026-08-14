@@ -350,7 +350,6 @@
     }
   },
   "consultRejected": "Request declined",
-  "consultTargetGym": "Gym enquiry",
   "consultTargetTrainer": "Direct request",
   "consultExerciseGoal": "Training goal",
   "consultHealthPurpose": "Health purpose",

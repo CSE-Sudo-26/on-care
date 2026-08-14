@@ -168,20 +168,23 @@ def test_seeded_trainers_cover_every_gym(client):
     assert len(set(names)) == len(names), "트레이너 이름 중복"
 
 
-def test_consultation_works_for_a_discovered_gym(client):
-    """카카오 발견 헬스장이 places 에 없으면 상담이 404 로 실패한다.
+def test_consultation_works_for_a_trainer_at_a_discovered_gym(
+    client, directory_trainer
+):
+    """카카오 발견 헬스장 소속 트레이너도 상담 대상이어야 한다.
 
-    헬스장 상세의 상담 버튼은 제휴 여부를 가리지 않으므로, 발견 헬스장도 상담
-    대상이어야 화면과 백엔드가 어긋나지 않는다(#324 → #327).
+    헬스장 상세의 트레이너 목록은 제휴 여부를 가리지 않으므로, 발견 헬스장 소속만
+    상담에서 404 가 나면 화면과 백엔드가 어긋난다(#324 → #327).
     """
     from tests.test_consultations import _auth, _payload, _register_member
 
+    trainer_id = directory_trainer(gym_id="328969863")  # 빌드업짐 PT 신촌점
     _member_id, token = _register_member(client)
-    payload = _payload(gym_id="328969863")  # 빌드업짐 PT 신촌점
+    payload = _payload(trainer_id=trainer_id)
     r = client.post("/v1/consultations", headers=_auth(token), json=payload)
 
     assert r.status_code == 201, r.text
-    assert r.json()["gym_id"] == "328969863"
+    assert r.json()["trainer_id"] == trainer_id
 
 
 def test_trainer_fields_match_app_contract(client):
@@ -408,7 +411,7 @@ def test_hidden_trainer_is_also_rejected_by_consultation(client, directory_train
     r = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer_id),
+        json=_payload(trainer_id=trainer_id),
     )
     assert r.status_code == 404, r.text
 

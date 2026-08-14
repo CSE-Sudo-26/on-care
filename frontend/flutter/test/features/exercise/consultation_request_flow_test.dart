@@ -39,21 +39,15 @@ const AppConfig _config = AppConfig(
   useMockApi: true,
 );
 
-ConsultationRequest _request(ConsultationTargetType targetType) {
+ConsultationRequest _request({String trainerId = 'trainer-consult'}) {
   return ConsultationRequest(
-    id: 'request-${targetType.name}',
-    targetType: targetType,
+    id: 'request-$trainerId',
+    targetType: ConsultationTargetType.trainer,
     gymId: _gym.id,
     gymName: _gym.name,
-    trainerId: targetType == ConsultationTargetType.trainer
-        ? _trainer.id
-        : null,
-    trainerName: targetType == ConsultationTargetType.trainer
-        ? _trainer.name
-        : null,
-    trainerRole: targetType == ConsultationTargetType.trainer
-        ? _trainer.role
-        : null,
+    trainerId: trainerId,
+    trainerName: _trainer.name,
+    trainerRole: _trainer.role,
     exerciseGoal: ExerciseGoal.weightLoss,
     healthPurposeType: HealthPurposeType.chronic,
   healthPurposeDetail: null,
@@ -126,17 +120,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  test('controller blocks a duplicate target but separates target types', () async {
+  test('controller blocks a duplicate trainer but not a different one', () async {
     final ConsultationRequestController controller =
         newTestConsultationController();
 
-    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isTrue);
-    expect(await seedPending(controller, _request(ConsultationTargetType.gym)), isFalse);
-    expect(await seedPending(controller, _request(ConsultationTargetType.trainer)), isTrue);
+    expect(await seedPending(controller, _request()), isTrue);
+    expect(await seedPending(controller, _request()), isFalse);
+    // 답이 없는 트레이너 한 명이 회원을 묶어 두면 안 된다.
+    expect(
+      await seedPending(controller, _request(trainerId: 'trainer-other')),
+      isTrue,
+    );
     expect(controller.state, hasLength(2));
   });
 
-  testWidgets('gym and trainer detail CTAs show different target cards', (
+  testWidgets('gym CTA picks a trainer before opening the form', (
     WidgetTester tester,
   ) async {
     await pumpRoute(
@@ -149,12 +147,33 @@ void main() {
     await tester.tap(find.text(l.exGymConsultRequest));
     await tester.pumpAndSettle();
 
-    expect(find.text(l.exConsultRequestTitle), findsOneWidget);
-    expect(find.text(_gym.name), findsOneWidget);
-    expect(find.textContaining(l.exTrainerAssignedLater), findsOneWidget);
+    // 헬스장에서 시작해도 요청은 트레이너 한 사람 앞으로 간다 — 고르기 전에는
+    // 폼으로 넘어가지 않는다.
+    expect(find.text(l.exGymConsultPickTrainer), findsOneWidget);
+    expect(find.text(l.exConsultRequestTitle), findsNothing);
 
-    router.go(AppRoutes.trainerDetailPath(_trainer.id));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('gym-consult-trainer-picker')),
+        matching: find.text(_trainer.name),
+      ),
+    );
     await tester.pumpAndSettle();
+
+    expect(find.text(l.exConsultRequestTitle), findsOneWidget);
+    expect(find.text(_trainer.name), findsOneWidget);
+    expect(find.textContaining(_gym.name), findsOneWidget);
+  });
+
+  testWidgets('trainer detail CTA opens the form for that trainer', (
+    WidgetTester tester,
+  ) async {
+    await pumpRoute(
+      tester,
+      AppRoutes.trainerDetailPath(_trainer.id),
+      hasMyGym: false,
+    );
+    final AppLocalizations l = _localizations(tester);
     await _scrollTo(tester, find.text(l.exTrainerConsultRequest), 250);
     await tester.tap(find.text(l.exTrainerConsultRequest));
     await tester.pumpAndSettle();
@@ -170,8 +189,8 @@ void main() {
     await pumpRoute(
       tester,
       AppRoutes.consultationRequestPath(
-        targetType: ConsultationTargetType.gym.name,
         gymId: _gym.id,
+        trainerId: _trainer.id,
       ),
     );
     final AppLocalizations l = _localizations(tester);
@@ -204,8 +223,8 @@ void main() {
     await pumpRoute(
       tester,
       AppRoutes.consultationRequestPath(
-        targetType: ConsultationTargetType.gym.name,
         gymId: _gym.id,
+        trainerId: _trainer.id,
       ),
     );
     final AppLocalizations l = _localizations(tester);
@@ -276,8 +295,8 @@ void main() {
 
     router.go(
       AppRoutes.consultationRequestPath(
-        targetType: ConsultationTargetType.gym.name,
         gymId: 'missing',
+        trainerId: _trainer.id,
       ),
     );
     await tester.pumpAndSettle();

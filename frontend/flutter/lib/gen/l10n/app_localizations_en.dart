@@ -1507,7 +1507,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exConsultRequestTitle => 'Consultation Request';
 
   @override
-  String get exGymConsultRequest => 'Request a Gym Consultation';
+  String get exGymConsultRequest => 'Request a Consultation';
+
+  @override
+  String get exGymConsultPickTrainer => 'Choose a trainer';
+
+  @override
+  String get exGymConsultPickTrainerHint => 'Your request goes to one trainer.';
+
+  @override
+  String get exGymConsultNoTrainers => 'No trainers are affiliated yet.';
 
   @override
   String get exTrainerConsultRequest => 'Request a Trainer Consultation';

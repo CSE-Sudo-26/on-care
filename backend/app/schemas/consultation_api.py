@@ -6,7 +6,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+#: 저장된 요청의 대상 종류. `gym` 은 **폐지된 갈래**다 — 상담 요청은 트레이너 한
+#: 사람에게만 간다. 이미 저장된 이력에 남아 있어 응답 스키마만 두 값을 받는다.
 ConsultationTargetType = Literal["gym", "trainer"]
+#: 새 요청이 지정할 수 있는 대상. 트레이너 한 사람뿐이다.
+ConsultationCreateTargetType = Literal["trainer"]
 ExerciseGoal = Literal[
     "weight_loss", "strength", "fitness", "posture", "health", "other"
 ]
@@ -17,9 +21,17 @@ PreferredTimeSlot = Literal["morning", "afternoon", "evening", "flexible"]
 
 
 class ConsultationCreate(BaseModel):
-    target_type: ConsultationTargetType
-    gym_id: str | None = Field(default=None, max_length=64)
-    trainer_id: str | None = Field(default=None, max_length=64)
+    """새 상담 요청. 대상은 트레이너 한 사람이다.
+
+    헬스장 전체로 보내는 갈래를 없앤 이유: 소속 트레이너 누구나 받을 수 있는 요청은
+    회원이 누구에게 상담을 거는지 모른 채 보내게 되고, 인박스에서도 "내 요청"과
+    "우리 헬스장 요청"이 섞여 화면에서 구분이 안 됐다. 헬스장에서 시작하더라도
+    회원이 소속 트레이너 중 한 명을 고른 뒤에 요청이 만들어진다.
+    """
+
+    #: 생략 가능하다 — 값은 `trainer` 하나뿐이라 클라이언트가 보낼 이유가 없다.
+    target_type: ConsultationCreateTargetType = "trainer"
+    trainer_id: str = Field(max_length=64)
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType
     health_purpose_detail: str | None = Field(default=None, max_length=500)
@@ -34,9 +46,7 @@ class ConsultationCreate(BaseModel):
             raise ValueError("status는 서버에서 설정합니다.")
         return data
 
-    @field_validator(
-        "gym_id", "trainer_id", "health_purpose_detail", "message", mode="before"
-    )
+    @field_validator("health_purpose_detail", "message", mode="before")
     @classmethod
     def _normalize_optional_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -44,18 +54,18 @@ class ConsultationCreate(BaseModel):
             return value or None
         return value
 
+    @field_validator("trainer_id", mode="before")
+    @classmethod
+    def _normalize_trainer_id(cls, value: Any) -> Any:
+        """공백만 보낸 trainer_id 는 누락으로 본다 — 대상 없는 요청은 만들 수 없다."""
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("상담을 요청할 트레이너를 지정해야 합니다.")
+        return value
+
     @model_validator(mode="after")
     def _validate_target(self) -> ConsultationCreate:
-        if self.target_type == "gym":
-            if self.gym_id is None:
-                raise ValueError("헬스장 상담에는 gym_id가 필요합니다.")
-            if self.trainer_id is not None:
-                raise ValueError("헬스장 상담에는 trainer_id를 사용할 수 없습니다.")
-        else:
-            if self.trainer_id is None:
-                raise ValueError("트레이너 상담에는 trainer_id가 필요합니다.")
-            if self.gym_id is not None:
-                raise ValueError("트레이너 상담에는 gym_id를 사용할 수 없습니다.")
         if self.health_purpose_type == "other" and self.health_purpose_detail is None:
             raise ValueError("기타 건강관리 목적에는 상세 내용이 필요합니다.")
         return self
@@ -109,6 +119,8 @@ class ConsultationOut(BaseModel):
     id: str
     member_id: str
     target_type: ConsultationTargetType
+    #: 폐지된 헬스장 대상 요청의 잔재다. 새 요청은 항상 None 이며, 지난 이력을
+    #: 목록에서 그대로 읽을 수 있도록 응답에 남겨 둔다.
     gym_id: str | None
     trainer_id: str | None
     #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 대상마다 상세를 다시 조회해야
@@ -125,8 +137,7 @@ class ConsultationOut(BaseModel):
     #: 거절 사유. 트레이너가 남긴 문장이 그대로 온다. (#473)
     #:
     #: 처리자 id(`decided_by`)는 **회원 응답에 싣지 않는다** — 회원에게 필요한 것은
-    #: 결과와 이유이지 누가 눌렀는지가 아니고, 헬스장으로 보낸 문의는 소속 트레이너
-    #: 누구나 처리할 수 있어 id 를 흘리면 지정하지도 않은 트레이너를 알게 된다.
+    #: 결과와 이유이지 누가 눌렀는지가 아니다.
     decision_note: str | None = None
     #: 처리 시각. 화면이 "언제 답을 받았는지"를 보여 준다.
     decided_at: datetime | None = None
@@ -144,10 +155,7 @@ class TrainerConsultationOut(ConsultationOut):
 
     #: 요청한 회원 이름. 대상 이름과 같은 이유로 id 대신 함께 내려준다.
     member_name: str | None = None
-    #: 이 요청이 내 앞으로 온 것(False)인지, 내 소속 헬스장으로 온 것(True)인지.
-    #: 카드가 "헬스장 문의" 배지를 다는 근거이며, 트레이너 지정 요청과 섞이면
-    #: 누구를 향한 요청인지 화면에서 구분할 수 없다.
-    via_gym: bool = False
-    #: 처리한 트레이너. 헬스장 문의는 소속 트레이너 누구나 받을 수 있어, 인박스
-    #: 이력에서 "누가 가져갔는지"가 필요하다. 회원 응답에는 없는 필드다.
+    #: 처리한 트레이너. 지금은 요청 대상(`trainer_id`)과 항상 같지만, 인박스 이력이
+    #: "누가 언제 처리했는지"를 그대로 보여 줘야 해 응답에 남긴다. 회원 응답에는
+    #: 없는 필드다.
     decided_by: str | None = None

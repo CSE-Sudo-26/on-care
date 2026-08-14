@@ -8,16 +8,9 @@ ConsultationRequestController newTestConsultationController() =>
     ConsultationRequestController(const MockConsultationRepository());
 
 /// 표시용 요청에서 접수 payload 를 만든다. mock repository 는 내용을 보지 않으므로
-/// 대상(gym/trainer)만 맞으면 충분하다.
+/// 대상 트레이너만 맞으면 충분하다.
 ConsultationDraft draftFor(ConsultationRequest request) => ConsultationDraft(
-  gymId: request.targetType == ConsultationTargetType.gym
-      ? request.gymId
-      : null,
-  // gym 대상인데 trainerId 가 남아 있으면 toJson() 이 trainer 대상으로 해석해
-  // 실제 API 와 다른 payload 가 된다(리뷰 지적).
-  trainerId: request.targetType == ConsultationTargetType.trainer
-      ? request.trainerId
-      : null,
+  trainerId: request.trainerId ?? '',
   exerciseGoal: ExerciseGoal.fitness,
   healthPurposeType: HealthPurposeType.general,
   healthPurposeDetail: null,

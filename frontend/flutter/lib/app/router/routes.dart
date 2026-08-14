@@ -36,19 +36,17 @@ class AppRoutes {
   static String mySettingsPath(String section) =>
       '/my-health/settings/${Uri.encodeComponent(section)}';
 
-  /// [trainerId] is required for trainer-target consultations — a gym has
-  /// several trainers, so the gym id alone cannot identify one.
+  /// 상담 요청은 트레이너 한 사람 앞으로만 간다 — [trainerId] 는 필수다.
+  /// [gymId] 는 요청 화면이 그 트레이너의 헬스장을 함께 보여 주는 데 쓴다.
   static String consultationRequestPath({
-    required String targetType,
     required String gymId,
-    String? trainerId,
+    required String trainerId,
   }) {
     return Uri(
       path: consultationRequest,
       queryParameters: <String, String>{
-        'targetType': targetType,
         'gymId': gymId,
-        if (trainerId != null && trainerId.isNotEmpty) 'trainerId': trainerId,
+        'trainerId': trainerId,
       },
     ).toString();
   }

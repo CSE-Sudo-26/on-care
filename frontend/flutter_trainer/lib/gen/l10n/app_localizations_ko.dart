@@ -552,9 +552,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejected => '상담 요청을 반려했어요';
 
   @override
-  String get consultTargetGym => '헬스장 문의';
-
-  @override
   String get consultTargetTrainer => '트레이너 지정';
 
   @override

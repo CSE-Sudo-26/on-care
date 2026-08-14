@@ -178,19 +178,12 @@ GoRouter buildAppRouter({
       ),
       GoRoute(
         path: AppRoutes.consultationRequest,
-        builder: (context, state) {
-          final String? rawTarget = state.uri.queryParameters['targetType'];
-          final ConsultationTargetType? targetType = switch (rawTarget) {
-            'gym' => ConsultationTargetType.gym,
-            'trainer' => ConsultationTargetType.trainer,
-            _ => null,
-          };
-          return ConsultationRequestPage(
-            targetType: targetType,
-            gymId: state.uri.queryParameters['gymId'] ?? '',
-            trainerId: state.uri.queryParameters['trainerId'],
-          );
-        },
+        // 폐지된 헬스장 대상 링크(`?targetType=gym`)는 trainerId 가 없어 화면이
+        // "대상을 찾을 수 없음"으로 떨어진다 — 옛 딥링크가 죽지 않고 안내된다.
+        builder: (context, state) => ConsultationRequestPage(
+          gymId: state.uri.queryParameters['gymId'] ?? '',
+          trainerId: state.uri.queryParameters['trainerId'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.consultationComplete,

@@ -566,9 +566,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consultRejected => 'Request declined';
 
   @override
-  String get consultTargetGym => 'Gym enquiry';
-
-  @override
   String get consultTargetTrainer => 'Direct request';
 
   @override

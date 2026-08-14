@@ -33,9 +33,6 @@ class GymDetailPage extends ConsumerWidget {
       gymFinderResultsProvider,
     );
     final AsyncValue<Gym?> myGymAsync = ref.watch(myGymProvider);
-    final List<ConsultationRequest> requests = ref.watch(
-      consultationRequestControllerProvider,
-    );
 
     final Gym? nearbyGym = switch (nearbyAsync) {
       AsyncData<List<Gym>>(:final value) => _findGym(value),
@@ -48,17 +45,7 @@ class GymDetailPage extends ConsumerWidget {
     final Gym? gym = nearbyGym ?? myGym;
     final Widget body;
     if (gym != null) {
-      final bool hasPending = requests.any(
-        (ConsultationRequest request) =>
-            request.targetType == ConsultationTargetType.gym &&
-            request.gymId == gym.id &&
-            request.status == ConsultationStatus.pending,
-      );
-      body = _GymDetails(
-        gym: gym,
-        hasPending: hasPending,
-        isMyGym: myGym != null,
-      );
+      body = _GymDetails(gym: gym, isMyGym: myGym != null);
     } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
     } else if (nearbyAsync.hasError || myGymAsync.hasError) {
@@ -94,14 +81,9 @@ class GymDetailPage extends ConsumerWidget {
 }
 
 class _GymDetails extends StatelessWidget {
-  const _GymDetails({
-    required this.gym,
-    required this.hasPending,
-    required this.isMyGym,
-  });
+  const _GymDetails({required this.gym, required this.isMyGym});
 
   final Gym gym;
-  final bool hasPending;
   final bool isMyGym;
 
   @override
@@ -224,14 +206,10 @@ class _GymDetails extends StatelessWidget {
             if (!isMyGym) ...<Widget>[
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: hasPending
-                    ? null
-                    : () => context.push(
-                        AppRoutes.consultationRequestPath(
-                          targetType: ConsultationTargetType.gym.name,
-                          gymId: gym.id,
-                        ),
-                      ),
+                key: const Key('gym-consult-start'),
+                // 상담은 트레이너 한 사람에게만 간다 — 헬스장에서 시작해도 소속
+                // 트레이너 중 누구에게 보낼지 먼저 고른다.
+                onPressed: () => _pickTrainerForConsultation(context, gym),
                 style: FilledButton.styleFrom(
                   backgroundColor: FigmaColors.primary,
                   minimumSize: const Size.fromHeight(50),
@@ -240,11 +218,123 @@ class _GymDetails extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  hasPending ? l.exConsultPendingCta : l.exGymConsultRequest,
+                  l.exGymConsultRequest,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 소속 트레이너 중 상담을 보낼 한 명을 고르는 시트.
+///
+/// 헬스장 상세의 목록으로 올려보내지 않고 시트로 띄우는 이유: 목록 행을 누르면
+/// 트레이너 상세로 가야 하고(정보를 보고 고르는 동선), 여기서는 "상담을 건다"는
+/// 의도가 이미 정해져 있어 한 번 더 상세를 거치게 하면 단계만 늘어난다.
+Future<void> _pickTrainerForConsultation(BuildContext context, Gym gym) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (BuildContext sheetContext) =>
+        _TrainerPickerSheet(gym: gym),
+  );
+}
+
+class _TrainerPickerSheet extends ConsumerWidget {
+  const _TrainerPickerSheet({required this.gym});
+
+  final Gym gym;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final List<Trainer> trainers =
+        ref.watch(gymTrainersProvider(gym.id)).valueOrNull ?? const <Trainer>[];
+    final List<ConsultationRequest> requests = ref.watch(
+      consultationRequestControllerProvider,
+    );
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              l.exGymConsultPickTrainer,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.ink,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l.exGymConsultPickTrainerHint,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (trainers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  l.exGymConsultNoTrainers,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  key: const Key('gym-consult-trainer-picker'),
+                  shrinkWrap: true,
+                  itemCount: trainers.length,
+                  separatorBuilder: (_, _) => const Padding(
+                    padding: EdgeInsets.only(left: 70),
+                    child: Divider(height: 1, color: FigmaColors.hairline),
+                  ),
+                  itemBuilder: (BuildContext context, int index) {
+                    final Trainer trainer = trainers[index];
+                    // 이미 대기 중인 트레이너를 다시 누르면 서버가 409 를 준다.
+                    // 누르기 전에 상태를 보여 주고 막는다.
+                    final bool pending = requests.any(
+                      (ConsultationRequest request) =>
+                          request.trainerId == trainer.id &&
+                          request.status == ConsultationStatus.pending,
+                    );
+                    return _AffiliatedTrainerRow(
+                      trainer: trainer,
+                      trailingLabel: pending ? l.exConsultPendingCta : null,
+                      onTap: pending
+                          ? null
+                          : () {
+                              Navigator.of(context).pop();
+                              context.push(
+                                AppRoutes.consultationRequestPath(
+                                  gymId: gym.id,
+                                  trainerId: trainer.id,
+                                ),
+                              );
+                            },
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),
@@ -343,16 +433,31 @@ class _AffiliatedTrainers extends ConsumerWidget {
 }
 
 class _AffiliatedTrainerRow extends StatelessWidget {
-  const _AffiliatedTrainerRow({required this.trainer});
+  const _AffiliatedTrainerRow({
+    required this.trainer,
+    this.onTap,
+    this.trailingLabel,
+  });
 
   final Trainer trainer;
 
+  /// 기본 동작은 트레이너 상세로 가기다. 상담 트레이너 선택 시트는 여기에 자기
+  /// 동작을 넣고, 이미 대기 중이면 null 을 줘 행을 잠근다.
+  final VoidCallback? onTap;
+
+  /// 오른쪽 화살표 대신 보여 줄 상태 문구(예: "상담 요청 대기 중").
+  final String? trailingLabel;
+
   @override
   Widget build(BuildContext context) {
+    final bool locked = onTap == null && trailingLabel != null;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(AppRoutes.trainerDetailPath(trainer.id)),
+        onTap: locked
+            ? null
+            : (onTap ??
+                  () => context.push(AppRoutes.trainerDetailPath(trainer.id))),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -401,7 +506,17 @@ class _AffiliatedTrainerRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
+              if (trailingLabel != null)
+                Text(
+                  trailingLabel!,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                )
+              else
+                const Icon(Icons.chevron_right, color: FigmaColors.textFaint),
             ],
           ),
         ),

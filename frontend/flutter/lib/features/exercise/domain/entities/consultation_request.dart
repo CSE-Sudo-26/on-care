@@ -86,6 +86,8 @@ class ConsultationRequest {
 
 /// `GET /consultations/me` 응답 → 엔티티. (#327)
 ConsultationRequest consultationFromJson(Map<String, Object?> j) {
+  // 새 요청은 언제나 트레이너 대상이다. `gym` 은 폐지된 갈래로, 그때 낸 요청이
+  // 목록에 남아 있어 계속 읽을 수 있어야 한다.
   final bool isTrainer = j['target_type'] == 'trainer';
   return ConsultationRequest(
     id: j['id']! as String,

@@ -40,19 +40,13 @@ class ConsultationRequestController
     }
   }
 
-  /// [trainerId] narrows trainer-target lookups to one person — a gym has
-  /// several trainers, so a request to one must not block the others.
-  bool hasPending({
-    required ConsultationTargetType targetType,
-    required String gymId,
-    String? trainerId,
-  }) {
+  /// 대기 중인 요청은 **트레이너별**로 본다 — 한 헬스장에 트레이너가 여럿이라,
+  /// 한 명에게 낸 요청이 다른 트레이너까지 막으면 안 된다.
+  bool hasPending({required String? trainerId}) {
+    if (trainerId == null || trainerId.isEmpty) return false;
     return state.any(
       (ConsultationRequest request) =>
-          request.targetType == targetType &&
-          request.gymId == gymId &&
-          (targetType != ConsultationTargetType.trainer ||
-              request.trainerId == trainerId) &&
+          request.trainerId == trainerId &&
           request.status == ConsultationStatus.pending,
     );
   }
@@ -66,11 +60,7 @@ class ConsultationRequestController
     required ConsultationDraft draft,
     required ConsultationRequest display,
   }) async {
-    if (hasPending(
-      targetType: display.targetType,
-      gymId: display.gymId,
-      trainerId: display.trainerId,
-    )) {
+    if (hasPending(trainerId: display.trainerId)) {
       return null;
     }
 

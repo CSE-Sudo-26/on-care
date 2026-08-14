@@ -151,16 +151,8 @@ def _gym_id_of(db_session, trainer: User) -> str:
     )
 
 
-def _request_consultation(
-    client,
-    token: str,
-    *,
-    gym_id: str | None = None,
-    trainer_id: str | None = None,
-) -> str:
+def _request_consultation(client, token: str, *, trainer_id: str) -> str:
     payload = {
-        "target_type": "gym" if gym_id else "trainer",
-        "gym_id": gym_id,
         "trainer_id": trainer_id,
         "exercise_goal": "weight_loss",
         "health_purpose_type": "general",
@@ -177,29 +169,31 @@ def _request_consultation(
 # --- 인박스 조회 -----------------------------------------------------------
 
 
-def test_inbox_shows_direct_and_gym_requests(client, db_session):
-    """나를 지정한 요청과 내 소속 헬스장으로 온 요청이 함께 보인다."""
-    trainer, trainer_token = _trainer(client, db_session)
-    gym_id = _gym_id_of(db_session, trainer)
-    _, direct_member_token = _member(client)
-    _, gym_member_token = _member(client)
+def test_inbox_shows_only_requests_addressed_to_me(client, db_session):
+    """인박스에는 나를 지정한 요청만 뜬다.
 
-    direct_id = _request_consultation(
-        client, direct_member_token, trainer_id=trainer.id
+    같은 헬스장 동료에게 간 요청까지 보이면, 회원이 고른 트레이너가 아닌 사람이
+    상담을 가져갈 수 있다.
+    """
+    gym = _gym(db_session)
+    trainer, trainer_token = _trainer(client, db_session, gym=gym)
+    colleague, _ = _trainer(client, db_session, gym=gym)
+    _, member_token = _member(client)
+    _, other_member_token = _member(client)
+
+    mine = _request_consultation(client, member_token, trainer_id=trainer.id)
+    colleagues = _request_consultation(
+        client, other_member_token, trainer_id=colleague.id
     )
-    gym_id_request = _request_consultation(client, gym_member_token, gym_id=gym_id)
 
     response = client.get("/v1/trainer/consultations", headers=_auth(trainer_token))
 
     assert response.status_code == 200, response.text
-    body = response.json()
-    by_id = {item["id"]: item for item in body}
-    assert direct_id in by_id
-    assert gym_id_request in by_id
-    assert by_id[direct_id]["via_gym"] is False
-    assert by_id[gym_id_request]["via_gym"] is True
+    by_id = {item["id"]: item for item in response.json()}
+    assert mine in by_id
+    assert colleagues not in by_id
     # 카드가 회원 이름을 렌더하므로 id 만 오면 안 된다.
-    assert by_id[direct_id]["member_name"] == "상담 회원"
+    assert by_id[mine]["member_name"] == "상담 회원"
 
 
 def test_inbox_excludes_other_trainers_requests(client, db_session):
@@ -372,7 +366,9 @@ def test_accept_links_member_to_the_trainers_gym(client, db_session):
     trainer, trainer_token = _trainer(client, db_session)
     member_id, member_token = _member(client)
     gym_id = _gym_id_of(db_session, trainer)
-    consultation_id = _request_consultation(client, member_token, gym_id=gym_id)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
 
     client.post(
         f"/v1/trainer/consultations/{consultation_id}/accept",
@@ -462,43 +458,45 @@ def test_commit_decision_maps_a_constraint_race_to_already_decided():
     assert session.rolled_back is True
 
 
-def test_two_gym_trainers_both_see_the_request_and_only_one_wins(
+def test_same_gym_colleague_can_neither_see_nor_take_the_request(
     client, db_session
 ):
-    """헬스장 문의는 소속 트레이너 누구나 받는다 — 늦은 쪽은 409 여야 한다.
+    """같은 헬스장 동료라도 남에게 간 요청은 보지도 가져가지도 못한다.
 
-    순차 호출이라 경합 자체는 재현하지 못하고(위 단위 테스트가 그 경로를 덮는다),
-    여기서는 인박스 공유 범위와 '한 명만 승인된다'는 결과 계약을 확인한다.
+    예전에는 헬스장으로 온 요청을 소속 누구나 받을 수 있어, 회원이 지목하지 않은
+    트레이너가 담당이 될 수 있었다.
     """
     gym = _gym(db_session)
-    first_trainer, first_token = _trainer(client, db_session, gym=gym)
-    second_trainer, second_token = _trainer(client, db_session, gym=gym)
+    target, target_token = _trainer(client, db_session, gym=gym)
+    colleague, colleague_token = _trainer(client, db_session, gym=gym)
     _, member_token = _member(client)
-    consultation_id = _request_consultation(client, member_token, gym_id=gym.id)
-
-    # 같은 요청이 두 트레이너의 인박스에 모두 보인다.
-    assert first_trainer.id != second_trainer.id
-    for token in (first_token, second_token):
-        inbox = client.get("/v1/trainer/consultations", headers=_auth(token))
-        assert consultation_id in {item["id"] for item in inbox.json()}
-
-    won = client.post(
-        f"/v1/trainer/consultations/{consultation_id}/accept",
-        headers=_auth(first_token),
-        json={},
-    )
-    lost = client.post(
-        f"/v1/trainer/consultations/{consultation_id}/accept",
-        headers=_auth(second_token),
-        json={},
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=target.id
     )
 
-    assert won.status_code == 200, won.text
-    assert lost.status_code == 409, lost.text
+    assert target.id != colleague.id
+    inbox = client.get(
+        "/v1/trainer/consultations", headers=_auth(colleague_token)
+    )
+    assert consultation_id not in {item["id"] for item in inbox.json()}
+
+    stolen = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(colleague_token),
+        json={},
+    )
+    mine = client.post(
+        f"/v1/trainer/consultations/{consultation_id}/accept",
+        headers=_auth(target_token),
+        json={},
+    )
+
+    assert stolen.status_code == 404, stolen.text
+    assert mine.status_code == 200, mine.text
 
 
 def test_accept_links_the_gym_for_an_existing_client(client, db_session):
-    """이미 담당 중인 회원이 헬스장 상담을 넣어도 헬스장 연결은 이뤄진다.
+    """이미 담당 중인 회원이 상담을 새로 넣어도 헬스장 연결은 이뤄진다.
 
     링크 생성과 헬스장 연결은 별개 조건이다 — 헬스장 연결을 '새 링크를 만든 경우'
     안에 두면 기존 고객은 영영 연결되지 않는다(리뷰).
@@ -513,13 +511,13 @@ def test_accept_links_the_gym_for_an_existing_client(client, db_session):
         headers=_auth(trainer_token),
         json={},
     )
-    # 담당은 이미 이 트레이너다. 헬스장 링크만 지운 뒤 헬스장 상담을 새로 넣는다.
+    # 담당은 이미 이 트레이너다. 헬스장 링크만 지운 뒤 상담을 새로 넣는다.
     db_session.query(MemberGym).filter(
         MemberGym.member_id == member_id
     ).delete(synchronize_session=False)
     db_session.commit()
 
-    second = _request_consultation(client, member_token, gym_id=gym.id)
+    second = _request_consultation(client, member_token, trainer_id=trainer.id)
     accepted = client.post(
         f"/v1/trainer/consultations/{second}/accept",
         headers=_auth(trainer_token),
@@ -625,14 +623,15 @@ def test_member_sees_the_reason_but_never_the_deciding_trainer(
 ):
     """회원 응답에는 사유·처리 시각만 싣고 처리자 id 는 싣지 않는다. (#473)
 
-    헬스장으로 보낸 문의는 소속 트레이너 누구나 처리할 수 있어, `decided_by` 를
-    흘리면 회원이 지정하지도 않은 트레이너를 알게 된다. 회원에게 필요한 것은
-    결과와 이유이지 누가 눌렀는지가 아니다.
+    회원에게 필요한 것은 결과와 이유이지 누가 눌렀는지가 아니다. 트레이너 인박스
+    쪽에는 처리 이력으로 남는다.
     """
     gym = _gym(db_session)
     trainer, trainer_token = _trainer(client, db_session, gym=gym)
     _, member_token = _member(client)
-    consultation_id = _request_consultation(client, member_token, gym_id=gym.id)
+    consultation_id = _request_consultation(
+        client, member_token, trainer_id=trainer.id
+    )
 
     client.post(
         f"/v1/trainer/consultations/{consultation_id}/reject",
