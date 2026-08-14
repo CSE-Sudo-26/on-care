@@ -427,13 +427,14 @@ class _UnsupportedBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
+        color: AppColors.brandOrange.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.brandOrange.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.info_outline, color: AppColors.warning, size: 17),
+          // 안내다. 주의가 아니므로 빨강으로 올리지 않는다(#690).
+          const Icon(Icons.info_outline, color: AppColors.brandOrange, size: 17),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

@@ -402,9 +402,12 @@ class _TypeChip extends StatelessWidget {
 
 /// Completion color scale shared by the bars and donuts: 100 = done
 /// (green), partial = orange, 0 = untouched (grey).
+///
+/// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
+/// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
 Color _rateColor(int rate) {
   if (rate >= 100) return AppColors.success;
-  if (rate > 0) return AppColors.warning;
+  if (rate > 0) return AppColors.brandOrange;
   return AppColors.borderStrong;
 }
 
@@ -509,7 +512,7 @@ class _WeekCompletionCard extends StatelessWidget {
             children: <Widget>[
               _LegendDot(color: AppColors.success, label: l.legendDone),
               const SizedBox(width: AppSpacing.md),
-              _LegendDot(color: AppColors.warning, label: l.legendPartial),
+              _LegendDot(color: AppColors.brandOrange, label: l.legendPartial),
               const SizedBox(width: AppSpacing.md),
               _LegendDot(color: AppColors.borderStrong, label: l.legendMissed),
             ],
@@ -655,7 +658,8 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
             _NoteBox(
               title: l.trainerNote,
               body: entry.trainerNote,
-              color: AppColors.warning,
+              // 노트다. 주의가 아니므로 빨강으로 올리지 않는다(#690).
+              color: AppColors.brandOrange,
             ),
           ],
           if (entry.assignedRoutineId != null) ...<Widget>[

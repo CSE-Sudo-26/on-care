@@ -2318,11 +2318,11 @@ class _NoteBox extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.06),
+        color: AppColors.brandOrange.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.all(AppRadius.md),
         border: Border(
           left: BorderSide(
-            color: AppColors.warning.withValues(alpha: 0.4),
+            color: AppColors.brandOrange.withValues(alpha: 0.4),
             width: 3,
           ),
         ),
@@ -2335,7 +2335,8 @@ class _NoteBox extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: AppColors.warning,
+              // 메모지 표시다. 주의가 아니므로 빨강으로 올리지 않는다(#690).
+              color: AppColors.brandOrange,
             ),
           ),
           const SizedBox(height: 2),

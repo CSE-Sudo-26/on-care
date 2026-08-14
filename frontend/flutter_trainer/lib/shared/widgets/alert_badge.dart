@@ -7,9 +7,12 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// The colour that carries [alert]'s meaning.
 ///
-/// 하나의 색은 하나의 뜻만: 남색 = 처리 필요, 빨강 = 목표 초과 (사용자 앱과
-/// 동일), 주황 = 완만한 주의. 답장 대기의 시급함은 색이 아니라 목록 맨 위에
-/// 오는 순서가 말한다.
+/// 하나의 색은 하나의 뜻만: 남색 = 처리 필요, 빨강 = 주의(목표 초과와 완료율
+/// 저조를 함께 포함). 답장 대기의 시급함은 색이 아니라 목록 맨 위에 오는 순서가
+/// 말한다.
+///
+/// 예전에는 완만한 주의를 주황으로 따로 두었는데, 회원이 자기 폰에서 빨갛게 보는
+/// 것을 트레이너는 주황으로 봐서 **두 앱이 같은 사실을 다른 세기로** 말했다(#690).
 Color alertColor(ClientAlert alert) => switch (alert) {
   ClientAlert.unanswered => AppColors.primary,
   ClientAlert.sodiumOver => AppColors.overTarget,
