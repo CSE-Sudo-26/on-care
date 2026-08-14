@@ -58,9 +58,7 @@ ConsultationRequest _consultation(
 }) {
   return ConsultationRequest(
     id: 'consultation-${status.name}',
-    targetType: ConsultationTargetType.trainer,
-    gymId: _gym.id,
-    gymName: _gym.name,
+
     trainerId: _trainer.id,
     trainerName: _trainer.name,
     trainerRole: _trainer.role,
@@ -291,9 +289,7 @@ void main() {
   ) async {
     final ConsultationRequest recentAcceptedRequest = ConsultationRequest(
       id: 'consultation-recent-accepted',
-      targetType: ConsultationTargetType.trainer,
-      gymId: _gym.id,
-      gymName: _gym.name,
+
       trainerId: 'another-trainer',
       trainerName: '박최근',
       trainerRole: '전담 트레이너',

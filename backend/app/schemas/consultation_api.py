@@ -6,10 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-#: 저장된 요청의 대상 종류. `gym` 은 **폐지된 갈래**다 — 상담 요청은 트레이너 한
-#: 사람에게만 간다. 이미 저장된 이력에 남아 있어 응답 스키마만 두 값을 받는다.
-ConsultationTargetType = Literal["gym", "trainer"]
-#: 새 요청이 지정할 수 있는 대상. 트레이너 한 사람뿐이다.
+#: 요청이 지정할 수 있는 대상. 트레이너 한 사람뿐이다 — 헬스장 전체로 보내는
+#: 갈래는 폐지됐고, 그때 만들어진 이력도 남아 있지 않다.
 ConsultationCreateTargetType = Literal["trainer"]
 ExerciseGoal = Literal[
     "weight_loss", "strength", "fitness", "posture", "health", "other"
@@ -118,14 +116,9 @@ class ConsultationOut(BaseModel):
 
     id: str
     member_id: str
-    target_type: ConsultationTargetType
-    #: 폐지된 헬스장 대상 요청의 잔재다. 새 요청은 항상 None 이며, 지난 이력을
-    #: 목록에서 그대로 읽을 수 있도록 응답에 남겨 둔다.
-    gym_id: str | None
     trainer_id: str | None
-    #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 대상마다 상세를 다시 조회해야
-    #: 하고, 삭제된 대상은 이름을 영영 못 만든다(#327).
-    gym_name: str | None = None
+    #: 목록 카드가 이름을 렌더한다. id 만 주면 앱이 트레이너마다 상세를 다시 조회해야
+    #: 하고, 대상이 지워지면 이름을 영영 못 만든다(#327).
     trainer_name: str | None = None
     exercise_goal: ExerciseGoal
     health_purpose_type: HealthPurposeType

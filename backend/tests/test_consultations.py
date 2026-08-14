@@ -34,9 +34,6 @@ def _cleanup_consultation_data(db_session):
         db_session.query(User).filter(User.id.in_(user_ids)).delete(
             synchronize_session=False
         )
-    db_session.query(ConsultationRequest).filter(
-        ConsultationRequest.gym_id.like(f"{TEST_PLACE_PREFIX}%")
-    ).delete(synchronize_session=False)
     db_session.query(Place).filter(
         Place.id.like(f"{TEST_PLACE_PREFIX}%")
     ).delete(synchronize_session=False)
@@ -144,10 +141,10 @@ def test_create_consultation_sets_server_fields(client, db_session):
     body = response.json()
     assert body["id"].startswith("consult-")
     assert body["member_id"] == member_id
-    # 대상은 언제나 트레이너 한 사람이고, 폐지된 헬스장 대상 컬럼은 비어 있다.
-    assert body["target_type"] == "trainer"
+    # 대상은 언제나 트레이너 한 사람이다 — 응답에 헬스장 자리는 없다.
     assert body["trainer_id"] == trainer.id
-    assert body["gym_id"] is None
+    assert "gym_id" not in body
+    assert "target_type" not in body
     assert body["status"] == "pending"
     assert body["health_purpose_detail"] == "건강 습관 개선"
     assert body["message"] == "상담을 받고 싶습니다."
@@ -190,18 +187,16 @@ def test_client_cannot_set_consultation_status(client, db_session, status):
 
 
 def test_consultation_out_validates_orm_instance():
-    """폐지된 헬스장 대상 이력도 회원 목록에서 그대로 읽혀야 한다.
+    """ORM 인스턴스가 응답 스키마로 그대로 검증된다.
 
-    응답 스키마가 `trainer` 만 받게 좁히면, 옛 요청을 가진 회원의 상담 목록이
-    통째로 500 이 된다.
+    필드가 어긋나면 목록·상세가 통째로 500 이 된다.
     """
     now = datetime.now(timezone.utc)
     consultation = ConsultationRequest(
         id="consult-orm-validation",
         member_id="user-orm-validation",
-        target_type="gym",
-        gym_id="place-orm-validation",
-        trainer_id=None,
+        target_type="trainer",
+        trainer_id="trainer-orm-validation",
         exercise_goal="health",
         health_purpose_type="general",
         health_purpose_detail=None,
@@ -401,7 +396,6 @@ def test_partial_unique_index_allows_completed_but_rejects_second_pending(
     common = {
         "member_id": member_id,
         "target_type": "trainer",
-        "gym_id": None,
         "trainer_id": _create_trainer(db_session).id,
         "exercise_goal": "health",
         "health_purpose_type": "general",
@@ -596,8 +590,8 @@ def test_consultation_out_carries_target_names(client, db_session):
 
     listed = client.get("/v1/consultations/me", headers=_auth(token)).json()
     assert listed[0]["trainer_name"] == trainer.name
-    # 대상은 트레이너뿐이라 헬스장 이름은 없다.
-    assert listed[0]["gym_name"] is None
+    # 대상은 트레이너뿐이라 응답에 헬스장 자리가 없다.
+    assert "gym_name" not in listed[0]
 
     detail = client.get(
         f"/v1/consultations/{created.json()['id']}", headers=_auth(token)

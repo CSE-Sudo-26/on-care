@@ -137,14 +137,8 @@ class _RecentConsultationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool trainerTarget =
-        request.targetType == ConsultationTargetType.trainer;
-    final String targetName = trainerTarget
-        ? request.trainerName ?? request.gymName
-        : request.gymName;
-    final String targetType = trainerTarget
-        ? l.exTrainerConsultType
-        : l.exGymConsultType;
+    final String targetName = request.trainerName ?? '';
+    final String targetType = l.exTrainerConsultType;
     final String status = switch (request.status) {
       ConsultationStatus.pending => l.exConsultPendingStatus,
       ConsultationStatus.accepted => l.exConsultAcceptedStatus,
@@ -175,8 +169,8 @@ class _RecentConsultationSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  trainerTarget ? Icons.person_outline : Icons.fitness_center,
+                child: const Icon(
+                  Icons.person_outline,
                   size: 21,
                   color: FigmaColors.primary,
                 ),
@@ -223,9 +217,9 @@ class _RecentConsultationSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      trainerTarget
-                          ? '$targetType · ${request.gymName}'
-                          : targetType,
+                      // 서버가 트레이너 대상 요청에 헬스장 이름을 주지 않아, 예전에는
+                      // 앱을 다시 열면 "트레이너 상담 · " 로 뒤가 비어 보였다.
+                      targetType,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

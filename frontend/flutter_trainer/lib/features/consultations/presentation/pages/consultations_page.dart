@@ -198,8 +198,6 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                           '${dateLabel(l, request.preferredDate)} '
                           '${label(preferredTimeLabels(l), request.preferredTimeCode)}',
                     ),
-                    if (request.gymName != null)
-                      _Field(label: l.consultGym, value: request.gymName!),
                   ],
                 ),
               ),

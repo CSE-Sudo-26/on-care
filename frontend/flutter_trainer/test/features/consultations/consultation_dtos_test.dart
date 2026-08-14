@@ -15,7 +15,6 @@ Map<String, Object?> _json({
   Object? slot = 'evening',
   Object? message = '  상담 부탁드립니다.  ',
   Object? status = 'pending',
-  Object? gymName,
   Object? note,
 }) => <String, Object?>{
   'id': 'consult-1',
@@ -28,7 +27,6 @@ Map<String, Object?> _json({
   'preferred_time_slot': slot,
   'message': message,
   'status': status,
-  'gym_name': gymName,
   'decision_note': note,
 };
 
@@ -80,17 +78,11 @@ void main() {
     expect(request.preferredDate, DateTime.fromMillisecondsSinceEpoch(0));
   });
 
-  test('carries the retired gym name and the decision note', () {
-    // 폐지된 헬스장 대상 요청이 이력에 남아 있어, 옛 응답도 그대로 읽혀야 한다.
+  test('carries the decision note', () {
     final request = consultationRequestFromJson(
-      _json(
-        gymName: '온케어짐 신촌점',
-        status: 'rejected',
-        note: '정원이 찼어요',
-      ),
+      _json(status: 'rejected', note: '정원이 찼어요'),
     );
 
-    expect(request.gymName, '온케어짐 신촌점');
     expect(request.isPending, isFalse);
     expect(request.decisionNote, '정원이 찼어요');
   });

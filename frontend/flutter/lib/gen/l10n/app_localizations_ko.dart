@@ -1497,16 +1497,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exConsultTarget => '상담 대상';
 
   @override
-  String get exGymConsultType => '헬스장 상담';
-
-  @override
   String get exTrainerConsultType => '트레이너 상담';
 
   @override
   String get exAssignedTrainer => '담당 트레이너';
-
-  @override
-  String get exTrainerAssignedLater => '헬스장에서 확인 후 배정돼요';
 
   @override
   String get exExerciseGoal => '운동 목표';

@@ -18,9 +18,6 @@ import '../../support/consultation_test_support.dart';
 
 final ConsultationRequest _pendingRequest = ConsultationRequest(
   id: 'request-user-a',
-  targetType: ConsultationTargetType.trainer,
-  gymId: 'gym-1',
-  gymName: 'A 사용자 상담 헬스장',
   trainerId: 'trainer-1',
   trainerName: 'A 사용자 상담 트레이너',
   trainerRole: '퍼스널 트레이너',

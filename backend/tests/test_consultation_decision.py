@@ -71,9 +71,6 @@ def _cleanup(db_session):
         db_session.query(User).filter(User.id.in_(user_ids)).delete(
             synchronize_session=False
         )
-    db_session.query(ConsultationRequest).filter(
-        ConsultationRequest.gym_id.like(f"{PLACE_PREFIX}%")
-    ).delete(synchronize_session=False)
     db_session.query(MemberGym).filter(
         MemberGym.gym_id.like(f"{PLACE_PREFIX}%")
     ).delete(synchronize_session=False)

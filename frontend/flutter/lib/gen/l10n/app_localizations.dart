@@ -2828,12 +2828,6 @@ abstract class AppLocalizations {
   /// **'Consultation Target'**
   String get exConsultTarget;
 
-  /// No description provided for @exGymConsultType.
-  ///
-  /// In en, this message translates to:
-  /// **'Gym Consultation'**
-  String get exGymConsultType;
-
   /// No description provided for @exTrainerConsultType.
   ///
   /// In en, this message translates to:
@@ -2845,12 +2839,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assigned Trainer'**
   String get exAssignedTrainer;
-
-  /// No description provided for @exTrainerAssignedLater.
-  ///
-  /// In en, this message translates to:
-  /// **'The gym will confirm and assign a trainer'**
-  String get exTrainerAssignedLater;
 
   /// No description provided for @exExerciseGoal.
   ///

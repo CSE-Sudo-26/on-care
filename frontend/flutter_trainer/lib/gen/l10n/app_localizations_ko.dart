@@ -680,9 +680,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultPreferredTime => '희망 일시';
 
   @override
-  String get consultGym => '문의 헬스장';
-
-  @override
   String get consultReject => '거절';
 
   @override

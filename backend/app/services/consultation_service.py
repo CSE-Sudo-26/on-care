@@ -110,10 +110,9 @@ def create_consultation(
     consultation = ConsultationRequest(
         id=f"consult-{uuid.uuid4().hex[:12]}",
         member_id=member_id,
+        # 값은 하나뿐이지만 컬럼은 남아 있다 — 대기 중복을 막는 부분 유니크 인덱스
+        # (`uq_consultation_requests_pending_trainer`)의 조건이 이 값을 본다.
         target_type="trainer",
-        # 헬스장 대상 요청은 폐지됐다. 컬럼은 지난 이력을 위해 남아 있을 뿐이라
-        # 새 요청은 언제나 비운다.
-        gym_id=None,
         trainer_id=payload.trainer_id,
         exercise_goal=payload.exercise_goal,
         health_purpose_type=payload.health_purpose_type,
@@ -159,20 +158,12 @@ def _notify_trainer_of_new_request(
 
 
 def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[ConsultationOut]:
-    """상담 목록에 대상 이름을 붙인다. (#327)
+    """상담 목록에 대상 트레이너 이름을 붙인다. (#327)
 
-    앱 목록 카드가 헬스장·트레이너 이름을 렌더하므로 id 만 주면 대상마다 상세를 다시
-    조회해야 한다. 대상별로 한 번씩 모아 읽어 N+1 을 피한다.
+    앱 목록 카드가 이름을 렌더하므로 id 만 주면 카드마다 트레이너 상세를 다시 조회해야
+    한다. 한 번에 모아 읽어 N+1 을 피한다.
     """
-    gym_ids = {r.gym_id for r in rows if r.gym_id}
     trainer_ids = {r.trainer_id for r in rows if r.trainer_id}
-
-    gym_names: dict[str, str] = {}
-    if gym_ids:
-        gym_names = {
-            p.id: p.name
-            for p in db.scalars(select(Place).where(Place.id.in_(gym_ids))).all()
-        }
     trainer_names: dict[str, str] = {}
     if trainer_ids:
         trainer_names = {
@@ -183,8 +174,7 @@ def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[Co
     out: list[ConsultationOut] = []
     for row in rows:
         item = ConsultationOut.model_validate(row)
-        # 대상이 지워졌으면 이름은 None 으로 남는다 — 앱이 폴백 문구를 쓴다.
-        item.gym_name = gym_names.get(row.gym_id or "")
+        # 트레이너가 지워졌으면 이름은 None 으로 남는다 — 앱이 폴백 문구를 쓴다.
         item.trainer_name = trainer_names.get(row.trainer_id or "")
         out.append(item)
     return out

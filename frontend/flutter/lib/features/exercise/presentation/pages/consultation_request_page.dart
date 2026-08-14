@@ -137,9 +137,6 @@ class _ConsultationRequestPageState
     final String message = _messageController.text.trim();
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
-      targetType: ConsultationTargetType.trainer,
-      gymId: gym.id,
-      gymName: gym.name,
       trainerId: trainer.id,
       trainerName: trainer.name,
       trainerRole: trainer.role,
