@@ -1126,6 +1126,21 @@ def trainer_client_ai_coach_history(
 
 # ---- 주간 리포트 (트레이너 → 회원) ----
 
+def _report_week(day: str) -> _date:
+    """리포트 주차를 검증해 그 주의 월요일로 정규화한다.
+
+    아직 오지 않은 주는 거부한다 — 값이 전부 0 인 리포트를 만들어 회원에게
+    보낼 수 있고, 화면에도 다음 주로 가는 길이 없다.
+    """
+    if not _is_ymd(day):
+        raise HTTPException(status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다.")
+    week = trainer_service.week_start_of(_date.fromisoformat(day))
+    today = _date.fromisoformat(trainer_service.today_iso())
+    if week > trainer_service.week_start_of(today):
+        raise HTTPException(status_code=422, detail="아직 오지 않은 주는 조회할 수 없습니다.")
+    return week
+
+
 @router.get("/trainer/clients/{member_id}/report", response_model=WeeklyReportOut)
 def trainer_client_report(
     member_id: str,
@@ -1135,11 +1150,8 @@ def trainer_client_report(
 ) -> WeeklyReportOut:
     """담당 고객의 주간 리포트. 아무 요일을 줘도 그 주의 월요일로 정규화한다."""
     _require_client(db, trainer.id, member_id)
-    day = week_start or trainer_service.today_iso()
-    if not _is_ymd(day):
-        raise HTTPException(status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다.")
     return trainer_service.build_weekly_report(
-        db, trainer.id, member_id, _date.fromisoformat(day)
+        db, trainer.id, member_id, _report_week(week_start or trainer_service.today_iso())
     )
 
 
@@ -1161,14 +1173,10 @@ def trainer_send_report(
     서버가 생성한 것이 나간다.
     """
     _require_client(db, trainer.id, member_id)
-    day = payload.week_start or trainer_service.today_iso()
-    if not _is_ymd(day):
-        raise HTTPException(status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다.")
+    week = _report_week(payload.week_start or trainer_service.today_iso())
     text = (payload.message or "").strip()
     if not text:
-        report = trainer_service.build_weekly_report(
-            db, trainer.id, member_id, _date.fromisoformat(day)
-        )
+        report = trainer_service.build_weekly_report(db, trainer.id, member_id, week)
         text = report.message
     return trainer_service.send_message(
         db, trainer.id, member_id, "trainer", text,

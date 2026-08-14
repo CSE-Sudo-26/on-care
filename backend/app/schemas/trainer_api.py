@@ -749,6 +749,12 @@ class WeeklyReportOut(BaseModel):
     completion_avg: int | None   # 기록이 없으면 null (0% 아님)
     sodium_over_days: int
     sodium_avg: int | None
+    #: 그 주(월→일)의 요일별 값. 로스터의 같은 이름 필드는 **이번 주** 것이라
+    #: 과거 주 화면에 쓸 수 없다 — 리포트는 자기 주의 계열을 직접 들고 온다(#752).
+    week_completion: list[int] = Field(default_factory=list)
+    sodium_week: list[int] = Field(default_factory=list)
+    calories_week: list[int] = Field(default_factory=list)
+    sugar_week: list[float] = Field(default_factory=list)
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)
 
 

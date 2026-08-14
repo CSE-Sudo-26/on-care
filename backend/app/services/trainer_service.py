@@ -2506,12 +2506,15 @@ def build_weekly_report(
             DietEntry.date <= sunday_str,
         )
     ).all()
-    sodium_by_day: dict[str, int] = defaultdict(int)
-    for e in diet:
-        sodium_by_day[e.date] += int(e.sodium_mg or 0)
-    daily = list(sodium_by_day.values())
-    sodium_over_days = sum(1 for mg in daily if mg > SODIUM_TARGET_MG)
-    sodium_avg = round(sum(daily) / len(daily)) if daily else None
+    diet_rows = list(diet)
+    sodium_week = _sodium_week(diet_rows, monday)
+    # 기록이 있는 날만 센다 — 아직 오지 않은 요일의 0 까지 나누면 주 초반
+    # 평균이 실제보다 낮아진다(로스터의 `sodiumWeekAvg` 와 같은 규칙).
+    recorded_sodium = [mg for mg in sodium_week if mg > 0]
+    sodium_over_days = sum(1 for mg in sodium_week if mg > SODIUM_TARGET_MG)
+    sodium_avg = (
+        round(sum(recorded_sodium) / len(recorded_sodium)) if recorded_sodium else None
+    )
 
     report = WeeklyReportOut(
         member_id=member_id,
@@ -2523,6 +2526,10 @@ def build_weekly_report(
         completion_avg=completion_avg,
         sodium_over_days=sodium_over_days,
         sodium_avg=sodium_avg,
+        week_completion=week,
+        sodium_week=sodium_week,
+        calories_week=_calories_week(diet_rows, monday),
+        sugar_week=_sugar_week(diet_rows, monday),
         message="",
     )
     return report.model_copy(update={"message": report_message(report)})
