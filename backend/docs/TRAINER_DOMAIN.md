@@ -38,7 +38,7 @@
 | `trainer_clients` | 트레이너↔회원 담당 링크(로스터의 정의) |
 | `trainer_routines` | 트레이너/AI가 회원에게 배정한 루틴 |
 | `trainer_client_memos` | 트레이너가 회원별로 남긴 메모(직접 작성 + 채팅 인사이트, `0036_trainer_memos`) |
-| `trainer_program_drafts` | 트레이너가 저장해 둔 프로그램 초안(회원과 묶이지 않음, `0038_program_drafts`) |
+| `trainer_program_drafts` | 트레이너가 저장해 둔 프로그램 초안(세션 배열, 회원과 묶이지 않음, `0038`+`0039`) |
 | `routine_history` | 회원 운동 완료 기록(회원 앱·PT 세션 공용 원본) |
 | `chat_messages` | 트레이너↔회원 1:1 채팅 |
 | `trainer_schedule` | 트레이너 오늘 타임라인(예약→수업→기록 루프) |
@@ -112,7 +112,8 @@
 | GET | `/trainer/clients/{member_id}/history` | 해당 회원 운동 기록(최신순) |
 | DELETE | `/trainer/me` | 트레이너 탈퇴 — 담당 회원에게 알린 뒤 계정과 딸린 데이터 삭제 (#505) |
 | GET | `/trainer/clients/{member_id}/routines` | 배정 루틴 |
-| POST | `/trainer/clients/{member_id}/routines` | 루틴 배정 |
+| POST | `/trainer/clients/{member_id}/routines` | 루틴 배정(단건) |
+| POST | `/trainer/clients/{member_id}/program` | 프로그램 배정 — 세션당 루틴 한 건 (#709) |
 | PUT | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 부분 수정(이름·시간·종류·사유) |
 | DELETE | `/trainer/clients/{member_id}/routines/{routine_id}` | 루틴 철회 |
 | GET | `/trainer/clients/{member_id}/memos` | 회원 메모 목록(최신순) |
@@ -122,7 +123,7 @@
 | GET | `/trainer/programs` | 저장한 프로그램 초안 목록(요약, 최근 수정 먼저) |
 | POST | `/trainer/programs` | 프로그램 초안 저장 |
 | GET | `/trainer/programs/{draft_id}` | 초안 상세(편집기로 불러오기) |
-| PUT | `/trainer/programs/{draft_id}` | 초안 수정(`exercises` 는 통째로 교체) |
+| PUT | `/trainer/programs/{draft_id}` | 초안 수정(`sessions` 는 통째로 교체) |
 | DELETE | `/trainer/programs/{draft_id}` | 초안 삭제 |
 | GET | `/trainer/clients/{member_id}/chat?before=&before_id=` | 채팅 스레드(커서 페이지네이션) |
 | POST | `/trainer/clients/{member_id}/chat` | 메시지 전송 (`client_request_id?`) |
@@ -184,6 +185,26 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 데이터는 없다. **기록이 없는 항목은 0 이 아니라 `null`** 로 내려간다("이행률 0%"는
 "안 했다"는 거짓말이 되므로). 전송은 별도 리포트 함이 아니라 **회원이 이미 읽고 있는
 채팅 스레드**로 들어간다.
+
+### 다중 세션 프로그램 (#709)
+
+편집기는 한 프로그램에 세션을 여러 개 만들 수 있는데 저장은 오랫동안 하나에서
+멈춰 있었다. `0039_program_sessions` 가 세 곳을 함께 넓혔다.
+
+| 곳 | 이전 | 이후 |
+|---|---|---|
+| 초안 | `session_name` + `exercises_json` | `sessions_json`(세션 배열, 순서 = 배열 순서) |
+| 배정 | 프로그램 전체가 루틴 **한 건** | 세션당 루틴 한 건 + `program_name`/`session_name`/`session_order`/`exercises_json` |
+| 일정 | `program_json` = `[{name,sets,reps,weight}]` | 항목에 `session` 추가(없으면 빈 문자열) |
+
+**세션이 하나뿐인 프로그램은 예전과 같은 모양이다** — 루틴 이름이 프로그램
+이름이고 `session_name` 이 비어 회원 화면에 없던 세션 라벨이 생기지 않는다.
+기존 행·기존 요청도 그대로 읽힌다(빠진 키는 빈 값).
+
+`client_request_id` 는 프로그램 **전체**에 대해 멱등하다. 세션마다
+`{key}#{index}` 로 나눠 저장하는데, `(trainer, member, client_request_id)` 유니크
+제약이 한 키로 여러 행을 허용하지 않기 때문이다. 재시도는 먼저 배정된 세션들을
+그대로 돌려준다 — 반쯤 겹친 배정이 남지 않는다.
 
 ### 로스터 집계 (`build_roster`)
 

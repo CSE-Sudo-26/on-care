@@ -360,6 +360,8 @@ void main() {
         'sets': 3,
         'reps': '12회',
         'weight': '60kg',
+        // 세션 구분은 항상 실린다 — 단일 세션 프로그램은 빈 문자열(#709).
+        'session': '',
       });
     },
   );
@@ -403,6 +405,7 @@ void main() {
       expect(body['client_name'], '김민수');
       expect((body['program'] as List<Object?>).single, <String, Object?>{
         'name': '스쿼트',
+        'session': '',
         'sets': 1,
         'reps': '20분',
         'weight': '-',

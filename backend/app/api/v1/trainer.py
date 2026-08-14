@@ -46,6 +46,7 @@ from app.schemas.trainer_api import (
     MemberHealthProfileOut, MemberHealthProfileUpdate,
     ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineFeedbackRequest,
+    ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
@@ -572,6 +573,38 @@ def trainer_assign_routine(
     )
 
 
+@router.post(
+    "/trainer/clients/{member_id}/program",
+    response_model=list[RoutineOut],
+    status_code=201,
+)
+def trainer_assign_program(
+    member_id: str,
+    payload: ProgramAssignRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RoutineOut]:
+    """다중 세션 프로그램을 담당 고객에게 배정한다. 세션 하나가 루틴 한 건. (#709)
+
+    세션이 하나뿐이면 결과가 단일 배정(`POST .../routines`)과 같은 모양이라,
+    회원 화면에 없던 세션 라벨이 생기지 않는다. `client_request_id` 는 프로그램
+    전체에 대해 멱등하다.
+    """
+    _require_client(db, trainer.id, member_id)
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="프로그램 이름이 필요합니다.")
+    if not any(session.exercises for session in payload.sessions):
+        # 운동이 하나도 없는 프로그램을 배정하면 회원에게 빈 루틴만 간다.
+        raise HTTPException(status_code=400, detail="운동이 하나 이상 필요합니다.")
+    return trainer_service.assign_program(
+        db, trainer.id, member_id,
+        name=name,
+        sessions=payload.sessions,
+        client_request_id=payload.client_request_id,
+    )
+
+
 @router.put(
     "/trainer/clients/{member_id}/routines/{routine_id}",
     response_model=RoutineOut,
@@ -735,7 +768,7 @@ def trainer_create_program_draft(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> TrainerProgramDraftOut:
-    """프로그램 초안 저장. 운동이 비어 있어도 저장된다(이름만 잡아 둔 상태)."""
+    """프로그램 초안 저장. 세션이 여러 개여도, 비어 있어도 저장된다."""
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="프로그램 이름이 필요합니다.")
@@ -745,8 +778,7 @@ def trainer_create_program_draft(
         goal=payload.goal.strip(),
         period=payload.period.strip(),
         memo=payload.memo,
-        session_name=payload.session_name.strip(),
-        exercises=payload.exercises,
+        sessions=payload.sessions,
     )
 
 
@@ -776,11 +808,11 @@ def trainer_update_program_draft(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> TrainerProgramDraftOut:
-    """저장된 초안 수정(부분). `exercises` 는 통째로 교체된다."""
+    """저장된 초안 수정(부분). `sessions` 는 통째로 교체된다."""
     fields = payload.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
-    for text_field in ("name", "goal", "period", "session_name"):
+    for text_field in ("name", "goal", "period"):
         if text_field in fields:
             fields[text_field] = fields[text_field].strip()
     if "name" in fields and not fields["name"]:

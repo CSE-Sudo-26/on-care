@@ -37,6 +37,25 @@ class DioTrainerRoutineRepository implements TrainerRoutineRepository {
     }
   }
 
+  /// Assigns a multi-session program in one request (#709).
+  ///
+  /// The whole program shares one `client_request_id`, so a retry after a
+  /// dropped response does not leave the member with a half-assigned program.
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {
+    try {
+      await _dio.post<List<dynamic>>(
+        '/trainer/clients/${Uri.encodeComponent(memberId)}/program',
+        data: payload,
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
   @override
   Future<void> updateRoutine(
     String memberId,

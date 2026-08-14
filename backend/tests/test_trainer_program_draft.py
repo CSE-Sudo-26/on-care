@@ -62,6 +62,14 @@ def _exercise(**overrides) -> dict:
     return base
 
 
+def _session(name: str = "세션 A", exercises: list | None = None, id_: str = "session-1") -> dict:
+    return {
+        "id": id_,
+        "name": name,
+        "exercises": [] if exercises is None else exercises,
+    }
+
+
 def _create_draft(client, token: str, **payload) -> dict:
     response = client.post(
         "/v1/trainer/programs", headers=_headers(token), json=payload
@@ -82,24 +90,27 @@ def test_draft_save_list_detail_update_contract(
         goal="체지방 감량",
         period="8주",
         memo="주 3회 기준",
-        session_name="세션 A",
-        exercises=[
-            _exercise(),
-            _exercise(
-                id="exercise-3",
-                name="인터벌 유산소",
-                sets="",
-                reps="",
-                duration="20",
-                type="유산소",
-                source="ai",
-            ),
+        sessions=[
+            _session(
+                exercises=[
+                    _exercise(),
+                    _exercise(
+                        id="exercise-3",
+                        name="인터벌 유산소",
+                        sets="",
+                        reps="",
+                        duration="20",
+                        type="유산소",
+                        source="ai",
+                    ),
+                ]
+            )
         ],
     )
     cleanup_drafts.append(created["id"])
     assert created["name"] == name
-    assert created["session_name"] == "세션 A"
-    assert len(created["exercises"]) == 2
+    assert created["sessions"][0]["name"] == "세션 A"
+    assert len(created["sessions"][0]["exercises"]) == 2
 
     listed = client.get("/v1/trainer/programs", headers=_headers(trainer_token))
     assert listed.status_code == 200, listed.text
@@ -108,9 +119,10 @@ def test_draft_save_list_detail_update_contract(
     )
     assert summary["name"] == name
     assert summary["goal"] == "체지방 감량"
+    assert summary["session_count"] == 1
     assert summary["exercise_count"] == 2
-    # 목록은 운동 구성을 싣지 않는다.
-    assert "exercises" not in summary
+    # 목록은 세션·운동 구성을 싣지 않는다.
+    assert "sessions" not in summary
 
     detail = client.get(
         f"/v1/trainer/programs/{created['id']}", headers=_headers(trainer_token)
@@ -123,13 +135,19 @@ def test_draft_save_list_detail_update_contract(
         headers=_headers(trainer_token),
         json={
             "name": f"{name} (수정)",
-            "exercises": [_exercise(id="exercise-9", name="스쿼트", sets="5")],
+            "sessions": [
+                _session(
+                    exercises=[_exercise(id="exercise-9", name="스쿼트", sets="5")]
+                )
+            ],
         },
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["name"] == f"{name} (수정)"
-    # exercises 는 통째로 교체된다.
-    assert [e["name"] for e in updated.json()["exercises"]] == ["스쿼트"]
+    # sessions 는 통째로 교체된다.
+    assert [
+        e["name"] for e in updated.json()["sessions"][0]["exercises"]
+    ] == ["스쿼트"]
     # 보내지 않은 필드는 그대로다.
     assert updated.json()["period"] == "8주"
 
@@ -137,7 +155,7 @@ def test_draft_save_list_detail_update_contract(
         f"/v1/trainer/programs/{created['id']}", headers=_headers(trainer_token)
     ).json()
     assert reread["name"] == f"{name} (수정)"
-    assert [e["name"] for e in reread["exercises"]] == ["스쿼트"]
+    assert [e["name"] for e in reread["sessions"][0]["exercises"]] == ["스쿼트"]
 
 
 def test_reopened_draft_keeps_every_editor_value(
@@ -162,15 +180,14 @@ def test_reopened_draft_keeps_every_editor_value(
         client,
         trainer_token,
         name=f"값 보존 {uuid4().hex[:6]}",
-        session_name="세션 B",
-        exercises=[written],
+        sessions=[_session(name="세션 B", exercises=[written])],
     )
     cleanup_drafts.append(created["id"])
 
     restored = client.get(
         f"/v1/trainer/programs/{created['id']}", headers=_headers(trainer_token)
-    ).json()["exercises"]
-    assert restored == [written]
+    ).json()["sessions"]
+    assert restored == [_session(name="세션 B", exercises=[written])]
 
 
 def test_a_draft_without_exercises_is_saved(
@@ -178,10 +195,10 @@ def test_a_draft_without_exercises_is_saved(
 ):
     """이름만 잡아 둔 상태도 초안이다 — 저장하지 못하면 기능이 반쪽이 된다."""
     created = _create_draft(
-        client, trainer_token, name=f"이름만 {uuid4().hex[:6]}", exercises=[]
+        client, trainer_token, name=f"이름만 {uuid4().hex[:6]}", sessions=[]
     )
     cleanup_drafts.append(created["id"])
-    assert created["exercises"] == []
+    assert created["sessions"] == []
 
     summary = next(
         item
@@ -190,6 +207,7 @@ def test_a_draft_without_exercises_is_saved(
         ).json()
         if item["id"] == created["id"]
     )
+    assert summary["session_count"] == 0
     assert summary["exercise_count"] == 0
 
 
@@ -228,14 +246,20 @@ def test_invalid_draft_input_is_rejected(client, trainer_token, cleanup_drafts):
     unknown_type = client.post(
         "/v1/trainer/programs",
         headers=_headers(trainer_token),
-        json={"name": "잘못된 유형", "exercises": [_exercise(type="Strength")]},
+        json={
+            "name": "잘못된 유형",
+            "sessions": [_session(exercises=[_exercise(type="Strength")])],
+        },
     )
     assert unknown_type.status_code == 422
 
     unknown_source = client.post(
         "/v1/trainer/programs",
         headers=_headers(trainer_token),
-        json={"name": "잘못된 출처", "exercises": [_exercise(source="import")]},
+        json={
+            "name": "잘못된 출처",
+            "sessions": [_session(exercises=[_exercise(source="import")])],
+        },
     )
     assert unknown_source.status_code == 422
 

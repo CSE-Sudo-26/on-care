@@ -2230,7 +2230,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorDefaultSession => '세션 A';
 
   @override
-  String get programEditorSaveUnsupported => '세션이 하나이고 이름이 있는 프로그램만 저장할 수 있어요';
+  String get programEditorSaveUnsupported => '프로그램 이름을 입력해 주세요';
 
   @override
   String get programEditorSaveEdit => '수정 저장';
@@ -2273,7 +2273,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programDraftDeleteBody => '이미 배정한 루틴과 등록한 일정은 그대로 남아요.';
 
   @override
-  String get programEditorAssignUnsupported => '현재 서버는 평면 루틴 배정만 지원해요.';
+  String get programEditorAssignUnsupported => '운동 이름과 세트 수를 확인해 주세요';
 
   @override
   String get programEditorAssign => '고객에게 배정';
@@ -2309,10 +2309,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String programEditorSessionName(String letter) {
     return '세션 $letter';
   }
-
-  @override
-  String get programEditorLocalBanner =>
-      '세션 하나짜리 프로그램은 저장하고 다시 불러올 수 있어요. 다중 세션 저장·배정은 아직 준비 중이에요.';
 
   @override
   String get programEditorSessionUp => '세션 위로 이동';

@@ -11,6 +11,7 @@ class TrainerProgramDraftSummary {
     required this.name,
     required this.goal,
     required this.period,
+    required this.sessionCount,
     required this.exerciseCount,
     required this.updatedAt,
   });
@@ -19,6 +20,7 @@ class TrainerProgramDraftSummary {
   final String name;
   final String goal;
   final String period;
+  final int sessionCount;
   final int exerciseCount;
   final DateTime updatedAt;
 
@@ -28,6 +30,7 @@ class TrainerProgramDraftSummary {
         name: json['name'] as String? ?? '',
         goal: json['goal'] as String? ?? '',
         period: json['period'] as String? ?? '',
+        sessionCount: (json['session_count'] as num?)?.toInt() ?? 0,
         exerciseCount: (json['exercise_count'] as num?)?.toInt() ?? 0,
         updatedAt: DateTime.parse(json['updated_at']! as String),
       );
@@ -37,16 +40,16 @@ class TrainerProgramDraftSummary {
     'name': name,
     'goal': goal,
     'period': period,
+    'session_count': sessionCount,
     'exercise_count': exerciseCount,
     'updated_at': updatedAt.toIso8601String(),
   };
 }
 
-/// A saved program draft with its full exercise list.
+/// A saved program draft with every session and its exercises.
 ///
-/// **One session only.** Saving multi-session programs is a follow-up to
-/// #708, so the server contract carries a single session and the editor
-/// keeps its multi-session drafts local until then.
+/// Session order is array order on both sides (#709), so a reopened draft
+/// renders in the order it was saved without re-sorting.
 class TrainerProgramDraft {
   const TrainerProgramDraft({
     required this.id,
@@ -54,8 +57,7 @@ class TrainerProgramDraft {
     required this.goal,
     required this.period,
     required this.memo,
-    required this.sessionName,
-    required this.exercises,
+    required this.sessions,
     required this.updatedAt,
   });
 
@@ -64,8 +66,7 @@ class TrainerProgramDraft {
   final String goal;
   final String period;
   final String memo;
-  final String sessionName;
-  final List<ProgramExerciseDraft> exercises;
+  final List<ProgramSessionDraft> sessions;
   final DateTime updatedAt;
 
   factory TrainerProgramDraft.fromJson(Map<String, Object?> json) =>
@@ -75,15 +76,15 @@ class TrainerProgramDraft {
         goal: json['goal'] as String? ?? '',
         period: json['period'] as String? ?? '',
         memo: json['memo'] as String? ?? '',
-        sessionName: json['session_name'] as String? ?? '',
-        exercises:
-            ((json['exercises'] as List<Object?>?) ?? const <Object?>[])
-                .map(
-                  (item) => programExerciseFromJson(
-                    (item! as Map<Object?, Object?>).cast<String, Object?>(),
-                  ),
-                )
-                .toList(),
+        sessions: <ProgramSessionDraft>[
+          for (final (index, item) in
+              ((json['sessions'] as List<Object?>?) ?? const <Object?>[])
+                  .indexed)
+            programSessionFromJson(
+              (item! as Map<Object?, Object?>).cast<String, Object?>(),
+              index: index,
+            ),
+        ],
         updatedAt: DateTime.parse(
           json['updated_at'] as String? ?? json['created_at']! as String,
         ),
@@ -95,25 +96,39 @@ class TrainerProgramDraft {
     'goal': goal,
     'period': period,
     'memo': memo,
-    'session_name': sessionName,
-    'exercises': exercises.map(programExerciseToJson).toList(),
+    'sessions': sessions.map(programSessionToJson).toList(),
     'updated_at': updatedAt.toIso8601String(),
   };
 
   /// Rebuilds the editor state so a reopened draft renders exactly as it was
-  /// saved — including which items came from the AI (`source`).
+  /// saved — session order, session names, and which items came from the AI.
+  ///
+  /// A draft saved with no sessions at all still opens with one empty session:
+  /// the editor has no representation for "no sessions" and would crash on
+  /// `sessions.first`.
   ProgramEditorState toEditorState({required String fallbackSessionName}) =>
       ProgramEditorState(
         name: name,
         goal: goal,
         period: period,
         memo: memo,
-        sessions: <ProgramSessionDraft>[
-          ProgramSessionDraft(
-            id: 'session-1',
-            name: sessionName.isEmpty ? fallbackSessionName : sessionName,
-            exercises: exercises,
-          ),
-        ],
+        sessions: sessions.isEmpty
+            ? <ProgramSessionDraft>[
+                ProgramSessionDraft(
+                  id: 'session-1',
+                  name: fallbackSessionName,
+                  exercises: const <ProgramExerciseDraft>[],
+                ),
+              ]
+            : <ProgramSessionDraft>[
+                for (final (index, session) in sessions.indexed)
+                  ProgramSessionDraft(
+                    id: session.id,
+                    name: session.name.isEmpty
+                        ? '$fallbackSessionName ${index + 1}'
+                        : session.name,
+                    exercises: session.exercises,
+                  ),
+              ],
       );
 }

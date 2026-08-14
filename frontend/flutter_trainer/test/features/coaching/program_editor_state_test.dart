@@ -19,17 +19,17 @@ void main() {
   }
 
   test('flat routine support follows the backend item constraints', () {
-    expect(draftWith(name: ' 스쿼트 ', sets: '3').supportsFlatRoutine, isTrue);
-    expect(draftWith(name: ' ', sets: '3').supportsFlatRoutine, isFalse);
+    expect(draftWith(name: ' 스쿼트 ', sets: '3').supportsAssignment, isTrue);
+    expect(draftWith(name: ' ', sets: '3').supportsAssignment, isFalse);
     expect(
       draftWith(
         name: List<String>.filled(101, '운동').join(),
         sets: '3',
-      ).supportsFlatRoutine,
+      ).supportsAssignment,
       isFalse,
     );
-    expect(draftWith(name: '스쿼트', sets: '').supportsFlatRoutine, isFalse);
-    expect(draftWith(name: '스쿼트', sets: '100').supportsFlatRoutine, isFalse);
+    expect(draftWith(name: '스쿼트', sets: '').supportsAssignment, isFalse);
+    expect(draftWith(name: '스쿼트', sets: '100').supportsAssignment, isFalse);
   });
 
   test('flat routine support rejects structures the API cannot represent', () {
@@ -47,7 +47,7 @@ void main() {
       ],
     );
 
-    expect(empty.supportsFlatRoutine, isFalse);
-    expect(multiple.supportsFlatRoutine, isFalse);
+    expect(empty.supportsAssignment, isFalse);
+    expect(multiple.supportsAssignment, isFalse);
   });
 }

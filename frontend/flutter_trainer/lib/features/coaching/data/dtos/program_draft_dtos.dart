@@ -59,22 +59,60 @@ ProgramExerciseDraft programExerciseFromJson(Map<String, Object?> json) =>
       source: json['source'] as String? ?? 'trainer',
     );
 
+/// [ProgramSessionDraft] → `ProgramDraftSession` JSON.
+Map<String, Object?> programSessionToJson(ProgramSessionDraft session) =>
+    <String, Object?>{
+      'id': _cap(session.id, 64),
+      'name': _cap(session.name, _kNameMax),
+      'exercises': <Map<String, Object?>>[
+        for (final exercise in session.exercises)
+          programExerciseToJson(exercise),
+      ],
+    };
+
+/// `ProgramDraftSession` JSON → [ProgramSessionDraft].
+ProgramSessionDraft programSessionFromJson(
+  Map<String, Object?> json, {
+  required int index,
+}) => ProgramSessionDraft(
+  id: json['id'] as String? ?? 'session-${index + 1}',
+  name: json['name'] as String? ?? '',
+  exercises:
+      ((json['exercises'] as List<Object?>?) ?? const <Object?>[])
+          .map(
+            (item) => programExerciseFromJson(
+              (item! as Map<Object?, Object?>).cast<String, Object?>(),
+            ),
+          )
+          .toList(),
+);
+
 /// [ProgramEditorState] → create/update payload.
 ///
-/// Only the first session goes to the server — multi-session saving is a
-/// follow-up to #708, and the editor blocks the save button for drafts that
-/// have more than one.
-Map<String, Object?> programDraftToJson(ProgramEditorState draft) {
-  final session = draft.sessions.isEmpty ? null : draft.sessions.first;
-  return <String, Object?>{
-    'name': _cap(draft.name, _kNameMax),
-    'goal': _cap(draft.goal, 200),
-    'period': _cap(draft.period, _kNameMax),
-    'memo': _cap(draft.memo, 2000),
-    'session_name': _cap(session?.name ?? '', _kNameMax),
-    'exercises': <Map<String, Object?>>[
-      for (final exercise in session?.exercises ?? const <ProgramExerciseDraft>[])
-        programExerciseToJson(exercise),
-    ],
-  };
-}
+/// Every session goes to the server in editor order (#709) — session order is
+/// array order on both sides, so nothing has to be re-sorted on the way back.
+Map<String, Object?> programDraftToJson(ProgramEditorState draft) =>
+    <String, Object?>{
+      'name': _cap(draft.name, _kNameMax),
+      'goal': _cap(draft.goal, 200),
+      'period': _cap(draft.period, _kNameMax),
+      'memo': _cap(draft.memo, 2000),
+      'sessions': <Map<String, Object?>>[
+        for (final session in draft.sessions) programSessionToJson(session),
+      ],
+    };
+
+/// [ProgramEditorState] → `ProgramAssignRequest` JSON.
+///
+/// [clientRequestId] makes the whole program idempotent for one send attempt:
+/// retrying with the same value does not assign the sessions twice (#581).
+Map<String, Object?> programAssignToJson(
+  ProgramEditorState draft, {
+  String? clientRequestId,
+}) => <String, Object?>{
+  'name': _cap(draft.name, _kNameMax),
+  'sessions': <Map<String, Object?>>[
+    for (final session in draft.sessions) programSessionToJson(session),
+  ],
+  'client_request_id': ?clientRequestId,
+};

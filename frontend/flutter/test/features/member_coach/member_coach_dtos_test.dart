@@ -97,4 +97,51 @@ void main() {
       );
     });
   });
+
+  test('coachRoutineFromJson maps a program session (#709)', () {
+    final r = coachRoutineFromJson(<String, Object?>{
+      'id': 'r-session-1',
+      'name': '세션 A · 하체',
+      'minutes': 30,
+      'type': '근력',
+      'reason': '레그프레스, 스쿼트',
+      'source': 'trainer',
+      'program_name': '주 2회 분할',
+      'session_name': '세션 A · 하체',
+      'session_order': 0,
+      'exercises': <Object?>[
+        <String, Object?>{
+          'name': '레그프레스',
+          'sets': '4',
+          'reps': '12회',
+          'weight': '60kg',
+          'duration': '',
+          'rest': '90',
+          'memo': '',
+        },
+      ],
+    });
+
+    expect(r.programName, '주 2회 분할');
+    expect(r.sessionName, '세션 A · 하체');
+    expect(r.isProgramSession, isTrue);
+    expect(r.exercises.single.name, '레그프레스');
+    expect(r.exercises.single.detail, '4세트 × 12회 · 60kg · 휴식 90초');
+  });
+
+  test('coachRoutineFromJson keeps working without the session keys', () {
+    // 세션 필드가 없던 예전 응답 — 단일 배정으로 읽힌다.
+    final r = coachRoutineFromJson(<String, Object?>{
+      'id': 'r1',
+      'name': '저강도 유산소',
+      'minutes': 20,
+      'type': '유산소',
+      'reason': '혈압 안정',
+      'source': 'ai',
+    });
+    expect(r.programName, '');
+    expect(r.sessionName, '');
+    expect(r.isProgramSession, isFalse);
+    expect(r.exercises, isEmpty);
+  });
 }

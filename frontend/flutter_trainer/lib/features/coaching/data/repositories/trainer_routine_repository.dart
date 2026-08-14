@@ -26,6 +26,14 @@ abstract interface class TrainerRoutineRepository {
     String? clientRequestId,
   });
 
+  /// Assigns a whole program — one routine per session (#709).
+  ///
+  /// [payload] comes from `programAssignToJson`, which carries the session
+  /// order and each session's exercises. A program with one session lands as
+  /// the same single routine the flat path produces, so the member's screen
+  /// does not suddenly grow a session label.
+  Future<void> assignProgram(String memberId, Map<String, Object?> payload);
+
   /// The member's currently assigned routines (newest first).
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId);
 
@@ -58,6 +66,12 @@ class MockTrainerRoutineRepository implements TrainerRoutineRepository {
     AssignedRoutine routine, {
     String? clientRequestId,
   }) async {}
+
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
 
   @override
   Stream<List<AssignedRoutine>> watchAssignedRoutines(String memberId) =>

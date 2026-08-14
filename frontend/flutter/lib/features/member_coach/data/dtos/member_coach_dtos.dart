@@ -31,7 +31,34 @@ CoachRoutine coachRoutineFromJson(Map<String, Object?> json) {
     completedIntensity: json['completed_intensity'] as String?,
     memberNote: _str(json['member_note']),
     trainerFeedback: _str(json['trainer_feedback']),
+    programName: _str(json['program_name']),
+    sessionName: _str(json['session_name']),
+    sessionOrder: json['session_order'] is num
+        ? (json['session_order']! as num).toInt()
+        : 0,
+    exercises: _coachRoutineExercises(json['exercises']),
   );
+}
+
+/// `RoutineOut.exercises` → [CoachRoutineExercise] 목록. (#709)
+///
+/// 키가 아예 없던 예전 응답은 빈 목록이라, 화면이 예전처럼 [CoachRoutine.reason]
+/// 만 보여 준다.
+List<CoachRoutineExercise> _coachRoutineExercises(Object? raw) {
+  if (raw is! List) return const <CoachRoutineExercise>[];
+  return <CoachRoutineExercise>[
+    for (final entry in raw)
+      if (entry is Map<String, Object?>)
+        CoachRoutineExercise(
+          name: _str(entry['name']),
+          sets: _str(entry['sets']),
+          reps: _str(entry['reps']),
+          weight: _str(entry['weight']),
+          duration: _str(entry['duration']),
+          rest: _str(entry['rest']),
+          memo: _str(entry['memo']),
+        ),
+  ];
 }
 
 /// `/me/coach/sessions` element (ScheduleSessionOut) → [CoachSession].

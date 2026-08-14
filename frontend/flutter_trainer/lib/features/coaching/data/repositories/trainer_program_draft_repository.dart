@@ -83,9 +83,20 @@ class LocalTrainerProgramDraftRepository
             name: draft['name'] as String? ?? '',
             goal: draft['goal'] as String? ?? '',
             period: draft['period'] as String? ?? '',
-            exerciseCount:
-                ((draft['exercises'] as List<Object?>?) ?? const <Object?>[])
+            sessionCount:
+                ((draft['sessions'] as List<Object?>?) ?? const <Object?>[])
                     .length,
+            exerciseCount: ((draft['sessions'] as List<Object?>?) ??
+                    const <Object?>[])
+                .fold<int>(
+                  0,
+                  (count, session) =>
+                      count +
+                      (((session! as Map<Object?, Object?>)['exercises']
+                                  as List<Object?>?) ??
+                              const <Object?>[])
+                          .length,
+                ),
             updatedAt: DateTime.parse(draft['updated_at']! as String),
           ),
         )

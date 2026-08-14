@@ -38,6 +38,11 @@ enum _Fail {
 
 /// 수정·삭제 호출을 기록하는 페이크.
 class _FakeRoutineRepository implements TrainerRoutineRepository {
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
   _FakeRoutineRepository({this.fail = _Fail.none});
 
   final _Fail fail;

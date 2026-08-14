@@ -168,6 +168,93 @@ void main() {
     );
   });
 
+  testWidgets('여러 세션짜리 프로그램은 프로그램 이름과 세션 구분을 함께 보여 준다 (#709)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      CoachRoutine(
+        id: 'session-a',
+        name: '세션 A · 하체',
+        minutes: 30,
+        type: '근력',
+        reason: '레그프레스, 스쿼트',
+        source: 'trainer',
+        programName: '주 2회 분할',
+        sessionName: '세션 A · 하체',
+        exercises: <CoachRoutineExercise>[
+          CoachRoutineExercise(
+            name: '레그프레스',
+            sets: '4',
+            reps: '12회',
+            weight: '60kg',
+          ),
+        ],
+      ),
+      CoachRoutine(
+        id: 'session-b',
+        name: '세션 B · 유산소',
+        minutes: 20,
+        type: '유산소',
+        reason: '인터벌 러닝',
+        source: 'trainer',
+        programName: '주 2회 분할',
+        sessionName: '세션 B · 유산소',
+        sessionOrder: 1,
+        exercises: <CoachRoutineExercise>[
+          CoachRoutineExercise(name: '인터벌 러닝', duration: '20'),
+        ],
+      ),
+    ]);
+
+    final Finder trainerCard = find.byType(CoachCard);
+    // 프로그램 이름은 묶음마다 한 번만 — 세션마다 반복하면 목록이 이름으로 찬다.
+    expect(
+      find.descendant(of: trainerCard, matching: find.text('주 2회 분할')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: trainerCard, matching: find.text('세션 A · 하체')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: trainerCard, matching: find.text('세션 B · 유산소')),
+      findsOneWidget,
+    );
+    // 운동 구성이 세트·횟수·중량까지 그대로 보인다.
+    expect(
+      find.descendant(
+        of: trainerCard,
+        matching: find.text('레그프레스 · 4세트 × 12회 · 60kg'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: trainerCard,
+        matching: find.text('인터벌 러닝 · 20분'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('단일 배정은 프로그램 이름표 없이 예전과 같이 보인다 (#709)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _trainerRoutine,
+    ]);
+
+    final Finder trainerCard = find.byType(CoachCard);
+    expect(
+      find.descendant(of: trainerCard, matching: find.byIcon(Icons.list_alt_outlined)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: trainerCard, matching: find.text('허리 부담 완화')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('배정 루틴 완료를 기록하고 완료 상태를 갱신한다', (WidgetTester tester) async {
     final MockMemberCoachRepository repository = MockMemberCoachRepository();
     await tester.pumpWidget(
