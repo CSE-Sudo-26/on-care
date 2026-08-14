@@ -3515,7 +3515,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchClientsHint.
   ///
   /// In en, this message translates to:
-  /// **'Search clients, goals, messages, or routines'**
+  /// **'Search clients, goals, recent messages, or routines'**
   String get searchClientsHint;
 
   /// No description provided for @searchClear.

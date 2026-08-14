@@ -1948,7 +1948,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchClientsHint =>
-      'Search clients, goals, messages, or routines';
+      'Search clients, goals, recent messages, or routines';
 
   @override
   String get searchClear => 'Clear search';
