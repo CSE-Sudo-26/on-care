@@ -129,6 +129,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       const SizedBox(height: AppSpacing.xxl),
 
                       AuthField(
+                        key: const ValueKey<String>('member-login-email'),
                         controller: _email,
                         hint: l.authEmailHint,
                         icon: Icons.mail_outline,
@@ -136,6 +137,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AuthField(
+                        key: const ValueKey<String>('member-login-password'),
                         controller: _password,
                         hint: l.authPasswordHint,
                         icon: Icons.lock_outline,
@@ -154,6 +156,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
                       // 로그인 버튼(그라데이션)
                       AuthGradientButton(
+                        key: const ValueKey<String>('member-login-submit'),
                         loading: _loading,
                         label: l.authSignInAction,
                         onTap: _login,

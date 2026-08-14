@@ -298,6 +298,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           },
         ),
         ActionButton(
+          key: const ValueKey<String>('schedule-open-slots'),
           label: l.schedSlots,
           icon: Icons.event_available_outlined,
           onPressed: () => _openReservationSlotsSheet(),
@@ -1844,6 +1845,7 @@ class _TimelineRow extends StatelessWidget {
           child: session.isGap
               ? const _GapSlot()
               : _SessionCard(
+                  key: ValueKey<String>('schedule-session-${session.id}'),
                   session: session,
                   expanded: expanded,
                   onToggle: onToggle,
@@ -1888,6 +1890,7 @@ class _GapSlot extends StatelessWidget {
 
 class _SessionCard extends StatelessWidget {
   const _SessionCard({
+    super.key,
     required this.session,
     required this.expanded,
     required this.onToggle,

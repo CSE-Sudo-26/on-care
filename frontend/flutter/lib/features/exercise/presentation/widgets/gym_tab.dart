@@ -687,10 +687,12 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
         content: Text(l.exCancelConfirmBody(label)),
         actions: <Widget>[
           TextButton(
+            key: const ValueKey<String>('cancel-dialog-keep'),
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(l.exCancelKeep),
           ),
           TextButton(
+            key: const ValueKey<String>('cancel-dialog-confirm'),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l.exCancelReservation),
           ),
@@ -815,6 +817,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                     children: <Widget>[
                       for (final TrainerSlot slot in slots)
                         _SlotChip(
+                          key: ValueKey<String>('slot-chip-${slot.id}'),
                           label: _when(context, l, slot.startsAt),
                           sub: slot.isFull
                               ? l.exSlotFull
@@ -833,6 +836,7 @@ class _ReservationPanelState extends ConsumerState<_ReservationPanel> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
+                        key: const ValueKey<String>('reserve-confirm'),
                         onPressed: busy ? null : () => _reserve(l, picked),
                         style: FilledButton.styleFrom(
                           backgroundColor: FigmaColors.primary,
@@ -1304,6 +1308,7 @@ class _TagChip extends StatelessWidget {
 
 class _SlotChip extends StatelessWidget {
   const _SlotChip({
+    super.key,
     required this.label,
     required this.sub,
     required this.selected,

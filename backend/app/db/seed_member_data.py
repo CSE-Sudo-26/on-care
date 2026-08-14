@@ -485,11 +485,24 @@ def _seed_chat(db: Session, member_id: str) -> None:
     thread = _CHAT.get(member_id)
     if not thread:
         return
-    # 스레드가 최근으로 보이도록 base 를 몇 시간 전으로 두고, 메시지마다 그
+    # 스레드가 최근으로 보이도록 base 를 하루 안쪽 과거로 두고, 메시지마다 그
     # 메시지의 days_ago 만큼 더 과거로 민다. 같은 날 안에서는 2분 간격이다.
     # days_ago 가 뒤로 갈수록 작아지므로 시각은 계속 증가한다 — 스레드 정렬은
     # (created_at, id) 이라 이 단조성이 대화 순서를 보장한다.
-    base = datetime.now(timezone.utc) - timedelta(hours=2)
+    #
+    # **시각을 정오로 고정한다.** 예전에는 `now - 2시간` 을 그대로 썼는데, 시드가
+    # 자정 근처(UTC 01:30~02:00)에 돌면 base 가 23:5x 가 되어 `+ i*2분` 이 자정을
+    # 넘었다. 그러면 같은 days_ago 묶음이 이틀로 쪼개져 **사흘치 대화가 나흘**이 되고,
+    # 날짜로 묶는 화면(하루치 AI 분석 안내)도 함께 어긋난다. CI 가 그 시간대에 걸리면
+    # `test_demo_thread_spans_three_days` 가 아무 변경 없이 실패했다.
+    #
+    # 묶음 안의 최대 간격이 34분이라 정오 기준이면 어떤 시각에 시드해도 자정을 넘지
+    # 않는다. 오늘 정오가 아직 오지 않았으면 하루 뒤로 물러 미래 시각을 만들지 않는다.
+    now = datetime.now(timezone.utc)
+    span = timedelta(minutes=(len(thread) - 1) * 2)
+    base = now.replace(hour=12, minute=0, second=0, microsecond=0)
+    if base + span > now:
+        base -= timedelta(days=1)
     keep: set[str] = set()
     for i, (sender, text, days_ago) in enumerate(thread):
         cid = f"seed-chat-{member_id}-{i}"
