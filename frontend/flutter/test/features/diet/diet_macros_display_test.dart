@@ -410,4 +410,71 @@ void main() {
     expect(find.textContaining('선택한 날짜에 기록된 식단'), findsNothing);
   });
 
+  testWidgets('나트륨과 당류는 같은 색 규칙을 쓴다 — 정상 초록 (#682)', (
+    WidgetTester tester,
+  ) async {
+    // 목표 안쪽 값. 두 지표가 같은 카드에 나란히 놓이므로 "정상"을 서로 다른
+    // 색으로 말하면 안 된다.
+    const DietDay day = DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'ok',
+          mealType: MealType.lunch,
+          timeLabel: '12:00',
+          foods: <FoodItem>[
+            FoodItem(name: '샐러드', calories: 300, sodiumMg: 400, sugarG: 5),
+          ],
+          totalCalories: 300,
+          sodiumMg: 400,
+          sugarG: 5,
+          carbsG: 20,
+          proteinG: 20,
+          fatG: 10,
+        ),
+      ],
+      totalCalories: 300,
+      totalSodiumMg: 400,
+      totalSugarG: 5,
+      macros: DietMacros(
+        carbsPct: 40,
+        proteinPct: 40,
+        fatPct: 20,
+        carbsG: 20,
+        proteinG: 20,
+        fatG: 10,
+      ),
+      aiCoachMessage: '',
+    );
+
+    await tester.pumpWidget(
+      _app(
+        const Scaffold(
+          body: SingleChildScrollView(child: NutritionSummary(day: day)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Color barColor(String label) {
+      final ColoredBox box = tester.widget<ColoredBox>(
+        find
+            .descendant(
+              of: find.byKey(Key('nutrition-status-vertical-progress-$label')),
+              matching: find.byType(ColoredBox),
+            )
+            .last,
+      );
+      return box.color;
+    }
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(NutritionSummary)),
+    );
+    expect(
+      barColor(l.dietSodium),
+      barColor(l.dietSugar),
+      reason: '정상 범위의 나트륨과 당류가 다른 색이면 안 된다',
+    );
+    expect(barColor(l.dietSodium), FigmaColors.greenText);
+  });
 }

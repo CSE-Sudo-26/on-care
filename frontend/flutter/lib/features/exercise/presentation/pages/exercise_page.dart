@@ -66,14 +66,18 @@ class _ExercisePageState extends State<ExercisePage> {
                 // 지역적으로 얻는다 — 헤더 전체를 다시 그리지 않는다.
                 Consumer(
                   builder: (BuildContext context, WidgetRef ref, Widget? _) =>
-FigmaTabHeader(
-                      title: l.pageExerciseTitle,
-                      trailingAction: const TrainerChatHeaderButton(),
-                      onBell: () => context.push(AppRoutes.notification),
-                      bellHasUnread:
-                          (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
-                      onCalendar: () => showScheduleCalendarSheet(context),
-                    ),
+                      FigmaTabHeader(
+                        title: l.pageExerciseTitle,
+                        trailingAction: const TrainerChatHeaderButton(),
+                        onBell: () => context.push(AppRoutes.notification),
+                        bellHasUnread:
+                            (ref
+                                    .watch(notificationUnreadProvider)
+                                    .valueOrNull ??
+                                0) >
+                            0,
+                        onCalendar: () => showScheduleCalendarSheet(context),
+                      ),
                 ),
                 _SubTabs(
                   active: _subTab,
@@ -539,11 +543,25 @@ class _ExerciseDayDetail extends StatelessWidget {
     final List<ExerciseSession> sessions = week.sessions
         .where((ExerciseSession s) => s.dayLabel == dayLabel)
         .toList();
-    final List<(String, double)> breakdown = <(String, double)>[
-      (l.exTypeCardio, _at(week.cardioMinutes, i)),
-      (l.exTypeStrength, _at(week.strengthMinutes, i)),
-      (l.exTypeStretching, _at(week.stretchingMinutes, i)),
-    ].where(((String, double) e) => e.$2 > 0).toList();
+    // 유형별 비중은 `운동 현황 > 오늘` 과 같은 도넛으로 그린다. 같은 데이터를
+    // 두 가지 모양으로 그리지 않도록(#682).
+    final List<_DonutSeg> segs = <_DonutSeg>[
+      _DonutSeg(
+        l.exTypeCardio,
+        _at(week.cardioMinutes, i).round(),
+        FigmaColors.primary,
+      ),
+      _DonutSeg(
+        l.exTypeStrength,
+        _at(week.strengthMinutes, i).round(),
+        const Color(0xFF1B6FA8),
+      ),
+      _DonutSeg(
+        l.exTypeStretching,
+        _at(week.stretchingMinutes, i).round(),
+        const Color(0xFFD4EEF8),
+      ),
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -580,48 +598,8 @@ class _ExerciseDayDetail extends StatelessWidget {
               ),
             ],
           ),
-          if (breakdown.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: kCardShadow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  for (final (String label, double m) in breakdown)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: <Widget>[
-                          Text(
-                            label,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.foreground,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${m.round()}${l.unitMinutes}',
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          const SizedBox(height: 14),
+          _TodayDonut(segs: segs),
           if (sessions.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             for (final ExerciseSession s in sessions)
