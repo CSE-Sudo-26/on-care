@@ -199,7 +199,6 @@ void main() {
 
       case 'edge-cases':
         final String rejectEmail = state.require('rejectEmail');
-        final String acceptEmail = state.require('acceptEmail');
         final String acceptConsultationId = state.require(
           'acceptConsultationId',
         );
@@ -225,12 +224,23 @@ void main() {
           reason: '다른 회원의 상담을 조회할 수 있습니다.',
         );
 
-        // 승인된 회원은 담당이 생겨 같은 트레이너에게 다시 신청할 수 없다.
-        final E2eApi accepted = await E2eApi.login(acceptEmail);
+        // 이미 처리한 상담은 다시 처리할 수 없다. 막지 않으면 트레이너가 같은
+        // 요청을 두 번 승인해 담당 연결과 일정이 중복으로 쌓인다.
+        final E2eApi trainerApi = await E2eApi.login(trainerEmail);
+        for (final String action in <String>['accept', 'reject']) {
+          expect(
+            await trainerApi.decideStatus(acceptConsultationId, action),
+            409,
+            reason: '이미 승인된 상담을 $action 로 다시 처리할 수 있습니다.',
+          );
+        }
+        final String rejectConsultationId = state.require(
+          'rejectConsultationId',
+        );
         expect(
-          await accepted.createConsultationStatus(trainerId: trainerId),
-          anyOf(409, 422),
-          reason: '이미 담당인 트레이너에게 상담을 다시 신청할 수 있습니다.',
+          await trainerApi.decideStatus(rejectConsultationId, 'accept'),
+          409,
+          reason: '이미 거절된 상담을 다시 승인할 수 있습니다.',
         );
 
       case 'cleanup':

@@ -220,6 +220,16 @@ class E2eApi {
     return res.statusCode!;
   }
 
+  /// 이미 처리된 상담을 다시 처리하려 할 때의 응답(트레이너 토큰으로 부른다).
+  Future<int> decideStatus(String consultationId, String action) async {
+    final Response<Object?> res = await _dio.post<Object?>(
+      '/trainer/consultations/$consultationId/$action',
+      data: <String, Object?>{'note': '재처리 시도'},
+      options: _auth,
+    );
+    return res.statusCode!;
+  }
+
   Future<int> consultationStatusCode(String consultationId) async {
     final Response<Object?> res = await _dio.get<Object?>(
       '/consultations/$consultationId',
