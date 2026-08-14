@@ -95,6 +95,13 @@ void main() {
       expect(navLabel(_en, NavLabel.schedule), _en.schedTitle);
     });
 
+    test('messages sits immediately after clients in the sidebar', () {
+      final clientsIndex = navDestinations.indexWhere(
+        (destination) => destination.label == NavLabel.clients,
+      );
+      expect(navDestinations[clientsIndex + 1].label, NavLabel.messages);
+    });
+
     testWidgets('unauthenticated boot lands on the login screen', (
       tester,
     ) async {

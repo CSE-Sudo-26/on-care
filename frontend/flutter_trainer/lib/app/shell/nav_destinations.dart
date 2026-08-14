@@ -99,18 +99,18 @@ const List<NavDestination> navDestinations = <NavDestination>[
     badge: NavBadge.unreadMessages,
   ),
   NavDestination(
-    label: NavLabel.schedule,
-    icon: Icons.calendar_today_outlined,
-    activeIcon: Icons.calendar_today,
-    route: AppRoutes.schedule,
-    badge: NavBadge.todayReservations,
-  ),
-  NavDestination(
     label: NavLabel.messages,
     icon: Icons.chat_bubble_outline,
     activeIcon: Icons.chat_bubble,
     route: AppRoutes.messages,
     badge: NavBadge.unreadMessages,
+  ),
+  NavDestination(
+    label: NavLabel.schedule,
+    icon: Icons.calendar_today_outlined,
+    activeIcon: Icons.calendar_today,
+    route: AppRoutes.schedule,
+    badge: NavBadge.todayReservations,
   ),
   NavDestination(
     label: NavLabel.coaching,

@@ -122,10 +122,10 @@ GoRouter buildAppRouter({
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.schedule,
-                builder: (context, state) => SchedulePage(
-                  view: state.uri.queryParameters['v'],
-                  date: state.uri.queryParameters['d'],
+                path: AppRoutes.messages,
+                builder: (context, state) => MessagesPage(
+                  clientId: state.uri.queryParameters['client'],
+                  filter: state.uri.queryParameters['f'],
                 ),
               ),
             ],
@@ -133,10 +133,10 @@ GoRouter buildAppRouter({
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.messages,
-                builder: (context, state) => MessagesPage(
-                  clientId: state.uri.queryParameters['client'],
-                  filter: state.uri.queryParameters['f'],
+                path: AppRoutes.schedule,
+                builder: (context, state) => SchedulePage(
+                  view: state.uri.queryParameters['v'],
+                  date: state.uri.queryParameters['d'],
                 ),
               ),
             ],

@@ -471,6 +471,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputHint => 'Type a message...';
 
   @override
+  String chatInsightDiscomfortTitle(String part) {
+    return '$part discomfort detected';
+  }
+
+  @override
+  String get chatInsightBodyPartGeneral => 'Physical';
+
+  @override
+  String get chatInsightNegativeTitle => 'Negative feedback detected';
+
+  @override
+  String get chatInsightDiscomfortDescription =>
+      'AI detected a report of discomfort. Check the symptoms and consider adjusting the next workout\'s intensity.';
+
+  @override
+  String get chatInsightNegativeDescription =>
+      'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the routine.';
+
+  @override
+  String get chatInsightAddMemo => 'Add to memo';
+
+  @override
+  String get chatInsightMemoAdded => 'Added to memo';
+
+  @override
+  String get chatInsightMemoSaved =>
+      'The AI insight was added to the trainer memo.';
+
+  @override
   String coachSheetTitle(String name) {
     return 'Coaching for $name';
   }
@@ -2065,7 +2094,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get messagesClientDetail => 'Client details';
+  String get messagesClientDetail => 'View client details';
 
   @override
   String get messagesSelectPrompt =>

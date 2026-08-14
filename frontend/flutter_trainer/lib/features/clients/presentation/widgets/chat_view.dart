@@ -5,6 +5,8 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/messages/data/chat_insight_memo_repository.dart';
+import 'package:oncare_trainer/features/messages/domain/chat_context_insight.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -54,6 +56,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// Message count at the last auto-scroll, so the thread only scrolls
   /// when a message actually arrives (not on every rebuild).
   int _lastCount = -1;
+
+  static const ChatContextInsightDetector _insightDetector =
+      ChatContextInsightDetector();
 
   @override
   void dispose() {
@@ -121,11 +126,16 @@ class _ChatViewState extends ConsumerState<ChatView> {
   /// 뿐이라 거기서 날짜를 파내면 표시 문구가 곧 로직이 된다. 시드 메시지에
   /// 대해서만 자르는 이유도 같다 — 방금 보낸 답장은 오늘 날짜라, 그대로 두면
   /// 내 말풍선 앞에 "분석했어요" 가 끼어든다.
-  List<Widget> _withDemoBanners(List<ClientChatMessage> list) {
+  List<Widget> _threadChildren(
+    List<ClientChatMessage> list, {
+    required bool showDemoBanners,
+    required Set<String> savedInsightIds,
+  }) {
     final List<Widget> out = <Widget>[];
     for (int i = 0; i < list.length; i++) {
       final ClientChatMessage m = list[i];
       final bool newDay =
+          showDemoBanners &&
           m.id.startsWith('seed-') &&
           (i == 0 || !_sameDay(list[i - 1].createdAt, m.createdAt));
       if (newDay) {
@@ -151,10 +161,38 @@ class _ChatViewState extends ConsumerState<ChatView> {
       out
         ..add(_Bubble(message: m, avatar: widget.clientAvatar))
         ..add(const SizedBox(height: AppSpacing.md));
+      final insight = _insightDetector.detect(m);
+      if (insight != null) {
+        out
+          ..add(
+            _ChatInsightBanner(
+              key: ValueKey<String>('chat-insight-${insight.id}'),
+              insight: insight,
+              saved: savedInsightIds.contains(insight.id),
+              onAddMemo: () => _addInsightMemo(insight),
+            ),
+          )
+          ..add(const SizedBox(height: AppSpacing.md));
+      }
     }
     // 대화가 없으면 배너만 남는다 — 분석한 것도 보낸 것도 없으므로 그리지 않는다.
-    if (list.isNotEmpty) out.add(_SentBanner(clientName: widget.clientName));
+    if (showDemoBanners && list.isNotEmpty) {
+      out.add(_SentBanner(clientName: widget.clientName));
+    }
     return out;
+  }
+
+  Future<void> _addInsightMemo(ChatContextInsight insight) async {
+    await ref
+        .read(chatInsightMemoRepositoryProvider)
+        .add(widget.clientId, insight);
+    ref.invalidate(chatInsightMemosProvider(widget.clientId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).chatInsightMemoSaved),
+      ),
+    );
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>
@@ -176,6 +214,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final AppLocalizations l = AppLocalizations.of(context);
     final messages = ref.watch(chatThreadProvider(widget.clientId));
     final showDemoBanners = ref.watch(appConfigProvider).useMockApi;
+    final savedInsightIds =
+        ref
+            .watch(chatInsightMemosProvider(widget.clientId))
+            .valueOrNull
+            ?.map((memo) => memo.insightId)
+            .toSet() ??
+        const <String>{};
 
     return Column(
       children: <Widget>[
@@ -221,20 +266,126 @@ class _ChatViewState extends ConsumerState<ChatView> {
               return ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                children: showDemoBanners
-                    ? _withDemoBanners(list)
-                    : <Widget>[
-                        for (final m in list) ...<Widget>[
-                          _Bubble(message: m, avatar: widget.clientAvatar),
-                          const SizedBox(height: AppSpacing.md),
-                        ],
-                      ],
+                children: _threadChildren(
+                  list,
+                  showDemoBanners: showDemoBanners,
+                  savedInsightIds: savedInsightIds,
+                ),
               );
             },
           ),
         ),
         _InputBar(controller: _input, sending: _sending, onSend: _send),
       ],
+    );
+  }
+}
+
+class _ChatInsightBanner extends StatelessWidget {
+  const _ChatInsightBanner({
+    required this.insight,
+    required this.saved,
+    required this.onAddMemo,
+    super.key,
+  });
+
+  final ChatContextInsight insight;
+  final bool saved;
+  final Future<void> Function() onAddMemo;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isDiscomfort = insight.kind == ChatInsightKind.discomfort;
+    final title = isDiscomfort
+        ? l.chatInsightDiscomfortTitle(
+            insight.bodyPart ?? l.chatInsightBodyPartGeneral,
+          )
+        : l.chatInsightNegativeTitle;
+    final description = isDiscomfort
+        ? l.chatInsightDiscomfortDescription
+        : l.chatInsightNegativeDescription;
+
+    return Container(
+      key: ValueKey<String>('chat-insight-banner-${insight.messageId}'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppColors.mutedForeground,
+                    fontSize: 11.5,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Material(
+            color: saved
+                ? AppColors.success.withValues(alpha: 0.10)
+                : AppColors.warning.withValues(alpha: 0.13),
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            child: InkWell(
+              key: ValueKey<String>('chat-insight-add-${insight.id}'),
+              onTap: saved ? null : onAddMemo,
+              borderRadius: const BorderRadius.all(AppRadius.pill),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 6,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      saved ? Icons.check_rounded : Icons.add_rounded,
+                      size: 15,
+                      color: saved ? AppColors.success : AppColors.warning,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      saved ? l.chatInsightMemoAdded : l.chatInsightAddMemo,
+                      style: TextStyle(
+                        color: saved ? AppColors.success : AppColors.warning,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
