@@ -14,7 +14,6 @@ import 'package:oncare_trainer/features/reports/data/repositories/report_reposit
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -60,6 +59,31 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   /// A send is in flight for this client.
   String? _sending;
 
+  /// 피드백 입력창의 현재 내용. 전송 버튼이 헤더의 공유 메뉴로 올라가면서
+  /// 입력창과 전송이 서로 다른 위젯에 있게 되어, 그 사이를 잇는 값이다.
+  ///
+  /// `setState` 를 부르지 않는다 — 메뉴는 열릴 때 `itemBuilder` 가 이 값을 다시
+  /// 읽으므로, 글자 하나마다 리포트 화면 전체를 다시 그릴 이유가 없다.
+  String? _feedbackDraft;
+
+  /// [_feedbackDraft] 가 어느 리포트의 것인가(`고객|주`). 고객이나 주가 바뀌면
+  /// 남의 리포트에 쓰던 문구가 따라가지 않게 버린다.
+  String? _feedbackFor;
+
+  /// 입력창이 비었는가. 메뉴의 전송 항목을 잠그는 유일한 이유라, 이 값이
+  /// 바뀔 때만 다시 그린다 — 글자마다 화면 전체를 다시 그리지 않는다.
+  bool _feedbackBlank = false;
+
+  /// 이 리포트에 대해 실제로 보낼 문구 — 트레이너가 고친 게 있으면 그것,
+  /// 없으면 화면에 채워져 있는 기본 문구다.
+  String _messageFor(AppLocalizations l, WeeklyReport report) =>
+      _feedbackFor == _feedbackKey(report)
+      ? (_feedbackDraft ?? reportMessage(l, report))
+      : reportMessage(l, report);
+
+  static String _feedbackKey(WeeklyReport report) =>
+      '${report.client.id}|${report.weekStart.toIso8601String()}';
+
   @override
   void didUpdateWidget(ReportsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -78,6 +102,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _weekStart = _weekStart.add(Duration(days: 7 * direction));
       // A different week is a different report — allow sending again.
       _sent.clear();
+      _feedbackDraft = null;
+      _feedbackFor = null;
+      _feedbackBlank = false;
     });
   }
 
@@ -87,7 +114,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     setState(() {
       _weekStart = currentWeek;
       _sent.clear();
+      _feedbackDraft = null;
+      _feedbackFor = null;
+      _feedbackBlank = false;
     });
+  }
+
+  /// 헤더 공유 메뉴의 전송. 화면에 떠 있는 리포트와 입력창의 현재 문구를 함께
+  /// 보낸다 — 입력창과 전송 버튼이 서로 다른 위젯이 되면서 필요해진 연결이다.
+  Future<void> _sendSelected(WeeklyReport report) {
+    return _send(report, _messageFor(AppLocalizations.of(context), report));
   }
 
   Future<void> _send(WeeklyReport report, String message) async {
@@ -126,11 +162,25 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       to: ymd(_weekStart.add(const Duration(days: 6))),
     );
     final weekSessions = ref.watch(scheduleRangeProvider(range));
+    // 헤더는 본문(LayoutBuilder)보다 위에 있어 본문이 고른 고객을 볼 수 없다.
+    // 본문과 **같은 규칙**으로 여기서 한 번 더 고른다 — 메뉴 항목에 이름을
+    // 함께 보여 주므로 누구에게 가는 리포트인지 화면에서 드러난다.
+    final roster = clientsAsync.valueOrNull ?? const <TrainerClient>[];
+    final TrainerClient? shareTarget = roster.isEmpty
+        ? null
+        : roster.firstWhere(
+            (c) => c.id == _clientId,
+            orElse: () => roster.first,
+          );
 
     return PageScaffold(
       key: ValueKey<String>('reports-${_clientId ?? 'list'}'),
       title: l.reportsTitle,
       subtitle: l.reportsSubtitle,
+      // 페이지 전체 스크롤을 끈다 — 넓은 화면에서 왼쪽 고객 열을 고정하고
+      // 오른쪽 리포트만 스크롤하기 위해서다. 좁은 화면은 아래 분기에서
+      // 스스로 스크롤을 갖는다.
+      scrollable: false,
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         ActionButton(
@@ -144,7 +194,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             icon: Icons.today_outlined,
             onPressed: _goToCurrentWeek,
           ),
-        const _UnsupportedPdfExportAction(),
+        _ShareMenu(
+          client: shareTarget,
+          weekStart: _weekStart,
+          sent: shareTarget != null && _sent.contains(shareTarget.id),
+          sending: shareTarget != null && _sending == shareTarget.id,
+          feedbackBlank: _feedbackBlank,
+          onSend: _sendSelected,
+        ),
       ],
       child: clientsAsync.when(
         loading: () => const Padding(
@@ -185,86 +242,120 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final wide =
-                      constraints.maxWidth >= AppLayout.splitBreakpoint;
-                  final picker = _ClientPicker(
-                    clients: clients,
-                    selectedId: selected.id,
-                    onSelect: _selectClient,
-                  );
-                  if (!wide && _clientId == null) {
-                    return picker;
-                  }
-                  // The report itself comes from the repository: local
-                  // in demo, server-aggregated against the real API
-                  // (only the backend has the member's full history).
-                  final reportKey = (client: selected, weekStart: _weekStart);
-                  final reportAsync = ref.watch(
-                    weeklyReportProvider(reportKey),
-                  );
-                  final report = reportAsync.when(
-                    loading: () => SectionCard(
-                      title: l.reportsWeekly,
-                      icon: Icons.description_outlined,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                    error: (e, _) => SectionCard(
-                      title: l.reportsWeekly,
-                      icon: Icons.description_outlined,
-                      child: EmptyHint(
-                        message: l.reportsLoadFailed,
-                        icon: Icons.error_outline,
-                        action: ActionButton(
-                          key: const ValueKey<String>('reports-weekly-retry'),
-                          label: l.actionRetry,
-                          onPressed: reportAsync.isLoading
-                              ? null
-                              : () => ref.invalidate(
-                                  weeklyReportProvider(reportKey),
-                                ),
-                        ),
-                      ),
-                    ),
-                    data: (data) => _ClientReport(
-                      report: data,
-                      sent: _sent.contains(selected.id),
-                      sending: _sending == selected.id,
-                      onSend: _send,
-                    ),
-                  );
-
-                  if (!wide) {
-                    return Column(
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide =
+                        constraints.maxWidth >= AppLayout.splitBreakpoint;
+                    // 좌측 열: 고객 목록 + 이번 주 먼저 볼 고객. 넓은 화면에서는
+                    // 이 열이 고정이고 오른쪽 리포트만 스크롤한다 — 리포트를 아래로
+                    // 읽는 동안 다른 고객으로 넘어가려면 목록이 늘 보여야 한다.
+                    final leftColumn = Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            key: const ValueKey<String>('reports-back-to-list'),
-                            onPressed: () => context.go(AppRoutes.reports),
-                            icon: const Icon(Icons.arrow_back),
-                            label: Text(l.reportsBackToList),
-                          ),
+                        _ClientPicker(
+                          clients: clients,
+                          selectedId: selected.id,
+                          onSelect: _selectClient,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        report,
                       ],
                     );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(width: 292, child: picker),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(child: report),
-                    ],
-                  );
-                },
+                    if (!wide && _clientId == null) {
+                      return SingleChildScrollView(child: leftColumn);
+                    }
+                    // The report itself comes from the repository: local
+                    // in demo, server-aggregated against the real API
+                    // (only the backend has the member's full history).
+                    final reportKey = (client: selected, weekStart: _weekStart);
+                    final reportAsync = ref.watch(
+                      weeklyReportProvider(reportKey),
+                    );
+                    final report = reportAsync.when(
+                      loading: () => SectionCard(
+                        title: l.reportsWeekly,
+                        icon: Icons.description_outlined,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.xl,
+                          ),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
+                      error: (e, _) => SectionCard(
+                        title: l.reportsWeekly,
+                        icon: Icons.description_outlined,
+                        child: EmptyHint(
+                          message: l.reportsLoadFailed,
+                          icon: Icons.error_outline,
+                          action: ActionButton(
+                            key: const ValueKey<String>('reports-weekly-retry'),
+                            label: l.actionRetry,
+                            onPressed: reportAsync.isLoading
+                                ? null
+                                : () => ref.invalidate(
+                                    weeklyReportProvider(reportKey),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      data: (data) => _ClientReport(
+                        report: data,
+                        initialFeedback: _messageFor(l, data),
+                        onFeedbackChanged: (text) {
+                          _feedbackDraft = text;
+                          _feedbackFor = _feedbackKey(data);
+                          // 비었는지 여부가 바뀔 때만 다시 그린다 — 그 외에는
+                          // 화면이 달라질 것이 없다.
+                          final blank = text.trim().isEmpty;
+                          if (blank != _feedbackBlank) {
+                            setState(() => _feedbackBlank = blank);
+                          }
+                        },
+                      ),
+                    );
+
+                    if (!wide) {
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                key: const ValueKey<String>(
+                                  'reports-back-to-list',
+                                ),
+                                onPressed: () => context.go(AppRoutes.reports),
+                                icon: const Icon(Icons.arrow_back),
+                                label: Text(l.reportsBackToList),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            report,
+                          ],
+                        ),
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        SizedBox(width: 292, child: leftColumn),
+                        const SizedBox(width: AppSpacing.lg),
+                        // 스크롤은 이 열 안에서만 일어난다. 페이지 전체가 스크롤
+                        // 되면 왼쪽 목록이 함께 밀려 올라가 버린다.
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: const ValueKey<String>(
+                              'reports-report-scroll',
+                            ),
+                            child: report,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
               if (weekSessions.hasError)
                 Padding(
@@ -286,7 +377,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 }
 
-class _ClientPicker extends StatelessWidget {
+class _ClientPicker extends StatefulWidget {
   const _ClientPicker({
     required this.clients,
     required this.selectedId,
@@ -298,89 +389,89 @@ class _ClientPicker extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  State<_ClientPicker> createState() => _ClientPickerState();
+}
+
+class _ClientPickerState extends State<_ClientPicker> {
+  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이다.
+  static const double _rowHeight = 56;
+
+  /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
+  static const int _visibleRows = 5;
+
+  /// 목록과 스크롤바가 같은 위치를 가리키도록 컨트롤러를 공유한다.
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final clients = widget.clients;
+    final selectedId = widget.selectedId;
+    final onSelect = widget.onSelect;
     return SectionCard(
-      title: l.reportsThisWeek,
+      title: l.navClients,
       icon: Icons.people_outline,
       dense: true,
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            decoration: const BoxDecoration(
-              color: AppColors.inputBackground,
-              borderRadius: BorderRadius.all(AppRadius.md),
-            ),
-            child: Text(
-              l.reportsAnalysisCount(
-                clients.length,
-                clients
-                    .where((client) => recordedCompletionMean(client) != null)
-                    .length,
-              ),
-              style: const TextStyle(
-                color: AppColors.subtleForeground,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          for (final client in clients)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Material(
-                color: client.id == selectedId
-                    ? AppColors.accentSurface
-                    : Colors.transparent,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                child: InkWell(
-                  onTap: () => onSelect(client.id),
+      // 다섯 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
+      // 카드가 화면 높이를 다 먹어 오른쪽 리포트와 나란히 읽기 어려웠다.
+      child: SizedBox(
+        height: _rowHeight * _visibleRows,
+        child: Scrollbar(
+          controller: _scroll,
+          thumbVisibility: true,
+          child: ListView.builder(
+            controller: _scroll,
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            itemCount: clients.length,
+            itemExtent: _rowHeight,
+            itemBuilder: (context, index) {
+              final client = clients[index];
+              final selected = client.id == selectedId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Material(
+                  color: selected
+                      ? AppColors.accentSurface
+                      : Colors.transparent,
                   borderRadius: const BorderRadius.all(AppRadius.md),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        ClientAvatar(label: client.avatar, size: 26),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              ClientIdentity(
-                                client: client,
-                                nameStyle: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: client.id == selectedId
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: AppColors.foreground,
-                                ),
+                  child: InkWell(
+                    onTap: () => onSelect(client.id),
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          ClientAvatar(label: client.avatar, size: 38),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: ClientIdentity(
+                              client: client,
+                              nameStyle: TextStyle(
+                                fontSize: 15,
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: AppColors.foreground,
                               ),
-                              Text(
-                                recordedCompletionMean(client) == null
-                                    ? l.reportsDataInsufficient
-                                    : l.reportsAnalysisAvailable,
-                                style: const TextStyle(
-                                  color: AppColors.subtleForeground,
-                                  fontSize: 10.5,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -398,15 +489,17 @@ Color _verdictTone(int? value, Color Function(int) verdict) =>
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
-    required this.sent,
-    required this.sending,
-    required this.onSend,
+    required this.initialFeedback,
+    required this.onFeedbackChanged,
   });
 
   final WeeklyReport report;
-  final bool sent;
-  final bool sending;
-  final void Function(WeeklyReport report, String message) onSend;
+
+  /// 입력창에 채워 둘 문구. 트레이너가 고치던 중이면 그 내용이다.
+  final String initialFeedback;
+
+  /// 입력창이 바뀔 때마다 현재 문구를 올려 준다 — 전송은 헤더 공유 메뉴가 한다.
+  final ValueChanged<String> onFeedbackChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -445,14 +538,18 @@ class _ClientReport extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.reportsFeedbackTitle,
+          // 저장 버튼을 제목 행에 둔다 — 입력창 위에 버튼만 있는 줄이 따로
+          // 있으면 카드가 그만큼 세로로 늘어난다.
+          trailing: Tooltip(
+            message: l.reportsFeedbackSaveUnsupported,
+            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
+          ),
           child: _FeedbackEditor(
             key: ValueKey<String>(
               'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
             ),
-            initialText: reportMessage(l, report),
-            sent: sent,
-            sending: sending,
-            onSend: (message) => onSend(report, message),
+            initialText: initialFeedback,
+            onChanged: onFeedbackChanged,
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -727,15 +824,13 @@ class _FeedbackEditor extends StatefulWidget {
   const _FeedbackEditor({
     super.key,
     required this.initialText,
-    required this.sent,
-    required this.sending,
-    required this.onSend,
+    required this.onChanged,
   });
 
   final String initialText;
-  final bool sent;
-  final bool sending;
-  final ValueChanged<String> onSend;
+
+  /// 전송은 헤더의 공유 메뉴가 한다 — 이 위젯은 문구만 들고 올려 준다.
+  final ValueChanged<String> onChanged;
 
   @override
   State<_FeedbackEditor> createState() => _FeedbackEditorState();
@@ -746,8 +841,6 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
     text: widget.initialText,
   );
 
-  bool get _canSend => _controller.text.trim().isNotEmpty;
-
   @override
   void dispose() {
     _controller.dispose();
@@ -757,48 +850,15 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerRight,
-          child: Tooltip(
-            message: l.reportsFeedbackSaveUnsupported,
-            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _controller,
-          onChanged: (_) => setState(() {}),
-          minLines: 4,
-          maxLines: 7,
-          decoration: InputDecoration(
-            hintText: l.reportsFeedbackHint,
-            helperText: l.reportsFeedbackHelper,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ActionButton(
-            label: widget.sent
-                ? l.reportsSendStateSent
-                : (widget.sending
-                      ? l.reportsSendStateSending
-                      : l.reportsSendAction),
-            icon: widget.sent ? Icons.check : Icons.send_outlined,
-            primary: true,
-            onPressed: widget.sent || widget.sending || !_canSend
-                ? null
-                : () {
-                    final text = _controller.text.trim();
-                    if (text.isEmpty) return;
-                    widget.onSend(text);
-                  },
-          ),
-        ),
-      ],
+    return TextField(
+      controller: _controller,
+      onChanged: widget.onChanged,
+      minLines: 4,
+      maxLines: 7,
+      // 입력 글씨의 기본은 bodyLarge(17)라 카드의 다른 글씨보다 유독 컸다.
+      // 임의의 숫자 대신 타이포 스케일의 한 단계 아래를 쓴다.
+      style: Theme.of(context).textTheme.bodySmall,
+      decoration: InputDecoration(hintText: l.reportsFeedbackHint),
     );
   }
 }
@@ -945,21 +1005,157 @@ class _ReportAiCard extends StatelessWidget {
   }
 }
 
-class _UnsupportedPdfExportAction extends StatelessWidget {
-  const _UnsupportedPdfExportAction();
+/// 리포트를 내보내는 두 경로를 한 메뉴로 모은 헤더 액션. (#735)
+///
+/// 전에는 동작하는 `고객에게 전송` 이 피드백 입력창 아래에, 눌리지 않는
+/// `PDF 내보내기` 가 헤더에 따로 있어서 "이 리포트를 어떻게 내보내지"의 답이
+/// 화면 두 곳에 나뉘어 있었다.
+///
+/// 항목에 고객 이름을 함께 적는다 — 헤더는 본문보다 위에 있어 어느 리포트가
+/// 열려 있는지 눈으로 잇기 어렵고, 잘못된 고객에게 보내는 실수가 되돌릴 수
+/// 없는 종류이기 때문이다.
+class _ShareMenu extends ConsumerWidget {
+  /// 메뉴 최소 너비. 두 항목 중 긴 쪽이 한 줄에 들어가는 폭이다.
+  static const double _menuMinWidth = 200;
+
+  /// 메뉴 한 줄. Material 기본은 글씨 16 · 높이 48 이라 12~13 으로 짜인 이
+  /// 콘솔에서 혼자 커 보였다. 글씨는 여는 버튼(`ActionButton` 라벨)과 같은
+  /// 크기·굵기로 맞춘다 — 버튼과 그 메뉴가 다른 크기로 보일 이유가 없다.
+  static const ButtonStyle _itemStyle = ButtonStyle(
+    textStyle: WidgetStatePropertyAll(
+      TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+    ),
+    minimumSize: WidgetStatePropertyAll(Size(0, 36)),
+    padding: WidgetStatePropertyAll(
+      EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    ),
+  );
+
+  const _ShareMenu({
+    required this.client,
+    required this.weekStart,
+    required this.sent,
+    required this.sending,
+    required this.feedbackBlank,
+    required this.onSend,
+  });
+
+  /// 리포트를 보고 있는 고객. 로스터가 비어 있으면 null.
+  final TrainerClient? client;
+
+  /// 화면이 보고 있는 주. 헤더의 주 이동과 같은 값을 써야 다른 주의 리포트를
+  /// 보내는 일이 없다.
+  final DateTime weekStart;
+  final bool sent;
+  final bool sending;
+
+  /// 피드백 입력창이 비었는가. 리포트 수치만 덩그러니 보내면 회원은 무슨 뜻인지
+  /// 알 수 없어, 전에도 빈 피드백은 보낼 수 없었다.
+  final bool feedbackBlank;
+
+  final Future<void> Function(WeeklyReport report) onSend;
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Tooltip(
-      message: l.reportsPdfUnsupported,
-      child: ActionButton(
-        key: const ValueKey<String>('reports-pdf-export-action'),
-        label: l.reportsPdfLabel,
-        icon: Icons.picture_as_pdf_outlined,
-        onPressed: null,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final target = client;
+    // 메뉴의 **오른쪽 변**을 버튼 오른쪽 변에 맞춘다.
+    //
+    // 기본(LTR)은 버튼 왼쪽에 붙어 오른쪽으로 자라, 헤더 끝에 있는 이 버튼에서는
+    // 창 가장자리에 닿는다. 버튼 너비를 숫자로 추정해 offset 으로 당기는 방법은
+    // 라벨·글꼴이 바뀌면 곧바로 어긋나므로, 펼침 방향 자체를 뒤집는다. 안쪽
+    // 내용은 다시 LTR 로 돌려 아이콘·글자 순서는 그대로 둔다.
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: MenuAnchor(
+        // 메뉴는 앱의 다른 메뉴와 같은 면으로 그린다 — Material 기본 표면은 이
+        // 콘솔의 카드보다 밝고 모서리도 달라 혼자 떠 보였다.
+        style: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll(AppColors.card),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              side: BorderSide(color: AppColors.borderStrong),
+            ),
+          ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          ),
+          minimumSize: const WidgetStatePropertyAll(Size(_menuMinWidth, 0)),
+        ),
+        // 헤더와 한 칸 띄운다. 가로 위치는 아래 Directionality 가 맞춘다.
+        alignmentOffset: const Offset(0, AppSpacing.xs),
+        menuChildren: <Widget>[
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: MenuItemButton(
+              key: const ValueKey<String>('reports-share-send'),
+              style: _itemStyle,
+              leadingIcon: Icon(
+                sent ? Icons.check : Icons.send_outlined,
+                size: 16,
+              ),
+              onPressed: target == null || sent || sending || feedbackBlank
+                  ? null
+                  : () => _send(context, ref, target),
+              child: Tooltip(
+                message: feedbackBlank && target != null && !sent && !sending
+                    ? l.reportsShareNeedsFeedback
+                    : '',
+                child: Text(
+                  target == null
+                      ? l.reportsShareNoClient
+                      : (sent
+                            ? l.reportsSendStateSent
+                            : (sending
+                                  ? l.reportsSendStateSending
+                                  : l.reportsShareSendTo(target.name))),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+          // PDF 생성 경로가 아직 없다. 항목을 숨기지 않는 이유는, 없는 기능이
+          // 아니라 아직 준비되지 않은 기능임을 화면에서 알 수 있어야 해서다.
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: MenuItemButton(
+              key: const ValueKey<String>('reports-share-pdf'),
+              style: _itemStyle,
+              leadingIcon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
+              onPressed: null,
+              child: Tooltip(
+                message: l.reportsPdfUnsupported,
+                child: Text(l.reportsPdfLabel),
+              ),
+            ),
+          ),
+        ],
+        builder: (context, controller, _) => Directionality(
+          textDirection: TextDirection.ltr,
+          child: ActionButton(
+            key: const ValueKey<String>('reports-share-action'),
+            label: l.reportsShare,
+            icon: Icons.ios_share,
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+          ),
+        ),
       ),
     );
+  }
+
+  /// 화면에 떠 있는 그 주의 리포트를 읽어 전송한다.
+  ///
+  /// 아직 로딩 중이면 보낼 내용이 없으므로 아무 일도 하지 않는다 — 빈 리포트를
+  /// 보내는 것보다 낫다.
+  void _send(BuildContext context, WidgetRef ref, TrainerClient target) {
+    final report = ref
+        .read(weeklyReportProvider((client: target, weekStart: weekStart)))
+        .valueOrNull;
+    if (report == null) return;
+    onSend(report);
   }
 }
 

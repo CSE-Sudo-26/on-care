@@ -984,7 +984,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsSendStateSending => 'Sending…';
 
   @override
-  String get reportsSendAction => 'Send to client';
+  String get reportsShare => 'Share';
+
+  @override
+  String reportsShareSendTo(String name) {
+    return 'Send to $name';
+  }
+
+  @override
+  String get reportsShareNeedsFeedback => 'Write feedback first to send it.';
+
+  @override
+  String get reportsShareNoClient => 'Pick a client to see their report first.';
 
   @override
   String reportBodyTitle(String range) {
@@ -1493,24 +1504,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachMemberSummary => 'Member summary';
 
   @override
-  String get reportsDataInsufficient => 'Insufficient data';
-
-  @override
-  String get reportsAnalysisAvailable => 'Ready to analyze';
-
-  @override
   String get reportsFeedbackComplete => 'Feedback complete';
 
   @override
   String get reportsFeedbackPending => 'Feedback pending';
 
   @override
-  String get reportsThisWeek => 'This week';
+  String get reportsDataInsufficient => 'Insufficient data';
 
   @override
-  String reportsAnalysisCount(int total, int available) {
-    return '$total total · $available ready';
-  }
+  String get reportsThisWeek => 'This week';
 
   @override
   String get coachSendFailed => 'Couldn\'t send. Please try again';
@@ -2486,10 +2489,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsFeedbackHint => 'Write coaching feedback for the client.';
-
-  @override
-  String get reportsFeedbackHelper =>
-      'The draft isn\'t stored on the server. Sending delivers it through the existing chat.';
 
   @override
   String get reportsTrendTitle => 'Workout completion · Last 4 weeks';

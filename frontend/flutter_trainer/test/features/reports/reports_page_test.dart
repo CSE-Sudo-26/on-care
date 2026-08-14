@@ -51,17 +51,20 @@ class _ReportFailsOncePerKeyRepository implements ReportRepository {
 /// 리포트 against the seeded roster — the trainer's own week plus one
 /// client's report, and sending it into their chat thread.
 void main() {
-  Future<void> revealSendAction(WidgetTester tester) async {
-    for (var attempt = 0; attempt < 6; attempt++) {
-      if (find.text('고객에게 전송').evaluate().isNotEmpty) break;
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -320));
-      await tester.pump();
-    }
-    if (find.text('고객에게 전송').evaluate().isNotEmpty) {
-      await tester.ensureVisible(find.text('고객에게 전송'));
-      await tester.pump();
-    }
+  /// 헤더의 공유 메뉴를 연다 — 전송은 이제 이 메뉴 안에 있다(#735).
+  Future<void> openShareMenu(WidgetTester tester) async {
+    await tester.tap(
+      find.byKey(const ValueKey<String>('reports-share-action')),
+    );
+    await settle(tester);
   }
+
+  /// 리포트 본문의 피드백 입력창.
+  final Finder feedbackField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField &&
+        widget.decoration?.hintText == '고객에게 전달할 코칭 피드백을 작성하세요.',
+  );
 
   Future<ProviderContainer> openReports(
     WidgetTester tester, {
@@ -109,16 +112,29 @@ void main() {
     expect(find.text('남성 · 35세'), findsWidgets);
   });
 
-  testWidgets('PDF 내보내기는 상단에만 표시된다', (tester) async {
+  testWidgets('공유는 상단에서 전송과 PDF 내보내기를 함께 보여 준다 (#735)', (tester) async {
     await openReports(tester);
 
-    final exportAction = find.byKey(
-      const ValueKey<String>('reports-pdf-export-action'),
+    final shareAction = find.byKey(
+      const ValueKey<String>('reports-share-action'),
     );
-    expect(exportAction, findsOneWidget);
+    expect(shareAction, findsOneWidget);
+    expect(tester.getCenter(shareAction).dy, lessThan(88));
+    // 메뉴를 열기 전에는 항목이 보이지 않는다.
+    expect(find.text('PDF 내보내기'), findsNothing);
+
+    await openShareMenu(tester);
+    expect(find.text('김민수님에게 전송'), findsOneWidget);
     expect(find.text('PDF 내보내기'), findsOneWidget);
-    expect(find.text('회원 공유용 PDF'), findsNothing);
-    expect(tester.getCenter(exportAction).dy, lessThan(88));
+    // PDF 는 아직 경로가 없어 눌리지 않는다.
+    expect(
+      tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey<String>('reports-share-pdf')),
+          )
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('과거 주차에서는 미래 이동 없이 이번 주로 복귀할 수 있다', (tester) async {
@@ -173,7 +189,8 @@ void main() {
 
     expect(back, findsNothing);
     expect(find.text('모바일 고객님 주간 리포트'), findsNothing);
-    expect(find.text('이번 주'), findsWidgets);
+    // 목록으로 돌아오면 고객 카드가 다시 보인다.
+    expect(find.text('고객'), findsWidgets);
   });
 
   testWidgets('the client query parameter focuses that client', (tester) async {
@@ -265,43 +282,44 @@ void main() {
     tester,
   ) async {
     await openReports(tester);
-    await revealSendAction(tester);
 
     // The preview box is the message body itself, so the trainer can
     // read it before sending rather than discovering it in the thread.
     expect(find.textContaining('주간 리포트'), findsWidgets);
     expect(find.textContaining('PT 세션'), findsWidgets);
-    expect(find.text('고객에게 전송'), findsOneWidget);
+    // 전송 경로는 화면에 하나뿐이다 — 본문에는 더 이상 전송 버튼이 없다.
+    await openShareMenu(tester);
+    expect(find.text('김민수님에게 전송'), findsOneWidget);
   });
 
   testWidgets('empty feedback cannot be sent', (tester) async {
     await openReports(tester);
-    await revealSendAction(tester);
 
-    final feedback = find.byWidgetPredicate(
-      (widget) =>
-          widget is TextField &&
-          widget.decoration?.hintText == '고객에게 전달할 코칭 피드백을 작성하세요.',
-    );
-    await tester.enterText(feedback, '   ');
-    await tester.pump();
+    await tester.enterText(feedbackField, '   ');
+    await settle(tester);
 
-    final button = tester.widget<ActionButton>(
-      find.widgetWithText(ActionButton, '고객에게 전송'),
+    await openShareMenu(tester);
+    expect(
+      tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey<String>('reports-share-send')),
+          )
+          .onPressed,
+      isNull,
     );
-    expect(button.onPressed, isNull);
   });
 
   testWidgets('전송 delivers the report into the client chat thread', (
     tester,
   ) async {
     final container = await openReports(tester);
-    await revealSendAction(tester);
+    await openShareMenu(tester);
 
-    await tester.tap(find.text('고객에게 전송'));
+    await tester.tap(find.text('김민수님에게 전송'));
     await settle(tester);
 
-    // Button latches so a second tap can't double-send.
+    // 메뉴 항목이 잠겨 두 번 보내지지 않는다.
+    await openShareMenu(tester);
     expect(find.text('전송됨'), findsOneWidget);
 
     final messages = await tester.runAsync(
@@ -333,16 +351,29 @@ void main() {
         ),
       ],
     );
-    await revealSendAction(tester);
+    await openShareMenu(tester);
 
-    await tester.tap(find.text('고객에게 전송'));
+    await tester.tap(find.text('김민수님에게 전송'));
     await settle(tester);
 
     // No false "전송됨" — the trainer would otherwise believe the member
     // got a report that never arrived.
     expect(find.text('전송됨'), findsNothing);
-    expect(find.text('고객에게 전송'), findsOneWidget);
     expect(find.text('리포트 전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+    // 실패해도 작성한 피드백이 남고 다시 보낼 수 있다.
+    expect(
+      tester.widget<TextField>(feedbackField).controller!.text,
+      contains('주간 리포트'),
+    );
+    await openShareMenu(tester);
+    expect(
+      tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey<String>('reports-share-send')),
+          )
+          .onPressed,
+      isNotNull,
+    );
   });
 }
 

@@ -954,7 +954,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsSendStateSending => '전송 중…';
 
   @override
-  String get reportsSendAction => '고객에게 전송';
+  String get reportsShare => '공유';
+
+  @override
+  String reportsShareSendTo(String name) {
+    return '$name님에게 전송';
+  }
+
+  @override
+  String get reportsShareNeedsFeedback => '피드백을 입력하면 전송할 수 있어요';
+
+  @override
+  String get reportsShareNoClient => '리포트를 볼 고객을 먼저 선택해 주세요';
 
   @override
   String reportBodyTitle(String range) {
@@ -1446,24 +1457,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachMemberSummary => '고객 요약';
 
   @override
-  String get reportsDataInsufficient => '데이터 부족';
-
-  @override
-  String get reportsAnalysisAvailable => '분석 가능';
-
-  @override
   String get reportsFeedbackComplete => '피드백 완료';
 
   @override
   String get reportsFeedbackPending => '피드백 미작성';
 
   @override
-  String get reportsThisWeek => '이번 주';
+  String get reportsDataInsufficient => '데이터 부족';
 
   @override
-  String reportsAnalysisCount(int total, int available) {
-    return '전체 $total명 · 분석 가능 $available명';
-  }
+  String get reportsThisWeek => '이번 주';
 
   @override
   String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';
@@ -2398,9 +2401,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsFeedbackHint => '고객에게 전달할 코칭 피드백을 작성하세요.';
-
-  @override
-  String get reportsFeedbackHelper => '초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.';
 
   @override
   String get reportsTrendTitle => '운동 이행률 추세 · 최근 4주';
