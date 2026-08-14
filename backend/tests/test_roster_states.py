@@ -10,9 +10,9 @@
 """
 from __future__ import annotations
 
-from datetime import date
-
 import pytest
+
+from app.core import clock
 
 _SODIUM_OVER = 2000  # 하루 나트륨 초과 기준
 _COMPLETION_LOW = 60  # 기록된 날 평균 이행률이 이 아래면 '이행률 저조'
@@ -83,7 +83,9 @@ def test_sparklines_cover_empty_short_and_full_weeks(client):
     불가능해진다. 계열이 이번 주 월→일로 고정되면서(#746) '꽉 찬 주'는 7일이
     아니라 **오늘까지의 날 수**다 — 아직 오지 않은 요일은 누구에게나 0 이다.
     """
-    elapsed = date.today().weekday() + 1
+    # 서비스는 KST 기준으로 "오늘"을 판단한다(`app.core.clock`). CI 는 UTC 라
+    # `date.today()` 를 쓰면 KST 00:00~09:00 사이에 하루가 어긋난다.
+    elapsed = clock.today().weekday() + 1
     lengths = {
         len([v for v in (r.get("sodium_week") or []) if v > 0]) for r in _roster(client)
     }
@@ -134,8 +136,7 @@ def test_daily_series_sit_on_this_weeks_weekdays(client):
     놓인다. 오늘 이후 요일은 아직 오지 않았으니 0 이고, 오늘 자리는 같은 응답의
     오늘 합계와 같아야 한다.
     """
-    today = date.today()
-    today_index = today.weekday()
+    today_index = clock.today().weekday()
     rows = _roster(client)
     for row in rows:
         assert row["sodium_week"][today_index] == row["sodium_mg"], row["name"]

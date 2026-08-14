@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from datetime import date
 from uuid import uuid4
 
 from app.core import clock
@@ -324,7 +323,8 @@ def test_trainer_clients_roster_aggregates_real_diet(client):
     assert len(jisu["sodium_week"]) == 7
     # 계열은 이번 주 월→일이라 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에
     # 놓인다(#746). 그 뒤 요일은 아직 오지 않아 0 이다.
-    today_index = date.today().weekday()
+    # 서비스 기준(KST)의 오늘 — CI(UTC)에서 `date.today()` 는 하루 어긋난다.
+    today_index = clock.today().weekday()
     assert jisu["sodium_week"][today_index] == 1800  # 오늘 = 3끼 나트륨 합
     assert all(v == 0 for v in jisu["sodium_week"][today_index + 1 :])
     assert len(jisu["week_completion"]) == 7
@@ -461,8 +461,6 @@ def test_trainer_client_history_newest_first(client):
 
 def test_history_excludes_other_trainers_records(client, db_session):
     """다른 트레이너가 작성한 기록/메모는 이 트레이너의 조회에 노출되지 않는다(PR 250-#1)."""
-    from datetime import date
-
     from app.db.seed_trainer import TRAINER_ID
     from app.models.models import RoutineHistory, User
     from app.services.trainer_service import build_client_history
