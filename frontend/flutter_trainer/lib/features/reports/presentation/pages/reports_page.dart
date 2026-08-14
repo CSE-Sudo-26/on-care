@@ -61,14 +61,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   @override
   void didUpdateWidget(ReportsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.clientId != null && widget.clientId != oldWidget.clientId) {
-      setState(() => _clientId = widget.clientId);
+    if (widget.clientId != oldWidget.clientId) {
+      _clientId = widget.clientId;
     }
   }
 
   void _selectClient(String id) {
     if (_clientId == id) return;
-    setState(() => _clientId = id);
     context.go(AppRoutes.reportFor(id));
   }
 
@@ -76,6 +75,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     setState(() {
       _weekStart = _weekStart.add(Duration(days: 7 * direction));
       // A different week is a different report — allow sending again.
+      _sent.clear();
+    });
+  }
+
+  void _goToCurrentWeek() {
+    final currentWeek = weekStartOf(DateTime.now());
+    if (_weekStart == currentWeek) return;
+    setState(() {
+      _weekStart = currentWeek;
       _sent.clear();
     });
   }
@@ -118,6 +126,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final weekSessions = ref.watch(scheduleRangeProvider(range));
 
     return PageScaffold(
+      key: ValueKey<String>('reports-${_clientId ?? 'list'}'),
       title: l.reportsTitle,
       subtitle: l.reportsSubtitle,
       actions: <Widget>[
@@ -126,11 +135,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
-        ActionButton(
-          label: l.reportsNextWeek,
-          icon: Icons.chevron_right,
-          onPressed: () => _shiftWeek(1),
-        ),
+        if (_weekStart != weekStartOf(DateTime.now()))
+          ActionButton(
+            label: l.reportsThisWeek,
+            icon: Icons.today_outlined,
+            onPressed: _goToCurrentWeek,
+          ),
+        const _UnsupportedPrintAction(),
       ],
       child: clientsAsync.when(
         loading: () => const Padding(
@@ -180,6 +191,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     selectedId: selected.id,
                     onSelect: _selectClient,
                   );
+                  if (!wide && _clientId == null) {
+                    return picker;
+                  }
                   // The report itself comes from the repository: local
                   // in demo, server-aggregated against the real API
                   // (only the backend has the member's full history).
@@ -225,8 +239,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        picker,
-                        const SizedBox(height: AppSpacing.lg),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: const ValueKey<String>('reports-back-to-list'),
+                            onPressed: () => context.go(AppRoutes.reports),
+                            icon: const Icon(Icons.arrow_back),
+                            label: Text(l.reportsBackToList),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
                         report,
                       ],
                     );
@@ -497,7 +519,7 @@ class _ClientReport extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         const _ReportAiCard(),
         const SizedBox(height: AppSpacing.md),
-        const _UnsupportedExportActions(),
+        const _UnsupportedPdfAction(),
       ],
     );
   }
@@ -544,36 +566,63 @@ class _WeekComparison extends ConsumerWidget {
               ),
             )
           else
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _ComparisonMetric(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final charts = <Widget>[
+                  _ComparisonMetric(
+                    key: const ValueKey<String>('completion-comparison-chart'),
                     label: l.reportsCompletionAvg,
-                    current: _percent(report.completionAvg),
-                    previous: _percent(before?.completionAvg),
+                    current: report.completionAvg,
+                    previous: before?.completionAvg,
+                    previousLabel: report.isCurrentWeek
+                        ? l.reportsLastWeek
+                        : l.reportsPrevWeek,
+                    currentLabel: report.isCurrentWeek
+                        ? l.reportsThisWeek
+                        : l.reportsSelectedWeek,
+                    maxValue: 100,
+                    valueSuffix: '%',
                     delta: completionDelta == null
                         ? null
                         : '${completionDelta >= 0 ? '+' : ''}$completionDelta%p',
                     positive: completionDelta == null || completionDelta >= 0,
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: _ComparisonMetric(
+                  _ComparisonMetric(
+                    key: const ValueKey<String>('sodium-comparison-chart'),
                     label: l.reportsAverageSodium,
-                    current: report.sodiumAvg == null
-                        ? '-'
-                        : '${report.sodiumAvg}mg',
-                    previous: before?.sodiumAvg == null
-                        ? '-'
-                        : '${before!.sodiumAvg}mg',
+                    current: report.sodiumAvg,
+                    previous: before?.sodiumAvg,
+                    previousLabel: report.isCurrentWeek
+                        ? l.reportsLastWeek
+                        : l.reportsPrevWeek,
+                    currentLabel: report.isCurrentWeek
+                        ? l.reportsThisWeek
+                        : l.reportsSelectedWeek,
+                    valueSuffix: 'mg',
                     delta: sodiumDelta == null
                         ? null
                         : '${sodiumDelta >= 0 ? '+' : ''}${sodiumDelta}mg',
                     positive: sodiumDelta == null || sodiumDelta <= 0,
                   ),
-                ),
-              ],
+                ];
+                if (constraints.maxWidth < 520) {
+                  return Column(
+                    children: <Widget>[
+                      charts.first,
+                      const SizedBox(height: AppSpacing.sm),
+                      charts.last,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(child: charts.first),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: charts.last),
+                  ],
+                );
+              },
             ),
         ],
       ),
@@ -582,28 +631,34 @@ class _WeekComparison extends ConsumerWidget {
 
   static int? _delta(int? current, int? previous) =>
       current == null || previous == null ? null : current - previous;
-
-  static String _percent(int? value) => value == null ? '-' : '$value%';
 }
 
 class _ComparisonMetric extends StatelessWidget {
   const _ComparisonMetric({
+    super.key,
     required this.label,
     required this.current,
     required this.previous,
+    required this.previousLabel,
+    required this.currentLabel,
+    required this.valueSuffix,
     required this.delta,
     required this.positive,
+    this.maxValue,
   });
 
   final String label;
-  final String current;
-  final String previous;
+  final int? current;
+  final int? previous;
+  final String previousLabel;
+  final String currentLabel;
+  final String valueSuffix;
   final String? delta;
   final bool positive;
+  final int? maxValue;
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: const BoxDecoration(
@@ -622,35 +677,33 @@ class _ComparisonMetric extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Row(
-            children: <Widget>[
-              Text(
-                current,
-                style: const TextStyle(
-                  fontSize: 19,
+          BarSeriesChart(
+            values: <int>[previous ?? 0, current ?? 0],
+            labels: <String>[previousLabel, currentLabel],
+            maxValue: maxValue,
+            height: 96,
+            showValues: true,
+            valueSuffix: valueSuffix,
+            highlightIndex: 1,
+            missingIndices: <int>{
+              if (previous == null) 0,
+              if (current == null) 1,
+            },
+          ),
+          if (delta != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                delta!,
+                style: TextStyle(
+                  color: positive ? AppColors.success : AppColors.overTarget,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              if (delta != null) ...<Widget>[
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  delta!,
-                  style: TextStyle(
-                    color: positive ? AppColors.success : AppColors.overTarget,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          Text(
-            l.reportsPreviousValue(previous),
-            style: const TextStyle(
-              color: AppColors.subtleForeground,
-              fontSize: 10.5,
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -879,33 +932,40 @@ class _ReportAiCard extends StatelessWidget {
   }
 }
 
-class _UnsupportedExportActions extends StatelessWidget {
-  const _UnsupportedExportActions();
+class _UnsupportedPrintAction extends StatelessWidget {
+  const _UnsupportedPrintAction();
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: <Widget>[
-        Tooltip(
-          message: l.reportsPdfUnsupported,
-          child: ActionButton(
-            label: l.reportsPdfLabel,
-            icon: Icons.picture_as_pdf_outlined,
-            onPressed: null,
-          ),
+    return Tooltip(
+      message: l.reportsPrintUnsupported,
+      child: ActionButton(
+        key: const ValueKey<String>('reports-print-action'),
+        label: l.reportsPrintLabel,
+        icon: Icons.print_outlined,
+        onPressed: null,
+      ),
+    );
+  }
+}
+
+class _UnsupportedPdfAction extends StatelessWidget {
+  const _UnsupportedPdfAction();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Tooltip(
+        message: l.reportsPdfUnsupported,
+        child: ActionButton(
+          label: l.reportsPdfLabel,
+          icon: Icons.picture_as_pdf_outlined,
+          onPressed: null,
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Tooltip(
-          message: l.reportsPrintUnsupported,
-          child: ActionButton(
-            label: l.reportsPrintLabel,
-            icon: Icons.print_outlined,
-            onPressed: null,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

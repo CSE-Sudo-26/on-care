@@ -729,9 +729,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsPrevWeek => '이전 주';
 
   @override
-  String get reportsNextWeek => '다음 주';
-
-  @override
   String get reportsLoadFailed => '리포트를 불러오지 못했어요';
 
   @override
@@ -2163,6 +2160,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsComparisonTitle => '이번 주 vs 지난 주';
+
+  @override
+  String get reportsLastWeek => '지난 주';
+
+  @override
+  String get reportsSelectedWeek => '선택 주';
+
+  @override
+  String get reportsBackToList => '고객 목록';
 
   @override
   String get reportsPreviousLoadFailed => '지난주 데이터를 불러오지 못했어요.';

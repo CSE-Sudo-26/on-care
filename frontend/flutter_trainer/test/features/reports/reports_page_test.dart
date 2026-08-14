@@ -10,6 +10,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
@@ -65,10 +66,11 @@ void main() {
   Future<ProviderContainer> openReports(
     WidgetTester tester, {
     String? clientId,
+    Size size = const Size(1600, 1200),
     List<Override> extraOverrides = const <Override>[],
   }) async {
     tester.view.devicePixelRatio = 1.0;
-    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.physicalSize = size;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     return pumpTrainerApp(
@@ -87,8 +89,88 @@ void main() {
     expect(find.text('리포트'), findsWidgets);
     expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
     expect(find.text('트레이너 피드백'), findsOneWidget);
+    expect(find.text('다음 주'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('completion-comparison-chart')),
+        matching: find.byType(BarSeriesChart),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('sodium-comparison-chart')),
+        matching: find.byType(BarSeriesChart),
+      ),
+      findsOneWidget,
+    );
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
+  });
+
+  testWidgets('인쇄 액션은 스크롤 본문이 아닌 상단 헤더에 표시된다', (tester) async {
+    await openReports(tester);
+
+    final printAction = find.byKey(
+      const ValueKey<String>('reports-print-action'),
+    );
+    expect(printAction, findsOneWidget);
+    expect(tester.getCenter(printAction).dy, lessThan(88));
+  });
+
+  testWidgets('과거 주차에서는 미래 이동 없이 이번 주로 복귀할 수 있다', (tester) async {
+    await openReports(tester);
+
+    expect(find.text('다음 주'), findsNothing);
+    expect(find.widgetWithText(ActionButton, '이번 주'), findsNothing);
+
+    await tester.tap(find.text('이전 주'));
+    await settle(tester);
+
+    final currentWeek = find.widgetWithText(ActionButton, '이번 주');
+    expect(currentWeek, findsOneWidget);
+    expect(find.text('다음 주'), findsNothing);
+    expect(find.text('선택 주'), findsNWidgets(2));
+
+    await tester.tap(currentWeek);
+    await settle(tester);
+
+    expect(currentWeek, findsNothing);
+  });
+
+  testWidgets('좁은 화면에서 고객 선택 시 목록 대신 상세를 바로 연다', (tester) async {
+    await openReports(
+      tester,
+      size: const Size(700, 1000),
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            makeClient(id: 'mobile-client', name: '모바일 고객'),
+          ]),
+        ),
+      ],
+    );
+
+    expect(find.text('모바일 고객님 주간 리포트'), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('reports-back-to-list')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('모바일 고객'));
+    await settle(tester);
+
+    final back = find.byKey(const ValueKey<String>('reports-back-to-list'));
+    expect(back, findsOneWidget);
+    expect(find.text('모바일 고객님 주간 리포트'), findsOneWidget);
+    expect(tester.getTopLeft(back).dy, lessThan(220));
+
+    await tester.tap(back);
+    await settle(tester);
+
+    expect(back, findsNothing);
+    expect(find.text('모바일 고객님 주간 리포트'), findsNothing);
+    expect(find.text('이번 주'), findsWidgets);
   });
 
   testWidgets('the client query parameter focuses that client', (tester) async {
