@@ -91,6 +91,24 @@ void main() {
         );
         expect(created['is_closed'], isFalse);
 
+        // 시트를 닫았다 다시 연다. 생성 직후의 목록을 그대로 훑으면 결과가 흔들린다 —
+        // 자리가 쌓여 목록이 길어지면 새 자리는 맨 아래에 붙는데, 갱신으로 리스트가
+        // 재빌드될 때 스크롤 위치가 초기화되어 바닥에 닿기 전에 훑기가 끝난다.
+        // 다시 열면 목록을 새로 받아오므로, 확인하려는 계약("연 자리가 슬롯 목록에
+        // 보인다")은 그대로 두고 타이밍 의존만 걷어낼 수 있다.
+        await tester.tap(find.byIcon(Icons.close));
+        await pumpUntilAbsent(
+          tester,
+          find.byType(ReservationSlotsSheet),
+          step: '슬롯 시트 닫힘',
+        );
+        await tester.tap(find.byKey(const ValueKey<String>('schedule-open-slots')));
+        await pumpUntil(
+          tester,
+          find.byKey(const ValueKey<String>('slot-create')),
+          step: '예약 슬롯 시트 재진입',
+        );
+
         await pumpUntilVisibleInList(
           tester,
           find.byKey(ValueKey<String>('slot-row-${created['id']}')),
