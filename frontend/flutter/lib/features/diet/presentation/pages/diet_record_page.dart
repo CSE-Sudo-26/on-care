@@ -319,7 +319,8 @@ class _PeriodToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           for (final DietPeriodTab tab in DietPeriodTab.values)
-            GestureDetector(
+            Flexible(
+              child: GestureDetector(
               key: Key('diet-period-tab-${tab.name}'),
               onTap: () => onChanged(tab),
               behavior: HitTestBehavior.opaque,
@@ -337,6 +338,8 @@ class _PeriodToggle extends StatelessWidget {
                 ),
                 child: Text(
                   labels[tab]!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -346,6 +349,7 @@ class _PeriodToggle extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
             ),
         ],
       ),
@@ -400,7 +404,9 @@ class _NutritionSectionHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _PeriodToggle(active: period, onChanged: onChanged),
+          // 큰 글자 배율에서는 토글 자체가 남는 폭보다 커진다. 접히게 두어야 줄이
+          // 넘치지 않는다(#739). 보통 배율에서는 최소 폭 그대로라 모양이 같다.
+          Flexible(child: _PeriodToggle(active: period, onChanged: onChanged)),
         ],
       ),
     );
@@ -910,28 +916,36 @@ class _CalorieCircularProgress extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                '${(calories.ratio * 100).round()}%',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  height: 1,
-                ),
+          // 링은 지름이 고정이라 글자 배율이 커지면 안쪽 두 줄이 원을 넘어선다
+          // (#739, 배율 2.0 에서 세로 18px). 원 안에 들어가도록 함께 줄인다 —
+          // 여기서만은 글자가 작아지는 편이 원 밖으로 삐져나오는 것보다 낫다.
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: FittedBox(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    '${(calories.ratio * 100).round()}%',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l.homeAchieveRate,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                l.homeAchieveRate,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1387,12 +1401,19 @@ class _MealLog extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      l.dietMealLog,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: FigmaColors.ink,
+                    // 제목도 마지막 수단으로는 접힌다. 날짜만 접히게 두면 제목이
+                    // 배정된 폭을 넘길 때 줄이 그대로 넘쳤다(#739). 실제로는 날짜가
+                    // 먼저 줄어들어 제목이 잘리는 일은 거의 없다.
+                    Flexible(
+                      child: Text(
+                        l.dietMealLog,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: FigmaColors.ink,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1512,40 +1533,55 @@ class _MealCard extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: FigmaColors.primaryA(0.12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        mealBadge(l, meal.mealType),
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: FigmaColors.primary,
+                    // 배지와 시각은 남는 폭 안에서 접힌다. 넷 다 고정 폭이면
+                    // 320px 에서 줄이 넘쳤다(#739). 칼로리와 화살표는 접지 않는다 —
+                    // 카드가 무엇을 말하는지가 거기 달려 있다.
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: FigmaColors.primaryA(0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          mealBadge(l, meal.mealType),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: FigmaColors.primary,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      meal.time,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedForeground,
+                    Flexible(
+                      child: Text(
+                        meal.time,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.mutedForeground,
+                        ),
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      '${_formatInt(meal.total)} ${l.unitKcal}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.primary,
+                    Flexible(
+                      child: Text(
+                        '${_formatInt(meal.total)} ${l.unitKcal}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: FigmaColors.primary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -1585,14 +1621,21 @@ class _MealCard extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    '${f.kcal}${l.unitKcal} · '
-                                    '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
-                                    '${_formatG(f.sugarG)}${l.dietUnitG}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.mutedForeground,
+                                  // 영양 문자열도 접힌다. 이름만 접히게 두면
+                                  // `350kcal · 1,200mg · 12g` 자체가 좁은 폭을
+                                  // 넘겨(320px 에서 최대 122px) 줄이 잘렸다(#739).
+                                  Flexible(
+                                    child: Text(
+                                      '${f.kcal}${l.unitKcal} · '
+                                      '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
+                                      '${_formatG(f.sugarG)}${l.dietUnitG}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.mutedForeground,
+                                      ),
                                     ),
                                   ),
                                 ],
