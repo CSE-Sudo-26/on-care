@@ -384,7 +384,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                 ? '${exercise.duration}분'
                 : exercise.reps,
             weight: exercise.weight.trim().isEmpty ? '-' : exercise.weight,
-            session: multi ? session.name : '',
+            session: multi ? capSessionName(session.name) : '',
           ),
     ];
   }

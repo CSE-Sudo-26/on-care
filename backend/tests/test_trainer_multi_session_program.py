@@ -233,9 +233,26 @@ def test_a_single_session_program_looks_like_the_old_flat_assignment(
 
 
 def test_retrying_the_same_program_does_not_assign_it_twice(
-    client, trainer_token, cleanup_routines
+    client, trainer_token, cleanup_routines, db_session
 ):
-    """같은 멱등키로 재시도하면 먼저 배정된 세션들이 그대로 돌아온다."""
+    """같은 멱등키로 재시도하면 먼저 배정된 세션들이 그대로 돌아온다.
+
+    루틴만이 아니라 **알림도** 한 번이어야 한다 — 멱등 조회보다 먼저 알림을
+    보내면 재시도마다 회원 알림함에 같은 배정이 쌓인다.
+    """
+    from sqlalchemy import func, select
+
+    from app.models.models import Notification
+
+    def _routine_notifications() -> int:
+        db_session.expire_all()
+        return db_session.scalar(
+            select(func.count())
+            .select_from(Notification)
+            .where(Notification.user_id == MEMBER_ID)
+        ) or 0
+
+    before = _routine_notifications()
     request_id = f"req-{uuid4().hex[:10]}"
     payload = {
         "name": f"재시도 {uuid4().hex[:6]}",
@@ -263,6 +280,8 @@ def test_retrying_the_same_program_does_not_assign_it_twice(
         f"/v1/trainer/clients/{MEMBER_ID}/routines", headers=_headers(trainer_token)
     ).json()
     assert len([r for r in listed if r["id"] in {x["id"] for x in first}]) == 2
+    # 세션이 둘이어도 알림은 프로그램당 하나이고, 재시도가 더 만들지 않는다.
+    assert _routine_notifications() - before == 1
 
 
 def test_a_program_without_exercises_is_rejected(client, trainer_token):
@@ -365,6 +384,13 @@ def test_a_schedule_row_without_session_keys_still_reads(client, trainer_token):
     session_id = registered.json()["id"]
     try:
         assert registered.json()["program"][0]["session"] == ""
+        # 저장 직후 응답과 다시 읽은 값이 갈릴 수 있으므로 조회 경로도 본다.
+        listed = client.get(
+            f"/v1/trainer/schedule?date={date}", headers=_headers(trainer_token)
+        ).json()
+        stored = next(item for item in listed if item["id"] == session_id)
+        assert stored["program"][0]["session"] == ""
+        assert stored["program"][0]["name"] == "레그프레스"
     finally:
         client.delete(
             f"/v1/trainer/schedule/{session_id}", headers=_headers(trainer_token)

@@ -95,6 +95,12 @@ class CoachRoutine {
     completedIntensity: completedIntensity ?? this.completedIntensity,
     memberNote: memberNote ?? this.memberNote,
     trainerFeedback: trainerFeedback ?? this.trainerFeedback,
+    // 완료만 표시해도 프로그램·세션·운동 구성은 그대로 남아야 한다 — 빠뜨리면
+    // 완료를 누른 순간 화면에서 프로그램 제목과 운동이 사라진다(#709).
+    programName: programName,
+    sessionName: sessionName,
+    sessionOrder: sessionOrder,
+    exercises: exercises,
   );
 }
 

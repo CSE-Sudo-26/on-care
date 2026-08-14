@@ -412,7 +412,11 @@ class ProgramAssignRequest(BaseModel):
     )
     #: 전송 시도당 클라이언트가 만드는 멱등키. 재시도에 같은 키를 다시 보내면
     #: 프로그램 전체가 두 번 배정되지 않는다(단일 배정과 같은 규약, #581).
-    client_request_id: str | None = Field(default=None, max_length=64)
+    #:
+    #: 단건 배정(64)보다 짧다. 서버가 세션마다 `{key}#{index}` 로 나눠 저장하는데
+    #: 그 값이 들어갈 컬럼이 `String(64)` 라, 접미사 자리를 남겨 두지 않으면 긴
+    #: 키가 저장 단계에서 길이 초과로 터진다.
+    client_request_id: str | None = Field(default=None, max_length=48)
 
 
 #: 메모 출처. 'trainer' 는 회원 상세에서 직접 쓴 메모, 'chat_insight' 는 채팅에서

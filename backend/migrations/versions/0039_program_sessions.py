@@ -38,7 +38,7 @@ def upgrade() -> None:
             json_build_object(
                 'id', 'session-1',
                 'name', session_name,
-                'exercises', COALESCE(exercises_json, '[]')::json
+                'exercises', COALESCE(NULLIF(exercises_json, ''), '[]')::json
             )
         )::text
         """
@@ -99,10 +99,15 @@ def downgrade() -> None:
         """
         UPDATE trainer_program_drafts
         SET session_name = COALESCE(
-                (sessions_json::json -> 0 ->> 'name'), ''
+                (COALESCE(NULLIF(sessions_json, ''), '[]')::json -> 0 ->> 'name'),
+                ''
             ),
             exercises_json = COALESCE(
-                (sessions_json::json -> 0 -> 'exercises')::text, '[]'
+                (
+                    COALESCE(NULLIF(sessions_json, ''), '[]')::json
+                    -> 0 -> 'exercises'
+                )::text,
+                '[]'
             )
         """
     )

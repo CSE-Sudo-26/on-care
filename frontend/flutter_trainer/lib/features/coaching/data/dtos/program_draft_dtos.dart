@@ -16,6 +16,13 @@ String _cap(String value, int max) {
   return trimmed.length <= max ? trimmed : trimmed.substring(0, max);
 }
 
+/// 세션 이름을 서버가 받는 길이로 맞춘다.
+///
+/// 배정(`ProgramDraftSession.name`)과 일정(`ProgramItem.session`)이 같은 상한을
+/// 쓰므로 두 경로가 같은 함수를 지나야 한다 — 한쪽만 자르면 긴 세션 이름으로
+/// 배정은 되고 일정 등록만 422 가 된다.
+String capSessionName(String value) => _cap(value, _kNameMax);
+
 /// [ProgramExerciseDraft] → `ProgramDraftExercise` JSON.
 ///
 /// Clamps to the server's validators so a draft never fails to save over a

@@ -108,7 +108,7 @@ void main() {
       'source': 'trainer',
       'program_name': '주 2회 분할',
       'session_name': '세션 A · 하체',
-      'session_order': 0,
+      'session_order': 2,
       'exercises': <Object?>[
         <String, Object?>{
           'name': '레그프레스',
@@ -124,6 +124,8 @@ void main() {
 
     expect(r.programName, '주 2회 분할');
     expect(r.sessionName, '세션 A · 하체');
+    // 0 을 그대로 두면 매퍼가 항상 기본값을 돌려줘도 통과한다.
+    expect(r.sessionOrder, 2);
     expect(r.isProgramSession, isTrue);
     expect(r.exercises.single.name, '레그프레스');
     expect(r.exercises.single.detail, '4세트 × 12회 · 60kg · 휴식 90초');
@@ -143,5 +145,28 @@ void main() {
     expect(r.sessionName, '');
     expect(r.isProgramSession, isFalse);
     expect(r.exercises, isEmpty);
+  });
+
+  test('copyWith keeps the program session data (#709)', () {
+    const routine = CoachRoutine(
+      id: 'r-session-1',
+      name: '세션 A · 하체',
+      minutes: 30,
+      type: '근력',
+      reason: '레그프레스',
+      source: 'trainer',
+      programName: '주 2회 분할',
+      sessionName: '세션 A · 하체',
+      sessionOrder: 1,
+      exercises: <CoachRoutineExercise>[CoachRoutineExercise(name: '레그프레스')],
+    );
+
+    // 완료만 표시했는데 프로그램 제목과 운동 구성이 사라지면 안 된다.
+    final completed = routine.copyWith(completed: true);
+    expect(completed.completed, isTrue);
+    expect(completed.programName, '주 2회 분할');
+    expect(completed.sessionName, '세션 A · 하체');
+    expect(completed.sessionOrder, 1);
+    expect(completed.exercises.single.name, '레그프레스');
   });
 }
