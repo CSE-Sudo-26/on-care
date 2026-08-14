@@ -29,6 +29,7 @@ import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -626,6 +627,7 @@ class _MemberProgramList extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Material(
+                key: ValueKey<String>('program-client-${client.id}'),
                 color: client.id == selectedId
                     ? AppColors.accentSurface
                     : Colors.transparent,
@@ -635,37 +637,47 @@ class _MemberProgramList extends StatelessWidget {
                   borderRadius: const BorderRadius.all(AppRadius.md),
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          client.name,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          client.lastRoutine == '-'
-                              ? client.goal
-                              : client.lastRoutine,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.mutedForeground,
-                            fontSize: 11.5,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          recordedCompletionMean(client) == null
-                              ? l.reportsDataInsufficient
-                              : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                        ClientAvatar(label: client.avatar, size: 32),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              ClientIdentity(
+                                client: client,
+                                nameStyle: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                client.lastRoutine == '-'
+                                    ? client.goal
+                                    : client.lastRoutine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.mutedForeground,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                recordedCompletionMean(client) == null
+                                    ? l.reportsDataInsufficient
+                                    : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -704,11 +716,12 @@ class _ProgramMemberSummary extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      client.name,
-                      style: const TextStyle(
+                    ClientIdentity(
+                      client: client,
+                      nameStyle: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
+                        color: AppColors.foreground,
                       ),
                     ),
                     Text(
@@ -834,15 +847,23 @@ class _ClientChip extends StatelessWidget {
                     )
                   : ClientAvatar(label: client.avatar, size: 32),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                client.name,
-                style: TextStyle(
+              ClientIdentity(
+                client: client,
+                nameStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? AppColors.primaryForeground
                       : AppColors.foreground,
                 ),
+                demographicsStyle: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: selected
+                      ? AppColors.primaryForeground.withValues(alpha: 0.8)
+                      : AppColors.subtleForeground,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

@@ -20,6 +20,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Labels for [AppRoutes.clientTabSections], in the same order.
@@ -373,10 +374,9 @@ class _Header extends ConsumerWidget {
               Row(
                 children: <Widget>[
                   Flexible(
-                    child: Text(
-                      client.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                    child: ClientIdentity(
+                      client: client,
+                      nameStyle: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.foreground,

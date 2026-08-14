@@ -20,6 +20,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Widest the inline field grows. Past this it stops looking like a
@@ -519,10 +520,9 @@ class _ResultRowState extends State<_ResultRow> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                widget.client.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                              ClientIdentity(
+                                client: widget.client,
+                                nameStyle: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.foreground,

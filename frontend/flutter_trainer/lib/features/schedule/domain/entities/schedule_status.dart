@@ -33,14 +33,15 @@ abstract final class SessionType {
 }
 
 /// 저장된 상태값 → 화면 문구.
-String scheduleStatusLabel(AppLocalizations l, String status) => switch (status) {
-  ScheduleStatus.upcoming => l.scheduleStatusUpcoming,
-  ScheduleStatus.done => l.scheduleStatusDone,
-  ScheduleStatus.gap => l.scheduleStatusGap,
-  // 서버가 새 상태를 추가했는데 앱이 모르는 경우. 빈칸을 보여 주느니 원문을 그대로
-  // 내보낸다 — 무엇이 들어왔는지 화면에서 확인할 수 있다.
-  _ => status,
-};
+String scheduleStatusLabel(AppLocalizations l, String status) =>
+    switch (status) {
+      ScheduleStatus.upcoming => l.scheduleStatusUpcoming,
+      ScheduleStatus.done => l.scheduleStatusDone,
+      ScheduleStatus.gap => l.scheduleStatusGap,
+      // 서버가 새 상태를 추가했는데 앱이 모르는 경우. 빈칸을 보여 주느니 원문을 그대로
+      // 내보낸다 — 무엇이 들어왔는지 화면에서 확인할 수 있다.
+      _ => status,
+    };
 
 /// 저장된 종류값 → 화면 문구.
 String sessionTypeLabel(AppLocalizations l, String type) => switch (type) {

@@ -695,7 +695,7 @@
   "reportsAiTitle": "AI 코칭 보조 · 리포트 요약",
   "reportsAiUnavailable": "실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.",
   "reportsPdfUnsupported": "PDF 생성 API가 아직 없어요.",
-  "reportsPdfLabel": "회원 공유용 PDF",
+  "reportsPdfLabel": "PDF 내보내기",
   "reportsPrintUnsupported": "PDF/인쇄용 report snapshot 지원 후 사용할 수 있어요.",
   "reportsPrintLabel": "인쇄"
 }

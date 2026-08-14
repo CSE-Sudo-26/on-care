@@ -19,6 +19,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -143,7 +144,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             icon: Icons.today_outlined,
             onPressed: _goToCurrentWeek,
           ),
-        const _UnsupportedPrintAction(),
+        const _UnsupportedPdfExportAction(),
       ],
       child: clientsAsync.when(
         loading: () => const Padding(
@@ -351,11 +352,9 @@ class _ClientPicker extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                client.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                              ClientIdentity(
+                                client: client,
+                                nameStyle: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: client.id == selectedId
                                       ? FontWeight.w800
@@ -427,7 +426,21 @@ class _ClientReport extends StatelessWidget {
               color: AppColors.subtleForeground,
             ),
           ),
-          child: _WeekComparison(report: report),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ClientIdentity(
+                client: client,
+                nameStyle: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _WeekComparison(report: report),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
@@ -520,8 +533,6 @@ class _ClientReport extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         const _ReportAiCard(),
-        const SizedBox(height: AppSpacing.md),
-        const _UnsupportedPdfAction(),
       ],
     );
   }
@@ -934,39 +945,19 @@ class _ReportAiCard extends StatelessWidget {
   }
 }
 
-class _UnsupportedPrintAction extends StatelessWidget {
-  const _UnsupportedPrintAction();
+class _UnsupportedPdfExportAction extends StatelessWidget {
+  const _UnsupportedPdfExportAction();
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Tooltip(
-      message: l.reportsPrintUnsupported,
+      message: l.reportsPdfUnsupported,
       child: ActionButton(
-        key: const ValueKey<String>('reports-print-action'),
-        label: l.reportsPrintLabel,
-        icon: Icons.print_outlined,
+        key: const ValueKey<String>('reports-pdf-export-action'),
+        label: l.reportsPdfLabel,
+        icon: Icons.picture_as_pdf_outlined,
         onPressed: null,
-      ),
-    );
-  }
-}
-
-class _UnsupportedPdfAction extends StatelessWidget {
-  const _UnsupportedPdfAction();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Tooltip(
-        message: l.reportsPdfUnsupported,
-        child: ActionButton(
-          label: l.reportsPdfLabel,
-          icon: Icons.picture_as_pdf_outlined,
-          onPressed: null,
-        ),
       ),
     );
   }

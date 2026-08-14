@@ -29,6 +29,7 @@ import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -452,6 +453,25 @@ void main() {
       expect(find.text('17.8'), findsOneWidget);
       expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
       expect(find.text('혈압 안정에 효과적'), findsOneWidget);
+      final programCard = find.byKey(
+        const ValueKey<String>('program-client-seed-client-1'),
+      );
+      expect(programCard, findsOneWidget);
+      expect(
+        find.descendant(of: programCard, matching: find.text('운동 이행률')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: programCard,
+          matching: find.textContaining('운동 이행률 '),
+        ),
+        findsOneWidget,
+      );
+      final avatar = tester.widget<ClientAvatar>(
+        find.descendant(of: programCard, matching: find.byType(ClientAvatar)),
+      );
+      expect(avatar.size, 32);
     });
 
     testWidgets('opens the A/B assistant inline in the AI routine tab', (

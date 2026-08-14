@@ -4151,7 +4151,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsPdfLabel.
   ///
   /// In en, this message translates to:
-  /// **'Shareable PDF'**
+  /// **'Export PDF'**
   String get reportsPdfLabel;
 
   /// No description provided for @reportsPrintUnsupported.

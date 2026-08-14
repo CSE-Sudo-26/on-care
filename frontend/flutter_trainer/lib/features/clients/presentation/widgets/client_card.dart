@@ -6,12 +6,12 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
-import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
-/// A client row on the 고객 관리 list: avatar + active dot, name, goal,
-/// last message, and a quick-metric footer (칼로리 / 나트륨 / 마지막 루틴).
+/// A client row on the 고객 관리 list: avatar + active dot, identity,
+/// goal, and a quick-metric footer (칼로리 / 나트륨 / 마지막 루틴).
 class ClientCard extends StatelessWidget {
   /// Creates a card for [client]; [onTap] opens the detail screen.
   const ClientCard({
@@ -33,7 +33,8 @@ class ClientCard extends StatelessWidget {
   /// detail panel is open.
   final bool selected;
 
-  /// Unread chat messages — shows a count badge next to the preview.
+  /// Unread chat messages retained for call-site compatibility. The customer
+  /// roster intentionally does not expose chat previews or notification badges.
   final int unread;
 
   /// Dense master-list presentation used by the Figma 회원 관리 split view.
@@ -66,7 +67,7 @@ class ClientCard extends StatelessWidget {
               ),
             ),
             child: compact
-                ? _CompactClientContent(client: client, unread: unread)
+                ? _CompactClientContent(client: client)
                 : Column(
                     children: <Widget>[
                       Row(
@@ -81,26 +82,13 @@ class ClientCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: Text(
-                                        client.name,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.foreground,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      client.lastTime,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.subtleForeground,
-                                      ),
-                                    ),
-                                  ],
+                                ClientIdentity(
+                                  client: client,
+                                  nameStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.foreground,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -110,51 +98,6 @@ class ClientCard extends StatelessWidget {
                                     color: AppColors.subtleForeground,
                                     fontWeight: FontWeight.w500,
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: Text(
-                                        client.lastMessage,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: unread > 0
-                                              ? AppColors.foreground
-                                              : AppColors.mutedForeground,
-                                          fontWeight: unread > 0
-                                              ? FontWeight.w700
-                                              : FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    if (unread > 0)
-                                      Container(
-                                        margin: const EdgeInsets.only(
-                                          left: AppSpacing.xs,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 1,
-                                        ),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.accent,
-                                          borderRadius: BorderRadius.all(
-                                            AppRadius.pill,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '$unread',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.accentForeground,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
                                 ),
                               ],
                             ),
@@ -200,15 +143,13 @@ class ClientCard extends StatelessWidget {
 }
 
 class _CompactClientContent extends StatelessWidget {
-  const _CompactClientContent({required this.client, required this.unread});
+  const _CompactClientContent({required this.client});
 
   final TrainerClient client;
-  final int unread;
 
   @override
   Widget build(BuildContext context) {
     final completion = recordedCompletionMean(client)?.round();
-    final alerts = alertsFor(client, unread: unread);
     return Row(
       children: <Widget>[
         ClientAvatar(
@@ -224,41 +165,7 @@ class _CompactClientContent extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      client.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (alerts.isNotEmpty)
-                    AlertBadge(alert: alerts.first, showIcon: false),
-                  if (unread > 0) ...<Widget>[
-                    const SizedBox(width: AppSpacing.xs),
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 20),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.all(AppRadius.pill),
-                      ),
-                      child: Text(
-                        '$unread',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
+                  Expanded(child: ClientIdentity(client: client)),
                 ],
               ),
               const SizedBox(height: 3),
@@ -270,16 +177,6 @@ class _CompactClientContent extends StatelessWidget {
                   color: AppColors.subtleForeground,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                client.lastMessage,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.mutedForeground,
-                  fontSize: 10.5,
                 ),
               ),
               const SizedBox(height: 7),
@@ -300,23 +197,15 @@ class _CompactClientContent extends StatelessWidget {
                         minHeight: 5,
                         value: completion == null ? 0 : completion / 100,
                         backgroundColor: AppColors.inputBackground,
-                        color:
-                            completion != null &&
-                                completion < lowCompletionThreshold
-                            ? AppColors.overTarget
-                            : AppColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     completion == null ? '-' : '$completion%',
-                    style: TextStyle(
-                      color:
-                          completion != null &&
-                              completion < lowCompletionThreshold
-                          ? AppColors.overTarget
-                          : AppColors.primary,
+                    style: const TextStyle(
+                      color: AppColors.primary,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),

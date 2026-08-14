@@ -8,7 +8,10 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 /// AI 코칭 상담의 답변 한 건. (#497)
 class ClientCoachAnswer {
   /// Creates an answer.
-  const ClientCoachAnswer({required this.reply, this.sources = const <String>[]});
+  const ClientCoachAnswer({
+    required this.reply,
+    this.sources = const <String>[],
+  });
 
   /// AI 가 만든 답변.
   final String reply;
@@ -117,8 +120,8 @@ class DioClientCoachRepository implements ClientCoachRepository {
       return ClientCoachAnswer(
         reply: body['reply'] is String ? body['reply']! as String : '',
         sources: <String>[
-          for (final Object? item in body['sources'] as List<Object?>? ??
-              const <Object?>[])
+          for (final Object? item
+              in body['sources'] as List<Object?>? ?? const <Object?>[])
             if (item is String && item.trim().isNotEmpty) item.trim(),
         ],
       );
