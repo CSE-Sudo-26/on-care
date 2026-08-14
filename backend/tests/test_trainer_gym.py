@@ -306,7 +306,7 @@ def test_setting_a_gym_makes_the_trainer_consultable(client, trainer):
 
     token, trainer_id = trainer
     _member_id, member_token = _register_member(client)
-    payload = _payload(target_type="trainer", trainer_id=trainer_id)
+    payload = _payload(trainer_id=trainer_id)
 
     before = client.post("/v1/consultations", headers=_auth(member_token), json=payload)
     assert before.status_code == 404, before.text

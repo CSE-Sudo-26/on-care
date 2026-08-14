@@ -3,12 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 
 ConsultationDraft _draft({
-  String? gymId = 'gym-1',
-  String? trainerId,
+  String trainerId = 'trainer-1',
   HealthPurposeType purpose = HealthPurposeType.general,
   String? detail,
 }) => ConsultationDraft(
-  gymId: gymId,
   trainerId: trainerId,
   exerciseGoal: ExerciseGoal.fitness,
   healthPurposeType: purpose,
@@ -21,7 +19,7 @@ ConsultationDraft _draft({
 void main() {
   test('wire 값이 백엔드 Literal 과 같다', () {
     final json = _draft().toJson();
-    expect(json['target_type'], 'gym');
+    expect(json['trainer_id'], 'trainer-1');
     expect(json['exercise_goal'], 'fitness');
     expect(json['health_purpose_type'], 'general');
     expect(json['preferred_time_slot'], 'morning');
@@ -29,13 +27,18 @@ void main() {
     expect(json['preferred_date'], '2026-08-20');
   });
 
-  test('대상이 둘 다이거나 둘 다 없으면 직렬화 전에 막는다', () {
+  test('폐지된 헬스장 대상 필드는 아예 싣지 않는다', () {
+    // target_type 은 서버 기본값(trainer)에 맡기고, gym_id 는 보내지 않는다 —
+    // 보내면 서버가 422 로 막는다.
+    final json = _draft().toJson();
+    expect(json.containsKey('gym_id'), isFalse);
+    expect(json.containsKey('target_type'), isFalse);
+  });
+
+  test('대상 트레이너가 비면 직렬화 전에 막는다', () {
     // 그대로 나가면 원인을 찾기 어려운 422 로 돌아온다.
-    expect(
-      () => _draft(trainerId: 'trainer-1').toJson(),
-      throwsArgumentError,
-    );
-    expect(() => _draft(gymId: null).toJson(), throwsArgumentError);
+    expect(() => _draft(trainerId: '').toJson(), throwsArgumentError);
+    expect(() => _draft(trainerId: '   ').toJson(), throwsArgumentError);
   });
 
   test('기타 목적인데 상세가 비면 막는다', () {
@@ -48,12 +51,5 @@ void main() {
           .toJson()['health_purpose_detail'],
       '허리 통증',
     );
-  });
-
-  test('트레이너 대상이면 gym_id 를 비운다', () {
-    final json = _draft(gymId: null, trainerId: 'trainer-1').toJson();
-    expect(json['target_type'], 'trainer');
-    expect(json['gym_id'], isNull);
-    expect(json['trainer_id'], 'trainer-1');
   });
 }

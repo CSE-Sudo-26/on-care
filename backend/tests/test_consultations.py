@@ -111,15 +111,13 @@ def _create_trainer(
     return trainer
 
 
-def _payload(
-    *,
-    target_type: str = "gym",
-    gym_id: str | None = None,
-    trainer_id: str | None = None,
-) -> dict:
+def _payload(*, trainer_id: str | None = None) -> dict:
+    """상담 요청 본문. 대상은 트레이너 한 사람뿐이라 trainer_id 만 받는다.
+
+    `target_type` 은 서버 기본값(`trainer`)에 맡긴다 — 값이 하나뿐이라 클라이언트가
+    보낼 이유가 없고, 보내지 않아도 만들어져야 한다.
+    """
     return {
-        "target_type": target_type,
-        "gym_id": gym_id,
         "trainer_id": trainer_id,
         "exercise_goal": "health",
         "health_purpose_type": "general",
@@ -130,10 +128,10 @@ def _payload(
     }
 
 
-def test_create_gym_consultation_sets_server_fields(client, db_session):
+def test_create_consultation_sets_server_fields(client, db_session):
     member_id, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["preferred_date"] = clock.today().isoformat()
 
     response = client.post(
@@ -146,9 +144,10 @@ def test_create_gym_consultation_sets_server_fields(client, db_session):
     body = response.json()
     assert body["id"].startswith("consult-")
     assert body["member_id"] == member_id
-    assert body["target_type"] == "gym"
-    assert body["gym_id"] == gym.id
-    assert body["trainer_id"] is None
+    # 대상은 언제나 트레이너 한 사람이고, 폐지된 헬스장 대상 컬럼은 비어 있다.
+    assert body["target_type"] == "trainer"
+    assert body["trainer_id"] == trainer.id
+    assert body["gym_id"] is None
     assert body["status"] == "pending"
     assert body["health_purpose_detail"] == "건강 습관 개선"
     assert body["message"] == "상담을 받고 싶습니다."
@@ -156,26 +155,31 @@ def test_create_gym_consultation_sets_server_fields(client, db_session):
     assert body["updated_at"]
 
 
-def test_create_trainer_consultation(client, db_session):
+def test_gym_target_is_no_longer_accepted(client, db_session):
+    """헬스장 전체로 보내는 요청은 폐지됐다 — 옛 본문은 422 로 막힌다.
+
+    막지 않으면 소속 트레이너 전원의 인박스에 뜨는 요청이 다시 생기고, 회원은
+    자기가 누구에게 상담을 걸었는지 모르는 채로 남는다.
+    """
     _, token = _register_member(client)
-    trainer = _create_trainer(db_session)
+    gym = _create_place(db_session)
+    payload = _payload()
+    payload["target_type"] = "gym"
+    payload["gym_id"] = gym.id
+    del payload["trainer_id"]
 
     response = client.post(
-        "/v1/consultations",
-        headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer.id),
+        "/v1/consultations", headers=_auth(token), json=payload
     )
 
-    assert response.status_code == 201, response.text
-    assert response.json()["trainer_id"] == trainer.id
-    assert response.json()["gym_id"] is None
+    assert response.status_code == 422, response.text
 
 
 @pytest.mark.parametrize("status", ["pending", "accepted", "rejected"])
 def test_client_cannot_set_consultation_status(client, db_session, status):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["status"] = status
 
     response = client.post(
@@ -186,6 +190,11 @@ def test_client_cannot_set_consultation_status(client, db_session, status):
 
 
 def test_consultation_out_validates_orm_instance():
+    """폐지된 헬스장 대상 이력도 회원 목록에서 그대로 읽혀야 한다.
+
+    응답 스키마가 `trainer` 만 받게 좁히면, 옛 요청을 가진 회원의 상담 목록이
+    통째로 500 이 된다.
+    """
     now = datetime.now(timezone.utc)
     consultation = ConsultationRequest(
         id="consult-orm-validation",
@@ -212,8 +221,8 @@ def test_consultation_out_validates_orm_instance():
 
 def test_past_preferred_date_is_rejected(client, db_session):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["preferred_date"] = (clock.today() - timedelta(days=1)).isoformat()
 
     response = client.post(
@@ -236,8 +245,8 @@ def test_invalid_limited_value_is_rejected(
     client, db_session, field: str, value: str
 ):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload[field] = value
 
     response = client.post(
@@ -250,8 +259,8 @@ def test_invalid_limited_value_is_rejected(
 @pytest.mark.parametrize("detail", [None, "", "   "])
 def test_other_health_purpose_requires_detail(client, db_session, detail):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["health_purpose_type"] = "other"
     payload["health_purpose_detail"] = detail
 
@@ -264,8 +273,8 @@ def test_other_health_purpose_requires_detail(client, db_session, detail):
 
 def test_blank_optional_text_is_normalized_to_null(client, db_session):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["health_purpose_detail"] = " "
     payload["message"] = " "
 
@@ -280,8 +289,8 @@ def test_blank_optional_text_is_normalized_to_null(client, db_session):
 
 def test_message_length_is_limited(client, db_session):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload["message"] = "a" * 2001
 
     response = client.post(
@@ -289,22 +298,6 @@ def test_message_length_is_limited(client, db_session):
     )
 
     assert response.status_code == 422
-
-
-@pytest.mark.parametrize("category", [None, "medical"])
-def test_missing_or_non_fitness_gym_is_rejected(client, db_session, category):
-    _, token = _register_member(client)
-    gym_id = "consult-place-missing"
-    if category is not None:
-        gym_id = _create_place(db_session, category=category).id
-
-    response = client.post(
-        "/v1/consultations",
-        headers=_auth(token),
-        json=_payload(gym_id=gym_id),
-    )
-
-    assert response.status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -327,7 +320,7 @@ def test_invalid_trainer_target_is_rejected(
     response = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer_id),
+        json=_payload(trainer_id=trainer_id),
     )
 
     assert response.status_code == 404
@@ -340,7 +333,7 @@ def test_trainer_without_gym_is_rejected(client, db_session):
     response = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer.id),
+        json=_payload(trainer_id=trainer.id),
     )
 
     assert response.status_code == 404
@@ -353,7 +346,7 @@ def test_trainer_at_non_fitness_place_is_rejected(client, db_session):
     response = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer.id),
+        json=_payload(trainer_id=trainer.id),
     )
 
     assert response.status_code == 404
@@ -362,17 +355,19 @@ def test_trainer_at_non_fitness_place_is_rejected(client, db_session):
 @pytest.mark.parametrize(
     "payload_changes",
     [
-        {"target_type": "trainer", "gym_id": None, "trainer_id": None},
-        {"target_type": "gym", "trainer_id": "trainer-any"},
-        {"target_type": "gym", "gym_id": None},
+        # 대상 없는 요청 — 누구에게도 가지 않는 상담은 만들 수 없다.
+        {"trainer_id": None},
+        {"trainer_id": "   "},
+        # 폐지된 헬스장 대상.
+        {"target_type": "gym"},
     ],
 )
 def test_target_id_contract_is_validated(
     client, db_session, payload_changes
 ):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    payload = _payload(gym_id=gym.id)
+    trainer = _create_trainer(db_session)
+    payload = _payload(trainer_id=trainer.id)
     payload.update(payload_changes)
 
     response = client.post(
@@ -382,17 +377,9 @@ def test_target_id_contract_is_validated(
     assert response.status_code == 422
 
 
-@pytest.mark.parametrize("target_type", ["gym", "trainer"])
-def test_duplicate_pending_consultation_is_rejected(
-    client, db_session, target_type
-):
+def test_duplicate_pending_consultation_is_rejected(client, db_session):
     _, token = _register_member(client)
-    if target_type == "gym":
-        target = _create_place(db_session)
-        payload = _payload(gym_id=target.id)
-    else:
-        target = _create_trainer(db_session)
-        payload = _payload(target_type="trainer", trainer_id=target.id)
+    payload = _payload(trainer_id=_create_trainer(db_session).id)
 
     first = client.post(
         "/v1/consultations", headers=_auth(token), json=payload
@@ -405,23 +392,17 @@ def test_duplicate_pending_consultation_is_rejected(
     assert second.status_code == 409
 
 
-@pytest.mark.parametrize("target_type", ["gym", "trainer"])
 def test_partial_unique_index_allows_completed_but_rejects_second_pending(
-    client, db_session, target_type
+    client, db_session
 ):
     from sqlalchemy.exc import IntegrityError
 
     member_id, _ = _register_member(client)
-    gym_id = trainer_id = None
-    if target_type == "gym":
-        gym_id = _create_place(db_session).id
-    else:
-        trainer_id = _create_trainer(db_session).id
     common = {
         "member_id": member_id,
-        "target_type": target_type,
-        "gym_id": gym_id,
-        "trainer_id": trainer_id,
+        "target_type": "trainer",
+        "gym_id": None,
+        "trainer_id": _create_trainer(db_session).id,
         "exercise_goal": "health",
         "health_purpose_type": "general",
         "preferred_date": clock.today().isoformat(),
@@ -457,36 +438,41 @@ def test_partial_unique_index_allows_completed_but_rejects_second_pending(
     db_session.rollback()
 
 
-def test_gym_and_trainer_pending_requests_are_independent(client, db_session):
+def test_pending_requests_to_different_trainers_are_independent(
+    client, db_session
+):
+    """대기 요청은 트레이너별로 하나다 — 다른 트레이너에게는 걸 수 있어야 한다.
+
+    회원 한 명이 대기 요청을 통틀어 하나만 갖게 막으면, 답 없는 트레이너 한 명이
+    회원을 무기한 묶어 둔다.
+    """
     _, token = _register_member(client)
-    gym = _create_place(db_session)
-    trainer = _create_trainer(db_session)
 
-    gym_response = client.post(
+    first = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(gym_id=gym.id),
+        json=_payload(trainer_id=_create_trainer(db_session).id),
     )
-    trainer_response = client.post(
+    second = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(target_type="trainer", trainer_id=trainer.id),
+        json=_payload(trainer_id=_create_trainer(db_session).id),
     )
 
-    assert gym_response.status_code == 201
-    assert trainer_response.status_code == 201
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
 
 
 def test_list_returns_only_current_member_in_latest_order(client, db_session):
     first_member_id, first_token = _register_member(client)
     _, second_token = _register_member(client)
-    first_gym = _create_place(db_session)
-    second_gym = _create_place(db_session)
+    first_trainer = _create_trainer(db_session)
+    second_trainer = _create_trainer(db_session)
 
     first = client.post(
         "/v1/consultations",
         headers=_auth(first_token),
-        json=_payload(gym_id=first_gym.id),
+        json=_payload(trainer_id=first_trainer.id),
     )
     assert first.status_code == 201
     first_row = db_session.get(ConsultationRequest, first.json()["id"])
@@ -496,13 +482,13 @@ def test_list_returns_only_current_member_in_latest_order(client, db_session):
     second = client.post(
         "/v1/consultations",
         headers=_auth(first_token),
-        json=_payload(gym_id=second_gym.id),
+        json=_payload(trainer_id=second_trainer.id),
     )
     assert second.status_code == 201
     other = client.post(
         "/v1/consultations",
         headers=_auth(second_token),
-        json=_payload(gym_id=first_gym.id),
+        json=_payload(trainer_id=first_trainer.id),
     )
     assert other.status_code == 201
 
@@ -521,11 +507,11 @@ def test_list_returns_only_current_member_in_latest_order(client, db_session):
 
 def test_get_returns_own_consultation(client, db_session):
     _, token = _register_member(client)
-    gym = _create_place(db_session)
+    trainer = _create_trainer(db_session)
     created = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(gym_id=gym.id),
+        json=_payload(trainer_id=trainer.id),
     )
 
     response = client.get(
@@ -540,11 +526,11 @@ def test_get_returns_own_consultation(client, db_session):
 def test_other_members_consultation_is_hidden(client, db_session):
     _, owner_token = _register_member(client)
     _, other_token = _register_member(client)
-    gym = _create_place(db_session)
+    trainer = _create_trainer(db_session)
     created = client.post(
         "/v1/consultations",
         headers=_auth(owner_token),
-        json=_payload(gym_id=gym.id),
+        json=_payload(trainer_id=trainer.id),
     )
 
     response = client.get(
@@ -577,7 +563,7 @@ def test_missing_consultation_returns_404(client):
 def test_consultation_endpoints_require_authentication(
     client, method: str, path: str
 ):
-    kwargs = {"json": _payload(gym_id="consult-place-any")} if method == "post" else {}
+    kwargs = {"json": _payload(trainer_id="consult-trainer-any")} if method == "post" else {}
 
     response = getattr(client, method)(path, **kwargs)
 
@@ -599,20 +585,21 @@ def test_consultation_out_carries_target_names(client, db_session):
     """목록 카드가 이름을 렌더한다 — id 만 주면 앱이 대상마다 상세를 다시 조회해야
     하고, 대상이 지워지면 이름을 영영 못 만든다(#327)."""
     token = _register_member(client)[1]
+    trainer = _create_trainer(db_session)
     created = client.post(
         "/v1/consultations",
         headers=_auth(token),
-        json=_payload(gym_id="gym-oncare-sinchon"),
+        json=_payload(trainer_id=trainer.id),
     )
     assert created.status_code == 201, created.text
-    assert created.json()["gym_name"] == "온케어짐 신촌점"
+    assert created.json()["trainer_name"] == trainer.name
 
     listed = client.get("/v1/consultations/me", headers=_auth(token)).json()
-    assert listed[0]["gym_name"] == "온케어짐 신촌점"
-    # 헬스장 상담이므로 트레이너 이름은 없다.
-    assert listed[0]["trainer_name"] is None
+    assert listed[0]["trainer_name"] == trainer.name
+    # 대상은 트레이너뿐이라 헬스장 이름은 없다.
+    assert listed[0]["gym_name"] is None
 
     detail = client.get(
         f"/v1/consultations/{created.json()['id']}", headers=_auth(token)
     ).json()
-    assert detail["gym_name"] == "온케어짐 신촌점"
+    assert detail["trainer_name"] == trainer.name

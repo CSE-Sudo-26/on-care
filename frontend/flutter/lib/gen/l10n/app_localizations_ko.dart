@@ -1473,7 +1473,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exConsultRequestTitle => '상담 요청';
 
   @override
-  String get exGymConsultRequest => '헬스장 상담 요청하기';
+  String get exGymConsultRequest => '상담 요청하기';
+
+  @override
+  String get exGymConsultPickTrainer => '상담받을 트레이너 선택';
+
+  @override
+  String get exGymConsultPickTrainerHint => '상담은 트레이너 한 분에게 전달돼요.';
+
+  @override
+  String get exGymConsultNoTrainers => '아직 소속 트레이너가 없어요.';
 
   @override
   String get exTrainerConsultRequest => '트레이너 상담 요청하기';

@@ -1094,12 +1094,6 @@ abstract class AppLocalizations {
   /// **'Request declined'**
   String get consultRejected;
 
-  /// No description provided for @consultTargetGym.
-  ///
-  /// In en, this message translates to:
-  /// **'Gym enquiry'**
-  String get consultTargetGym;
-
   /// No description provided for @consultTargetTrainer.
   ///
   /// In en, this message translates to:

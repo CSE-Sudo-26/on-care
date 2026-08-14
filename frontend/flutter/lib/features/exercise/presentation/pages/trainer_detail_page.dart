@@ -325,7 +325,6 @@ class _TrainerDetails extends StatelessWidget {
                     ? null
                     : () => context.push(
                         AppRoutes.consultationRequestPath(
-                          targetType: ConsultationTargetType.trainer.name,
                           gymId: trainer.gymId,
                           trainerId: trainer.id,
                         ),

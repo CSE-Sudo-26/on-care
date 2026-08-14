@@ -18,12 +18,12 @@ import '../../support/consultation_test_support.dart';
 
 final ConsultationRequest _pendingRequest = ConsultationRequest(
   id: 'request-user-a',
-  targetType: ConsultationTargetType.gym,
+  targetType: ConsultationTargetType.trainer,
   gymId: 'gym-1',
   gymName: 'A 사용자 상담 헬스장',
-  trainerId: null,
-  trainerName: null,
-  trainerRole: null,
+  trainerId: 'trainer-1',
+  trainerName: 'A 사용자 상담 트레이너',
+  trainerRole: '퍼스널 트레이너',
   exerciseGoal: ExerciseGoal.weightLoss,
   healthPurposeType: HealthPurposeType.chronic,
   healthPurposeDetail: null,
@@ -71,10 +71,7 @@ void main() {
     expect(
       container
           .read(consultationRequestControllerProvider.notifier)
-          .hasPending(
-            targetType: _pendingRequest.targetType,
-            gymId: _pendingRequest.gymId,
-          ),
+          .hasPending(trainerId: _pendingRequest.trainerId),
       isFalse,
     );
     expect(container.read(exerciseRoutineDoneProvider), <bool>[false, false]);
@@ -106,10 +103,7 @@ void main() {
     expect(
       container
           .read(consultationRequestControllerProvider.notifier)
-          .hasPending(
-            targetType: _pendingRequest.targetType,
-            gymId: _pendingRequest.gymId,
-          ),
+          .hasPending(trainerId: _pendingRequest.trainerId),
       isFalse,
     );
   });
@@ -154,10 +148,7 @@ void main() {
     expect(
       container
           .read(consultationRequestControllerProvider.notifier)
-          .hasPending(
-            targetType: _pendingRequest.targetType,
-            gymId: _pendingRequest.gymId,
-          ),
+          .hasPending(trainerId: _pendingRequest.trainerId),
       isFalse,
     );
   });
@@ -211,10 +202,7 @@ void main() {
     expect(
       container
           .read(consultationRequestControllerProvider.notifier)
-          .hasPending(
-            targetType: _pendingRequest.targetType,
-            gymId: _pendingRequest.gymId,
-          ),
+          .hasPending(trainerId: _pendingRequest.trainerId),
       isTrue,
     );
     expect(container.read(exerciseRoutineDoneProvider), <bool>[true, false]);

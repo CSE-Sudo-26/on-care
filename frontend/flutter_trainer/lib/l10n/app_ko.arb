@@ -168,7 +168,6 @@
   "consultActionFailed": "상담을 처리하지 못했어요",
   "consultApproved": "{name} 회원을 담당 고객으로 등록했어요",
   "consultRejected": "상담 요청을 반려했어요",
-  "consultTargetGym": "헬스장 문의",
   "consultTargetTrainer": "트레이너 지정",
   "consultExerciseGoal": "운동 목표",
   "consultHealthPurpose": "건강관리 목적",

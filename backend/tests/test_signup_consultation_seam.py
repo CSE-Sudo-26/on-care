@@ -142,14 +142,12 @@ def _member(client) -> tuple[str, str]:
     return response.json()["id"], _login(client, email)
 
 
-def _request_consultation(client, token: str, gym_id: str) -> str:
+def _request_consultation(client, token: str, trainer_id: str) -> str:
     response = client.post(
         "/v1/consultations",
         headers=_auth(token),
         json={
-            "target_type": "gym",
-            "gym_id": gym_id,
-            "trainer_id": None,
+            "trainer_id": trainer_id,
             "exercise_goal": "strength",
             "health_purpose_type": "general",
             "health_purpose_detail": None,
@@ -165,23 +163,24 @@ def _request_consultation(client, token: str, gym_id: str) -> str:
 def test_a_signed_up_trainer_can_receive_and_accept_a_consultation(
     client, db_session
 ):
-    """가입 → 헬스장 상담 → 인박스 → 승인 → 로스터.
+    """가입 → 상담 요청 → 인박스 → 승인 → 로스터.
 
-    여기서 확인하는 것은 각 단계의 동작이 아니라 **초대 코드가 채운 소속이 인박스
-    조회 조건과 실제로 이어지는가**다. 그 연결이 끊기면 새로 가입한 트레이너의
-    인박스가 조용히 비고, 양쪽 단위 테스트는 모두 통과한다.
+    여기서 확인하는 것은 각 단계의 동작이 아니라 **초대 코드가 채운 소속이 상담
+    대상 조건과 실제로 이어지는가**다. 상담은 헬스장 소속 트레이너에게만 걸 수
+    있어(`_validate_target`), 그 연결이 끊기면 새로 가입한 트레이너는 회원이 고를
+    수 없는 사람이 되고 양쪽 단위 테스트는 모두 통과한다.
     """
     gym = _gym(db_session)
     code = _invite_code(db_session, gym)
 
     trainer_id, trainer_token = _sign_up_trainer(client, code)
     member_id, member_token = _member(client)
-    consultation_id = _request_consultation(client, member_token, gym.id)
+    consultation_id = _request_consultation(client, member_token, trainer_id)
 
     inbox = client.get("/v1/trainer/consultations", headers=_auth(trainer_token))
     assert inbox.status_code == 200, inbox.text
     assert consultation_id in {item["id"] for item in inbox.json()}, (
-        "초대 코드가 채운 소속이 인박스 조회 조건과 이어지지 않았다"
+        "가입한 트레이너의 인박스에 자기 앞으로 온 요청이 오지 않았다"
     )
 
     accepted = client.post(
@@ -197,17 +196,18 @@ def test_a_signed_up_trainer_can_receive_and_accept_a_consultation(
     assert member_id in {c["id"] for c in roster.json()}
 
 
-def test_a_signed_up_trainer_sees_only_their_own_gym(client, db_session):
-    """가입한 트레이너의 인박스가 자기 헬스장으로 좁혀져 있다.
+def test_a_signed_up_trainer_sees_only_their_own_requests(client, db_session):
+    """가입한 트레이너의 인박스가 자기 앞으로 온 요청으로 좁혀져 있다.
 
     위 테스트만 있으면 "인박스가 모든 요청을 준다"는 잘못된 구현도 통과한다.
+    같은 헬스장 동료에게 간 요청까지 보이면 안 된다.
     """
-    mine = _gym(db_session)
-    other = _gym(db_session)
-    _, trainer_token = _sign_up_trainer(client, _invite_code(db_session, mine))
+    gym = _gym(db_session)
+    _, trainer_token = _sign_up_trainer(client, _invite_code(db_session, gym))
+    other_trainer_id, _ = _sign_up_trainer(client, _invite_code(db_session, gym))
     _, member_token = _member(client)
 
-    foreign_id = _request_consultation(client, member_token, other.id)
+    foreign_id = _request_consultation(client, member_token, other_trainer_id)
 
     inbox = client.get("/v1/trainer/consultations", headers=_auth(trainer_token))
 

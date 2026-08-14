@@ -36,11 +36,10 @@ String preferredTimeSlotToWire(PreferredTimeSlot t) => switch (t) {
   PreferredTimeSlot.flexible => 'flexible',
 };
 
-/// 상담 신청 내용. 대상은 헬스장 **또는** 트레이너 하나다 — 서버가 둘 다 오거나
-/// 둘 다 비면 422 로 거절한다.
+/// 상담 신청 내용. 대상은 트레이너 한 사람이다 — 헬스장 전체로 보내는 갈래는
+/// 없앴고, 서버도 `trainer_id` 없는 요청을 422 로 거절한다.
 class ConsultationDraft {
   const ConsultationDraft({
-    required this.gymId,
     required this.trainerId,
     required this.exerciseGoal,
     required this.healthPurposeType,
@@ -50,11 +49,9 @@ class ConsultationDraft {
     required this.message,
   });
 
-  /// 헬스장 상담이면 값, 트레이너 상담이면 null.
-  final String? gymId;
-
-  /// 트레이너 상담이면 값, 헬스장 상담이면 null.
-  final String? trainerId;
+  /// 상담을 받을 트레이너. 헬스장에서 시작해도 소속 트레이너 중 한 명을 고른 뒤에
+  /// 요청이 만들어진다.
+  final String trainerId;
   final ExerciseGoal exerciseGoal;
   final HealthPurposeType healthPurposeType;
 
@@ -65,14 +62,10 @@ class ConsultationDraft {
   final String? message;
 
   Map<String, Object?> toJson() {
-    // 서버는 대상이 정확히 하나여야 하고, other 목적에는 상세가 있어야 한다(422).
-    // 여기서 막지 않으면 둘 다 실린 payload 가 그대로 나가 원인을 찾기 어려운
-    // 422 로 돌아온다.
-    if ((gymId == null) == (trainerId == null)) {
-      throw ArgumentError(
-        '상담 대상은 헬스장·트레이너 중 정확히 하나여야 합니다 '
-        '(gymId=$gymId, trainerId=$trainerId).',
-      );
+    // other 목적에는 상세가 있어야 한다(서버 422). 여기서 막지 않으면 원인을 찾기
+    // 어려운 422 로 돌아온다.
+    if (trainerId.trim().isEmpty) {
+      throw ArgumentError('상담을 요청할 트레이너를 지정해야 합니다.');
     }
     if (healthPurposeType == HealthPurposeType.other &&
         (healthPurposeDetail == null || healthPurposeDetail!.trim().isEmpty)) {
@@ -82,8 +75,7 @@ class ConsultationDraft {
   }
 
   Map<String, Object?> _json() => <String, Object?>{
-    'target_type': trainerId != null ? 'trainer' : 'gym',
-    'gym_id': gymId,
+    // `target_type` 은 서버 기본값(trainer)에 맡긴다 — 값이 하나뿐이다.
     'trainer_id': trainerId,
     'exercise_goal': exerciseGoalToWire(exerciseGoal),
     'health_purpose_type': healthPurposeToWire(healthPurposeType),

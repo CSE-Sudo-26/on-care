@@ -2783,8 +2783,26 @@ abstract class AppLocalizations {
   /// No description provided for @exGymConsultRequest.
   ///
   /// In en, this message translates to:
-  /// **'Request a Gym Consultation'**
+  /// **'Request a Consultation'**
   String get exGymConsultRequest;
+
+  /// No description provided for @exGymConsultPickTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a trainer'**
+  String get exGymConsultPickTrainer;
+
+  /// No description provided for @exGymConsultPickTrainerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request goes to one trainer.'**
+  String get exGymConsultPickTrainerHint;
+
+  /// No description provided for @exGymConsultNoTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainers are affiliated yet.'**
+  String get exGymConsultNoTrainers;
 
   /// No description provided for @exTrainerConsultRequest.
   ///

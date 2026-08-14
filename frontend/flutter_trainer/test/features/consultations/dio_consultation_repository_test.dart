@@ -66,7 +66,6 @@ void main() {
             'preferred_date': '2026-08-12',
             'preferred_time_slot': 'morning',
             'status': 'pending',
-            'via_gym': true,
           },
         ], '/trainer/consultations'),
       );
@@ -75,7 +74,6 @@ void main() {
 
       expect(list, hasLength(1));
       expect(list.single.memberName, '김민수');
-      expect(list.single.viaGym, isTrue);
       final captured =
           verify(
                 () => dio.get<List<dynamic>>(

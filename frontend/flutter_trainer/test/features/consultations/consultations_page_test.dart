@@ -17,7 +17,6 @@ ConsultationRequest _request({
   String id = 'consult-1',
   String name = '김민수',
   String status = 'pending',
-  bool viaGym = false,
   String? message = '상담 부탁드립니다.',
 }) => ConsultationRequest(
   id: id,
@@ -29,7 +28,6 @@ ConsultationRequest _request({
   preferredTimeCode: 'evening',
   message: message,
   status: status,
-  viaGym: viaGym,
 );
 
 /// A stand-in inbox that reports itself enabled (so the nav row renders)
@@ -106,18 +104,19 @@ void main() {
     expect(find.text('거절'), findsOneWidget);
   });
 
-  testWidgets('badges a gym-routed request so the trainer can tell', (
+  testWidgets('badges every request as addressed to this trainer', (
     tester,
   ) async {
     await _pumpInbox(
       tester,
       _FakeConsultationRepository(
-        requests: <ConsultationRequest>[_request(viaGym: true)],
+        requests: <ConsultationRequest>[_request()],
       ),
     );
 
-    expect(find.text('헬스장 문의'), findsOneWidget);
-    expect(find.text('트레이너 지정'), findsNothing);
+    // 요청은 트레이너 한 사람 앞으로만 온다 — "헬스장 문의" 갈래는 없어졌다.
+    expect(find.text('트레이너 지정'), findsOneWidget);
+    expect(find.text('헬스장 문의'), findsNothing);
   });
 
   testWidgets('accepting sends the decision to the repository', (tester) async {

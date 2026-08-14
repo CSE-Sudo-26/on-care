@@ -9,11 +9,11 @@ import 'package:oncare/features/exercise/presentation/controllers/consultation_r
 const Map<String, Object?> _serverRow = <String, Object?>{
   'id': 'consult-abc123',
   'member_id': 'user-demo',
-  'target_type': 'gym',
-  'gym_id': 'gym-oncare-sinchon',
-  'trainer_id': null,
-  'gym_name': '온케어짐 신촌점',
-  'trainer_name': null,
+  'target_type': 'trainer',
+  'gym_id': null,
+  'trainer_id': 'trainer-demo',
+  'gym_name': null,
+  'trainer_name': '김트레이너',
   'exercise_goal': 'weight_loss',
   'health_purpose_type': 'chronic',
   'health_purpose_detail': null,
@@ -47,8 +47,8 @@ void main() {
   test('서버 응답이 엔티티로 복원된다', () {
     final r = consultationFromJson(_serverRow);
     expect(r.id, 'consult-abc123');
-    expect(r.targetType, ConsultationTargetType.gym);
-    expect(r.gymName, '온케어짐 신촌점');
+    expect(r.targetType, ConsultationTargetType.trainer);
+    expect(r.trainerName, '김트레이너');
     // 라벨이 아니라 계약 enum 이어야 화면이 현지화 문구를 만들 수 있다.
     expect(r.exerciseGoal, ExerciseGoal.weightLoss);
     expect(r.healthPurposeType, HealthPurposeType.chronic);
@@ -75,10 +75,7 @@ void main() {
     expect(c.state, hasLength(1));
     // 복원이 없으면 목록이 비어 같은 대상에 다시 눌러 409 를 받는다.
     expect(
-      c.hasPending(
-        targetType: ConsultationTargetType.gym,
-        gymId: 'gym-oncare-sinchon',
-      ),
+      c.hasPending(trainerId: 'trainer-demo'),
       isTrue,
     );
   });

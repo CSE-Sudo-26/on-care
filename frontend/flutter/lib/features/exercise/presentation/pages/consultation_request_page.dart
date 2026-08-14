@@ -37,16 +37,15 @@ extension on _PreferredTime {
 
 class ConsultationRequestPage extends ConsumerStatefulWidget {
   const ConsultationRequestPage({
-    required this.targetType,
     required this.gymId,
-    this.trainerId,
+    required this.trainerId,
     super.key,
   });
 
-  final ConsultationTargetType? targetType;
   final String gymId;
 
-  /// Set for trainer-target requests; a gym has several trainers.
+  /// 상담을 받을 트레이너. 폐지된 헬스장 대상 링크로 들어오면 비어 있고, 그때는
+  /// 폼 대신 "대상을 찾을 수 없음"을 띄운다.
   final String? trainerId;
 
   @override
@@ -119,7 +118,7 @@ class _ConsultationRequestPageState
 
   Future<void> _submit({
     required Gym gym,
-    required Trainer? trainer,
+    required Trainer trainer,
     required Map<_ExerciseGoal, String> goalLabels,
     required Map<_HealthPurpose, String> purposeLabels,
     required Map<_PreferredTime, String> timeLabels,
@@ -128,13 +127,8 @@ class _ConsultationRequestPageState
     setState(() => _attempted = true);
     if (!_isValid) return;
 
-    final ConsultationTargetType targetType = widget.targetType!;
     final controller = ref.read(consultationRequestControllerProvider.notifier);
-    if (controller.hasPending(
-      targetType: targetType,
-      gymId: gym.id,
-      trainerId: trainer?.id,
-    )) {
+    if (controller.hasPending(trainerId: trainer.id)) {
       return;
     }
 
@@ -143,18 +137,12 @@ class _ConsultationRequestPageState
     final String message = _messageController.text.trim();
     final ConsultationRequest request = ConsultationRequest(
       id: 'consult-${now.microsecondsSinceEpoch}',
-      targetType: targetType,
+      targetType: ConsultationTargetType.trainer,
       gymId: gym.id,
       gymName: gym.name,
-      trainerId: targetType == ConsultationTargetType.trainer
-          ? trainer?.id
-          : null,
-      trainerName: targetType == ConsultationTargetType.trainer
-          ? trainer?.name
-          : null,
-      trainerRole: targetType == ConsultationTargetType.trainer
-          ? trainer?.role
-          : null,
+      trainerId: trainer.id,
+      trainerName: trainer.name,
+      trainerRole: trainer.role,
       // 라벨이 아니라 계약 enum 을 담는다 — 라벨을 저장하면 서버에서 복원할 때
       // 문구를 만들 수 없다(#327).
       exerciseGoal: _exerciseGoal!.wire,
@@ -169,11 +157,7 @@ class _ConsultationRequestPageState
       createdAt: now,
     );
     final ConsultationDraft draft = ConsultationDraft(
-      // 서버는 대상이 하나여야 한다 — 둘 다 오면 422.
-      gymId: targetType == ConsultationTargetType.gym ? gym.id : null,
-      trainerId: targetType == ConsultationTargetType.trainer
-          ? trainer?.id
-          : null,
+      trainerId: trainer.id,
       exerciseGoal: _exerciseGoal!.wire,
       healthPurposeType: _healthPurpose!.wire,
       healthPurposeDetail: _healthPurpose == _HealthPurpose.other
@@ -223,34 +207,25 @@ class _ConsultationRequestPageState
       _ => null,
     };
     final Gym? gym = nearbyGym ?? myGym;
-    final bool trainerTarget =
-        widget.targetType == ConsultationTargetType.trainer;
-    // 트레이너 상담이면 대상 트레이너를 id 로 직접 읽는다.
-    final AsyncValue<Trainer?> trainerAsync = trainerTarget
-        ? ref.watch(trainerProvider(widget.trainerId ?? ''))
+    final bool hasTrainerId = (widget.trainerId ?? '').isNotEmpty;
+    // 대상 트레이너를 id 로 직접 읽는다.
+    final AsyncValue<Trainer?> trainerAsync = hasTrainerId
+        ? ref.watch(trainerProvider(widget.trainerId!))
         : const AsyncValue<Trainer?>.data(null);
     final Trainer? trainer = trainerAsync.valueOrNull;
-    final bool targetIsValid =
-        widget.targetType != null &&
-        gym != null &&
-        (!trainerTarget || trainer != null);
+    final bool targetIsValid = gym != null && trainer != null;
 
     final Widget body;
     if (targetIsValid) {
-      final ConsultationTargetType targetType = widget.targetType!;
       final bool hasPending = requests.any(
         (ConsultationRequest request) =>
-            request.targetType == targetType &&
-            request.gymId == gym.id &&
-            (!trainerTarget || request.trainerId == trainer?.id) &&
+            request.trainerId == trainer.id &&
             request.status == ConsultationStatus.pending,
       );
       body = _buildForm(gym: gym, trainer: trainer, hasPending: hasPending);
-    } else if (trainerTarget && trainerAsync.isLoading) {
+    } else if (hasTrainerId && trainerAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
-    } else if (widget.targetType == null ||
-        widget.gymId.isEmpty ||
-        gym != null) {
+    } else if (!hasTrainerId || widget.gymId.isEmpty || gym != null) {
       body = _StateMessage(message: l.exConsultTargetNotFound);
     } else if (nearbyAsync.isLoading || myGymAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator(strokeWidth: 3));
@@ -287,7 +262,7 @@ class _ConsultationRequestPageState
 
   Widget _buildForm({
     required Gym gym,
-    required Trainer? trainer,
+    required Trainer trainer,
     required bool hasPending,
   }) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -324,11 +299,7 @@ class _ConsultationRequestPageState
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: <Widget>[
-            _TargetCard(
-              targetType: widget.targetType!,
-              gym: gym,
-              trainer: trainer,
-            ),
+            _TargetCard(gym: gym, trainer: trainer),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
               chipKeyPrefix: 'consult-goal',
@@ -463,23 +434,15 @@ class _ConsultationRequestPageState
 }
 
 class _TargetCard extends StatelessWidget {
-  const _TargetCard({
-    required this.targetType,
-    required this.gym,
-    required this.trainer,
-  });
+  const _TargetCard({required this.gym, required this.trainer});
 
-  final ConsultationTargetType targetType;
   final Gym gym;
-  final Trainer? trainer;
+  final Trainer trainer;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final bool trainerTarget = targetType == ConsultationTargetType.trainer;
-    final String typeLabel = trainerTarget
-        ? l.exTrainerConsultType
-        : l.exGymConsultType;
+    final String typeLabel = l.exTrainerConsultType;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -521,7 +484,7 @@ class _TargetCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            trainerTarget ? (trainer?.name ?? gym.name) : gym.name,
+            trainer.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -532,9 +495,7 @@ class _TargetCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            trainerTarget
-                ? (trainer?.role ?? l.exTrainerDedicated)
-                : gym.address,
+            trainer.role ?? l.exTrainerDedicated,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -544,9 +505,7 @@ class _TargetCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            trainerTarget
-                ? '${l.exTrainerAffiliation} · ${gym.name}'
-                : '${l.exAssignedTrainer} · ${l.exTrainerAssignedLater}',
+            '${l.exTrainerAffiliation} · ${gym.name}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

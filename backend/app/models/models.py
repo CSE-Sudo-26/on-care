@@ -486,7 +486,12 @@ class MemberGym(Base):
 
 
 class ConsultationRequest(Base):
-    """회원의 헬스장·트레이너 상담 요청."""
+    """회원이 트레이너 한 사람에게 보내는 상담 요청.
+
+    헬스장 전체를 대상으로 하는 갈래(`target_type='gym'`)는 폐지됐다. 컬럼과 인덱스는
+    이미 저장된 이력을 읽기 위해 남아 있고, 새 요청은 언제나 `target_type='trainer'`
+    에 `gym_id` 가 비어 있다.
+    """
 
     __tablename__ = "consultation_requests"
 
@@ -495,6 +500,7 @@ class ConsultationRequest(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     target_type: Mapped[str] = mapped_column(String(20))
+    #: 폐지된 헬스장 대상 요청에만 값이 있다(위 클래스 설명 참고).
     gym_id: Mapped[str | None] = mapped_column(
         ForeignKey("places.id", ondelete="SET NULL"), nullable=True
     )
@@ -510,8 +516,8 @@ class ConsultationRequest(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending"
     )
-    #: 처리한 트레이너. 헬스장으로 온 요청(target_type='gym')은 소속 트레이너 누구나
-    #: 받을 수 있어 요청 대상(trainer_id)과 다른 값이므로 별도 컬럼이다. (#467)
+    #: 처리한 트레이너. 지금은 요청 대상(trainer_id)과 항상 같지만, 폐지된 헬스장
+    #: 요청은 소속 누구나 받을 수 있어 다른 값이 들어간 이력이 남아 있다. (#467)
     decided_by: Mapped[str | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -529,6 +535,8 @@ class ConsultationRequest(Base):
     )
 
     __table_args__ = (
+        # 폐지된 헬스장 대상 요청의 인덱스. 새 행은 이 조건에 걸리지 않지만, 남아
+        # 있는 이력을 위해 그대로 둔다.
         Index(
             "uq_consultation_requests_pending_gym",
             "member_id",
@@ -548,8 +556,9 @@ class ConsultationRequest(Base):
             "member_id",
             "created_at",
         ),
-        # 트레이너 인박스의 두 경로 — 내 앞으로 온 것 / 내 헬스장으로 온 것. (#467)
+        # 트레이너 인박스 — 나를 지정한 요청만 읽는다. (#467)
         Index("ix_consultation_requests_trainer_status", "trainer_id", "status"),
+        # 헬스장 인박스가 쓰던 인덱스. 위 두 항목과 같은 이유로 남겨 둔다.
         Index("ix_consultation_requests_gym_status", "gym_id", "status"),
     )
 

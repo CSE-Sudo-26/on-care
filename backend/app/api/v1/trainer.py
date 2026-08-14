@@ -115,7 +115,7 @@ def _decide(
 ) -> TrainerConsultationOut:
     """승인·거절 공통 예외 매핑. 두 라우트가 같은 실패 모드를 갖는다. (#467)
 
-    남의 헬스장 요청을 404 로 돌리는 것은 의도다 — 403 은 그 id 의 요청이 존재한다는
+    남의 요청을 404 로 돌리는 것은 의도다 — 403 은 그 id 의 요청이 존재한다는
     사실을 알려 주어 id 를 훑는 것만으로 남의 상담 건수를 셀 수 있다.
     """
     try:
@@ -919,7 +919,7 @@ def trainer_consultations(
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[ConsultationStatusFilter, Query()] = "pending",
 ) -> list[TrainerConsultationOut]:
-    """나를 지정한 요청 + 내 소속 헬스장으로 온 요청. 기본은 미처리만."""
+    """나를 지정한 상담 요청. 기본은 미처리만."""
     return consultation_service.list_for_trainer(db, trainer.id, status)
 
 

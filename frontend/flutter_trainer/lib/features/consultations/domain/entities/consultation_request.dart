@@ -17,7 +17,6 @@ class ConsultationRequest {
     required this.status,
     this.message,
     this.purposeDetail,
-    this.viaGym = false,
     this.gymName,
     this.decisionNote,
   });
@@ -55,14 +54,7 @@ class ConsultationRequest {
   /// `pending` | `accepted` | `rejected`.
   final String status;
 
-  /// Whether this came to the gym rather than to this trainer by name.
-  ///
-  /// A gym enquiry can be picked up by any trainer at that gym, so the
-  /// card says so — otherwise the trainer cannot tell whether the member
-  /// asked for them specifically.
-  final bool viaGym;
-
-  /// Gym name for a gym-routed request.
+  /// Gym name carried by retired gym-routed requests; null for new ones.
   final String? gymName;
 
   /// Rejection reason, once decided.

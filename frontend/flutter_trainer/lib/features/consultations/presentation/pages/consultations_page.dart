@@ -163,9 +163,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       // 이름이 비어 오는 경우의 대체 문구는 화면이 붙인다 — DTO 는
       // 로케일을 모른다. (#501)
       title: request.memberName.isEmpty ? l.unknownMember : request.memberName,
-      trailing: request.viaGym
-          ? _Tag(label: l.consultTargetGym, tone: AppColors.brandOrange)
-          : _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
+      // 상담 요청은 트레이너 한 사람 앞으로만 온다 — 예전의 "헬스장 문의" 갈래는
+      // 없어졌다.
+      trailing: _Tag(label: l.consultTargetTrainer, tone: AppColors.primary),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[

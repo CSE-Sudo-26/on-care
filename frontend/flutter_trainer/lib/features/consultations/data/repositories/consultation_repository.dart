@@ -72,7 +72,6 @@ class DemoConsultationRepository implements ConsultationRepository {
               preferredTimeCode: 'evening',
               status: 'pending',
               message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',
-              viaGym: true,
               gymName: '온케어 피트니스',
             ),
           ];
@@ -121,7 +120,6 @@ class DemoConsultationRepository implements ConsultationRepository {
         status: status,
         message: request.message,
         purposeDetail: request.purposeDetail,
-        viaGym: request.viaGym,
         gymName: request.gymName,
         decisionNote: note,
       ),

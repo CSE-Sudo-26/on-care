@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -42,8 +42,8 @@ class DuplicatePendingConsultation(Exception):
 class ConsultationNotFound(Exception):
     """내 앞으로 온 요청이 아니거나 존재하지 않음 — 라우터가 404 로 옮긴다.
 
-    남의 헬스장 요청을 403 이 아니라 404 로 돌리는 이유: 403 은 "그 id 의 요청이
-    존재한다"를 알려 주어, id 를 훑는 것만으로 다른 헬스장의 상담 건수를 셀 수 있다.
+    남의 요청을 403 이 아니라 404 로 돌리는 이유: 403 은 "그 id 의 요청이 존재한다"를
+    알려 주어, id 를 훑는 것만으로 다른 트레이너의 상담 건수를 셀 수 있다.
     """
 
 
@@ -61,30 +61,25 @@ class MemberAlreadyCoached(Exception):
 
 
 def _pending_query(member_id: str, payload: ConsultationCreate):
-    query = select(ConsultationRequest).where(
+    """같은 트레이너에게 이미 보낸 대기 요청을 찾는 질의.
+
+    `uq_consultation_requests_pending_trainer` 와 같은 조건이라, 이 질의가 비었는데도
+    삽입이 제약에 걸리면 그건 경합이다(호출자가 다시 확인한다).
+    """
+    return select(ConsultationRequest).where(
         ConsultationRequest.member_id == member_id,
-        ConsultationRequest.target_type == payload.target_type,
+        ConsultationRequest.target_type == "trainer",
+        ConsultationRequest.trainer_id == payload.trainer_id,
         ConsultationRequest.status == "pending",
     )
-    if payload.target_type == "gym":
-        return query.where(ConsultationRequest.gym_id == payload.gym_id)
-    return query.where(ConsultationRequest.trainer_id == payload.trainer_id)
 
 
 def _validate_target(db: Session, payload: ConsultationCreate) -> None:
-    if payload.target_type == "gym":
-        gym = db.scalar(
-            select(Place).where(
-                Place.id == payload.gym_id,
-                Place.category == "fitness",
-            )
-        )
-        if gym is None:
-            raise ConsultationTargetNotFound(
-                "상담 가능한 헬스장을 찾을 수 없습니다."
-            )
-        return
+    """상담을 받을 수 있는 트레이너인지 확인한다.
 
+    헬스장(`Place.category == 'fitness'`)에 소속된 활성 트레이너만 대상이다 — 소속이
+    없으면 승인 뒤 회원을 연결할 헬스장도 없다.
+    """
     trainer = db.scalar(
         select(User)
         .join(TrainerProfile, TrainerProfile.trainer_id == User.id)
@@ -115,8 +110,10 @@ def create_consultation(
     consultation = ConsultationRequest(
         id=f"consult-{uuid.uuid4().hex[:12]}",
         member_id=member_id,
-        target_type=payload.target_type,
-        gym_id=payload.gym_id,
+        target_type="trainer",
+        # 헬스장 대상 요청은 폐지됐다. 컬럼은 지난 이력을 위해 남아 있을 뿐이라
+        # 새 요청은 언제나 비운다.
+        gym_id=None,
         trainer_id=payload.trainer_id,
         exercise_goal=payload.exercise_goal,
         health_purpose_type=payload.health_purpose_type,
@@ -127,7 +124,7 @@ def create_consultation(
         status="pending",
     )
     db.add(consultation)
-    _notify_trainers_of_new_request(db, consultation, member_id)
+    _notify_trainer_of_new_request(db, consultation, member_id)
     try:
         db.commit()
     except IntegrityError:
@@ -141,37 +138,24 @@ def create_consultation(
     return attach_target_names(db, [consultation])[0]
 
 
-def _notify_trainers_of_new_request(
+def _notify_trainer_of_new_request(
     db: Session, consultation: ConsultationRequest, member_id: str
 ) -> None:
-    """새 상담 요청을 받을 트레이너(들)에게 알림을 남긴다. 커밋은 호출자가 한다. (#503)
+    """새 상담 요청을 지정된 트레이너에게 알린다. 커밋은 호출자가 한다. (#503)
 
-    대상이 트레이너면 그 사람에게만, 헬스장이면 **그 헬스장 소속 트레이너 전원**에게
-    남긴다 — 헬스장으로 온 요청은 소속 누구나 받을 수 있고(#467), 아무에게도
-    알리지 않으면 인박스를 열어 보는 사람만 우연히 발견하게 된다.
+    알림이 없으면 인박스를 열어 보는 사람만 우연히 요청을 발견한다.
     """
-    if consultation.trainer_id is not None:
-        trainer_ids = [consultation.trainer_id]
-    elif consultation.gym_id is not None:
-        trainer_ids = list(
-            db.scalars(
-                select(TrainerProfile.trainer_id).where(
-                    TrainerProfile.gym_id == consultation.gym_id
-                )
-            ).all()
-        )
-    else:
+    if consultation.trainer_id is None:
         return
 
     member_name = db.scalar(select(User.name).where(User.id == member_id)) or "회원"
-    for trainer_id in trainer_ids:
-        notification_service.queue_for_trainer(
-            db,
-            trainer_id=trainer_id,
-            kind=notification_service.TRAINER_CONSULTATION_KIND,
-            title="새 상담 요청이 도착했어요",
-            body=f"{member_name} 회원 · {consultation.preferred_date}",
-        )
+    notification_service.queue_for_trainer(
+        db,
+        trainer_id=consultation.trainer_id,
+        kind=notification_service.TRAINER_CONSULTATION_KIND,
+        title="새 상담 요청이 도착했어요",
+        body=f"{member_name} 회원 · {consultation.preferred_date}",
+    )
 
 
 def attach_target_names(db: Session, rows: list[ConsultationRequest]) -> list[ConsultationOut]:
@@ -267,22 +251,15 @@ def trainer_gym_id(db: Session, trainer_id: str) -> str | None:
     )
 
 
-def _inbox_scope(trainer_id: str, gym_id: str | None):
-    """트레이너가 볼 수 있는 요청의 범위.
+def _inbox_scope(trainer_id: str):
+    """트레이너가 볼 수 있는 요청의 범위 — 나를 지정한 요청뿐이다.
 
-    두 갈래다 — 나를 지정한 요청(`target_type='trainer'`)과 내 소속 헬스장으로 온
-    요청(`target_type='gym'`). 소속이 없는 트레이너는 헬스장 갈래가 통째로 빠진다
-    (gym_id 가 None 인 조건을 걸면 대상 헬스장이 지워진 남의 요청까지 걸린다).
+    예전에는 "내 소속 헬스장으로 온 요청" 갈래가 하나 더 있어, 회원이 헬스장에 보낸
+    문의가 소속 트레이너 전원의 인박스에 동시에 떴다. 이제 요청은 트레이너 한 사람을
+    지정해서만 만들어지므로 갈래가 하나다. 남아 있는 옛 `target_type='gym'` 행은
+    `trainer_id` 가 비어 있어 이 조건에 걸리지 않는다.
     """
-    mine = (ConsultationRequest.target_type == "trainer") & (
-        ConsultationRequest.trainer_id == trainer_id
-    )
-    if gym_id is None:
-        return mine
-    via_gym = (ConsultationRequest.target_type == "gym") & (
-        ConsultationRequest.gym_id == gym_id
-    )
-    return or_(mine, via_gym)
+    return ConsultationRequest.trainer_id == trainer_id
 
 
 def _to_trainer_out(
@@ -308,7 +285,6 @@ def _to_trainer_out(
         item = TrainerConsultationOut(
             **base[row.id].model_dump(),
             member_name=member_names.get(row.member_id),
-            via_gym=row.target_type == "gym",
             decided_by=row.decided_by,
         )
         out.append(item)
@@ -320,7 +296,7 @@ def list_for_trainer(
 ) -> list[TrainerConsultationOut]:
     """트레이너 인박스. 기본은 미처리(`pending`)만, 최신 요청이 위로 온다."""
     query = select(ConsultationRequest).where(
-        _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id))
+        _inbox_scope(trainer_id)
     )
     if status != "all":
         query = query.where(ConsultationRequest.status == status)
@@ -339,7 +315,7 @@ def pending_count_for_trainer(db: Session, trainer_id: str) -> int:
     """미처리 요청 수 — 인박스 배지용. 목록 전체를 만들지 않는다."""
     rows = db.scalars(
         select(ConsultationRequest.id).where(
-            _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
+            _inbox_scope(trainer_id),
             ConsultationRequest.status == "pending",
         )
     ).all()
@@ -351,13 +327,13 @@ def _require_inbox_row(
 ) -> ConsultationRequest:
     """인박스 범위 안의 상담 행. 없거나 남의 것이면 [ConsultationNotFound].
 
-    [lock] 은 결정 경로 전용이다. 헬스장으로 온 요청은 같은 헬스장 트레이너 누구나
-    받을 수 있어 두 사람이 같은 순간에 승인할 수 있고, 잠금이 없으면 둘 다 `pending`
-    검사를 통과한 뒤 링크 삽입에서 제약에 걸린다(리뷰). 행을 잠가 직렬화한다.
+    [lock] 은 결정 경로 전용이다. 같은 요청에 승인 요청이 겹쳐 들어오면 잠금 없이는
+    둘 다 `pending` 검사를 통과한 뒤 링크 삽입에서 제약에 걸린다(리뷰). 행을 잠가
+    직렬화한다.
     """
     query = select(ConsultationRequest).where(
         ConsultationRequest.id == consultation_id,
-        _inbox_scope(trainer_id, trainer_gym_id(db, trainer_id)),
+        _inbox_scope(trainer_id),
     )
     if lock:
         query = query.with_for_update()
@@ -482,8 +458,8 @@ def accept(
                     sort_order=(last_order or 0) + 1,
                 )
             )
-    # 링크 생성 여부와는 별개 조건이다 — 이미 이 트레이너의 담당인 회원이 헬스장
-    # 상담을 새로 넣고 승인받는 경우에도 헬스장 연결은 이뤄져야 한다(리뷰).
+    # 링크 생성 여부와는 별개 조건이다 — 이미 이 트레이너의 담당인 회원이 상담을
+    # 새로 넣고 승인받는 경우에도 헬스장 연결은 이뤄져야 한다(리뷰).
     # 이미 연결된 회원에게는 no-op 이라 중복 호출이 무해하다.
     _link_member_gym(db, row.member_id, trainer_gym_id(db, trainer_id))
 
