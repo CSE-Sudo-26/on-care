@@ -339,6 +339,46 @@ def test_trainer_client_diet_maps_member_meals(client):
     assert meals[0]["fat_g"] == 6
 
 
+def test_trainer_client_diet_survives_unexpected_food_shapes(client, db_session):
+    """음식 항목이 딕셔너리가 아니어도 그 날짜 식단이 죽지 않는다. (#724)
+
+    `["김치찌개", 42, null]` 처럼 저장된 기록이 실제로 있었고, 예전에는 이 한 건
+    때문에 담당 회원의 그 날짜 식단 조회 전체가 500 이 됐다. 문자열은 이름으로
+    살리고 나머지는 건너뛴다 — 칼로리·영양소는 그대로 보여 준다.
+    """
+    import json as _json
+
+    from app.models.models import DietEntry
+
+    day = "2099-02-02"
+    db_session.add(DietEntry(
+        id="diet-shape-test",
+        user_id="user-jisu",
+        date=day,
+        meal_type="lunch",
+        foods_json=_json.dumps(["김치찌개", 42, None], ensure_ascii=False),
+        total_calories=520,
+        carbs_g=60, protein_g=20, fat_g=15, sodium_mg=1200,
+    ))
+    db_session.commit()
+    try:
+        token = _trainer_token(client)
+        r = client.get(
+            f"/v1/trainer/clients/user-jisu/diet?date={day}",
+            headers=_auth(token),
+        )
+
+        assert r.status_code == 200, r.text
+        meal = r.json()[0]
+        assert meal["items"] == "김치찌개"
+        assert meal["calories"] == 520
+    finally:
+        db_session.query(DietEntry).filter(
+            DietEntry.id == "diet-shape-test"
+        ).delete()
+        db_session.commit()
+
+
 def test_trainer_client_macros_are_member_scoped_and_empty_day_is_empty(client):
     token = _trainer_token(client)
 
