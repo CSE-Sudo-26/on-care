@@ -9,6 +9,7 @@ import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/diet/domain/entities/diet_period.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:oncare/shared/widgets/metric_trend_chart.dart';
 
 /// 식단 탭의 기간 뷰(이번 주 / 이번 달).
 ///
@@ -17,9 +18,19 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 /// 일별 막대와 **하루 평균**을 보여준다. 합계가 아니라 평균을 머리 숫자로 두는
 /// 이유는 주(7일)와 달(30일)의 길이가 달라 합계끼리는 견줄 수 없기 때문이다.
 class DietPeriodView extends ConsumerStatefulWidget {
-  const DietPeriodView({required this.range, this.profile, super.key});
+  const DietPeriodView({
+    required this.range,
+    required this.weekly,
+    this.profile,
+    super.key,
+  });
 
   final DietDateRange range;
+
+  /// 이번 주인가. 주간은 홈 탭과 **같은 꺾은선**으로, 이번 달은 일별 막대로
+  /// 그린다 — 30칸을 꺾은선으로 그리면 점과 값 라벨이 서로 겹친다.
+  final bool weekly;
+
   final UserProfile? profile;
 
   @override
@@ -72,6 +83,14 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
         p?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG,
     };
   }
+
+  /// 꺾은선의 가로 눈금. **홈 탭과 같은 값**이라 두 화면의 눈금이 어긋나지
+  /// 않는다(`dashboard_content.dart` 의 지표 설정과 짝).
+  List<double> _ticks(_Metric m) => switch (m) {
+    _Metric.calories => const <double>[0, 1500, 2500],
+    _Metric.sodium => const <double>[0, 1750, 3500],
+    _Metric.sugar => const <double>[0, 25, 50],
+  };
 
   /// 소수 첫째 자리까지만 남기고 정수는 콤마만 붙인다(당류 17.8 이 18 로
   /// 반올림돼 하루 뷰와 어긋나지 않도록).
@@ -201,8 +220,10 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                     for (final DietPeriodDay d in period.days) d.date,
                   ],
                   format: _number,
-                  // 지표를 바꾸면 막대가 0 에서 다시 자란다.
+                  // 지표를 바꾸면 그래프가 처음부터 다시 그려진다.
                   replayKey: _metric,
+                  weekly: widget.weekly,
+                  ticks: _ticks(_metric),
                 ),
         ),
       ],
@@ -223,6 +244,8 @@ class _PeriodBody extends StatelessWidget {
     required this.dates,
     required this.format,
     required this.replayKey,
+    required this.weekly,
+    required this.ticks,
   });
 
   final DietPeriod period;
@@ -236,6 +259,12 @@ class _PeriodBody extends StatelessWidget {
   final List<DateTime> dates;
   final String Function(num) format;
   final Object replayKey;
+
+  /// 이번 주면 꺾은선, 이번 달이면 막대.
+  final bool weekly;
+
+  /// 꺾은선의 가로 눈금. 홈 탭과 같은 값을 쓴다.
+  final List<double> ticks;
 
   @override
   Widget build(BuildContext context) {
@@ -355,13 +384,28 @@ class _PeriodBody extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(height: 1, thickness: 1, color: FigmaColors.hairline),
           const SizedBox(height: 14),
-          _PeriodBars(
-            values: values,
-            dates: dates,
-            goal: goal,
-            color: color,
-            replayKey: replayKey,
-          ),
+          if (weekly)
+            MetricTrendChart(
+              values: values,
+              dayLabels: <String>[
+                for (final DateTime d in dates) _weekdayLabel(d),
+              ],
+              goal: goal,
+              ticks: ticks,
+              // 이번 주는 오늘까지만 잇는다. 오늘이 이 범위 밖이면(지난 주를
+              // 보고 있으면) 마지막 칸까지 전부 그린다.
+              todayIndex: _todayIndexIn(dates),
+              replayKey: replayKey,
+              formatTick: (double v) => format(v),
+            )
+          else
+            _PeriodBars(
+              values: values,
+              dates: dates,
+              goal: goal,
+              color: color,
+              replayKey: replayKey,
+            ),
         ],
       ),
     );
@@ -518,4 +562,18 @@ class _MetricPill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 요일 한 글자(월…일). 홈 탭 주간 추이의 요일 라벨과 같은 형식이다.
+String _weekdayLabel(DateTime d) =>
+    const <String>['월', '화', '수', '목', '금', '토', '일'][d.weekday - 1];
+
+/// 오늘이 이 범위의 몇 번째 칸인가. 범위 밖이면 마지막 칸 — 지난 주를 보고
+/// 있을 때 선이 중간에서 끊기지 않게 한다.
+int _todayIndexIn(List<DateTime> dates) {
+  final DateTime today = DateUtils.dateOnly(DateTime.now());
+  for (int i = 0; i < dates.length; i++) {
+    if (DateUtils.dateOnly(dates[i]) == today) return i;
+  }
+  return dates.length - 1;
 }

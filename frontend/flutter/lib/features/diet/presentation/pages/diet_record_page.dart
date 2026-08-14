@@ -239,6 +239,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: DietPeriodView(
                       range: _rangeFor(_period, center),
+                      weekly: _period == DietPeriodTab.week,
                       profile: profile,
                     ),
                   )
@@ -369,9 +370,13 @@ class _NutritionSectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
       child: Row(
         children: <Widget>[
-          // 좁은 화면·큰 글자 배율에서 제목이 토글을 밀어내 Row 가 넘치던
-          // 문제(#684 리뷰). 제목이 먼저 줄어든다.
-          Flexible(
+          // 토글을 카드 오른쪽 끝에 붙인다 — 운동 탭 '운동 현황' 과 같은 자리라
+          // 두 탭을 오가며 같은 곳에서 기간을 바꾼다.
+          //
+          // `Spacer` 가 아니라 `Expanded` 로 미는 이유: 좁은 화면·큰 글자 배율에서
+          // 제목이 토글을 밀어내 Row 가 넘치던 문제(#684 리뷰)를 그대로 막아야
+          // 한다. 제목이 남은 자리를 다 쓰되 먼저 줄어든다.
+          Expanded(
             child: Text(
               l.dietNutritionSummary,
               maxLines: 1,
