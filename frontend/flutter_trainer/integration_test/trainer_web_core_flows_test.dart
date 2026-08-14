@@ -349,15 +349,22 @@ void main() {
       step: 'consultation inbox sheet',
     );
 
-    final requestKey = ValueKey<String>('consultation-$consultationId');
+    // 키는 #640 의 트레이너 상담 E2E 가 붙여 둔 것을 그대로 쓴다. 같은 위젯에 스위트마다
+    // 다른 키를 붙이면 한쪽을 고칠 때 다른 쪽이 조용히 멀어진다.
+    final requestKey = ValueKey<String>('consult-request-$consultationId');
     await _pumpUntil(
       tester,
       find.byKey(requestKey),
       step: 'prepared pending consultation',
     );
     expect(find.text(_consultationMemberName), findsWidgets);
+    // 거절 버튼 키는 카드마다 같으므로 요청 카드 안에서 찾는다 — 대기 중인 요청이
+    // 여러 건이면 그냥 누르는 순간 남의 요청을 거절한다.
     await tester.tap(
-      find.byKey(ValueKey<String>('consultation-reject-$consultationId')),
+      find.descendant(
+        of: find.byKey(requestKey),
+        matching: find.byKey(const Key('consult-reject')),
+      ),
     );
     await _pumpUntil(
       tester,
@@ -365,10 +372,7 @@ void main() {
       step: 'consultation rejection dialog',
     );
     await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ),
+      find.byKey(const Key('consult-reject-reason')),
       _rejectionNote,
     );
     // 사유가 비면 확인 버튼이 비활성이다. `enterText` 는 프레임을 그려 주지 않으므로
@@ -377,7 +381,7 @@ void main() {
     final rejectConfirm = find.byWidgetPredicate(
       (widget) =>
           widget is TextButton &&
-          widget.key == const ValueKey<String>('consultation-reject-confirm') &&
+          widget.key == const Key('consult-reject-confirm') &&
           widget.onPressed != null,
       description: 'enabled rejection confirm button',
     );
