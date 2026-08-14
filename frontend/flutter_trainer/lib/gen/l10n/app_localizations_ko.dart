@@ -2415,9 +2415,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackHint => '고객에게 전달할 코칭 피드백을 작성하세요.';
 
   @override
-  String get reportsFeedbackHelper => '초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.';
-
-  @override
   String get reportsTrendTitle => '운동 이행률 추세 · 최근 4주';
 
   @override

@@ -506,6 +506,12 @@ class _ClientReport extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.reportsFeedbackTitle,
+          // 저장 버튼을 제목 행에 둔다 — 입력창 위에 버튼만 있는 줄이 따로
+          // 있으면 카드가 그만큼 세로로 늘어난다.
+          trailing: Tooltip(
+            message: l.reportsFeedbackSaveUnsupported,
+            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
+          ),
           child: _FeedbackEditor(
             key: ValueKey<String>(
               'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
@@ -812,28 +818,12 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerRight,
-          child: Tooltip(
-            message: l.reportsFeedbackSaveUnsupported,
-            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _controller,
-          onChanged: widget.onChanged,
-          minLines: 4,
-          maxLines: 7,
-          decoration: InputDecoration(
-            hintText: l.reportsFeedbackHint,
-            helperText: l.reportsFeedbackHelper,
-          ),
-        ),
-      ],
+    return TextField(
+      controller: _controller,
+      onChanged: widget.onChanged,
+      minLines: 4,
+      maxLines: 7,
+      decoration: InputDecoration(hintText: l.reportsFeedbackHint),
     );
   }
 }

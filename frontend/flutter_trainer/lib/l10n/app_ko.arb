@@ -750,7 +750,6 @@
   "reportsFeedbackSaveUnsupported": "피드백 초안 저장 API가 아직 없어요.",
   "reportsFeedbackSave": "피드백 저장",
   "reportsFeedbackHint": "고객에게 전달할 코칭 피드백을 작성하세요.",
-  "reportsFeedbackHelper": "초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.",
   "reportsTrendTitle": "운동 이행률 추세 · 최근 4주",
   "reportsTrendWeek": "{index}주",
   "reportsAiTitle": "AI 코칭 보조 · 리포트 요약",

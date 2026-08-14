@@ -2504,10 +2504,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsFeedbackHint => 'Write coaching feedback for the client.';
 
   @override
-  String get reportsFeedbackHelper =>
-      'The draft isn\'t stored on the server. Sending delivers it through the existing chat.';
-
-  @override
   String get reportsTrendTitle => 'Workout completion · Last 4 weeks';
 
   @override

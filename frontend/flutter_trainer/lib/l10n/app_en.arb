@@ -1487,7 +1487,6 @@
   "reportsFeedbackSaveUnsupported": "Feedback draft storage isn't supported yet.",
   "reportsFeedbackSave": "Save feedback",
   "reportsFeedbackHint": "Write coaching feedback for the client.",
-  "reportsFeedbackHelper": "The draft isn't stored on the server. Sending delivers it through the existing chat.",
   "reportsTrendTitle": "Workout completion · Last 4 weeks",
   "reportsTrendWeek": "Week {index}",
   "@reportsTrendWeek": {"placeholders": {"index": {"type": "int"}}},

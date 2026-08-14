@@ -4454,12 +4454,6 @@ abstract class AppLocalizations {
   /// **'Write coaching feedback for the client.'**
   String get reportsFeedbackHint;
 
-  /// No description provided for @reportsFeedbackHelper.
-  ///
-  /// In en, this message translates to:
-  /// **'The draft isn\'t stored on the server. Sending delivers it through the existing chat.'**
-  String get reportsFeedbackHelper;
-
   /// No description provided for @reportsTrendTitle.
   ///
   /// In en, this message translates to:
