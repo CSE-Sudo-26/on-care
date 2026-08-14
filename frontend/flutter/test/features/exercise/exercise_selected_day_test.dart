@@ -78,6 +78,29 @@ class _FixedWeekRepository implements ExerciseRepository {
   }) async => throw UnimplementedError();
 }
 
+/// 이번 주와 지난 주가 서로 다른 값인 저장소. 지난 주 조회 경로(`fetchWeek`)를
+/// 실제로 지났는지 수치로 구분하기 위한 대역.
+class _TwoWeekRepository extends _FixedWeekRepository {
+  _TwoWeekRepository({
+    required double thisWeek,
+    required this.pastWeekMinutes,
+    this.failPastWeek = false,
+  }) : super(thisWeek);
+
+  final double pastWeekMinutes;
+  final bool failPastWeek;
+
+  /// 지난 주를 실제로 받아 갔는지. 이번 주 값이 재활용되면 false 로 남는다.
+  bool fetchedPastWeek = false;
+
+  @override
+  Future<ExerciseWeek> fetchWeek(DateTime weekStart) async {
+    fetchedPastWeek = true;
+    if (failPastWeek) throw StateError('past week lookup failed');
+    return _week(pastWeekMinutes);
+  }
+}
+
 Widget _app(ExerciseRepository repo) {
   return ProviderScope(
     overrides: <Override>[
@@ -159,6 +182,83 @@ void main() {
     );
     final DateTime target = _otherDayThisWeek();
 
+    await tester.tap(find.text('${target.day}').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text(l.otherDateEmpty(l.pageExerciseTitle)), findsOneWidget);
+  });
+
+  testWidgets('지난 주로 넘겨 고른 날은 그 주를 따로 받아 그린다 (#671)', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(500, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    // 이번 주 40분 / 지난 주 12분 — 이번 주 값이 재사용되면 12분이 안 나온다.
+    final _TwoWeekRepository repo = _TwoWeekRepository(
+      thisWeek: 40,
+      pastWeekMinutes: 12,
+    );
+    await tester.pumpWidget(_app(repo));
+    await tester.pumpAndSettle();
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(ExercisePage)),
+    );
+
+    // 주간 스트립의 왼쪽 화살표로 한 주 뒤로 간다.
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await tester.pumpAndSettle();
+
+    // 지난 주로 옮긴 스트립의 가운데 날짜(= 오늘 -7일)를 고른다.
+    final DateTime now = DateTime.now();
+    final DateTime target = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 7));
+    await tester.tap(find.text('${target.day}').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      repo.fetchedPastWeek,
+      isTrue,
+      reason: '지난 주는 fetchWeek 으로 따로 받아야 한다',
+    );
+    expect(
+      find.text('${target.month}월 ${target.day}일 ${l.pageExerciseTitle}'),
+      findsOneWidget,
+    );
+    expect(find.text('12${l.unitMinutes}'), findsWidgets);
+    expect(find.text(l.otherDateEmpty(l.pageExerciseTitle)), findsNothing);
+  });
+
+  testWidgets('지난 주 조회가 실패하면 빈 문구로 내려앉는다', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(500, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final _TwoWeekRepository repo = _TwoWeekRepository(
+      thisWeek: 40,
+      pastWeekMinutes: 12,
+      failPastWeek: true,
+    );
+    await tester.pumpWidget(_app(repo));
+    await tester.pumpAndSettle();
+
+    final AppLocalizations l = AppLocalizations.of(
+      tester.element(find.byType(ExercisePage)),
+    );
+
+    await tester.tap(find.byIcon(Icons.chevron_left).first);
+    await tester.pumpAndSettle();
+    final DateTime now = DateTime.now();
+    final DateTime target = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 7));
     await tester.tap(find.text('${target.day}').first);
     await tester.pumpAndSettle();
 

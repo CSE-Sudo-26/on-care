@@ -227,3 +227,24 @@ def test_week_start_rejects_malformed_date(client):
         "/v1/exercise/weeks/current", params={"week_start": "2026-13-99"}, headers=h
     )
     assert r.status_code == 422
+
+
+def test_week_start_rejects_non_iso_basic_format(client):
+    """`20260810` 같은 기본 형식은 받지 않는다.
+
+    date.fromisoformat 은 3.11 부터 이 형식도 받지만, 앱의 로컬 목업은 엄격한
+    YYYY-MM-DD 만 받는다. 두 구현이 같은 요청에 다르게 답하면 안 된다.
+    """
+    h = _login(client)
+    r = client.get(
+        "/v1/exercise/weeks/current", params={"week_start": "20260810"}, headers=h
+    )
+    assert r.status_code == 422
+
+
+def test_week_start_rejects_empty_string(client):
+    h = _login(client)
+    r = client.get(
+        "/v1/exercise/weeks/current", params={"week_start": ""}, headers=h
+    )
+    assert r.status_code == 422

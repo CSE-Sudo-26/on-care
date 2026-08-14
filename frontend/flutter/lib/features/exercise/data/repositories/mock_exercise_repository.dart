@@ -173,7 +173,12 @@ class MockExerciseRepository implements ExerciseRepository {
     final DateTime monday = _today.subtract(
       Duration(days: _todayIdx + 7 * weeksAgo),
     );
-    final DateTime date = monday.add(Duration(days: dayIdx));
+    // Duration 이 아니라 날짜 성분으로 더한다(서머타임 안전).
+    final DateTime date = DateTime(
+      monday.year,
+      monday.month,
+      monday.day + dayIdx,
+    );
     return '${date.month}월 ${date.day}일';
   }
 

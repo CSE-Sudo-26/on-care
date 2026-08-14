@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -76,8 +76,11 @@ def current_week(
     if week_start is None:
         week_start = monday_of_this_week_str()
     else:
+        # strptime 으로 엄격하게 본다. date.fromisoformat 은 3.11 부터
+        # `20260810` 같은 기본 형식도 받아, 앱의 로컬 목업(엄격한 YYYY-MM-DD)과
+        # 받아들이는 값의 집합이 갈린다.
         try:
-            date.fromisoformat(week_start)
+            datetime.strptime(week_start, "%Y-%m-%d")
         except ValueError:
             raise HTTPException(
                 status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다."

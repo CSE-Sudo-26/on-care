@@ -819,14 +819,23 @@ class LocalApiInterceptor extends Interceptor {
   /// 넘길 때 그 주의 월요일을 실어 보낸다(#671) — 그 전에는 조회 경로가 이번
   /// 주 하나뿐이라 지난주를 받아올 방법이 없었다.
   Future<Response<Object?>> _exerciseCurrentWeek(RequestOptions options) async {
-    final Object? requested = options.queryParameters['week_start'];
-    final String? requestedWeek = requested is String && requested.isNotEmpty
-        ? requested
-        : null;
-    if (requestedWeek != null && !_isDateString(requestedWeek)) {
-      return _badRequest(options, 'week_start must be YYYY-MM-DD');
+    // 파라미터가 **있으면** 그 값을 그대로 검사한다. 빈 문자열도 "잘못된 값"이다
+    // — 서버(FastAPI)가 그렇게 답하므로 여기서 조용히 이번 주로 흘려보내면 두
+    //   구현이 갈린다.
+    final bool hasWeekStart = options.queryParameters.containsKey('week_start');
+    final String weekStart;
+    if (hasWeekStart) {
+      final Object? requested = options.queryParameters['week_start'];
+      final String raw = requested is String ? requested : '';
+      if (!_isDateString(raw)) {
+        return _unprocessable(options, 'week_start must be YYYY-MM-DD');
+      }
+      // 월요일이 아닌 날짜를 줘도 그 날이 속한 주로 맞춘다 — 서버의
+      // `monday_of_str` 과 같은 규칙(backend/API_CONTRACT.md).
+      weekStart = _mondayOfString(raw);
+    } else {
+      weekStart = _mondayOfThisWeekString();
     }
-    final weekStart = requestedWeek ?? _mondayOfThisWeekString();
     final rows = await (_db.select(
       _db.exerciseSessions,
     )..where((t) => t.weekStart.equals(weekStart))).get();
@@ -953,7 +962,8 @@ class LocalApiInterceptor extends Interceptor {
     final dayIdx = _weekdayLabels.indexOf(dayLabel);
     final monday = DateTime.tryParse(weekStart);
     if (dayIdx < 0 || monday == null) return dayLabel;
-    final date = monday.add(Duration(days: dayIdx));
+    // Duration 이 아니라 날짜 성분으로 더한다(서머타임 안전).
+    final date = DateTime(monday.year, monday.month, monday.day + dayIdx);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final delta = today.difference(DateTime(date.year, date.month, date.day)).inDays;
@@ -1598,9 +1608,16 @@ class LocalApiInterceptor extends Interceptor {
     return '${d.inDays}일 전';
   }
 
-  String _mondayOfThisWeekString() {
-    final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+  String _mondayOfThisWeekString() => _mondayOf(DateTime.now());
+
+  /// `YYYY-MM-DD` 가 속한 주의 월요일. FastAPI `monday_of_str` 과 같은 규칙이다.
+  /// 형식은 호출 전에 검사한다([_isDateString]).
+  String _mondayOfString(String date) => _mondayOf(DateTime.parse(date));
+
+  String _mondayOf(DateTime d) {
+    // 날짜 성분으로 뺀다 — Duration 으로 빼면 서머타임이 있는 지역에서 하루가
+    // 24시간이 아닌 날에 어긋난다.
+    final monday = DateTime(d.year, d.month, d.day - (d.weekday - 1));
     return '${monday.year.toString().padLeft(4, '0')}-'
         '${monday.month.toString().padLeft(2, '0')}-'
         '${monday.day.toString().padLeft(2, '0')}';
@@ -1635,6 +1652,16 @@ class LocalApiInterceptor extends Interceptor {
       requestOptions: options,
       statusCode: 400,
       data: <String, Object?>{'code': 'bad_request', 'message': message},
+    );
+  }
+
+  /// 형식이 잘못된 값. FastAPI 의 검증 실패와 같은 422 를 쓴다 — 두 구현이
+  /// 같은 요청에 다른 상태 코드를 주면 클라이언트가 갈린다.
+  Response<Object?> _unprocessable(RequestOptions options, String message) {
+    return Response<Object?>(
+      requestOptions: options,
+      statusCode: 422,
+      data: <String, Object?>{'code': 'unprocessable', 'message': message},
     );
   }
 

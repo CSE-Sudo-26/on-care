@@ -275,12 +275,64 @@ void main() {
     );
   });
 
-  test('week_start 형식이 깨지면 400 이다', () async {
+  test('week_start 로 월요일이 아닌 날을 줘도 그 주로 맞춘다 (#671)', () async {
+    // 서버(FastAPI)가 monday_of_str 로 맞추므로 목업도 같아야 한다.
+    final DateTime lastMonday = DateTime.parse(
+      _currentMonday(),
+    ).subtract(const Duration(days: 7));
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    final String lastWeek = fmt(lastMonday);
+    await db
+        .into(db.exerciseSessions)
+        .insert(
+          ExerciseSessionsCompanion.insert(
+            id: 'ex-last-wed',
+            weekStart: lastWeek,
+            dayLabel: '수',
+            type: 'cardio',
+            minutes: 35,
+            calories: 240,
+          ),
+        );
+
+    // 그 주의 목요일을 넘긴다.
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{
+        'week_start': fmt(lastMonday.add(const Duration(days: 3))),
+      },
+    );
+    expect(res.data!['total_minutes'], 35);
+  });
+
+  test('week_start 형식이 깨지면 422 다 (서버와 같은 코드)', () async {
     final res = await dio.get<Map<String, Object?>>(
       '/exercise/weeks/current',
       queryParameters: <String, Object?>{'week_start': 'not-a-date'},
       options: Options(validateStatus: (int? s) => true),
     );
-    expect(res.statusCode, 400);
+    expect(res.statusCode, 422);
+  });
+
+  test('week_start 가 빈 문자열이어도 조용히 이번 주로 넘어가지 않는다', () async {
+    // FastAPI 는 빈 값에 422 를 준다. 목업이 이번 주를 돌려주면 두 구현이 갈린다.
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': ''},
+      options: Options(validateStatus: (int? s) => true),
+    );
+    expect(res.statusCode, 422);
+  });
+
+  test('ISO 기본 형식(20260810)은 받지 않는다', () async {
+    final res = await dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': '20260810'},
+      options: Options(validateStatus: (int? s) => true),
+    );
+    expect(res.statusCode, 422);
   });
 }
