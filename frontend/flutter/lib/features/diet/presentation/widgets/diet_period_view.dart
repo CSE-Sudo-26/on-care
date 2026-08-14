@@ -68,7 +68,8 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
         p?.effectiveDailyCalories ?? UserProfile.defaultDailyCalories,
       _Metric.sodium =>
         p?.effectiveDailySodiumMg ?? UserProfile.defaultDailySodiumMg,
-      _Metric.sugar => p?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG,
+      _Metric.sugar =>
+        p?.effectiveDailySugarG ?? UserProfile.defaultDailySugarG,
     };
   }
 
@@ -161,8 +162,14 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
                   ),
                   const SizedBox(height: 14),
                   OutlinedButton(
-                    onPressed: () =>
-                        ref.invalidate(dietPeriodProvider(widget.range)),
+                    // 실패는 날짜별 provider 에 남아 있다. 집계만 무효화하면
+                    // 같은 에러를 다시 읽어 와 아무 일도 일어나지 않는다.
+                    onPressed: () {
+                      for (final DateTime d in dietRangeDates(widget.range)) {
+                        ref.invalidate(dietByDateProvider(d));
+                      }
+                      ref.invalidate(dietPeriodProvider(widget.range));
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: FigmaColors.primary,
                       side: BorderSide(color: FigmaColors.primaryA(0.4)),
@@ -314,16 +321,15 @@ class _PeriodBody extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  over ? '${l.homeGoal} ${l.homeMetricOver}' : l.homeMetricNormal,
+                  over
+                      ? '${l.homeGoal} ${l.homeMetricOver}'
+                      : l.homeMetricNormal,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -396,10 +402,16 @@ class _PeriodBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const double chartHeight = 120;
-    final double maxValue = <double>[
+    // 축 위쪽에 여유를 둔다. 목표를 넘은 날이 없으면 목표가 곧 최댓값이 되어
+    // 목표선이 차트 맨 위(=바깥)에 놓여 잘려 보이지 않았다.
+    final double peak = <double>[
       goal,
       ...values,
     ].fold<double>(1, (double a, double b) => b > a ? b : a);
+    final double maxValue = peak * 1.15;
+    // 목표가 0이면(프로필에 목표를 0으로 넣은 경우) 초과 판정을 하지 않는다 —
+    // 카드 위쪽 배지도 같은 규칙이라, 배지는 '정상'인데 막대만 빨간 일이 없다.
+    final bool hasGoal = goal > 0;
     // 달(30칸)에서도 라벨이 겹치지 않도록 몇 칸에 하나만 적는다.
     final int labelStep = values.length > 10 ? (values.length / 6).ceil() : 1;
 
@@ -410,48 +422,51 @@ class _PeriodBars extends StatelessWidget {
           height: chartHeight,
           child: Stack(
             children: <Widget>[
-              // 목표선.
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
-                child: const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: FigmaColors.hairline,
+              if (hasGoal)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: chartHeight * (goal / maxValue).clamp(0.0, 1.0),
+                  child: const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: FigmaColors.hairline,
+                  ),
                 ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  for (int i = 0; i < values.length; i++)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                        child: ChartReveal(
-                          replayKey: replayKey,
-                          builder: (BuildContext context, double t) =>
-                              Container(
-                                key: Key('diet-period-bar-$i'),
-                                height:
-                                    chartHeight *
-                                    (values[i] / maxValue).clamp(0.0, 1.0) *
-                                    t,
-                                decoration: BoxDecoration(
-                                  color: values[i] > goal
-                                      ? FigmaColors.dangerRed.withValues(
-                                          alpha: 0.85,
-                                        )
-                                      : color.withValues(alpha: 0.85),
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(3),
-                                  ),
-                                ),
+              // 막대 전체를 하나의 ChartReveal 로 감싸고 순서만 어긋내
+              // (chartStagger) 준다. 막대마다 애니메이션을 두면 한 달치에
+              // 티커가 31개 생긴다.
+              ChartReveal(
+                curve: Curves.linear,
+                replayKey: replayKey,
+                builder: (BuildContext context, double t) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    for (int i = 0; i < values.length; i++)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                          child: Container(
+                            key: Key('diet-period-bar-$i'),
+                            height:
+                                chartHeight *
+                                (values[i] / maxValue).clamp(0.0, 1.0) *
+                                chartStagger(t, i, values.length),
+                            decoration: BoxDecoration(
+                              color: hasGoal && values[i] > goal
+                                  ? FigmaColors.dangerRed.withValues(
+                                      alpha: 0.85,
+                                    )
+                                  : color.withValues(alpha: 0.85),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(3),
                               ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

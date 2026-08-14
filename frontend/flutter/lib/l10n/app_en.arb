@@ -280,7 +280,7 @@
   "dietPeriodTrend": "Nutrition trend",
   "dietPeriodAverage": "Daily average",
   "dietPeriodTotal": "Period total",
-  "dietPeriodLoggedDays": "{days} days logged",
+  "dietPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
   "@dietPeriodLoggedDays": {
     "placeholders": {
       "days": {

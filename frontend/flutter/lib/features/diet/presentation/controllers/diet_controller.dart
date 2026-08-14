@@ -43,26 +43,42 @@ FutureProvider<DietDay> dietByDateProvider(DateTime date) {
 /// 기간 조회의 키. 양끝을 포함한다(from ≤ 날짜 ≤ to).
 typedef DietDateRange = ({DateTime from, DateTime to});
 
-/// 이번 주·이번 달 식단 집계.
+/// 기간에 든 날짜들(양끝 포함).
 ///
-/// 새 엔드포인트를 두지 않고 하루 조회를 기간만큼 모은다. 날짜별 응답은 이미
-/// [dietByDateProvider] 가 캐시하므로, 하루 뷰에서 본 값과 기간 뷰의 그 날
-/// 막대가 **같은 응답**에서 나온다 — 따로 집계하면 조용히 어긋난다.
-final dietPeriodProvider = FutureProvider.family<DietPeriod, DietDateRange>((
-  ref,
-  DietDateRange range,
-) async {
+/// 일수는 **UTC 로 환산해** 센다. 로컬 자정끼리 빼면 서머타임이 있는 지역에서
+/// 3월 한 달이 29일 23시간이 되고, `inDays` 가 29 로 잘려 말일이 통째로
+/// 빠진다.
+List<DateTime> dietRangeDates(DietDateRange range) {
   final DateTime from = DateTime(
     range.from.year,
     range.from.month,
     range.from.day,
   );
   final DateTime to = DateTime(range.to.year, range.to.month, range.to.day);
-  final int span = to.difference(from).inDays;
-  final List<DateTime> dates = <DateTime>[
+  final int span = DateTime.utc(
+    to.year,
+    to.month,
+    to.day,
+  ).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+  return <DateTime>[
     for (int i = 0; i <= span; i++)
       DateTime(from.year, from.month, from.day + i),
   ];
+}
+
+/// 이번 주·이번 달 식단 집계.
+///
+/// 새 엔드포인트를 두지 않고 하루 조회를 기간만큼 모은다. 날짜별 응답은
+/// [dietByDateProvider] 가 캐시하므로 같은 날을 두 번 부르지 않는다.
+///
+/// 오늘은 하루 뷰가 [dietTodayProvider](`/diet/days/today`)로, 기간 뷰가
+/// [dietByDateProvider](`/diet/days/{today}`)로 읽는다. 서로 다른 캐시라
+/// 끼니를 더하거나 지울 때 **둘 다** 비워야 한다(`diet_flows.dart`).
+final dietPeriodProvider = FutureProvider.family<DietPeriod, DietDateRange>((
+  ref,
+  DietDateRange range,
+) async {
+  final List<DateTime> dates = dietRangeDates(range);
   // watch 는 await 이전에 모두 걸어 둔다 — 하루라도 바뀌면 기간 값도 다시
   // 계산되고, 요청은 순차가 아니라 한꺼번에 나간다.
   final List<Future<DietDay>> pending = <Future<DietDay>>[

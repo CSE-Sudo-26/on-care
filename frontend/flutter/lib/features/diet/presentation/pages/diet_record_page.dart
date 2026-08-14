@@ -109,6 +109,31 @@ String _formatInt(int v) => v.toString().replaceAllMapped(
 /// 식단 탭이 보여주는 기간. 운동 탭의 `운동 현황` 토글과 같은 뜻·같은 순서다.
 enum DietPeriodTab { day, week, month }
 
+/// 기간 뷰가 집계할 날짜 범위. 이번 주는 월~일, 이번 달은 1일~말일이다.
+/// 아직 오지 않은 날도 범위에 넣는다 — 빈 칸이 남아야 한 주·한 달의 모양이
+/// 그대로 읽힌다(평균은 기록이 있는 날만으로 낸다).
+///
+/// 날짜를 Duration 이 아니라 성분으로 옮긴다. 로컬 시간에 Duration 을 더하면
+/// 서머타임이 있는 지역에서 주 전체가 하루씩 밀린다. `DateTime(y, m + 1, 0)`
+/// 은 12월이면 다음 해 1월 0일 = 12월 31일로 알아서 넘어간다.
+DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
+  if (tab == DietPeriodTab.month) {
+    return (
+      from: DateTime(today.year, today.month),
+      to: DateTime(today.year, today.month + 1, 0),
+    );
+  }
+  final DateTime monday = DateTime(
+    today.year,
+    today.month,
+    today.day - (today.weekday - 1),
+  );
+  return (
+    from: monday,
+    to: DateTime(monday.year, monday.month, monday.day + 6),
+  );
+}
+
 class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   int _weekShift = 0; // whole-week steps away from today
   late DateTime _selected;
@@ -131,19 +156,8 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     return ((d.day + offset - 1) / 7).floor() + 1;
   }
 
-  /// 기간 뷰가 집계할 날짜 범위. 이번 주는 월~일, 이번 달은 1일~말일이다.
-  /// 아직 오지 않은 날도 범위에 넣는다 — 빈 칸이 남아야 한 주·한 달의 모양이
-  /// 그대로 읽힌다(평균은 기록이 있는 날만으로 낸다).
-  DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) {
-    if (tab == DietPeriodTab.month) {
-      return (
-        from: DateTime(today.year, today.month),
-        to: DateTime(today.year, today.month + 1, 0),
-      );
-    }
-    final DateTime monday = today.subtract(Duration(days: today.weekday - 1));
-    return (from: monday, to: monday.add(const Duration(days: 6)));
-  }
+  DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
+      dietRangeForTab(tab, today);
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +191,8 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => context.push(AppRoutes.notification),
                   bellHasUnread:
-                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
+                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) >
+                      0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
                 // 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에
@@ -214,32 +229,32 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   ),
                   const SizedBox(height: 8),
                   diet.when(
-                  loading: () => const _DietLoading(),
-                  error: (Object e, StackTrace _) => _DietError(
-                    onRetry: () {
-                      if (atToday) {
-                        ref.invalidate(dietTodayProvider);
-                      } else {
-                        ref.invalidate(dietByDateProvider(_selected));
-                      }
-                    },
-                  ),
-                  data: (DietDay day) => !atToday && day.entries.isEmpty
-                      ? const _EmptyDay()
-                      : Column(
-                          children: <Widget>[
-                            NutritionSummary(day: day, profile: profile),
-                            const SizedBox(height: 20),
-                            _AiFeedback(message: day.aiCoachMessage),
-                            const SizedBox(height: 20),
-                            _MealLog(
-                              entries: day.entries,
-                              onAdd: () => showDietAddSheet(context),
-                              onEditMeal: (DietMeal m) =>
-                                  openMealDetailPage(context, m),
-                            ),
-                          ],
-                        ),
+                    loading: () => const _DietLoading(),
+                    error: (Object e, StackTrace _) => _DietError(
+                      onRetry: () {
+                        if (atToday) {
+                          ref.invalidate(dietTodayProvider);
+                        } else {
+                          ref.invalidate(dietByDateProvider(_selected));
+                        }
+                      },
+                    ),
+                    data: (DietDay day) => !atToday && day.entries.isEmpty
+                        ? const _EmptyDay()
+                        : Column(
+                            children: <Widget>[
+                              NutritionSummary(day: day, profile: profile),
+                              const SizedBox(height: 20),
+                              _AiFeedback(message: day.aiCoachMessage),
+                              const SizedBox(height: 20),
+                              _MealLog(
+                                entries: day.entries,
+                                onAdd: () => showDietAddSheet(context),
+                                onEditMeal: (DietMeal m) =>
+                                    openMealDetailPage(context, m),
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ],
@@ -524,27 +539,11 @@ class NutritionSummary extends StatelessWidget {
         profile?.effectiveDailyProteinG ?? UserProfile.defaultDailyProteinG;
     final int fatGoal =
         profile?.effectiveDailyFatG ?? UserProfile.defaultDailyFatG;
-    // Sum straight from the foods so the summary always equals the meal cards;
-    // fall back to the server day totals when the per-food sum is 0 (real-server
-    // payloads carry nutrition only at the day/entry level).
-    final List<FoodItem> foods = <FoodItem>[
-      for (final DietEntry e in day.entries) ...e.foods,
-    ];
-    final int foodKcal = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.calories,
-    );
-    final int foodSodium = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.sodiumMg,
-    );
-    final double foodSugar = foods.fold<double>(
-      0,
-      (double a, FoodItem f) => a + f.sugarG,
-    );
-    final int kcal = foodKcal > 0 ? foodKcal : day.totalCalories;
-    final int sodium = foodSodium > 0 ? foodSodium : day.totalSodiumMg;
-    final double sugar = foodSugar > 0 ? foodSugar : day.totalSugarG;
+    // 끼니 음식의 합을 먼저 쓰고 0이면 서버 하루 합계로 떨어진다. 규칙은
+    // 기간 뷰와 공유한다([DietDayTotals]) — 두 화면의 숫자가 갈리지 않도록.
+    final int kcal = day.effectiveCalories;
+    final int sodium = day.effectiveSodiumMg;
+    final double sugar = day.effectiveSugarG;
     final List<_NutritionSummaryItem> items = <_NutritionSummaryItem>[
       _NutritionSummaryItem(
         label: l.dietCalories,

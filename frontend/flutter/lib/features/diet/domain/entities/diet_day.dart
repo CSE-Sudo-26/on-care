@@ -156,3 +156,39 @@ class DietDay {
     aiCoachMessage: json['ai_coach_message']! as String,
   );
 }
+
+/// 화면이 쓰는 하루 합계.
+///
+/// 끼니별 음식의 합을 먼저 보고, 그 합이 0 이면 서버가 준 하루 합계로 떨어진다.
+/// 실서버 응답은 영양을 하루/끼니 단위로만 내려주기 때문이다(음식 배열에는
+/// 이름과 칼로리만 들어 있다). 식단 탭의 하루 요약과 기간 뷰가 **같은 규칙**을
+/// 써야 두 화면의 숫자가 어긋나지 않는다.
+extension DietDayTotals on DietDay {
+  List<FoodItem> get _allFoods => <FoodItem>[
+    for (final DietEntry e in entries) ...e.foods,
+  ];
+
+  int get effectiveCalories {
+    final int sum = _allFoods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.calories,
+    );
+    return sum > 0 ? sum : totalCalories;
+  }
+
+  int get effectiveSodiumMg {
+    final int sum = _allFoods.fold<int>(
+      0,
+      (int a, FoodItem f) => a + f.sodiumMg,
+    );
+    return sum > 0 ? sum : totalSodiumMg;
+  }
+
+  double get effectiveSugarG {
+    final double sum = _allFoods.fold<double>(
+      0,
+      (double a, FoodItem f) => a + f.sugarG,
+    );
+    return sum > 0 ? sum : totalSugarG;
+  }
+}

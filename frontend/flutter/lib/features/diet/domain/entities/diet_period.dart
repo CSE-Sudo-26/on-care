@@ -9,32 +9,14 @@ class DietPeriodDay {
     required this.sugarG,
   });
 
-  /// 그날의 [DietDay] 를 접어 만든다. 끼니별 합이 0 이면 서버가 준 하루 합계를
-  /// 쓴다 — 실서버 응답은 영양을 하루/끼니 단위로만 내려주기 때문이다(식단 탭
-  /// 하루 요약과 같은 규칙).
-  factory DietPeriodDay.from(DateTime date, DietDay day) {
-    final List<FoodItem> foods = <FoodItem>[
-      for (final DietEntry e in day.entries) ...e.foods,
-    ];
-    final int foodKcal = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.calories,
-    );
-    final int foodSodium = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.sodiumMg,
-    );
-    final double foodSugar = foods.fold<double>(
-      0,
-      (double a, FoodItem f) => a + f.sugarG,
-    );
-    return DietPeriodDay(
-      date: date,
-      calories: foodKcal > 0 ? foodKcal : day.totalCalories,
-      sodiumMg: foodSodium > 0 ? foodSodium : day.totalSodiumMg,
-      sugarG: foodSugar > 0 ? foodSugar : day.totalSugarG,
-    );
-  }
+  /// 그날의 [DietDay] 를 접어 만든다. 합산 규칙은 하루 요약과 공유한다
+  /// ([DietDayTotals]) — 따로 계산하면 두 화면의 숫자가 조용히 어긋난다.
+  factory DietPeriodDay.from(DateTime date, DietDay day) => DietPeriodDay(
+    date: date,
+    calories: day.effectiveCalories,
+    sodiumMg: day.effectiveSodiumMg,
+    sugarG: day.effectiveSugarG,
+  );
 
   final DateTime date;
   final int calories;

@@ -558,6 +558,9 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       if (!mounted) return;
       // analyze() already persisted the entry → refresh the day's summary/list.
       ref.invalidate(dietTodayProvider);
+      // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
+      // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
+      ref.invalidate(dietByDateProvider(DateTime.now()));
       setState(() {
         _result = result;
         _loading = false;
@@ -1057,6 +1060,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // Sheet dismissed mid-save → don't pop the page below.
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
+      // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
+      // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
+      ref.invalidate(dietByDateProvider(DateTime.now()));
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
     } catch (_) {
@@ -1104,6 +1110,9 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       // Sheet dismissed mid-delete → don't pop the page below.
       if (!mounted) return;
       ref.invalidate(dietTodayProvider);
+      // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
+      // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
+      ref.invalidate(dietByDateProvider(DateTime.now()));
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
     } catch (_) {

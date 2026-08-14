@@ -510,7 +510,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dietPeriodLoggedDays(int days) {
-    return '$days days logged';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days logged',
+      one: '1 day logged',
+    );
+    return '$_temp0';
   }
 
   @override

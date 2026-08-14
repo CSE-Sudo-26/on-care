@@ -1019,7 +1019,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietPeriodLoggedDays.
   ///
   /// In en, this message translates to:
-  /// **'{days} days logged'**
+  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
   String dietPeriodLoggedDays(int days);
 
   /// No description provided for @dietPeriodEmpty.
