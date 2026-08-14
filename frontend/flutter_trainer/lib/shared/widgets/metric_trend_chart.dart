@@ -1,0 +1,357 @@
+/// 지표 하나의 주간 추이 꺾은선 — 사용자 앱 홈 탭과 **같은 그림**이다.
+///
+/// 사용자 앱의 `shared/widgets/metric_trend_chart.dart` 를 트레이너 콘솔 토큰으로
+/// 옮긴 것이다. 두 앱은 패키지가 갈라져 있어 코드를 공유할 수 없으므로, 규칙을
+/// 여기에도 적어 둔다. 한쪽만 고치면 회원이 보는 그래프와 트레이너가 보는
+/// 그래프가 다른 이야기를 한다.
+///
+///  * 선은 **오늘까지만** 잇는다 — 아직 오지 않은 요일의 0 이 급락처럼 보이지
+///    않도록. x 좌표는 7칸 기준 그대로라 주끼리 정렬된다.
+///  * 점 색은 그날이 목표를 넘겼는지만 말한다(초과=빨강, 그 외=초록).
+///  * 목표선은 그리지 않는다. 눈금과 겹치면 선이 두꺼워 보였다.
+library;
+
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
+
+/// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
+const Color kMetricTrendLine = Color(0xFFDDE2E8);
+
+/// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+///
+/// 목표가 0 이면 초과로 보지 않는다 — 목표 없는 지표의 모든 기록이 빨간 점이
+/// 되어 버린다.
+Color metricStatusColor(double v, double goal) =>
+    goal > 0 && v > goal ? AppColors.overTarget : AppColors.success;
+
+/// 소수 첫째 자리까지만 남기고 정수는 콤마만. 당류 17.8 이 18 로 반올림돼
+/// 요약 수치와 어긋나지 않도록.
+String metricTrendNumber(num v) => v == v.roundToDouble()
+    ? NumberFormat('#,###').format(v)
+    : NumberFormat('#,##0.#').format(v);
+
+/// 데이터와 눈금을 모두 담는 스케일. **0 을 바닥으로 두지 않는다** — 두면
+/// 하루하루 차이가 거의 평평한 선으로 뭉개진다.
+(double, double) metricTrendScale({
+  required List<double> values,
+  required List<double> ticks,
+  required double goal,
+}) {
+  final all = <double>[...values, ...ticks, goal];
+  var lo = all.reduce(math.min);
+  var hi = all.reduce(math.max);
+  final range = (hi - lo) == 0 ? 1.0 : (hi - lo);
+  hi += range * 0.10;
+  lo -= range * 0.08;
+  // 당류처럼 0이 최소 눈금인 지표는 바닥을 0에 고정.
+  if (ticks.isNotEmpty && ticks.first <= 0 && lo < 0) lo = 0;
+  return (lo, hi);
+}
+
+/// 눈금 라벨 + 꺾은선 + 요일 라벨 한 덩어리.
+class MetricTrendChart extends StatelessWidget {
+  /// Creates a weekly trend chart.
+  const MetricTrendChart({
+    super.key,
+    required this.values,
+    required this.dayLabels,
+    required this.goal,
+    required this.ticks,
+    required this.todayIndex,
+    required this.replayKey,
+    required this.formatTick,
+    this.height = 68,
+  });
+
+  /// 요일별 값(월→일). [dayLabels] 와 길이가 같아야 한다.
+  final List<double> values;
+
+  /// 요일 라벨(월→일).
+  final List<String> dayLabels;
+
+  /// 하루 목표. 점 색만 정한다(목표선은 그리지 않는다).
+  final double goal;
+
+  /// 가로 눈금선을 그릴 값들. 지표마다 다르다.
+  final List<double> ticks;
+
+  /// 선을 여기까지만 잇는다. 지난 주처럼 전부 지난 구간이면 마지막 index.
+  final int todayIndex;
+
+  /// 바뀌면 진입 애니메이션을 처음부터 다시 그린다.
+  final Object replayKey;
+
+  /// 눈금 라벨 포맷.
+  final String Function(double) formatTick;
+
+  /// 꺾은선 영역 높이(요일 라벨 제외).
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final (lo, hi) = metricTrendScale(
+      values: values,
+      ticks: ticks,
+      goal: goal,
+    );
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        // 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
+        SizedBox(
+          width: 38,
+          height: height,
+          child: Stack(
+            children: <Widget>[
+              for (final t in ticks)
+                Positioned(
+                  right: 0,
+                  top: (height - ((t - lo) / (hi - lo)) * height - 8).clamp(
+                    0.0,
+                    height - 16,
+                  ),
+                  child: SizedBox(
+                    height: 16,
+                    child: Center(child: _AxisLabel(formatTick(t))),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            children: <Widget>[
+              SizedBox(
+                height: height,
+                child: still
+                    ? _paint(1, lo, hi)
+                    : TweenAnimationBuilder<double>(
+                        // 키가 바뀌면 tween 이 0부터 다시 시작한다.
+                        key: ValueKey<Object>(replayKey),
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 620),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, t, _) => _paint(t, lo, hi),
+                      ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  for (var i = 0; i < dayLabels.length; i++)
+                    if (i == todayIndex)
+                      // 오늘: 브랜드색 원 안에 흰 글씨.
+                      Container(
+                        width: 18,
+                        height: 18,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          dayLabels[i],
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryForeground,
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        dayLabels[i],
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _paint(double t, double lo, double hi) => CustomPaint(
+    size: Size.infinite,
+    painter: MetricTrendPainter(
+      cur: values,
+      goal: goal,
+      ticks: ticks,
+      lo: lo,
+      hi: hi,
+      todayIndex: todayIndex,
+      progress: t,
+    ),
+  );
+}
+
+class _AxisLabel extends StatelessWidget {
+  const _AxisLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    textAlign: TextAlign.right,
+    style: const TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: AppColors.mutedForeground,
+    ),
+  );
+}
+
+/// 꺾은선 본체.
+class MetricTrendPainter extends CustomPainter {
+  /// Creates the line painter.
+  MetricTrendPainter({
+    required this.cur,
+    required this.goal,
+    required this.ticks,
+    required this.lo,
+    required this.hi,
+    required this.todayIndex,
+    this.progress = 1,
+  });
+
+  /// 요일별 값(월→일).
+  final List<double> cur;
+
+  /// 하루 목표. 점 색만 정한다.
+  final double goal;
+
+  /// 가로 눈금선을 그릴 값들.
+  final List<double> ticks;
+
+  /// 축 바닥.
+  final double lo;
+
+  /// 축 천장.
+  final double hi;
+
+  /// 선을 여기까지만 그린다(미래 요일의 0값이 급락처럼 보이지 않도록).
+  final int todayIndex;
+
+  /// 0 → 1 진입 애니메이션 진행도. 선은 월요일부터 오늘 쪽으로 이어지고,
+  /// 각 데이터 포인트와 값 라벨은 선이 도달하는 순간 나타난다.
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (cur.isEmpty) return;
+    final w = size.width;
+    final h = size.height;
+    final span = (hi - lo) <= 0 ? 1.0 : (hi - lo);
+    double dx(int i) => cur.length <= 1 ? w / 2 : (i / (cur.length - 1)) * w;
+    double dy(double v) => h - ((v - lo) / span) * h;
+
+    final grid = Paint()
+      ..color = const Color(0xFFEFF3F7)
+      ..strokeWidth = 1;
+    for (final t in ticks) {
+      if (t < lo || t > hi) continue;
+      final gy = dy(t);
+      canvas.drawLine(Offset(0, gy), Offset(w, gy), grid);
+    }
+
+    final lastIdx = todayIndex.clamp(0, cur.length - 1);
+    final pts = <Offset>[
+      for (var i = 0; i <= lastIdx; i++) Offset(dx(i), dy(cur[i])),
+    ];
+
+    final p = progress.clamp(0.0, 1.0);
+    final drawn = lastIdx * p;
+    if (lastIdx > 0) {
+      final line = Path()..moveTo(pts.first.dx, pts.first.dy);
+      final whole = drawn.floor().clamp(0, lastIdx);
+      for (var i = 1; i <= whole; i++) {
+        line.lineTo(pts[i].dx, pts[i].dy);
+      }
+      if (whole < lastIdx) {
+        final tip = Offset.lerp(pts[whole], pts[whole + 1], drawn - whole)!;
+        line.lineTo(tip.dx, tip.dy);
+      }
+      canvas.drawPath(
+        line,
+        Paint()
+          ..color = kMetricTrendLine
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+
+    for (var i = 0; i <= lastIdx; i++) {
+      // 선이 이 점에 닿기 직전부터 짧게 페이드인한다.
+      final a = lastIdx == 0 ? p : ((drawn - i) / 0.35 + 1).clamp(0.0, 1.0);
+      if (a <= 0) continue;
+      final sc = metricStatusColor(cur[i], goal);
+      _dot(canvas, pts[i], sc, r: i == cur.length - 1 ? 5.0 : 4.2, alpha: a);
+      _text(canvas, metricTrendNumber(cur[i]), pts[i], w, sc, alpha: a);
+    }
+  }
+
+  void _dot(
+    Canvas c,
+    Offset o,
+    Color color, {
+    double r = 3.0,
+    double alpha = 1,
+  }) {
+    c.drawCircle(
+      o,
+      r + 1.3,
+      Paint()..color = AppColors.card.withValues(alpha: alpha),
+    );
+    c.drawCircle(o, r, Paint()..color = color.withValues(alpha: alpha));
+  }
+
+  void _text(
+    Canvas c,
+    String s,
+    Offset at,
+    double w,
+    Color color, {
+    double alpha = 1,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: s,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color.withValues(alpha: alpha),
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    final bx = (at.dx - tp.width / 2).clamp(0.0, w - tp.width);
+    var by = at.dy - tp.height - 7;
+    if (by < 0) by = at.dy + 7;
+    tp.paint(c, Offset(bx, by));
+  }
+
+  @override
+  bool shouldRepaint(covariant MetricTrendPainter old) =>
+      old.cur != cur ||
+      old.goal != goal ||
+      old.ticks != ticks ||
+      old.lo != lo ||
+      old.hi != hi ||
+      old.todayIndex != todayIndex ||
+      old.progress != progress;
+}

@@ -19,6 +19,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -190,7 +191,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ),
         if (_weekStart != weekStartOf(DateTime.now()))
           ActionButton(
-            label: l.reportsThisWeek,
+            label: l.reportsGoThisWeek,
             icon: Icons.today_outlined,
             onPressed: _goToCurrentWeek,
           ),
@@ -606,23 +607,7 @@ class _ClientReport extends StatelessWidget {
               else
                 EmptyHint(message: l.reportsNoWorkoutsThisWeek),
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                l.reportsSodiumTrend,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              if (report.isCurrentWeek)
-                Sparkline(
-                  values: client.sodiumWeek,
-                  threshold: sodiumTargetMg,
-                  height: 56,
-                )
-              else
-                EmptyHint(message: l.reportsNoLastWeekSodium),
+              _MetricTrendSection(client: client, report: report),
               const SizedBox(height: AppSpacing.md),
               _FourWeekTrend(report: report),
             ],
@@ -633,6 +618,149 @@ class _ClientReport extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 어떤 영양 지표의 주간 추이를 볼지 고르는 식별자.
+///
+/// 화면에 보이는 라벨과 분리해 둔다 — 로케일이 내부 키가 되면 영어에서
+/// 선택이 깨진다.
+enum _TrendMetric { calories, sodium, sugar }
+
+/// 칼로리·나트륨·당류 주간 추이 — 선택한 지표 하나를 사용자 앱 홈 탭과 **같은
+/// 그림**으로 그린다(#746).
+///
+/// 눈금은 사용자 앱 `dashboard_content.dart` 의 값을 그대로 쓴다. 지표를 바꿔도
+/// 축 바닥이 항상 0 이라 세 그래프를 번갈아 봐도 기준선이 흔들리지 않는다.
+class _MetricTrendSection extends StatefulWidget {
+  const _MetricTrendSection({required this.client, required this.report});
+
+  final TrainerClient client;
+  final WeeklyReport report;
+
+  @override
+  State<_MetricTrendSection> createState() => _MetricTrendSectionState();
+}
+
+class _MetricTrendSectionState extends State<_MetricTrendSection> {
+  _TrendMetric _metric = _TrendMetric.calories;
+
+  String _label(AppLocalizations l, _TrendMetric metric) => switch (metric) {
+    _TrendMetric.calories => l.metricCalories,
+    _TrendMetric.sodium => l.metricSodium,
+    _TrendMetric.sugar => l.metricSugar,
+  };
+
+  /// 선택한 지표의 요일별 값. 계열이 7일이 아니면(구버전 응답) 비워 둔다.
+  List<double> get _values {
+    final client = widget.client;
+    final series = switch (_metric) {
+      _TrendMetric.calories => client.caloriesWeek.map((v) => v.toDouble()),
+      _TrendMetric.sodium => client.sodiumWeek.map((v) => v.toDouble()),
+      _TrendMetric.sugar => client.sugarWeek,
+    }.toList(growable: false);
+    return series.length == weekdayCount ? series : const <double>[];
+  }
+
+  double get _goal => switch (_metric) {
+    _TrendMetric.calories => calorieTargetKcal.toDouble(),
+    _TrendMetric.sodium => sodiumTargetMg.toDouble(),
+    _TrendMetric.sugar => sugarTargetG.toDouble(),
+  };
+
+  List<double> get _ticks => switch (_metric) {
+    _TrendMetric.calories => const <double>[0, 1500, 2500],
+    _TrendMetric.sodium => const <double>[0, 1750, 3500],
+    _TrendMetric.sugar => const <double>[0, 25, 50],
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final values = _values;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l.reportsMetricTrend(_label(l, _metric)),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+            ),
+            for (final metric in _TrendMetric.values) ...<Widget>[
+              const SizedBox(width: AppSpacing.xs),
+              _MetricChip(
+                key: ValueKey<String>('trend-metric-${metric.name}'),
+                label: _label(l, metric),
+                selected: metric == _metric,
+                onTap: () => setState(() => _metric = metric),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // 주간 계열은 이번 주치만 들고 있다. 지난 주를 열면 나트륨 때와 같이
+        // 없다고 말한다 — 이번 주 선을 지난 주 자리에 그리지 않는다.
+        if (!widget.report.isCurrentWeek)
+          EmptyHint(message: l.reportsNoLastWeekMetricTrend(_label(l, _metric)))
+        // 기록이 하나도 없는 고객까지 바닥에 붙은 0 선을 그리면 "기록 없음"이
+        // "하루 0kcal" 처럼 읽힌다.
+        else if (values.isEmpty || values.every((v) => v == 0))
+          EmptyHint(message: l.reportsNoMetricRecords(_label(l, _metric)))
+        else
+          MetricTrendChart(
+            values: values,
+            dayLabels: weekdayLabels(l),
+            goal: _goal,
+            ticks: _ticks,
+            todayIndex: elapsedWeekdays(DateTime.now()) - 1,
+            // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
+            // 따라가게 한다.
+            replayKey: _metric,
+            formatTick: metricTrendNumber,
+          ),
+      ],
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? AppColors.accentSurface : AppColors.inputBackground,
+    borderRadius: const BorderRadius.all(AppRadius.pill),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: const BorderRadius.all(AppRadius.pill),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.primary : AppColors.mutedForeground,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _WeekComparison extends ConsumerWidget {
@@ -660,7 +788,9 @@ class _WeekComparison extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            l.reportsComparisonTitle,
+            l.reportsComparisonTitle(
+              report.isCurrentWeek ? l.reportsThisWeek : l.reportsSelectedWeek,
+            ),
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -684,9 +814,7 @@ class _WeekComparison extends ConsumerWidget {
                     label: l.reportsCompletionAvg,
                     current: report.completionAvg,
                     previous: before?.completionAvg,
-                    previousLabel: report.isCurrentWeek
-                        ? l.reportsLastWeek
-                        : l.reportsPrevWeek,
+                    previousLabel: l.reportsLastWeek,
                     currentLabel: report.isCurrentWeek
                         ? l.reportsThisWeek
                         : l.reportsSelectedWeek,
@@ -702,9 +830,7 @@ class _WeekComparison extends ConsumerWidget {
                     label: l.reportsAverageSodium,
                     current: report.sodiumAvg,
                     previous: before?.sodiumAvg,
-                    previousLabel: report.isCurrentWeek
-                        ? l.reportsLastWeek
-                        : l.reportsPrevWeek,
+                    previousLabel: l.reportsLastWeek,
                     currentLabel: report.isCurrentWeek
                         ? l.reportsThisWeek
                         : l.reportsSelectedWeek,

@@ -2,6 +2,10 @@
 /// summary tile, and the AI comment all flip to the warning case.
 const int sodiumTargetMg = 2000;
 
+/// Daily calorie target (kcal). The weekly trend chart colours a day red
+/// above this, the same way the member app's home tab does.
+const int calorieTargetKcal = 2000;
+
 /// Daily sugar target (g). Over this, the diet summary 당류 tile warns.
 const int sugarTargetG = 50;
 
@@ -27,6 +31,8 @@ class TrainerClient {
     required this.lastRoutine,
     required this.weekCompletion,
     required this.sodiumWeek,
+    this.caloriesWeek = const <int>[],
+    this.sugarWeek = const <double>[],
     this.gender = '',
     this.age,
   });
@@ -88,6 +94,11 @@ class TrainerClient {
   /// backfills it).
   final List<int> sodiumWeek;
 
+  /// 최근 7일 일별 칼로리·당류. [sodiumWeek] 와 같은 창이라 한 그래프에서 지표만
+  /// 바꿔 볼 수 있다(#746). 당류는 소수를 유지한다.
+  final List<int> caloriesWeek;
+  final List<double> sugarWeek;
+
   /// Stable display gender for roster rows that predate demographic fields.
   ///
   /// The demo roster is presentation fixture data. Keeping the fallback on
@@ -117,8 +128,15 @@ class TrainerClient {
   int get sodiumOverDays =>
       sodiumWeek.where((mg) => mg > sodiumTargetMg).length;
 
-  /// 7-day average sodium (mg), or `null` when no history exists.
-  int? get sodiumWeekAvg => sodiumWeek.isEmpty
-      ? null
-      : (sodiumWeek.reduce((a, b) => a + b) / sodiumWeek.length).round();
+  /// 이번 주 평균 나트륨(mg), 기록이 없으면 `null`.
+  ///
+  /// **기록된 날만** 나눈다. 주간 계열이 월→일로 고정되면서 아직 오지 않은
+  /// 요일이 0 으로 들어오는데, 그 0 까지 나누면 주 초반에는 평균이 실제보다
+  /// 낮게 나와 주의 배지가 조용해진다. 이행률 평균(`recordedCompletionMean`)
+  /// 이 쓰는 규칙과 같다.
+  int? get sodiumWeekAvg {
+    final recorded = sodiumWeek.where((mg) => mg > 0).toList(growable: false);
+    if (recorded.isEmpty) return null;
+    return (recorded.reduce((a, b) => a + b) / recorded.length).round();
+  }
 }

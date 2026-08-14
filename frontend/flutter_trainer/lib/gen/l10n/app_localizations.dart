@@ -1637,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous week'**
+  /// **'Previous'**
   String get reportsPrevWeek;
 
   /// No description provided for @reportsLoadFailed.
@@ -1766,17 +1766,23 @@ abstract class AppLocalizations {
   /// **'No workouts logged this week'**
   String get reportsNoWorkoutsThisWeek;
 
-  /// No description provided for @reportsSodiumTrend.
+  /// No description provided for @reportsMetricTrend.
   ///
   /// In en, this message translates to:
-  /// **'Sodium trend'**
-  String get reportsSodiumTrend;
+  /// **'{metric} trend'**
+  String reportsMetricTrend(String metric);
 
-  /// No description provided for @reportsNoLastWeekSodium.
+  /// No description provided for @reportsNoLastWeekMetricTrend.
   ///
   /// In en, this message translates to:
-  /// **'No sodium trend for last week yet'**
-  String get reportsNoLastWeekSodium;
+  /// **'No {metric} trend for last week yet'**
+  String reportsNoLastWeekMetricTrend(String metric);
+
+  /// No description provided for @reportsNoMetricRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No {metric} logged this week yet'**
+  String reportsNoMetricRecords(String metric);
 
   /// No description provided for @reportsSendStateSent.
   ///
@@ -3368,12 +3374,6 @@ abstract class AppLocalizations {
   /// **'{unit} over'**
   String metricOverBy(String unit);
 
-  /// No description provided for @chartNotEnoughData.
-  ///
-  /// In en, this message translates to:
-  /// **'Not enough data yet'**
-  String get chartNotEnoughData;
-
   /// No description provided for @authErrInvalidCredentials.
   ///
   /// In en, this message translates to:
@@ -4373,8 +4373,14 @@ abstract class AppLocalizations {
   /// No description provided for @reportsComparisonTitle.
   ///
   /// In en, this message translates to:
-  /// **'This week vs last week'**
-  String get reportsComparisonTitle;
+  /// **'{week} vs last week'**
+  String reportsComparisonTitle(String week);
+
+  /// No description provided for @reportsGoThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to this week'**
+  String get reportsGoThisWeek;
 
   /// No description provided for @reportsLastWeek.
   ///

@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A compact labelled bar series (주간 이행률, 세션 수 …).
 ///
 /// Deliberately hand-built rather than pulled from a charting package:
-/// the console needs exactly two chart shapes (this and [Sparkline]),
-/// both trivial, and a chart library would add build weight and its own
-/// theming surface for no gain. If a real analytics screen ever needs
+/// the console needs exactly one chart shape here, trivial, and a chart
+/// library would add build weight and its own theming surface for no
+/// gain. If a real analytics screen ever needs
 /// axes, tooltips and zoom, that's the moment to add one.
 class BarSeriesChart extends StatelessWidget {
   /// Creates a bar series.
@@ -206,133 +205,4 @@ class _Bar extends StatelessWidget {
       },
     );
   }
-}
-
-/// A small trend line with an optional threshold rule (7일 나트륨 추이).
-class Sparkline extends StatelessWidget {
-  /// Creates a sparkline.
-  const Sparkline({
-    super.key,
-    required this.values,
-    this.threshold,
-    this.height = 44,
-    this.color = AppColors.primary,
-  });
-
-  /// Series, oldest → newest.
-  final List<int> values;
-
-  /// Optional horizontal rule (e.g. the daily sodium target).
-  final int? threshold;
-
-  /// Plot height.
-  final double height;
-
-  /// Line colour.
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    if (values.length < 2) {
-      final AppLocalizations l = AppLocalizations.of(context);
-      return SizedBox(
-        height: height,
-        child: Center(
-          child: Text(
-            l.chartNotEnoughData,
-            style: TextStyle(fontSize: 12, color: AppColors.subtleForeground),
-          ),
-        ),
-      );
-    }
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _SparklinePainter(
-          values: values,
-          threshold: threshold,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  const _SparklinePainter({
-    required this.values,
-    required this.threshold,
-    required this.color,
-  });
-
-  final List<int> values;
-  final int? threshold;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final maxV = <int>[
-      values.reduce((a, b) => a > b ? a : b),
-      threshold ?? 0,
-      1,
-    ].reduce((a, b) => a > b ? a : b).toDouble();
-    // Head-room so the peak point's dot isn't clipped by the top edge.
-    final ceiling = maxV * 1.15;
-    final dx = size.width / (values.length - 1);
-
-    double yFor(num v) => size.height - (v / ceiling) * size.height;
-
-    final points = <Offset>[
-      for (var i = 0; i < values.length; i++) Offset(i * dx, yFor(values[i])),
-    ];
-
-    // Area fill under the line.
-    final area = Path()..moveTo(points.first.dx, size.height);
-    for (final p in points) {
-      area.lineTo(p.dx, p.dy);
-    }
-    area
-      ..lineTo(points.last.dx, size.height)
-      ..close();
-    canvas.drawPath(area, Paint()..color = color.withValues(alpha: 0.10));
-
-    if (threshold != null) {
-      final y = yFor(threshold!);
-      final dash = Paint()
-        ..color = AppColors.overTarget.withValues(alpha: 0.6)
-        ..strokeWidth = 1;
-      for (var x = 0.0; x < size.width; x += 6) {
-        canvas.drawLine(Offset(x, y), Offset(x + 3, y), dash);
-      }
-    }
-
-    final line = Path()..moveTo(points.first.dx, points.first.dy);
-    for (final p in points.skip(1)) {
-      line.lineTo(p.dx, p.dy);
-    }
-    canvas.drawPath(
-      line,
-      Paint()
-        ..color = color
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // Dots: over-threshold points flip to the warning colour so the
-    // "which days went over" question is answered without a legend.
-    for (var i = 0; i < points.length; i++) {
-      final over = threshold != null && values[i] > threshold!;
-      canvas.drawCircle(
-        points[i],
-        over ? 3 : 2,
-        Paint()..color = over ? AppColors.overTarget : color,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparklinePainter old) =>
-      old.values != values || old.threshold != threshold || old.color != color;
 }

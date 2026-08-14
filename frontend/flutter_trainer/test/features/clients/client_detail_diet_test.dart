@@ -92,22 +92,21 @@ void main() {
       expect(seongho[1].items, '짜장면'); // 점심
     });
 
-    test('client rows carry a sodium history ending at today', () async {
+    test('client rows carry this week\'s sodium history on its weekdays', () async {
       final clients = await DriftClientRepository(db).watchClients().first;
+      // 계열은 이번 주 월→일이다(#746). 요일 라벨과 함께 그리므로 길이는 늘
+      // 7이고, 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에 놓인다.
+      final todayIndex = DateTime.now().weekday - 1;
       for (final c in clients) {
-        // At most a week, and never more — the sparkline draws what it
-        // is given. A client who only started logging this week has
-        // fewer points, and one who has not started has none.
-        expect(c.sodiumWeek.length, lessThanOrEqualTo(7), reason: c.name);
-        // Whatever its length, the last entry mirrors today's total
-        // shown on the metric tile beside it.
-        if (c.sodiumWeek.isNotEmpty) {
-          expect(c.sodiumWeek.last, c.sodiumMg, reason: c.name);
-        }
+        expect(c.sodiumWeek, hasLength(7), reason: c.name);
+        expect(c.sodiumWeek[todayIndex], c.sodiumMg, reason: c.name);
+        // 아직 오지 않은 요일은 누구에게나 0 — 기록 없음과 같은 표현이다.
+        expect(
+          c.sodiumWeek.skip(todayIndex + 1),
+          everyElement(0),
+          reason: c.name,
+        );
       }
-      // The fixture must keep covering the full-week case too, or the
-      // seven-point sparkline stops being exercised at all.
-      expect(clients.where((c) => c.sodiumWeek.length == 7), isNotEmpty);
       final minsu = clients.firstWhere((c) => c.name == '김민수');
       expect(minsu.sodiumOverDays, greaterThan(0)); // 2400/2200/2300… over
       expect(minsu.sodiumWeekAvg, isNotNull);

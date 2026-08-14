@@ -365,6 +365,13 @@ class DriftClientRepository implements ClientRepository {
         // throw, so normalise through num (review PR 247).
         .map((e) => (e as num).toInt())
         .toList();
+    final caloriesWeek = (jsonDecode(row.caloriesWeekJson) as List<Object?>)
+        .map((e) => (e as num).toInt())
+        .toList();
+    // 당류는 소수를 유지한다 — 반올림하면 식단 탭 수치와 어긋난다(#746).
+    final sugarWeek = (jsonDecode(row.sugarWeekJson) as List<Object?>)
+        .map((e) => (e as num).toDouble())
+        .toList();
     return TrainerClient(
       id: row.id,
       name: row.name,
@@ -382,6 +389,8 @@ class DriftClientRepository implements ClientRepository {
       lastRoutine: row.lastRoutine,
       weekCompletion: week,
       sodiumWeek: sodiumWeek,
+      caloriesWeek: caloriesWeek,
+      sugarWeek: sugarWeek,
     );
   }
 }

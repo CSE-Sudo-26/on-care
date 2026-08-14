@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -128,14 +128,46 @@ def _today_totals(
     return calories, sodium_mg, sugar_g, carbs_g, protein_g, fat_g
 
 
-def _sodium_week(diet_rows: list[DietEntry], today: date) -> list[int]:
-    """최근 7일 일별 나트륨 합(오래된→오늘). 기록 없는 날은 0."""
-    by_date: dict[str, int] = {}
-    for e in diet_rows:
-        by_date[e.date] = by_date.get(e.date, 0) + e.sodium_mg
+def _sodium_week(diet_rows: list[DietEntry], monday: date) -> list[int]:
+    """이번 주(월→일) 일별 나트륨 합. 기록 없는 날은 0."""
     return [
-        by_date.get((today - timedelta(days=off)).isoformat(), 0)
-        for off in range(6, -1, -1)
+        round(v) for v in _daily_week(diet_rows, monday, lambda e: e.sodium_mg)
+    ]
+
+
+def _calories_week(diet_rows: list[DietEntry], monday: date) -> list[int]:
+    """이번 주(월→일) 일별 칼로리 합. 나트륨과 같은 창·같은 규칙이다. (#746)"""
+    return [
+        round(v)
+        for v in _daily_week(diet_rows, monday, lambda e: e.total_calories)
+    ]
+
+
+def _sugar_week(diet_rows: list[DietEntry], monday: date) -> list[float]:
+    """이번 주(월→일) 일별 당류 합.
+
+    나트륨·칼로리와 달리 소수를 유지한다 — 당류는 6.3+8.5 처럼 소수로 쌓이고,
+    반올림하면 같은 회원의 식단 탭 수치와 어긋난다(`sugar_g` 가 Float 인 이유와
+    같다).
+    """
+    return [round(v, 1) for v in _daily_week(diet_rows, monday, lambda e: e.sugar_g)]
+
+
+def _daily_week(
+    diet_rows: list[DietEntry], monday: date, value: Callable[[DietEntry], float]
+) -> list[float]:
+    """이번 주(월→일) 일별 합. 기록 없는 날과 아직 오지 않은 날은 0.
+
+    `week_completion` 과 **같은 창**이다. 오늘 기준 롤링 7일이 아니라 요일에
+    고정한다 — 화면이 이 값을 요일 라벨과 함께 그리므로, 창이 굴러가면 금요일
+    수치가 일요일 자리에 놓인다(#746).
+    """
+    by_date: dict[str, float] = {}
+    for e in diet_rows:
+        by_date[e.date] = by_date.get(e.date, 0) + value(e)
+    return [
+        by_date.get((monday + timedelta(days=off)).isoformat(), 0)
+        for off in range(7)
     ]
 
 
@@ -199,7 +231,8 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
     week_ago_str = (today - timedelta(days=6)).isoformat()
     monday_str = monday.isoformat()
 
-    # 최근 7일 식단(오늘 합계 + 나트륨 추세) — 전 고객 배치, 날짜 한정
+    # 식단(오늘 합계 + 이번 주 추이) — 전 고객 배치, 날짜 한정. 월요일은 항상
+    # `today - 6` 이후라 이 창 하나로 이번 주 월→일을 모두 덮는다.
     diet_by_member: dict[str, list[DietEntry]] = defaultdict(list)
     for e in db.scalars(
         select(DietEntry).where(
@@ -257,7 +290,9 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
                 if last_rt else "-"
             ),
             week_completion=_week_completion(hist_by_member.get(link.member_id, []), monday),
-            sodium_week=_sodium_week(diet_rows, today),
+            sodium_week=_sodium_week(diet_rows, monday),
+            calories_week=_calories_week(diet_rows, monday),
+            sugar_week=_sugar_week(diet_rows, monday),
         ))
     return out
 

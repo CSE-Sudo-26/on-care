@@ -898,7 +898,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Summarize this week\'s changes and prepare a report to share';
 
   @override
-  String get reportsPrevWeek => 'Previous week';
+  String get reportsPrevWeek => 'Previous';
 
   @override
   String get reportsLoadFailed => 'Couldn\'t load reports';
@@ -972,10 +972,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsNoWorkoutsThisWeek => 'No workouts logged this week';
 
   @override
-  String get reportsSodiumTrend => 'Sodium trend';
+  String reportsMetricTrend(String metric) {
+    return '$metric trend';
+  }
 
   @override
-  String get reportsNoLastWeekSodium => 'No sodium trend for last week yet';
+  String reportsNoLastWeekMetricTrend(String metric) {
+    return 'No $metric trend for last week yet';
+  }
+
+  @override
+  String reportsNoMetricRecords(String metric) {
+    return 'No $metric logged this week yet';
+  }
 
   @override
   String get reportsSendStateSent => 'Sent';
@@ -1876,9 +1885,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chartNotEnoughData => 'Not enough data yet';
-
-  @override
   String get authErrInvalidCredentials =>
       'That email or password isn\'t right.';
 
@@ -2455,7 +2461,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorExerciseMemo => 'Memo';
 
   @override
-  String get reportsComparisonTitle => 'This week vs last week';
+  String reportsComparisonTitle(String week) {
+    return '$week vs last week';
+  }
+
+  @override
+  String get reportsGoThisWeek => 'Go to this week';
 
   @override
   String get reportsLastWeek => 'Last week';

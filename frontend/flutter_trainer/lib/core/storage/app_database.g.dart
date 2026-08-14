@@ -385,6 +385,30 @@ class $TrainerClientsTable extends TrainerClients
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _caloriesWeekJsonMeta = const VerificationMeta(
+    'caloriesWeekJson',
+  );
+  @override
+  late final GeneratedColumn<String> caloriesWeekJson = GeneratedColumn<String>(
+    'calories_week_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _sugarWeekJsonMeta = const VerificationMeta(
+    'sugarWeekJson',
+  );
+  @override
+  late final GeneratedColumn<String> sugarWeekJson = GeneratedColumn<String>(
+    'sugar_week_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -415,6 +439,8 @@ class $TrainerClientsTable extends TrainerClients
     lastRoutine,
     weekCompletionJson,
     sodiumWeekJson,
+    caloriesWeekJson,
+    sugarWeekJson,
     sortOrder,
   ];
   @override
@@ -559,6 +585,24 @@ class $TrainerClientsTable extends TrainerClients
         ),
       );
     }
+    if (data.containsKey('calories_week_json')) {
+      context.handle(
+        _caloriesWeekJsonMeta,
+        caloriesWeekJson.isAcceptableOrUnknown(
+          data['calories_week_json']!,
+          _caloriesWeekJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sugar_week_json')) {
+      context.handle(
+        _sugarWeekJsonMeta,
+        sugarWeekJson.isAcceptableOrUnknown(
+          data['sugar_week_json']!,
+          _sugarWeekJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -638,6 +682,14 @@ class $TrainerClientsTable extends TrainerClients
         DriftSqlType.string,
         data['${effectivePrefix}sodium_week_json'],
       )!,
+      caloriesWeekJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}calories_week_json'],
+      )!,
+      sugarWeekJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sugar_week_json'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -669,6 +721,8 @@ class TrainerClientRow extends DataClass
   final String lastRoutine;
   final String weekCompletionJson;
   final String sodiumWeekJson;
+  final String caloriesWeekJson;
+  final String sugarWeekJson;
   final int sortOrder;
   const TrainerClientRow({
     required this.id,
@@ -687,6 +741,8 @@ class TrainerClientRow extends DataClass
     required this.lastRoutine,
     required this.weekCompletionJson,
     required this.sodiumWeekJson,
+    required this.caloriesWeekJson,
+    required this.sugarWeekJson,
     required this.sortOrder,
   });
   @override
@@ -708,6 +764,8 @@ class TrainerClientRow extends DataClass
     map['last_routine'] = Variable<String>(lastRoutine);
     map['week_completion_json'] = Variable<String>(weekCompletionJson);
     map['sodium_week_json'] = Variable<String>(sodiumWeekJson);
+    map['calories_week_json'] = Variable<String>(caloriesWeekJson);
+    map['sugar_week_json'] = Variable<String>(sugarWeekJson);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -730,6 +788,8 @@ class TrainerClientRow extends DataClass
       lastRoutine: Value(lastRoutine),
       weekCompletionJson: Value(weekCompletionJson),
       sodiumWeekJson: Value(sodiumWeekJson),
+      caloriesWeekJson: Value(caloriesWeekJson),
+      sugarWeekJson: Value(sugarWeekJson),
       sortOrder: Value(sortOrder),
     );
   }
@@ -758,6 +818,8 @@ class TrainerClientRow extends DataClass
         json['weekCompletionJson'],
       ),
       sodiumWeekJson: serializer.fromJson<String>(json['sodiumWeekJson']),
+      caloriesWeekJson: serializer.fromJson<String>(json['caloriesWeekJson']),
+      sugarWeekJson: serializer.fromJson<String>(json['sugarWeekJson']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -781,6 +843,8 @@ class TrainerClientRow extends DataClass
       'lastRoutine': serializer.toJson<String>(lastRoutine),
       'weekCompletionJson': serializer.toJson<String>(weekCompletionJson),
       'sodiumWeekJson': serializer.toJson<String>(sodiumWeekJson),
+      'caloriesWeekJson': serializer.toJson<String>(caloriesWeekJson),
+      'sugarWeekJson': serializer.toJson<String>(sugarWeekJson),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
@@ -802,6 +866,8 @@ class TrainerClientRow extends DataClass
     String? lastRoutine,
     String? weekCompletionJson,
     String? sodiumWeekJson,
+    String? caloriesWeekJson,
+    String? sugarWeekJson,
     int? sortOrder,
   }) => TrainerClientRow(
     id: id ?? this.id,
@@ -820,6 +886,8 @@ class TrainerClientRow extends DataClass
     lastRoutine: lastRoutine ?? this.lastRoutine,
     weekCompletionJson: weekCompletionJson ?? this.weekCompletionJson,
     sodiumWeekJson: sodiumWeekJson ?? this.sodiumWeekJson,
+    caloriesWeekJson: caloriesWeekJson ?? this.caloriesWeekJson,
+    sugarWeekJson: sugarWeekJson ?? this.sugarWeekJson,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   TrainerClientRow copyWithCompanion(TrainerClientsCompanion data) {
@@ -850,6 +918,12 @@ class TrainerClientRow extends DataClass
       sodiumWeekJson: data.sodiumWeekJson.present
           ? data.sodiumWeekJson.value
           : this.sodiumWeekJson,
+      caloriesWeekJson: data.caloriesWeekJson.present
+          ? data.caloriesWeekJson.value
+          : this.caloriesWeekJson,
+      sugarWeekJson: data.sugarWeekJson.present
+          ? data.sugarWeekJson.value
+          : this.sugarWeekJson,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -873,6 +947,8 @@ class TrainerClientRow extends DataClass
           ..write('lastRoutine: $lastRoutine, ')
           ..write('weekCompletionJson: $weekCompletionJson, ')
           ..write('sodiumWeekJson: $sodiumWeekJson, ')
+          ..write('caloriesWeekJson: $caloriesWeekJson, ')
+          ..write('sugarWeekJson: $sugarWeekJson, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
@@ -896,6 +972,8 @@ class TrainerClientRow extends DataClass
     lastRoutine,
     weekCompletionJson,
     sodiumWeekJson,
+    caloriesWeekJson,
+    sugarWeekJson,
     sortOrder,
   );
   @override
@@ -918,6 +996,8 @@ class TrainerClientRow extends DataClass
           other.lastRoutine == this.lastRoutine &&
           other.weekCompletionJson == this.weekCompletionJson &&
           other.sodiumWeekJson == this.sodiumWeekJson &&
+          other.caloriesWeekJson == this.caloriesWeekJson &&
+          other.sugarWeekJson == this.sugarWeekJson &&
           other.sortOrder == this.sortOrder);
 }
 
@@ -938,6 +1018,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
   final Value<String> lastRoutine;
   final Value<String> weekCompletionJson;
   final Value<String> sodiumWeekJson;
+  final Value<String> caloriesWeekJson;
+  final Value<String> sugarWeekJson;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const TrainerClientsCompanion({
@@ -957,6 +1039,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     this.lastRoutine = const Value.absent(),
     this.weekCompletionJson = const Value.absent(),
     this.sodiumWeekJson = const Value.absent(),
+    this.caloriesWeekJson = const Value.absent(),
+    this.sugarWeekJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -977,6 +1061,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     required String lastRoutine,
     required String weekCompletionJson,
     this.sodiumWeekJson = const Value.absent(),
+    this.caloriesWeekJson = const Value.absent(),
+    this.sugarWeekJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1007,6 +1093,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Expression<String>? lastRoutine,
     Expression<String>? weekCompletionJson,
     Expression<String>? sodiumWeekJson,
+    Expression<String>? caloriesWeekJson,
+    Expression<String>? sugarWeekJson,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -1028,6 +1116,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       if (weekCompletionJson != null)
         'week_completion_json': weekCompletionJson,
       if (sodiumWeekJson != null) 'sodium_week_json': sodiumWeekJson,
+      if (caloriesWeekJson != null) 'calories_week_json': caloriesWeekJson,
+      if (sugarWeekJson != null) 'sugar_week_json': sugarWeekJson,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1050,6 +1140,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     Value<String>? lastRoutine,
     Value<String>? weekCompletionJson,
     Value<String>? sodiumWeekJson,
+    Value<String>? caloriesWeekJson,
+    Value<String>? sugarWeekJson,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -1070,6 +1162,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
       lastRoutine: lastRoutine ?? this.lastRoutine,
       weekCompletionJson: weekCompletionJson ?? this.weekCompletionJson,
       sodiumWeekJson: sodiumWeekJson ?? this.sodiumWeekJson,
+      caloriesWeekJson: caloriesWeekJson ?? this.caloriesWeekJson,
+      sugarWeekJson: sugarWeekJson ?? this.sugarWeekJson,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -1126,6 +1220,12 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
     if (sodiumWeekJson.present) {
       map['sodium_week_json'] = Variable<String>(sodiumWeekJson.value);
     }
+    if (caloriesWeekJson.present) {
+      map['calories_week_json'] = Variable<String>(caloriesWeekJson.value);
+    }
+    if (sugarWeekJson.present) {
+      map['sugar_week_json'] = Variable<String>(sugarWeekJson.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -1154,6 +1254,8 @@ class TrainerClientsCompanion extends UpdateCompanion<TrainerClientRow> {
           ..write('lastRoutine: $lastRoutine, ')
           ..write('weekCompletionJson: $weekCompletionJson, ')
           ..write('sodiumWeekJson: $sodiumWeekJson, ')
+          ..write('caloriesWeekJson: $caloriesWeekJson, ')
+          ..write('sugarWeekJson: $sugarWeekJson, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4036,6 +4138,8 @@ typedef $$TrainerClientsTableCreateCompanionBuilder =
       required String lastRoutine,
       required String weekCompletionJson,
       Value<String> sodiumWeekJson,
+      Value<String> caloriesWeekJson,
+      Value<String> sugarWeekJson,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -4057,6 +4161,8 @@ typedef $$TrainerClientsTableUpdateCompanionBuilder =
       Value<String> lastRoutine,
       Value<String> weekCompletionJson,
       Value<String> sodiumWeekJson,
+      Value<String> caloriesWeekJson,
+      Value<String> sugarWeekJson,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -4147,6 +4253,16 @@ class $$TrainerClientsTableFilterComposer
 
   ColumnFilters<String> get sodiumWeekJson => $composableBuilder(
     column: $table.sodiumWeekJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get caloriesWeekJson => $composableBuilder(
+    column: $table.caloriesWeekJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sugarWeekJson => $composableBuilder(
+    column: $table.sugarWeekJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4245,6 +4361,16 @@ class $$TrainerClientsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get caloriesWeekJson => $composableBuilder(
+    column: $table.caloriesWeekJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sugarWeekJson => $composableBuilder(
+    column: $table.sugarWeekJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -4318,6 +4444,16 @@ class $$TrainerClientsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get caloriesWeekJson => $composableBuilder(
+    column: $table.caloriesWeekJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sugarWeekJson => $composableBuilder(
+    column: $table.sugarWeekJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 }
@@ -4375,6 +4511,8 @@ class $$TrainerClientsTableTableManager
                 Value<String> lastRoutine = const Value.absent(),
                 Value<String> weekCompletionJson = const Value.absent(),
                 Value<String> sodiumWeekJson = const Value.absent(),
+                Value<String> caloriesWeekJson = const Value.absent(),
+                Value<String> sugarWeekJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerClientsCompanion(
@@ -4394,6 +4532,8 @@ class $$TrainerClientsTableTableManager
                 lastRoutine: lastRoutine,
                 weekCompletionJson: weekCompletionJson,
                 sodiumWeekJson: sodiumWeekJson,
+                caloriesWeekJson: caloriesWeekJson,
+                sugarWeekJson: sugarWeekJson,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -4415,6 +4555,8 @@ class $$TrainerClientsTableTableManager
                 required String lastRoutine,
                 required String weekCompletionJson,
                 Value<String> sodiumWeekJson = const Value.absent(),
+                Value<String> caloriesWeekJson = const Value.absent(),
+                Value<String> sugarWeekJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerClientsCompanion.insert(
@@ -4434,6 +4576,8 @@ class $$TrainerClientsTableTableManager
                 lastRoutine: lastRoutine,
                 weekCompletionJson: weekCompletionJson,
                 sodiumWeekJson: sodiumWeekJson,
+                caloriesWeekJson: caloriesWeekJson,
+                sugarWeekJson: sugarWeekJson,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),

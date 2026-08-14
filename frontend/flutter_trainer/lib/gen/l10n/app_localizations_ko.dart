@@ -870,7 +870,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsSubtitle => '이번 주 변화를 정리하고 고객에게 전달할 리포트를 작성하세요';
 
   @override
-  String get reportsPrevWeek => '이전 주';
+  String get reportsPrevWeek => '이전';
 
   @override
   String get reportsLoadFailed => '리포트를 불러오지 못했어요';
@@ -942,10 +942,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsNoWorkoutsThisWeek => '이번 주 운동 기록이 없어요';
 
   @override
-  String get reportsSodiumTrend => '나트륨 추이';
+  String reportsMetricTrend(String metric) {
+    return '$metric 추이';
+  }
 
   @override
-  String get reportsNoLastWeekSodium => '지난 주 나트륨 추이는 아직 없어요';
+  String reportsNoLastWeekMetricTrend(String metric) {
+    return '지난 주 $metric 추이는 아직 없어요';
+  }
+
+  @override
+  String reportsNoMetricRecords(String metric) {
+    return '이번 주 $metric 기록이 아직 없어요';
+  }
 
   @override
   String get reportsSendStateSent => '전송됨';
@@ -1818,9 +1827,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get chartNotEnoughData => '데이터가 아직 부족해요';
-
-  @override
   String get authErrInvalidCredentials => '이메일 또는 비밀번호가 올바르지 않습니다.';
 
   @override
@@ -2368,7 +2374,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorExerciseMemo => '메모';
 
   @override
-  String get reportsComparisonTitle => '이번 주 vs 지난 주';
+  String reportsComparisonTitle(String week) {
+    return '$week vs 지난 주';
+  }
+
+  @override
+  String get reportsGoThisWeek => '이번 주로';
 
   @override
   String get reportsLastWeek => '지난 주';
