@@ -121,7 +121,7 @@ void main() {
   });
 
   group('식단 탭 기간 토글', () {
-    testWidgets('이번 주를 고르면 기간 추이 카드가 나오고, 오늘로 돌아오면 끼니 목록이 돌아온다', (
+    testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -136,15 +136,28 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 처음에는 하루 뷰.
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+
+      // 처음에는 하루 요약.
       expect(find.byKey(const Key('nutrition-summary-card')), findsOneWidget);
       expect(find.byKey(const Key('diet-period-card')), findsNothing);
+      // 제목은 기간과 무관한 '영양 요약'.
+      expect(find.text(l.dietNutritionSummary), findsOneWidget);
+      expect(l.dietNutritionSummary.contains('오늘'), isFalse);
 
       await tester.tap(find.byKey(const Key('diet-period-tab-week')));
       await tester.pumpAndSettle();
 
+      // 요약 자리만 그래프로 바뀐다.
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
       expect(find.byKey(const Key('nutrition-summary-card')), findsNothing);
+      // 날짜 스트립과 끼니 목록은 그대로 남는다 — 운동 탭과 같은 규칙.
+      expect(find.text(l.dietTodayMeals), findsOneWidget);
+      expect(find.text(l.dietAddMeal), findsOneWidget);
+      // 토글도 제목 줄에 그대로 있다.
+      expect(find.byKey(const Key('diet-period-tab-month')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('diet-period-tab-month')));
       await tester.pumpAndSettle();
@@ -156,6 +169,7 @@ void main() {
       expect(find.byKey(const Key('diet-period-card')), findsNothing);
     });
   });
+
   group('dietRangeForTab', () {
     test('이번 주는 월~일 7일이다 (일요일에도 그 주로 묶인다)', () {
       // 2026-06-07 은 일요일 → weekday 7. Duration 으로 빼면 다음 주로 샌다.

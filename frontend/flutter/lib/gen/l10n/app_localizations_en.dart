@@ -463,7 +463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietWeekdaySun => 'Sun';
 
   @override
-  String get dietNutritionSummary => 'Today\'s Nutrition';
+  String get dietNutritionSummary => 'Nutrition';
 
   @override
   String get dietCalories => 'Calories';

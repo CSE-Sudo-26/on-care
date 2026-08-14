@@ -929,7 +929,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietNutritionSummary.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Nutrition'**
+  /// **'Nutrition'**
   String get dietNutritionSummary;
 
   /// No description provided for @dietCalories.
