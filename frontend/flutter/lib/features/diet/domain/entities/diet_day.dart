@@ -49,6 +49,7 @@ class DietEntry {
     this.fatG = 0,
     this.aiComment = '',
     this.photoAsset,
+    this.photoUrl,
   });
 
   final String? id;
@@ -70,6 +71,12 @@ class DietEntry {
   /// back to the meal-type emoji.
   final String? photoAsset;
 
+  /// API path of the photo the member actually uploaded (#699), relative to
+  /// the API base. Null for entries recorded before photos were stored, and
+  /// for entries whose photo could not be read. Takes precedence over
+  /// [photoAsset]: the demo asset is a stand-in for exactly this.
+  final String? photoUrl;
+
   factory DietEntry.fromJson(Map<String, Object?> json) => DietEntry(
     id: json['id'] as String?,
     mealType: _mealFromString(json['meal_type']! as String),
@@ -86,6 +93,7 @@ class DietEntry {
     fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
     aiComment: (json['ai_comment'] as String?) ?? '',
     photoAsset: json['photo_asset'] as String?,
+    photoUrl: json['photo_url'] as String?,
   );
 }
 

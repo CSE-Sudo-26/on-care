@@ -1,0 +1,82 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:oncare/core/network/dio_client.dart';
+
+/// Bytes of a stored meal photo, keyed by its API path (`/diet/photos/<id>`).
+///
+/// 이름이 [MealPhoto] 와 갈리는 것을 피해 "stored" 를 붙였다 — 그쪽은 **올리기
+/// 전** 고른 사진이고, 여기는 **이미 저장된** 사진이다.
+///
+/// Goes through the app's [dioProvider] rather than `Image.network` on
+/// purpose: the photo route is **authenticated** (only the owner and their
+/// trainer may read it), and the auth interceptor is what puts the token on
+/// the request. A bare image URL would come back 401.
+///
+/// Riverpod's cache is also the image cache here — the same meal rendered on
+/// the diet tab and in the detail sheet fetches once. (#699)
+final storedMealPhotoProvider = FutureProvider.family<Uint8List?, String>((
+  ref,
+  path,
+) async {
+  final Dio dio = ref.watch(dioProvider);
+  try {
+    final Response<List<int>> res = await dio.get<List<int>>(
+      path,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final List<int>? data = res.data;
+    if (data == null || data.isEmpty) return null;
+    return Uint8List.fromList(data);
+  } on DioException {
+    // 사진을 못 가져와도 끼니 카드는 그려야 한다 — 호출부가 대체 썸네일로 넘어간다.
+    return null;
+  }
+});
+
+/// Square thumbnail of a **stored** meal photo (the one the member already
+/// uploaded), with [fallback] shown while it
+/// loads and whenever it can't be shown (no photo, network failure, corrupt
+/// bytes). The fallback is the existing emoji/asset chip, so a photo that
+/// isn't there changes nothing about the layout.
+class StoredMealPhoto extends ConsumerWidget {
+  const StoredMealPhoto({
+    super.key,
+    required this.path,
+    required this.size,
+    required this.fallback,
+    this.borderRadius = 12,
+  });
+
+  /// API path relative to the API base (`/diet/photos/<id>`).
+  final String path;
+  final double size;
+  final Widget fallback;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<Uint8List?> photo = ref.watch(
+      storedMealPhotoProvider(path),
+    );
+    return photo.maybeWhen(
+      data: (Uint8List? bytes) => bytes == null
+          ? fallback
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(borderRadius),
+              child: Image.memory(
+                bytes,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+                    fallback,
+              ),
+            ),
+      orElse: () => fallback,
+    );
+  }
+}

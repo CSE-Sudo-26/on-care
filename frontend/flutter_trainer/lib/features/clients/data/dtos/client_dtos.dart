@@ -39,6 +39,7 @@ ClientDietEntry clientDietEntryFromJson(Map<String, Object?> json) {
     carbsG: _double(json['carbs_g']),
     proteinG: _double(json['protein_g']),
     fatG: _double(json['fat_g']),
+    photoUrl: _nullableStr(json['photo_url']),
   );
 }
 
