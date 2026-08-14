@@ -21,6 +21,7 @@ from app.schemas.diet import DietAnalysis, RecognizedFood
 from app.schemas.diet_api import (
     DietEntryOut, DietEntryUpdate, DietTodayResponse, calculate_macros,
 )
+from app.services import diet_photo_service
 from app.services.coach.personal_ingest import record_diet, refresh_diet
 
 logger = logging.getLogger(__name__)
@@ -64,12 +65,18 @@ def entry_to_analysis(entry: DietEntry) -> DietAnalysis:
     )
 
 
-def _entry_out(entry: DietEntry) -> DietEntryOut:
+def member_photo_url(photo_id: str) -> str:
+    """회원 자신이 보는 사진 경로. API base 기준 상대 경로다."""
+    return f"/diet/photos/{photo_id}"
+
+
+def _entry_out(entry: DietEntry, photo_id: str | None = None) -> DietEntryOut:
     return DietEntryOut(
         id=entry.id, meal_type=entry.meal_type, time_label=entry.time_label,
         foods=load_foods(entry.foods_json), total_calories=entry.total_calories,
         carbs_g=entry.carbs_g, protein_g=entry.protein_g, fat_g=entry.fat_g,
         sodium_mg=entry.sodium_mg, sugar_g=entry.sugar_g,
+        photo_url=member_photo_url(photo_id) if photo_id else None,
     )
 
 
@@ -90,7 +97,9 @@ def build_day(db: Session, user_id: str, date: str) -> DietTodayResponse:
         .order_by(DietEntry.created_at.asc())
     ).all()
 
-    entries: list[DietEntryOut] = [_entry_out(r) for r in rows]
+    # 사진은 id 만 한 번에 읽는다 — 하루치 집계가 바이트까지 끌고 오면 안 된다.
+    photo_ids = diet_photo_service.photo_ids_for_entries(db, [r.id for r in rows])
+    entries: list[DietEntryOut] = [_entry_out(r, photo_ids.get(r.id)) for r in rows]
     total_cal = total_na = total_sugar = 0
     total_carbs = total_protein = total_fat = 0.0
     for r in rows:

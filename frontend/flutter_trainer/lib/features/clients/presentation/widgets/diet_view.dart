@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_meal_photo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -97,66 +98,78 @@ class _MealCard extends StatelessWidget {
         boxShadow: kCardShadow,
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 2,
+          // 회원이 올린 사진. 없으면 아무것도 그리지 않아 기존 카드 그대로다. (#699)
+          if (entry.photoUrl case final String path) ...<Widget>[
+            ClientMealPhoto(path: path),
+            const SizedBox(width: AppSpacing.md),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 2,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: AppColors.accentSurface,
+                        borderRadius: BorderRadius.all(AppRadius.pill),
+                      ),
+                      child: Text(
+                        entry.meal,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${entry.calories} kcal',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ],
                 ),
-                decoration: const BoxDecoration(
-                  color: AppColors.accentSurface,
-                  borderRadius: BorderRadius.all(AppRadius.pill),
-                ),
-                child: Text(
-                  entry.meal,
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  entry.items,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                '${entry.calories} kcal',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accent,
+                const SizedBox(height: 2),
+                Text(
+                  l.dietSodiumValue(entry.sodiumMg),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.subtleForeground,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            entry.items,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.mutedForeground,
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    Text('${l.metricCarbs} ${_grams(entry.carbsG)}g'),
+                    Text('${l.metricProtein} ${_grams(entry.proteinG)}g'),
+                    Text('${l.metricFat} ${_grams(entry.fatG)}g'),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l.dietSodiumValue(entry.sodiumMg),
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: AppColors.subtleForeground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.xs,
-            children: <Widget>[
-              Text('${l.metricCarbs} ${_grams(entry.carbsG)}g'),
-              Text('${l.metricProtein} ${_grams(entry.proteinG)}g'),
-              Text('${l.metricFat} ${_grams(entry.fatG)}g'),
-            ],
           ),
         ],
       ),

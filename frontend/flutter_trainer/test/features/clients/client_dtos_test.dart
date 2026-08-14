@@ -95,6 +95,35 @@ void main() {
       expect(d.carbsG, 40);
       expect(d.proteinG, 25.5);
       expect(d.fatG, 15);
+      // 사진이 없는 끼니는 null — 사진 저장(#699) 이전 기록이 그렇다.
+      expect(d.photoUrl, isNull);
+    });
+
+    test('maps the meal photo path when the member uploaded one', () {
+      final d = clientDietEntryFromJson(<String, Object?>{
+        'meal': '점심',
+        'items': '비빔밥',
+        'calories': 620,
+        'sodium_mg': 900,
+        'photo_url': '/trainer/clients/user-jisu/diet/photos/dietpic-abc123',
+      });
+
+      expect(
+        d.photoUrl,
+        '/trainer/clients/user-jisu/diet/photos/dietpic-abc123',
+      );
+    });
+
+    test('an empty photo path reads as no photo', () {
+      final d = clientDietEntryFromJson(<String, Object?>{
+        'meal': '저녁',
+        'items': '닭가슴살',
+        'calories': 300,
+        'sodium_mg': 400,
+        'photo_url': '',
+      });
+
+      expect(d.photoUrl, isNull);
     });
 
     test('maps a history entry with exercises list', () {

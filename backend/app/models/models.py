@@ -22,6 +22,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -150,6 +151,42 @@ class DietEntry(Base):
         UniqueConstraint(
             "user_id", "idempotency_key", name="uq_diet_entries_user_idem"
         ),
+    )
+
+
+class DietPhoto(Base):
+    """끼니 사진 — 회원이 올린 사진의 축소본. (#699)
+
+    별도 테이블인 이유: `diet_entries` 는 하루 집계·트레이너 조회에서 통째로
+    읽힌다. 바이트를 같은 행에 두면 사진이 필요 없는 모든 조회가 사진까지
+    끌고 온다.
+
+    저장 위치는 **공유 DB** 다. 오브젝트 스토리지는 버킷·자격증명·과금 주체가
+    배포 환경(#414)에 매이는데, 사진 없이는 "회원이 올린 걸 트레이너가 본다"
+    는 흐름 자체가 서지 않는다. 원본이 아니라 축소본만 두어(장변 상한 + JPEG
+    재인코딩) 행 크기를 예측 가능하게 묶어 둔다 — 나중에 스토리지로 옮기더라도
+    이 테이블이 이관 목록이 된다.
+    """
+
+    __tablename__ = "diet_photos"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # 끼니 하나에 사진 하나. 재분석·재촬영은 이번 범위 밖이라 unique 로 못 박는다.
+    entry_id: Mapped[str] = mapped_column(
+        ForeignKey("diet_entries.id", ondelete="CASCADE"), unique=True
+    )
+    # 소유자를 사진에도 들고 있는다 — 접근 판정이 끼니 행을 거치지 않아도 되고,
+    # 탈퇴 시 사진이 users 를 따라 함께 지워진다.
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    content_type: Mapped[str] = mapped_column(String(40), default="image/jpeg")
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    byte_size: Mapped[int] = mapped_column(Integer, default=0)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )
 
 

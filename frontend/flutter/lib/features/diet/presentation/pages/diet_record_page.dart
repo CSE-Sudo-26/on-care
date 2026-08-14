@@ -13,6 +13,7 @@ import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
+import 'package:oncare/features/diet/presentation/widgets/stored_meal_photo.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -85,6 +86,7 @@ DietMeal _mealFromEntry(DietEntry e) {
     emoji: meta.emoji,
     thumbBg: meta.bg,
     photoAsset: e.photoAsset,
+    photoUrl: e.photoUrl,
     aiComment: e.aiComment,
     items: <DietFood>[
       for (final FoodItem f in e.foods)
@@ -1597,14 +1599,29 @@ class _MealCard extends StatelessWidget {
   }
 }
 
-/// Meal thumbnail: the AI-analysed food photo, falling back to the meal-type
-/// emoji chip when no photo is bundled.
+/// Meal thumbnail: the photo the member uploaded, then the bundled demo
+/// asset, then the meal-type emoji chip.
+///
+/// 실서버에서는 회원이 올린 사진(`photoUrl`)이 온다. 번들 자산은 실서버에 붙으면
+/// 늘 비어 있던 데모 값이라 뒤로 물린다. (#699)
 class _MealThumb extends StatelessWidget {
   const _MealThumb({required this.meal});
   final DietMeal meal;
 
   @override
   Widget build(BuildContext context) {
+    final String? url = meal.photoUrl;
+    if (url != null && url.isNotEmpty) {
+      return StoredMealPhoto(
+        path: url,
+        size: 52,
+        fallback: _assetOrEmojiThumb(),
+      );
+    }
+    return _assetOrEmojiThumb();
+  }
+
+  Widget _assetOrEmojiThumb() {
     final String? asset = meal.photoAsset;
     if (asset != null) {
       return ClipRRect(

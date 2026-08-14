@@ -138,6 +138,9 @@ class ClientDietEntryOut(BaseModel):
     carbs_g: float
     protein_g: float
     fat_g: float
+    # 회원이 올린 끼니 사진 경로(API base 기준 상대 경로). 담당 트레이너 전용
+    # 경로라 회원 앱이 받는 값과 다르다. 사진이 없으면 null. (#699)
+    photo_url: str | None = None
 
 
 class RoutineHistoryOut(BaseModel):

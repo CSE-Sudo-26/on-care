@@ -50,6 +50,7 @@ class DietMeal {
     required this.sugar,
     this.aiComment = '',
     this.photoAsset,
+    this.photoUrl,
     this.id,
   });
 
@@ -68,6 +69,10 @@ class DietMeal {
 
   /// Bundled photo asset for the thumbnail; null falls back to [emoji].
   final String? photoAsset;
+
+  /// API path of the photo the member uploaded (#699). Wins over
+  /// [photoAsset] when present.
+  final String? photoUrl;
   final String? id;
 }
 
@@ -954,6 +959,7 @@ class DietMealDetailPage extends ConsumerWidget {
     emoji: '',
     thumbBg: Colors.white,
     photoAsset: entry.photoAsset,
+    photoUrl: entry.photoUrl,
     aiComment: entry.aiComment,
     items: <DietFood>[
       for (final FoodItem food in entry.foods)
