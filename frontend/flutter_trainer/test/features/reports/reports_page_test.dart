@@ -410,20 +410,33 @@ void main() {
     expect(client.sugarWeek.any((v) => v != v.roundToDouble()), isTrue);
   });
 
-  testWidgets('지난 주에는 고른 지표 이름으로 없다고 말한다 (#746)', (tester) async {
+  testWidgets('지난 주도 그 주의 계열로 그려지고 이번 주와 섞이지 않는다 (#752)', (
+    tester,
+  ) async {
     await openReports(tester);
+    List<double> drawnValues() =>
+        tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).values;
+
+    final thisWeek = drawnValues();
+    expect(thisWeek, hasLength(7));
+
     await tester.tap(find.text('이전'));
     await settle(tester);
 
-    expect(find.byType(MetricTrendChart), findsNothing);
-    expect(find.text('지난 주 칼로리 추이는 아직 없어요'), findsOneWidget);
+    // 과거 주도 그래프가 그려진다 — 예전에는 이 자리가 통째로 비어 있었다.
+    final lastWeek = drawnValues();
+    expect(lastWeek, hasLength(7));
+    expect(lastWeek, isNot(equals(thisWeek)), reason: '이번 주 수치가 그대로 실렸다');
+    // 지난 주는 이미 다 지났으니 마지막 요일까지 값이 있다.
+    expect(lastWeek.last, greaterThan(0));
+    // 지난 주 일요일에 '오늘' 표시가 붙으면 그 날이 오늘인 것처럼 읽힌다.
+    expect(
+      tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).markToday,
+      isFalse,
+    );
 
-    final chip = find.byKey(const ValueKey<String>('trend-metric-sugar'));
-    await tester.ensureVisible(chip);
-    await tester.pump();
-    await tester.tap(chip);
-    await settle(tester);
-    expect(find.text('지난 주 당류 추이는 아직 없어요'), findsOneWidget);
+    // 이행률·나트륨 수치도 '-' 가 아니라 그 주의 값이다.
+    expect(find.text('-'), findsNothing);
   });
 
   testWidgets('주를 가리키는 말은 이번 주·지난 주·선택 주 셋뿐이다', (tester) async {

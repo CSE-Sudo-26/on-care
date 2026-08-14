@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
@@ -44,25 +46,56 @@ abstract interface class ReportRepository {
 /// Computes the report locally from the drift-backed streams.
 class LocalReportRepository implements ReportRepository {
   /// Creates the local source.
-  const LocalReportRepository(this._schedule, this._chat);
+  const LocalReportRepository(this._schedule, this._chat, this._db);
 
   final ScheduleRepository _schedule;
   final ChatRepository _chat;
+  final AppDatabase _db;
 
   @override
   Stream<WeeklyReport> watch({
     required TrainerClient client,
     required DateTime weekStart,
   }) {
+    final start = weekStartOf(weekStart);
     return _schedule
         .watchClientSessions((id: client.id, name: client.name))
-        .map(
-          (sessions) => buildWeeklyReport(
+        .asyncMap(
+          (sessions) async => buildWeeklyReport(
             client: client,
             sessions: sessions,
-            weekStart: weekStart,
+            weekStart: start,
+            // 데모도 그 주의 이력에서 계열을 만든다 — 로스터가 준 이번 주
+            // 계열을 과거 주에 붙이지 않는다(#752).
+            week: await _weekSeries(client.id, start),
           ),
         );
+  }
+
+  /// 그 주(월→일)의 요일별 값. 기록이 하나도 없으면 null — 화면이 "없다"고
+  /// 말할 수 있어야 한다(0 으로 채우면 "하루 0kcal" 처럼 읽힌다).
+  Future<WeekSeries?> _weekSeries(String clientId, DateTime monday) async {
+    final sunday = monday.add(const Duration(days: 6));
+    final rows =
+        await (_db.select(_db.clientDailyMetrics)..where(
+              (t) =>
+                  t.clientId.equals(clientId) &
+                  t.date.isBiggerOrEqualValue(ymd(monday)) &
+                  t.date.isSmallerOrEqualValue(ymd(sunday)),
+            ))
+            .get();
+    if (rows.isEmpty) return null;
+    final byDate = <String, ClientDailyMetricRow>{
+      for (final row in rows) row.date: row,
+    };
+    ClientDailyMetricRow? on(int day) =>
+        byDate[ymd(monday.add(Duration(days: day)))];
+    return WeekSeries(
+      completion: <int>[for (var d = 0; d < 7; d++) on(d)?.completion ?? 0],
+      sodium: <int>[for (var d = 0; d < 7; d++) on(d)?.sodiumMg ?? 0],
+      calories: <int>[for (var d = 0; d < 7; d++) on(d)?.calories ?? 0],
+      sugar: <double>[for (var d = 0; d < 7; d++) on(d)?.sugarG ?? 0],
+    );
   }
 
   @override
@@ -174,6 +207,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
     return LocalReportRepository(
       ref.watch(scheduleRepositoryProvider),
       ref.watch(chatRepositoryProvider),
+      ref.watch(appDatabaseProvider),
     );
   }
   return DioReportRepository(ref.watch(dioProvider));

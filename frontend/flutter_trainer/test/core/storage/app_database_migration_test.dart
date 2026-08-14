@@ -65,7 +65,7 @@ void main() {
       final meal = await db.select(db.clientDietEntries).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 6);
+      expect(version.read<int>('user_version'), 7);
       expect(client.id, 'existing-client');
       expect(client.caloriesToday, 500);
       expect(client.sugarG, 12.0);
@@ -83,7 +83,7 @@ void main() {
     },
   );
 
-  test('v4 to v6 preserves integer sugar and all client rows', () async {
+  test('v4 to v7 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
       setup: (database) {
         database.execute('''
@@ -128,7 +128,7 @@ void main() {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 6);
+    expect(version.read<int>('user_version'), 7);
     expect(clients, hasLength(2));
     expect(clients[0].name, '기존 회원 A');
     expect(clients[0].sugarG, 12.0);
@@ -186,7 +186,7 @@ void main() {
       final client = await db.select(db.trainerClients).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 6);
+      expect(version.read<int>('user_version'), 7);
       // 기존 값은 그대로 두고, 새 계열만 기본값으로 붙는다.
       expect(client.sugarG, 17.8);
       expect(client.sodiumWeekJson, '[700,800]');

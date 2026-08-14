@@ -52,7 +52,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v9'), _todayString());
+      expect(await db.readValue('trainer_seeded_v10'), _todayString());
     });
 
     test(
@@ -219,13 +219,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v9', '2020-01-01');
+      await db.putValue('trainer_seeded_v10', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v9'), _todayString());
+      expect(await db.readValue('trainer_seeded_v10'), _todayString());
     });
 
     test(
@@ -314,7 +314,7 @@ void main() {
 
         // Simulate an older build: already seeded TODAY under a previous
         // flag, plus a runtime (non-seed) client that must survive.
-        await db.putValue('trainer_seeded_v8', today);
+        await db.putValue('trainer_seeded_v9', today);
         await db
             .into(db.trainerClients)
             .insert(
@@ -348,7 +348,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v9'), today);
+        expect(await db.readValue('trainer_seeded_v10'), today);
       },
     );
 
@@ -370,7 +370,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v9', '2020-01-01');
+      await db.putValue('trainer_seeded_v10', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

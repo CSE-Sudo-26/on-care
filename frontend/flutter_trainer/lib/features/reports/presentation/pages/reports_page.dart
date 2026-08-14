@@ -720,10 +720,12 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
             dayLabels: weekdayLabels(l),
             goal: _goal,
             ticks: _ticks,
-            // 지난 주는 이미 다 지났으니 선을 일요일까지 잇는다.
+            // 지난 주는 이미 다 지났으니 선을 일요일까지 잇되, 그 자리에
+            // '오늘' 표시를 붙이지는 않는다.
             todayIndex: widget.report.isCurrentWeek
                 ? elapsedWeekdays(DateTime.now()) - 1
                 : weekdayCount - 1,
+            markToday: widget.report.isCurrentWeek,
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
             // 따라가게 한다.
             replayKey: _metric,

@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v9']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v10']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,7 +26,10 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v9` (was `_v8`): every client now carries a weekly
+/// The flag is `_v10` (was `_v9`): the demo now carries dated daily history
+/// so past weeks render (#752) — without a bump, anyone who opened the app
+/// today would keep rows with no history behind them. `_v9` anchored the
+/// weekly series onto weekdays, and every client now carries a weekly
 /// 칼로리·당류 series for the metric-selectable trend chart (#746) —
 /// without a bump, anyone who opened the app today would keep rows whose
 /// new columns are still the empty default. `_v8` preserved 김민수's
@@ -54,7 +57,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = DateTime.now().weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v9') == today) return;
+  if (await db.readValue('trainer_seeded_v10') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -88,6 +91,10 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     await (db.delete(
       db.trainerScheduleEntries,
     )..where((t) => t.id.like('seed-%'))).go();
+    // 날짜별 이력은 id 가 없다(고객+날짜가 키다) — 고객 id 로 지운다.
+    await (db.delete(
+      db.clientDailyMetrics,
+    )..where((t) => t.clientId.like('seed-%'))).go();
 
     // ---- Re-insert clients + their nested data ----
     for (final client in _clients) {
@@ -168,6 +175,11 @@ Future<void> seedIfEmpty(AppDatabase db) async {
             ),
         ]);
 
+        b.insertAll(
+          db.clientDailyMetrics,
+          _dailyMetrics(client, DateTime.now()).toList(growable: false),
+        );
+
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
           for (var i = 0; i < client.chat.length; i++)
             ClientChatMessagesCompanion.insert(
@@ -233,7 +245,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v9', today);
+    await db.putValue('trainer_seeded_v10', today);
   });
 }
 
@@ -299,6 +311,62 @@ class _Chat {
   /// 날짜로 묶으려는 쪽(대화 중간의 AI 분석 안내)에서 하루로 보였다.
   final int dayIndex;
 }
+
+
+/// 데모가 들고 있는 주 수 — 이번 주 + 지난 4주. '최근 4주' 카드가 4주를 읽고,
+/// 리포트의 '이전' 이동도 그만큼은 채워져 있어야 화면이 비지 않는다.
+const int _demoHistoryWeeks = 5;
+
+/// 주마다 곱하는 계수. 과거로 갈수록 값이 조금씩 다르게 보이도록 고정된 수를
+/// 돌려 쓴다 — 난수를 쓰면 재시딩마다 이력이 바뀌어 어제 본 화면과 달라진다.
+const List<double> _weekFactors = <double>[1.0, 0.94, 1.08, 0.9, 1.05];
+
+/// 고객의 날짜별 하루 집계. 이번 주는 카드에 보이는 값 그대로, 지난 주들은
+/// **같은 요일 자리에** 같은 기록 습관으로 채운다.
+///
+/// 기록이 드문 고객(휴면·첫 주)은 과거에도 드물게 남는다 — 과거 주만 갑자기
+/// 성실해지면 화면이 그 고객의 이야기와 어긋난다. 기록이 하나도 없는 고객은
+/// 과거에도 없다.
+Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now) sync* {
+  final today = DateTime(now.year, now.month, now.day);
+  final monday = today.subtract(Duration(days: today.weekday - 1));
+  final todayIndex = today.weekday - 1;
+
+  for (var back = 0; back < _demoHistoryWeeks; back++) {
+    final weekMonday = monday.subtract(Duration(days: 7 * back));
+    final factor = _weekFactors[back % _weekFactors.length];
+    // 이번 주는 오늘까지만, 지난 주들은 일요일까지 — 지난 주에 '아직 오지 않은
+    // 요일'은 없다.
+    final anchor = back == 0 ? todayIndex : 6;
+    final calories = _onWeekdays(client.caloriesWeek, anchor);
+    final sodium = _onWeekdays(client.sodiumWeek, anchor);
+    final sugar = _onWeekdays(client.sugarWeek, anchor);
+    final completion = client.weekCompletion;
+
+    for (var day = 0; day < 7; day++) {
+      final date = weekMonday.add(Duration(days: day));
+      if (date.isAfter(today)) break;
+      final cal = _scaled(calories[day], factor);
+      final na = _scaled(sodium[day], factor);
+      final sg = day < sugar.length ? sugar[day] * factor : 0.0;
+      final done = day < completion.length
+          ? _scaled(completion[day], factor).clamp(0, 100)
+          : 0;
+      if (cal == 0 && na == 0 && sg == 0 && done == 0) continue;
+      yield ClientDailyMetricsCompanion.insert(
+        clientId: 'seed-client-${client.id}',
+        date: ymd(date),
+        completion: Value(done),
+        calories: Value(cal),
+        sodiumMg: Value(na),
+        sugarG: Value(double.parse((sg).toStringAsFixed(1))),
+      );
+    }
+  }
+}
+
+/// 이번 주는 값을 그대로 두고(계수 1) 과거 주만 흔든다.
+int _scaled(num value, double factor) => (value * factor).round();
 
 /// 시드의 "오래된→오늘" 계열을 **이번 주 월→일** 자리에 옮긴다.
 ///

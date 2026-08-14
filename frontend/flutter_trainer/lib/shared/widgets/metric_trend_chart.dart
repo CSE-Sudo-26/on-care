@@ -65,6 +65,7 @@ class MetricTrendChart extends StatelessWidget {
     required this.todayIndex,
     required this.replayKey,
     required this.formatTick,
+    this.markToday = true,
     this.height = 68,
   });
 
@@ -82,6 +83,11 @@ class MetricTrendChart extends StatelessWidget {
 
   /// 선을 여기까지만 잇는다. 지난 주처럼 전부 지난 구간이면 마지막 index.
   final int todayIndex;
+
+  /// [todayIndex] 요일에 '오늘' 표시(브랜드색 원)를 그릴지. 과거 주는 선이
+  /// 일요일까지 이어지는데, 그 자리에 오늘 표시가 붙으면 지난 주 일요일이
+  /// 오늘인 것처럼 읽힌다(#752).
+  final bool markToday;
 
   /// 바뀌면 진입 애니메이션을 처음부터 다시 그린다.
   final Object replayKey;
@@ -146,7 +152,7 @@ class MetricTrendChart extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   for (var i = 0; i < dayLabels.length; i++)
-                    if (i == todayIndex)
+                    if (i == todayIndex && markToday)
                       // 오늘: 브랜드색 원 안에 흰 글씨.
                       Container(
                         width: 18,
