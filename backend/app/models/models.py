@@ -660,10 +660,22 @@ class TrainerInviteCode(Base):
 class TrainerClient(Base):
     """트레이너↔회원 담당 링크. 트레이너의 '고객 목록'은 이 링크로 정의된다.
 
-    goal 은 트레이너가 설정한 코칭 목표(예: '혈압 관리 · 체중 감량'). active 는
-    활성/휴면. 한 회원이 한 트레이너에게 중복 배정되지 않도록 (trainer, member) 유일.
-    또한 회원측 API 는 '현재 담당 코치 1명'을 전제하므로, 회원당 active 링크는 최대
-    1개로 partial unique index 로 강제한다(복수 트레이너 동시 배정 방지).
+    goal 은 트레이너가 설정한 코칭 목표(예: '혈압 관리 · 체중 감량'). 한 회원이 한
+    트레이너에게 중복 배정되지 않도록 (trainer, member) 유일. 또한 회원측 API 는
+    '현재 담당 코치 1명'을 전제하므로, 회원당 active 링크는 최대 1개로 partial
+    unique index 로 강제한다(복수 트레이너 동시 배정 방지).
+
+    **`active` 와 `dormant` 는 다른 축이다.** (#707)
+
+    * `active` — 담당 관계 자체가 살아 있는가. 해제(헬스장 탈퇴·다른 트레이너
+      배정·탈퇴)만 이 값을 내리고, 내려가면 회원측은 '담당 없음'이 되며 예약·
+      코치 조회가 막힌다. 트레이너가 화면에서 건드리는 값이 아니다.
+    * `dormant` — 트레이너가 이 회원을 지금 적극적으로 관리하고 있는가. 화면의
+      '활성/휴면' 배지가 이 값이다. 휴면으로 내려도 담당 관계·기록·채팅은 그대로
+      남는다.
+
+    둘을 한 컬럼으로 겸하면 트레이너가 '휴면'을 누르는 순간 담당 관계가 끊겨
+    회원 앱에서 코치가 사라진다 — 그래서 나눈다.
     """
 
     __tablename__ = "trainer_clients"
@@ -676,7 +688,10 @@ class TrainerClient(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     goal: Mapped[str] = mapped_column(String(200), default="")
+    #: 담당 관계가 살아 있는가(해제 여부). 트레이너 화면의 배지가 아니다.
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    #: 트레이너의 관리 상태 — True 면 화면에 '휴면'으로 보인다.
+    dormant: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

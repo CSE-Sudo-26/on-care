@@ -1052,6 +1052,12 @@ abstract class AppLocalizations {
   /// **'Dormant'**
   String get clientDormant;
 
+  /// No description provided for @clientStatusChangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change the status. Please try again.'**
+  String get clientStatusChangeFailed;
+
   /// No description provided for @clientClosePanel.
   ///
   /// In en, this message translates to:

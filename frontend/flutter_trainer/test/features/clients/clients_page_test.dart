@@ -466,7 +466,7 @@ void main() {
       expect(find.text('활성'), findsOneWidget);
     });
 
-    testWidgets('read-only repositories disable every roster mutation entry', (
+    testWidgets('a source that cannot add clients still allows 활성/휴면', (
       tester,
     ) async {
       await pumpTrainerApp(
@@ -499,11 +499,14 @@ void main() {
       await tester.tap(clientCard.last);
       await settle(tester);
 
+      // 신규 고객 등록과 활성/휴면은 다른 권한이다 (#707) — 백엔드 로스터에는
+      // 고객을 더하는 경로가 없지만 관리 상태 전환은 있다. 한 플래그로 묶여
+      // 있던 동안에는 이 배지가 실 API 에서 계속 읽기 전용이었다.
       final statusInkWell = find.byKey(
         const ValueKey<String>('client-status-toggle'),
       );
       expect(statusInkWell, findsOneWidget);
-      expect(tester.widget<InkWell>(statusInkWell).onTap, isNull);
+      expect(tester.widget<InkWell>(statusInkWell).onTap, isNotNull);
     });
   });
 }

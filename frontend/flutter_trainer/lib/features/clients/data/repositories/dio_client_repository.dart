@@ -184,9 +184,23 @@ class DioClientRepository implements ClientRepository, ClientDataRefresher {
   Future<bool> addClient({required String name, required String goal}) =>
       throw UnsupportedError('addClient is demo-only (no backend endpoint).');
 
+  /// Flips the trainer's 활성/휴면 management state for [id] (#707).
+  ///
+  /// This is not an unassignment — the backend keeps the trainer↔member link
+  /// and every record behind it, and the member app sees no change.
+  ///
+  /// The roster is re-fetched only after the server confirms, so a failed
+  /// call leaves the badge showing the last state the server actually has.
   @override
-  Future<void> setClientActive(String id, bool active) =>
-      throw UnsupportedError(
-        'setClientActive is demo-only (no backend endpoint).',
+  Future<void> setClientActive(String id, bool active) async {
+    try {
+      await _dio.put<Map<String, Object?>>(
+        '/trainer/clients/${Uri.encodeComponent(id)}/status',
+        data: <String, Object?>{'active': active},
       );
+    } on DioException catch (error) {
+      throw AppError.fromDio(error);
+    }
+    _refreshes.add(id);
+  }
 }

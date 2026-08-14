@@ -27,10 +27,16 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 /// Dio source emits a single fetched value (loading/error surface through
 /// the consuming `AsyncValue`).
 abstract interface class ClientRepository {
-  /// Whether this source supports adding clients and changing roster status.
+  /// Whether this source can **add** clients to the roster.
   ///
-  /// The real roster is managed by trainer-member links on the backend and
-  /// currently has no mutation endpoints, so its UI must stay read-only.
+  /// The real roster is defined by trainer↔member links created through
+  /// consultation approval, and there is no add-client endpoint — so the
+  /// 신규 고객 등록 entry stays demo-only.
+  ///
+  /// This no longer gates [setClientActive]: the 활성/휴면 state is a
+  /// trainer-side management flag that both sources support (#707). The two
+  /// used to share one flag, which kept the status badge read-only against
+  /// the real API.
   bool get supportsRosterMutations;
 
   Stream<List<TrainerClient>> watchClients();
@@ -53,10 +59,16 @@ abstract interface class ClientRepository {
   );
   Future<ClientExerciseWeek> fetchExerciseWeek(String clientId);
 
-  /// Demo-only roster mutations — the backend roster comes from
+  /// Demo-only roster additions — the backend roster comes from
   /// trainer↔member links, so these are unsupported against the real API.
   Future<bool> clientNameExists(String name);
   Future<bool> addClient({required String name, required String goal});
+
+  /// Moves [id] between 활성 and 휴면.
+  ///
+  /// Supported by both sources. This is the trainer's own management state,
+  /// **not** an unassignment — the member keeps their coach and every record
+  /// behind the link (#707).
   Future<void> setClientActive(String id, bool active);
 }
 

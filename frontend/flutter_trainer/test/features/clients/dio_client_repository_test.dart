@@ -289,8 +289,8 @@ void main() {
     },
   );
 
-  group('roster mutations are demo-only against the real API', () {
-    test('advertises the roster as read-only', () {
+  group('adding clients stays demo-only against the real API', () {
+    test('advertises the roster as closed to additions', () {
       expect(repo.supportsRosterMutations, isFalse);
     });
 
@@ -300,11 +300,88 @@ void main() {
         throwsUnsupportedError,
       );
     });
-    test('setClientActive throws UnsupportedError', () {
-      expect(() => repo.setClientActive('id', false), throwsUnsupportedError);
-    });
     test('clientNameExists throws UnsupportedError', () {
       expect(() => repo.clientNameExists('x'), throwsUnsupportedError);
+    });
+  });
+
+  group('활성/휴면 management state (#707)', () {
+    const String path = '/trainer/clients/m1/status';
+
+    test('setClientActive PUTs the requested state', () async {
+      Map<String, Object?>? sent;
+      when(
+        () => dio.put<Map<String, Object?>>(path, data: any(named: 'data')),
+      ).thenAnswer((invocation) async {
+        sent = (invocation.namedArguments[#data] as Map<Object?, Object?>)
+            .cast<String, Object?>();
+        return Response<Map<String, Object?>>(
+          requestOptions: RequestOptions(path: path),
+          statusCode: 200,
+          data: <String, Object?>{'member_id': 'm1', 'active': false},
+        );
+      });
+
+      await repo.setClientActive('m1', false);
+      expect(sent, <String, Object?>{'active': false});
+    });
+
+    test('a confirmed change re-fetches the roster so the badge follows the '
+        'server, not the tap', () async {
+      var rosterActive = true;
+      when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+        (_) async => _okList(<dynamic>[
+          <String, Object?>{'id': 'm1', 'name': 'A', 'active': rosterActive},
+        ], '/trainer/clients'),
+      );
+      when(
+        () => dio.put<Map<String, Object?>>(path, data: any(named: 'data')),
+      ).thenAnswer((_) async {
+        rosterActive = false;
+        return Response<Map<String, Object?>>(
+          requestOptions: RequestOptions(path: path),
+          statusCode: 200,
+          data: <String, Object?>{'member_id': 'm1', 'active': false},
+        );
+      });
+
+      final emissions = <bool>[];
+      final sub = repo.watchClients().listen(
+        (clients) => emissions.add(clients.single.active),
+      );
+      addTearDown(sub.cancel);
+      // 첫 방출(활성)을 받은 뒤 상태를 바꾼다.
+      await Future<void>.delayed(Duration.zero);
+      await repo.setClientActive('m1', false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(emissions, <bool>[true, false]);
+    });
+
+    test('a rejected change surfaces a typed error and does not refresh the '
+        'roster — the badge keeps the state the server still has', () async {
+      when(() => dio.get<List<dynamic>>('/trainer/clients')).thenAnswer(
+        (_) async => _okList(<dynamic>[
+          <String, Object?>{'id': 'm1', 'name': 'A', 'active': true},
+        ], '/trainer/clients'),
+      );
+      when(
+        () => dio.put<Map<String, Object?>>(path, data: any(named: 'data')),
+      ).thenThrow(_httpError(409, path));
+
+      final emissions = <bool>[];
+      final sub = repo.watchClients().listen(
+        (clients) => emissions.add(clients.single.active),
+      );
+      addTearDown(sub.cancel);
+      await Future<void>.delayed(Duration.zero);
+
+      await expectLater(
+        repo.setClientActive('m1', false),
+        throwsA(isA<AppError>()),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(emissions, <bool>[true]);
     });
   });
 }

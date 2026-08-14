@@ -552,6 +552,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientDormant => 'Dormant';
 
   @override
+  String get clientStatusChangeFailed =>
+      'Couldn\'t change the status. Please try again.';
+
+  @override
   String get clientClosePanel => 'Close panel';
 
   @override
