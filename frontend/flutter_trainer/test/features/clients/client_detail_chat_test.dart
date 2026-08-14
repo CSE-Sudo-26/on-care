@@ -502,33 +502,23 @@ void main() {
       },
     );
 
-    testWidgets(
-      'client detail owns one scroll with diet and workout evidence',
-      (tester) async {
-        await pumpTrainerApp(
-          tester,
-          token: 'demo-trainer-token',
-          at: AppRoutes.clientDetail('seed-client-1'),
-        );
-        expect(
-          find.byKey(
-            const ValueKey<String>('client-detail-scroll-seed-client-1'),
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('오늘 영양 요약'), findsOneWidget);
-        await tester.scrollUntilVisible(
-          find.text('배정된 루틴'),
-          250,
-          scrollable: find.descendant(
-            of: find.byKey(
-              const ValueKey<String>('client-detail-scroll-seed-client-1'),
-            ),
-            matching: find.byType(Scrollable),
-          ),
-        );
-        expect(find.text('배정된 루틴'), findsOneWidget);
-      },
-    );
+    testWidgets('client detail separates diet and workout evidence into tabs', (
+      tester,
+    ) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.clientDetail('seed-client-1'),
+      );
+      expect(
+        find.byKey(const ValueKey<String>('client-detail-sub-tabs')),
+        findsOneWidget,
+      );
+      expect(find.text('오늘 영양 요약'), findsOneWidget);
+      expect(find.text('배정된 루틴'), findsNothing);
+      await tester.tap(find.text('운동'));
+      await settle(tester);
+      expect(find.text('배정된 루틴'), findsOneWidget);
+    });
   });
 }

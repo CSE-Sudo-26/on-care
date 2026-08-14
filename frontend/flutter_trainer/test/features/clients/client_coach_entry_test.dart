@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_coach_sheet.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
@@ -74,21 +76,28 @@ Future<void> _openClient(
   );
 }
 
+Future<void> _openCoachSheet(WidgetTester tester) async {
+  final context = tester.element(find.byType(ClientDetailView));
+  unawaited(
+    showClientCoachSheet(context, memberId: _minsuId, clientName: '김민수'),
+  );
+  await settle(tester);
+}
+
 void main() {
   testWidgets('데모 고객 상세에는 AI 상담 버튼이 없다', (WidgetTester tester) async {
     // 데모에는 근거로 삼을 회원 기록이 없다. 화면이 지금과 같아야 한다.
     await _openClient(tester);
 
     expect(find.text('AI에게 묻기'), findsNothing);
-    // 기존 두 액션은 그대로다.
-    expect(find.text('프로그램'), findsWidgets);
-    expect(find.text('주간 리포트'), findsWidgets);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+    expect(find.text('메모'), findsOneWidget);
   });
 
-  testWidgets('실 API 모드에서는 버튼이 보인다', (WidgetTester tester) async {
+  testWidgets('실 API 모드에서도 AI 상담 빠른 버튼을 숨긴다', (WidgetTester tester) async {
     await _openClient(tester, coach: _FakeCoachRepository());
 
-    expect(find.text('AI에게 묻기'), findsOneWidget);
+    expect(find.text('AI에게 묻기'), findsNothing);
   });
 
   testWidgets('질문을 보내고 답변과 근거를 보여준다', (WidgetTester tester) async {
@@ -100,7 +109,7 @@ void main() {
     );
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
     await tester.enterText(find.byType(TextField).last, '나트륨이 높아요');
     await tester.tap(find.text('물어보기'));
@@ -116,7 +125,7 @@ void main() {
     final repo = _FakeCoachRepository();
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
     await tester.tap(find.text('물어보기'));
     await settle(tester);
@@ -130,7 +139,7 @@ void main() {
     );
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
     await tester.enterText(find.byType(TextField).last, '질문');
     await tester.tap(find.text('물어보기'));
@@ -153,7 +162,7 @@ void main() {
     );
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
 
     expect(repo.restored.single, _minsuId);
@@ -174,7 +183,7 @@ void main() {
     );
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
     await tester.enterText(find.byType(TextField).last, '두 번째 질문입니다');
     await tester.tap(find.text('다시 묻기'));
@@ -191,7 +200,7 @@ void main() {
     final repo = _FakeCoachRepository(historyFuture: history.future);
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await tester.pump();
 
     expect(
@@ -229,7 +238,7 @@ void main() {
     );
     await _openClient(tester, coach: repo);
 
-    await tester.tap(find.text('AI에게 묻기'));
+    await _openCoachSheet(tester);
     await settle(tester);
     await tester.enterText(find.byType(TextField).last, '질문');
     await tester.tap(find.text('물어보기'));

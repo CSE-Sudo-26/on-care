@@ -194,10 +194,17 @@ void main() {
   });
 
   group('WorkoutView', () {
-    Finder detailScrollable(String clientId) => find.descendant(
-      of: find.byKey(ValueKey<String>('client-detail-scroll-$clientId')),
-      matching: find.byType(Scrollable),
-    );
+    Finder detailScrollable(String clientId) => find
+        .descendant(
+          of: find
+              .descendant(
+                of: find.byKey(ValueKey<String>('workout-$clientId')),
+                matching: find.byType(ListView),
+              )
+              .first,
+          matching: find.byType(Scrollable),
+        )
+        .first;
 
     Future<void> openWorkout(WidgetTester tester, String clientName) async {
       await pumpTrainerApp(
@@ -227,7 +234,11 @@ void main() {
       final Finder feedbackButton = find.byKey(
         const ValueKey<String>('routine-feedback-assigned-ex-r1'),
       );
-      await tester.scrollUntilVisible(feedbackButton, 150);
+      await tester.scrollUntilVisible(
+        feedbackButton,
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       await tester.ensureVisible(feedbackButton);
       await settle(tester);
       await tester.tap(feedbackButton);
@@ -284,15 +295,27 @@ void main() {
 
       // History entries with feedback + note boxes. Lower list items are
       // built lazily — scroll each into view before asserting.
-      await tester.scrollUntilVisible(find.text('7/12 (오늘)'), 150);
+      await tester.scrollUntilVisible(
+        find.text('7/12 (오늘)'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('7/12 (오늘)'), findsOneWidget);
       expect(find.text('100%'), findsWidgets);
-      await tester.scrollUntilVisible(find.text('트레이너 메모'), 150);
+      await tester.scrollUntilVisible(
+        find.text('트레이너 메모'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('트레이너 메모'), findsOneWidget); // only 7/12 has one
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
-      await tester.scrollUntilVisible(find.text('스트레칭 (생략)'), 150);
+      await tester.scrollUntilVisible(
+        find.text('스트레칭 (생략)'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('스트레칭 (생략)'), findsOneWidget);
     });
 
@@ -318,7 +341,11 @@ void main() {
       // first thing on the tab, so the failure did not blank it.
       expect(find.text('배정된 루틴'), findsOneWidget);
       expect(find.text('PT 프로그램 이력'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('이번 주 완료율'), 150);
+      await tester.scrollUntilVisible(
+        find.text('이번 주 완료율'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('이번 주 완료율'), findsOneWidget);
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(
@@ -394,6 +421,8 @@ void main() {
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
+      await tester.ensureVisible(retry);
+      await settle(tester);
       await tester.tap(retry);
       await settle(tester);
 
@@ -401,6 +430,14 @@ void main() {
           container.read(scheduleRepositoryProvider)
               as _SessionsFailsOnceRepository;
       expect(repository.watchSessionCalls, 2);
+      final scrollable = detailScrollable('seed-client-1');
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.textContaining('복구 PT'),
+        150,
+        scrollable: scrollable,
+      );
       expect(find.textContaining('복구 PT'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('이번 주 완료율'),

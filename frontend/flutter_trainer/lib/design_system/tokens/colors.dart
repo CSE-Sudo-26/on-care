@@ -26,6 +26,11 @@ class AppColors {
   /// 진행 척도의 '부분', 지표 구분색 등. 주의는 [warning](빨강)이다.
   static const Color brandOrange = Color(0xFFFF953C);
 
+  /// Brand green shared with the user app (`FigmaColors.green`).
+  /// Diet charts use this token so both apps present nutrition progress with
+  /// the same visual language.
+  static const Color brandUserGreen = Color(0xFF34C9A0);
+
   // --- Accent (client navy) ---
   /// Navy used for client avatars, info chips, and the "AI 요약" card.
   static const Color accent = Color(0xFF2E7DAB);

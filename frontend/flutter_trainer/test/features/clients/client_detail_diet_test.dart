@@ -7,11 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
-
 
 /// Seeded client ids by display name — the detail is addressed by id.
 const Map<String, String> seedClientIds = <String, String>{
@@ -118,6 +118,18 @@ void main() {
   });
 
   group('DietView', () {
+    Finder detailScrollable(String clientId) => find
+        .descendant(
+          of: find
+              .descendant(
+                of: find.byKey(ValueKey<String>('diet-$clientId')),
+                matching: find.byType(ListView),
+              )
+              .first,
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
     Future<void> openDiet(WidgetTester tester, String clientName) async {
       await pumpTrainerApp(
         tester,
@@ -176,11 +188,31 @@ void main() {
         find.byKey(const Key('client-nutrition-calorie-progress')),
         findsOneWidget,
       );
+      final calorieProgress = tester.widget<CircularProgressIndicator>(
+        find.byKey(const Key('client-nutrition-calorie-progress')),
+      );
+      expect(calorieProgress.valueColor?.value, AppColors.brandUserGreen);
       for (final String label in <String>['탄수화물', '단백질', '지방']) {
         expect(
           find.byKey(Key('client-nutrition-macro-$label')),
           findsOneWidget,
           reason: label,
+        );
+        expect(
+          tester
+              .widgetList<ColoredBox>(
+                find.descendant(
+                  of: find.byKey(Key('client-nutrition-macro-$label')),
+                  matching: find.byType(ColoredBox),
+                ),
+              )
+              .any(
+                (box) =>
+                    box.color ==
+                    AppColors.brandUserGreen.withValues(alpha: 0.65),
+              ),
+          isTrue,
+          reason: '$label 그래프가 사용자 앱 공통 초록색을 써야 합니다.',
         );
       }
       Finder inMacro(String label, String text) => find.descendant(
@@ -205,10 +237,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(
-          of: sodiumStatus,
-          matching: find.textContaining('많아요'),
-        ),
+        find.descendant(of: sodiumStatus, matching: find.textContaining('많아요')),
         findsOneWidget,
         reason: '목표를 넘겼는데 초과 문구가 없습니다.',
       );
@@ -221,22 +250,35 @@ void main() {
       );
       // The detail header plus the 7-day trend card push every meal card
       // down, so reach them by scrolling.
-      await tester.scrollUntilVisible(find.text('아침'), 150);
+      await tester.scrollUntilVisible(
+        find.text('아침'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('아침'), findsOneWidget);
       expect(find.text('스크램블 에그, 딸기'), findsOneWidget);
       expect(find.text('217 kcal'), findsOneWidget);
       expect(find.text('탄수화물 10g'), findsOneWidget);
       expect(find.text('단백질 13.5g'), findsOneWidget);
       expect(find.text('지방 14.5g'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('점심'), 150);
+      await tester.scrollUntilVisible(
+        find.text('점심'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('점심'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('간식'), 150);
+      await tester.scrollUntilVisible(
+        find.text('간식'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(find.text('간식'), findsOneWidget);
       // Over-target AI comment (3428 − 2000 = 1428mg) — last list item,
       // built lazily, so scroll it into view first.
       await tester.scrollUntilVisible(
         find.textContaining('나트륨이 목표치를 1428mg 초과했어요'),
         150,
+        scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
     });
@@ -261,7 +303,11 @@ void main() {
     ) async {
       await openDiet(tester, '강서연');
 
-      await tester.scrollUntilVisible(find.text('거름'), 150);
+      await tester.scrollUntilVisible(
+        find.text('거름'),
+        150,
+        scrollable: detailScrollable('seed-client-6'),
+      );
       expect(find.text('아직 기록된 식단이 없어요'), findsNothing);
       expect(find.text('탄수화물 0g'), findsWidgets);
       expect(find.text('단백질 0g'), findsWidgets);
@@ -279,7 +325,11 @@ void main() {
       });
 
       await openDiet(tester, '김민수');
-      await tester.scrollUntilVisible(find.text('탄수화물 10g'), 150);
+      await tester.scrollUntilVisible(
+        find.text('탄수화물 10g'),
+        150,
+        scrollable: detailScrollable('seed-client-1'),
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -294,6 +344,11 @@ void main() {
         at: AppRoutes.clientDetail(seedClientIds['임도현']!, section: 'diet'),
       );
 
+      await tester.scrollUntilVisible(
+        find.text('아직 기록된 식단이 없어요'),
+        150,
+        scrollable: detailScrollable('seed-client-7'),
+      );
       expect(find.text('아직 기록된 식단이 없어요'), findsOneWidget);
       expect(find.textContaining('균형이 잘 맞아요'), findsNothing);
       expect(find.textContaining('나트륨이 목표치를'), findsNothing);
@@ -308,13 +363,18 @@ void main() {
 
       // The detail header sits above the list, so her 아침 card can start
       // below the fold on the test viewport.
-      await tester.scrollUntilVisible(find.text('그릭요거트, 과일'), 150);
+      await tester.scrollUntilVisible(
+        find.text('그릭요거트, 과일'),
+        150,
+        scrollable: detailScrollable('seed-client-2'),
+      );
       expect(find.text('그릭요거트, 과일'), findsOneWidget);
       // Under target in the diet summary.
       expect(find.text('mg 초과'), findsNothing);
       await tester.scrollUntilVisible(
         find.textContaining('오늘 식단은 균형이 잘 맞아요'),
         150,
+        scrollable: detailScrollable('seed-client-2'),
       );
       expect(find.textContaining('오늘 식단은 균형이 잘 맞아요'), findsOneWidget);
     });

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_coach_sheet.dart';
-import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -36,11 +34,10 @@ List<String> clientSectionLabels(AppLocalizations l) => <String>[
 /// 로케일과 무관하다.
 const int clientSectionCount = 2;
 
-/// The trainer-only 360° detail: identity and actions stay above one scroll
-/// containing workout and diet evidence. The route section only determines
-/// which evidence appears first, so existing deep links remain meaningful
-/// without duplicating the full chat surface owned by `/messages`.
-class ClientDetailView extends ConsumerWidget {
+/// The trainer-only client detail: identity and actions stay above the diet and
+/// workout tabs. The selected tab mirrors the route so deep links, refreshes,
+/// and browser navigation restore the same section.
+class ClientDetailView extends ConsumerStatefulWidget {
   /// Creates the detail body for [clientId].
   const ClientDetailView({
     super.key,
@@ -68,15 +65,62 @@ class ClientDetailView extends ConsumerWidget {
 
   /// The section actually being shown; unknown values fall back to the
   /// default so a stale link renders something rather than nothing.
-  String get _section {
+  String get resolvedSection {
     final s = section ?? '';
-    return AppRoutes.clientSections.contains(s)
+    return AppRoutes.clientTabSections.contains(s)
         ? s
         : AppRoutes.defaultClientSection;
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClientDetailView> createState() => _ClientDetailViewState();
+}
+
+class _ClientDetailViewState extends ConsumerState<ClientDetailView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  late int _reportedIndex;
+
+  int get _routeIndex =>
+      AppRoutes.clientTabSections.indexOf(widget.resolvedSection);
+
+  @override
+  void initState() {
+    super.initState();
+    _reportedIndex = _routeIndex;
+    _tabController = TabController(
+      length: clientSectionCount,
+      initialIndex: _reportedIndex,
+      vsync: this,
+    )..addListener(_handleTabChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant ClientDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextIndex = _routeIndex;
+    if (nextIndex != _tabController.index) {
+      _reportedIndex = nextIndex;
+      _tabController.animateTo(nextIndex);
+    }
+  }
+
+  void _handleTabChange() {
+    if (_tabController.index == _reportedIndex) return;
+    _reportedIndex = _tabController.index;
+    widget.onSectionChange(AppRoutes.clientTabSections[_reportedIndex]);
+  }
+
+  @override
+  void dispose() {
+    _tabController
+      ..removeListener(_handleTabChange)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     // Distinguish loading / error / loaded instead of flattening them
     // into an empty list (an unknown id used to render a nameless
@@ -95,32 +139,31 @@ class ClientDetailView extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _StatusView(
         message: l.clientsLoadFailed,
-        showBack: showBack,
+        showBack: widget.showBack,
         // Re-subscribes the stream for a fresh attempt.
         onRetry: () => ref.invalidate(clientsProvider),
       ),
       data: (clients) {
-        final match = clients.where((c) => c.id == clientId);
+        final match = clients.where((c) => c.id == widget.clientId);
         if (match.isEmpty) {
           // Stale deep link / removed client.
           return _StatusView(
             message: l.clientNotFound,
-            showBack: showBack,
+            showBack: widget.showBack,
             onRetry: null,
           );
         }
         final client = match.first;
 
-        final workoutFirst = _section == 'workout';
         final diet = DietView(
-          key: ValueKey<String>('diet-$clientId'),
+          key: ValueKey<String>('diet-${widget.clientId}'),
           client: client,
-          embedded: true,
+          embedded: false,
         );
         final workout = WorkoutView(
-          key: ValueKey<String>('workout-$clientId'),
+          key: ValueKey<String>('workout-${widget.clientId}'),
           client: client,
-          embedded: true,
+          embedded: false,
         );
 
         return Column(
@@ -128,8 +171,8 @@ class ClientDetailView extends ConsumerWidget {
             _Header(
               client: client,
               alerts: alertsFor(client, unread: unread[client.id] ?? 0),
-              showBack: showBack,
-              onClose: onClose,
+              showBack: widget.showBack,
+              onClose: widget.onClose,
               onRefresh: () {
                 final ClientRepository repository = ref.read(
                   clientRepositoryProvider,
@@ -144,30 +187,27 @@ class ClientDetailView extends ConsumerWidget {
                         .setClientActive(client.id, !client.active)
                   : null,
             ),
+            Material(
+              color: AppColors.card,
+              child: TabBar(
+                key: const ValueKey<String>('client-detail-sub-tabs'),
+                controller: _tabController,
+                tabs: <Widget>[
+                  Tab(text: l.clientTabDiet),
+                  Tab(text: l.clientTabWorkout),
+                ],
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.mutedForeground,
+                indicatorColor: AppColors.primary,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: AppColors.borderStrong,
+              ),
+            ),
             Expanded(
-              child: SingleChildScrollView(
-                key: ValueKey<String>('client-detail-scroll-$clientId'),
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _DetailSectionLabel(
-                      label: workoutFirst
-                          ? l.clientTabWorkout
-                          : l.clientTabDiet,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    workoutFirst ? workout : diet,
-                    const SizedBox(height: AppSpacing.xl),
-                    _DetailSectionLabel(
-                      label: workoutFirst
-                          ? l.clientTabDiet
-                          : l.clientTabWorkout,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    workoutFirst ? diet : workout,
-                  ],
-                ),
+              child: TabBarView(
+                key: ValueKey<String>('client-detail-tabs-${widget.clientId}'),
+                controller: _tabController,
+                children: <Widget>[diet, workout],
               ),
             ),
           ],
@@ -175,22 +215,6 @@ class ClientDetailView extends ConsumerWidget {
       },
     );
   }
-}
-
-class _DetailSectionLabel extends StatelessWidget {
-  const _DetailSectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    label,
-    style: const TextStyle(
-      color: AppColors.foreground,
-      fontSize: 15,
-      fontWeight: FontWeight.w800,
-    ),
-  );
 }
 
 /// Fallback body for the error and not-found states: a message, an
@@ -288,33 +312,15 @@ class _Header extends ConsumerWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
+            key: const ValueKey<String>('client-detail-quick-actions'),
+            alignment: WrapAlignment.end,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: <Widget>[
               ActionButton(
-                label: l.clientQuickMessages,
-                icon: Icons.chat_bubble_outline,
-                onPressed: () => context.go(AppRoutes.messagesFor(client.id)),
-              ),
-              ActionButton(
-                label: l.clientQuickProgram,
-                icon: Icons.fitness_center_outlined,
-                primary: true,
-                onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
-              ),
-              ActionButton(
-                label: l.clientQuickSchedule,
-                icon: Icons.calendar_month_outlined,
-                onPressed: () => context.go(AppRoutes.scheduleView('week')),
-              ),
-              ActionButton(
-                label: l.clientWeeklyReport,
-                icon: Icons.insights_outlined,
-                onPressed: () => context.go(AppRoutes.reportFor(client.id)),
-              ),
-              ActionButton(
                 label: l.clientHealthGoals,
                 icon: Icons.badge_outlined,
+                primary: true,
                 onPressed: () => showMemberHealthProfileDialog(
                   context,
                   memberId: client.id,
@@ -331,21 +337,6 @@ class _Header extends ConsumerWidget {
               ),
             ],
           ),
-          // AI 코칭 상담(#497)은 실 API 모드에서만 — 데모에는 근거로 삼을 회원
-          // 기록이 없어 무엇을 물어도 의미 있는 답이 나오지 않는다. 기존 두
-          // 버튼 행은 그대로 두고 아래에 붙여, 데모 헤더가 지금과 같게 남는다.
-          if (ref.watch(clientCoachEnabledProvider)) ...<Widget>[
-            const SizedBox(height: AppSpacing.sm),
-            ActionButton(
-              label: l.clientAskAi,
-              icon: Icons.psychology_outlined,
-              onPressed: () => showClientCoachSheet(
-                context,
-                memberId: client.id,
-                clientName: client.name,
-              ),
-            ),
-          ],
         ],
       ),
     );
