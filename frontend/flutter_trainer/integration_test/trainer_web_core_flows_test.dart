@@ -38,6 +38,15 @@ final Finder _chatThread = find.byKey(
   ValueKey<String>('messages-thread-$_clientId'),
 );
 
+/// 초안이 빠져나간 입력창 — 전송이 서버까지 갔다는 신호다.
+final Finder _clearedChatInput = find.byWidgetPredicate(
+  (widget) =>
+      widget is TextField &&
+      widget.key == const ValueKey<String>('client-chat-input') &&
+      (widget.controller?.text ?? '').isEmpty,
+  description: 'cleared chat composer',
+);
+
 Future<void> _pumpUntil(
   WidgetTester tester,
   Finder finder, {
@@ -178,11 +187,15 @@ Future<void> _reboot(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
   await bootstrap();
+  // 셸이 떴다는 것 자체가 세션이 살아남았다는 뜻이다 — 복원에 실패하면 인증 게이트가
+  // 로그인 화면을 붙들고 있어 셸이 아예 오지 않는다.
   await _pumpUntil(tester, find.byType(AppShell), step: 'app reboot');
-  expect(
+  // 로그인 화면은 라우트가 걷히는 동안 한두 프레임 더 트리에 남는다. 곧바로 단언하면
+  // 세션이 멀쩡한데도 "복원 실패" 로 잡힌다.
+  await _pumpUntilAbsent(
+    tester,
     find.byType(TrainerSignInPage),
-    findsNothing,
-    reason: 'secure session did not survive the reboot',
+    step: 'sign-in screen dismissed after reboot',
   );
   expect(_location(tester), AppRoutes.dashboard);
 }
@@ -311,7 +324,14 @@ void main() {
       find.byKey(const ValueKey<String>('client-chat-input')),
       message,
     );
+    // `enterText` 는 프레임을 그려 주지 않는다. 안 그리고 바로 누르면 전송 핸들러가
+    // 빈 입력을 읽고 조용히 돌아간다.
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey<String>('client-chat-send')));
+    // 입력창은 **서버 저장이 끝난 뒤에만** 비워진다(`ChatView._send`) — 실패하면 초안이
+    // 그대로 남는다. 입력창이 비는 것을 기다려야 "보냈다" 를 기다리는 것이 된다.
+    // 글자만 찾으면 입력창에 남은 초안이 잡혀, 전송이 안 나가도 통과한다.
+    await _pumpUntil(tester, _clearedChatInput, step: 'chat send accepted');
     await _pumpUntil(tester, find.text(message), step: 'chat send result');
     expect(find.text(message), findsOneWidget);
 
