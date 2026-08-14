@@ -269,12 +269,14 @@ class _RecentConsultationSection extends StatelessWidget {
         return null;
       case ConsultationStatus.accepted:
         return _OutcomeNote(
+          key: const Key('consult-outcome-accepted'),
           tone: FigmaColors.primary,
           text: l.exConsultAcceptedGuide,
         );
       case ConsultationStatus.rejected:
         final String? note = request.decisionNote;
         return _OutcomeNote(
+          key: const Key('consult-outcome-rejected'),
           tone: FigmaColors.textMuted,
           label: note == null ? null : l.exConsultRejectedReasonLabel,
           text: note ?? l.exConsultRejectedNoReason,
@@ -285,7 +287,12 @@ class _RecentConsultationSection extends StatelessWidget {
 
 /// 상태 카드 하단의 결과 안내 한 덩어리 — 승인 안내 또는 거절 사유.
 class _OutcomeNote extends StatelessWidget {
-  const _OutcomeNote({required this.tone, required this.text, this.label});
+  const _OutcomeNote({
+    required this.tone,
+    required this.text,
+    this.label,
+    super.key,
+  });
 
   final Color tone;
   final String? label;
@@ -1097,12 +1104,17 @@ class _RecommendedTrainerSection extends StatelessWidget {
             return SizedBox(
               height: 120,
               child: ListView.separated(
+                // 목록이 가로로 길고 지연 생성이라, 뒤쪽 카드는 화면에 들어오기
+                // 전까지 **존재하지 않는다**. E2E 가 이 목록을 잡고 스크롤할 수
+                // 있어야 뒤쪽 트레이너에게도 상담을 신청할 수 있다. (#640)
+                key: const Key('trainer-recommendation-list'),
                 scrollDirection: Axis.horizontal,
                 itemCount: trainers.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (BuildContext context, int index) {
                   final Trainer trainer = trainers[index];
                   return _TrainerRecommendationCard(
+                    key: ValueKey<String>('trainer-card-${trainer.id}'),
                     trainer: trainer,
                     gymName: gymNames[trainer.gymId] ?? '',
                     onTap: () =>
@@ -1123,6 +1135,7 @@ class _TrainerRecommendationCard extends StatelessWidget {
     required this.trainer,
     required this.gymName,
     required this.onTap,
+    super.key,
   });
 
   final Trainer trainer;

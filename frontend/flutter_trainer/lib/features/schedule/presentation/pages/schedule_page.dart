@@ -321,6 +321,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         children: <Widget>[
           if (consultationInbox)
             ListTile(
+              key: const Key('consult-inbox-entry'),
               dense: true,
               leading: Badge(
                 isLabelVisible: (pendingConsultations ?? 0) > 0,

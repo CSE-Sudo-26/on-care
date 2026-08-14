@@ -138,6 +138,50 @@ class E2eApi {
     );
   }
 
+  /// 트레이너에게 도착한 상담 요청. 기본은 대기 중만, [all] 이면 처리한 것까지.
+  Future<List<Map<String, dynamic>>> consultations({bool all = false}) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/consultations',
+      queryParameters: all ? <String, String>{'status': 'all'} : null,
+      options: _auth,
+    );
+    return <Map<String, dynamic>>[
+      for (final Object? row in res.data ?? const <Object?>[])
+        row! as Map<String, dynamic>,
+    ];
+  }
+
+  /// 이 회원이 담당 목록에 들어왔는가. 승인이 만드는 **연결**을 본다.
+  Future<bool> isClientOf(String memberId) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/clients',
+      options: _auth,
+    );
+    for (final Object? row in res.data ?? const <Object?>[]) {
+      final Map<String, dynamic> client = row! as Map<String, dynamic>;
+      if (client['id'] == memberId || client['member_id'] == memberId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// 이 회원 몫으로 잡힌 일정. 승인이 만드는 **일정**을 본다.
+  ///
+  /// 서버에 `member_id` 로 물어야 한다 — 일정 응답에는 그 필드가 **없어서**
+  /// 전체 목록을 받아 걸러 내면 아무것도 못 찾는다.
+  Future<List<Map<String, dynamic>>> scheduleFor(String memberId) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/schedule',
+      queryParameters: <String, String>{'member_id': memberId},
+      options: _auth,
+    );
+    return <Map<String, dynamic>>[
+      for (final Object? row in res.data ?? const <Object?>[])
+        row! as Map<String, dynamic>,
+    ];
+  }
+
   Future<List<Map<String, dynamic>>> trainerSlots() async {
     final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
       '/trainer/reservation-slots',

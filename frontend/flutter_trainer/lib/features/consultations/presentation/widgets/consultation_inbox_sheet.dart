@@ -67,8 +67,14 @@ class ConsultationInboxSheet extends ConsumerWidget {
                           itemCount: rows.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: AppSpacing.md),
-                          itemBuilder: (context, index) =>
-                              _RequestCard(request: rows[index]),
+                          itemBuilder: (context, index) => _RequestCard(
+                            // E2E 가 "내가 낸 요청" 을 집어야 한다 — 목록의 자리는
+                            // 다른 회원의 요청이 끼면 밀린다. (#640)
+                            key: ValueKey<String>(
+                              'consult-request-${rows[index].id}',
+                            ),
+                            request: rows[index],
+                          ),
                         ),
                 ),
               ),
@@ -81,7 +87,7 @@ class ConsultationInboxSheet extends ConsumerWidget {
 }
 
 class _RequestCard extends ConsumerStatefulWidget {
-  const _RequestCard({required this.request});
+  const _RequestCard({required this.request, super.key});
 
   final ConsultationRequest request;
 
@@ -150,35 +156,10 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
 
   Future<void> _reject() async {
     final l = AppLocalizations.of(context);
-    final controller = TextEditingController();
     final note = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.consultRejectTitle),
-        content: TextField(
-          controller: controller,
-          maxLength: 500,
-          maxLines: 3,
-          decoration: InputDecoration(hintText: l.consultRejectHint),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l.actionCancel),
-          ),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) => TextButton(
-              onPressed: value.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.of(context).pop(value.text.trim()),
-              child: Text(l.consultRejectAction),
-            ),
-          ),
-        ],
-      ),
+      builder: (context) => const _RejectDialog(),
     );
-    controller.dispose();
     if (note == null || note.isEmpty || !mounted) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -247,12 +228,14 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
               ActionButton(
+                key: const Key('consult-reject'),
                 label: l.consultReject,
                 tone: AppColors.destructive,
                 onPressed: _busy ? null : _reject,
               ),
               const SizedBox(width: AppSpacing.sm),
               ActionButton(
+                key: const Key('consult-accept'),
                 label: l.schedNewSession,
                 icon: Icons.event_available_outlined,
                 primary: true,
@@ -281,6 +264,60 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       ],
     ),
   );
+}
+
+/// 거절 사유를 받는 다이얼로그.
+///
+/// 컨트롤러를 **이 위젯이 소유한다.** 호출부에서 `showDialog` 가 반환되자마자 버리면,
+/// 다이얼로그가 사라지는 애니메이션 동안 남아 있는 프레임이 이미 버린 컨트롤러를 읽어
+/// "A TextEditingController was used after being disposed" 로 터진다. State 가 소유하면
+/// 화면이 완전히 사라진 뒤에 정리된다.
+class _RejectDialog extends StatefulWidget {
+  const _RejectDialog();
+
+  @override
+  State<_RejectDialog> createState() => _RejectDialogState();
+}
+
+class _RejectDialogState extends State<_RejectDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.consultRejectTitle),
+      content: TextField(
+        key: const Key('consult-reject-reason'),
+        controller: _controller,
+        maxLength: 500,
+        maxLines: 3,
+        decoration: InputDecoration(hintText: l.consultRejectHint),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionCancel),
+        ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _controller,
+          builder: (context, value, _) => TextButton(
+            key: const Key('consult-reject-confirm'),
+            onPressed: value.text.trim().isEmpty
+                ? null
+                : () => Navigator.of(context).pop(value.text.trim()),
+            child: Text(l.consultRejectAction),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _Booking {
@@ -344,6 +381,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           Text(widget.request.memberName),
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
+            key: const Key('consult-book-date'),
             icon: const Icon(Icons.calendar_today_outlined),
             label: Text(dateLabel(l, _date)),
             onPressed: () async {
@@ -363,6 +401,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             children: <Widget>[
               Expanded(
                 child: DropdownButtonFormField<int>(
+                  key: const Key('consult-book-hour'),
                   initialValue: _hour,
                   decoration: InputDecoration(labelText: l.schedFieldTime),
                   items: <DropdownMenuItem<int>>[
@@ -378,6 +417,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: DropdownButtonFormField<int>(
+                  key: const Key('consult-book-minute'),
                   initialValue: _minute,
                   decoration: InputDecoration(labelText: l.schedMinuteSuffix),
                   items: <DropdownMenuItem<int>>[
@@ -395,6 +435,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           ),
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<int>(
+            key: const Key('consult-book-duration'),
             initialValue: _duration,
             decoration: InputDecoration(labelText: l.schedFieldDuration),
             items: <DropdownMenuItem<int>>[
@@ -412,6 +453,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
           child: Text(l.actionCancel),
         ),
         TextButton(
+          key: const Key('consult-book-confirm'),
           onPressed: () =>
               Navigator.of(context).pop(_Booking(_date, _time, _duration)),
           child: Text(l.schedAddAction),
