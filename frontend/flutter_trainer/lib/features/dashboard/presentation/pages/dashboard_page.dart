@@ -156,15 +156,11 @@ class _TodayTasksCard extends StatelessWidget {
               children: <Widget>[
                 for (final task in tasks)
                   _TaskRow(
-                    key: ValueKey<String>(
-                      'dashboard-task-${task.alert.name}',
-                    ),
+                    key: ValueKey<String>('dashboard-task-${task.alert.name}'),
                     task: task,
                     onTap: () {
                       if (task.alert == ClientAlert.unanswered) {
-                        context.go(
-                          AppRoutes.messagesFor(task.entry.client.id),
-                        );
+                        context.go(AppRoutes.messagesFor(task.entry.client.id));
                         return;
                       }
                       context.go(
@@ -189,12 +185,21 @@ List<_DashboardTask> _buildTodayTasks(List<AttentionClient> entries) {
     ClientAlert.lowCompletion,
     ClientAlert.sodiumOver,
   ];
-  return <_DashboardTask>[
-    for (final alert in order)
-      if (entries.where((entry) => entry.alerts.contains(alert)).firstOrNull
-          case final entry?)
-        _DashboardTask(entry: entry, alert: alert),
-  ];
+  final usedClientIds = <String>{};
+  final tasks = <_DashboardTask>[];
+  for (final alert in order) {
+    final matching = entries
+        .where((entry) => entry.alerts.contains(alert))
+        .toList(growable: false);
+    final entry = matching
+        .where((candidate) => !usedClientIds.contains(candidate.client.id))
+        .firstOrNull;
+    final selected = entry ?? matching.firstOrNull;
+    if (selected == null) continue;
+    tasks.add(_DashboardTask(entry: selected, alert: alert));
+    usedClientIds.add(selected.client.id);
+  }
+  return tasks;
 }
 
 class _DashboardTask {

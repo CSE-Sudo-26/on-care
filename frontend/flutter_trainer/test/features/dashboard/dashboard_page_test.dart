@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
+import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -22,7 +23,10 @@ import '../../helpers/pump_app.dart';
 /// replies (4 in total), and today has 4 booked sessions (6 slots − 2
 /// gaps).
 void main() {
-  Future<void> openDashboard(WidgetTester tester) async {
+  Future<void> openDashboard(
+    WidgetTester tester, {
+    List<Override> extraOverrides = const <Override>[],
+  }) async {
     tester.view.devicePixelRatio = 1.0;
     tester.view.physicalSize = const Size(1600, 1200);
     addTearDown(tester.view.resetPhysicalSize);
@@ -31,6 +35,7 @@ void main() {
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.dashboard,
+      extraOverrides: extraOverrides,
     );
   }
 
@@ -221,6 +226,86 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('today tasks prefer different clients for each action type', (
+    tester,
+  ) async {
+    final allAlerts = makeClient(
+      id: 'all-alerts',
+      name: '중복 고객',
+      sodiumMg: 2500,
+      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
+    );
+    final replyOnly = makeClient(id: 'reply-only', name: '답장 고객');
+    final workoutOnly = makeClient(
+      id: 'workout-only',
+      name: '운동 고객',
+      weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
+    );
+    final dietOnly = makeClient(id: 'diet-only', name: '식단 고객', sodiumMg: 2500);
+    await openDashboard(
+      tester,
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            allAlerts,
+            replyOnly,
+            workoutOnly,
+            dietOnly,
+          ]),
+        ),
+        unreadCountsProvider.overrideWith(
+          (ref) => Stream<Map<String, int>>.value(const <String, int>{
+            'all-alerts': 1,
+            'reply-only': 1,
+          }),
+        ),
+      ],
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
+        matching: find.textContaining('중복 고객'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
+        matching: find.textContaining('운동 고객'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
+        matching: find.textContaining('식단 고객'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  for (final scenario in <({String task, String route})>[
+    (task: 'unanswered', route: '/messages?client='),
+    (task: 'lowCompletion', route: '/workout'),
+    (task: 'sodiumOver', route: '/diet'),
+  ]) {
+    testWidgets('today ${scenario.task} task opens its action destination', (
+      tester,
+    ) async {
+      await openDashboard(tester);
+
+      final task = find.byKey(
+        ValueKey<String>('dashboard-task-${scenario.task}'),
+      );
+      await tester.ensureVisible(task);
+      await tester.tap(task);
+      await settle(tester);
+
+      expect(currentLocation(tester), contains(scenario.route));
+    });
+  }
 
   group('AttentionCard.sectionFor', () {
     test('each alert opens the sub-tab that actually addresses it', () {
