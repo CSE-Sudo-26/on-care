@@ -113,34 +113,41 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            l.dietPeriodRange(
-              fmt.format(widget.range.from),
-              fmt.format(widget.range.to),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
+        // 지표 버튼과 날짜 범위를 **한 줄에** 둔다. 범위만 따로 한 줄을 쓰면
+        // 제목·범위·버튼 세 줄이 되어 정작 그래프가 아래로 밀린다.
         Row(
           children: <Widget>[
             for (final _Metric m in _Metric.values) ...<Widget>[
               _MetricPill(
                 label: _label(l, m),
-                color: _color(m),
+                // 버튼은 **무엇을 고르는가**만 말한다. 지표마다 색이 다르면
+                // 고르기 전부터 셋이 서로 다른 뜻을 가진 것처럼 보인다.
+                // 지표별 색은 아래 그래프가 계속 쓴다.
+                color: FigmaColors.primary,
                 active: _metric == m,
                 onTap: () => setState(() => _metric = m),
               ),
               if (m != _Metric.values.last) const SizedBox(width: 8),
             ],
+            const SizedBox(width: 8),
+            // 좁은 화면에서 먼저 줄어드는 쪽은 범위다 — 버튼은 눌러야 하는
+            // 것이라 잘리면 안 된다.
+            Expanded(
+              child: Text(
+                l.dietPeriodRange(
+                  fmt.format(widget.range.from),
+                  fmt.format(widget.range.to),
+                ),
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
