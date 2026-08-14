@@ -321,35 +321,35 @@ class _PeriodToggle extends StatelessWidget {
           for (final DietPeriodTab tab in DietPeriodTab.values)
             Flexible(
               child: GestureDetector(
-              key: Key('diet-period-tab-${tab.name}'),
-              onTap: () => onChanged(tab),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: active == tab
-                      ? FigmaColors.primary
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  labels[tab]!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+                key: Key('diet-period-tab-${tab.name}'),
+                onTap: () => onChanged(tab),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
                     color: active == tab
-                        ? Colors.white
-                        : AppColors.mutedForeground,
+                        ? FigmaColors.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    labels[tab]!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: active == tab
+                          ? Colors.white
+                          : AppColors.mutedForeground,
+                    ),
                   ),
                 ),
               ),
-            ),
             ),
         ],
       ),
@@ -406,7 +406,9 @@ class _NutritionSectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
           // 큰 글자 배율에서는 토글 자체가 남는 폭보다 커진다. 접히게 두어야 줄이
           // 넘치지 않는다(#739). 보통 배율에서는 최소 폭 그대로라 모양이 같다.
-          Flexible(child: _PeriodToggle(active: period, onChanged: onChanged)),
+          Flexible(
+            child: _PeriodToggle(active: period, onChanged: onChanged),
+          ),
         ],
       ),
     );
@@ -1419,7 +1421,9 @@ class _MealLog extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        MaterialLocalizations.of(context).formatMediumDate(date),
+                        MaterialLocalizations.of(
+                          context,
+                        ).formatMediumDate(date),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1533,9 +1537,9 @@ class _MealCard extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    // 배지와 시각은 남는 폭 안에서 접힌다. 넷 다 고정 폭이면
-                    // 320px 에서 줄이 넘쳤다(#739). 칼로리와 화살표는 접지 않는다 —
-                    // 카드가 무엇을 말하는지가 거기 달려 있다.
+                    // 배지·시각·칼로리는 남는 폭 안에서 접힌다. 넷 다 고정 폭이면
+                    // 320px 에서 줄이 넘쳤다(#739). 화살표만 접지 않는다 — 카드를
+                    // 누를 수 있다는 표시가 사라지면 안 된다.
                     Flexible(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
