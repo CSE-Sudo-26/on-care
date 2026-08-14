@@ -24,6 +24,10 @@ Future<void> showScheduleCalendarSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    // 탭 페이지에는 저마다 Navigator 가 있고 MainShell 은 extendBody 라, 기본값
+    // 으로 열면 시트가 하단 내비게이션 **뒤쪽**까지 펼쳐져 마지막 주가 바에
+    // 가린다(#680). 루트에 올려 바 위를 덮는다 — 식단 추가 시트와 같은 규칙.
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: AppColors.background,
     barrierColor: Colors.black54,

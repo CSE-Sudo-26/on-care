@@ -89,9 +89,7 @@ void main() {
   // 31일 = 37칸. 잘림 회귀(#669)가 가장 먼저 드러나는 모양.
   final DateTime august2026 = DateTime(2026, 8, 15);
 
-  testWidgets('세로가 넉넉하면 6주짜리 달의 말일까지 한 화면에 그린다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('세로가 넉넉하면 6주짜리 달의 말일까지 한 화면에 그린다', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(900, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -107,9 +105,7 @@ void main() {
     expect(_gridCellCount(tester), 42);
   });
 
-  testWidgets('세로가 짧으면 잘라내지 않고 스크롤해서 말일에 닿는다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('세로가 짧으면 잘라내지 않고 스크롤해서 말일에 닿는다', (WidgetTester tester) async {
     // 이 높이라야 6주 그리드가 남은 공간을 넘어 실제로 스크롤이 생긴다.
     // 640 에서는 다 들어가 버려 스크롤 경로를 전혀 지나지 않는다.
     tester.view.physicalSize = const Size(400, 500);
@@ -140,9 +136,7 @@ void main() {
     expect(_gridCellCount(tester), 42);
   });
 
-  testWidgets('말일이 토요일이 아닌 달도 마지막 주가 7칸으로 닫힌다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('말일이 토요일이 아닌 달도 마지막 주가 7칸으로 닫힌다', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(900, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -196,5 +190,71 @@ void main() {
     expect(find.byKey(const Key('calendar-day-3')), findsOneWidget);
     // 칸 안에서 잘리더라도 첫 칩은 그려진다.
     expect(find.text('00:00 일정 0'), findsOneWidget);
+  });
+
+  testWidgets('하단 내비게이션이 있는 화면에서도 달력이 그 위를 덮는다 (#680)', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(500, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    int navTaps = 0;
+
+    // MainShell 과 같은 모양: extendBody 인 Scaffold + 하단 바, 그리고 탭
+    // 페이지마다 있는 중첩 Navigator. 기본값으로 시트를 열면 이 구조에서
+    // 마지막 주가 바 뒤로 들어간다.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          scheduleRepositoryProvider.overrideWithValue(
+            _EmptyScheduleRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            extendBody: true,
+            bottomNavigationBar: SizedBox(
+              height: 82,
+              child: Center(
+                child: ElevatedButton(
+                  onPressed: () => navTaps++,
+                  child: const Text('홈'),
+                ),
+              ),
+            ),
+            body: Navigator(
+              onGenerateRoute: (RouteSettings _) => MaterialPageRoute<void>(
+                builder: (BuildContext context) => TextButton(
+                  onPressed: () => showScheduleCalendarSheet(
+                    context,
+                    initialDate: august2026,
+                  ),
+                  child: const Text('열기'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('calendar-day-31')), findsOneWidget);
+
+    // 하단 바 자리를 누른다. 시트가 위에 있으면 배리어가 먹어 시트가 닫히고,
+    // 바 뒤에 깔려 있으면 바의 버튼이 눌린다.
+    await tester.tap(find.text('홈'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(
+      navTaps,
+      0,
+      reason: '달력이 하단 내비게이션 위를 덮어야 한다 — 바가 눌리면 시트가 그 뒤에 있다는 뜻',
+    );
   });
 }
