@@ -485,6 +485,7 @@ class _InputBar extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: TextField(
+              key: const ValueKey<String>('member-chat-input'),
               controller: controller,
               enabled: !sending,
               textInputAction: TextInputAction.send,
@@ -518,6 +519,7 @@ class _InputBar extends StatelessWidget {
             color: sending ? FigmaColors.textFaint : FigmaColors.primary,
             shape: const CircleBorder(),
             child: InkWell(
+              key: const ValueKey<String>('member-chat-send'),
               customBorder: const CircleBorder(),
               onTap: sending ? null : onSend,
               child: const Padding(
