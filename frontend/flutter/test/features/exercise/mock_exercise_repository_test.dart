@@ -119,4 +119,53 @@ void main() {
       expect(after.dailyMinutes[4], 80);
     });
   });
+
+  group('fetchWeek 로 지난 주를 조회한다 (#671)', () {
+    test('이번 주 월요일을 주면 fetchThisWeek 과 같다', () async {
+      final MockExerciseRepository r = repo();
+      // 2024-01-05 는 금요일 → 그 주 월요일은 2024-01-01.
+      final ExerciseWeek week = await r.fetchWeek(DateTime(2024));
+      final ExerciseWeek current = await r.fetchThisWeek();
+      expect(week.dailyMinutes, current.dailyMinutes);
+      expect(week.totalMinutes, current.totalMinutes);
+    });
+
+    test('지난 주는 값이 있고, 이번 주와 다르다', () async {
+      final MockExerciseRepository r = repo();
+      final ExerciseWeek last = await r.fetchWeek(DateTime(2023, 12, 25));
+      final ExerciseWeek current = await r.fetchThisWeek();
+
+      expect(last.totalMinutes, greaterThan(0));
+      expect(last.sessions, isNotEmpty);
+      expect(
+        last.dailyMinutes,
+        isNot(current.dailyMinutes),
+        reason: '지난 주가 이번 주 복사본이면 주간 비교가 뜻이 없다',
+      );
+      // 하루 합 = 유형별 합 (이번 주와 같은 규칙).
+      for (int i = 0; i < last.dailyMinutes.length; i++) {
+        expect(
+          last.dailyMinutes[i],
+          closeTo(
+            last.cardioMinutes[i] +
+                last.strengthMinutes[i] +
+                last.stretchingMinutes[i],
+            0.001,
+          ),
+        );
+      }
+      // 지난 주 세션에는 '오늘' 라벨이 붙지 않는다.
+      expect(
+        last.sessions.every((ExerciseSession s) => s.dateLabel != '오늘'),
+        isTrue,
+      );
+    });
+
+    test('오래된 주일수록 운동량이 줄어든다', () async {
+      final MockExerciseRepository r = repo();
+      final ExerciseWeek oneWeekAgo = await r.fetchWeek(DateTime(2023, 12, 25));
+      final ExerciseWeek fourWeeksAgo = await r.fetchWeek(DateTime(2023, 12, 4));
+      expect(fourWeeksAgo.totalMinutes, lessThan(oneWeekAgo.totalMinutes));
+    });
+  });
 }

@@ -16,6 +16,20 @@ class DioExerciseRepository implements ExerciseRepository {
   }
 
   @override
+  Future<ExerciseWeek> fetchWeek(DateTime weekStart) async {
+    final res = await _dio.get<Map<String, Object?>>(
+      '/exercise/weeks/current',
+      queryParameters: <String, Object?>{'week_start': _dateString(weekStart)},
+    );
+    return ExerciseWeek.fromJson(res.data!);
+  }
+
+  static String _dateString(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  @override
   Future<ExerciseSession> addSession({
     required ExerciseType type,
     required int minutes,

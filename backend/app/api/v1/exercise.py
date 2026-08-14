@@ -7,9 +7,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -64,8 +65,27 @@ def _reject_if_derived(row: ExerciseSession) -> None:
 def current_week(
     current_user: CurrentUser,
     db: Annotated[Session, Depends(get_db)],
+    week_start: Annotated[str | None, Query(description="조회할 주의 월요일 YYYY-MM-DD")] = None,
 ) -> ExerciseWeekResponse:
-    week_start = monday_of_this_week_str()
+    """한 주의 운동 집계. `week_start` 없이 부르면 이번 주다.
+
+    회원 앱이 지난 날짜를 고르면 그 주를 받아 하루치를 보여준다. 이 파라미터가
+    없을 때는 조회 경로가 이번 주 하나뿐이라 지난 기록을 볼 방법이 없었다.
+    월요일이 아닌 날짜를 줘도 그 날이 속한 주로 맞춘다.
+    """
+    if week_start is None:
+        week_start = monday_of_this_week_str()
+    else:
+        # strptime 으로 엄격하게 본다. date.fromisoformat 은 3.11 부터
+        # `20260810` 같은 기본 형식도 받아, 앱의 로컬 목업(엄격한 YYYY-MM-DD)과
+        # 받아들이는 값의 집합이 갈린다.
+        try:
+            datetime.strptime(week_start, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=422, detail="week_start 는 YYYY-MM-DD 형식이어야 합니다."
+            ) from None
+        week_start = monday_of_str(week_start)
     rows = db.scalars(
         select(ExerciseSession)
         .where(ExerciseSession.user_id == current_user.id)
