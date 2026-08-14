@@ -694,6 +694,49 @@ class TrainerClient(Base):
     )
 
 
+class TrainerClientMemo(Base):
+    """트레이너가 담당 회원에 대해 남긴 메모. 회원에게는 보이지 않는다.
+
+    출처가 둘이다 — 트레이너가 회원 상세에서 직접 쓴 메모(source='trainer')와,
+    채팅에서 감지한 신호를 저장한 메모(source='chat_insight'). 둘을 한 테이블에
+    두는 이유는 회원 상세가 **하나의 목록**으로 보여 주기 때문이다.
+
+    `insight_id` 는 채팅 인사이트의 식별자다. 같은 인사이트를 여러 번 저장해도
+    메모가 늘지 않도록 (trainer, member, insight_id) 를 유일로 둔다 — 직접 쓴
+    메모는 이 값이 NULL 이라 제약에 걸리지 않는다(Postgres 는 NULL 을 서로 다른
+    값으로 본다).
+    """
+
+    __tablename__ = "trainer_client_memos"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str] = mapped_column(Text, default="")
+    #: 'trainer' | 'chat_insight'
+    source: Mapped[str] = mapped_column(String(16), default="trainer")
+    insight_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 채팅 인사이트 종류(discomfort|negativeFeedback). 직접 쓴 메모는 빈 문자열.
+    insight_kind: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id", "member_id", "insight_id", name="uq_trainer_client_memo_insight"
+        ),
+        Index("ix_trainer_client_memos_pair", "trainer_id", "member_id"),
+    )
+
+
 class TrainerRoutine(Base):
     """트레이너/AI가 회원에게 배정한 루틴 — 프론트 ClientAiRoutines 대응.
 
