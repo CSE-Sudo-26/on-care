@@ -328,6 +328,7 @@ class _ConsultationRequestPageState
             ),
             const SizedBox(height: 20),
             _ChoiceField<_ExerciseGoal>(
+              chipKeyPrefix: 'consult-goal',
               title: l.exExerciseGoal,
               values: _ExerciseGoal.values,
               labels: goalLabels,
@@ -351,6 +352,7 @@ class _ConsultationRequestPageState
             const SizedBox(height: 20),
             _ChoiceField<_HealthPurpose>(
               key: const Key('health-purpose-options'),
+              chipKeyPrefix: 'consult-purpose',
               title: l.exHealthPurpose,
               values: _HealthPurpose.values,
               labels: purposeLabels,
@@ -365,6 +367,7 @@ class _ConsultationRequestPageState
             if (_healthPurpose == _HealthPurpose.other) ...<Widget>[
               const SizedBox(height: 10),
               TextField(
+                key: const Key('consult-purpose-other'),
                 controller: _healthPurposeController,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
@@ -378,11 +381,16 @@ class _ConsultationRequestPageState
             const SizedBox(height: 20),
             _FieldTitle(title: l.exPreferredDate),
             const SizedBox(height: 8),
-            _DateField(date: _preferredDate, onTap: _selectDate),
+            _DateField(
+              key: const Key('consult-date'),
+              date: _preferredDate,
+              onTap: _selectDate,
+            ),
             if (_attempted && _preferredDate == null)
               _ErrorText(l.exDateRequired),
             const SizedBox(height: 20),
             _ChoiceField<_PreferredTime>(
+              chipKeyPrefix: 'consult-time',
               title: l.exPreferredTime,
               values: _PreferredTime.values,
               labels: timeLabels,
@@ -397,6 +405,7 @@ class _ConsultationRequestPageState
             _FieldTitle(title: l.exConsultMessage),
             const SizedBox(height: 8),
             TextField(
+              key: const Key('consult-message'),
               controller: _messageController,
               minLines: 4,
               maxLines: 7,
@@ -408,6 +417,7 @@ class _ConsultationRequestPageState
             ],
             const SizedBox(height: 24),
             FilledButton(
+              key: const Key('consult-submit'),
               onPressed: hasPending || _submitting
                   ? null
                   : () => unawaited(
@@ -556,6 +566,7 @@ class _ChoiceField<T> extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     this.errorText,
+    this.chipKeyPrefix,
     super.key,
   });
 
@@ -565,6 +576,10 @@ class _ChoiceField<T> extends StatelessWidget {
   final T? selected;
   final ValueChanged<T> onSelected;
   final String? errorText;
+
+  /// 칩마다 붙일 키의 앞자리. E2E 가 화면에 보이는 **문구 대신 자리**로 칩을 고를
+  /// 수 있게 한다 — 문구는 번역이 바뀌면 흔들리고, 이 화면은 선택지가 많다. (#640)
+  final String? chipKeyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -577,8 +592,11 @@ class _ChoiceField<T> extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: <Widget>[
-            for (final T value in values)
+            for (final (int i, T value) in values.indexed)
               ChoiceChip(
+                key: chipKeyPrefix == null
+                    ? null
+                    : ValueKey<String>('$chipKeyPrefix-$i'),
                 label: Text(labels[value]!),
                 selected: selected == value,
                 selectedColor: FigmaColors.primaryA(0.14),
@@ -598,7 +616,7 @@ class _ChoiceField<T> extends StatelessWidget {
 }
 
 class _DateField extends StatelessWidget {
-  const _DateField({required this.date, required this.onTap});
+  const _DateField({required this.date, required this.onTap, super.key});
 
   final DateTime? date;
   final VoidCallback onTap;
