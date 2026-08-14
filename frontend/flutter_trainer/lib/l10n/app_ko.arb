@@ -195,6 +195,23 @@
   "dietLoadFailed": "식단을 불러오지 못했어요",
   "dietEmpty": "아직 기록된 식단이 없어요",
   "dietTodaySummary": "오늘 영양 요약",
+  "dietAchieveRate": "달성률",
+  "dietAmountOver": "목표보다 {amount} 많아요",
+  "@dietAmountOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dietAmountRemaining": "목표까지 {amount} 남았어요",
+  "@dietAmountRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "dietSodiumTrend": "최근 7일 나트륨 추이",
   "dietAverageMg": "평균 {value}mg",
   "dietSodiumOverDays": "지난 7일 중 {days}일 목표({target}mg)를 초과했어요.",
