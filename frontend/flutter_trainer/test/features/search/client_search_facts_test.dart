@@ -91,7 +91,40 @@ void main() {
     });
   });
 
-  test('기본 선택 경로는 현재 탭과 무관하게 고객 상세로 고정된다', () {
-    expect(clientSearchDestination(minsu), '/clients/c1/diet');
+  test('기본 선택 경로는 현재 탭의 고객 화면을 유지한다', () {
+    final facts = ClientSearchFacts(
+      nextSession: <String, ScheduleSession>{
+        minsu.id: session(
+          date: '2026-08-20',
+          time: '10:00',
+          clientId: minsu.id,
+        ),
+      },
+    );
+
+    expect(
+      clientSearchDestination(Uri.parse('/clients/c2/workout'), minsu, facts),
+      '/clients/c1/workout',
+    );
+    expect(
+      clientSearchDestination(Uri.parse('/messages?f=unread'), minsu, facts),
+      '/messages?client=c1&f=unread',
+    );
+    expect(
+      clientSearchDestination(Uri.parse('/coaching'), minsu, facts),
+      '/coaching?client=c1',
+    );
+    expect(
+      clientSearchDestination(Uri.parse('/reports'), minsu, facts),
+      '/reports?client=c1',
+    );
+    expect(
+      clientSearchDestination(Uri.parse('/schedule'), minsu, facts),
+      '/schedule?v=day&d=2026-08-20',
+    );
+    expect(
+      clientSearchDestination(Uri.parse('/dashboard'), minsu, facts),
+      '/clients/c1/diet',
+    );
   });
 }

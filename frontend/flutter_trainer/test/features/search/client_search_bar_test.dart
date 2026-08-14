@@ -70,15 +70,23 @@ void main() {
     );
   });
 
-  testWidgets('어느 탭에서 검색해도 기본 선택은 같은 고객 상세를 연다', (tester) async {
-    await openDesktop(tester, AppRoutes.dashboard);
-    for (final route in <String>[AppRoutes.dashboard, AppRoutes.reports]) {
+  testWidgets('Enter로 선택하면 현재 탭 안에서 해당 고객을 연다', (tester) async {
+    await openDesktop(tester, AppRoutes.messages);
+    for (final (route, expected) in <(String, String)>[
+      (
+        AppRoutes.clientDetail('seed-client-2', section: 'workout'),
+        AppRoutes.clientDetail('seed-client-1', section: 'workout'),
+      ),
+      (AppRoutes.messages, AppRoutes.messagesFor('seed-client-1')),
+      (AppRoutes.coaching, AppRoutes.coachingFor('seed-client-1')),
+      (AppRoutes.reports, AppRoutes.reportFor('seed-client-1')),
+    ]) {
       GoRouter.of(tester.element(find.byKey(clientSearchFieldKey))).go(route);
       await settle(tester);
       await search(tester, '김민수');
-      await tester.tap(resultRow('김민수'));
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await settle(tester);
-      expect(location(tester), '/clients/seed-client-1/diet');
+      expect(location(tester), expected, reason: route);
     }
   });
 
@@ -132,7 +140,7 @@ void main() {
       GoRouter.of(
         tester.element(find.byKey(clientSearchIconKey)),
       ).state.uri.toString(),
-      '/clients/seed-client-1/diet',
+      AppRoutes.messagesFor('seed-client-1'),
     );
   });
 }
