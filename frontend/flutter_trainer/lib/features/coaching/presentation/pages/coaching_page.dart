@@ -23,6 +23,7 @@ import 'package:oncare_trainer/features/coaching/presentation/widgets/program_ed
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -263,6 +264,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     return PageScaffold(
       title: l.coachTitle,
       subtitle: l.coachSubtitle,
+      headerCenter: const ClientSearchBar(),
       scrollable: false,
       contentPadding: EdgeInsets.zero,
       child: clientsAsync.when(
@@ -600,7 +602,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   }
 }
 
-class _MemberProgramList extends StatefulWidget {
+class _MemberProgramList extends StatelessWidget {
   const _MemberProgramList({
     required this.clients,
     required this.selectedId,
@@ -612,44 +614,24 @@ class _MemberProgramList extends StatefulWidget {
   final ValueChanged<String> onSelect;
 
   @override
-  State<_MemberProgramList> createState() => _MemberProgramListState();
-}
-
-class _MemberProgramListState extends State<_MemberProgramList> {
-  String _query = '';
-
-  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final query = _query.trim().toLowerCase();
-    final clients = widget.clients
-        .where((client) => client.name.toLowerCase().contains(query))
-        .toList(growable: false);
     return SectionCard(
       title: l.coachMemberPrograms,
       dense: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          TextField(
-            key: const ValueKey<String>('program-member-search'),
-            onChanged: (value) => setState(() => _query = value),
-            decoration: InputDecoration(
-              hintText: l.searchClientsHint,
-              prefixIcon: const Icon(Icons.search, size: 18),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           for (final client in clients)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Material(
-                color: client.id == widget.selectedId
+                color: client.id == selectedId
                     ? AppColors.accentSurface
                     : Colors.transparent,
                 borderRadius: const BorderRadius.all(AppRadius.md),
                 child: InkWell(
-                  onTap: () => widget.onSelect(client.id),
+                  onTap: () => onSelect(client.id),
                   borderRadius: const BorderRadius.all(AppRadius.md),
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),

@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashb
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
@@ -40,6 +41,7 @@ class DashboardPage extends ConsumerWidget {
     return PageScaffold(
       title: l.dashTitle,
       subtitle: dateLabel(l, today),
+      headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         ActionButton(
           label: l.dashAddSchedule,

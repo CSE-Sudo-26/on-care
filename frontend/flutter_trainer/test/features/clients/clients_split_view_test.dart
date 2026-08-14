@@ -42,17 +42,24 @@ void main() {
   Future<void> scrollToCard(WidgetTester tester, String name) async {
     // Check the raw finder, not `card()` — `.first` throws rather than
     // reporting empty when nothing matched.
-    if (find.text(name).evaluate().isNotEmpty) return;
-    await tester.scrollUntilVisible(
-      find.text(name),
-      160,
-      scrollable: find
-          .ancestor(
-            of: find.byType(ClientCard).first,
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
+    final candidates = find.text(name);
+    if (candidates.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        find.text(name),
+        160,
+        scrollable: find
+            .ancestor(
+              of: find.byType(ClientCard).first,
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+    }
+
+    // A lazily built card can already exist just beyond the viewport. In
+    // that case scrollUntilVisible is skipped, but tapping still misses it.
+    await tester.ensureVisible(candidates.first);
+    await tester.pumpAndSettle();
   }
 
   testWidgets('wide viewport starts as a plain list; picking a client '

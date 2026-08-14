@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -55,15 +56,6 @@ class MessagesPage extends ConsumerStatefulWidget {
 }
 
 class _MessagesPageState extends ConsumerState<MessagesPage> {
-  final TextEditingController _search = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -75,6 +67,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     return PageScaffold(
       title: l.navMessages,
       subtitle: l.messagesSubtitle,
+      headerCenter: const ClientSearchBar(),
       scrollable: false,
       contentPadding: const EdgeInsets.fromLTRB(
         AppLayout.pagePadding,
@@ -94,13 +87,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         ),
         data: (clients) {
           final filtered = clients.where((client) {
-            if (_query.isNotEmpty &&
-                !client.name.toLowerCase().contains(_query.toLowerCase()) &&
-                !client.lastMessage.toLowerCase().contains(
-                  _query.toLowerCase(),
-                )) {
-              return false;
-            }
             return switch (filter) {
               _ConversationFilter.all => true,
               _ConversationFilter.unread => (unread[client.id] ?? 0) > 0,
@@ -125,8 +111,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                     selectedId: null,
                     unread: unread,
                     filter: filter,
-                    controller: _search,
-                    onQueryChanged: _setQuery,
                     onFilterChanged: _setFilter,
                     onSelected: _selectClient,
                   );
@@ -148,8 +132,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                       selectedId: selected?.id,
                       unread: unread,
                       filter: filter,
-                      controller: _search,
-                      onQueryChanged: _setQuery,
                       onFilterChanged: _setFilter,
                       onSelected: _selectClient,
                     ),
@@ -169,8 +151,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     );
   }
 
-  void _setQuery(String value) => setState(() => _query = value.trim());
-
   void _setFilter(_ConversationFilter filter) {
     context.go(AppRoutes.messagesFor(widget.clientId, filter: filter.value));
   }
@@ -186,8 +166,6 @@ class _ConversationList extends StatelessWidget {
     required this.selectedId,
     required this.unread,
     required this.filter,
-    required this.controller,
-    required this.onQueryChanged,
     required this.onFilterChanged,
     required this.onSelected,
   });
@@ -196,8 +174,6 @@ class _ConversationList extends StatelessWidget {
   final String? selectedId;
   final Map<String, int> unread;
   final _ConversationFilter filter;
-  final TextEditingController controller;
-  final ValueChanged<String> onQueryChanged;
   final ValueChanged<_ConversationFilter> onFilterChanged;
   final ValueChanged<String> onSelected;
 
@@ -220,18 +196,6 @@ class _ConversationList extends StatelessWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: TextField(
-              controller: controller,
-              onChanged: onQueryChanged,
-              decoration: InputDecoration(
-                hintText: l.messagesSearchHint,
-                prefixIcon: const Icon(Icons.search, size: 18),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),

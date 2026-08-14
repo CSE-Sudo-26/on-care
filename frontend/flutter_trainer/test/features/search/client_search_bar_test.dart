@@ -8,42 +8,131 @@ import 'package:oncare_trainer/features/search/presentation/widgets/client_searc
 import '../../helpers/pump_app.dart';
 
 void main() {
+  final results = find.byKey(clientSearchResultsKey);
+
   Future<void> openDesktop(WidgetTester tester, String route) async {
-    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await pumpTrainerApp(tester, token: 'demo-trainer-token', at: route);
   }
 
-  testWidgets('대시보드와 일정에는 전역 회원 검색을 노출하지 않는다', (tester) async {
+  Future<void> search(WidgetTester tester, String query) async {
+    await tester.enterText(find.byKey(clientSearchFieldKey), query);
+    await settle(tester);
+  }
+
+  Finder resultRow(String name) =>
+      find.descendant(of: results, matching: find.text(name));
+
+  String location(WidgetTester tester) => GoRouter.of(
+    tester.element(find.byKey(clientSearchFieldKey)),
+  ).state.uri.toString();
+
+  testWidgets('모든 주요 화면 헤더에 같은 통합 검색 바가 표시된다', (tester) async {
     await openDesktop(tester, AppRoutes.dashboard);
-    expect(find.byKey(clientSearchFieldKey), findsNothing);
 
-    GoRouter.of(tester.element(find.text('대시보드').last)).go(AppRoutes.schedule);
-    await settle(tester);
-    expect(find.byKey(clientSearchFieldKey), findsNothing);
+    for (final route in <String>[
+      AppRoutes.dashboard,
+      AppRoutes.clients,
+      AppRoutes.schedule,
+      AppRoutes.messages,
+      AppRoutes.coaching,
+      AppRoutes.reports,
+    ]) {
+      GoRouter.of(tester.element(find.byKey(clientSearchFieldKey))).go(route);
+      await settle(tester);
+      expect(find.byKey(clientSearchFieldKey), findsOneWidget, reason: route);
+    }
   });
 
-  testWidgets('회원 관리는 목록 문맥 안에서 이름을 필터링한다', (tester) async {
+  testWidgets('화면별 고객 검색 입력은 제거하고 통합 검색만 유지한다', (tester) async {
     await openDesktop(tester, AppRoutes.clients);
+    expect(
+      find.byKey(const ValueKey<String>('clients-roster-search')),
+      findsNothing,
+    );
 
-    final field = find.byKey(const ValueKey<String>('clients-roster-search'));
-    expect(field, findsOneWidget);
-    await tester.enterText(field, '김민수');
+    GoRouter.of(
+      tester.element(find.byKey(clientSearchFieldKey)),
+    ).go(AppRoutes.messages);
     await settle(tester);
+    expect(find.byType(TextField), findsOneWidget);
 
-    expect(find.text('김민수'), findsWidgets);
-    expect(find.text('박성호'), findsNothing);
-  });
-
-  testWidgets('프로그램 검색은 회원별 프로그램 목록 안에 있다', (tester) async {
-    await openDesktop(tester, AppRoutes.coaching);
-
-    expect(find.byKey(clientSearchFieldKey), findsNothing);
+    GoRouter.of(
+      tester.element(find.byKey(clientSearchFieldKey)),
+    ).go(AppRoutes.coaching);
+    await settle(tester);
     expect(
       find.byKey(const ValueKey<String>('program-member-search')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('어느 탭에서 검색해도 기본 선택은 같은 고객 상세를 연다', (tester) async {
+    await openDesktop(tester, AppRoutes.dashboard);
+    for (final route in <String>[AppRoutes.dashboard, AppRoutes.reports]) {
+      GoRouter.of(tester.element(find.byKey(clientSearchFieldKey))).go(route);
+      await settle(tester);
+      await search(tester, '김민수');
+      await tester.tap(resultRow('김민수'));
+      await settle(tester);
+      expect(location(tester), '/clients/seed-client-1/diet');
+    }
+  });
+
+  testWidgets('이름이 아닌 최근 메시지로도 고객을 통합 검색한다', (tester) async {
+    await openDesktop(tester, AppRoutes.dashboard);
+    await search(tester, '장거리');
+
+    expect(results, findsOneWidget);
+    expect(
+      find.descendant(of: results, matching: find.textContaining('장거리')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('한 결과에서 메시지·일정·코칭·리포트로 바로 이동할 수 있다', (tester) async {
+    await openDesktop(tester, AppRoutes.dashboard);
+    await search(tester, '김민수');
+
+    await tester.tap(find.byKey(clientSearchQuickActionsKey('seed-client-1')));
+    await settle(tester);
+    expect(
+      find.byKey(clientSearchDestinationKey('seed-client-1', 'messages')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(clientSearchDestinationKey('seed-client-1', 'coaching')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(clientSearchDestinationKey('seed-client-1', 'reports')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('좁은 화면에서는 검색 아이콘으로 동일한 통합 검색을 연다', (tester) async {
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.messages,
+    );
+
+    expect(find.byKey(clientSearchFieldKey), findsNothing);
+    await tester.tap(find.byKey(clientSearchIconKey));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '김민수');
+    await settle(tester);
+    await tester.tap(resultRow('김민수'));
+    await settle(tester);
+
+    expect(
+      GoRouter.of(
+        tester.element(find.byKey(clientSearchIconKey)),
+      ).state.uri.toString(),
+      '/clients/seed-client-1/diet',
     );
   });
 }

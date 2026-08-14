@@ -15,7 +15,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/search/domain/client_search.dart';
-import 'package:oncare_trainer/features/search/domain/client_search_scope.dart';
+import 'package:oncare_trainer/features/search/domain/client_search_facts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -66,22 +66,19 @@ ValueKey<String> clientSearchDestinationKey(
 /// What a pick resolved to: the client and the route to open.
 typedef _Pick = ({TrainerClient client, String route});
 
-enum _SearchDestination { clients, schedule, coaching, reports }
+enum _SearchDestination { clients, schedule, messages, coaching, reports }
 
 String? _destinationRoute(
   _SearchDestination destination,
   TrainerClient client,
-  ClientSearchFacts facts, {
-  String? clientSection,
-}) => switch (destination) {
-  _SearchDestination.clients => AppRoutes.clientDetail(
-    client.id,
-    section: clientSection,
-  ),
+  ClientSearchFacts facts,
+) => switch (destination) {
+  _SearchDestination.clients => AppRoutes.clientDetail(client.id),
   _SearchDestination.schedule => switch (facts.nextSession[client.id]) {
     final next? => AppRoutes.scheduleView('day', date: next.date),
     null => null,
   },
+  _SearchDestination.messages => AppRoutes.messagesFor(client.id),
   _SearchDestination.coaching => AppRoutes.coachingFor(client.id),
   _SearchDestination.reports => AppRoutes.reportFor(client.id),
 };
@@ -89,9 +86,9 @@ String? _destinationRoute(
 /// The shared facts behind [results], read from the streams the rest of the
 /// console already uses.
 ///
-/// The current tab uses one fact for its contextual subtitle, while the same
-/// set also powers cross-tab destinations. It subscribes to nothing until a
-/// query has matches, so an idle header keeps no search-only streams open.
+/// The same fact set powers the unified result summary and every destination.
+/// It subscribes to nothing until a query has matches, so an idle header keeps
+/// no search-only streams open.
 ClientSearchFacts watchClientSearchFacts(
   WidgetRef ref,
   List<TrainerClient> results,
@@ -115,26 +112,16 @@ ClientSearchFacts watchClientSearchFacts(
 
 /// 고객 검색 — the console header's client picker.
 ///
-/// Sits in the middle of every main tab's header and always searches the
-/// same roster, but the rows and the destination follow [scope]: on
-/// 스케줄 it shows the next booking and jumps to that day, on 리포트 the
-/// week's completion and opens the report, and so on
-/// ([clientSearchDetail] / [clientSearchDestination]).
+/// Sits in the middle of every main tab's header and always searches the same
+/// roster and related records. A direct pick consistently opens the customer
+/// detail; explicit actions open the schedule, messages, coaching, or report.
 ///
 /// Two forms: the inline field with a dropdown, and an icon opening the
 /// same search in a dialog. The icon is used when the shell is in its
 /// drawer form, or when the header's own actions leave no room.
 class ClientSearchBar extends ConsumerStatefulWidget {
-  /// Creates the search bar for [scope].
-  const ClientSearchBar({super.key, required this.scope, this.clientSection});
-
-  /// Which tab this bar is on — decides the rows and the destination.
-  final ClientSearchScope scope;
-
-  /// The 고객 sub-tab currently open (`diet` | `workout` | `chat`), so a
-  /// pick from the 고객 tab stays on the section the trainer was reading.
-  /// Ignored by every other scope.
-  final String? clientSection;
+  /// Creates the unified search bar.
+  const ClientSearchBar({super.key});
 
   @override
   ConsumerState<ClientSearchBar> createState() => _ClientSearchBarState();
@@ -203,23 +190,15 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     }
   }
 
-  void _submit(ClientSearchFacts facts) {
+  void _submit() {
     if (_results.isEmpty) return;
     final index = _highlight.clamp(0, _results.length - 1);
-    _pick(_results[index], facts);
+    _pick(_results[index]);
   }
 
-  void _pick(TrainerClient client, ClientSearchFacts facts) {
+  void _pick(TrainerClient client) {
     _close(clear: true);
-    _apply((
-      client: client,
-      route: clientSearchDestination(
-        widget.scope,
-        client,
-        facts,
-        clientSection: widget.clientSection,
-      ),
-    ));
+    _apply((client: client, route: clientSearchDestination(client)));
   }
 
   void _apply(_Pick pick) {
@@ -234,10 +213,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
   Future<void> _openDialog() async {
     final pick = await showDialog<_Pick>(
       context: context,
-      builder: (_) => _ClientSearchDialog(
-        scope: widget.scope,
-        clientSection: widget.clientSection,
-      ),
+      builder: (_) => const _ClientSearchDialog(),
     );
     if (pick == null || !mounted) return;
     _apply(pick);
@@ -284,7 +260,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
                 child: TapRegion(
                   groupId: this,
                   onTapOutside: (_) => _close(),
-                  child: _field(l, facts),
+                  child: _field(l),
                 ),
               ),
             ),
@@ -294,7 +270,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     );
   }
 
-  Widget _field(AppLocalizations l, ClientSearchFacts facts) {
+  Widget _field(AppLocalizations l) {
     return CallbackShortcuts(
       // The same keys the dropdown implies: ↑/↓ walk the rows, Esc backs
       // out. Enter is the field's own submit.
@@ -351,7 +327,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           focusedBorder: _fieldBorder,
         ),
         onChanged: _onQueryChanged,
-        onSubmitted: (_) => _submit(facts),
+        onSubmitted: (_) => _submit(),
         onTap: () {
           if (_hasQuery) _dropdown.show();
         },
@@ -371,13 +347,11 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           groupId: this,
           child: _ResultsCard(
             width: width,
-            scope: widget.scope,
             query: _query,
             results: _results,
             facts: facts,
-            clientSection: widget.clientSection,
             highlighted: _highlight,
-            onPick: (client) => _pick(client, facts),
+            onPick: _pick,
             onOpenDestination: _openDestination,
           ),
         ),
@@ -394,26 +368,22 @@ const OutlineInputBorder _fieldBorder = OutlineInputBorder(
 );
 
 /// The dropdown (and the dialog's body): matches, or why there are none,
-/// plus the footer that says what picking one does on this tab.
+/// plus the footer that explains the consistent default destination.
 class _ResultsCard extends StatelessWidget {
   const _ResultsCard({
     required this.width,
-    required this.scope,
     required this.query,
     required this.results,
     required this.facts,
-    required this.clientSection,
     required this.highlighted,
     required this.onPick,
     required this.onOpenDestination,
   });
 
   final double width;
-  final ClientSearchScope scope;
   final String query;
   final List<TrainerClient> results;
   final ClientSearchFacts facts;
-  final String? clientSection;
   final int highlighted;
   final ValueChanged<TrainerClient> onPick;
   final void Function(TrainerClient client, String route) onOpenDestination;
@@ -461,16 +431,13 @@ class _ResultsCard extends StatelessWidget {
                   itemCount: results.length,
                   itemBuilder: (context, i) => _ResultRow(
                     client: results[i],
-                    detail: clientSearchDetail(l, scope, results[i], facts),
+                    detail: clientSearchDetail(l, results[i], facts),
                     routes: <_SearchDestination, String?>{
                       for (final destination in _SearchDestination.values)
                         destination: _destinationRoute(
                           destination,
                           results[i],
                           facts,
-                          clientSection: scope == ClientSearchScope.clients
-                              ? clientSection
-                              : null,
                         ),
                     },
                     highlighted: i == highlighted,
@@ -481,7 +448,7 @@ class _ResultsCard extends StatelessWidget {
                 ),
               ),
             ),
-          _Footer(text: clientSearchFooter(l, scope)),
+          _Footer(text: l.searchGoClientDetail),
         ],
       ),
     );
@@ -550,6 +517,7 @@ class _ResultRowState extends State<_ResultRow> {
                               const SizedBox(height: 1),
                               Text(
                                 widget.detail,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 14,
@@ -625,6 +593,11 @@ class _ResultRowState extends State<_ResultRow> {
         l.navSchedule,
         Icons.calendar_today_outlined,
         'schedule',
+      ),
+      _SearchDestination.messages => (
+        l.navMessages,
+        Icons.chat_bubble_outline,
+        'messages',
       ),
       _SearchDestination.coaching => (
         l.navCoaching,
@@ -711,10 +684,7 @@ class _Footer extends StatelessWidget {
 /// caller owns the page context, so the snackbar and the `go` both land
 /// on the console rather than on a route that is being dismissed.
 class _ClientSearchDialog extends ConsumerStatefulWidget {
-  const _ClientSearchDialog({required this.scope, this.clientSection});
-
-  final ClientSearchScope scope;
-  final String? clientSection;
+  const _ClientSearchDialog();
 
   @override
   ConsumerState<_ClientSearchDialog> createState() =>
@@ -750,10 +720,10 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
     );
   }
 
-  void _submit(ClientSearchFacts facts) {
+  void _submit() {
     if (_results.isEmpty) return;
     final index = _highlight.clamp(0, _results.length - 1);
-    _pop(_results[index], facts);
+    _pop(_results[index]);
   }
 
   @override
@@ -824,7 +794,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                     focusedBorder: _fieldBorder,
                   ),
                   onChanged: _onQueryChanged,
-                  onSubmitted: (_) => _submit(facts),
+                  onSubmitted: (_) => _submit(),
                 ),
               ),
             ),
@@ -832,13 +802,11 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
               const SizedBox(height: AppSpacing.sm),
               _ResultsCard(
                 width: width,
-                scope: widget.scope,
                 query: _query,
                 results: _results,
                 facts: facts,
-                clientSection: widget.clientSection,
                 highlighted: _highlight,
-                onPick: (client) => _pop(client, facts),
+                onPick: _pop,
                 onOpenDestination: (client, route) => _popRoute(client, route),
               ),
             ],
@@ -848,16 +816,8 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
     );
   }
 
-  void _pop(TrainerClient client, ClientSearchFacts facts) {
-    _popRoute(
-      client,
-      clientSearchDestination(
-        widget.scope,
-        client,
-        facts,
-        clientSection: widget.clientSection,
-      ),
-    );
+  void _pop(TrainerClient client) {
+    _popRoute(client, clientSearchDestination(client));
   }
 
   void _popRoute(TrainerClient client, String route) {

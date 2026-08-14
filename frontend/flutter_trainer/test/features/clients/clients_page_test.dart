@@ -214,7 +214,7 @@ void main() {
           ],
         );
 
-        expect(find.byType(ClientSearchBar), findsNothing);
+        expect(find.byType(ClientSearchBar), findsOneWidget);
         expect(find.text('회원 관리'), findsOneWidget);
       });
     }
@@ -296,17 +296,10 @@ void main() {
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('박성호'), findsOneWidget);
       expect(
-        tester
-            .getTopLeft(
-              find.byKey(const ValueKey<String>('clients-roster-search')),
-            )
-            .dx,
-        tester
-            .getTopLeft(
-              find.byKey(const ValueKey<String>('client-seed-client-1')),
-            )
-            .dx,
+        find.byKey(const ValueKey<String>('clients-roster-search')),
+        findsNothing,
       );
+      expect(find.byType(ClientSearchBar), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('이지수'),
         150,
@@ -330,17 +323,9 @@ void main() {
         at: AppRoutes.clientsFiltered('attention'),
       );
 
-      final search = find.byKey(
-        const ValueKey<String>('clients-roster-search'),
-      );
-      await tester.enterText(search, '없는 회원');
-      await tester.pump();
-      expect(tester.widget<TextField>(search).controller?.text, '없는 회원');
-
       await tester.tap(find.text('전체 보기'));
       await settle(tester);
 
-      expect(tester.widget<TextField>(search).controller?.text, isEmpty);
       expect(find.text('김민수'), findsOneWidget);
     });
 
