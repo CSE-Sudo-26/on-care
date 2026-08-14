@@ -247,6 +247,38 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
     return out
 
 
+def _food_names(foods_json: str | None) -> list[str]:
+    """저장된 `foods_json` → 표시용 음식 이름 목록.
+
+    항목이 딕셔너리라는 보장이 없다. 실제로 `["김치찌개", 42, null]` 처럼 문자열·숫자가
+    섞여 저장된 기록이 있고, 예전에는 `f.get("name")` 이 그 자리에서 AttributeError 를
+    내 **그 날짜 식단 조회 전체가 500** 이 됐다(#724). 회원 앱 경로
+    (`diet_service.load_foods`)는 같은 값을 받아도 죽지 않아, 한 기록인데 트레이너 쪽만
+    터졌다.
+
+    문자열은 이름으로 살린다 — 버리면 트레이너 화면에서 끼니 내용이 통째로 빈다.
+    이름을 만들 수 없는 나머지(숫자·null 등)는 건너뛴다.
+    """
+    try:
+        foods = json.loads(foods_json) if foods_json else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(foods, list):
+        return []
+
+    names: list[str] = []
+    for food in foods:
+        if isinstance(food, dict):
+            name = food.get("name")
+        elif isinstance(food, str):
+            name = food
+        else:
+            continue
+        if isinstance(name, str) and name.strip():
+            names.append(name.strip())
+    return names
+
+
 def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietEntryOut]:
     """회원의 특정 날짜 식단(회원 실데이터)을 고객 식단 서브탭 형태로."""
     rows = db.scalars(
@@ -260,11 +292,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
 
     out: list[ClientDietEntryOut] = []
     for r in rows:
-        try:
-            foods = json.loads(r.foods_json) if r.foods_json else []
-        except json.JSONDecodeError:
-            foods = []
-        items = ", ".join(f.get("name", "") for f in foods if f.get("name"))
+        items = ", ".join(_food_names(r.foods_json))
         photo_id = photo_ids.get(r.id)
         out.append(ClientDietEntryOut(
             meal=_meal_kr(r.meal_type),
