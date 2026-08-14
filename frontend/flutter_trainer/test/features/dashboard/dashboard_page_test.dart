@@ -130,7 +130,7 @@ void main() {
     await openDashboard(tester);
 
     expect(find.text('오늘의 일정'), findsOneWidget);
-    expect(find.text('김민수 · 1:1 PT'), findsWidgets);
+    expect(find.text('김민수 남성 · 35세 · 1:1 PT'), findsWidgets);
     expect(find.text('완료'), findsWidgets);
     // Gaps are shown but muted — a free hour is information.
     expect(find.text('빈 시간'), findsWidgets);

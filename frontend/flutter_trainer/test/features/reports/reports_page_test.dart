@@ -106,16 +106,19 @@ void main() {
     );
     // Defaults to the first client rather than an empty right pane.
     expect(find.text('김민수님 주간 리포트'), findsOneWidget);
+    expect(find.text('남성 · 35세'), findsWidgets);
   });
 
-  testWidgets('인쇄 액션은 스크롤 본문이 아닌 상단 헤더에 표시된다', (tester) async {
+  testWidgets('PDF 내보내기는 상단에만 표시된다', (tester) async {
     await openReports(tester);
 
-    final printAction = find.byKey(
-      const ValueKey<String>('reports-print-action'),
+    final exportAction = find.byKey(
+      const ValueKey<String>('reports-pdf-export-action'),
     );
-    expect(printAction, findsOneWidget);
-    expect(tester.getCenter(printAction).dy, lessThan(88));
+    expect(exportAction, findsOneWidget);
+    expect(find.text('PDF 내보내기'), findsOneWidget);
+    expect(find.text('회원 공유용 PDF'), findsNothing);
+    expect(tester.getCenter(exportAction).dy, lessThan(88));
   });
 
   testWidgets('과거 주차에서는 미래 이동 없이 이번 주로 복귀할 수 있다', (tester) async {

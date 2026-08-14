@@ -33,7 +33,8 @@ class AuthException implements Exception {
   final String? detail;
 
   @override
-  String toString() => 'AuthException: $failure${detail == null ? '' : ' ($detail)'}';
+  String toString() =>
+      'AuthException: $failure${detail == null ? '' : ' ($detail)'}';
 }
 
 /// Raised when the authenticated account is not a trainer (the backend

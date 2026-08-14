@@ -131,10 +131,11 @@ final notificationInboxEnabledProvider = Provider<bool>(
 );
 
 /// 받은 알림 목록.
-final trainerNotificationsProvider =
-    FutureProvider<List<TrainerNotification>>((ref) {
-      return ref.watch(trainerNotificationRepositoryProvider).fetch();
-    }, name: 'trainerNotifications');
+final trainerNotificationsProvider = FutureProvider<List<TrainerNotification>>((
+  ref,
+) {
+  return ref.watch(trainerNotificationRepositoryProvider).fetch();
+}, name: 'trainerNotifications');
 
 /// 미읽음 수 — 사이드바 배지.
 final trainerUnreadNotificationsProvider = FutureProvider<int>((ref) {

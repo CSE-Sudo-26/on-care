@@ -8,6 +8,9 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
@@ -23,6 +26,8 @@ class TodayTimelineCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final schedule = ref.watch(todayScheduleProvider);
+    final clients =
+        ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
 
     return SectionCard(
       title: l.dashTodaySchedule,
@@ -49,6 +54,11 @@ class TodayTimelineCard extends ConsumerWidget {
               for (final session in sessions)
                 _Row(
                   session: session,
+                  client: findClientIdentity(
+                    clients,
+                    clientId: session.clientId,
+                    clientName: session.clientName,
+                  ),
                   onTap: () => context.go(AppRoutes.scheduleView('day')),
                 ),
             ],
@@ -60,9 +70,14 @@ class TodayTimelineCard extends ConsumerWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.session, required this.onTap});
+  const _Row({
+    required this.session,
+    required this.client,
+    required this.onTap,
+  });
 
   final ScheduleSession session;
+  final TrainerClient? client;
   final VoidCallback onTap;
 
   Color get _statusColor {
@@ -105,20 +120,27 @@ class _Row extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Text(
-                  muted
-                      ? l.dashEmptySlot
-                      : '${session.clientName} · ${session.type}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: muted ? FontWeight.w500 : FontWeight.w600,
-                    color: muted
-                        ? AppColors.subtleForeground
-                        : AppColors.foreground,
-                  ),
-                ),
+                child: muted
+                    ? Text(
+                        l.dashEmptySlot,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.subtleForeground,
+                        ),
+                      )
+                    : Text(
+                        '${client == null ? session.clientName : clientIdentityLabel(context, client!)} · ${session.type}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.foreground,
+                        ),
+                      ),
               ),
               if (!muted)
                 Text(

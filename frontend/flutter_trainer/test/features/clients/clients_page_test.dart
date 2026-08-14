@@ -329,40 +329,29 @@ void main() {
       expect(find.text('김민수'), findsOneWidget);
     });
 
-    testWidgets('unread badges show and clear after reading the thread', (
-      tester,
-    ) async {
+    testWidgets('고객 목록은 메시지 미리보기와 안 읽은 배지를 노출하지 않는다', (tester) async {
       await pumpTrainerApp(
         tester,
         token: 'demo-trainer-token',
         at: AppRoutes.clients,
       );
 
-      // Scoped to each card rather than counting '1' across the roster:
-      // several members are waiting on a reply now, and the list is long
-      // enough that what is built depends on scroll position.
-      Finder badgeOf(String name) => find.descendant(
-        of: find.ancestor(
-          of: find.text(name),
-          matching: find.byType(ClientCard),
-        ),
-        matching: find.text('1'),
+      final sunghoCard = find.ancestor(
+        of: find.text('박성호'),
+        matching: find.byType(ClientCard),
       );
-
-      // 박성호 is waiting; 김민수's thread is seeded already answered.
-      expect(badgeOf('박성호'), findsOneWidget);
-      expect(badgeOf('김민수'), findsNothing);
-
-      // Open 박성호's chat, then come back — his badge cleared. The badge
-      // clears once the messages are on screen.
-      await goTo(
-        tester,
-        AppRoutes.clientDetail('seed-client-3', section: 'chat'),
+      expect(
+        find.descendant(of: sunghoCard, matching: find.text('1')),
+        findsNothing,
       );
-      await goTo(tester, AppRoutes.clients);
-      await settle(tester);
-
-      expect(badgeOf('박성호'), findsNothing);
+      expect(
+        find.descendant(of: sunghoCard, matching: find.text('이번 주 운동 못했어요...')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: sunghoCard, matching: find.textContaining('세')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('tapping a client card opens the detail screen', (
@@ -403,9 +392,8 @@ void main() {
       await tester.tap(find.text('등록하기'));
       await settle(tester);
 
-      // New client appended at the end of the list (0 data, no badge).
-      // Scoped to her own card: a seeded brand-new client carries the
-      // same "아직 대화가 없어요" placeholder.
+      // New client appended at the end of the list. Customer cards show
+      // identity details instead of chat placeholders or unread badges.
       await tester.scrollUntilVisible(
         find.text('최수진'),
         150,
@@ -418,14 +406,16 @@ void main() {
             .first,
       );
       expect(find.text('최수진'), findsWidgets);
+      final card = find.ancestor(
+        of: find.text('최수진').last,
+        matching: find.byType(ClientCard),
+      );
       expect(
-        find.descendant(
-          of: find.ancestor(
-            of: find.text('최수진').last,
-            matching: find.byType(ClientCard),
-          ),
-          matching: find.text('아직 대화가 없어요'),
-        ),
+        find.descendant(of: card, matching: find.text('아직 대화가 없어요')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: card, matching: find.textContaining('세')),
         findsOneWidget,
       );
     });

@@ -96,7 +96,6 @@ const List<NavDestination> navDestinations = <NavDestination>[
     icon: Icons.people_outline,
     activeIcon: Icons.people,
     route: AppRoutes.clients,
-    badge: NavBadge.unreadMessages,
   ),
   NavDestination(
     label: NavLabel.messages,

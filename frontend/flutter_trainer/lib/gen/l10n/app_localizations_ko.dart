@@ -2237,7 +2237,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsPdfUnsupported => 'PDF 생성 API가 아직 없어요.';
 
   @override
-  String get reportsPdfLabel => '회원 공유용 PDF';
+  String get reportsPdfLabel => 'PDF 내보내기';
 
   @override
   String get reportsPrintUnsupported =>

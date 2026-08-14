@@ -382,15 +382,17 @@ class DriftScheduleRepository implements ScheduleRepository {
       // Conditional update: `changed` is 0 when a concurrent call already
       // completed this session, in which case we must not log again.
       final changed =
-          await (_db.update(
-            table,
-          )..where((t) => t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming))).write(
-            TrainerScheduleEntriesCompanion(
-              status: const Value(ScheduleStatus.done),
-              // An empty memo must not wipe an existing note.
-              note: note.isEmpty ? const Value.absent() : Value(note),
-            ),
-          );
+          await (_db.update(table)..where(
+                (t) =>
+                    t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming),
+              ))
+              .write(
+                TrainerScheduleEntriesCompanion(
+                  status: const Value(ScheduleStatus.done),
+                  // An empty memo must not wipe an existing note.
+                  note: note.isEmpty ? const Value.absent() : Value(note),
+                ),
+              );
       if (changed != 1) return;
 
       // 기록을 남길 고객도 id 로 찾는다. v3 이전 행만 이름으로 폴백한다.

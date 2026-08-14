@@ -1429,7 +1429,7 @@
   "reportsAiTitle": "AI coaching assistant · Report summary",
   "reportsAiUnavailable": "Available after the report summary API is connected. No summary is generated now.",
   "reportsPdfUnsupported": "PDF generation isn't supported yet.",
-  "reportsPdfLabel": "Shareable PDF",
+  "reportsPdfLabel": "Export PDF",
   "reportsPrintUnsupported": "Available after PDF/print report snapshots are supported.",
   "reportsPrintLabel": "Print"
 }
