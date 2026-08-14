@@ -998,6 +998,42 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your diet.'**
   String get dietLoadError;
 
+  /// No description provided for @dietPeriodTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition trend'**
+  String get dietPeriodTrend;
+
+  /// No description provided for @dietPeriodAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily average'**
+  String get dietPeriodAverage;
+
+  /// No description provided for @dietPeriodTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Period total'**
+  String get dietPeriodTotal;
+
+  /// No description provided for @dietPeriodLoggedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day logged} other{{days} days logged}}'**
+  String dietPeriodLoggedDays(int days);
+
+  /// No description provided for @dietPeriodEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No meals were logged in this period.'**
+  String get dietPeriodEmpty;
+
+  /// No description provided for @dietPeriodRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} - {end}'**
+  String dietPeriodRange(String start, String end);
+
   /// No description provided for @otherDateEmpty.
   ///
   /// In en, this message translates to:

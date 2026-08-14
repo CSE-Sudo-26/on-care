@@ -500,6 +500,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietLoadError => 'Couldn\'t load your diet.';
 
   @override
+  String get dietPeriodTrend => 'Nutrition trend';
+
+  @override
+  String get dietPeriodAverage => 'Daily average';
+
+  @override
+  String get dietPeriodTotal => 'Period total';
+
+  @override
+  String dietPeriodLoggedDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days logged',
+      one: '1 day logged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dietPeriodEmpty => 'No meals were logged in this period.';
+
+  @override
+  String dietPeriodRange(String start, String end) {
+    return '$start - $end';
+  }
+
+  @override
   String otherDateEmpty(Object section) {
     return 'No $section records for the selected date.';
   }

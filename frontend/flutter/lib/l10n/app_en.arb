@@ -277,6 +277,29 @@
   "dietEmptyLog": "No meals logged yet.\nAdd your first meal with a photo!",
   "dietPhotoAnalysis": "Photo Analysis",
   "dietLoadError": "Couldn't load your diet.",
+  "dietPeriodTrend": "Nutrition trend",
+  "dietPeriodAverage": "Daily average",
+  "dietPeriodTotal": "Period total",
+  "dietPeriodLoggedDays": "{days, plural, =1{1 day logged} other{{days} days logged}}",
+  "@dietPeriodLoggedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dietPeriodEmpty": "No meals were logged in this period.",
+  "dietPeriodRange": "{start} - {end}",
+  "@dietPeriodRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
   "otherDateEmpty": "No {section} records for the selected date.",
   "dietTagSodium": "Sodium {mg}mg",
   "@dietTagSodium": {

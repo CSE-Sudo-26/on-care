@@ -12,6 +12,7 @@ import 'package:oncare/features/account/presentation/controllers/account_control
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
+import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/trainer_chat_header_button.dart';
 import 'package:oncare/features/notification/presentation/controllers/notification_controller.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -105,9 +106,38 @@ String _formatInt(int v) => v.toString().replaceAllMapped(
   (Match _) => ',',
 );
 
+/// 식단 탭이 보여주는 기간. 운동 탭의 `운동 현황` 토글과 같은 뜻·같은 순서다.
+enum DietPeriodTab { day, week, month }
+
+/// 기간 뷰가 집계할 날짜 범위. 이번 주는 월~일, 이번 달은 1일~말일이다.
+/// 아직 오지 않은 날도 범위에 넣는다 — 빈 칸이 남아야 한 주·한 달의 모양이
+/// 그대로 읽힌다(평균은 기록이 있는 날만으로 낸다).
+///
+/// 날짜를 Duration 이 아니라 성분으로 옮긴다. 로컬 시간에 Duration 을 더하면
+/// 서머타임이 있는 지역에서 주 전체가 하루씩 밀린다. `DateTime(y, m + 1, 0)`
+/// 은 12월이면 다음 해 1월 0일 = 12월 31일로 알아서 넘어간다.
+DietDateRange dietRangeForTab(DietPeriodTab tab, DateTime today) {
+  if (tab == DietPeriodTab.month) {
+    return (
+      from: DateTime(today.year, today.month),
+      to: DateTime(today.year, today.month + 1, 0),
+    );
+  }
+  final DateTime monday = DateTime(
+    today.year,
+    today.month,
+    today.day - (today.weekday - 1),
+  );
+  return (
+    from: monday,
+    to: DateTime(monday.year, monday.month, monday.day + 6),
+  );
+}
+
 class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   int _weekShift = 0; // whole-week steps away from today
   late DateTime _selected;
+  DietPeriodTab _period = DietPeriodTab.day;
 
   DateTime get _today {
     final DateTime n = DateTime.now();
@@ -125,6 +155,9 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
     final int offset = first.weekday - 1; // days from Monday
     return ((d.day + offset - 1) / 7).floor() + 1;
   }
+
+  DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
+      dietRangeForTab(tab, today);
 
   @override
   Widget build(BuildContext context) {
@@ -158,60 +191,137 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                   trailingAction: const TrainerChatHeaderButton(),
                   onBell: () => context.push(AppRoutes.notification),
                   bellHasUnread:
-                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
+                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) >
+                      0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
-                _DateStrip(
-                  days: days,
-                  today: today,
-                  selected: _selected,
-                  weekLabel: l.dietWeekLabel(
-                    center.month,
-                    _weekOfMonth(center),
-                  ),
-                  showTodayButton: !atToday,
-                  onSelect: (DateTime d) => setState(() => _selected = d),
-                  onPrev: () => setState(() => _weekShift -= 1),
-                  onNext: _weekShift >= 0
-                      ? null
-                      : () => setState(() => _weekShift += 1),
-                  onToday: () => setState(() {
-                    _weekShift = 0;
-                    _selected = today;
-                  }),
+                // 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에
+                // 없었다 — 운동 탭과 같은 기간 토글을 둔다(#670).
+                _PeriodTabs(
+                  active: _period,
+                  onChanged: (DietPeriodTab t) => setState(() => _period = t),
                 ),
-                const SizedBox(height: 8),
-                diet.when(
-                  loading: () => const _DietLoading(),
-                  error: (Object e, StackTrace _) => _DietError(
-                    onRetry: () {
-                      if (atToday) {
-                        ref.invalidate(dietTodayProvider);
-                      } else {
-                        ref.invalidate(dietByDateProvider(_selected));
-                      }
-                    },
+                if (_period != DietPeriodTab.day) ...<Widget>[
+                  const SizedBox(height: 4),
+                  DietPeriodView(
+                    range: _rangeFor(_period, today),
+                    profile: profile,
                   ),
-                  data: (DietDay day) => !atToday && day.entries.isEmpty
-                      ? const _EmptyDay()
-                      : Column(
-                          children: <Widget>[
-                            NutritionSummary(day: day, profile: profile),
-                            const SizedBox(height: 20),
-                            _AiFeedback(message: day.aiCoachMessage),
-                            const SizedBox(height: 20),
-                            _MealLog(
-                              entries: day.entries,
-                              onAdd: () => showDietAddSheet(context),
-                              onEditMeal: (DietMeal m) =>
-                                  openMealDetailPage(context, m),
-                            ),
-                          ],
-                        ),
-                ),
+                ] else ...<Widget>[
+                  _DateStrip(
+                    days: days,
+                    today: today,
+                    selected: _selected,
+                    weekLabel: l.dietWeekLabel(
+                      center.month,
+                      _weekOfMonth(center),
+                    ),
+                    showTodayButton: !atToday,
+                    onSelect: (DateTime d) => setState(() => _selected = d),
+                    onPrev: () => setState(() => _weekShift -= 1),
+                    onNext: _weekShift >= 0
+                        ? null
+                        : () => setState(() => _weekShift += 1),
+                    onToday: () => setState(() {
+                      _weekShift = 0;
+                      _selected = today;
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  diet.when(
+                    loading: () => const _DietLoading(),
+                    error: (Object e, StackTrace _) => _DietError(
+                      onRetry: () {
+                        if (atToday) {
+                          ref.invalidate(dietTodayProvider);
+                        } else {
+                          ref.invalidate(dietByDateProvider(_selected));
+                        }
+                      },
+                    ),
+                    data: (DietDay day) => !atToday && day.entries.isEmpty
+                        ? const _EmptyDay()
+                        : Column(
+                            children: <Widget>[
+                              NutritionSummary(day: day, profile: profile),
+                              const SizedBox(height: 20),
+                              _AiFeedback(message: day.aiCoachMessage),
+                              const SizedBox(height: 20),
+                              _MealLog(
+                                entries: day.entries,
+                                onAdd: () => showDietAddSheet(context),
+                                onEditMeal: (DietMeal m) =>
+                                    openMealDetailPage(context, m),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────── period tabs ──
+
+/// 오늘 / 이번 주 / 이번 달. 운동 탭의 기간 토글과 같은 문구를 공유해 두 탭의
+/// 조작이 어긋나지 않게 한다.
+class _PeriodTabs extends StatelessWidget {
+  const _PeriodTabs({required this.active, required this.onChanged});
+
+  final DietPeriodTab active;
+  final ValueChanged<DietPeriodTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final Map<DietPeriodTab, String> labels = <DietPeriodTab, String>{
+      DietPeriodTab.day: l.exToday,
+      DietPeriodTab.week: l.exThisWeek,
+      DietPeriodTab.month: l.exThisMonth,
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: FigmaColors.statBg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          children: <Widget>[
+            for (final DietPeriodTab tab in DietPeriodTab.values)
+              Expanded(
+                child: GestureDetector(
+                  key: Key('diet-period-tab-${tab.name}'),
+                  onTap: () => onChanged(tab),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: active == tab ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: active == tab ? kCardShadow : null,
+                    ),
+                    child: Text(
+                      labels[tab]!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: active == tab
+                            ? FigmaColors.primary
+                            : AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -429,27 +539,11 @@ class NutritionSummary extends StatelessWidget {
         profile?.effectiveDailyProteinG ?? UserProfile.defaultDailyProteinG;
     final int fatGoal =
         profile?.effectiveDailyFatG ?? UserProfile.defaultDailyFatG;
-    // Sum straight from the foods so the summary always equals the meal cards;
-    // fall back to the server day totals when the per-food sum is 0 (real-server
-    // payloads carry nutrition only at the day/entry level).
-    final List<FoodItem> foods = <FoodItem>[
-      for (final DietEntry e in day.entries) ...e.foods,
-    ];
-    final int foodKcal = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.calories,
-    );
-    final int foodSodium = foods.fold<int>(
-      0,
-      (int a, FoodItem f) => a + f.sodiumMg,
-    );
-    final double foodSugar = foods.fold<double>(
-      0,
-      (double a, FoodItem f) => a + f.sugarG,
-    );
-    final int kcal = foodKcal > 0 ? foodKcal : day.totalCalories;
-    final int sodium = foodSodium > 0 ? foodSodium : day.totalSodiumMg;
-    final double sugar = foodSugar > 0 ? foodSugar : day.totalSugarG;
+    // 끼니 음식의 합을 먼저 쓰고 0이면 서버 하루 합계로 떨어진다. 규칙은
+    // 기간 뷰와 공유한다([DietDayTotals]) — 두 화면의 숫자가 갈리지 않도록.
+    final int kcal = day.effectiveCalories;
+    final int sodium = day.effectiveSodiumMg;
+    final double sugar = day.effectiveSugarG;
     final List<_NutritionSummaryItem> items = <_NutritionSummaryItem>[
       _NutritionSummaryItem(
         label: l.dietCalories,

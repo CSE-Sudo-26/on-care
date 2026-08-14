@@ -496,6 +496,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietLoadError => '식단 정보를 불러오지 못했어요.';
 
   @override
+  String get dietPeriodTrend => '영양 추이';
+
+  @override
+  String get dietPeriodAverage => '하루 평균';
+
+  @override
+  String get dietPeriodTotal => '기간 합계';
+
+  @override
+  String dietPeriodLoggedDays(int days) {
+    return '$days일 기록';
+  }
+
+  @override
+  String get dietPeriodEmpty => '이 기간에 기록된 식단이 없어요.';
+
+  @override
+  String dietPeriodRange(String start, String end) {
+    return '$start ~ $end';
+  }
+
+  @override
   String otherDateEmpty(Object section) {
     return '선택한 날짜에 기록된 $section이 없어요.';
   }
