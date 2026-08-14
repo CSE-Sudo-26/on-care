@@ -243,8 +243,7 @@ class _TrainerDetails extends StatelessWidget {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () =>
-                        context.push(AppRoutes.gymDetailPath(gym!.id)),
+                    onTap: () => context.push(AppRoutes.gymDetailPath(gym!.id)),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16),

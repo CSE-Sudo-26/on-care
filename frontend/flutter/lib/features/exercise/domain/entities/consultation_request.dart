@@ -57,6 +57,7 @@ class ConsultationRequest {
   final String? trainerId;
   final String? trainerName;
   final String? trainerRole;
+
   /// 표시용 라벨이 아니라 **계약 enum** 을 들고 있다. 서버는 코드를 주므로, 라벨을
   /// 저장하면 `GET /consultations/me` 로 복원할 때 문구를 만들 수 없다(#327).
   /// 화면이 이 값으로 현지화 문구를 고른다.
@@ -100,7 +101,9 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
     // 서버는 트레이너 직함을 상담 응답에 담지 않는다. 목록 카드는 이름만 쓴다.
     trainerRole: null,
     exerciseGoal: exerciseGoalFromWire(j['exercise_goal'] as String?),
-    healthPurposeType: healthPurposeFromWire(j['health_purpose_type'] as String?),
+    healthPurposeType: healthPurposeFromWire(
+      j['health_purpose_type'] as String?,
+    ),
     healthPurposeDetail: j['health_purpose_detail'] as String?,
     preferredDate:
         DateTime.tryParse((j['preferred_date'] as String?) ?? '') ??

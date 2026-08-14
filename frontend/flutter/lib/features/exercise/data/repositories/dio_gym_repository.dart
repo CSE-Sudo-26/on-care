@@ -111,7 +111,10 @@ class DioGymRepository implements GymRepository {
     try {
       final res = await _dio.get<Map<String, Object?>>(
         '/me/gym',
-        queryParameters: <String, Object?>{'lat': kGymSearchLat, 'lng': kGymSearchLng},
+        queryParameters: <String, Object?>{
+          'lat': kGymSearchLat,
+          'lng': kGymSearchLng,
+        },
       );
       if (res.data != null) return _gym(res.data!);
     } on DioException catch (e) {

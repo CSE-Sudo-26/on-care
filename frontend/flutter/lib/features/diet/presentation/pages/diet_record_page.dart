@@ -969,13 +969,15 @@ class _NutritionStatusCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 나트륨·당류는 같은 카드에 나란히 놓인 같은 성격의 지표다. "정상"을 서로
+    // 다른 색으로 말하면 안 돼서 규칙을 하나로 맞춘다 — 정상 초록, 초과 빨강.
     final Widget sodiumCard = _NutritionStatusCard(
       key: const Key('nutrition-sodium-status'),
       item: sodium,
       difference: sodiumDifference,
       progressColor: sodium.isOverGoal
           ? FigmaColors.dangerRed
-          : FigmaColors.primaryDeep,
+          : FigmaColors.greenText,
     );
     final Widget sugarCard = _NutritionStatusCard(
       key: const Key('nutrition-sugar-status'),
