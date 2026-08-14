@@ -192,9 +192,8 @@ void main() {
           summary,
         );
 
-        expect(result.headline, contains('김민수'));
-        expect(result.clients.single.statusSummary, contains('무릎'));
-        expect(result.clients.single.exerciseFocus, contains('고중량'));
+        expect(result.kind, CoachingSummaryKind.attention);
+        expect(result.clients.single.ruleData?.signal, RuleCoachingSignal.knee);
       },
     );
 
@@ -207,10 +206,8 @@ void main() {
         summary,
       );
 
-      expect(
-        result.clients.single.evidence,
-        contains('오늘 나트륨 2500mg / 기준 2000mg'),
-      );
+      expect(result.clients.single.ruleData?.sodiumMg, 2500);
+      expect(result.clients.single.ruleData?.sodiumTargetMg, 2000);
     });
 
     test('an empty roster gets an onboarding line, not a stat', () async {
@@ -218,7 +215,7 @@ void main() {
         DashboardSummary.empty,
       );
 
-      expect(result.headline, contains('담당 고객이 등록되면'));
+      expect(result.headline, isEmpty);
       expect(result.clients, isEmpty);
       expect(result.kind, CoachingSummaryKind.noClients);
     });
@@ -232,9 +229,57 @@ void main() {
         summary,
       );
 
-      expect(result.headline, contains('목표 범위 안'));
       expect(result.kind, CoachingSummaryKind.allOnTrack);
       expect(result.totalClients, 1);
     });
+
+    test('ordinary body-part words are not treated as pain signals', () async {
+      for (final message in <String>['오늘 하체 운동 완료', '목표를 달성했어요']) {
+        final summary = buildDashboardSummary(
+          clients: <TrainerClient>[makeClient(id: 'a', lastMessage: message)],
+          unread: const <String, int>{'a': 1},
+        );
+        final result = await const DemoAiCoachingSummaryRepository().fetch(
+          summary,
+        );
+        expect(
+          result.clients.single.ruleData?.signal,
+          RuleCoachingSignal.unanswered,
+          reason: message,
+        );
+      }
+    });
+
+    test(
+      'unanswered and low completion keep different coaching signals',
+      () async {
+        final unanswered = buildDashboardSummary(
+          clients: <TrainerClient>[makeClient(id: 'reply')],
+          unread: const <String, int>{'reply': 1},
+        );
+        final lowCompletion = buildDashboardSummary(
+          clients: <TrainerClient>[
+            makeClient(
+              id: 'low',
+              weekCompletion: const <int>[40, 40, 0, 0, 0, 0, 0],
+            ),
+          ],
+          unread: const <String, int>{'low': 1},
+        );
+        final unansweredResult = await const DemoAiCoachingSummaryRepository()
+            .fetch(unanswered);
+        final lowResult = await const DemoAiCoachingSummaryRepository().fetch(
+          lowCompletion,
+        );
+        expect(
+          unansweredResult.clients.single.ruleData?.signal,
+          RuleCoachingSignal.unanswered,
+        );
+        expect(
+          lowResult.clients.single.ruleData?.signal,
+          RuleCoachingSignal.lowCompletion,
+        );
+      },
+    );
   });
 }

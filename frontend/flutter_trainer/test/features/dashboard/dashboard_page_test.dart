@@ -166,7 +166,7 @@ void main() {
       expect(find.text('AI 코칭 요약'), findsOneWidget);
       expect(find.textContaining('김민수 고객'), findsWidgets);
       expect(find.text('오늘 운동 중심'), findsWidgets);
-      expect(find.textContaining('고중량'), findsWidgets);
+      expect(find.textContaining('중강도 걷기'), findsWidgets);
       expect(find.text('판단 근거'), findsWidgets);
     },
   );

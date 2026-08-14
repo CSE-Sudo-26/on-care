@@ -101,6 +101,16 @@ class _Candidate:
             return None
         return round(sum(recorded) / len(recorded))
 
+    @property
+    def signal(self) -> str | None:
+        """대화와 건강 프로필을 함께 보되, 대화 인용 원문은 따로 유지한다."""
+        return _signal(
+            (
+                *self.member_messages,
+                _bounded_text(self.conditions, HEALTH_CONDITIONS_MAX_CHARS),
+            )
+        )
+
     def prompt_payload(self) -> dict[str, object]:
         return {
             "member_id": self.client.id,
@@ -123,6 +133,10 @@ class _Candidate:
     @property
     def grounded_evidence(self) -> list[str]:
         evidence: list[str] = []
+        if self.conditions and _signal((self.conditions,)):
+            evidence.append(
+                f"건강 프로필: “{_bounded_text(self.conditions, HEALTH_CONDITIONS_MAX_CHARS)}”"
+            )
         if self.member_messages:
             evidence.append(f"최근 대화: “{self.member_messages[-1]}”")
         if self.client.sodium_mg > self.sodium_target_mg:
@@ -210,12 +224,13 @@ def _signal(texts: tuple[str, ...]) -> str | None:
 
 def _score(
     client: TrainerClientOut,
+    conditions: str,
     member_messages: tuple[str, ...],
     unread: int,
     sodium_target_mg: int,
 ) -> int:
     score = min(unread, 3)
-    if _signal(member_messages):
+    if _signal((*member_messages, conditions)):
         score += 8
     if client.sodium_mg > sodium_target_mg:
         score += 4
@@ -268,6 +283,7 @@ def build_candidates(db: Session, trainer_id: str) -> list[_Candidate]:
                 member_messages=member_messages,
                 score=_score(
                     client,
+                    (profile.conditions or "") if profile else "",
                     member_messages,
                     unread.get(client.id, 0),
                     target,
@@ -278,24 +294,24 @@ def build_candidates(db: Session, trainer_id: str) -> list[_Candidate]:
 
 
 def _rule_insight(candidate: _Candidate) -> DashboardCoachingClientOut:
-    signal = _signal(candidate.member_messages)
+    signal = candidate.signal
     name = candidate.client.name
     evidence = candidate.grounded_evidence
 
     if signal == "knee":
-        status = f"{name} 고객이 최근 무릎·하체 당김을 언급해 하체 압박 동작의 부하 조절이 필요합니다."
+        status = f"{name} 고객의 건강 프로필 또는 최근 대화에서 무릎·하체 불편 신호가 확인돼 하체 압박 동작의 부하 조절이 필요합니다."
         focus = "스쿼트·런지 고중량은 줄이고 둔근 활성화, 무릎 가동성, 평지 걷기 중심으로 구성하세요."
         caution = "세션 전 통증 위치와 가동 범위를 다시 확인하세요."
     elif signal == "shoulder":
-        status = f"{name} 고객이 어깨·목 불편을 언급해 상체 밀기·당기기 강도를 바로 높이기 어렵습니다."
+        status = f"{name} 고객의 건강 프로필 또는 최근 대화에서 어깨·목 불편 신호가 확인돼 상체 밀기·당기기 강도를 바로 높이기 어렵습니다."
         focus = "상체 고중량은 줄이고 흉추 가동성, 견갑 안정화, 목·가슴 스트레칭 중심으로 구성하세요."
         caution = "팔을 들 때 통증이 생기는 각도를 먼저 확인하세요."
     elif signal == "back":
-        status = f"{name} 고객이 허리·등 불편을 언급해 축성 부하와 반복 굴곡을 조절해야 합니다."
+        status = f"{name} 고객의 건강 프로필 또는 최근 대화에서 허리·등 불편 신호가 확인돼 축성 부하와 반복 굴곡을 조절해야 합니다."
         focus = "데드리프트 고중량은 줄이고 호흡, 척추 중립, 코어·둔근 안정화 중심으로 구성하세요."
         caution = "방사통이나 일상 동작 통증이 있는지 먼저 확인하세요."
     elif signal == "fatigue":
-        status = f"{name} 고객이 피로·야근 등 회복 제약을 보여 오늘은 완수 가능한 강도가 우선입니다."
+        status = f"{name} 고객의 건강 프로필 또는 최근 대화에서 피로·회복 제약이 확인돼 오늘은 완수 가능한 강도가 우선입니다."
         focus = "고강도 전신 운동은 줄이고 15~20분 저강도 유산소와 전신 회복 스트레칭 중심으로 구성하세요."
         caution = "수면과 현재 피로도를 확인한 뒤 강도를 확정하세요."
     elif candidate.client.sodium_mg > candidate.sodium_target_mg:
@@ -303,8 +319,8 @@ def _rule_insight(candidate: _Candidate) -> DashboardCoachingClientOut:
         focus = "고강도 인터벌보다 중강도 걷기·사이클과 전신 근력의 안정적인 볼륨 중심으로 구성하세요."
         caution = "수분 섭취와 어지럼·부종 여부를 확인하세요."
     elif candidate.completion_average is not None and candidate.completion_average < 60:
-        status = f"{name} 고객은 최근 기록상 큰 경고 신호가 없어 목표에 맞춘 점진적 진행이 가능합니다."
-        focus = "현재 루틴 강도를 유지하고 전신 근력과 중강도 유산소를 균형 있게 구성하세요."
+        status = f"{name} 고객은 최근 운동 이행률이 낮아 현재 운동량·난이도와 목표가 실제 일정에 맞는지 재확인이 필요합니다."
+        focus = "운동량과 동작 수를 줄여 완수 가능한 난이도로 다시 시작하고, 이행 상태에 따라 주간 목표를 점진적으로 재구성하세요."
         caution = "세션 시작 전 당일 컨디션을 확인하세요."
     else:
         status = f"{name} 고객의 확인하지 않은 메시지가 있어 오늘 운동 전 현재 상태를 먼저 확인해야 합니다."
@@ -397,6 +413,7 @@ def _call_llm(prompt: str):
                 prompt,
                 json_mode=True,
                 thinking_budget=DEFAULT_THINKING_BUDGET,
+                timeout_seconds=LLM_TIMEOUT_SECONDS,
             )
         finally:
             _llm_slots.release()

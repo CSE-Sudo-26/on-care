@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.schemas.trainer_api import (
     DashboardCoachingSummaryOut,
@@ -102,6 +102,48 @@ def test_rule_summary_turns_knee_signal_into_specific_exercise_focus():
     assert any("2600mg" in item for item in summary.clients[0].evidence)
 
 
+def test_health_profile_only_signal_makes_client_actionable():
+    candidate = replace(
+        _candidate(),
+        conditions="무릎 통증",
+        recent_messages=(),
+        member_messages=(),
+        unread_count=0,
+        score=8,
+    )
+    score = service._score(
+        candidate.client,
+        candidate.conditions,
+        candidate.member_messages,
+        candidate.unread_count,
+        3000,
+    )
+    summary = service.build_rule_summary([candidate])
+    assert score >= 8
+    assert "무릎" in summary.clients[0].status_summary
+    assert summary.clients[0].evidence[0] == "건강 프로필: “무릎 통증”"
+
+
+def test_low_completion_recommends_gradual_routine_restructure():
+    client = _candidate().client.model_copy(
+        update={"sodium_mg": 1000, "week_completion": [40, 40, 0, 0, 0, 0, 0]}
+    )
+    candidate = replace(
+        _candidate(),
+        client=client,
+        conditions="",
+        recent_messages=(),
+        member_messages=(),
+        unread_count=0,
+        score=3,
+    )
+    insight = service.build_rule_summary([candidate]).clients[0]
+    assert "이행률이 낮아" in insight.status_summary
+    assert "운동량" in insight.exercise_focus
+    assert "난이도" in insight.exercise_focus
+    assert "목표" in insight.exercise_focus
+
+
 def test_generate_summary_sends_bounded_structured_context(monkeypatch):
     fake = _FakeLlm(_valid_payload())
     monkeypatch.setattr(service, "build_candidates", lambda *_: [_candidate()])
@@ -150,6 +192,13 @@ def test_prompt_bounds_and_marks_health_profile_injection_as_untrusted(monkeypat
     assert payload["health_conditions"].endswith("…")
     assert "건강 상태" in fake.system_prompt
     assert "비신뢰 참고 자료" in fake.system_prompt
+
+
+def test_llm_transport_timeout_matches_dashboard_wait_timeout(monkeypatch):
+    fake = _FakeLlm(_valid_payload())
+    monkeypatch.setattr(service, "get_coach_llm", lambda: fake)
+    service._call_llm("{}")
+    assert fake.kwargs["timeout_seconds"] == service.LLM_TIMEOUT_SECONDS
 
 
 def test_rule_summary_omits_clients_when_no_actionable_signal_exists():

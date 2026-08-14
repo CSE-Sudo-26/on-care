@@ -8,6 +8,7 @@ class AiCoachingClientInsight {
     required this.evidence,
     required this.exerciseFocus,
     required this.caution,
+    this.ruleData,
   });
 
   final String memberId;
@@ -17,6 +18,7 @@ class AiCoachingClientInsight {
   final List<String> evidence;
   final String exerciseFocus;
   final String caution;
+  final RuleCoachingData? ruleData;
 
   factory AiCoachingClientInsight.fromJson(Map<String, Object?> json) {
     return AiCoachingClientInsight(
@@ -46,8 +48,34 @@ enum CoachingPriority {
   }
 }
 
+enum RuleCoachingSignal {
+  knee,
+  upperBody,
+  fatigue,
+  sodium,
+  lowCompletion,
+  unanswered,
+}
+
+/// 데모 규칙형 요약의 로케일 독립 신호. 표시 문장은 presentation에서 만든다.
+class RuleCoachingData {
+  const RuleCoachingData({
+    required this.signal,
+    this.recentMessage,
+    this.sodiumMg,
+    this.sodiumTargetMg,
+    this.completionAverage,
+  });
+
+  final RuleCoachingSignal signal;
+  final String? recentMessage;
+  final int? sodiumMg;
+  final int? sodiumTargetMg;
+  final int? completionAverage;
+}
+
 /// 문장 자체가 아니라 화면이 로케일에 맞춰 표현해야 하는 규칙형 요약 상태.
-enum CoachingSummaryKind { details, noClients, allOnTrack }
+enum CoachingSummaryKind { details, attention, noClients, allOnTrack }
 
 /// 식단·운동·건강 프로필·대화 기록을 종합한 오늘의 AI 코칭 요약.
 class AiCoachingSummary {

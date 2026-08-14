@@ -1,4 +1,5 @@
 """코치 LLM 공통 인터페이스. 토큰 사용량 기록(모델 비교용)."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -26,6 +27,7 @@ class CoachLLM(ABC):
         *,
         json_mode: bool = False,
         thinking_budget: int | None = None,
+        timeout_seconds: float | None = None,
     ) -> LLMResult:
         """텍스트 생성.
 
@@ -36,5 +38,7 @@ class CoachLLM(ABC):
         - `thinking_budget`: 사고 토큰 상한. Gemini 계열은 기본적으로 사고가 켜져
           있어 짧은 JSON 하나를 뽑는 데도 10초 이상 걸린다. 작은 값을 주면 체감
           지연이 크게 준다(실측: 12.9s → 1.5s). 지원하지 않는 구현은 무시한다.
+        - `timeout_seconds`: 이 호출의 전송 계층 제한. 호출부의 대기 제한보다 실제
+          HTTP 요청이 오래 살아 worker를 점유하지 않게 한다.
         """
         raise NotImplementedError

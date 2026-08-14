@@ -120,6 +120,9 @@ class _SummaryBody extends StatelessWidget {
       CoachingSummaryKind.allOnTrack => l.dashAiAllOnTrack(
         summary.totalClients,
       ),
+      CoachingSummaryKind.attention => l.dashAiRuleHeadline(
+        summary.clients.first.memberName,
+      ),
       CoachingSummaryKind.details => summary.headline,
     };
     return Column(
@@ -173,6 +176,7 @@ class _InsightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final copy = _insightCopy(l, insight);
     final (priorityLabel, priorityColor) = switch (insight.priority) {
       CoachingPriority.high => (l.dashAiPriorityHigh, AppColors.warning),
       CoachingPriority.medium => (
@@ -224,34 +228,106 @@ class _InsightPanel extends StatelessWidget {
           _DetailBlock(
             icon: Icons.monitor_heart_outlined,
             label: l.dashAiStatus,
-            body: insight.statusSummary,
+            body: copy.status,
           ),
           const SizedBox(height: AppSpacing.sm),
           _DetailBlock(
             icon: Icons.fitness_center,
             label: l.dashAiExerciseFocus,
-            body: insight.exerciseFocus,
+            body: copy.focus,
           ),
-          if (insight.evidence.isNotEmpty) ...<Widget>[
+          if (copy.evidence.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _DetailBlock(
               icon: Icons.fact_check_outlined,
               label: l.dashAiEvidence,
-              body: insight.evidence.map((item) => '• $item').join('\n'),
+              body: copy.evidence.map((item) => '• $item').join('\n'),
             ),
           ],
-          if (insight.caution.isNotEmpty) ...<Widget>[
+          if (copy.caution.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _DetailBlock(
               icon: Icons.health_and_safety_outlined,
               label: l.dashAiCaution,
-              body: insight.caution,
+              body: copy.caution,
             ),
           ],
         ],
       ),
     );
   }
+}
+
+class _InsightCopy {
+  const _InsightCopy({
+    required this.status,
+    required this.focus,
+    required this.evidence,
+    required this.caution,
+  });
+
+  final String status;
+  final String focus;
+  final List<String> evidence;
+  final String caution;
+}
+
+_InsightCopy _insightCopy(AppLocalizations l, AiCoachingClientInsight insight) {
+  final data = insight.ruleData;
+  if (data == null) {
+    return _InsightCopy(
+      status: insight.statusSummary,
+      focus: insight.exerciseFocus,
+      evidence: insight.evidence,
+      caution: insight.caution,
+    );
+  }
+  final (status, focus, caution) = switch (data.signal) {
+    RuleCoachingSignal.knee => (
+      l.dashAiRuleKneeStatus,
+      l.dashAiRuleKneeFocus,
+      l.dashAiRuleKneeCaution,
+    ),
+    RuleCoachingSignal.upperBody => (
+      l.dashAiRuleUpperStatus,
+      l.dashAiRuleUpperFocus,
+      l.dashAiRuleUpperCaution,
+    ),
+    RuleCoachingSignal.fatigue => (
+      l.dashAiRuleFatigueStatus,
+      l.dashAiRuleFatigueFocus,
+      l.dashAiRuleFatigueCaution,
+    ),
+    RuleCoachingSignal.sodium => (
+      l.dashAiRuleSodiumStatus,
+      l.dashAiRuleSodiumFocus,
+      l.dashAiRuleSodiumCaution,
+    ),
+    RuleCoachingSignal.lowCompletion => (
+      l.dashAiRuleCompletionStatus,
+      l.dashAiRuleCompletionFocus,
+      l.dashAiRuleCompletionCaution,
+    ),
+    RuleCoachingSignal.unanswered => (
+      l.dashAiRuleUnansweredStatus,
+      l.dashAiRuleUnansweredFocus,
+      l.dashAiRuleUnansweredCaution,
+    ),
+  };
+  final evidence = <String>[
+    if (data.recentMessage case final message?)
+      l.dashAiRuleEvidenceMessage(message),
+    if ((data.sodiumMg, data.sodiumTargetMg) case (final value?, final target?))
+      l.dashAiRuleEvidenceSodium(value, target),
+    if (data.completionAverage case final average?)
+      l.dashAiRuleEvidenceCompletion(average),
+  ];
+  return _InsightCopy(
+    status: status,
+    focus: focus,
+    evidence: evidence.take(3).toList(growable: false),
+    caution: caution,
+  );
 }
 
 class _DetailBlock extends StatelessWidget {
