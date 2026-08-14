@@ -1,0 +1,267 @@
+/// 상담 요청·처리 실 API E2E — 회원 앱 단계 (#640).
+///
+/// 트레이너 웹 단계와 번갈아 실행된다. 순서와 실행 방법은
+/// `tool/run_consultation_e2e.sh` 와 `docs/local_fullstack.md` 참고.
+///
+///  1. `member-request`      — 새 회원 둘이 UI 폼으로 상담을 신청한다.
+///  2. (트레이너) `trainer-accept`
+///  3. `member-after-accept` — 승인 결과·담당·일정이 회원에게 돌아온다.
+///  4. (트레이너) `trainer-reject`
+///  5. `member-after-reject` — 거절 사유가 그대로 보이고 다시 신청할 수 있다.
+///  6. `edge-cases`          — 중복 제출·남의 상담 조회.
+///  7. `cleanup`             — 계정 둘을 지운다.
+///
+/// ## 왜 계정을 새로 만드는가
+///
+/// 시드 회원 셋은 이미 `trainer-demo` 담당이다. 그 회원으로는 **승인이 담당 연결을
+/// 만든다** 를 검증할 수 없고(이미 연결돼 있다), 한 번 승인해 버리면 다음 실행이 같은
+/// 상태에서 시작하지 못한다. 그래서 실행마다 새로 만들고 끝나면 지운다.
+///
+/// 승인 사이클과 거절 사이클이 서로를 막으므로(승인 뒤에는 담당이 생겨 재신청이
+/// 막힌다) 계정을 둘 쓴다.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+import 'support/e2e_harness.dart';
+
+/// 폼에서 고를 자리. 서버 계약 enum 과 순서가 같다(화면 enum → wire 는 index 매핑).
+const int _goalStrength = 1; // ExerciseGoal.strength
+const int _purposeRehab = 2; // HealthPurposeType.rehab
+const int _timeEvening = 2; // PreferredTimeSlot.evening
+
+const String _acceptMessage = 'E2E 승인 시나리오 문의입니다.';
+const String _rejectMessage = 'E2E 거절 시나리오 문의입니다.';
+
+/// 이 회원의 대기 중 상담 한 건. 없으면 null.
+Map<String, dynamic>? _pendingOf(List<Map<String, dynamic>> rows) {
+  for (final Map<String, dynamic> row in rows) {
+    if (row['status'] == 'pending') return row;
+  }
+  return null;
+}
+
+Future<void> _requestAs(
+  WidgetTester tester, {
+  required String email,
+  required String message,
+}) async {
+  await bootSignedOut(tester);
+  await loginAsMember(tester, email: email);
+  await openConsultationForm(tester, trainerId);
+  await submitConsultation(
+    tester,
+    goalIndex: _goalStrength,
+    purposeIndex: _purposeRehab,
+    timeIndex: _timeEvening,
+    message: message,
+  );
+}
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(installPluginFakes);
+
+  testWidgets('회원 단계: $e2ePhase', (WidgetTester tester) async {
+    final E2eState state = E2eState.read();
+
+    switch (e2ePhase) {
+      case 'member-request':
+        final String stamp = DateTime.now().microsecondsSinceEpoch.toString();
+        final String acceptEmail = 'e2e-640-a-$stamp@oncare.test';
+        final String rejectEmail = 'e2e-640-r-$stamp@oncare.test';
+        final String acceptId = await E2eApi.register(
+          acceptEmail,
+          name: 'E2E 승인 회원',
+        );
+        final String rejectId = await E2eApi.register(
+          rejectEmail,
+          name: 'E2E 거절 회원',
+        );
+        E2eState.merge(<String, Object?>{
+          'acceptEmail': acceptEmail,
+          'acceptId': acceptId,
+          'rejectEmail': rejectEmail,
+          'rejectId': rejectId,
+        });
+
+        // 새 회원에게는 담당이 없다. 승인이 담당을 **만드는지** 보려면 여기서
+        // 비어 있어야 한다.
+        final E2eApi acceptApi = await E2eApi.login(acceptEmail);
+        expect(
+          await acceptApi.myCoach(),
+          isNull,
+          reason: '새 회원에게 이미 담당 트레이너가 있습니다.',
+        );
+
+        await _requestAs(
+          tester,
+          email: acceptEmail,
+          message: _acceptMessage,
+        );
+
+        // 화면이 아니라 서버에 남았는지 본다. 그리고 **입력한 값 그대로** 인지.
+        final Map<String, dynamic>? saved = await _waitForPending(acceptApi);
+        expect(saved, isNotNull, reason: 'UI 제출이 서버에 상담을 남기지 않았습니다.');
+        expect(saved!['trainer_id'], trainerId);
+        expect(saved['target_type'], 'trainer');
+        expect(saved['exercise_goal'], 'strength');
+        expect(saved['health_purpose_type'], 'rehab');
+        expect(saved['preferred_time_slot'], 'evening');
+        expect(saved['message'], _acceptMessage);
+        E2eState.merge(<String, Object?>{
+          'acceptConsultationId': saved['id'],
+        });
+
+        // 거절 사이클용 요청도 UI 로 낸다.
+        await _requestAs(
+          tester,
+          email: rejectEmail,
+          message: _rejectMessage,
+        );
+        final E2eApi rejectApi = await E2eApi.login(rejectEmail);
+        final Map<String, dynamic>? rejectSaved = await _waitForPending(
+          rejectApi,
+        );
+        expect(rejectSaved, isNotNull);
+        expect(rejectSaved!['message'], _rejectMessage);
+        E2eState.merge(<String, Object?>{
+          'rejectConsultationId': rejectSaved['id'],
+        });
+
+      case 'member-after-accept':
+        final String email = state.require('acceptEmail');
+        final String memberId = state.require('acceptId');
+        final E2eApi api = await E2eApi.login(email);
+
+        // 승인은 세 가지를 **함께** 남긴다: 상담 상태, 담당 연결, 일정.
+        final List<Map<String, dynamic>> rows = await api.myConsultations();
+        expect(rows.single['status'], 'accepted');
+        final Map<String, dynamic>? coach = await api.myCoach();
+        expect(coach, isNotNull, reason: '승인했는데 담당 트레이너가 생기지 않았습니다.');
+        expect(coach!['trainer_id'], trainerId);
+
+        final E2eApi trainerApi = await E2eApi.login(trainerEmail);
+        final List<Map<String, dynamic>> sessions = await trainerApi
+            .trainerScheduleFor(memberId);
+        expect(
+          sessions,
+          isNotEmpty,
+          reason: '승인이 상담 일정을 만들지 않았습니다.',
+        );
+        E2eState.merge(<String, Object?>{'sessionId': sessions.first['id']});
+
+        // 화면에도 돌아오는가. 재로그인 뒤에도 남는가 — 앱이 들고 있던 값이
+        // 아니라 서버가 답한 값이어야 한다.
+        await bootSignedOut(tester);
+        await loginAsMember(tester, email: email);
+        await openGymTab(tester);
+        await pumpUntil(
+          tester,
+          find.byKey(const Key('consult-outcome-accepted')),
+          step: '승인 안내',
+        );
+        await pumpUntil(
+          tester,
+          find.byKey(const Key('trainerChatHeaderButton')),
+          step: '담당 트레이너 채팅 진입점',
+        );
+
+      case 'member-after-reject':
+        final String email = state.require('rejectEmail');
+        final String note = state.require('rejectNote');
+        final E2eApi api = await E2eApi.login(email);
+
+        final List<Map<String, dynamic>> rows = await api.myConsultations();
+        expect(rows.single['status'], 'rejected');
+        expect(
+          rows.single['decision_note'],
+          note,
+          reason: '트레이너가 적은 사유와 회원이 받는 사유가 다릅니다.',
+        );
+        // 거절은 담당을 만들지 않는다.
+        expect(await api.myCoach(), isNull);
+
+        await bootSignedOut(tester);
+        await loginAsMember(tester, email: email);
+        await openGymTab(tester);
+        await pumpUntil(
+          tester,
+          find.byKey(const Key('consult-outcome-rejected')),
+          step: '거절 안내',
+        );
+        // 사유가 문구 그대로 보여야 한다 — 배지만 있으면 다시 신청해도 되는지
+        // 판단할 근거가 없다.
+        expect(find.textContaining(note), findsWidgets);
+
+      case 'edge-cases':
+        final String rejectEmail = state.require('rejectEmail');
+        final String acceptEmail = state.require('acceptEmail');
+        final String acceptConsultationId = state.require(
+          'acceptConsultationId',
+        );
+        final E2eApi rejected = await E2eApi.login(rejectEmail);
+
+        // 거절당한 회원은 **다시 신청할 수 있다.**
+        final Map<String, dynamic> again = await rejected.createConsultation(
+          trainerId: trainerId,
+        );
+        expect(again['status'], 'pending');
+
+        // 대기 중인데 또 내면 막힌다.
+        expect(
+          await rejected.createConsultationStatus(trainerId: trainerId),
+          409,
+          reason: '대기 중 상담이 있는데 중복 제출이 통과했습니다.',
+        );
+
+        // 남의 상담은 보이지 않는다.
+        expect(
+          await rejected.consultationStatusCode(acceptConsultationId),
+          404,
+          reason: '다른 회원의 상담을 조회할 수 있습니다.',
+        );
+
+        // 승인된 회원은 담당이 생겨 같은 트레이너에게 다시 신청할 수 없다.
+        final E2eApi accepted = await E2eApi.login(acceptEmail);
+        expect(
+          await accepted.createConsultationStatus(trainerId: trainerId),
+          anyOf(409, 422),
+          reason: '이미 담당인 트레이너에게 상담을 다시 신청할 수 있습니다.',
+        );
+
+      case 'cleanup':
+        // 일정을 먼저 지운다. `trainer_schedule.member_id` 는 SET NULL 이라 계정을
+        // 먼저 지우면 주인 없는 상담 일정이 트레이너 달력에 영영 남는다.
+        final String? sessionId = state.values['sessionId'] as String?;
+        if (sessionId != null) {
+          final E2eApi trainerApi = await E2eApi.login(trainerEmail);
+          await trainerApi.deleteTrainerSession(sessionId);
+        }
+        for (final String key in <String>['acceptEmail', 'rejectEmail']) {
+          final String? email = state.values[key] as String?;
+          if (email == null) continue;
+          final E2eApi api = await E2eApi.login(email);
+          await api.deleteMe();
+        }
+
+      default:
+        fail('알 수 없는 단계: $e2ePhase');
+    }
+  });
+}
+
+/// 제출 직후의 서버 반영을 기다린다. UI 제출은 비동기라 곧바로 조회하면 아직
+/// 없을 수 있다 — 없다고 단정하면 **되는 기능을 실패로** 보고한다.
+Future<Map<String, dynamic>?> _waitForPending(E2eApi api) async {
+  final DateTime deadline = DateTime.now().add(const Duration(seconds: 20));
+  while (DateTime.now().isBefore(deadline)) {
+    final Map<String, dynamic>? row = _pendingOf(await api.myConsultations());
+    if (row != null) return row;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  }
+  return null;
+}

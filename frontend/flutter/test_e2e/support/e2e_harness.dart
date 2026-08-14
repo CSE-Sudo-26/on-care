@@ -183,6 +183,51 @@ class E2eApi {
   Future<List<Map<String, dynamic>>> myConsultations() =>
       _list('/consultations/me');
 
+  /// 상담을 API 로 만든다. **UI 검증용이 아니라** 예외 케이스(중복·권한)용이다 —
+  /// 그쪽은 화면이 아니라 서버 규칙을 보는 자리다.
+  Map<String, Object?> _consultationBody(String trainerId) =>
+      <String, Object?>{
+        'target_type': 'trainer',
+        'trainer_id': trainerId,
+        'exercise_goal': 'strength',
+        'health_purpose_type': 'rehab',
+        'preferred_date': DateTime.now()
+            .toIso8601String()
+            .substring(0, 10),
+        'preferred_time_slot': 'evening',
+        'message': 'E2E 예외 케이스',
+      };
+
+  Future<Map<String, dynamic>> createConsultation({
+    required String trainerId,
+  }) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .post<Map<String, dynamic>>(
+          '/consultations',
+          data: _consultationBody(trainerId),
+          options: _auth,
+        );
+    expect(res.statusCode, 201, reason: '상담 생성 실패: ${res.data}');
+    return res.data!;
+  }
+
+  Future<int> createConsultationStatus({required String trainerId}) async {
+    final Response<Object?> res = await _dio.post<Object?>(
+      '/consultations',
+      data: _consultationBody(trainerId),
+      options: _auth,
+    );
+    return res.statusCode!;
+  }
+
+  Future<int> consultationStatusCode(String consultationId) async {
+    final Response<Object?> res = await _dio.get<Object?>(
+      '/consultations/$consultationId',
+      options: _auth,
+    );
+    return res.statusCode!;
+  }
+
   /// 대상 트레이너에게 도착한 상담 요청(트레이너 토큰으로 부른다).
   Future<List<Map<String, dynamic>>> trainerConsultations() =>
       _list('/trainer/consultations');
@@ -195,11 +240,18 @@ class E2eApi {
   }
 
   /// 트레이너 일정 중 이 회원 몫. 승인이 만든 상담 일정을 여기서 확인한다.
+  ///
+  /// 서버에 `member_id` 로 물어야 한다 — 일정 응답에는 그 필드가 **없어서**
+  /// 전체 목록을 받아 걸러 내면 아무것도 못 찾는다.
   Future<List<Map<String, dynamic>>> trainerScheduleFor(String memberId) async {
-    final List<Map<String, dynamic>> rows = await _list('/trainer/schedule');
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/schedule',
+      queryParameters: <String, String>{'member_id': memberId},
+      options: _auth,
+    );
     return <Map<String, dynamic>>[
-      for (final Map<String, dynamic> row in rows)
-        if (row['member_id'] == memberId) row,
+      for (final Object? row in res.data ?? const <Object?>[])
+        row! as Map<String, dynamic>,
     ];
   }
 
@@ -485,9 +537,18 @@ Future<void> openTrainerChat(WidgetTester tester) async {
 /// 아니라 "그 화면이 열린다" 만 검증하게 된다. (#640)
 Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
   await openGymTab(tester);
+  final Finder list = find.byKey(const Key('trainer-recommendation-list'));
+  await pumpUntil(tester, list, step: '추천 트레이너 목록');
+
+  // 카드는 화면에 들어오기 전까지 **만들어지지 않는다**. `ensureVisible` 은 이미
+  // 있는 위젯만 옮기므로, 지연 목록에서는 스크롤로 만들어 내야 한다.
   final Finder card = find.byKey(ValueKey<String>('trainer-card-$targetId'));
-  await pumpUntil(tester, card, step: '추천 트레이너 카드');
-  await tester.ensureVisible(card);
+  await tester.scrollUntilVisible(
+    card,
+    240,
+    scrollable: find.descendant(of: list, matching: find.byType(Scrollable)),
+    maxScrolls: 60,
+  );
   await tester.pump();
   await tester.tap(card);
 
@@ -496,11 +557,35 @@ Future<void> openConsultationForm(WidgetTester tester, String targetId) async {
   await tester.ensureVisible(start);
   await tester.pump();
   await tester.tap(start);
+  // 폼의 **맨 위** 를 기다린다. 제출 버튼은 목록 끝이라 아직 만들어지지 않았다.
   await pumpUntil(
     tester,
-    find.byKey(const Key('consult-submit')),
+    find.byKey(const Key('consult-form')),
     step: '상담 신청 폼',
   );
+  await pumpUntil(
+    tester,
+    find.byKey(const ValueKey<String>('consult-goal-0')),
+    step: '운동 목표 칩',
+  );
+}
+
+/// 폼이 한 화면보다 길다. 아래쪽 위젯은 스크롤해서 **만들어 낸 뒤에야** 잡힌다.
+Future<Finder> _revealInForm(WidgetTester tester, Finder target) async {
+  if (target.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      target,
+      160,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('consult-form')),
+        matching: find.byType(Scrollable),
+      ),
+      maxScrolls: 40,
+    );
+  }
+  await tester.ensureVisible(target);
+  await tester.pump();
+  return target;
 }
 
 /// 상담 신청 폼을 채우고 제출한다. 선택지는 **문구가 아니라 자리**로 고른다 —
@@ -516,10 +601,10 @@ Future<void> submitConsultation(
   required String message,
 }) async {
   Future<void> tapChip(String prefix, int index) async {
-    final Finder chip = find.byKey(ValueKey<String>('$prefix-$index'));
-    await pumpUntil(tester, chip, step: '$prefix 칩');
-    await tester.ensureVisible(chip);
-    await tester.pump();
+    final Finder chip = await _revealInForm(
+      tester,
+      find.byKey(ValueKey<String>('$prefix-$index')),
+    );
     await tester.tap(chip);
     await tester.pump();
   }
@@ -527,29 +612,38 @@ Future<void> submitConsultation(
   await tapChip('consult-goal', goalIndex);
   await tapChip('consult-purpose', purposeIndex);
 
-  final Finder date = find.byKey(const Key('consult-date'));
-  await tester.ensureVisible(date);
-  await tester.pump();
+  final Finder date = await _revealInForm(
+    tester,
+    find.byKey(const Key('consult-date')),
+  );
   await tester.tap(date);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
-  final Finder ok = find.text('확인');
-  await pumpUntil(tester, ok, step: '날짜 선택 확인 버튼');
-  await tester.tap(ok.last);
+
+  // 확인 버튼을 **문구로 찾지 않는다** — 로케일에 따라 '확인'도 'OK'도 된다.
+  // 다이얼로그의 액션은 [취소, 확인] 순서라 마지막이 확인이다.
+  final Finder dialog = find.byType(DatePickerDialog);
+  await pumpUntil(tester, dialog, step: '날짜 선택 다이얼로그');
+  final Finder ok = find
+      .descendant(of: dialog, matching: find.byType(TextButton))
+      .last;
+  await tester.tap(ok);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 
   await tapChip('consult-time', timeIndex);
 
-  final Finder box = find.byKey(const Key('consult-message'));
-  await tester.ensureVisible(box);
-  await tester.pump();
+  final Finder box = await _revealInForm(
+    tester,
+    find.byKey(const Key('consult-message')),
+  );
   await tester.enterText(box, message);
   await tester.pump();
 
-  final Finder submit = find.byKey(const Key('consult-submit'));
-  await tester.ensureVisible(submit);
-  await tester.pump();
+  final Finder submit = await _revealInForm(
+    tester,
+    find.byKey(const Key('consult-submit')),
+  );
   await tester.tap(submit);
 }
 

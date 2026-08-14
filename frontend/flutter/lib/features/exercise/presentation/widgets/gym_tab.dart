@@ -1104,6 +1104,10 @@ class _RecommendedTrainerSection extends StatelessWidget {
             return SizedBox(
               height: 120,
               child: ListView.separated(
+                // 목록이 가로로 길고 지연 생성이라, 뒤쪽 카드는 화면에 들어오기
+                // 전까지 **존재하지 않는다**. E2E 가 이 목록을 잡고 스크롤할 수
+                // 있어야 뒤쪽 트레이너에게도 상담을 신청할 수 있다. (#640)
+                key: const Key('trainer-recommendation-list'),
                 scrollDirection: Axis.horizontal,
                 itemCount: trainers.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 12),

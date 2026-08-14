@@ -156,37 +156,10 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
 
   Future<void> _reject() async {
     final l = AppLocalizations.of(context);
-    final controller = TextEditingController();
     final note = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.consultRejectTitle),
-        content: TextField(
-          key: const Key('consult-reject-reason'),
-          controller: controller,
-          maxLength: 500,
-          maxLines: 3,
-          decoration: InputDecoration(hintText: l.consultRejectHint),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l.actionCancel),
-          ),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) => TextButton(
-              key: const Key('consult-reject-confirm'),
-              onPressed: value.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.of(context).pop(value.text.trim()),
-              child: Text(l.consultRejectAction),
-            ),
-          ),
-        ],
-      ),
+      builder: (context) => const _RejectDialog(),
     );
-    controller.dispose();
     if (note == null || note.isEmpty || !mounted) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -291,6 +264,60 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       ],
     ),
   );
+}
+
+/// 거절 사유를 받는 다이얼로그.
+///
+/// 컨트롤러를 **이 위젯이 소유한다.** 호출부에서 `showDialog` 가 반환되자마자 버리면,
+/// 다이얼로그가 사라지는 애니메이션 동안 남아 있는 프레임이 이미 버린 컨트롤러를 읽어
+/// "A TextEditingController was used after being disposed" 로 터진다. State 가 소유하면
+/// 화면이 완전히 사라진 뒤에 정리된다.
+class _RejectDialog extends StatefulWidget {
+  const _RejectDialog();
+
+  @override
+  State<_RejectDialog> createState() => _RejectDialogState();
+}
+
+class _RejectDialogState extends State<_RejectDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.consultRejectTitle),
+      content: TextField(
+        key: const Key('consult-reject-reason'),
+        controller: _controller,
+        maxLength: 500,
+        maxLines: 3,
+        decoration: InputDecoration(hintText: l.consultRejectHint),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.actionCancel),
+        ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _controller,
+          builder: (context, value, _) => TextButton(
+            key: const Key('consult-reject-confirm'),
+            onPressed: value.text.trim().isEmpty
+                ? null
+                : () => Navigator.of(context).pop(value.text.trim()),
+            child: Text(l.consultRejectAction),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _Booking {

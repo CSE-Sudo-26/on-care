@@ -318,6 +318,9 @@ class _ConsultationRequestPageState
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: ListView(
+          // 폼이 한 화면보다 길다. 아래쪽 항목은 화면에 들어오기 전까지 만들어지지
+          // 않으므로, E2E 가 이 목록을 잡고 스크롤할 수 있어야 한다. (#640)
+          key: const Key('consult-form'),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: <Widget>[
