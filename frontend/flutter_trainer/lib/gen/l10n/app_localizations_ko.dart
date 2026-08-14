@@ -1457,24 +1457,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachMemberSummary => '고객 요약';
 
   @override
-  String get reportsDataInsufficient => '데이터 부족';
-
-  @override
-  String get reportsAnalysisAvailable => '분석 가능';
-
-  @override
   String get reportsFeedbackComplete => '피드백 완료';
 
   @override
   String get reportsFeedbackPending => '피드백 미작성';
 
   @override
-  String get reportsThisWeek => '이번 주';
+  String get reportsDataInsufficient => '데이터 부족';
 
   @override
-  String reportsAnalysisCount(int total, int available) {
-    return '전체 $total명 · 분석 가능 $available명';
-  }
+  String get reportsThisWeek => '이번 주';
 
   @override
   String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';

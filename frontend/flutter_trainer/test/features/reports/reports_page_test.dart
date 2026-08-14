@@ -189,7 +189,8 @@ void main() {
 
     expect(back, findsNothing);
     expect(find.text('모바일 고객님 주간 리포트'), findsNothing);
-    expect(find.text('이번 주'), findsWidgets);
+    // 목록으로 돌아오면 고객 카드가 다시 보인다.
+    expect(find.text('고객'), findsWidgets);
   });
 
   testWidgets('the client query parameter focuses that client', (tester) async {

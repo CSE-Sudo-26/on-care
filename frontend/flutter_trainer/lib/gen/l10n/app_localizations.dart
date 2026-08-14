@@ -2720,18 +2720,6 @@ abstract class AppLocalizations {
   /// **'Member summary'**
   String get coachMemberSummary;
 
-  /// No description provided for @reportsDataInsufficient.
-  ///
-  /// In en, this message translates to:
-  /// **'Insufficient data'**
-  String get reportsDataInsufficient;
-
-  /// No description provided for @reportsAnalysisAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Ready to analyze'**
-  String get reportsAnalysisAvailable;
-
   /// No description provided for @reportsFeedbackComplete.
   ///
   /// In en, this message translates to:
@@ -2744,17 +2732,17 @@ abstract class AppLocalizations {
   /// **'Feedback pending'**
   String get reportsFeedbackPending;
 
+  /// No description provided for @reportsDataInsufficient.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient data'**
+  String get reportsDataInsufficient;
+
   /// No description provided for @reportsThisWeek.
   ///
   /// In en, this message translates to:
   /// **'This week'**
   String get reportsThisWeek;
-
-  /// No description provided for @reportsAnalysisCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{total} total · {available} ready'**
-  String reportsAnalysisCount(int total, int available);
 
   /// No description provided for @coachSendFailed.
   ///

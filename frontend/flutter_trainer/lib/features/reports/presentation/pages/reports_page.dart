@@ -14,7 +14,6 @@ import 'package:oncare_trainer/features/reports/data/repositories/report_reposit
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -169,12 +168,19 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final roster = clientsAsync.valueOrNull ?? const <TrainerClient>[];
     final TrainerClient? shareTarget = roster.isEmpty
         ? null
-        : roster.firstWhere((c) => c.id == _clientId, orElse: () => roster.first);
+        : roster.firstWhere(
+            (c) => c.id == _clientId,
+            orElse: () => roster.first,
+          );
 
     return PageScaffold(
       key: ValueKey<String>('reports-${_clientId ?? 'list'}'),
       title: l.reportsTitle,
       subtitle: l.reportsSubtitle,
+      // 페이지 전체 스크롤을 끈다 — 넓은 화면에서 왼쪽 고객 열을 고정하고
+      // 오른쪽 리포트만 스크롤하기 위해서다. 좁은 화면은 아래 분기에서
+      // 스스로 스크롤을 갖는다.
+      scrollable: false,
       headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         ActionButton(
@@ -236,94 +242,120 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final wide =
-                      constraints.maxWidth >= AppLayout.splitBreakpoint;
-                  final picker = _ClientPicker(
-                    clients: clients,
-                    selectedId: selected.id,
-                    onSelect: _selectClient,
-                  );
-                  if (!wide && _clientId == null) {
-                    return picker;
-                  }
-                  // The report itself comes from the repository: local
-                  // in demo, server-aggregated against the real API
-                  // (only the backend has the member's full history).
-                  final reportKey = (client: selected, weekStart: _weekStart);
-                  final reportAsync = ref.watch(
-                    weeklyReportProvider(reportKey),
-                  );
-                  final report = reportAsync.when(
-                    loading: () => SectionCard(
-                      title: l.reportsWeekly,
-                      icon: Icons.description_outlined,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                    error: (e, _) => SectionCard(
-                      title: l.reportsWeekly,
-                      icon: Icons.description_outlined,
-                      child: EmptyHint(
-                        message: l.reportsLoadFailed,
-                        icon: Icons.error_outline,
-                        action: ActionButton(
-                          key: const ValueKey<String>('reports-weekly-retry'),
-                          label: l.actionRetry,
-                          onPressed: reportAsync.isLoading
-                              ? null
-                              : () => ref.invalidate(
-                                  weeklyReportProvider(reportKey),
-                                ),
-                        ),
-                      ),
-                    ),
-                    data: (data) => _ClientReport(
-                      report: data,
-                      initialFeedback: _messageFor(l, data),
-                      onFeedbackChanged: (text) {
-                        _feedbackDraft = text;
-                        _feedbackFor = _feedbackKey(data);
-                        // 비었는지 여부가 바뀔 때만 다시 그린다 — 그 외에는
-                        // 화면이 달라질 것이 없다.
-                        final blank = text.trim().isEmpty;
-                        if (blank != _feedbackBlank) {
-                          setState(() => _feedbackBlank = blank);
-                        }
-                      },
-                    ),
-                  );
-
-                  if (!wide) {
-                    return Column(
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide =
+                        constraints.maxWidth >= AppLayout.splitBreakpoint;
+                    // 좌측 열: 고객 목록 + 이번 주 먼저 볼 고객. 넓은 화면에서는
+                    // 이 열이 고정이고 오른쪽 리포트만 스크롤한다 — 리포트를 아래로
+                    // 읽는 동안 다른 고객으로 넘어가려면 목록이 늘 보여야 한다.
+                    final leftColumn = Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            key: const ValueKey<String>('reports-back-to-list'),
-                            onPressed: () => context.go(AppRoutes.reports),
-                            icon: const Icon(Icons.arrow_back),
-                            label: Text(l.reportsBackToList),
-                          ),
+                        _ClientPicker(
+                          clients: clients,
+                          selectedId: selected.id,
+                          onSelect: _selectClient,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        report,
                       ],
                     );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(width: 292, child: picker),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(child: report),
-                    ],
-                  );
-                },
+                    if (!wide && _clientId == null) {
+                      return SingleChildScrollView(child: leftColumn);
+                    }
+                    // The report itself comes from the repository: local
+                    // in demo, server-aggregated against the real API
+                    // (only the backend has the member's full history).
+                    final reportKey = (client: selected, weekStart: _weekStart);
+                    final reportAsync = ref.watch(
+                      weeklyReportProvider(reportKey),
+                    );
+                    final report = reportAsync.when(
+                      loading: () => SectionCard(
+                        title: l.reportsWeekly,
+                        icon: Icons.description_outlined,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.xl,
+                          ),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
+                      error: (e, _) => SectionCard(
+                        title: l.reportsWeekly,
+                        icon: Icons.description_outlined,
+                        child: EmptyHint(
+                          message: l.reportsLoadFailed,
+                          icon: Icons.error_outline,
+                          action: ActionButton(
+                            key: const ValueKey<String>('reports-weekly-retry'),
+                            label: l.actionRetry,
+                            onPressed: reportAsync.isLoading
+                                ? null
+                                : () => ref.invalidate(
+                                    weeklyReportProvider(reportKey),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      data: (data) => _ClientReport(
+                        report: data,
+                        initialFeedback: _messageFor(l, data),
+                        onFeedbackChanged: (text) {
+                          _feedbackDraft = text;
+                          _feedbackFor = _feedbackKey(data);
+                          // 비었는지 여부가 바뀔 때만 다시 그린다 — 그 외에는
+                          // 화면이 달라질 것이 없다.
+                          final blank = text.trim().isEmpty;
+                          if (blank != _feedbackBlank) {
+                            setState(() => _feedbackBlank = blank);
+                          }
+                        },
+                      ),
+                    );
+
+                    if (!wide) {
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                key: const ValueKey<String>(
+                                  'reports-back-to-list',
+                                ),
+                                onPressed: () => context.go(AppRoutes.reports),
+                                icon: const Icon(Icons.arrow_back),
+                                label: Text(l.reportsBackToList),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            report,
+                          ],
+                        ),
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        SizedBox(width: 292, child: leftColumn),
+                        const SizedBox(width: AppSpacing.lg),
+                        // 스크롤은 이 열 안에서만 일어난다. 페이지 전체가 스크롤
+                        // 되면 왼쪽 목록이 함께 밀려 올라가 버린다.
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: const ValueKey<String>(
+                              'reports-report-scroll',
+                            ),
+                            child: report,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
               if (weekSessions.hasError)
                 Padding(
@@ -345,7 +377,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 }
 
-class _ClientPicker extends StatelessWidget {
+class _ClientPicker extends StatefulWidget {
   const _ClientPicker({
     required this.clients,
     required this.selectedId,
@@ -357,89 +389,89 @@ class _ClientPicker extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  State<_ClientPicker> createState() => _ClientPickerState();
+}
+
+class _ClientPickerState extends State<_ClientPicker> {
+  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이다.
+  static const double _rowHeight = 56;
+
+  /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
+  static const int _visibleRows = 5;
+
+  /// 목록과 스크롤바가 같은 위치를 가리키도록 컨트롤러를 공유한다.
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final clients = widget.clients;
+    final selectedId = widget.selectedId;
+    final onSelect = widget.onSelect;
     return SectionCard(
-      title: l.reportsThisWeek,
+      title: l.navClients,
       icon: Icons.people_outline,
       dense: true,
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            decoration: const BoxDecoration(
-              color: AppColors.inputBackground,
-              borderRadius: BorderRadius.all(AppRadius.md),
-            ),
-            child: Text(
-              l.reportsAnalysisCount(
-                clients.length,
-                clients
-                    .where((client) => recordedCompletionMean(client) != null)
-                    .length,
-              ),
-              style: const TextStyle(
-                color: AppColors.subtleForeground,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          for (final client in clients)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Material(
-                color: client.id == selectedId
-                    ? AppColors.accentSurface
-                    : Colors.transparent,
-                borderRadius: const BorderRadius.all(AppRadius.md),
-                child: InkWell(
-                  onTap: () => onSelect(client.id),
+      // 다섯 명까지만 보여 주고 나머지는 스크롤한다. 로스터가 열다섯 명이면
+      // 카드가 화면 높이를 다 먹어 오른쪽 리포트와 나란히 읽기 어려웠다.
+      child: SizedBox(
+        height: _rowHeight * _visibleRows,
+        child: Scrollbar(
+          controller: _scroll,
+          thumbVisibility: true,
+          child: ListView.builder(
+            controller: _scroll,
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            itemCount: clients.length,
+            itemExtent: _rowHeight,
+            itemBuilder: (context, index) {
+              final client = clients[index];
+              final selected = client.id == selectedId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Material(
+                  color: selected
+                      ? AppColors.accentSurface
+                      : Colors.transparent,
                   borderRadius: const BorderRadius.all(AppRadius.md),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        ClientAvatar(label: client.avatar, size: 26),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              ClientIdentity(
-                                client: client,
-                                nameStyle: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: client.id == selectedId
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: AppColors.foreground,
-                                ),
+                  child: InkWell(
+                    onTap: () => onSelect(client.id),
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          ClientAvatar(label: client.avatar, size: 38),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: ClientIdentity(
+                              client: client,
+                              nameStyle: TextStyle(
+                                fontSize: 15,
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: AppColors.foreground,
                               ),
-                              Text(
-                                recordedCompletionMean(client) == null
-                                    ? l.reportsDataInsufficient
-                                    : l.reportsAnalysisAvailable,
-                                style: const TextStyle(
-                                  color: AppColors.subtleForeground,
-                                  fontSize: 10.5,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

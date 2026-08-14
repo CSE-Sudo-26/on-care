@@ -1504,24 +1504,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachMemberSummary => 'Member summary';
 
   @override
-  String get reportsDataInsufficient => 'Insufficient data';
-
-  @override
-  String get reportsAnalysisAvailable => 'Ready to analyze';
-
-  @override
   String get reportsFeedbackComplete => 'Feedback complete';
 
   @override
   String get reportsFeedbackPending => 'Feedback pending';
 
   @override
-  String get reportsThisWeek => 'This week';
+  String get reportsDataInsufficient => 'Insufficient data';
 
   @override
-  String reportsAnalysisCount(int total, int available) {
-    return '$total total · $available ready';
-  }
+  String get reportsThisWeek => 'This week';
 
   @override
   String get coachSendFailed => 'Couldn\'t send. Please try again';
