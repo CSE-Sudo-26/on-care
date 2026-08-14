@@ -870,7 +870,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsSubtitle => '이번 주 변화를 정리하고 고객에게 전달할 리포트를 작성하세요';
 
   @override
-  String get reportsPrevWeek => '이전 주';
+  String get reportsPrevWeek => '이전';
 
   @override
   String get reportsLoadFailed => '리포트를 불러오지 못했어요';
@@ -2378,7 +2378,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorExerciseMemo => '메모';
 
   @override
-  String get reportsComparisonTitle => '이번 주 vs 지난 주';
+  String reportsComparisonTitle(String week) {
+    return '$week vs 지난 주';
+  }
+
+  @override
+  String get reportsGoThisWeek => '이번 주로';
 
   @override
   String get reportsLastWeek => '지난 주';

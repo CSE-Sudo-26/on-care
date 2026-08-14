@@ -898,7 +898,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Summarize this week\'s changes and prepare a report to share';
 
   @override
-  String get reportsPrevWeek => 'Previous week';
+  String get reportsPrevWeek => 'Previous';
 
   @override
   String get reportsLoadFailed => 'Couldn\'t load reports';
@@ -2466,7 +2466,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorExerciseMemo => 'Memo';
 
   @override
-  String get reportsComparisonTitle => 'This week vs last week';
+  String reportsComparisonTitle(String week) {
+    return '$week vs last week';
+  }
+
+  @override
+  String get reportsGoThisWeek => 'Go to this week';
 
   @override
   String get reportsLastWeek => 'Last week';

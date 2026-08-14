@@ -142,12 +142,12 @@ void main() {
     await openReports(tester);
 
     expect(find.text('다음 주'), findsNothing);
-    expect(find.widgetWithText(ActionButton, '이번 주'), findsNothing);
+    expect(find.widgetWithText(ActionButton, '이번 주로'), findsNothing);
 
-    await tester.tap(find.text('이전 주'));
+    await tester.tap(find.text('이전'));
     await settle(tester);
 
-    final currentWeek = find.widgetWithText(ActionButton, '이번 주');
+    final currentWeek = find.widgetWithText(ActionButton, '이번 주로');
     expect(currentWeek, findsOneWidget);
     expect(find.text('다음 주'), findsNothing);
     expect(find.text('선택 주'), findsNWidgets(2));
@@ -242,7 +242,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('이전 주'));
+    await tester.tap(find.text('이전'));
     await settle(tester);
     await tester.tap(
       find.byKey(const ValueKey<String>('reports-weekly-retry')),
@@ -412,7 +412,7 @@ void main() {
 
   testWidgets('지난 주에는 고른 지표 이름으로 없다고 말한다 (#746)', (tester) async {
     await openReports(tester);
-    await tester.tap(find.text('이전 주'));
+    await tester.tap(find.text('이전'));
     await settle(tester);
 
     expect(find.byType(MetricTrendChart), findsNothing);
@@ -424,6 +424,25 @@ void main() {
     await tester.tap(chip);
     await settle(tester);
     expect(find.text('지난 주 당류 추이는 아직 없어요'), findsOneWidget);
+  });
+
+  testWidgets('주를 가리키는 말은 이번 주·지난 주·선택 주 셋뿐이다', (tester) async {
+    await openReports(tester);
+
+    // 헤더 버튼은 동작이라 주 이름을 쓰지 않는다 — '이전 주' 버튼과 비교 카드의
+    // '이전 주' 열이 같은 말이라 어느 주를 보고 있는지 헷갈렸다.
+    expect(find.text('이전'), findsOneWidget);
+    expect(find.text('이번 주 vs 지난 주'), findsOneWidget);
+
+    await tester.tap(find.text('이전'));
+    await settle(tester);
+
+    // 과거 주에서는 제목도 보고 있는 주를 따라간다.
+    expect(find.text('선택 주 vs 지난 주'), findsOneWidget);
+    expect(find.text('이번 주 vs 지난 주'), findsNothing);
+    // 앞선 주는 상황과 무관하게 늘 '지난 주'.
+    expect(find.text('지난 주'), findsNWidgets(2));
+    expect(find.text('이전 주'), findsNothing);
   });
 }
 

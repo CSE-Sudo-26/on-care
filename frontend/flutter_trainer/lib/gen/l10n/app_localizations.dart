@@ -1637,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportsPrevWeek.
   ///
   /// In en, this message translates to:
-  /// **'Previous week'**
+  /// **'Previous'**
   String get reportsPrevWeek;
 
   /// No description provided for @reportsLoadFailed.
@@ -4379,8 +4379,14 @@ abstract class AppLocalizations {
   /// No description provided for @reportsComparisonTitle.
   ///
   /// In en, this message translates to:
-  /// **'This week vs last week'**
-  String get reportsComparisonTitle;
+  /// **'{week} vs last week'**
+  String reportsComparisonTitle(String week);
+
+  /// No description provided for @reportsGoThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to this week'**
+  String get reportsGoThisWeek;
 
   /// No description provided for @reportsLastWeek.
   ///

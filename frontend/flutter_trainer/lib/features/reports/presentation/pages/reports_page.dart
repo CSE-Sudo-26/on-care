@@ -191,7 +191,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ),
         if (_weekStart != weekStartOf(DateTime.now()))
           ActionButton(
-            label: l.reportsThisWeek,
+            label: l.reportsGoThisWeek,
             icon: Icons.today_outlined,
             onPressed: _goToCurrentWeek,
           ),
@@ -788,7 +788,9 @@ class _WeekComparison extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            l.reportsComparisonTitle,
+            l.reportsComparisonTitle(
+              report.isCurrentWeek ? l.reportsThisWeek : l.reportsSelectedWeek,
+            ),
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -812,9 +814,7 @@ class _WeekComparison extends ConsumerWidget {
                     label: l.reportsCompletionAvg,
                     current: report.completionAvg,
                     previous: before?.completionAvg,
-                    previousLabel: report.isCurrentWeek
-                        ? l.reportsLastWeek
-                        : l.reportsPrevWeek,
+                    previousLabel: l.reportsLastWeek,
                     currentLabel: report.isCurrentWeek
                         ? l.reportsThisWeek
                         : l.reportsSelectedWeek,
@@ -830,9 +830,7 @@ class _WeekComparison extends ConsumerWidget {
                     label: l.reportsAverageSodium,
                     current: report.sodiumAvg,
                     previous: before?.sodiumAvg,
-                    previousLabel: report.isCurrentWeek
-                        ? l.reportsLastWeek
-                        : l.reportsPrevWeek,
+                    previousLabel: l.reportsLastWeek,
                     currentLabel: report.isCurrentWeek
                         ? l.reportsThisWeek
                         : l.reportsSelectedWeek,
