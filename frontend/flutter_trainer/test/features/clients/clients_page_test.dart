@@ -215,7 +215,7 @@ void main() {
         );
 
         expect(find.byType(ClientSearchBar), findsOneWidget);
-        expect(find.text('회원 관리'), findsOneWidget);
+        expect(find.text('고객 관리'), findsOneWidget);
       });
     }
 
@@ -288,7 +288,7 @@ void main() {
 
       // The roster header states the size; the coaching signals
       // (나트륨 초과, 오늘 예약) now live on the 대시보드, not here.
-      expect(find.text('회원 관리'), findsWidgets);
+      expect(find.text('고객 관리'), findsWidgets);
       expect(find.text('15명 · 활성 13명'), findsWidgets);
 
       // Priority order: sodium-over clients come first, so a client who
@@ -366,11 +366,12 @@ void main() {
       await tester.tap(find.text('김민수'));
       await settle(tester);
 
-      // Detail opened — both evidence sections and the standalone message
-      // action are unique to it.
+      // Detail opened — both evidence tabs and the two quick actions are
+      // unique to it.
       expect(find.text('식단'), findsOneWidget);
       expect(find.text('운동'), findsOneWidget);
-      expect(find.text('메시지'), findsOneWidget);
+      expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+      expect(find.text('메모'), findsOneWidget);
     });
 
     testWidgets('신규 고객 등록 adds a client to the list', (tester) async {

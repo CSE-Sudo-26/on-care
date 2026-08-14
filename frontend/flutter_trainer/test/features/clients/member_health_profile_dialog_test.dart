@@ -67,6 +67,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('0.0~14.0 범위로 입력해 주세요.'), findsOneWidget);
-    expect(find.text('회원 신체·목표 관리'), findsOneWidget);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
   });
 }

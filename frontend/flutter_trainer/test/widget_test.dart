@@ -36,7 +36,7 @@ void main() {
     // The login screen shows the On-Care logo (image, not a title) plus
     // the login / sign-up / demo entry points.
     expect(find.text('로그인'), findsOneWidget);
-    expect(find.text('회원가입'), findsOneWidget);
+    expect(find.text('계정 만들기'), findsOneWidget);
     expect(find.text('로그인 없이 데모 둘러보기'), findsOneWidget);
   });
 }

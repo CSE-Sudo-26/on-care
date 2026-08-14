@@ -562,7 +562,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('예약 슬롯 관리'), findsOneWidget);
-      expect(find.textContaining('회원이 예약할 시간을 엽니다'), findsOneWidget);
+      expect(find.textContaining('고객이 예약할 시간을 엽니다'), findsOneWidget);
       expect(find.text('열기'), findsOneWidget);
     });
 
@@ -835,7 +835,24 @@ void main() {
         tester,
         AppRoutes.clientDetail('seed-client-3', section: 'workout'),
       );
-      await tester.scrollUntilVisible(find.text('벤치 폼 안정적'), 150);
+      final workoutScroll = find
+          .descendant(
+            of: find
+                .descendant(
+                  of: find.byKey(
+                    const ValueKey<String>('workout-seed-client-3'),
+                  ),
+                  matching: find.byType(ListView),
+                )
+                .first,
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('벤치 폼 안정적'),
+        150,
+        scrollable: workoutScroll,
+      );
       expect(find.text('벤치 폼 안정적'), findsOneWidget);
       expect(find.textContaining('(오늘)'), findsWidgets);
     });

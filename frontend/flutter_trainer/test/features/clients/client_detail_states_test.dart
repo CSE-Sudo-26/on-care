@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -23,7 +25,7 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     await tester.tap(find.text('고객 목록으로'));
     await settle(tester);
-    expect(find.text('회원 관리'), findsWidgets);
+    expect(find.text('고객 관리'), findsWidgets);
   });
 
   testWidgets('a provider error offers retry', (tester) async {
@@ -44,7 +46,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the alert remains visible above the unified detail scroll', (
+  testWidgets('the alert remains visible above the detail tabs', (
     tester,
   ) async {
     await pumpTrainerApp(
@@ -54,70 +56,85 @@ void main() {
     );
 
     expect(find.text('답장 대기'), findsOneWidget);
-    final scroll = find.byKey(
-      const ValueKey<String>('client-detail-scroll-seed-client-3'),
-    );
+    final scroll = find
+        .descendant(
+          of: find.byKey(const ValueKey<String>('diet-seed-client-3')),
+          matching: find.byType(ListView),
+        )
+        .first;
     await tester.drag(scroll, const Offset(0, -500));
     await tester.pump();
     expect(find.text('답장 대기'), findsOneWidget);
   });
 
-  testWidgets('diet and workout share one 360-degree detail scroll', (
-    tester,
-  ) async {
+  testWidgets('diet and workout are separated into tabs', (tester) async {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.clientDetail('seed-client-1'),
     );
 
-    final scroll = find.byKey(
-      const ValueKey<String>('client-detail-scroll-seed-client-1'),
-    );
-    expect(scroll, findsOneWidget);
-    expect(find.text('오늘 영양 요약'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('client-detail-sub-tabs')),
-      findsNothing,
+      findsOneWidget,
     );
-    await tester.scrollUntilVisible(
-      find.text('배정된 루틴'),
-      250,
-      scrollable: find.descendant(
-        of: scroll,
-        matching: find.byType(Scrollable),
-      ),
-    );
+    expect(find.text('오늘 영양 요약'), findsOneWidget);
+    expect(find.text('배정된 루틴'), findsNothing);
+
+    await tester.tap(find.text('운동'));
+    await settle(tester);
+
     expect(find.text('배정된 루틴'), findsOneWidget);
+    expect(find.text('오늘 영양 요약'), findsNothing);
+    final context = tester.element(find.byType(Navigator).first);
+    expect(
+      GoRouter.of(context).routeInformationProvider.value.uri.path,
+      '/clients/seed-client-1/workout',
+    );
   });
 
-  testWidgets('workout deep-link keeps workout evidence first', (tester) async {
+  testWidgets('workout deep-link opens only the workout tab', (tester) async {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.clientDetail('seed-client-1', section: 'workout'),
     );
 
-    final workoutTop = tester.getTopLeft(find.text('배정된 루틴')).dy;
-    final dietTop = tester.getTopLeft(find.text('오늘 영양 요약')).dy;
-    expect(workoutTop, lessThan(dietTop));
+    expect(find.text('배정된 루틴'), findsOneWidget);
+    expect(find.text('오늘 영양 요약'), findsNothing);
   });
 
-  testWidgets('message action opens the standalone messages workspace', (
-    tester,
-  ) async {
+  test('legacy chat section safely resolves to the diet tab', () {
+    final view = ClientDetailView(
+      clientId: 'seed-client-1',
+      section: 'chat',
+      onSectionChange: (_) {},
+    );
+
+    expect(view.resolvedSection, AppRoutes.defaultClientSection);
+  });
+
+  testWidgets('quick actions keep only health goals and memo', (tester) async {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.clientDetail('seed-client-3'),
     );
 
-    await tester.tap(find.text('메시지'));
-    await settle(tester);
-    final context = tester.element(find.byType(Navigator).first);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+    expect(find.text('메모'), findsOneWidget);
+    expect(find.text('메시지'), findsNothing);
+    expect(find.text('프로그램'), findsNothing);
+    expect(find.text('일정 등록'), findsNothing);
+    expect(find.text('주간 리포트'), findsNothing);
+
+    final actions = find.byKey(
+      const ValueKey<String>('client-detail-quick-actions'),
+    );
+    expect(actions, findsOneWidget);
     expect(
-      GoRouter.of(context).routeInformationProvider.value.uri.toString(),
-      AppRoutes.messagesFor('seed-client-3'),
+      tester.getRect(find.widgetWithText(ActionButton, '메모')).right,
+      closeTo(tester.getRect(actions).right, 0.1),
     );
   });
 }

@@ -161,7 +161,7 @@ class _MemberHealthProfileDialogState
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('회원 신체·목표 관리'),
+      title: const Text('고객 신체·목표 관리'),
       content: SizedBox(
         width: 520,
         child: FutureBuilder<MemberHealthProfile>(
@@ -241,7 +241,7 @@ class _MemberHealthProfileDialogState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _goals,
-                      decoration: _decoration('회원 목표'),
+                      decoration: _decoration('고객 목표'),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 20),
