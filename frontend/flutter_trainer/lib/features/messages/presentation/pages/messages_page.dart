@@ -271,6 +271,9 @@ class _ConversationList extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final client = clients[index];
                       return _ConversationTile(
+                        key: ValueKey<String>(
+                          'messages-conversation-${client.id}',
+                        ),
                         client: client,
                         selected: client.id == selectedId,
                         unread: unread[client.id] ?? 0,
@@ -322,6 +325,7 @@ class _FilterChip extends StatelessWidget {
 
 class _ConversationTile extends StatelessWidget {
   const _ConversationTile({
+    super.key,
     required this.client,
     required this.selected,
     required this.unread,

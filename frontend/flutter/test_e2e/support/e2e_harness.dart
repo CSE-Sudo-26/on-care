@@ -34,6 +34,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:oncare/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
+import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String memberEmail = 'minsu@oncare.com';
@@ -41,6 +42,8 @@ const String otherMemberEmail = 'jisu@oncare.com';
 /// 픽스처 전용. 정원 1 짜리 경쟁용 슬롯을 여는 데만 쓴다.
 const String trainerEmail = 'trainer@oncare.com';
 const String trainerId = 'trainer-demo';
+const String memberId = 'user-demo';
+const String otherMemberId = 'user-jisu';
 const String demoPassword = 'oncare123';
 
 const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
@@ -174,6 +177,58 @@ class E2eApi {
 
   Future<Response<Object?>> cancelRaw(String reservationId) =>
       _dio.delete<Object?>('/reservations/$reservationId', options: _auth);
+
+  // ── 채팅 (#639) ──────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> coachChat() => _list('/me/coach/chat');
+
+  /// 본문이 [body] 인 메시지들. 재시도가 한 건으로 접히는지 셀 때 쓴다.
+  Future<List<Map<String, dynamic>>> coachChatWithBody(String body) async =>
+      <Map<String, dynamic>>[
+        for (final Map<String, dynamic> row in await coachChat())
+          if (row['body'] == body) row,
+      ];
+
+  /// 회원 발신. [clientRequestId] 를 같은 값으로 두 번 보내면 서버가 한 건으로
+  /// 접어야 한다 — 앱의 재시도가 정확히 이 모양이다(#605).
+  Future<Response<Object?>> sendAsMember(
+    String text, {
+    String? clientRequestId,
+  }) => _dio.post<Object?>(
+    '/me/coach/chat',
+    data: <String, Object?>{
+      'text': text,
+      'client_request_id': ?clientRequestId,
+    },
+    options: _auth,
+  );
+
+  Future<int> memberUnread() async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/me/coach/chat/unread', options: _auth);
+    return (res.data!['unread'] as num).toInt();
+  }
+
+  Future<void> markMemberRead() async {
+    await _dio.post<Object?>('/me/coach/chat/read', options: _auth);
+  }
+
+  /// 픽스처용 — 트레이너 계정으로 회원 [memberId] 스레드에 답장한다.
+  Future<Response<Object?>> sendAsTrainer(
+    String memberId,
+    String text, {
+    String? clientRequestId,
+  }) => _dio.post<Object?>(
+    '/trainer/clients/$memberId/chat',
+    data: <String, Object?>{
+      'text': text,
+      'client_request_id': ?clientRequestId,
+    },
+    options: _auth,
+  );
+
+  Future<List<Map<String, dynamic>>> trainerThread(String memberId) =>
+      _list('/trainer/clients/$memberId/chat');
 
   /// 픽스처용 — 트레이너 계정으로 정원 [capacity] 짜리 슬롯을 연다.
   ///
@@ -337,6 +392,28 @@ Future<Finder> selectSlotForReserve(WidgetTester tester, String slotId) async {
     if (confirm.evaluate().isNotEmpty) return confirm;
   }
   fail('[$e2ePhase] 슬롯 $slotId 를 골랐는데 예약 확정 버튼이 뜨지 않았습니다.');
+}
+
+/// 운동 탭 헤더 → 담당 트레이너 채팅 화면.
+///
+/// 헤더 버튼은 모든 메인 탭에 같은 모양으로 있고 담당 트레이너가 있어야 눌린다.
+Future<void> openTrainerChat(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey<String>('nav-exercise')));
+  await pumpUntil(tester, find.byType(ExercisePage), step: '운동 화면');
+  final Finder button = find.byKey(const Key('trainerChatHeaderButton'));
+  await pumpUntil(tester, button, step: '트레이너 채팅 버튼');
+
+  // 버튼은 담당 트레이너가 **로드되기 전까지** onTap 이 null 이다. 그 사이의 탭은
+  // 예외 없이 아무 일도 일으키지 않으므로, 화면이 열릴 때까지 다시 누른다.
+  final Finder page = find.byType(TrainerChatPage);
+  for (int attempt = 0; attempt < 10 && page.evaluate().isEmpty; attempt++) {
+    await tester.tap(button);
+    final DateTime deadline = DateTime.now().add(const Duration(seconds: 3));
+    while (page.evaluate().isEmpty && DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+  expect(page, findsWidgets, reason: '[$e2ePhase] 트레이너 채팅 화면이 열리지 않았습니다.');
 }
 
 /// 운동 탭 → 헬스장 서브탭. 담당 트레이너의 예약 패널이 있는 자리다.

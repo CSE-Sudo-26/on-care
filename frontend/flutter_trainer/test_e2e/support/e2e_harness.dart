@@ -199,6 +199,60 @@ class E2eApi {
     ];
   }
 
+  // ── 채팅 (#639) ──────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> thread(String clientId) async {
+    final Response<List<dynamic>> res = await _dio.get<List<dynamic>>(
+      '/trainer/clients/$clientId/chat',
+      options: _auth,
+    );
+    return <Map<String, dynamic>>[
+      for (final Object? row in res.data ?? const <Object?>[])
+        row! as Map<String, dynamic>,
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> threadWithBody(
+    String clientId,
+    String body,
+  ) async => <Map<String, dynamic>>[
+    for (final Map<String, dynamic> row in await thread(clientId))
+      if (row['body'] == body) row,
+  ];
+
+  /// 픽스처용 — 회원 계정으로 메시지를 보낸다. 트레이너 화면을 **연 채로** 상대
+  /// 메시지를 도착시켜야 polling 을 검증할 수 있는데, 두 앱을 한 프로세스에 띄울 수
+  /// 없으므로 이 자리에서는 API 가 회원 역할을 대신한다.
+  Future<void> sendAsMember(String text) async {
+    final Dio dio = Dio(BaseOptions(baseUrl: apiBaseUrl));
+    final Response<Map<String, dynamic>> login = await dio
+        .post<Map<String, dynamic>>(
+          '/auth/login',
+          data: <String, String>{
+            'username': memberEmail,
+            'password': demoPassword,
+          },
+          options: Options(contentType: Headers.formUrlEncodedContentType),
+        );
+    await dio.post<Object?>(
+      '/me/coach/chat',
+      data: <String, Object?>{'text': text},
+      options: Options(
+        headers: <String, String>{
+          'Authorization': 'Bearer ${login.data!['access_token']}',
+        },
+      ),
+    );
+  }
+
+  /// 트레이너의 스레드별 미읽음 수. 스레드가 없으면 0.
+  Future<int> unreadFor(String clientId) async {
+    final Response<Map<String, dynamic>> res = await _dio
+        .get<Map<String, dynamic>>('/trainer/chat/unread', options: _auth);
+    return ((res.data ?? const <String, dynamic>{})[clientId] as num?)?.toInt() ??
+        0;
+  }
+
   Future<void> closeSlot(String id) async {
     await _dio.delete<Object?>(
       '/trainer/reservation-slots/$id',
