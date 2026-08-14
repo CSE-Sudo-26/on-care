@@ -1140,6 +1140,10 @@ void main() {
       bool includeInitialSuggestions = true,
       void Function(_CapturingScheduleRepository repo)? captureSchedule,
     }) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 1200);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final routineRepo = _SpyTrainerRoutineRepository(
         throwOnAssign: assignError,
       );

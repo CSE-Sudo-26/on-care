@@ -92,6 +92,10 @@ Future<void> _openCoaching(
   WidgetTester tester,
   TrainerProgramDraftRepository repository,
 ) async {
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(1600, 1200);
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   await pumpTrainerApp(
     tester,
     token: 'demo-trainer-token',
