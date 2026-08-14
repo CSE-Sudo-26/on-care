@@ -52,6 +52,8 @@ from app.schemas.trainer_api import (
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
     TrainerMemoCreateRequest, TrainerMemoOut, TrainerMemoUpdateRequest,
+    TrainerProgramDraftCreate, TrainerProgramDraftOut,
+    TrainerProgramDraftSummary, TrainerProgramDraftUpdate,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
 )
@@ -705,6 +707,102 @@ def trainer_delete_memo(
     try:
         trainer_service.delete_memo(db, trainer.id, member_id, memo_id)
     except trainer_service.MemoNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "deleted"}
+
+
+# ---- 프로그램 초안 (#708) ----
+#
+# 초안은 트레이너의 것이라 회원 경로 아래가 아니다. 소유권 경계는 trainer_id 이고,
+# 남의 초안과 없는 초안은 똑같이 404 다.
+
+@router.get("/trainer/programs", response_model=list[TrainerProgramDraftSummary])
+def trainer_program_drafts(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TrainerProgramDraftSummary]:
+    """내가 저장한 프로그램 초안 목록(최근 수정 먼저, 운동 구성 제외)."""
+    return trainer_service.build_program_drafts(db, trainer.id)
+
+
+@router.post(
+    "/trainer/programs",
+    response_model=TrainerProgramDraftOut,
+    status_code=201,
+)
+def trainer_create_program_draft(
+    payload: TrainerProgramDraftCreate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerProgramDraftOut:
+    """프로그램 초안 저장. 운동이 비어 있어도 저장된다(이름만 잡아 둔 상태)."""
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="프로그램 이름이 필요합니다.")
+    return trainer_service.create_program_draft(
+        db, trainer.id,
+        name=name,
+        goal=payload.goal.strip(),
+        period=payload.period.strip(),
+        memo=payload.memo,
+        session_name=payload.session_name.strip(),
+        exercises=payload.exercises,
+    )
+
+
+@router.get(
+    "/trainer/programs/{draft_id}",
+    response_model=TrainerProgramDraftOut,
+)
+def trainer_program_draft(
+    draft_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerProgramDraftOut:
+    """저장된 초안 상세 — 편집기로 불러올 때 쓴다."""
+    try:
+        return trainer_service.get_program_draft(db, trainer.id, draft_id)
+    except trainer_service.ProgramDraftNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put(
+    "/trainer/programs/{draft_id}",
+    response_model=TrainerProgramDraftOut,
+)
+def trainer_update_program_draft(
+    draft_id: str,
+    payload: TrainerProgramDraftUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerProgramDraftOut:
+    """저장된 초안 수정(부분). `exercises` 는 통째로 교체된다."""
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    for text_field in ("name", "goal", "period", "session_name"):
+        if text_field in fields:
+            fields[text_field] = fields[text_field].strip()
+    if "name" in fields and not fields["name"]:
+        raise HTTPException(status_code=400, detail="프로그램 이름이 필요합니다.")
+    try:
+        return trainer_service.update_program_draft(
+            db, trainer.id, draft_id, fields
+        )
+    except trainer_service.ProgramDraftNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/trainer/programs/{draft_id}")
+def trainer_delete_program_draft(
+    draft_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    """저장된 초안 삭제. 이미 배정한 루틴·등록한 일정은 그대로 남는다."""
+    try:
+        trainer_service.delete_program_draft(db, trainer.id, draft_id)
+    except trainer_service.ProgramDraftNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "deleted"}
 

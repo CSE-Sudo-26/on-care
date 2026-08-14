@@ -3,18 +3,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
@@ -88,6 +93,18 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// Day offset (0 = 오늘 … 6) the routine gets registered on.
   int _registerOffset = 0;
 
+  /// The saved draft currently open in the editor; null means the editor is
+  /// working on a new program. Saving overwrites this one instead of piling
+  /// up a copy per click (#708).
+  String? _openDraftId;
+
+  /// Contents to seed the editor with when a saved draft is opened. Kept
+  /// here (not in the editor) so opening another draft can rebuild it.
+  ProgramEditorState? _openDraftSeed;
+
+  /// A draft save is in flight — blocks re-entry so one click is one draft.
+  bool _savingDraft = false;
+
   @override
   void dispose() {
     _sentTimer?.cancel();
@@ -128,6 +145,138 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
 
   bool _isStillSelected(String clientId) =>
       _clientId == null || _clientId == clientId;
+
+  /// Saves the editor's current contents as a program draft. (#708)
+  ///
+  /// A draft that was opened from the saved list is overwritten; otherwise a
+  /// new one is created and the editor switches to editing it, so pressing
+  /// 저장 twice does not leave two copies behind.
+  ///
+  /// On failure nothing in the editor changes — the trainer keeps what they
+  /// typed and can press 저장 again.
+  Future<void> _saveDraft(ProgramEditorState draft) async {
+    if (_savingDraft) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
+    final repository = ref.read(trainerProgramDraftRepositoryProvider);
+    final payload = programDraftToJson(draft);
+    final openId = _openDraftId;
+    setState(() => _savingDraft = true);
+    try {
+      final saved = openId == null
+          ? await repository.create(payload)
+          : await repository.update(openId, payload);
+      ref.invalidate(trainerProgramDraftsProvider);
+      if (!mounted) return;
+      setState(() {
+        _savingDraft = false;
+        _openDraftId = saved.id;
+      });
+      messenger.showSnackBar(SnackBar(content: Text(l.programDraftSaved)));
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _savingDraft = false);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AppError
+                ? serverDetailOr(l, error.message, l.programDraftSaveFailed)
+                : l.programDraftSaveFailed,
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Loads a saved draft into the editor.
+  ///
+  /// Bumping [_editorRevision] rebuilds the workspace so it initialises from
+  /// the saved contents rather than merging them into whatever was on screen.
+  Future<void> _openDraft(TrainerProgramDraftSummary summary) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = AppLocalizations.of(context);
+    try {
+      final draft = await ref
+          .read(trainerProgramDraftRepositoryProvider)
+          .read(summary.id);
+      if (!mounted) return;
+      setState(() {
+        _openDraftId = draft.id;
+        _openDraftSeed = draft.toEditorState(
+          fallbackSessionName: l.programEditorDefaultSession,
+        );
+        _editorRevision++;
+        // 불러온 구성은 이 초안이 결정한 내용이다 — 템플릿·전송 배너는 초기화한다.
+        _appliedTemplate = null;
+        _sent = false;
+        _registered = false;
+      });
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.programDraftLoaded(draft.name))),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AppError
+                ? serverDetailOr(l, error.message, l.programDraftLoadFailed)
+                : l.programDraftLoadFailed,
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Starts a fresh program, leaving the saved one untouched on the server.
+  void _startNewDraft() {
+    setState(() {
+      _openDraftId = null;
+      _openDraftSeed = null;
+      _editorRevision++;
+      _appliedTemplate = null;
+      _sent = false;
+      _registered = false;
+    });
+  }
+
+  Future<void> _deleteDraft(TrainerProgramDraftSummary summary) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l.programDraftDeleteTitle),
+        content: Text(l.programDraftDeleteBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.actionDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(trainerProgramDraftRepositoryProvider)
+          .delete(summary.id);
+      ref.invalidate(trainerProgramDraftsProvider);
+      if (!mounted) return;
+      // 편집기가 그 초안을 열고 있었다면 이제 새 프로그램을 쓰는 셈이다 —
+      // 저장을 누르면 없는 초안을 덮어쓰려다 실패한다.
+      if (_openDraftId == summary.id) setState(() => _openDraftId = null);
+    } on Object {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.programDraftDeleteFailed)),
+      );
+    }
+  }
   Future<void> _assignDraft(
     TrainerClient client,
     ProgramEditorState draft,
@@ -347,6 +496,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                                 _sent = false;
                               }),
                             ),
+                            // 좁은 화면은 _libraryChildren 이 같은 카드를 붙인다.
+                            ...?_savedProgramsCard(),
                           ],
                         ),
                       ),
@@ -428,8 +579,104 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           _sent = false;
         }),
       ),
+      // 저장한 프로그램이 하나도 없으면 카드 자체가 나오지 않는다 — 아직
+      // 저장한 적 없는 트레이너의 화면은 지금과 같다.
+      ...?_savedProgramsCard(),
       const SizedBox(height: AppSpacing.lg),
       _SendHistoryCard(client: client),
+    ];
+  }
+
+  /// The saved-program list, or null when the trainer has saved none.
+  ///
+  /// Returning null (rather than an empty card) keeps the tab exactly as it
+  /// is today for anyone who has never used 저장 (#708).
+  List<Widget>? _savedProgramsCard() {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final drafts = ref.watch(trainerProgramDraftsProvider).valueOrNull;
+    if (drafts == null || drafts.isEmpty) return null;
+    return <Widget>[
+      const SizedBox(height: AppSpacing.lg),
+      SectionCard(
+        key: const ValueKey<String>('saved-programs-card'),
+        title: l.programSavedTitle,
+        icon: Icons.bookmark_outline,
+        dense: true,
+        trailing: _openDraftId == null
+            ? null
+            : TextButton(
+                key: const ValueKey<String>('saved-programs-new'),
+                onPressed: _startNewDraft,
+                child: Text(l.programSavedNew),
+              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (final draft in drafts)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Material(
+                  color: draft.id == _openDraftId
+                      ? AppColors.accentSurface
+                      : AppColors.inputBackground,
+                  borderRadius: const BorderRadius.all(AppRadius.md),
+                  child: InkWell(
+                    key: ValueKey<String>('saved-program-${draft.id}'),
+                    onTap: () => _openDraft(draft),
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  draft.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  <String>[
+                                    if (draft.goal.isNotEmpty) draft.goal,
+                                    if (draft.period.isNotEmpty) draft.period,
+                                    l.programSavedExerciseCount(
+                                      draft.exerciseCount,
+                                    ),
+                                  ].join(' · '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.subtleForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            key: ValueKey<String>(
+                              'saved-program-delete-${draft.id}',
+                            ),
+                            tooltip: l.actionDelete,
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            onPressed: () => _deleteDraft(draft),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     ];
   }
 
@@ -529,6 +776,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     }),
                     onAssignFlat: (draft) => _assignDraft(client, draft),
                     onRegisterFlat: (draft) => _registerDraft(client, draft),
+                    initialDraft: _openDraftSeed,
+                    onSave: _saveDraft,
+                    saving: _savingDraft,
+                    editingSaved: _openDraftId != null,
                   ),
                   if (_sent)
                     Padding(

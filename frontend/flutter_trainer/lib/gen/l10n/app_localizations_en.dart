@@ -2311,7 +2311,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorSaveUnsupported =>
-      'Multi-session program storage isn\'t supported yet.';
+      'Only a named, single-session program can be saved.';
+
+  @override
+  String get programEditorSaveEdit => 'Save changes';
+
+  @override
+  String get programSavedTitle => 'Saved programs';
+
+  @override
+  String get programSavedOpen => 'Open';
+
+  @override
+  String programSavedExerciseCount(int count) {
+    return '$count exercises';
+  }
+
+  @override
+  String get programSavedNew => 'New program';
+
+  @override
+  String get programDraftSaved => 'Program saved.';
+
+  @override
+  String get programDraftSaveFailed =>
+      'Couldn\'t save the program. Please try again.';
+
+  @override
+  String programDraftLoaded(String name) {
+    return 'Opened $name in the editor.';
+  }
+
+  @override
+  String get programDraftLoadFailed =>
+      'Couldn\'t open the saved program. Please try again.';
+
+  @override
+  String get programDraftDeleteFailed =>
+      'Couldn\'t delete the program. Please try again.';
+
+  @override
+  String get programDraftDeleteTitle => 'Delete this saved program?';
+
+  @override
+  String get programDraftDeleteBody =>
+      'Routines you already assigned and sessions you scheduled stay as they are.';
 
   @override
   String get programEditorAssignUnsupported =>
@@ -2355,7 +2399,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorLocalBanner =>
-      'This is a local draft. Saving and assigning multi-session programs requires the new Program API.';
+      'A single-session program can be saved and reopened. Saving and assigning multi-session programs is still to come.';
 
   @override
   String get programEditorSessionUp => 'Move session up';

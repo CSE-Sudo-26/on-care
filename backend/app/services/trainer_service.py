@@ -16,18 +16,21 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import func, or_, select, tuple_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from pydantic import ValidationError
 
 from app.core import clock
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
-    TrainerClient, TrainerClientMemo, TrainerProfile, TrainerReservation,
-    TrainerReservationSlot, TrainerRoutine, TrainerSchedule, User,
+    TrainerClient, TrainerClientMemo, TrainerProfile, TrainerProgramDraft,
+    TrainerReservation, TrainerReservationSlot, TrainerRoutine, TrainerSchedule,
+    User,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
+    ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramDraftExercise,
+    ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
     TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
-    WeeklyReportOut,
+    TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportOut,
 )
 from app.services import diet_photo_service, exercise_service, notification_service
 from app.services.coach import personal_ingest
@@ -1152,6 +1155,167 @@ def delete_memo(db: Session, trainer_id: str, member_id: str, memo_id: str) -> N
     """
     memo = _owned_memo(db, trainer_id, member_id, memo_id)
     db.delete(memo)
+    db.commit()
+
+
+# ---- 프로그램 초안 (#708) ----
+
+class ProgramDraftNotFound(Exception):
+    """그 트레이너에게 그 id 의 초안이 없다(라우터가 404 로 변환)."""
+
+
+def _draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
+    """저장된 운동 목록을 읽는다. 깨진 행이 목록 전체를 막지 않는다.
+
+    스키마가 거른 값만 저장되지만, 손으로 고쳤거나 예전 형식이 남은 행 하나
+    때문에 초안을 아예 못 여는 편이 더 나쁘다 — 읽을 수 있는 항목만 돌려준다.
+    """
+    try:
+        raw = json.loads(exercises_json) if exercises_json else []
+    except json.JSONDecodeError:
+        return []
+    out: list[ProgramDraftExercise] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        try:
+            out.append(ProgramDraftExercise.model_validate(item))
+        except ValidationError:
+            continue
+    return out
+
+
+def _dump_draft_exercises(exercises: Sequence[ProgramDraftExercise]) -> str:
+    return json.dumps(
+        [e.model_dump() for e in exercises], ensure_ascii=False
+    )
+
+
+def _draft_out(draft: TrainerProgramDraft) -> TrainerProgramDraftOut:
+    return TrainerProgramDraftOut(
+        id=draft.id,
+        name=draft.name,
+        goal=draft.goal,
+        period=draft.period,
+        memo=draft.memo,
+        session_name=draft.session_name,
+        exercises=_draft_exercises(draft.exercises_json),
+        created_at=draft.created_at,
+        updated_at=draft.updated_at,
+    )
+
+
+#: 목록이 한 번에 내려주는 최대 초안 수. 초안은 지우지 않으면 쌓이기만 한다.
+_PROGRAM_DRAFT_LIMIT = 100
+
+
+def build_program_drafts(
+    db: Session, trainer_id: str
+) -> list[TrainerProgramDraftSummary]:
+    """내가 저장한 프로그램 초안 목록(최근 수정 먼저).
+
+    운동 구성은 싣지 않는다 — 목록은 "무엇을 저장해 뒀나"만 보여 주고, 편집기로
+    불러올 때 상세를 따로 읽는다.
+    """
+    rows = db.scalars(
+        select(TrainerProgramDraft)
+        .where(TrainerProgramDraft.trainer_id == trainer_id)
+        .order_by(
+            TrainerProgramDraft.updated_at.desc(), TrainerProgramDraft.id.desc()
+        )
+        .limit(_PROGRAM_DRAFT_LIMIT)
+    ).all()
+    return [
+        TrainerProgramDraftSummary(
+            id=d.id,
+            name=d.name,
+            goal=d.goal,
+            period=d.period,
+            exercise_count=len(_draft_exercises(d.exercises_json)),
+            updated_at=d.updated_at,
+        )
+        for d in rows
+    ]
+
+
+def _owned_draft(
+    db: Session, trainer_id: str, draft_id: str
+) -> TrainerProgramDraft:
+    """내가 저장한 초안만 집는다. 남의 초안과 없는 초안은 똑같이 404 다."""
+    draft = db.scalar(
+        select(TrainerProgramDraft).where(
+            TrainerProgramDraft.id == draft_id,
+            TrainerProgramDraft.trainer_id == trainer_id,
+        )
+    )
+    if draft is None:
+        raise ProgramDraftNotFound("저장된 프로그램을 찾을 수 없습니다.")
+    return draft
+
+
+def get_program_draft(
+    db: Session, trainer_id: str, draft_id: str
+) -> TrainerProgramDraftOut:
+    return _draft_out(_owned_draft(db, trainer_id, draft_id))
+
+
+def create_program_draft(
+    db: Session, trainer_id: str, *,
+    name: str, goal: str, period: str, memo: str, session_name: str,
+    exercises: Sequence[ProgramDraftExercise],
+) -> TrainerProgramDraftOut:
+    """프로그램 초안을 저장한다."""
+    now = datetime.now(timezone.utc)
+    draft = TrainerProgramDraft(
+        id=f"pgm-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        name=name,
+        goal=goal,
+        period=period,
+        memo=memo,
+        session_name=session_name,
+        exercises_json=_dump_draft_exercises(exercises),
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    return _draft_out(draft)
+
+
+def update_program_draft(
+    db: Session, trainer_id: str, draft_id: str, fields: dict
+) -> TrainerProgramDraftOut:
+    """저장된 초안을 고친다. 보낸 필드만 반영한다.
+
+    `exercises` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
+    구성 전체를 들고 있다.
+    """
+    draft = _owned_draft(db, trainer_id, draft_id)
+    for field in ("name", "goal", "period", "memo", "session_name"):
+        if field in fields:
+            setattr(draft, field, fields[field])
+    if "exercises" in fields:
+        draft.exercises_json = _dump_draft_exercises(
+            [
+                item
+                if isinstance(item, ProgramDraftExercise)
+                else ProgramDraftExercise.model_validate(item)
+                for item in fields["exercises"]
+            ]
+        )
+    draft.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(draft)
+    return _draft_out(draft)
+
+
+def delete_program_draft(db: Session, trainer_id: str, draft_id: str) -> None:
+    """저장된 초안을 지운다. 배정된 루틴·스케줄은 건드리지 않는다 —
+    초안에서 만들어진 뒤로는 서로 독립적인 데이터다."""
+    draft = _owned_draft(db, trainer_id, draft_id)
+    db.delete(draft)
     db.commit()
 
 

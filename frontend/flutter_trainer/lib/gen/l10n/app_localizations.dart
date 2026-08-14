@@ -4109,8 +4109,80 @@ abstract class AppLocalizations {
   /// No description provided for @programEditorSaveUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'Multi-session program storage isn\'t supported yet.'**
+  /// **'Only a named, single-session program can be saved.'**
   String get programEditorSaveUnsupported;
+
+  /// No description provided for @programEditorSaveEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get programEditorSaveEdit;
+
+  /// No description provided for @programSavedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved programs'**
+  String get programSavedTitle;
+
+  /// No description provided for @programSavedOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get programSavedOpen;
+
+  /// No description provided for @programSavedExerciseCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} exercises'**
+  String programSavedExerciseCount(int count);
+
+  /// No description provided for @programSavedNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New program'**
+  String get programSavedNew;
+
+  /// No description provided for @programDraftSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Program saved.'**
+  String get programDraftSaved;
+
+  /// No description provided for @programDraftSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the program. Please try again.'**
+  String get programDraftSaveFailed;
+
+  /// No description provided for @programDraftLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened {name} in the editor.'**
+  String programDraftLoaded(String name);
+
+  /// No description provided for @programDraftLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the saved program. Please try again.'**
+  String get programDraftLoadFailed;
+
+  /// No description provided for @programDraftDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the program. Please try again.'**
+  String get programDraftDeleteFailed;
+
+  /// No description provided for @programDraftDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this saved program?'**
+  String get programDraftDeleteTitle;
+
+  /// No description provided for @programDraftDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Routines you already assigned and sessions you scheduled stay as they are.'**
+  String get programDraftDeleteBody;
 
   /// No description provided for @programEditorAssignUnsupported.
   ///
@@ -4187,7 +4259,7 @@ abstract class AppLocalizations {
   /// No description provided for @programEditorLocalBanner.
   ///
   /// In en, this message translates to:
-  /// **'This is a local draft. Saving and assigning multi-session programs requires the new Program API.'**
+  /// **'A single-session program can be saved and reopened. Saving and assigning multi-session programs is still to come.'**
   String get programEditorLocalBanner;
 
   /// No description provided for @programEditorSessionUp.

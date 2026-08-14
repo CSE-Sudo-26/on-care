@@ -28,6 +28,10 @@ class ProgramEditorWorkspace extends StatefulWidget {
     this.templateRevision = 0,
     this.assigning = false,
     this.registering = false,
+    this.initialDraft,
+    this.onSave,
+    this.saving = false,
+    this.editingSaved = false,
   });
 
   final String clientGoal;
@@ -40,6 +44,24 @@ class ProgramEditorWorkspace extends StatefulWidget {
   final ValueChanged<int> onRegisterOffsetChanged;
   final bool assigning;
   final bool registering;
+
+  /// A saved draft to open instead of starting from the client's goal.
+  ///
+  /// AI suggestions are **not** appended on top of it — the saved draft is
+  /// what the trainer decided on, and re-adding proposals they already
+  /// accepted or dropped would quietly change their work (#708).
+  final ProgramEditorState? initialDraft;
+
+  /// Saves the current draft. Null when saving isn't wired up.
+  final Future<void> Function(ProgramEditorState draft)? onSave;
+
+  /// A save is in flight — the button locks so a second click can't create
+  /// a duplicate draft.
+  final bool saving;
+
+  /// Whether the editor is working on an already-saved draft (overwrite)
+  /// rather than a new one.
+  final bool editingSaved;
 
   @override
   State<ProgramEditorWorkspace> createState() => _ProgramEditorWorkspaceState();
@@ -59,12 +81,22 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
     super.didChangeDependencies();
     if (_initialized) return;
     final l = AppLocalizations.of(context);
-    _draft = ProgramEditorState.initial(
-      clientGoal: widget.clientGoal,
-      programName: l.programEditorDefaultName(widget.clientGoal),
-      sessionName: l.programEditorDefaultSession,
-    );
-    _appendAiSuggestions(widget.aiSuggestions);
+    final saved = widget.initialDraft;
+    if (saved != null) {
+      _draft = saved;
+      _nextId = saved.sessions.fold<int>(
+            0,
+            (count, session) => count + session.exercises.length,
+          ) +
+          2;
+    } else {
+      _draft = ProgramEditorState.initial(
+        clientGoal: widget.clientGoal,
+        programName: l.programEditorDefaultName(widget.clientGoal),
+        sessionName: l.programEditorDefaultSession,
+      );
+      _appendAiSuggestions(widget.aiSuggestions);
+    }
     _initialized = true;
   }
 
@@ -78,7 +110,9 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   void didUpdateWidget(ProgramEditorWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_initialized) return;
-    if (widget.aiSuggestions != oldWidget.aiSuggestions) {
+    // A reopened draft is not topped up with proposals — see [initialDraft].
+    if (widget.initialDraft == null &&
+        widget.aiSuggestions != oldWidget.aiSuggestions) {
       _appendAiSuggestions(widget.aiSuggestions);
     }
     if (widget.templateRevision == oldWidget.templateRevision) {
@@ -108,6 +142,11 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final canUseFlatApi = _draft.supportsFlatRoutine;
+    // 다중 세션 초안은 아직 서버에 담을 자리가 없다(#708 제외 범위) — 저장하면
+    // 두 번째 세션이 조용히 사라지므로 막고, 왜 막혔는지 툴팁으로 말한다.
+    final singleSession = _draft.sessions.length == 1;
+    final canSave =
+        widget.onSave != null && singleSession && _draft.name.trim().isNotEmpty;
     return SectionCard(
       title: _draft.name,
       dense: true,
@@ -115,8 +154,16 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
         spacing: AppSpacing.xs,
         children: <Widget>[
           Tooltip(
-            message: l.programEditorSaveUnsupported,
-            child: ActionButton(label: l.actionSave, onPressed: null),
+            message: canSave ? '' : l.programEditorSaveUnsupported,
+            child: ActionButton(
+              key: const ValueKey<String>('program-editor-save'),
+              label: widget.saving
+                  ? l.progSaving
+                  : (widget.editingSaved ? l.programEditorSaveEdit : l.actionSave),
+              onPressed: canSave && !widget.saving
+                  ? () => widget.onSave!(_draft)
+                  : null,
+            ),
           ),
           Tooltip(
             message: canUseFlatApi ? '' : l.programEditorAssignUnsupported,

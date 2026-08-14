@@ -2181,7 +2181,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get clientTrainerMemoHint => '이 회원에 대해 기억할 내용을 적어 주세요';
+  String get clientTrainerMemoHint => '이 고객에 대해 기억할 내용을 적어 주세요';
 
   @override
   String get clientTrainerMemoAdd => '메모 추가';
@@ -2230,7 +2230,47 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorDefaultSession => '세션 A';
 
   @override
-  String get programEditorSaveUnsupported => '다중 세션 프로그램 저장 API가 아직 없어요.';
+  String get programEditorSaveUnsupported => '세션이 하나이고 이름이 있는 프로그램만 저장할 수 있어요';
+
+  @override
+  String get programEditorSaveEdit => '수정 저장';
+
+  @override
+  String get programSavedTitle => '저장한 프로그램';
+
+  @override
+  String get programSavedOpen => '불러오기';
+
+  @override
+  String programSavedExerciseCount(int count) {
+    return '운동 $count개';
+  }
+
+  @override
+  String get programSavedNew => '새 프로그램';
+
+  @override
+  String get programDraftSaved => '프로그램을 저장했어요';
+
+  @override
+  String get programDraftSaveFailed => '프로그램을 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String programDraftLoaded(String name) {
+    return '$name을(를) 편집기로 불러왔어요';
+  }
+
+  @override
+  String get programDraftLoadFailed => '저장한 프로그램을 불러오지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get programDraftDeleteFailed => '프로그램을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get programDraftDeleteTitle => '저장한 프로그램을 삭제할까요?';
+
+  @override
+  String get programDraftDeleteBody => '이미 배정한 루틴과 등록한 일정은 그대로 남아요.';
 
   @override
   String get programEditorAssignUnsupported => '현재 서버는 평면 루틴 배정만 지원해요.';
@@ -2272,7 +2312,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorLocalBanner =>
-      '로컬 편집 상태입니다. 다중 세션 저장·배정은 신규 Program API 연결 후 사용할 수 있어요.';
+      '세션 하나짜리 프로그램은 저장하고 다시 불러올 수 있어요. 다중 세션 저장·배정은 아직 준비 중이에요.';
 
   @override
   String get programEditorSessionUp => '세션 위로 이동';
