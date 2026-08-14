@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
+import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -68,6 +70,13 @@ void main() {
 
     // No selection yet — list only, with the empty-panel hint.
     expect(find.textContaining('왼쪽에서 고객을 선택하면'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ClientCard),
+        matching: find.byType(AlertBadge),
+      ),
+      findsNothing,
+    );
 
     await tester.tap(card('김민수'));
     await settle(tester);
@@ -219,6 +228,34 @@ void main() {
     }
     // The top of the list is where the trainer looks first.
     expect(rendered.first.client.sodiumOverBudget, isTrue);
+  });
+
+  testWidgets('낮은 이행률이어도 고객 목록 진행 바와 퍼센트는 남색을 유지한다', (tester) async {
+    await openWide(tester);
+    await scrollToCard(tester, '배준혁');
+
+    final clientCard = find.ancestor(
+      of: find.text('배준혁'),
+      matching: find.byType(ClientCard),
+    );
+    final progress = tester.widget<LinearProgressIndicator>(
+      find.descendant(
+        of: clientCard,
+        matching: find.byType(LinearProgressIndicator),
+      ),
+    );
+
+    expect(progress.color, AppColors.primary);
+
+    final percentage = tester.widget<Text>(
+      find.descendant(
+        of: clientCard,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text && (widget.data?.endsWith('%') ?? false),
+        ),
+      ),
+    );
+    expect(percentage.style?.color, AppColors.primary);
   });
 
   testWidgets('the panel location is a path that encodes the section', (

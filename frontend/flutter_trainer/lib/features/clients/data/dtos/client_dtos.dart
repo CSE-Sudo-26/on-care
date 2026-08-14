@@ -13,6 +13,8 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     id: _str(json['id']),
     name: _str(json['name']),
     avatar: _str(json['avatar']),
+    gender: _str(json['gender']),
+    age: _nullableInt(json['age']),
     goal: _str(json['goal']),
     lastMessage: _str(json['last_message']),
     lastTime: _str(json['last_time']),
@@ -98,6 +100,8 @@ String _str(Object? v) => v is String ? v : '';
 String? _nullableStr(Object? v) => v is String && v.isNotEmpty ? v : null;
 
 int _int(Object? v) => v is num ? v.toInt() : 0;
+
+int? _nullableInt(Object? v) => v is num ? v.toInt() : null;
 
 double _double(Object? v) => v is num ? v.toDouble() : 0;
 

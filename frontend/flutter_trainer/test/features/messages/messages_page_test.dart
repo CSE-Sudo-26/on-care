@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
+import 'package:oncare_trainer/design_system/tokens/radius.dart';
+import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/messages/data/chat_insight_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
@@ -37,8 +40,85 @@ void main() {
             .first,
       );
       expect(surface.color, AppColors.accentSurface);
+      final tappable = tester.widget<InkWell>(
+        find.descendant(of: selectedTile, matching: find.byType(InkWell)),
+      );
+      expect(tappable.borderRadius, const BorderRadius.all(AppRadius.card));
+      final cardBody = tester.widget<Container>(
+        find
+            .descendant(of: selectedTile, matching: find.byType(Container))
+            .first,
+      );
+      expect(cardBody.padding, const EdgeInsets.all(AppSpacing.lg));
+      expect(cardBody.constraints?.minHeight, 88);
+
+      final listColumn = tester.widget<SizedBox>(
+        find.ancestor(
+          of: selectedTile,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is SizedBox && widget.width == AppLayout.splitListWidth,
+          ),
+        ),
+      );
+      expect(listColumn.width, AppLayout.splitListWidth);
     });
   });
+
+  testWidgets('conversation list keeps unread and status information', (
+    tester,
+  ) async {
+    await withWideSurface(tester, () async {
+      await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+      await goTo(tester, AppRoutes.messages);
+
+      final conversation = find.byKey(
+        const ValueKey<String>('messages-conversation-seed-client-3'),
+      );
+      expect(conversation, findsOneWidget);
+      expect(
+        find.descendant(
+          of: conversation,
+          matching: find.text('이번 주 운동 못했어요...'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('messages-unread-seed-client-3')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: conversation, matching: find.text('나트륨 초과')),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets(
+    'narrowest desktop split keeps message and time without overflow',
+    (tester) async {
+      await withWideSurface(tester, size: const Size(1024, 760), () async {
+        await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+        await goTo(tester, AppRoutes.messagesFor('seed-client-1'));
+
+        final conversation = find.byKey(
+          const ValueKey<String>('messages-conversation-seed-client-1'),
+        );
+        expect(
+          find.descendant(
+            of: conversation,
+            matching: find.textContaining('확인했어요.'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: conversation, matching: find.text('18:18')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    },
+  );
 
   testWidgets('client query keeps the selected member in the thread', (
     tester,

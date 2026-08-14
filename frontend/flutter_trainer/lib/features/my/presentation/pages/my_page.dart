@@ -206,11 +206,7 @@ class _MyPageState extends ConsumerState<MyPage> {
           ? l.myGymChangeFailed
           : '${l.myGymChangeFailed} $localizedDetail';
     }
-    return serverDetailOr(
-      l,
-      detail,
-      l.myProfileSaveFailed,
-    );
+    return serverDetailOr(l, detail, l.myProfileSaveFailed);
   }
 
   void _applySavedProfile(TrainerProfile saved) {

@@ -15,8 +15,10 @@ import 'package:oncare_trainer/features/schedule/presentation/widgets/reservatio
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
@@ -1578,15 +1580,20 @@ class _DayColumn extends StatelessWidget {
   }
 }
 
-class _WeekChip extends StatelessWidget {
+class _WeekChip extends ConsumerWidget {
   const _WeekChip({required this.session, required this.onTap});
 
   final ScheduleSession session;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = session.isDone ? AppColors.success : AppColors.primary;
+    final client = findClientIdentity(
+      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[],
+      clientId: session.clientId,
+      clientName: session.clientName,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
@@ -1612,16 +1619,31 @@ class _WeekChip extends StatelessWidget {
                     color: color,
                   ),
                 ),
-                Text(
-                  session.clientName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.foreground,
+                if (client == null)
+                  Text(
+                    session.clientName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.foreground,
+                    ),
+                  )
+                else
+                  ClientIdentity(
+                    client: client,
+                    nameStyle: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.foreground,
+                    ),
+                    demographicsStyle: const TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.subtleForeground,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -1891,7 +1913,7 @@ class _GapSlot extends StatelessWidget {
   }
 }
 
-class _SessionCard extends StatelessWidget {
+class _SessionCard extends ConsumerWidget {
   const _SessionCard({
     super.key,
     required this.session,
@@ -1920,9 +1942,14 @@ class _SessionCard extends StatelessWidget {
   final VoidCallback? onComplete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final s = session;
+    final client = findClientIdentity(
+      ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[],
+      clientId: session.clientId,
+      clientName: session.clientName,
+    );
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card,
@@ -1959,14 +1986,24 @@ class _SessionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          s.clientName,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.foreground,
+                        if (client == null)
+                          Text(
+                            s.clientName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.foreground,
+                            ),
+                          )
+                        else
+                          ClientIdentity(
+                            client: client,
+                            nameStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.foreground,
+                            ),
                           ),
-                        ),
                         Text(
                           l.sessionTypeAndDuration(
                             sessionTypeLabel(l, s.type),

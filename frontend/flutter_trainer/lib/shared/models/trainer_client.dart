@@ -27,6 +27,8 @@ class TrainerClient {
     required this.lastRoutine,
     required this.weekCompletion,
     required this.sodiumWeek,
+    this.gender = '',
+    this.age,
   });
 
   /// Row id (e.g. `seed-client-1`).
@@ -37,6 +39,13 @@ class TrainerClient {
 
   /// Single-char avatar label (e.g. 김).
   final String avatar;
+
+  /// Optional roster demographic supplied by the API (`male` / `female` /
+  /// `other`). Older API and local-demo rows do not carry it yet.
+  final String gender;
+
+  /// Optional international age supplied by the API.
+  final int? age;
 
   /// Goal label (e.g. 혈압 관리 · 체중 감량).
   final String goal;
@@ -78,6 +87,24 @@ class TrainerClient {
   /// [sodiumMg]). Empty for pre-v2 rows (before the next re-seed
   /// backfills it).
   final List<int> sodiumWeek;
+
+  /// Stable display gender for roster rows that predate demographic fields.
+  ///
+  /// The demo roster is presentation fixture data. Keeping the fallback on
+  /// the stable client id means same-name members still receive distinct,
+  /// repeatable identity details without changing the persisted Drift schema.
+  String get rosterGender {
+    if (gender == 'male' || gender == 'female' || gender == 'other') {
+      return gender;
+    }
+    return _demographicSeed.isEven ? 'female' : 'male';
+  }
+
+  /// Roster age, constrained to the requested twenties/thirties fixture range
+  /// when the source does not provide one.
+  int get rosterAge => age ?? 20 + (_demographicSeed % 20);
+
+  int get _demographicSeed => id.runes.fold<int>(0, (sum, rune) => sum + rune);
 
   /// Sodium exceeds the [sodiumTargetMg] daily target — surfaced as a
   /// warning on the list card and counted by the AI summary.

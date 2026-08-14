@@ -360,7 +360,10 @@ class _MacroItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 7),
-        _Bar(progress: item.ratio, color: AppColors.primary.withValues(alpha: 0.65)),
+        _Bar(
+          progress: item.ratio,
+          color: AppColors.primary.withValues(alpha: 0.65),
+        ),
       ],
     );
   }
@@ -419,7 +422,11 @@ class _StatusCards extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints c) {
         if (c.maxWidth < 310) {
           return Column(
-            children: <Widget>[a, const SizedBox(height: AppSpacing.sm), b],
+            children: <Widget>[
+              a,
+              const SizedBox(height: AppSpacing.sm),
+              b,
+            ],
           );
         }
         return Row(

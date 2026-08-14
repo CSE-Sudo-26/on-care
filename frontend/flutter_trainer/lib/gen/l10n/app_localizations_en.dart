@@ -2308,7 +2308,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsPdfUnsupported => 'PDF generation isn\'t supported yet.';
 
   @override
-  String get reportsPdfLabel => 'Shareable PDF';
+  String get reportsPdfLabel => 'Export PDF';
 
   @override
   String get reportsPrintUnsupported =>

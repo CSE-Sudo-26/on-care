@@ -11,9 +11,7 @@ ScheduleSession scheduleSessionFromJson(Map<String, dynamic> json) {
     time: _str(json['time']),
     // 서버는 고객을 member_id 로 참조한다. 빈 문자열은 미등록(상담) 슬롯이라
     // null 로 눕혀 이름 폴백 경로와 같은 의미가 되게 한다(#386).
-    clientId: _str(json['member_id']).isEmpty
-        ? null
-        : _str(json['member_id']),
+    clientId: _str(json['member_id']).isEmpty ? null : _str(json['member_id']),
     clientName: _str(json['client_name']),
     type: _str(json['type']),
     durationMinutes: _int(json['duration_minutes']),

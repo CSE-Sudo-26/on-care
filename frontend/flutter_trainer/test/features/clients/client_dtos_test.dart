@@ -27,6 +27,8 @@ void main() {
         'id': 'm1',
         'name': '김민수',
         'avatar': '김',
+        'gender': 'male',
+        'age': 36,
         'goal': '혈압 관리',
         'last_message': '점심 등록했어요',
         'last_time': '방금',
@@ -44,6 +46,8 @@ void main() {
 
       expect(c.id, 'm1');
       expect(c.name, '김민수');
+      expect(c.rosterGender, 'male');
+      expect(c.rosterAge, 36);
       expect(c.sodiumMg, 2100);
       expect(c.sugarG, 17.8);
       expect(c.carbsG, 150.5);
@@ -75,6 +79,7 @@ void main() {
       expect(c.weekCompletion, <int>[100, 50]);
       expect(c.sodiumWeek, isEmpty);
       expect(c.active, isFalse); // absent → false
+      expect(c.rosterAge, inInclusiveRange(20, 39));
     });
   });
 

@@ -17,6 +17,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -126,7 +127,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   SizedBox(
-                    width: 340,
+                    width: AppLayout.splitListWidth,
                     child: _ConversationList(
                       clients: filtered,
                       selectedId: selected?.id,
@@ -136,7 +137,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                       onSelected: _selectClient,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.lg),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: selected == null
                         ? const _EmptyThread()
@@ -180,72 +181,65 @@ class _ConversationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Text(
-              l.messagesConversations,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          l.messagesConversations,
+          style: const TextStyle(
+            color: AppColors.foreground,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: <Widget>[
-                for (final item in _ConversationFilter.values) ...<Widget>[
-                  _FilterChip(
-                    label: item == _ConversationFilter.unread
-                        ? l.messagesFilterUnreadCount(
-                            unread.values.where((n) => n > 0).length,
-                          )
-                        : item.label(l),
-                    selected: filter == item,
-                    onTap: () => onFilterChanged(item),
-                  ),
-                  if (item != _ConversationFilter.values.last)
-                    const SizedBox(width: AppSpacing.xs),
-                ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: <Widget>[
+              for (final item in _ConversationFilter.values) ...<Widget>[
+                _FilterChip(
+                  label: item == _ConversationFilter.unread
+                      ? l.messagesFilterUnreadCount(
+                          unread.values.where((n) => n > 0).length,
+                        )
+                      : item.label(l),
+                  selected: filter == item,
+                  onTap: () => onFilterChanged(item),
+                ),
+                if (item != _ConversationFilter.values.last)
+                  const SizedBox(width: AppSpacing.xs),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1, color: AppColors.borderStrong),
-          Expanded(
-            child: clients.isEmpty
-                ? EmptyHint(
-                    message: l.messagesEmpty,
-                    icon: Icons.forum_outlined,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: clients.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) {
-                      final client = clients[index];
-                      return _ConversationTile(
-                        key: ValueKey<String>(
-                          'messages-conversation-${client.id}',
-                        ),
-                        client: client,
-                        selected: client.id == selectedId,
-                        unread: unread[client.id] ?? 0,
-                        onTap: () => onSelected(client.id),
-                      );
-                    },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Expanded(
+          child: clients.isEmpty
+              ? EmptyHint(message: l.messagesEmpty, icon: Icons.forum_outlined)
+              : ListView.separated(
+                  padding: const EdgeInsets.only(
+                    right: AppSpacing.sm,
+                    bottom: AppLayout.pagePadding,
                   ),
-          ),
-        ],
-      ),
+                  itemCount: clients.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (context, index) {
+                    final client = clients[index];
+                    return _ConversationTile(
+                      key: ValueKey<String>(
+                        'messages-conversation-${client.id}',
+                      ),
+                      client: client,
+                      selected: client.id == selectedId,
+                      unread: unread[client.id] ?? 0,
+                      onTap: () => onSelected(client.id),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
@@ -314,7 +308,8 @@ class _ConversationTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: const BorderRadius.all(AppRadius.card),
           child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            constraints: const BoxConstraints(minHeight: 88),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(AppRadius.card),
               border: Border.all(
@@ -340,11 +335,12 @@ class _ConversationTile extends StatelessWidget {
                       Row(
                         children: <Widget>[
                           Expanded(
-                            child: Text(
-                              client.name,
-                              style: const TextStyle(
+                            child: ClientIdentity(
+                              client: client,
+                              nameStyle: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
+                                color: AppColors.foreground,
                               ),
                             ),
                           ),
@@ -357,7 +353,7 @@ class _ConversationTile extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 3),
                       Row(
                         children: <Widget>[
                           Expanded(
@@ -367,7 +363,7 @@ class _ConversationTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: AppColors.mutedForeground,
-                                fontSize: 12.5,
+                                fontSize: 11.5,
                                 fontWeight: unread > 0
                                     ? FontWeight.w700
                                     : FontWeight.w500,
@@ -376,11 +372,15 @@ class _ConversationTile extends StatelessWidget {
                           ),
                           if (unread > 0)
                             Container(
+                              key: ValueKey<String>(
+                                'messages-unread-${client.id}',
+                              ),
                               margin: const EdgeInsets.only(
                                 left: AppSpacing.xs,
                               ),
+                              constraints: const BoxConstraints(minWidth: 20),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
+                                horizontal: 6,
                                 vertical: 2,
                               ),
                               decoration: const BoxDecoration(
@@ -389,6 +389,7 @@ class _ConversationTile extends StatelessWidget {
                               ),
                               child: Text(
                                 '$unread',
+                                textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -399,7 +400,7 @@ class _ConversationTile extends StatelessWidget {
                         ],
                       ),
                       if (alerts.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 7),
                         AlertBadge(alert: alerts.first),
                       ],
                     ],
@@ -447,11 +448,12 @@ class _ThreadPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        client.name,
-                        style: const TextStyle(
+                      ClientIdentity(
+                        client: client,
+                        nameStyle: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
+                          color: AppColors.foreground,
                         ),
                       ),
                       Text(
