@@ -258,6 +258,39 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get dashAiLoading =>
+      'Reviewing diet, workouts, and recent conversations…';
+
+  @override
+  String get dashAiLoadFailed =>
+      'Couldn\'t load the detailed coaching summary.';
+
+  @override
+  String get dashAiRateLimited =>
+      'There are too many summary requests. Try again shortly.';
+
+  @override
+  String get dashAiStatus => 'Current status';
+
+  @override
+  String get dashAiExerciseFocus => 'Today\'s exercise focus';
+
+  @override
+  String get dashAiEvidence => 'Evidence';
+
+  @override
+  String get dashAiCaution => 'Check before session';
+
+  @override
+  String get dashAiPriorityHigh => 'Check first';
+
+  @override
+  String get dashAiPriorityMedium => 'Monitor';
+
+  @override
+  String get dashAiPriorityLow => 'Maintain';
+
+  @override
   String get dashAttentionTitle => 'Clients to check';
 
   @override

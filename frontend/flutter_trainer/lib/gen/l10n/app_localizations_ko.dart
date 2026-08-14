@@ -251,6 +251,36 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get dashAiLoading => '식단·운동·최근 대화를 종합하고 있어요…';
+
+  @override
+  String get dashAiLoadFailed => '상세 코칭 요약을 불러오지 못했어요.';
+
+  @override
+  String get dashAiRateLimited => '요약 요청이 많아요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get dashAiStatus => '현재 상태';
+
+  @override
+  String get dashAiExerciseFocus => '오늘 운동 중심';
+
+  @override
+  String get dashAiEvidence => '판단 근거';
+
+  @override
+  String get dashAiCaution => '세션 전 확인';
+
+  @override
+  String get dashAiPriorityHigh => '우선 확인';
+
+  @override
+  String get dashAiPriorityMedium => '관찰 필요';
+
+  @override
+  String get dashAiPriorityLow => '유지';
+
+  @override
   String get dashAttentionTitle => '확인 필요 고객';
 
   @override

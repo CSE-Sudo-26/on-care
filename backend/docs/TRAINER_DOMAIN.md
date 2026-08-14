@@ -108,6 +108,7 @@
 | PUT | `/trainer/schedule/{id}` | 예약 수정 |
 | DELETE | `/trainer/schedule/{id}` | 예약 삭제 |
 | POST | `/trainer/schedule/{id}/complete` | 세션 완료(예정→완료) |
+| GET | `/trainer/dashboard/coaching-summary` | 식단·운동·건강 프로필·최근 대화를 종합한 고객별 오늘 코칭 요약 |
 | POST | `/trainer/clients/{member_id}/ai-coach` | 담당 고객 데이터 기반 AI 코칭 질의 |
 | GET | `/trainer/clients/{member_id}/report?week_start=` | 주간 리포트(어느 요일을 줘도 그 주 월요일로 정규화) |
 | POST | `/trainer/clients/{member_id}/report/send` | 리포트를 회원 채팅 스레드로 전송 |
@@ -139,6 +140,15 @@ scope에 포함해 회원과 트레이너가 우연히 같은 키를 만들어�
 쓰되, 검색 스코프가 호출자(트레이너)가 아니라 **담당 회원**이다. 트레이너가 자기
 자신의(비어 있는) 기록으로 코칭받는 일을 막기 위한 구분이며, 접근 경계는 담당 링크
 확인(`_require_client`) — 남의 고객이면 404 로 존재조차 드러내지 않는다.
+
+### 대시보드 코칭 요약 (`/trainer/dashboard/coaching-summary`)
+
+담당 로스터에서 식단·주간 운동 이행률·건강 프로필·최근 14일 대화를 배치 조회하고,
+우선 확인할 고객을 최대 3명으로 제한해 LLM에 전달한다. 응답은 고객별 `현재 상태`,
+`판단 근거`, `오늘 운동 중심`, `세션 전 확인`으로 구조화하며, 입력에 없는 고객 ID나
+이름을 모델이 만들면 폐기한다. 대화 인용은 신뢰할 수 없는 참고 자료로 명시하고,
+공급자 장애·10초 타임아웃·응답 계약 위반 시 같은 스키마의 규칙 기반 요약으로
+폴백한다. 최근 대화는 고객별 최대 6건만 포함해 컨텍스트와 쿼리 크기를 제한한다.
 
 ### 주간 리포트 (`/trainer/clients/{id}/report`)
 

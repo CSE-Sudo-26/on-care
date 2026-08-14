@@ -548,6 +548,66 @@ abstract class AppLocalizations {
   /// **'All {total} clients are within target. Hold this intensity and raise next week\'s goal.'**
   String dashAiAllOnTrack(int total);
 
+  /// No description provided for @dashAiLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewing diet, workouts, and recent conversations…'**
+  String get dashAiLoading;
+
+  /// No description provided for @dashAiLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the detailed coaching summary.'**
+  String get dashAiLoadFailed;
+
+  /// No description provided for @dashAiRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'There are too many summary requests. Try again shortly.'**
+  String get dashAiRateLimited;
+
+  /// No description provided for @dashAiStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Current status'**
+  String get dashAiStatus;
+
+  /// No description provided for @dashAiExerciseFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s exercise focus'**
+  String get dashAiExerciseFocus;
+
+  /// No description provided for @dashAiEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence'**
+  String get dashAiEvidence;
+
+  /// No description provided for @dashAiCaution.
+  ///
+  /// In en, this message translates to:
+  /// **'Check before session'**
+  String get dashAiCaution;
+
+  /// No description provided for @dashAiPriorityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Check first'**
+  String get dashAiPriorityHigh;
+
+  /// No description provided for @dashAiPriorityMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Monitor'**
+  String get dashAiPriorityMedium;
+
+  /// No description provided for @dashAiPriorityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain'**
+  String get dashAiPriorityLow;
+
   /// No description provided for @dashAttentionTitle.
   ///
   /// In en, this message translates to:

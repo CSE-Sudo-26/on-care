@@ -155,6 +155,16 @@
     }
   },
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
+  "dashAiLoading": "Reviewing diet, workouts, and recent conversations…",
+  "dashAiLoadFailed": "Couldn't load the detailed coaching summary.",
+  "dashAiRateLimited": "There are too many summary requests. Try again shortly.",
+  "dashAiStatus": "Current status",
+  "dashAiExerciseFocus": "Today's exercise focus",
+  "dashAiEvidence": "Evidence",
+  "dashAiCaution": "Check before session",
+  "dashAiPriorityHigh": "Check first",
+  "dashAiPriorityMedium": "Monitor",
+  "dashAiPriorityLow": "Maintain",
   "@dashAiAllOnTrack": {
     "placeholders": {
       "total": {

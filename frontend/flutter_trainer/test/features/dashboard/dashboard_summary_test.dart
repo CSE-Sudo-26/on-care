@@ -1,15 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oncare_trainer/features/dashboard/data/ai_coaching_summary_repository.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
-import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 import '../../helpers/client_factory.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
-
-/// 문구 기대값은 로케일을 명시해 읽는다.
-final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// The dashboard's aggregation rules. These decide what the trainer is
 /// told to do first, so they're worth pinning down without a widget.
@@ -176,36 +172,65 @@ void main() {
     });
   });
 
-  group('AiSummaryCard.messageFor', () {
-    test('leads with unanswered messages over every other signal', () {
-      final summary = buildDashboardSummary(
-        clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
-        unread: const <String, int>{'a': 1},
-      );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('답장'));
-    });
+  group('DemoAiCoachingSummaryRepository', () {
+    test(
+      'turns a named client signal into a specific exercise focus',
+      () async {
+        final summary = buildDashboardSummary(
+          clients: <TrainerClient>[
+            makeClient(
+              id: 'a',
+              name: '김민수',
+              sodiumMg: 2500,
+              lastMessage: '무릎이 가볍게 당겨요',
+            ),
+          ],
+          unread: const <String, int>{'a': 1},
+        );
+        final result = await const DemoAiCoachingSummaryRepository().fetch(
+          summary,
+        );
 
-    test('mentions the sodium count when nobody is waiting', () {
+        expect(result.headline, contains('김민수'));
+        expect(result.clients.single.statusSummary, contains('무릎'));
+        expect(result.clients.single.exerciseFocus, contains('고중량'));
+      },
+    );
+
+    test('includes the sodium value as evidence', () async {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[makeClient(id: 'a', sodiumMg: 2500)],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('나트륨'));
-    });
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        summary,
+      );
 
-    test('an empty roster gets an onboarding line, not a stat', () {
       expect(
-        AiSummaryCard.messageFor(_ko, DashboardSummary.empty),
-        contains('담당 고객이 없어요'),
+        result.clients.single.evidence,
+        contains('오늘 나트륨 2500mg / 기준 2000mg'),
       );
     });
 
-    test('a clean roster is told so rather than left blank', () {
+    test('an empty roster gets an onboarding line, not a stat', () async {
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        DashboardSummary.empty,
+      );
+
+      expect(result.headline, contains('담당 고객이 등록되면'));
+      expect(result.clients, isEmpty);
+    });
+
+    test('a clean roster is told so rather than left blank', () async {
       final summary = buildDashboardSummary(
         clients: <TrainerClient>[makeClient(id: 'a')],
         unread: const <String, int>{},
       );
-      expect(AiSummaryCard.messageFor(_ko, summary), contains('목표 범위 안'));
+      final result = await const DemoAiCoachingSummaryRepository().fetch(
+        summary,
+      );
+
+      expect(result.headline, contains('목표 범위 안'));
     });
   });
 }
