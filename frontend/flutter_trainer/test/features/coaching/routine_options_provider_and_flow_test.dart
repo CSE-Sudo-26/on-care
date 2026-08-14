@@ -37,6 +37,11 @@ const _client = TrainerClient(
 );
 
 class _CapturingRoutineRepository implements TrainerRoutineRepository {
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
 
   @override
   Future<void> updateRoutine(
@@ -74,6 +79,11 @@ class _CapturingRoutineRepository implements TrainerRoutineRepository {
 /// Always throws [error] from `assignRoutine`, to exercise the send
 /// button's failure-message branching (network vs. other).
 class _ThrowingRoutineRepository implements TrainerRoutineRepository {
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {}
 
   @override
   Future<void> updateRoutine(

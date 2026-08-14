@@ -30,6 +30,7 @@ List<Map<String, Object?>> programToJson(List<ProgramItem> program) {
         'sets': item.sets,
         'reps': item.reps,
         'weight': item.weight,
+        'session': item.session,
       },
   ];
 }
@@ -44,6 +45,8 @@ List<ProgramItem> _programFromJson(Object? raw) {
           sets: _int(entry['sets']),
           reps: _str(entry['reps']),
           weight: _str(entry['weight']),
+          // 세션 키가 없던 예전 일정은 빈 문자열 — 평면 목록으로 읽힌다(#709).
+          session: _str(entry['session']),
         ),
   ];
 }

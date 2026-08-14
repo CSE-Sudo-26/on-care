@@ -36,6 +36,10 @@ class CoachRoutine {
     this.completedIntensity,
     this.memberNote = '',
     this.trainerFeedback = '',
+    this.programName = '',
+    this.sessionName = '',
+    this.sessionOrder = 0,
+    this.exercises = const <CoachRoutineExercise>[],
   });
 
   final String id;
@@ -52,6 +56,21 @@ class CoachRoutine {
   final String? completedIntensity;
   final String memberNote;
   final String trainerFeedback;
+
+  /// 여러 세션으로 짜인 프로그램의 이름. 단일 루틴은 빈 문자열이다(#709).
+  final String programName;
+
+  /// 이 루틴이 그 프로그램의 어느 세션인가. 세션이 하나뿐이면 빈 문자열.
+  final String sessionName;
+
+  /// 프로그램 안에서의 세션 순서(0부터).
+  final int sessionOrder;
+
+  /// 이 세션에 담긴 운동 구성. 예전에는 이름만 [reason] 에 이어 붙어 왔다.
+  final List<CoachRoutineExercise> exercises;
+
+  /// 이 루틴이 여러 세션짜리 프로그램의 한 세션인가.
+  bool get isProgramSession => sessionName.isNotEmpty;
 
   bool get isTrainerRecommended => source == 'trainer';
   bool get isAiRecommended => source == 'ai';
@@ -76,6 +95,12 @@ class CoachRoutine {
     completedIntensity: completedIntensity ?? this.completedIntensity,
     memberNote: memberNote ?? this.memberNote,
     trainerFeedback: trainerFeedback ?? this.trainerFeedback,
+    // 완료만 표시해도 프로그램·세션·운동 구성은 그대로 남아야 한다 — 빠뜨리면
+    // 완료를 누른 순간 화면에서 프로그램 제목과 운동이 사라진다(#709).
+    programName: programName,
+    sessionName: sessionName,
+    sessionOrder: sessionOrder,
+    exercises: exercises,
   );
 }
 
@@ -164,4 +189,41 @@ class CoachMessage {
   final DateTime createdAt;
 
   bool get fromMe => sender == CoachSender.me;
+}
+
+/// 배정된 세션 안의 운동 한 항목 — 트레이너 편집기가 적어 준 값 그대로다.
+///
+/// 세트·횟수·중량은 문자열이다. 트레이너가 "10회"·"자체중량" 처럼 적을 수 있고,
+/// 숫자로 바꾸면 그 표현이 사라진다(#709).
+class CoachRoutineExercise {
+  const CoachRoutineExercise({
+    required this.name,
+    this.sets = '',
+    this.reps = '',
+    this.weight = '',
+    this.duration = '',
+    this.rest = '',
+    this.memo = '',
+  });
+
+  final String name;
+  final String sets;
+  final String reps;
+  final String weight;
+  final String duration;
+  final String rest;
+  final String memo;
+
+  /// "4세트 × 12회 · 60kg" 처럼 한 줄로 읽히는 요약. 비어 있는 값은 건너뛴다.
+  String get detail => <String>[
+    if (sets.isNotEmpty && reps.isNotEmpty)
+      '$sets세트 × $reps'
+    else if (sets.isNotEmpty)
+      '$sets세트'
+    else if (reps.isNotEmpty)
+      reps,
+    if (duration.isNotEmpty) '$duration분',
+    if (weight.isNotEmpty && weight != '-') weight,
+    if (rest.isNotEmpty) '휴식 $rest초',
+  ].join(' · ');
 }

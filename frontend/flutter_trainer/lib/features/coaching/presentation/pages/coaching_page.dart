@@ -13,7 +13,6 @@ import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
-import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
@@ -281,7 +280,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     TrainerClient client,
     ProgramEditorState draft,
   ) async {
-    if (_sent || _sending || !draft.supportsFlatRoutine) return;
+    if (_sent || _sending || !draft.supportsAssignment) return;
     final sentFor = client.id;
     if (_sendRequestId == null || _sendRequestFor != sentFor) {
       _sendRequestId = newClientRequestId();
@@ -291,12 +290,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     final messenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(context);
     try {
+      // 세션이 몇 개든 프로그램 배정 한 번으로 보낸다 — 세션당 루틴 한 건이
+      // 되고, 세션이 하나뿐이면 예전 단일 배정과 같은 결과다(#709).
       await ref
           .read(trainerRoutineRepositoryProvider)
-          .assignRoutine(
+          .assignProgram(
             client.id,
-            _draftRoutine(draft),
-            clientRequestId: _sendRequestId,
+            programAssignToJson(draft, clientRequestId: _sendRequestId),
           );
     } catch (_) {
       if (!mounted || !_isStillSelected(sentFor)) return;
@@ -325,7 +325,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     TrainerClient client,
     ProgramEditorState draft,
   ) async {
-    if (!draft.supportsFlatRoutine ||
+    if (!draft.supportsAssignment ||
         _registered ||
         _registeringClientIds.contains(client.id)) {
       return;
@@ -367,43 +367,26 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
     });
   }
 
-  List<ProgramItem> _draftProgram(ProgramEditorState draft) => <ProgramItem>[
-    for (final exercise in draft.sessions.single.exercises)
-      ProgramItem(
-        name: exercise.name.trim(),
-        sets: int.parse(exercise.sets.trim()),
-        reps: exercise.duration.trim().isNotEmpty
-            ? '${exercise.duration}분'
-            : exercise.reps,
-        weight: exercise.weight.trim().isEmpty ? '-' : exercise.weight,
-      ),
-  ];
-
-  AssignedRoutine _draftRoutine(ProgramEditorState draft) {
-    final exercises = draft.sessions.single.exercises;
-    final summary = summaryTypeAndSource(
-      aiItemTypes: <String>[
-        for (final exercise in exercises)
-          if (exercise.source == 'ai') exercise.type,
-      ],
-      customItemTypes: <String>[
-        for (final exercise in exercises)
-          if (exercise.source != 'ai') exercise.type,
-      ],
-    );
-    final minutes = exercises.fold<int>(
-      0,
-      (total, exercise) =>
-          total + (int.tryParse(exercise.duration.trim()) ?? 0),
-    );
-    return AssignedRoutine(
-      id: '',
-      name: draft.name,
-      minutes: minutes,
-      type: summary.type,
-      reason: exercises.map((exercise) => exercise.name).join(', '),
-      source: summary.source,
-    );
+  /// The draft flattened into schedule items, each tagged with its session.
+  ///
+  /// 세션 이름은 항목마다 붙는다(#709) — 일정은 평면 목록이지만 이 값으로 다시
+  /// 세션별로 묶어 보여 줄 수 있고, 세션이 하나뿐이면 빈 문자열이라 예전 일정과
+  /// 같은 모양이다.
+  List<ProgramItem> _draftProgram(ProgramEditorState draft) {
+    final multi = draft.sessions.length > 1;
+    return <ProgramItem>[
+      for (final session in draft.sessions)
+        for (final exercise in session.exercises)
+          ProgramItem(
+            name: exercise.name.trim(),
+            sets: int.parse(exercise.sets.trim()),
+            reps: exercise.duration.trim().isNotEmpty
+                ? '${exercise.duration}분'
+                : exercise.reps,
+            weight: exercise.weight.trim().isEmpty ? '-' : exercise.weight,
+            session: multi ? capSessionName(session.name) : '',
+          ),
+    ];
   }
 
   @override

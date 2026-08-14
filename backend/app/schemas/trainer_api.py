@@ -227,15 +227,55 @@ class ChatSendRequest(BaseModel):
 RoutineType = Literal["걷기", "유산소", "근력", "요가", "스트레칭", "기타"]
 RoutineSource = Literal["ai", "trainer"]  # ai 추천 | 트레이너 직접 배정
 
+#: 운동 항목의 출처. 'ai' 는 AI 제안을 편집기에 반영한 것, 'trainer' 는 트레이너가
+#: 직접 추가한 것. 저장·복원 후에도 이 구분이 남아야 화면이 같은 배지를 그린다.
+ProgramExerciseSource = Literal["ai", "trainer"]
+
+
+class ProgramDraftExercise(BaseModel):
+    """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
+
+    세트·횟수·중량·시간은 **문자열 그대로** 둔다. 편집기가 "10회"·"60"·"20kg"
+    같은 자유 입력을 받으므로 숫자로 정규화하면 트레이너가 적어 둔 표현이 사라진다
+    — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
+    """
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=100)
+    sets: str = Field(default="", max_length=30)
+    reps: str = Field(default="", max_length=30)
+    weight: str = Field(default="", max_length=30)
+    duration: str = Field(default="", max_length=30)
+    distance: str = Field(default="", max_length=30)
+    rest: str = Field(default="", max_length=30)
+    rpe: str = Field(default="", max_length=30)
+    memo: str = Field(default="", max_length=300)
+    type: RoutineType = "근력"
+    source: ProgramExerciseSource = "trainer"
+
+
+
 
 class RoutineOut(BaseModel):
-    """배정 루틴 — 프론트 ClientAiRoutine 계약 정렬."""
+    """배정 루틴 — 프론트 ClientAiRoutine 계약 정렬.
+
+    다중 세션 프로그램은 세션당 한 건이다(#709). `program_name` 이 같은 건들이
+    한 프로그램이고 `session_order` 가 순서다. 단일 배정은 세 값이 비어 있어
+    예전 계약과 같다.
+    """
     id: str
     name: str
     minutes: int
     type: RoutineType
     reason: str
     source: RoutineSource
+    #: 여러 세션을 묶는 프로그램 이름. 단일 배정은 빈 문자열.
+    program_name: str = ""
+    #: 이 루틴이 어느 세션인가. 세션이 하나뿐인 프로그램은 빈 문자열.
+    session_name: str = ""
+    #: 프로그램 안에서의 세션 순서(0부터).
+    session_order: int = 0
+    #: 그 세션의 운동 구성. 예전에는 이름만 `reason` 에 이어 붙였다.
+    exercises: list[ProgramDraftExercise] = Field(default_factory=list)
     completed: bool = False
     completed_at: _datetime | None = None
     completed_minutes: int | None = None
@@ -282,46 +322,35 @@ class RoutineFeedbackRequest(BaseModel):
 
 # ---- 프로그램 초안 (#708) ----
 
-#: 운동 항목의 출처. 'ai' 는 AI 제안을 편집기에 반영한 것, 'trainer' 는 트레이너가
-#: 직접 추가한 것. 저장·복원 후에도 이 구분이 남아야 화면이 같은 배지를 그린다.
-ProgramExerciseSource = Literal["ai", "trainer"]
-
-
-class ProgramDraftExercise(BaseModel):
-    """초안의 운동 한 항목 — 편집기 `ProgramExerciseDraft` 계약 정렬.
-
-    세트·횟수·중량·시간은 **문자열 그대로** 둔다. 편집기가 "10회"·"60"·"20kg"
-    같은 자유 입력을 받으므로 숫자로 정규화하면 트레이너가 적어 둔 표현이 사라진다
-    — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
-    """
-    id: str = Field(min_length=1, max_length=64)
-    name: str = Field(min_length=1, max_length=100)
-    sets: str = Field(default="", max_length=30)
-    reps: str = Field(default="", max_length=30)
-    weight: str = Field(default="", max_length=30)
-    duration: str = Field(default="", max_length=30)
-    distance: str = Field(default="", max_length=30)
-    rest: str = Field(default="", max_length=30)
-    rpe: str = Field(default="", max_length=30)
-    memo: str = Field(default="", max_length=300)
-    type: RoutineType = "근력"
-    source: ProgramExerciseSource = "trainer"
-
-
-#: 초안 하나가 담는 운동 수 상한. 화면이 한 세션에 넣을 수 있는 현실적인 개수를
+#: 세션 하나가 담는 운동 수 상한. 화면이 한 세션에 넣을 수 있는 현실적인 개수를
 #: 훨씬 넘는 값이며, 한 요청이 DB 에 무한정 밀어 넣는 것을 막는다.
 _PROGRAM_DRAFT_MAX_EXERCISES = 50
 
+#: 한 프로그램의 세션 수 상한. 주 단위 분할(A/B/C…)을 충분히 담는 값이다.
+_PROGRAM_MAX_SESSIONS = 12
+
+
+class ProgramDraftSession(BaseModel):
+    """프로그램의 세션 하나 — 편집기 `ProgramSessionDraft` 계약 정렬. (#709)
+
+    순서는 배열 순서다. 별도 정렬 값을 두면 배열과 어긋날 수 있고, 편집기는
+    이미 순서를 가진 목록을 들고 있다.
+    """
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(default="", max_length=100)
+    exercises: list[ProgramDraftExercise] = Field(
+        default_factory=list, max_length=_PROGRAM_DRAFT_MAX_EXERCISES
+    )
+
 
 class TrainerProgramDraftOut(BaseModel):
-    """저장된 프로그램 초안."""
+    """저장된 프로그램 초안. 세션은 저장한 순서 그대로 돌아온다."""
     id: str
     name: str
     goal: str
     period: str
     memo: str
-    session_name: str
-    exercises: list[ProgramDraftExercise]
+    sessions: list[ProgramDraftSession]
     created_at: _datetime
     updated_at: _datetime
 
@@ -336,6 +365,7 @@ class TrainerProgramDraftSummary(BaseModel):
     name: str
     goal: str
     period: str
+    session_count: int
     exercise_count: int
     updated_at: _datetime
 
@@ -346,18 +376,17 @@ class TrainerProgramDraftCreate(BaseModel):
     goal: str = Field(default="", max_length=200)
     period: str = Field(default="", max_length=100)
     memo: str = Field(default="", max_length=2000)
-    session_name: str = Field(default="", max_length=100)
     #: 운동이 하나도 없는 초안도 저장할 수 있다 — 이름과 목표만 잡아 둔 상태가
     #: 초안으로서 의미가 있고, 그 상태를 저장하지 못하면 기능이 반쪽이 된다.
-    exercises: list[ProgramDraftExercise] = Field(
-        default_factory=list, max_length=_PROGRAM_DRAFT_MAX_EXERCISES
+    sessions: list[ProgramDraftSession] = Field(
+        default_factory=list, max_length=_PROGRAM_MAX_SESSIONS
     )
 
 
 class TrainerProgramDraftUpdate(PartialUpdate):
     """초안 부분 수정. 보낸 필드만 반영한다.
 
-    `exercises` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
+    `sessions` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
     구성 전체를 들고 있고, 부분 병합은 순서가 어긋날 여지만 만든다.
     """
 
@@ -365,10 +394,29 @@ class TrainerProgramDraftUpdate(PartialUpdate):
     goal: str | None = Field(default=None, max_length=200)
     period: str | None = Field(default=None, max_length=100)
     memo: str | None = Field(default=None, max_length=2000)
-    session_name: str | None = Field(default=None, max_length=100)
-    exercises: list[ProgramDraftExercise] | None = Field(
-        default=None, max_length=_PROGRAM_DRAFT_MAX_EXERCISES
+    sessions: list[ProgramDraftSession] | None = Field(
+        default=None, max_length=_PROGRAM_MAX_SESSIONS
     )
+
+
+class ProgramAssignRequest(BaseModel):
+    """다중 세션 프로그램을 담당 회원에게 배정하는 입력. (#709)
+
+    세션 하나당 루틴 하나가 만들어진다. 세션이 하나뿐이면 예전 단일 배정과
+    같은 모양의 루틴 하나가 되고 세션 라벨이 붙지 않는다 — 회원 화면에 없던
+    구분이 갑자기 생기지 않게 하려는 것이다.
+    """
+    name: str = Field(min_length=1, max_length=100)
+    sessions: list[ProgramDraftSession] = Field(
+        min_length=1, max_length=_PROGRAM_MAX_SESSIONS
+    )
+    #: 전송 시도당 클라이언트가 만드는 멱등키. 재시도에 같은 키를 다시 보내면
+    #: 프로그램 전체가 두 번 배정되지 않는다(단일 배정과 같은 규약, #581).
+    #:
+    #: 단건 배정(64)보다 짧다. 서버가 세션마다 `{key}#{index}` 로 나눠 저장하는데
+    #: 그 값이 들어갈 컬럼이 `String(64)` 라, 접미사 자리를 남겨 두지 않으면 긴
+    #: 키가 저장 단계에서 길이 초과로 터진다.
+    client_request_id: str | None = Field(default=None, max_length=48)
 
 
 #: 메모 출처. 'trainer' 는 회원 상세에서 직접 쓴 메모, 'chat_insight' 는 채팅에서
@@ -515,11 +563,17 @@ ScheduleStatus = Literal["예정", "완료", "공백"]
 
 
 class ProgramItem(BaseModel):
-    """세션 프로그램 한 항목 — 프론트 ProgramItem 계약({name,sets,reps,weight})."""
+    """세션 프로그램 한 항목 — 프론트 ProgramItem 계약({name,sets,reps,weight}).
+
+    `session` 은 다중 세션 프로그램을 일정에 등록할 때 그 항목이 속한 세션
+    이름이다(#709). 기존 행에는 이 키가 없고, 없으면 빈 문자열이라 예전처럼
+    세션 구분 없는 목록으로 읽힌다.
+    """
     name: str = Field(min_length=1, max_length=100)
     sets: int = Field(default=0, ge=0, le=99)
     reps: str = Field(default="", max_length=30)
     weight: str = Field(default="", max_length=30)
+    session: str = Field(default="", max_length=100)
 
 
 class ScheduleSessionOut(BaseModel):

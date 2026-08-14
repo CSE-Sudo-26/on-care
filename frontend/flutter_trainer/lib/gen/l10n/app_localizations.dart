@@ -4109,7 +4109,7 @@ abstract class AppLocalizations {
   /// No description provided for @programEditorSaveUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'Only a named, single-session program can be saved.'**
+  /// **'Give the program a name first.'**
   String get programEditorSaveUnsupported;
 
   /// No description provided for @programEditorSaveEdit.
@@ -4187,7 +4187,7 @@ abstract class AppLocalizations {
   /// No description provided for @programEditorAssignUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'The server currently supports flat routine assignments only.'**
+  /// **'Check each exercise\'s name and set count.'**
   String get programEditorAssignUnsupported;
 
   /// No description provided for @programEditorAssign.
@@ -4255,12 +4255,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session {letter}'**
   String programEditorSessionName(String letter);
-
-  /// No description provided for @programEditorLocalBanner.
-  ///
-  /// In en, this message translates to:
-  /// **'A single-session program can be saved and reopened. Saving and assigning multi-session programs is still to come.'**
-  String get programEditorLocalBanner;
 
   /// No description provided for @programEditorSessionUp.
   ///
