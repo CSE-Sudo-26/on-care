@@ -128,6 +128,7 @@ class _SubTabs extends StatelessWidget {
     final bool on = active == i;
     return Expanded(
       child: GestureDetector(
+        key: ValueKey<String>('exercise-subtab-$i'),
         onTap: () => onChanged(i),
         behavior: HitTestBehavior.opaque,
         child: Container(

@@ -124,6 +124,74 @@ Flutter 3.44의 `integration_test` WebDriver 채널은 브라우저 스크린샷
 검증합니다. Chrome 프로세스 자체의 reload 이벤트까지 자동화해야 한다면 Flutter 공식
 드라이버가 reload 명령을 지원할 때 별도 시나리오로 추가해야 합니다.
 
+## 회원↔트레이너 예약·취소 E2E (#637)
+
+트레이너가 연 자리를 회원이 예약하고, 그 예약이 트레이너 일정으로 파생됐다가, 회원이 취소하면
+좌석과 일정이 함께 돌아오는 **양방향 흐름 전체**를 실 API로 검증합니다. 위 백엔드만 떠 있으면
+됩니다 — ChromeDriver도 브라우저도 필요 없습니다.
+
+```bash
+bash tool/run_reservation_e2e.sh
+```
+
+### 왜 브라우저가 없는가
+
+회원 앱의 배포 타깃은 iOS/Android지 웹이 아닙니다. 그래서 이 스위트는 브라우저 대신
+`IntegrationTestWidgetsFlutterBinding`(LiveBinding)을 `flutter test`로 돌립니다. 실제 위젯
+트리와 실제 HTTP가 그대로 동작하고, 트레이너 웹 스위트(ChromeDriver)보다 빠릅니다.
+`flutter test` 기본 바인딩은 FakeAsync라 실 네트워크 응답이 영원히 오지 않으므로,
+LiveBinding이 아니면 이 방식은 성립하지 않습니다.
+
+VM에는 구현이 없는 플러그인 세 개(`shared_preferences`, `flutter_secure_storage`,
+`path_provider`)는 하네스가 setUp에서 채웁니다.
+
+### 단계 구성
+
+두 앱은 **서로 다른 Dart 패키지**라 한 프로세스에 함께 띄울 수 없습니다. 그래서 한 시나리오를
+단계로 쪼개 번갈아 실행하고, 단계 사이의 상태는 **서버 DB**와 **상태 파일(id만)** 로 넘깁니다.
+잔여 좌석처럼 검증 대상인 값은 상태 파일에 담지 않습니다 — 담으면 서버가 아니라 앞 단계의
+기억을 검증하게 됩니다.
+
+| 순서 | 단계 | 앱 | 확인하는 것 |
+| --- | --- | --- | --- |
+| 1 | `create-slot` | 트레이너 웹 | UI로 연 슬롯의 정원·잔여 좌석이 서버와 일치 |
+| 2 | `reserve` | 회원 앱 | 슬롯 노출 · 예약 · 좌석 감소 · 재시작·재로그인 후 유지 |
+| 3 | `verify-schedule` | 트레이너 웹 | 그 예약이 만든 일정이 트레이너 화면에 표시 |
+| 4 | `cancel` | 회원 앱 | 취소 · 좌석 복구 · 재예약 가능 |
+| 5 | `verify-schedule-removed` | 트레이너 웹 | 일정 제거 · 좌석이 정원까지 복구 |
+| 6 | `edge-cases` | 회원 앱 | 중복·권한 없는 회원·동시 요청이 초과 예약을 못 만듦 |
+| 7 | `cleanup` | 트레이너 웹 | 이번 실행이 연 슬롯을 닫음 |
+
+실패하면 러너가 **어느 단계에서 멈췄는지와 상태 파일 경로**를 남깁니다. 그 단계만 따로 다시
+돌릴 수도 있습니다.
+
+```bash
+cd frontend/flutter
+flutter test test_e2e/reservation_member_test.dart \
+  --dart-define=USE_MOCK_API=false \
+  --dart-define=API_BASE_URL=http://localhost:8000/v1 \
+  --dart-define=E2E_PHASE=reserve \
+  --dart-define=E2E_STATE_FILE=/tmp/oncare_e2e.json
+```
+
+### 반복 실행과 남는 데이터
+
+매 실행은 **새 슬롯**을 엽니다. 앞선 실행이 중간에 죽어 예약이 남아 있어도 다음 실행은 그것을
+건드리지 않습니다. 슬롯 삭제 API는 없고 닫기만 가능하므로(`DELETE /trainer/reservation-slots/{id}`
+는 `is_closed`를 켭니다), 실행마다 **닫힌 슬롯이 하나씩 남습니다.** 닫힌 자리는 회원 조회에
+나오지 않아 다음 실행과 간섭하지 않습니다.
+
+### 테스트가 고정하는 계약
+
+- 트레이너는 `trainer@oncare.com`, 회원은 `minsu@oncare.com`(`user-demo`), 권한 밖 회원은
+  `jisu@oncare.com`이며 모두 기본 `DEMO_LOGIN_PASSWORD=oncare123`을 씁니다.
+- `USE_MOCK_API=false`가 아니거나 앱과 검증용 API 클라이언트의 `API_BASE_URL`이 다르면
+  **즉시 실패합니다.** 목업으로 새면서 초록불이 뜨는 것을 막습니다.
+- 화면 이동과 예약·취소는 사이드바·탭·버튼만 씁니다. 다만 "화면에 보였다"와 "서버에
+  저장됐다"는 다른 주장이므로, 각 단계는 UI와 서버 응답을 **둘 다** 확인합니다.
+- 슬롯 시각은 시트 기본값 10:00을 그대로 쓰고 날짜만 하루 뒤로 잡습니다 — `showTimePicker`
+  다이얼을 흉내 내는 쪽이 깨질 거리가 더 많습니다.
+
 ### 시드 기록과 AI 코치
 
 시드된 식단·운동·대화는 기동할 때 **개인 RAG 문서로도 적재**됩니다(#604). 그래서 데모

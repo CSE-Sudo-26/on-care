@@ -281,6 +281,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   SizedBox(
                     width: 100,
                     child: TextField(
+                      key: const ValueKey<String>('slot-capacity-input'),
                       controller: _capacity,
                       enabled: !_saving,
                       keyboardType: TextInputType.number,
@@ -292,6 +293,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   FilledButton.icon(
+                    key: const ValueKey<String>('slot-create'),
                     onPressed: _saving ? null : _create,
                     icon: const Icon(Icons.add),
                     label: Text(l.slotOpenAction),
@@ -333,6 +335,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       itemBuilder: (context, index) {
                         final slot = daySlots[index];
                         return Container(
+                          key: ValueKey<String>('slot-row-${slot.id}'),
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             color: slot.isClosed

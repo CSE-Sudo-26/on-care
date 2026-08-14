@@ -150,6 +150,7 @@ class _MainShellState extends ConsumerState<MainShell>
                         ),
                         const SizedBox(width: 64),
                         _Destination(
+                          key: const ValueKey<String>('nav-exercise'),
                           icon: Icons.fitness_center_outlined,
                           activeIcon: Icons.fitness_center,
                           label: l.navExercise,
@@ -198,6 +199,7 @@ class _MainShellState extends ConsumerState<MainShell>
 
 class _Destination extends StatelessWidget {
   const _Destination({
+    super.key,
     required this.icon,
     required this.activeIcon,
     required this.label,
