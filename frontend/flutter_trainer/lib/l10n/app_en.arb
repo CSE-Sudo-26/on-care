@@ -1251,7 +1251,7 @@
   "@searchClients": {
     "description": "Label/tooltip of the console header's client search."
   },
-  "searchClientsHint": "Search by client name",
+  "searchClientsHint": "Search clients, goals, messages, or routines",
   "searchClear": "Clear search",
   "searchQuickActions": "Open in another tab",
   "searchNoResults": "No client matches “{query}”",
@@ -1340,7 +1340,6 @@
   "messagesSubtitle": "Exchange coaching updates with clients and follow up quickly",
   "messagesLoadFailed": "Couldn't load conversations.",
   "messagesConversations": "Conversations",
-  "messagesSearchHint": "Search clients or messages",
   "messagesEmpty": "No conversations match these filters.",
   "messagesFilterAll": "All",
   "messagesFilterUnread": "Unread",

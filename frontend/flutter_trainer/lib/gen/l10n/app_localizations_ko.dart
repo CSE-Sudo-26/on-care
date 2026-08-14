@@ -1862,7 +1862,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchClients => '고객 검색';
 
   @override
-  String get searchClientsHint => '고객 이름 검색';
+  String get searchClientsHint => '고객, 목표, 메시지, 루틴 통합 검색';
 
   @override
   String get searchClear => '검색어 지우기';
@@ -1973,9 +1973,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesConversations => '대화';
-
-  @override
-  String get messagesSearchHint => '회원 이름 또는 메시지 검색';
 
   @override
   String get messagesEmpty => '조건에 맞는 대화가 없어요.';

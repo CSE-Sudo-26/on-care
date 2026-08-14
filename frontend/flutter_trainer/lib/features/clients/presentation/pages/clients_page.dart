@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/clients/presentation/widgets/client_card
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -50,23 +51,11 @@ enum _ManagementFilter { all, attention, active, dormant }
 enum _ClientSort { priority, name }
 
 class _ClientsPageState extends ConsumerState<ClientsPage> {
-  final TextEditingController _queryController = TextEditingController();
-  String _query = '';
   _ManagementFilter _managementFilter = _ManagementFilter.all;
   _ClientSort _sort = _ClientSort.priority;
 
-  @override
-  void dispose() {
-    _queryController.dispose();
-    super.dispose();
-  }
-
   void _clearFilters() {
-    _queryController.clear();
-    setState(() {
-      _query = '';
-      _managementFilter = _ManagementFilter.all;
-    });
+    setState(() => _managementFilter = _ManagementFilter.all);
     context.go(AppRoutes.clients);
   }
 
@@ -126,13 +115,8 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
       data: (all) {
         final AppLocalizations l = AppLocalizations.of(context);
         var list = applyClientFilter(all, activeFilter, unread: unread);
-        final normalizedQuery = _query.trim().toLowerCase();
         list = list
             .where((client) {
-              if (normalizedQuery.isNotEmpty &&
-                  !client.name.toLowerCase().contains(normalizedQuery)) {
-                return false;
-              }
               switch (_managementFilter) {
                 case _ManagementFilter.all:
                   return true;
@@ -227,12 +211,10 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 children: <Widget>[
                   if (wide || selected == null)
                     _MemberManagementToolbar(
-                      queryController: _queryController,
                       managementFilter: _managementFilter,
                       sort: _sort,
                       shownCount: list.length,
                       activeCount: all.where((client) => client.active).length,
-                      onQueryChanged: (value) => setState(() => _query = value),
                       onFilterChanged: (value) =>
                           setState(() => _managementFilter = value),
                       onSortChanged: (value) => setState(() => _sort = value),
@@ -271,22 +253,18 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
 
 class _MemberManagementToolbar extends StatelessWidget {
   const _MemberManagementToolbar({
-    required this.queryController,
     required this.managementFilter,
     required this.sort,
     required this.shownCount,
     required this.activeCount,
-    required this.onQueryChanged,
     required this.onFilterChanged,
     required this.onSortChanged,
   });
 
-  final TextEditingController queryController;
   final _ManagementFilter managementFilter;
   final _ClientSort sort;
   final int shownCount;
   final int activeCount;
-  final ValueChanged<String> onQueryChanged;
   final ValueChanged<_ManagementFilter> onFilterChanged;
   final ValueChanged<_ClientSort> onSortChanged;
 
@@ -300,67 +278,34 @@ class _MemberManagementToolbar extends StatelessWidget {
         AppLayout.pagePadding,
         0,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final search = SizedBox(
-            width: constraints.maxWidth >= 900 ? 420 : constraints.maxWidth,
-            child: TextField(
-              key: const ValueKey<String>('clients-roster-search'),
-              controller: queryController,
-              onChanged: onQueryChanged,
-              decoration: InputDecoration(
-                hintText: l.searchClientsHint,
-                prefixIcon: const Icon(Icons.search, size: 19),
-              ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: <Widget>[
+          _ToolbarMenu<_ManagementFilter>(
+            value: managementFilter,
+            label: _managementLabel(l, managementFilter),
+            items: _ManagementFilter.values,
+            itemLabel: (value) => _managementLabel(l, value),
+            onSelected: onFilterChanged,
+          ),
+          _ToolbarMenu<_ClientSort>(
+            value: sort,
+            label: _sortLabel(l, sort),
+            items: _ClientSort.values,
+            itemLabel: (value) => _sortLabel(l, value),
+            onSelected: onSortChanged,
+          ),
+          Text(
+            l.clientsToolbarCount(shownCount, activeCount),
+            style: const TextStyle(
+              color: AppColors.subtleForeground,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
-          );
-          final controls = Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              _ToolbarMenu<_ManagementFilter>(
-                value: managementFilter,
-                label: _managementLabel(l, managementFilter),
-                items: _ManagementFilter.values,
-                itemLabel: (value) => _managementLabel(l, value),
-                onSelected: onFilterChanged,
-              ),
-              _ToolbarMenu<_ClientSort>(
-                value: sort,
-                label: _sortLabel(l, sort),
-                items: _ClientSort.values,
-                itemLabel: (value) => _sortLabel(l, value),
-                onSelected: onSortChanged,
-              ),
-              Text(
-                l.clientsToolbarCount(shownCount, activeCount),
-                style: const TextStyle(
-                  color: AppColors.subtleForeground,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          );
-          if (constraints.maxWidth < 900) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                search,
-                const SizedBox(height: AppSpacing.sm),
-                controls,
-              ],
-            );
-          }
-          return Row(
-            children: <Widget>[
-              search,
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: controls),
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -497,6 +442,7 @@ class _Frame extends StatelessWidget {
     return PageScaffold(
       title: l.clientsTitle,
       subtitle: subtitle,
+      headerCenter: const ClientSearchBar(),
       actions: actions,
       scrollable: false,
       contentPadding: EdgeInsets.zero,

@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -120,6 +121,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     return PageScaffold(
       title: l.reportsTitle,
       subtitle: l.reportsSubtitle,
+      headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         ActionButton(
           label: l.reportsPrevWeek,

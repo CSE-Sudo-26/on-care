@@ -3473,7 +3473,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchClientsHint.
   ///
   /// In en, this message translates to:
-  /// **'Search by client name'**
+  /// **'Search clients, goals, messages, or routines'**
   String get searchClientsHint;
 
   /// No description provided for @searchClear.
@@ -3667,12 +3667,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Conversations'**
   String get messagesConversations;
-
-  /// No description provided for @messagesSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search clients or messages'**
-  String get messagesSearchHint;
 
   /// No description provided for @messagesEmpty.
   ///

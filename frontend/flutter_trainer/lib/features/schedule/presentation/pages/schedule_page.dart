@@ -19,6 +19,7 @@ import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 스케줄 tab — the trainer's calendar, in two views.
@@ -274,6 +275,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return PageScaffold(
       title: l.schedTitle,
       subtitle: dateLabel(l, _selectedDay),
+      headerCenter: const ClientSearchBar(),
       actions: <Widget>[
         if (showToday)
           ActionButton(

@@ -1921,7 +1921,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchClients => 'Search clients';
 
   @override
-  String get searchClientsHint => 'Search by client name';
+  String get searchClientsHint =>
+      'Search clients, goals, messages, or routines';
 
   @override
   String get searchClear => 'Clear search';
@@ -2034,9 +2035,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesConversations => 'Conversations';
-
-  @override
-  String get messagesSearchHint => 'Search clients or messages';
 
   @override
   String get messagesEmpty => 'No conversations match these filters.';

@@ -27,11 +27,16 @@ List<TrainerClient> searchClients(
   for (var i = 0; i < clients.length; i++) {
     final client = clients[i];
     final name = client.name.toLowerCase();
+    final relatedRecords = <String>[
+      client.goal,
+      client.lastMessage,
+      client.lastRoutine,
+    ].join('\n').toLowerCase();
     final tier = name.startsWith(normalized)
         ? 0
         : name.contains(normalized)
         ? 1
-        : client.goal.toLowerCase().contains(normalized)
+        : relatedRecords.contains(normalized)
         ? 2
         : -1;
     if (tier < 0) continue;
