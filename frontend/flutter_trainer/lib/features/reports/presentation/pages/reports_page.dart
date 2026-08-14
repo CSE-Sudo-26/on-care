@@ -823,6 +823,9 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
       onChanged: widget.onChanged,
       minLines: 4,
       maxLines: 7,
+      // 입력 글씨의 기본은 bodyLarge(17)라 카드의 다른 글씨보다 유독 컸다.
+      // 임의의 숫자 대신 타이포 스케일의 한 단계 아래를 쓴다.
+      style: Theme.of(context).textTheme.bodySmall,
       decoration: InputDecoration(hintText: l.reportsFeedbackHint),
     );
   }
@@ -980,6 +983,22 @@ class _ReportAiCard extends StatelessWidget {
 /// 열려 있는지 눈으로 잇기 어렵고, 잘못된 고객에게 보내는 실수가 되돌릴 수
 /// 없는 종류이기 때문이다.
 class _ShareMenu extends ConsumerWidget {
+  /// 메뉴 최소 너비. 두 항목 중 긴 쪽이 한 줄에 들어가는 폭이다.
+  static const double _menuMinWidth = 200;
+
+  /// 메뉴 한 줄. Material 기본은 글씨 16 · 높이 48 이라 12~13 으로 짜인 이
+  /// 콘솔에서 혼자 커 보였다. 글씨는 여는 버튼(`ActionButton` 라벨)과 같은
+  /// 크기·굵기로 맞춘다 — 버튼과 그 메뉴가 다른 크기로 보일 이유가 없다.
+  static const ButtonStyle _itemStyle = ButtonStyle(
+    textStyle: WidgetStatePropertyAll(
+      TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+    ),
+    minimumSize: WidgetStatePropertyAll(Size(0, 36)),
+    padding: WidgetStatePropertyAll(
+      EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    ),
+  );
+
   const _ShareMenu({
     required this.client,
     required this.weekStart,
@@ -1008,47 +1027,89 @@ class _ShareMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final target = client;
-    return MenuAnchor(
-      menuChildren: <Widget>[
-        MenuItemButton(
-          key: const ValueKey<String>('reports-share-send'),
-          leadingIcon: Icon(sent ? Icons.check : Icons.send_outlined, size: 18),
-          onPressed: target == null || sent || sending || feedbackBlank
-              ? null
-              : () => _send(context, ref, target),
-          child: Tooltip(
-            message: feedbackBlank && target != null && !sent && !sending
-                ? l.reportsShareNeedsFeedback
-                : '',
-            child: Text(
-              target == null
-                  ? l.reportsShareNoClient
-                  : (sent
-                        ? l.reportsSendStateSent
-                        : (sending
-                              ? l.reportsSendStateSending
-                              : l.reportsShareSendTo(target.name))),
+    // 메뉴의 **오른쪽 변**을 버튼 오른쪽 변에 맞춘다.
+    //
+    // 기본(LTR)은 버튼 왼쪽에 붙어 오른쪽으로 자라, 헤더 끝에 있는 이 버튼에서는
+    // 창 가장자리에 닿는다. 버튼 너비를 숫자로 추정해 offset 으로 당기는 방법은
+    // 라벨·글꼴이 바뀌면 곧바로 어긋나므로, 펼침 방향 자체를 뒤집는다. 안쪽
+    // 내용은 다시 LTR 로 돌려 아이콘·글자 순서는 그대로 둔다.
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: MenuAnchor(
+        // 메뉴는 앱의 다른 메뉴와 같은 면으로 그린다 — Material 기본 표면은 이
+        // 콘솔의 카드보다 밝고 모서리도 달라 혼자 떠 보였다.
+        style: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll(AppColors.card),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(AppRadius.md),
+              side: BorderSide(color: AppColors.borderStrong),
             ),
           ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          ),
+          minimumSize: const WidgetStatePropertyAll(Size(_menuMinWidth, 0)),
         ),
-        // PDF 생성 경로가 아직 없다. 항목을 숨기지 않는 이유는, 없는 기능이
-        // 아니라 아직 준비되지 않은 기능임을 화면에서 알 수 있어야 해서다.
-        MenuItemButton(
-          key: const ValueKey<String>('reports-share-pdf'),
-          leadingIcon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-          onPressed: null,
-          child: Tooltip(
-            message: l.reportsPdfUnsupported,
-            child: Text(l.reportsPdfLabel),
+        // 헤더와 한 칸 띄운다. 가로 위치는 아래 Directionality 가 맞춘다.
+        alignmentOffset: const Offset(0, AppSpacing.xs),
+        menuChildren: <Widget>[
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: MenuItemButton(
+              key: const ValueKey<String>('reports-share-send'),
+              style: _itemStyle,
+              leadingIcon: Icon(
+                sent ? Icons.check : Icons.send_outlined,
+                size: 16,
+              ),
+              onPressed: target == null || sent || sending || feedbackBlank
+                  ? null
+                  : () => _send(context, ref, target),
+              child: Tooltip(
+                message: feedbackBlank && target != null && !sent && !sending
+                    ? l.reportsShareNeedsFeedback
+                    : '',
+                child: Text(
+                  target == null
+                      ? l.reportsShareNoClient
+                      : (sent
+                            ? l.reportsSendStateSent
+                            : (sending
+                                  ? l.reportsSendStateSending
+                                  : l.reportsShareSendTo(target.name))),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+          // PDF 생성 경로가 아직 없다. 항목을 숨기지 않는 이유는, 없는 기능이
+          // 아니라 아직 준비되지 않은 기능임을 화면에서 알 수 있어야 해서다.
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: MenuItemButton(
+              key: const ValueKey<String>('reports-share-pdf'),
+              style: _itemStyle,
+              leadingIcon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
+              onPressed: null,
+              child: Tooltip(
+                message: l.reportsPdfUnsupported,
+                child: Text(l.reportsPdfLabel),
+              ),
+            ),
+          ),
+        ],
+        builder: (context, controller, _) => Directionality(
+          textDirection: TextDirection.ltr,
+          child: ActionButton(
+            key: const ValueKey<String>('reports-share-action'),
+            label: l.reportsShare,
+            icon: Icons.ios_share,
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
           ),
         ),
-      ],
-      builder: (context, controller, _) => ActionButton(
-        key: const ValueKey<String>('reports-share-action'),
-        label: l.reportsShare,
-        icon: Icons.ios_share,
-        onPressed: () =>
-            controller.isOpen ? controller.close() : controller.open(),
       ),
     );
   }
@@ -1065,6 +1126,7 @@ class _ShareMenu extends ConsumerWidget {
     onSend(report);
   }
 }
+
 class _Figure extends StatelessWidget {
   const _Figure({
     required this.label,
