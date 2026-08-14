@@ -35,9 +35,21 @@ class _FakeDraftRepository implements TrainerProgramDraftRepository {
           name: draft['name']! as String,
           goal: draft['goal'] as String? ?? '',
           period: draft['period'] as String? ?? '',
-          exerciseCount:
-              ((draft['exercises'] as List<Object?>?) ?? const <Object?>[])
+          sessionCount:
+              ((draft['sessions'] as List<Object?>?) ?? const <Object?>[])
                   .length,
+          exerciseCount:
+              ((draft['sessions'] as List<Object?>?) ?? const <Object?>[]).fold<
+                int
+              >(
+                0,
+                (count, session) =>
+                    count +
+                    (((session! as Map<Object?, Object?>)['exercises']
+                                as List<Object?>?) ??
+                            const <Object?>[])
+                        .length,
+              ),
           updatedAt: DateTime.parse(draft['updated_at']! as String),
         ),
       )
@@ -189,21 +201,26 @@ void main() {
       'goal': '근력 향상',
       'period': '6주',
       'memo': '',
-      'session_name': '세션 A',
-      'exercises': <Map<String, Object?>>[
+      'sessions': <Map<String, Object?>>[
         <String, Object?>{
-          'id': 'exercise-2',
-          'name': '레그프레스',
-          'sets': '4',
-          'reps': '12회',
-          'weight': '60kg',
-          'duration': '',
-          'distance': '',
-          'rest': '90',
-          'rpe': '8',
-          'memo': '',
-          'type': '근력',
-          'source': 'ai',
+          'id': 'session-1',
+          'name': '세션 A',
+          'exercises': <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'exercise-2',
+              'name': '레그프레스',
+              'sets': '4',
+              'reps': '12회',
+              'weight': '60kg',
+              'duration': '',
+              'distance': '',
+              'rest': '90',
+              'rpe': '8',
+              'memo': '',
+              'type': '근력',
+              'source': 'ai',
+            },
+          ],
         },
       ],
       'updated_at': '2026-08-14T09:00:00Z',
@@ -234,7 +251,7 @@ void main() {
     expect(find.text('레그프레스'), findsWidgets);
 
     // 불러온 초안은 기존 배정 흐름에 그대로 쓸 수 있다 — 저장·복원이 배정
-    // 가능 여부(supportsFlatRoutine)를 깨뜨리지 않는다.
+    // 가능 여부(supportsAssignment)를 깨뜨리지 않는다.
     final assignButton = find.widgetWithText(ActionButton, '고객에게 배정');
     expect(tester.widget<ActionButton>(assignButton).onPressed, isNotNull);
 

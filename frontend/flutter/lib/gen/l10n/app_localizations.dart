@@ -968,11 +968,11 @@ abstract class AppLocalizations {
   /// **'AI advice'**
   String get dietAiFeedback;
 
-  /// No description provided for @dietTodayMeals.
+  /// No description provided for @dietMealLog.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Meals'**
-  String get dietTodayMeals;
+  /// **'Meal Log'**
+  String get dietMealLog;
 
   /// No description provided for @dietAddMeal.
   ///
@@ -983,7 +983,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietEmptyLog.
   ///
   /// In en, this message translates to:
-  /// **'No meals logged yet.\nAdd your first meal with a photo!'**
+  /// **'No meals logged.\nAdd a meal with a photo!'**
   String get dietEmptyLog;
 
   /// No description provided for @dietPhotoAnalysis.

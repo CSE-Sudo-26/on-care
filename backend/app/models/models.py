@@ -770,6 +770,16 @@ class TrainerRoutine(Base):
 
     source: 'ai'(AI 추천) | 'trainer'(트레이너 직접 배정). 회원 앱에서 '받은 루틴'
     으로도 읽힌다(양쪽에서 보이는 공유 데이터).
+
+    **다중 세션 프로그램은 세션당 한 행이다.** (#709) 트레이너가 세션 여러 개로
+    구성한 프로그램을 배정하면 각 세션이 루틴 하나가 되고, `program_name` 으로
+    묶이며 `session_order` 가 순서를 지킨다. 세션이 하나뿐인 프로그램은 예전과
+    똑같이 행 하나이고 `session_name` 이 비어 있다 — 회원 화면에 없던 세션
+    라벨이 갑자기 생기지 않게 하려는 것이다.
+
+    `exercises_json` 은 그 세션의 운동 구성을 그대로 담는다. 예전에는 운동
+    이름들을 `reason` 에 이어 붙이는 것이 전부라 세트·횟수·중량이 회원에게
+    닿지 않았다.
     """
 
     __tablename__ = "trainer_routines"
@@ -786,6 +796,14 @@ class TrainerRoutine(Base):
     type: Mapped[str] = mapped_column(String(20))  # 유산소|근력|스트레칭
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
+    #: 여러 세션을 한 프로그램으로 묶는 이름. 단일 루틴 배정은 빈 문자열이다.
+    program_name: Mapped[str] = mapped_column(String(100), default="")
+    #: 이 루틴이 어느 세션인가. 세션이 하나뿐이면 비어 있다.
+    session_name: Mapped[str] = mapped_column(String(100), default="")
+    #: 프로그램 안에서의 세션 순서(0부터). 단일 루틴은 0.
+    session_order: Mapped[int] = mapped_column(Integer, default=0)
+    #: 그 세션의 운동 구성. 초안의 운동 항목과 같은 형식이다.
+    exercises_json: Mapped[str] = mapped_column(Text, default="[]")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     # 재전송 중복 배정 방지용 멱등키(전송 시도당 1회 생성). NULL 허용 → 기존/무키
     # 요청은 제약 밖. DietEntry.idempotency_key 와 같은 방식이다.
@@ -811,15 +829,18 @@ class TrainerProgramDraft(Base):
     저장한 초안을 불러와 기존 배정 경로로 보내는 별개의 행동이다. 그래서
     `member_id` 가 없다.
 
-    **세션 하나만 담는다.** 다중 세션 저장·배정은 이 작업의 범위 밖이라(#708 제외
-    범위) 편집기의 다중 세션 초안은 여전히 저장되지 않는다. 나중에 열 때는
-    세션 테이블을 따로 두거나 이 컬럼들을 배열로 올리게 된다.
+    `sessions_json` 은 편집기의 세션 목록을 순서 그대로 담는다
+    (`[{id,name,exercises:[{id,name,sets,reps,weight,duration,distance,rest,
+    rpe,memo,type,source}]}]`). 세션 순서가 곧 배열 순서다 — 별도 정렬 컬럼을
+    두면 배열과 어긋날 수 있고, 편집기는 이미 순서를 가진 목록을 들고 있다.
 
-    `exercises_json` 은 편집기의 운동 목록을 그대로 담는다
-    (`[{id,name,sets,reps,weight,duration,distance,rest,rpe,memo,type,source}]`).
-    값이 전부 자유 문자열("10회", "60")이라 숫자로 정규화하면 트레이너가 적어 둔
-    표현이 사라진다 — 저장·복원에서 값이 손실되지 않는 것이 이 기능의 요구다.
-    스케줄의 `program_json` 과 같은 방식이되, 항목이 더 많다.
+    운동의 세트·횟수·중량은 전부 자유 문자열("10회", "60")이라 숫자로 정규화하면
+    트레이너가 적어 둔 표현이 사라진다 — 저장·복원에서 값이 손실되지 않는 것이
+    이 기능의 요구다. 스케줄의 `program_json` 과 같은 방식이되 한 겹 더 깊다.
+
+    #708 은 세션 하나만 담았고(`session_name`/`exercises_json`), #709 에서 세션
+    배열로 올렸다. `0039_program_sessions` 가 기존 행을 세션 1개짜리 배열로
+    옮긴다.
     """
 
     __tablename__ = "trainer_program_drafts"
@@ -832,8 +853,7 @@ class TrainerProgramDraft(Base):
     goal: Mapped[str] = mapped_column(String(200), default="")
     period: Mapped[str] = mapped_column(String(100), default="")
     memo: Mapped[str] = mapped_column(Text, default="")
-    session_name: Mapped[str] = mapped_column(String(100), default="")
-    exercises_json: Mapped[str] = mapped_column(Text, default="[]")
+    sessions_json: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

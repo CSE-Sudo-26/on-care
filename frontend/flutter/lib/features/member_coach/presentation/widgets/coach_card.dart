@@ -119,7 +119,16 @@ class CoachCard extends ConsumerWidget {
                 ),
               )
             else
-              for (final CoachRoutine routine in trainerRoutines) ...<Widget>[
+              for (final (int index, CoachRoutine routine)
+                  in trainerRoutines.indexed) ...<Widget>[
+                // 여러 세션짜리 프로그램은 첫 세션 위에 프로그램 이름을 한 번
+                // 얹는다 — 세션 카드가 어디에 묶이는지 보이지 않으면 그냥
+                // 낱개 루틴 여러 개로 읽힌다(#709).
+                if (routine.programName.isNotEmpty &&
+                    (index == 0 ||
+                        trainerRoutines[index - 1].programName !=
+                            routine.programName))
+                  _ProgramHeading(name: routine.programName),
                 _RecommendedExerciseRow(routine: routine),
                 const SizedBox(height: 8),
               ],
@@ -281,14 +290,32 @@ class _RecommendedExerciseRowState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      routine.name,
+                      routine.isProgramSession
+                          ? routine.sessionName
+                          : routine.name,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: FigmaColors.ink,
                       ),
                     ),
-                    if (routine.reason.isNotEmpty) ...<Widget>[
+                    // 운동 구성이 오면 그것을 보여 준다 — 이름만 이어 붙인
+                    // reason 보다 정확하다(세트·횟수·중량까지 온다, #709).
+                    if (routine.exercises.isNotEmpty)
+                      for (final CoachRoutineExercise exercise
+                          in routine.exercises) ...<Widget>[
+                        const SizedBox(height: 2),
+                        Text(
+                          exercise.detail.isEmpty
+                              ? exercise.name
+                              : '${exercise.name} · ${exercise.detail}',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                      ]
+                    else if (routine.reason.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 2),
                       Text(
                         routine.reason,
@@ -553,6 +580,42 @@ class _ChatButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 여러 세션이 묶인 프로그램의 이름표. (#709)
+class _ProgramHeading extends StatelessWidget {
+  const _ProgramHeading({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: <Widget>[
+          const Icon(
+            Icons.list_alt_outlined,
+            size: 15,
+            color: FigmaColors.primary,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: FigmaColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

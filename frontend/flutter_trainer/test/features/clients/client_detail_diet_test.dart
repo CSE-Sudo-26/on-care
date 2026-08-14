@@ -190,7 +190,7 @@ void main() {
       final calorieProgress = tester.widget<CircularProgressIndicator>(
         find.byKey(const Key('client-nutrition-calorie-progress')),
       );
-      expect(calorieProgress.valueColor?.value, AppColors.brandUserGreen);
+      expect(calorieProgress.valueColor?.value, AppColors.primary);
       for (final String label in <String>['탄수화물', '단백질', '지방']) {
         expect(
           find.byKey(Key('client-nutrition-macro-$label')),
@@ -206,12 +206,10 @@ void main() {
                 ),
               )
               .any(
-                (box) =>
-                    box.color ==
-                    AppColors.brandUserGreen.withValues(alpha: 0.65),
+                (box) => box.color == AppColors.primary.withValues(alpha: 0.65),
               ),
           isTrue,
-          reason: '$label 그래프가 사용자 앱 공통 초록색을 써야 합니다.',
+          reason: '$label 그래프가 기존 트레이너 앱 색상을 써야 합니다.',
         );
       }
       Finder inMacro(String label, String text) => find.descendant(
@@ -280,6 +278,30 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
+    });
+
+    testWidgets('normal sodium and sugar use the user app sugar green', (
+      tester,
+    ) async {
+      await openDiet(tester, '이지수');
+
+      for (final Key key in <Key>[
+        const Key('client-nutrition-sodium-status'),
+        const Key('client-nutrition-sugar-status'),
+      ]) {
+        expect(
+          tester
+              .widgetList<ColoredBox>(
+                find.descendant(
+                  of: find.byKey(key),
+                  matching: find.byType(ColoredBox),
+                ),
+              )
+              .any((box) => box.color == AppColors.userSugarGreen),
+          isTrue,
+          reason: '$key 정상 그래프가 사용자 앱 당류 초록색을 써야 합니다.',
+        );
+      }
     });
 
     testWidgets('integer-valued sugar keeps the existing compact format', (

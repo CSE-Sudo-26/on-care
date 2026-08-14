@@ -209,7 +209,9 @@ class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
   _SpyTrainerRoutineRepository({this.throwOnAssign});
 
   final Object? throwOnAssign;
-  AssignedRoutine? lastAssigned;
+
+  /// 마지막으로 배정된 프로그램 payload(세션·운동 구성 포함, #709).
+  Map<String, Object?>? lastAssigned;
 
   /// 전송 시도마다 넘어온 멱등키. 재시도가 같은 키를 쓰는지 본다(#581).
   final List<String?> assignAttempts = <String?>[];
@@ -219,10 +221,28 @@ class _SpyTrainerRoutineRepository implements TrainerRoutineRepository {
     String memberId,
     AssignedRoutine routine, {
     String? clientRequestId,
-  }) async {
-    assignAttempts.add(clientRequestId);
+  }) async => throw UnsupportedError('프로그램 배정 경로만 쓴다 (#709)');
+
+  @override
+  Future<void> assignProgram(
+    String memberId,
+    Map<String, Object?> payload,
+  ) async {
+    assignAttempts.add(payload['client_request_id'] as String?);
     if (throwOnAssign != null) throw throwOnAssign!;
-    lastAssigned = routine;
+    lastAssigned = payload;
+  }
+
+  /// 배정된 첫 세션의 운동 목록 — 유형·출처 요약은 이제 서버가 접는다.
+  List<Map<String, Object?>> get lastAssignedExercises {
+    final sessions = lastAssigned?['sessions'] as List<Object?>?;
+    if (sessions == null || sessions.isEmpty) {
+      return const <Map<String, Object?>>[];
+    }
+    final first = sessions.first! as Map<String, Object?>;
+    return ((first['exercises'] as List<Object?>?) ?? const <Object?>[])
+        .map((item) => (item! as Map<Object?, Object?>).cast<String, Object?>())
+        .toList();
   }
 
   @override
@@ -1253,8 +1273,16 @@ void main() {
         await tapSend(tester);
 
         expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
-        expect(routineRepo.lastAssigned?.type, '스트레칭');
-        expect(routineRepo.lastAssigned?.source, 'trainer');
+        // 유형·출처 요약은 서버가 세션 단위로 접는다(#709) — 클라이언트는
+        // 트레이너가 넣은 운동을 그대로 실어 보낸다.
+        expect(
+          routineRepo.lastAssignedExercises.map((e) => e['type']),
+          everyElement('스트레칭'),
+        );
+        expect(
+          routineRepo.lastAssignedExercises.map((e) => e['source']),
+          everyElement('trainer'),
+        );
       },
     );
   });

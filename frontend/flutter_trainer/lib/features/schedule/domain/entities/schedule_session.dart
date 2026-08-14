@@ -8,6 +8,7 @@ class ProgramItem {
     required this.sets,
     required this.reps,
     required this.weight,
+    this.session = '',
   });
 
   /// Exercise name.
@@ -21,6 +22,12 @@ class ProgramItem {
 
   /// Weight label (e.g. "80kg", "자체중량", "-" for none).
   final String weight;
+
+  /// Which session of a multi-session program this item belongs to (#709).
+  ///
+  /// Empty for a single-session program and for rows written before sessions
+  /// existed — the schedule then reads as the flat list it always was.
+  final String session;
 }
 
 /// One slot on the trainer's daily timeline (스케줄 탭). Decoded from

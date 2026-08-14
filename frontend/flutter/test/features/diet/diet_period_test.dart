@@ -184,6 +184,129 @@ void main() {
   });
 
   group('식단 탭 기간 토글', () {
+    testWidgets('끼니 목록 제목은 날짜에 매이지 않고 어느 날 기록인지 함께 적는다 (#687)', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Element context = tester.element(find.byType(DietRecordPage));
+      final AppLocalizations l = AppLocalizations.of(context);
+      final MaterialLocalizations m = MaterialLocalizations.of(context);
+
+      // 이 목록은 늘 **선택한 날**을 보여 준다. 제목이 '오늘' 을 주장하면 사흘 전을
+      // 골랐을 때 거짓말이 된다 — 그게 #687 이 신고된 경로다.
+      final Finder title = find.text(l.dietMealLog);
+      expect(title, findsOneWidget);
+      expect(l.dietMealLog.contains('오늘'), isFalse);
+      expect(l.dietMealLog.toLowerCase().contains('today'), isFalse);
+
+      // 제목 줄 안에서만 날짜를 찾는다. 화면 다른 곳의 같은 문자열을 주워 담으면
+      // 이 단언이 무엇을 보장하는지 흐려진다.
+      Finder dateInHeader(DateTime day) => find.descendant(
+        of: find.byKey(const ValueKey<String>('meal-log-header')),
+        matching: find.text(m.formatMediumDate(day)),
+      );
+
+      final DateTime now = DateTime.now();
+      final DateTime today = DateTime(now.year, now.month, now.day);
+      expect(dateInHeader(today), findsOneWidget);
+
+      // 핵심: 다른 날을 고르면 제목 옆 날짜도 함께 움직여야 한다. 오늘만 확인하면
+      // `date: _selected` 가 갱신되는지는 증명되지 않는다.
+      //
+      // 이틀 전을 쓰는 이유: 기록이 **없는** 지난 날짜는 끼니 목록 자체가 숨겨져
+      // (`!atToday && day.entries.isEmpty`) 제목 줄이 아예 없다. 대역은 어제·이틀
+      // 전까지만 기록을 준다.
+      final DateTime other = today.subtract(const Duration(days: 2));
+      await tester.tap(
+        find.byKey(
+          ValueKey<String>('diet-day-${other.year}-${other.month}-${other.day}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(dateInHeader(other), findsOneWidget);
+      expect(dateInHeader(today), findsNothing);
+      expect(find.text(l.dietMealLog), findsOneWidget);
+    });
+
+    testWidgets('좁은 화면·큰 글자 배율에서 먼저 접히는 것은 날짜다 (#687 리뷰)', (
+      WidgetTester tester,
+    ) async {
+      // 제목·날짜·추가 버튼이 한 줄이라, 폭이 좁거나 글자 배율이 크면 셋의 최소 폭
+      // 합이 화면을 넘긴다. 접히는 쪽은 날짜여야 한다 — 추가 버튼이 밀려나면 끼니를
+      // 넣을 수 없다.
+      // 폭만 좁힌다. 높이를 넉넉히 두는 이유는 `ListView` 가 보이는 자식만 만들기
+      // 때문이다 — 짧은 화면에서는 끼니 목록이 아래로 밀려 아예 그려지지 않는다.
+      tester.view.physicalSize = const Size(320, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Element context = tester.element(find.byType(DietRecordPage));
+      final AppLocalizations l = AppLocalizations.of(context);
+      final DateTime now = DateTime.now();
+      final String todayLabel = MaterialLocalizations.of(
+        context,
+      ).formatMediumDate(DateTime(now.year, now.month, now.day));
+
+      final Finder header = find.byKey(
+        const ValueKey<String>('meal-log-header'),
+      );
+      final Finder date = find.descendant(
+        of: header,
+        matching: find.text(todayLabel),
+      );
+      final Finder addButton = find.descendant(
+        of: header,
+        matching: find.text(l.dietAddMeal),
+      );
+      expect(date, findsOneWidget);
+      expect(addButton, findsOneWidget);
+
+      // 날짜는 한 줄로 접힌다.
+      final Text dateText = tester.widget<Text>(date);
+      expect(dateText.maxLines, 1);
+      expect(dateText.overflow, TextOverflow.ellipsis);
+
+      // 추가 버튼이 제목 줄 안에 남는다 — 밀려나면 끼니를 넣을 수 없다.
+      final Rect headerRect = tester.getRect(header);
+      final Rect addRect = tester.getRect(addButton);
+      expect(addRect.left, greaterThanOrEqualTo(headerRect.left));
+      expect(addRect.right, lessThanOrEqualTo(headerRect.right + 0.5));
+
+      // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
+      expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
+
+      // 화면 어디에서도 넘치지 않는다. 화면 전체가 좁은 폭을 견디게 된 뒤로
+      // (#739) 이 단언을 이 자리에서 그대로 쓸 수 있다.
+      expect(tester.takeException(), isNull);
+      expect(find.text(l.dietMealLog), findsOneWidget);
+    });
+
     testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
     ) async {
@@ -217,7 +340,7 @@ void main() {
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
       expect(find.byKey(const Key('nutrition-summary-card')), findsNothing);
       // 날짜 스트립과 끼니 목록은 그대로 남는다 — 운동 탭과 같은 규칙.
-      expect(find.text(l.dietTodayMeals), findsOneWidget);
+      expect(find.text(l.dietMealLog), findsOneWidget);
       expect(find.text(l.dietAddMeal), findsOneWidget);
       // 토글도 제목 줄에 그대로 있다.
       expect(find.byKey(const Key('diet-period-tab-month')), findsOneWidget);

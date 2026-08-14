@@ -27,6 +27,7 @@ from app.models.models import (
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramDraftExercise,
+    ProgramDraftSession,
     ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
     TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
@@ -743,7 +744,11 @@ def delete_trainer_account(db: Session, trainer: User) -> None:
 
 
 def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
-    """이 트레이너가 회원에게 배정한 루틴(정렬순)."""
+    """이 트레이너가 회원에게 배정한 루틴(정렬순).
+
+    한 프로그램의 세션들은 `sort_order` 를 연속으로 받으므로 이 정렬만으로
+    세션 순서가 지켜진다 — 별도 그룹핑 없이 배열 순서가 곧 프로그램 순서다.
+    """
     rows = db.scalars(
         select(TrainerRoutine)
         .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
@@ -838,6 +843,10 @@ def _routine_out(
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
+        program_name=rt.program_name,
+        session_name=rt.session_name,
+        session_order=rt.session_order,
+        exercises=draft_exercises(rt.exercises_json),
         completed=completion is not None,
         completed_at=completion.completed_at if completion is not None else None,
         completed_minutes=completion.minutes if completion is not None else None,
@@ -1048,6 +1057,158 @@ def assign_routine(
     return _routine_out(rt)
 
 
+def _session_summary(
+    exercises: Sequence[ProgramDraftExercise],
+) -> tuple[int, str, str]:
+    """세션 하나를 루틴 한 건의 (분, 유형, 출처)로 요약한다. (#709)
+
+    트레이너 웹이 단일 세션을 배정할 때 쓰던 규칙과 같다 — 분은 각 운동의
+    `duration` 합, 유형은 가장 많은 유형, 출처는 AI 제안이 하나라도 있으면
+    'ai'. 규칙을 서버로 옮긴 것은 세션이 여러 개가 되면서 클라이언트마다
+    다르게 접히는 것을 막기 위해서다.
+    """
+    minutes = 0
+    counts: dict[str, int] = {}
+    has_ai = False
+    for exercise in exercises:
+        try:
+            minutes += int(exercise.duration.strip())
+        except ValueError:
+            pass
+        counts[exercise.type] = counts.get(exercise.type, 0) + 1
+        if exercise.source == "ai":
+            has_ai = True
+    type_ = max(counts, key=lambda t: counts[t]) if counts else "근력"
+    return minutes, type_, ("ai" if has_ai else "trainer")
+
+
+def _program_request_key(base: str, index: int) -> str:
+    """세션별 멱등키. 프로그램 전체가 한 번의 전송 시도이므로 같은 base 를 쓴다.
+
+    세션마다 키를 나누는 이유는 `(trainer, member, client_request_id)` 유니크
+    제약 때문이다 — 같은 키로 여러 행을 만들 수 없다.
+    """
+    return f"{base}#{index}"
+
+
+def assign_program(
+    db: Session, trainer_id: str, member_id: str, *,
+    name: str,
+    sessions: Sequence[ProgramDraftSession],
+    client_request_id: str | None = None,
+) -> list[RoutineOut]:
+    """다중 세션 프로그램을 회원에게 배정한다. 세션 하나가 루틴 한 건이 된다. (#709)
+
+    세션이 하나뿐이면 예전 단일 배정과 같은 모양이다 — 루틴 이름은 프로그램
+    이름이고 `session_name` 이 비어 회원 화면에 없던 세션 라벨이 생기지 않는다.
+    세션이 여럿이면 루틴 이름이 세션 이름이 되고 `program_name` 이 묶는다.
+
+    [client_request_id] 가 오면 **프로그램 전체**에 대해 멱등하다. 재시도에 같은
+    키를 다시 보내면 먼저 배정된 세션들을 그대로 돌려준다 — 중간까지 저장된
+    상태에서 재시도해 세션이 반쯤 겹치는 일이 없다.
+
+    알림은 프로그램당 한 번이다. 세션마다 보내면 회원 알림함이 한 번의 배정으로
+    가득 찬다.
+    """
+    if client_request_id:
+        existing = db.scalars(
+            select(TrainerRoutine)
+            .where(
+                TrainerRoutine.trainer_id == trainer_id,
+                TrainerRoutine.member_id == member_id,
+                TrainerRoutine.client_request_id.in_(
+                    [
+                        _program_request_key(client_request_id, index)
+                        for index in range(len(sessions))
+                    ]
+                ),
+            )
+            .order_by(TrainerRoutine.session_order)
+        ).all()
+        if existing:
+            return [_routine_out(rt) for rt in existing]
+
+    multi = len(sessions) > 1
+    max_order = db.scalar(
+        select(func.max(TrainerRoutine.sort_order)).where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    ) or 0
+    now = datetime.now(timezone.utc)
+    created: list[TrainerRoutine] = []
+    for index, session in enumerate(sessions):
+        minutes, type_, source = _session_summary(session.exercises)
+        rt = TrainerRoutine(
+            id=f"rt-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            name=(session.name or name) if multi else name,
+            minutes=minutes,
+            type=type_,
+            reason=", ".join(e.name for e in session.exercises)[:200],
+            source=source,
+            program_name=name if multi else "",
+            session_name=session.name if multi else "",
+            session_order=index,
+            exercises_json=json.dumps(
+                [e.model_dump() for e in session.exercises], ensure_ascii=False
+            ),
+            sort_order=max_order + index + 1,
+            client_request_id=(
+                _program_request_key(client_request_id, index)
+                if client_request_id
+                else None
+            ),
+            created_at=now,
+        )
+        db.add(rt)
+        created.append(rt)
+
+    # 단일 배정과 같은 이유로 알림보다 먼저 flush 한다 — 동시 요청이 유니크
+    # 제약에 걸리면 진 쪽이 알림까지 쌓지 않아야 한다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = db.scalars(
+                select(TrainerRoutine)
+                .where(
+                    TrainerRoutine.trainer_id == trainer_id,
+                    TrainerRoutine.member_id == member_id,
+                    TrainerRoutine.client_request_id.in_(
+                        [
+                            _program_request_key(client_request_id, index)
+                            for index in range(len(sessions))
+                        ]
+                    ),
+                )
+                .order_by(TrainerRoutine.session_order)
+            ).all()
+            if existing:
+                return [_routine_out(rt) for rt in existing]
+        raise
+
+    total_minutes = sum(rt.minutes for rt in created)
+    notification_service.queue(
+        db,
+        member_id=member_id,
+        kind=notification_service.EXERCISE,
+        category=notification_service.MEMBER_ROUTINE,
+        title="새 운동 루틴이 배정되었어요",
+        body=(
+            f"{name} · 세션 {len(created)}개 · {total_minutes}분"
+            if multi
+            else f"{name} · {total_minutes}분"
+        ),
+    )
+    db.commit()
+    for rt in created:
+        db.refresh(rt)
+    return [_routine_out(rt) for rt in created]
+
+
 # ---- 회원별 트레이너 메모 (#706) ----
 
 class MemoNotFound(Exception):
@@ -1199,15 +1360,21 @@ class ProgramDraftNotFound(Exception):
     """그 트레이너에게 그 id 의 초안이 없다(라우터가 404 로 변환)."""
 
 
-def _draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
-    """저장된 운동 목록을 읽는다. 깨진 행이 목록 전체를 막지 않는다.
+def draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
+    """저장된 운동 목록을 읽는다. 깨진 항목이 목록 전체를 막지 않는다.
 
-    스키마가 거른 값만 저장되지만, 손으로 고쳤거나 예전 형식이 남은 행 하나
+    스키마가 거른 값만 저장되지만, 손으로 고쳤거나 예전 형식이 남은 항목 하나
     때문에 초안을 아예 못 여는 편이 더 나쁘다 — 읽을 수 있는 항목만 돌려준다.
     """
     try:
         raw = json.loads(exercises_json) if exercises_json else []
     except json.JSONDecodeError:
+        return []
+    return _validated_exercises(raw)
+
+
+def _validated_exercises(raw: object) -> list[ProgramDraftExercise]:
+    if not isinstance(raw, list):
         return []
     out: list[ProgramDraftExercise] = []
     for item in raw:
@@ -1220,9 +1387,35 @@ def _draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
     return out
 
 
-def _dump_draft_exercises(exercises: Sequence[ProgramDraftExercise]) -> str:
+def draft_sessions(sessions_json: str) -> list[ProgramDraftSession]:
+    """저장된 세션 목록을 순서 그대로 읽는다. (#709)
+
+    운동과 같은 이유로 관대하다 — 읽을 수 없는 세션 하나가 프로그램 전체를
+    못 열게 만들면 안 된다.
+    """
+    try:
+        raw = json.loads(sessions_json) if sessions_json else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(raw, list):
+        return []
+    out: list[ProgramDraftSession] = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            continue
+        out.append(
+            ProgramDraftSession(
+                id=str(item.get("id") or f"session-{index + 1}"),
+                name=str(item.get("name") or ""),
+                exercises=_validated_exercises(item.get("exercises")),
+            )
+        )
+    return out
+
+
+def dump_draft_sessions(sessions: Sequence[ProgramDraftSession]) -> str:
     return json.dumps(
-        [e.model_dump() for e in exercises], ensure_ascii=False
+        [session.model_dump() for session in sessions], ensure_ascii=False
     )
 
 
@@ -1233,8 +1426,7 @@ def _draft_out(draft: TrainerProgramDraft) -> TrainerProgramDraftOut:
         goal=draft.goal,
         period=draft.period,
         memo=draft.memo,
-        session_name=draft.session_name,
-        exercises=_draft_exercises(draft.exercises_json),
+        sessions=draft_sessions(draft.sessions_json),
         created_at=draft.created_at,
         updated_at=draft.updated_at,
     )
@@ -1249,8 +1441,8 @@ def build_program_drafts(
 ) -> list[TrainerProgramDraftSummary]:
     """내가 저장한 프로그램 초안 목록(최근 수정 먼저).
 
-    운동 구성은 싣지 않는다 — 목록은 "무엇을 저장해 뒀나"만 보여 주고, 편집기로
-    불러올 때 상세를 따로 읽는다.
+    세션·운동 구성은 싣지 않는다 — 목록은 "무엇을 저장해 뒀나"만 보여 주고,
+    편집기로 불러올 때 상세를 따로 읽는다.
     """
     rows = db.scalars(
         select(TrainerProgramDraft)
@@ -1260,17 +1452,21 @@ def build_program_drafts(
         )
         .limit(_PROGRAM_DRAFT_LIMIT)
     ).all()
-    return [
-        TrainerProgramDraftSummary(
-            id=d.id,
-            name=d.name,
-            goal=d.goal,
-            period=d.period,
-            exercise_count=len(_draft_exercises(d.exercises_json)),
-            updated_at=d.updated_at,
+    out: list[TrainerProgramDraftSummary] = []
+    for d in rows:
+        sessions = draft_sessions(d.sessions_json)
+        out.append(
+            TrainerProgramDraftSummary(
+                id=d.id,
+                name=d.name,
+                goal=d.goal,
+                period=d.period,
+                session_count=len(sessions),
+                exercise_count=sum(len(s.exercises) for s in sessions),
+                updated_at=d.updated_at,
+            )
         )
-        for d in rows
-    ]
+    return out
 
 
 def _owned_draft(
@@ -1296,10 +1492,10 @@ def get_program_draft(
 
 def create_program_draft(
     db: Session, trainer_id: str, *,
-    name: str, goal: str, period: str, memo: str, session_name: str,
-    exercises: Sequence[ProgramDraftExercise],
+    name: str, goal: str, period: str, memo: str,
+    sessions: Sequence[ProgramDraftSession],
 ) -> TrainerProgramDraftOut:
-    """프로그램 초안을 저장한다."""
+    """프로그램 초안을 저장한다. 세션은 받은 순서 그대로 남는다."""
     now = datetime.now(timezone.utc)
     draft = TrainerProgramDraft(
         id=f"pgm-{uuid.uuid4().hex[:12]}",
@@ -1308,8 +1504,7 @@ def create_program_draft(
         goal=goal,
         period=period,
         memo=memo,
-        session_name=session_name,
-        exercises_json=_dump_draft_exercises(exercises),
+        sessions_json=dump_draft_sessions(sessions),
         created_at=now,
         updated_at=now,
     )
@@ -1324,20 +1519,20 @@ def update_program_draft(
 ) -> TrainerProgramDraftOut:
     """저장된 초안을 고친다. 보낸 필드만 반영한다.
 
-    `exercises` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
+    `sessions` 는 통째로 교체한다 — 편집기가 항목 단위 diff 가 아니라 현재
     구성 전체를 들고 있다.
     """
     draft = _owned_draft(db, trainer_id, draft_id)
-    for field in ("name", "goal", "period", "memo", "session_name"):
+    for field in ("name", "goal", "period", "memo"):
         if field in fields:
             setattr(draft, field, fields[field])
-    if "exercises" in fields:
-        draft.exercises_json = _dump_draft_exercises(
+    if "sessions" in fields:
+        draft.sessions_json = dump_draft_sessions(
             [
                 item
-                if isinstance(item, ProgramDraftExercise)
-                else ProgramDraftExercise.model_validate(item)
-                for item in fields["exercises"]
+                if isinstance(item, ProgramDraftSession)
+                else ProgramDraftSession.model_validate(item)
+                for item in fields["sessions"]
             ]
         )
     draft.updated_at = datetime.now(timezone.utc)
@@ -1378,6 +1573,8 @@ def _program_items(program_json: str) -> list[ProgramItem]:
             sets=int(m.get("sets", 0) or 0),
             reps=str(m.get("reps", "")),
             weight=str(m.get("weight", "")),
+            # 이 키가 없는 예전 행은 세션 구분 없는 목록으로 그대로 읽힌다(#709).
+            session=str(m.get("session", "") or ""),
         ))
     return out
 

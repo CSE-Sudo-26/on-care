@@ -198,7 +198,7 @@ class _CalorieRow extends StatelessWidget {
     final AppLocalizations l = AppLocalizations.of(context);
     final Color color = calories.isOverGoal
         ? AppColors.overTarget
-        : AppColors.brandUserGreen;
+        : AppColors.primary;
     return Row(
       children: <Widget>[
         Expanded(
@@ -362,7 +362,7 @@ class _MacroItem extends StatelessWidget {
         const SizedBox(height: 7),
         _Bar(
           progress: item.ratio,
-          color: AppColors.brandUserGreen.withValues(alpha: 0.65),
+          color: AppColors.primary.withValues(alpha: 0.65),
         ),
       ],
     );
@@ -453,7 +453,7 @@ class _StatusCard extends StatelessWidget {
     // 나트륨·당류는 같은 성격의 지표다. "정상" 을 서로 다른 색으로 말하지 않는다.
     final Color status = item.isOverGoal
         ? AppColors.overTarget
-        : AppColors.brandUserGreen;
+        : AppColors.userSugarGreen;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(

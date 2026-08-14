@@ -141,12 +141,10 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final canUseFlatApi = _draft.supportsFlatRoutine;
-    // 다중 세션 초안은 아직 서버에 담을 자리가 없다(#708 제외 범위) — 저장하면
-    // 두 번째 세션이 조용히 사라지므로 막고, 왜 막혔는지 툴팁으로 말한다.
-    final singleSession = _draft.sessions.length == 1;
-    final canSave =
-        widget.onSave != null && singleSession && _draft.name.trim().isNotEmpty;
+    // 세션 수는 더 이상 막는 이유가 아니다 — 서버가 세션 여러 개짜리 프로그램을
+    // 저장·배정·등록한다(#709). 남은 조건은 값이 계약에 맞는지뿐이다.
+    final canAssign = _draft.supportsAssignment;
+    final canSave = widget.onSave != null && _draft.name.trim().isNotEmpty;
     return SectionCard(
       title: _draft.name,
       dense: true,
@@ -166,11 +164,12 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
             ),
           ),
           Tooltip(
-            message: canUseFlatApi ? '' : l.programEditorAssignUnsupported,
+            message: canAssign ? '' : l.programEditorAssignUnsupported,
             child: ActionButton(
+              key: const ValueKey<String>('program-editor-assign'),
               label: l.programEditorAssign,
               primary: true,
-              onPressed: canUseFlatApi && !widget.assigning
+              onPressed: canAssign && !widget.assigning
                   ? () => widget.onAssignFlat(_draft)
                   : null,
             ),
@@ -180,8 +179,6 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _UnsupportedBanner(),
-          const SizedBox(height: AppSpacing.md),
           Text(
             l.programEditorInfo,
             style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
@@ -320,9 +317,10 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
               ),
               const SizedBox(width: AppSpacing.sm),
               ActionButton(
+                key: const ValueKey<String>('program-editor-register'),
                 label: l.coachRegisterOn(_dayLabel(l, widget.registerOffset)),
                 icon: Icons.calendar_today_outlined,
-                onPressed: canUseFlatApi && !widget.registering
+                onPressed: canAssign && !widget.registering
                     ? () => widget.onRegisterFlat(_draft)
                     : null,
               ),
@@ -465,44 +463,6 @@ String _dayLabel(AppLocalizations l, int offset) {
   if (offset == 1) return l.labelTomorrow;
   final date = DateTime.now().add(Duration(days: offset));
   return '${date.month}/${date.day}';
-}
-
-class _UnsupportedBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.brandOrange.withValues(alpha: 0.1),
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border.all(
-          color: AppColors.brandOrange.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          // 안내다. 주의가 아니므로 빨강으로 올리지 않는다(#690).
-          const Icon(
-            Icons.info_outline,
-            color: AppColors.brandOrange,
-            size: 17,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              l.programEditorLocalBanner,
-              style: const TextStyle(
-                color: AppColors.mutedForeground,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ProgramInfo extends StatelessWidget {

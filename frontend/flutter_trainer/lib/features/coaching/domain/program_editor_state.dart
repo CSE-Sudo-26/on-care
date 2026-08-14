@@ -18,12 +18,18 @@ class ProgramEditorState {
   final String memo;
   final List<ProgramSessionDraft> sessions;
 
-  /// Whether this draft can be represented by the current flat routine API.
-  bool get supportsFlatRoutine {
-    if (sessions.length != 1 || sessions.single.exercises.isEmpty) {
-      return false;
-    }
-    for (final exercise in sessions.single.exercises) {
+  /// Whether this draft can be assigned to a member or put on the schedule.
+  ///
+  /// Session count is no longer part of the answer — the backend takes a
+  /// program of any number of sessions (#709). What still matters is that
+  /// every exercise carries values the assignment contract accepts: a name,
+  /// and a set count the schedule's `ProgramItem` can hold.
+  bool get supportsAssignment {
+    final exercises = <ProgramExerciseDraft>[
+      for (final session in sessions) ...session.exercises,
+    ];
+    if (exercises.isEmpty) return false;
+    for (final exercise in exercises) {
       final nameLength = exercise.name.trim().length;
       final sets = int.tryParse(exercise.sets.trim());
       if (nameLength < 1 || nameLength > 100 || sets == null) return false;

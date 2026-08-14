@@ -481,13 +481,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietAiFeedback => 'AI 맞춤 조언';
 
   @override
-  String get dietTodayMeals => '오늘의 식단';
+  String get dietMealLog => '식단 기록';
 
   @override
   String get dietAddMeal => '식단 추가';
 
   @override
-  String get dietEmptyLog => '아직 기록된 식단이 없어요.\n사진으로 첫 끼니를 추가해 보세요!';
+  String get dietEmptyLog => '기록된 식단이 없어요.\n사진으로 끼니를 추가해 보세요!';
 
   @override
   String get dietPhotoAnalysis => '사진 분석';

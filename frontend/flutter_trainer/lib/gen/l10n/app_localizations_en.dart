@@ -2084,7 +2084,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchClientsHint =>
-      'Search clients, goals, messages, or routines';
+      'Clients, goals, recent messages, last routine sent date';
 
   @override
   String get searchClear => 'Clear search';
@@ -2319,8 +2319,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorDefaultSession => 'Session A';
 
   @override
-  String get programEditorSaveUnsupported =>
-      'Only a named, single-session program can be saved.';
+  String get programEditorSaveUnsupported => 'Give the program a name first.';
 
   @override
   String get programEditorSaveEdit => 'Save changes';
@@ -2368,7 +2367,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorAssignUnsupported =>
-      'The server currently supports flat routine assignments only.';
+      'Check each exercise\'s name and set count.';
 
   @override
   String get programEditorAssign => 'Assign to client';
@@ -2405,10 +2404,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String programEditorSessionName(String letter) {
     return 'Session $letter';
   }
-
-  @override
-  String get programEditorLocalBanner =>
-      'A single-session program can be saved and reopened. Saving and assigning multi-session programs is still to come.';
 
   @override
   String get programEditorSessionUp => 'Move session up';

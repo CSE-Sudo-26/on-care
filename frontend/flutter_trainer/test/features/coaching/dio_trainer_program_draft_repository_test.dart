@@ -20,15 +20,14 @@ const String _base = '/trainer/programs';
 Map<String, Object?> _draftJson({
   String id = 'pgm-1',
   String name = '체중 감량 프로그램',
-  List<Map<String, Object?>> exercises = const <Map<String, Object?>>[],
+  List<Map<String, Object?>> sessions = const <Map<String, Object?>>[],
 }) => <String, Object?>{
   'id': id,
   'name': name,
   'goal': '체지방 감량',
   'period': '8주',
   'memo': '주 3회',
-  'session_name': '세션 A',
-  'exercises': exercises,
+  'sessions': sessions,
   'created_at': '2026-08-14T09:00:00Z',
   'updated_at': '2026-08-14T09:00:00Z',
 };
@@ -96,9 +95,12 @@ void main() {
       );
 
       expect(payload['name'], '체중 감량 프로그램');
-      expect(payload['session_name'], '세션 A');
+      final session =
+          (payload['sessions']! as List<Object?>).single!
+              as Map<String, Object?>;
+      expect(session['name'], '세션 A');
       final exercise =
-          (payload['exercises']! as List<Object?>).single!
+          (session['exercises']! as List<Object?>).single!
               as Map<String, Object?>;
       // AI 제안인지 트레이너가 넣은 것인지의 구분이 그대로 나간다.
       expect(exercise['source'], 'ai');
@@ -125,7 +127,10 @@ void main() {
         ),
       );
       final exercise =
-          (payload['exercises']! as List<Object?>).single!
+          (((payload['sessions']! as List<Object?>).single!
+                          as Map<String, Object?>)['exercises']!
+                      as List<Object?>)
+                  .single!
               as Map<String, Object?>;
       expect(exercise['type'], '근력');
       expect(exercise['source'], 'trainer');
@@ -140,7 +145,10 @@ void main() {
         ),
       );
       final exercise =
-          (payload['exercises']! as List<Object?>).single!
+          (((payload['sessions']! as List<Object?>).single!
+                          as Map<String, Object?>)['exercises']!
+                      as List<Object?>)
+                  .single!
               as Map<String, Object?>;
       expect(exercise['name'], '-');
     });
@@ -155,6 +163,7 @@ void main() {
             'name': '체중 감량',
             'goal': '체지방 감량',
             'period': '8주',
+            'session_count': 1,
             'exercise_count': 3,
             'updated_at': '2026-08-14T09:00:00Z',
           },
@@ -202,7 +211,11 @@ void main() {
       when(() => dio.get<Map<String, Object?>>('$_base/pgm-1')).thenAnswer(
         (_) async => _ok<Map<String, Object?>>(
           _draftJson(
-            exercises: <Map<String, Object?>>[
+            sessions: <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'session-1',
+                'name': '세션 A',
+                'exercises': <Map<String, Object?>>[
               <String, Object?>{
                 'id': 'exercise-2',
                 'name': '레그프레스',
@@ -216,6 +229,8 @@ void main() {
                 'memo': '무릎 각도 확인',
                 'type': '근력',
                 'source': 'ai',
+              },
+                ],
               },
             ],
           ),
@@ -234,7 +249,7 @@ void main() {
       expect(exercise.weight, '60kg');
       expect(exercise.source, 'ai');
       // 복원한 초안은 기존 배정·일정 등록 경로에 그대로 쓸 수 있다.
-      expect(state.supportsFlatRoutine, isTrue);
+      expect(state.supportsAssignment, isTrue);
     });
 
     test('남의 초안은 타입 있는 오류로 올라온다', () {
