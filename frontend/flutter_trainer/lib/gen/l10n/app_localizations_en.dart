@@ -650,6 +650,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietTodaySummary => 'Today\'s nutrition';
 
   @override
+  String get dietAchieveRate => 'Progress';
+
+  @override
+  String dietAmountOver(String amount) {
+    return '$amount over the goal';
+  }
+
+  @override
+  String dietAmountRemaining(String amount) {
+    return '$amount remaining to the goal';
+  }
+
+  @override
   String get dietSodiumTrend => 'Sodium over the last 7 days';
 
   @override

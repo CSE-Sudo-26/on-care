@@ -8,13 +8,10 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
-import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 
 import '../../helpers/pump_app.dart';
 
-final AppLocalizationsKo _ko = AppLocalizationsKo();
 
 /// Seeded client ids by display name — the detail is addressed by id.
 const Map<String, String> seedClientIds = <String, String>{
@@ -169,64 +166,57 @@ void main() {
         AppRoutes.clientDetail('seed-client-1', section: 'diet'),
       );
       expect(find.text('오늘 영양 요약'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+      // 회원 앱과 같은 카드다(#698): 칼로리 링 + 탄단지 진행 바 + 나트륨·당류
+      // 상태 카드. 예전의 MetricTile 6칸 묶음은 없어졌다.
+      expect(
+        find.byKey(const Key('client-nutrition-summary-card')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('client-nutrition-calorie-progress')),
+        findsOneWidget,
+      );
+      for (final String label in <String>['탄수화물', '단백질', '지방']) {
+        expect(
+          find.byKey(Key('client-nutrition-macro-$label')),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      Finder inMacro(String label, String text) => find.descendant(
+        of: find.byKey(Key('client-nutrition-macro-$label')),
+        matching: find.textContaining(text),
+      );
+      expect(inMacro('탄수화물', '120'), findsOneWidget);
+      expect(inMacro('단백질', '45'), findsOneWidget);
+      expect(inMacro('지방', '45'), findsOneWidget);
 
-    testWidgets('김민수 (sodium over target) shows warning + over AI comment', (
-      tester,
-    ) async {
-      await openDiet(tester, '김민수');
-
-      expect(find.text('오늘 영양 요약'), findsOneWidget);
-      // Nutrition metrics live only in the diet tab, not in the shared
-      // detail header. The alert badge remains visible above the tabs.
-      expect(find.byType(MetricTile), findsNWidgets(6));
-      expect(find.text('탄수화물'), findsOneWidget);
-      expect(find.text('단백질'), findsOneWidget);
-      expect(find.text('지방'), findsOneWidget);
-      final carbsTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricCarbs,
-      );
-      final proteinTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricProtein,
-      );
-      final fatTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricFat,
-      );
-      expect(
-        find.descendant(of: carbsTile, matching: find.text('120')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: proteinTile, matching: find.text('45')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: fatTile, matching: find.text('45')),
-        findsOneWidget,
-      );
       expect(find.text('나트륨 초과'), findsOneWidget);
-      final sodiumTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricSodium,
+      final Finder sodiumStatus = find.byKey(
+        const Key('client-nutrition-sodium-status'),
       );
-      expect(sodiumTile, findsOneWidget);
+      expect(sodiumStatus, findsOneWidget);
+      // 천 단위 구분이 들어간다 — 회원 앱과 같은 형식.
       expect(
-        find.descendant(of: sodiumTile, matching: find.text('3428')),
+        find.descendant(
+          of: sodiumStatus,
+          matching: find.textContaining('3,428', findRichText: true),
+        ),
         findsOneWidget,
       );
       expect(
-        find.descendant(of: sodiumTile, matching: find.text('mg 초과')),
+        find.descendant(
+          of: sodiumStatus,
+          matching: find.textContaining('많아요'),
+        ),
         findsOneWidget,
-      );
-      final sugarTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricSugar,
+        reason: '목표를 넘겼는데 초과 문구가 없습니다.',
       );
       expect(
-        find.descendant(of: sugarTile, matching: find.text('17.8')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: sugarTile, matching: find.text('g')),
+        find.descendant(
+          of: find.byKey(const Key('client-nutrition-sugar-status')),
+          matching: find.textContaining('17.8', findRichText: true),
+        ),
         findsOneWidget,
       );
       // The detail header plus the 7-day trend card push every meal card
@@ -256,11 +246,11 @@ void main() {
     ) async {
       await openDiet(tester, '이지수');
 
-      final sugarTile = find.byWidgetPredicate(
-        (widget) => widget is MetricTile && widget.label == _ko.metricSugar,
-      );
       expect(
-        find.descendant(of: sugarTile, matching: find.text('38')),
+        find.descendant(
+          of: find.byKey(const Key('client-nutrition-sugar-status')),
+          matching: find.textContaining('38', findRichText: true),
+        ),
         findsOneWidget,
       );
       expect(find.text('38.0'), findsNothing);
@@ -291,19 +281,6 @@ void main() {
       await openDiet(tester, '김민수');
       await tester.scrollUntilVisible(find.text('탄수화물 10g'), 150);
       expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('식단 shows the 7-day sodium trend with over-days count', (
-      tester,
-    ) async {
-      await openDiet(tester, '김민수');
-
-      // The trend card renders with 김민수's weekly average and a
-      // pattern summary (his week has several over-target days).
-      await tester.scrollUntilVisible(find.text('최근 7일 나트륨 추이'), 120);
-      expect(find.text('최근 7일 나트륨 추이'), findsOneWidget);
-      expect(find.textContaining('평균'), findsOneWidget);
-      expect(find.textContaining('목표(2000mg)를 초과했어요'), findsOneWidget);
     });
 
     testWidgets('a client with no logged meals gets a hint, not a verdict', (

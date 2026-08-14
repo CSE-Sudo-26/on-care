@@ -1262,6 +1262,24 @@ abstract class AppLocalizations {
   /// **'Today\'s nutrition'**
   String get dietTodaySummary;
 
+  /// No description provided for @dietAchieveRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get dietAchieveRate;
+
+  /// No description provided for @dietAmountOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over the goal'**
+  String dietAmountOver(String amount);
+
+  /// No description provided for @dietAmountRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} remaining to the goal'**
+  String dietAmountRemaining(String amount);
+
   /// No description provided for @dietSodiumTrend.
   ///
   /// In en, this message translates to:

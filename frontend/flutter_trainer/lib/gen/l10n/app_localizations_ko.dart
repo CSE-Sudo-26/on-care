@@ -636,6 +636,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietTodaySummary => '오늘 영양 요약';
 
   @override
+  String get dietAchieveRate => '달성률';
+
+  @override
+  String dietAmountOver(String amount) {
+    return '목표보다 $amount 많아요';
+  }
+
+  @override
+  String dietAmountRemaining(String amount) {
+    return '목표까지 $amount 남았어요';
+  }
+
+  @override
   String get dietSodiumTrend => '최근 7일 나트륨 추이';
 
   @override

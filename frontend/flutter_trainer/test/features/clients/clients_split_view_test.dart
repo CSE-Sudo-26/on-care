@@ -132,13 +132,13 @@ void main() {
 
     await tester.tap(card('김민수'));
     await settle(tester);
-    expect(find.text('3428'), findsWidgets);
+    expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
     await scrollToCard(tester, '이지수');
     await tester.tap(card('이지수'));
     await settle(tester);
 
-    expect(find.text('3428'), findsNothing);
+    expect(find.textContaining('3,428', findRichText: true), findsNothing);
     // Still embedded — no full-screen push happened.
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
   });
@@ -169,20 +169,20 @@ void main() {
   testWidgets('the section stays put when switching clients', (tester) async {
     await openWide(tester);
 
-    // Open 식단 for 김민수 (3428mg — appears on the summary tile and as
+    // Open 식단 for 김민수 (3,428mg — appears on the summary card and as
     // the last sodium-trend bar label, so match ≥1)…
     await goTo(
       tester,
       AppRoutes.clientDetail('seed-client-1', section: 'diet'),
     );
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('3428'), findsWidgets);
+    expect(find.textContaining('3,428', findRichText: true), findsWidgets);
 
-    // …switch to 박성호: same sub-tab, his data (2400mg).
+    // …switch to 박성호: same sub-tab, his data (2,400mg).
     await tester.tap(card('박성호'));
     await settle(tester);
     expect(find.text('오늘 영양 요약'), findsOneWidget);
-    expect(find.text('2400'), findsWidgets);
+    expect(find.textContaining('2,400', findRichText: true), findsWidgets);
   });
 
   testWidgets('the list is ordered by priority: sodium-over first', (
