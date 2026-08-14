@@ -1887,7 +1887,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchClients => '고객 검색';
 
   @override
-  String get searchClientsHint => '고객, 목표, 최근 메시지, 루틴 통합 검색';
+  String get searchClientsHint => '고객, 목표, 최근 메시지, 마지막 루틴 전송 시점 통합 검색';
 
   @override
   String get searchClear => '검색어 지우기';

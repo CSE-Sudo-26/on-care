@@ -589,7 +589,7 @@
   "routineFieldReason": "사유 (선택)",
   "routineDeleteBody": "{name} 배정이 회원 앱에서도 사라져요.",
   "searchClients": "고객 검색",
-  "searchClientsHint": "고객, 목표, 최근 메시지, 루틴 통합 검색",
+  "searchClientsHint": "고객, 목표, 최근 메시지, 마지막 루틴 전송 시점 통합 검색",
   "searchClear": "검색어 지우기",
   "searchQuickActions": "다른 탭에서 열기",
   "searchNoResults": "“{query}”와 일치하는 고객이 없어요",

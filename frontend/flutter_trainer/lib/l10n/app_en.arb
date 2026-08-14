@@ -1259,7 +1259,7 @@
   "@searchClients": {
     "description": "Label/tooltip of the console header's client search."
   },
-  "searchClientsHint": "Search clients, goals, recent messages, or routines",
+  "searchClientsHint": "Search clients, goals, recent messages, or last routine sent date",
   "searchClear": "Clear search",
   "searchQuickActions": "Open in another tab",
   "searchNoResults": "No client matches “{query}”",
