@@ -460,7 +460,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietWeekdaySun => '일';
 
   @override
-  String get dietNutritionSummary => '오늘의 영양 요약';
+  String get dietNutritionSummary => '영양 요약';
 
   @override
   String get dietCalories => '칼로리';
@@ -494,9 +494,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dietLoadError => '식단 정보를 불러오지 못했어요.';
-
-  @override
-  String get dietPeriodTrend => '영양 추이';
 
   @override
   String get dietPeriodAverage => '하루 평균';

@@ -89,137 +89,123 @@ class _DietPeriodViewState extends ConsumerState<DietPeriodView> {
       Localizations.localeOf(context).toString(),
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text(
-                l.dietPeriodTrend,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.ink,
-                ),
+    // 바깥 섹션(영양 요약)이 이미 제목과 좌우 여백을 갖는다 — 여기서 또 두면
+    // 제목이 두 줄로 겹치고 여백이 이중으로 들어간다(#681).
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            l.dietPeriodRange(
+              fmt.format(widget.range.from),
+              fmt.format(widget.range.to),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: <Widget>[
+            for (final _Metric m in _Metric.values) ...<Widget>[
+              _MetricPill(
+                label: _label(l, m),
+                color: _color(m),
+                active: _metric == m,
+                onTap: () => setState(() => _metric = m),
               ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  l.dietPeriodRange(
-                    fmt.format(widget.range.from),
-                    fmt.format(widget.range.to),
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              if (m != _Metric.values.last) const SizedBox(width: 8),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        async.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+            ),
+          ),
+          error: (Object e, StackTrace _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Column(
+              children: <Widget>[
+                Text(
+                  l.dietLoadError,
                   style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+                    fontSize: 14,
+                    color: AppColors.foreground,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              for (final _Metric m in _Metric.values) ...<Widget>[
-                _MetricPill(
-                  label: _label(l, m),
-                  color: _color(m),
-                  active: _metric == m,
-                  onTap: () => setState(() => _metric = m),
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  // 실패는 날짜별 provider 에 남아 있다. 집계만 무효화하면
+                  // 같은 에러를 다시 읽어 와 아무 일도 일어나지 않는다.
+                  onPressed: () {
+                    for (final DateTime d in dietRangeDates(widget.range)) {
+                      ref.invalidate(dietByDateProvider(d));
+                    }
+                    ref.invalidate(dietPeriodProvider(widget.range));
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: FigmaColors.primary,
+                    side: BorderSide(color: FigmaColors.primaryA(0.4)),
+                  ),
+                  child: Text(l.actionRetry),
                 ),
-                if (m != _Metric.values.last) const SizedBox(width: 8),
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          async.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(
-                child: SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-              ),
-            ),
-            error: (Object e, StackTrace _) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: <Widget>[
-                  Text(
-                    l.dietLoadError,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.foreground,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  OutlinedButton(
-                    // 실패는 날짜별 provider 에 남아 있다. 집계만 무효화하면
-                    // 같은 에러를 다시 읽어 와 아무 일도 일어나지 않는다.
-                    onPressed: () {
-                      for (final DateTime d in dietRangeDates(widget.range)) {
-                        ref.invalidate(dietByDateProvider(d));
-                      }
-                      ref.invalidate(dietPeriodProvider(widget.range));
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: FigmaColors.primary,
-                      side: BorderSide(color: FigmaColors.primaryA(0.4)),
-                    ),
-                    child: Text(l.actionRetry),
-                  ),
-                ],
-              ),
-            ),
-            data: (DietPeriod period) => period.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Center(
-                      child: Text(
-                        l.dietPeriodEmpty,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.mutedForeground,
-                        ),
+          data: (DietPeriod period) => period.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: Text(
+                      l.dietPeriodEmpty,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.mutedForeground,
                       ),
                     ),
-                  )
-                : _PeriodBody(
-                    period: period,
-                    metricLabel: _label(l, _metric),
-                    unit: _unit(l, _metric),
-                    color: _color(_metric),
-                    average: _averageOf(period, _metric),
-                    goal: _goalOf(_metric).toDouble(),
-                    total: period.days.fold<double>(
-                      0,
-                      (double a, DietPeriodDay d) => a + _valueOf(d, _metric),
-                    ),
-                    values: <double>[
-                      for (final DietPeriodDay d in period.days)
-                        _valueOf(d, _metric),
-                    ],
-                    dates: <DateTime>[
-                      for (final DietPeriodDay d in period.days) d.date,
-                    ],
-                    format: _number,
-                    // 지표를 바꾸면 막대가 0 에서 다시 자란다.
-                    replayKey: _metric,
                   ),
-          ),
-        ],
-      ),
+                )
+              : _PeriodBody(
+                  period: period,
+                  metricLabel: _label(l, _metric),
+                  unit: _unit(l, _metric),
+                  color: _color(_metric),
+                  average: _averageOf(period, _metric),
+                  goal: _goalOf(_metric).toDouble(),
+                  total: period.days.fold<double>(
+                    0,
+                    (double a, DietPeriodDay d) => a + _valueOf(d, _metric),
+                  ),
+                  values: <double>[
+                    for (final DietPeriodDay d in period.days)
+                      _valueOf(d, _metric),
+                  ],
+                  dates: <DateTime>[
+                    for (final DietPeriodDay d in period.days) d.date,
+                  ],
+                  format: _number,
+                  // 지표를 바꾸면 막대가 0 에서 다시 자란다.
+                  replayKey: _metric,
+                ),
+        ),
+      ],
     );
   }
 }

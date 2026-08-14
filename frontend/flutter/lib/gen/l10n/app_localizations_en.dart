@@ -463,7 +463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietWeekdaySun => 'Sun';
 
   @override
-  String get dietNutritionSummary => 'Today\'s Nutrition';
+  String get dietNutritionSummary => 'Nutrition';
 
   @override
   String get dietCalories => 'Calories';
@@ -498,9 +498,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dietLoadError => 'Couldn\'t load your diet.';
-
-  @override
-  String get dietPeriodTrend => 'Nutrition trend';
 
   @override
   String get dietPeriodAverage => 'Daily average';

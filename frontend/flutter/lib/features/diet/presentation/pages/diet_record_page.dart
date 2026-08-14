@@ -64,7 +64,7 @@ DietMeal _mealFromEntry(DietEntry e) {
   final ({String emoji, Color bg}) meta =
       _mealMeta[e.mealType] ?? _mealMeta[MealType.snack]!;
   // Totals are summed from the per-food nutrition so the pills on the card and
-  // the "오늘의 영양 요약" numbers stay consistent. Real-server payloads carry
+  // the 영양 요약 numbers stay consistent. Real-server payloads carry
   // nutrition only at the entry level (foods = [{name, calories}]), so fall back
   // to the entry totals when the per-food sum is 0.
   final int foodSodium = e.foods.fold<int>(
@@ -159,6 +159,14 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   DietDateRange _rangeFor(DietPeriodTab tab, DateTime today) =>
       dietRangeForTab(tab, today);
 
+  void _retryDay() {
+    if (_weekShift == 0 && _selected == _today) {
+      ref.invalidate(dietTodayProvider);
+    } else {
+      ref.invalidate(dietByDateProvider(_selected));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -195,68 +203,78 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
                       0,
                   onCalendar: () => showScheduleCalendarSheet(context),
                 ),
-                // 홈은 식단을 주간으로도 보여주는데 식단 탭에는 하루치밖에
-                // 없었다 — 운동 탭과 같은 기간 토글을 둔다(#670).
-                _PeriodTabs(
-                  active: _period,
+                // 날짜 스트립은 기간과 무관하게 늘 있다 — 기간 토글은 영양
+                // 요약 섹션 하나만 바꾼다(운동 탭의 `운동 현황` 과 같다, #681).
+                _DateStrip(
+                  days: days,
+                  today: today,
+                  selected: _selected,
+                  weekLabel: l.dietWeekLabel(
+                    center.month,
+                    _weekOfMonth(center),
+                  ),
+                  showTodayButton: !atToday,
+                  onSelect: (DateTime d) => setState(() => _selected = d),
+                  onPrev: () => setState(() => _weekShift -= 1),
+                  onNext: _weekShift >= 0
+                      ? null
+                      : () => setState(() => _weekShift += 1),
+                  onToday: () => setState(() {
+                    _weekShift = 0;
+                    _selected = today;
+                  }),
+                ),
+                const SizedBox(height: 8),
+                // 영양 요약 섹션. 제목·토글·기간 그래프는 **선택한 날짜의 요청과
+                // 무관하게** 늘 그린다 — 기록이 빈 날을 누르면 주간 그래프까지
+                // 통째로 사라지고 토글마저 없어져 되돌아갈 수도 없었다(#684 리뷰).
+                _NutritionSectionHeader(
+                  period: _period,
                   onChanged: (DietPeriodTab t) => setState(() => _period = t),
                 ),
-                if (_period != DietPeriodTab.day) ...<Widget>[
-                  const SizedBox(height: 4),
-                  DietPeriodView(
-                    range: _rangeFor(_period, today),
-                    profile: profile,
-                  ),
-                ] else ...<Widget>[
-                  _DateStrip(
-                    days: days,
-                    today: today,
-                    selected: _selected,
-                    weekLabel: l.dietWeekLabel(
-                      center.month,
-                      _weekOfMonth(center),
+                if (_period != DietPeriodTab.day)
+                  // 범위는 스트립이 보여주는 주(center)를 따른다. today 로 잡으면
+                  // 주를 뒤로 넘겼을 때 스트립과 그래프가 다른 주를 가리킨다.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: DietPeriodView(
+                      range: _rangeFor(_period, center),
+                      profile: profile,
                     ),
-                    showTodayButton: !atToday,
-                    onSelect: (DateTime d) => setState(() => _selected = d),
-                    onPrev: () => setState(() => _weekShift -= 1),
-                    onNext: _weekShift >= 0
-                        ? null
-                        : () => setState(() => _weekShift += 1),
-                    onToday: () => setState(() {
-                      _weekShift = 0;
-                      _selected = today;
-                    }),
-                  ),
-                  const SizedBox(height: 8),
+                  )
+                else
                   diet.when(
                     loading: () => const _DietLoading(),
-                    error: (Object e, StackTrace _) => _DietError(
-                      onRetry: () {
-                        if (atToday) {
-                          ref.invalidate(dietTodayProvider);
-                        } else {
-                          ref.invalidate(dietByDateProvider(_selected));
-                        }
-                      },
-                    ),
+                    error: (Object e, StackTrace _) =>
+                        _DietError(onRetry: _retryDay),
                     data: (DietDay day) => !atToday && day.entries.isEmpty
                         ? const _EmptyDay()
-                        : Column(
-                            children: <Widget>[
-                              NutritionSummary(day: day, profile: profile),
-                              const SizedBox(height: 20),
-                              _AiFeedback(message: day.aiCoachMessage),
-                              const SizedBox(height: 20),
-                              _MealLog(
-                                entries: day.entries,
-                                onAdd: () => showDietAddSheet(context),
-                                onEditMeal: (DietMeal m) =>
-                                    openMealDetailPage(context, m),
-                              ),
-                            ],
+                        : NutritionSummary(
+                            day: day,
+                            profile: profile,
+                            showHeader: false,
                           ),
                   ),
-                ],
+                // 아래는 선택한 날짜 기준이라 기간과 무관하다.
+                diet.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (Object e, StackTrace _) => const SizedBox.shrink(),
+                  data: (DietDay day) => !atToday && day.entries.isEmpty
+                      ? const SizedBox.shrink()
+                      : Column(
+                          children: <Widget>[
+                            const SizedBox(height: 20),
+                            _AiFeedback(message: day.aiCoachMessage),
+                            const SizedBox(height: 20),
+                            _MealLog(
+                              entries: day.entries,
+                              onAdd: () => showDietAddSheet(context),
+                              onEditMeal: (DietMeal m) =>
+                                  openMealDetailPage(context, m),
+                            ),
+                          ],
+                        ),
+                ),
               ],
             ),
           ),
@@ -266,12 +284,15 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   }
 }
 
-// ─────────────────────────────────────────────────────── period tabs ──
+// ─────────────────────────────────────────────────────── period toggle ──
 
-/// 오늘 / 이번 주 / 이번 달. 운동 탭의 기간 토글과 같은 문구를 공유해 두 탭의
-/// 조작이 어긋나지 않게 한다.
-class _PeriodTabs extends StatelessWidget {
-  const _PeriodTabs({required this.active, required this.onChanged});
+/// 오늘 / 이번 주 / 이번 달.
+///
+/// 운동 탭 `운동 현황` 의 토글과 자리·문구뿐 아니라 **생김새까지** 같게 둔다
+/// (여백·글자 크기·선택 표시·전환 시간). 같은 자리에 놓인 같은 조작이 탭마다
+/// 다르게 보이면 안 된다. 한 위젯으로 합치는 것은 별 이슈로 뗀다.
+class _PeriodToggle extends StatelessWidget {
+  const _PeriodToggle({required this.active, required this.onChanged});
 
   final DietPeriodTab active;
   final ValueChanged<DietPeriodTab> onChanged;
@@ -284,45 +305,87 @@ class _PeriodTabs extends StatelessWidget {
       DietPeriodTab.week: l.exThisWeek,
       DietPeriodTab.month: l.exThisMonth,
     };
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: FigmaColors.statBg,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          children: <Widget>[
-            for (final DietPeriodTab tab in DietPeriodTab.values)
-              Expanded(
-                child: GestureDetector(
-                  key: Key('diet-period-tab-${tab.name}'),
-                  onTap: () => onChanged(tab),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(vertical: 7),
-                    decoration: BoxDecoration(
-                      color: active == tab ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: active == tab ? kCardShadow : null,
-                    ),
-                    child: Text(
-                      labels[tab]!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: active == tab
-                            ? FigmaColors.primary
-                            : AppColors.mutedForeground,
-                      ),
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FigmaColors.statBg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (final DietPeriodTab tab in DietPeriodTab.values)
+            GestureDetector(
+              key: Key('diet-period-tab-${tab.name}'),
+              onTap: () => onChanged(tab),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: active == tab
+                      ? FigmaColors.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  labels[tab]!,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: active == tab
+                        ? Colors.white
+                        : AppColors.mutedForeground,
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 영양 요약 섹션의 제목 줄. 제목 + 기간 토글.
+///
+/// 페이지가 직접 그린다 — 하루 요청(`diet.when`) 안에 두면 기록이 빈 날이나
+/// 실패한 날에 토글까지 사라져 되돌아갈 방법이 없어진다(#684 리뷰).
+class _NutritionSectionHeader extends StatelessWidget {
+  const _NutritionSectionHeader({
+    required this.period,
+    required this.onChanged,
+  });
+
+  final DietPeriodTab period;
+  final ValueChanged<DietPeriodTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+      child: Row(
+        children: <Widget>[
+          // 좁은 화면·큰 글자 배율에서 제목이 토글을 밀어내 Row 가 넘치던
+          // 문제(#684 리뷰). 제목이 먼저 줄어든다.
+          Flexible(
+            child: Text(
+              l.dietNutritionSummary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.ink,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _PeriodToggle(active: period, onChanged: onChanged),
+        ],
       ),
     );
   }
@@ -519,10 +582,19 @@ class _DayCell extends StatelessWidget {
 // ──────────────────────────────────────────────────── nutrition summary ──
 
 class NutritionSummary extends StatelessWidget {
-  const NutritionSummary({required this.day, this.profile, super.key});
+  const NutritionSummary({
+    required this.day,
+    this.profile,
+    this.showHeader = true,
+    super.key,
+  });
 
   final DietDay day;
   final UserProfile? profile;
+
+  /// 식단 탭은 기간 토글과 함께 제목을 **바깥에서** 그린다(하루 요청 상태와
+  /// 무관하게 늘 보여야 하므로). 이 위젯만 단독으로 쓰는 곳은 기본값을 쓴다.
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -599,15 +671,17 @@ class NutritionSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            l.dietNutritionSummary,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: FigmaColors.ink,
+          if (showHeader) ...<Widget>[
+            Text(
+              l.dietNutritionSummary,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.ink,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
+          ],
           _NutritionSummaryCard(
             calories: items[0],
             calorieDifference: _formatInt((kcal - calorieGoal).abs()),

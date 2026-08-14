@@ -121,7 +121,7 @@ void main() {
   });
 
   group('식단 탭 기간 토글', () {
-    testWidgets('이번 주를 고르면 기간 추이 카드가 나오고, 오늘로 돌아오면 끼니 목록이 돌아온다', (
+    testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -136,15 +136,28 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 처음에는 하루 뷰.
+      final AppLocalizations l = AppLocalizations.of(
+        tester.element(find.byType(DietRecordPage)),
+      );
+
+      // 처음에는 하루 요약.
       expect(find.byKey(const Key('nutrition-summary-card')), findsOneWidget);
       expect(find.byKey(const Key('diet-period-card')), findsNothing);
+      // 제목은 기간과 무관한 '영양 요약'.
+      expect(find.text(l.dietNutritionSummary), findsOneWidget);
+      expect(l.dietNutritionSummary.contains('오늘'), isFalse);
 
       await tester.tap(find.byKey(const Key('diet-period-tab-week')));
       await tester.pumpAndSettle();
 
+      // 요약 자리만 그래프로 바뀐다.
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
       expect(find.byKey(const Key('nutrition-summary-card')), findsNothing);
+      // 날짜 스트립과 끼니 목록은 그대로 남는다 — 운동 탭과 같은 규칙.
+      expect(find.text(l.dietTodayMeals), findsOneWidget);
+      expect(find.text(l.dietAddMeal), findsOneWidget);
+      // 토글도 제목 줄에 그대로 있다.
+      expect(find.byKey(const Key('diet-period-tab-month')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('diet-period-tab-month')));
       await tester.pumpAndSettle();
@@ -156,6 +169,7 @@ void main() {
       expect(find.byKey(const Key('diet-period-card')), findsNothing);
     });
   });
+
   group('dietRangeForTab', () {
     test('이번 주는 월~일 7일이다 (일요일에도 그 주로 묶인다)', () {
       // 2026-06-07 은 일요일 → weekday 7. Duration 으로 빼면 다음 주로 샌다.
@@ -226,6 +240,79 @@ void main() {
     expect(period.avgSodiumMg, 800);
     expect(period.avgSugarG, closeTo(9, 0.001));
   });
+
+  group('기간 뷰는 선택한 날짜 요청에 좌우되지 않는다 (#684 리뷰)', () {
+    testWidgets('기록이 빈 날을 골라도 그래프와 토글이 남는다', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            // 어제만 비어 있고 나머지는 기록이 있다 — 주간 집계는 충분하다.
+            dietRepositoryProvider.overrideWithValue(
+              _EmptyYesterdayRepository(),
+            ),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
+
+      final DateTime yesterday = DateTime.now().subtract(
+        const Duration(days: 1),
+      );
+      await tester.tap(find.text('${yesterday.day}').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('diet-period-card')),
+        findsOneWidget,
+        reason: '하루 기록이 비었다고 기간 그래프가 사라지면 안 된다',
+      );
+      expect(
+        find.byKey(const Key('diet-period-tab-day')),
+        findsOneWidget,
+        reason: '토글이 사라지면 오늘로 돌아갈 방법이 없다',
+      );
+    });
+
+    testWidgets('하루 조회가 실패해도 토글이 남는다', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _app(
+          overrides: <Override>[
+            dietRepositoryProvider.overrideWithValue(_FailPastRepository()),
+            accountRepositoryProvider.overrideWithValue(
+              MockAccountRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+      await tester.pumpAndSettle();
+
+      final DateTime yesterday = DateTime.now().subtract(
+        const Duration(days: 1),
+      );
+      await tester.tap(find.text('${yesterday.day}').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('diet-period-tab-day')), findsOneWidget);
+    });
+  });
 }
 
 /// 어느 날짜에도 기록이 없는 저장소.
@@ -262,4 +349,32 @@ class _DayTotalsOnlyRepository extends FakeDietRepository {
     macros: DietMacros.zero(),
     aiCoachMessage: '',
   );
+}
+
+/// 어제만 비어 있는 저장소.
+class _EmptyYesterdayRepository extends FakeDietRepository {
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async {
+    final DateTime y = DateTime.now().subtract(const Duration(days: 1));
+    if (date.year == y.year && date.month == y.month && date.day == y.day) {
+      return const DietDay(
+        entries: <DietEntry>[],
+        totalCalories: 0,
+        totalSodiumMg: 0,
+        totalSugarG: 0,
+        macros: DietMacros.zero(),
+        aiCoachMessage: '',
+      );
+    }
+    return super.fetchByDate(date);
+  }
+}
+
+/// 오늘이 아닌 날짜 조회가 실패하는 저장소.
+class _FailPastRepository extends FakeDietRepository {
+  @override
+  Future<DietDay> fetchByDate(DateTime date) async {
+    if (date.day != DateTime.now().day) throw StateError('boom');
+    return super.fetchByDate(date);
+  }
 }

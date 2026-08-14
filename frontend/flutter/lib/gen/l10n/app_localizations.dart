@@ -929,7 +929,7 @@ abstract class AppLocalizations {
   /// No description provided for @dietNutritionSummary.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Nutrition'**
+  /// **'Nutrition'**
   String get dietNutritionSummary;
 
   /// No description provided for @dietCalories.
@@ -997,12 +997,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load your diet.'**
   String get dietLoadError;
-
-  /// No description provided for @dietPeriodTrend.
-  ///
-  /// In en, this message translates to:
-  /// **'Nutrition trend'**
-  String get dietPeriodTrend;
 
   /// No description provided for @dietPeriodAverage.
   ///
