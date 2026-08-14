@@ -500,9 +500,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dietLoadError => 'Couldn\'t load your diet.';
 
   @override
-  String get dietPeriodTrend => 'Nutrition trend';
-
-  @override
   String get dietPeriodAverage => 'Daily average';
 
   @override

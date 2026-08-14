@@ -496,9 +496,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietLoadError => '식단 정보를 불러오지 못했어요.';
 
   @override
-  String get dietPeriodTrend => '영양 추이';
-
-  @override
   String get dietPeriodAverage => '하루 평균';
 
   @override

@@ -998,12 +998,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your diet.'**
   String get dietLoadError;
 
-  /// No description provided for @dietPeriodTrend.
-  ///
-  /// In en, this message translates to:
-  /// **'Nutrition trend'**
-  String get dietPeriodTrend;
-
   /// No description provided for @dietPeriodAverage.
   ///
   /// In en, this message translates to:
