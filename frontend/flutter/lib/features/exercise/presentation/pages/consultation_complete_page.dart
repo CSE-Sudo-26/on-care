@@ -120,8 +120,7 @@ class _CompletionContent extends StatelessWidget {
                   const Divider(height: 25, color: FigmaColors.hairline),
                   _SummaryRow(
                     label: l.exPreferredDate,
-                    value:
-                        '$date · ${_timeLabel(l, request.preferredTimeSlot)}',
+                    value: '$date · ${_timeLabel(l, request.preferredTimeSlot)}',
                   ),
                   const Divider(height: 25, color: FigmaColors.hairline),
                   _SummaryRow(

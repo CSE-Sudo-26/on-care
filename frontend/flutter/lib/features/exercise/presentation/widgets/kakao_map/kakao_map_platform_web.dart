@@ -147,8 +147,11 @@ class _KakaoMapViewState extends State<_KakaoMapView> {
 
   JSObject get _maps => _prop(_global('kakao')!, 'maps')!;
 
-  JSObject _latLng(double lat, double lng) => (_maps['LatLng'] as JSFunction)
-      .callAsConstructor<JSObject>(lat.toJS, lng.toJS);
+  JSObject _latLng(double lat, double lng) =>
+      (_maps['LatLng'] as JSFunction).callAsConstructor<JSObject>(
+        lat.toJS,
+        lng.toJS,
+      );
 
   void _createMap() {
     final JSObject options = JSObject()

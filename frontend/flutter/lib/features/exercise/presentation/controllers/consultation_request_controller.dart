@@ -101,8 +101,7 @@ final consultationRequestControllerProvider =
       ConsultationRequestController,
       List<ConsultationRequest>
     >(
-      (ref) => ConsultationRequestController(
-        ref.watch(consultationRepositoryProvider),
-      ),
+      (ref) =>
+          ConsultationRequestController(ref.watch(consultationRepositoryProvider)),
       name: 'consultationRequests',
     );

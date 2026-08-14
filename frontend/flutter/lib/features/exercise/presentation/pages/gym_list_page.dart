@@ -467,7 +467,9 @@ class _GymMap extends StatelessWidget {
             for (final Gym g in located)
               KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
           ],
-          fallback: _GymMiniMap(pinCount: located.isEmpty ? 3 : located.length),
+          fallback: _GymMiniMap(
+            pinCount: located.isEmpty ? 3 : located.length,
+          ),
         ),
       ),
     );
