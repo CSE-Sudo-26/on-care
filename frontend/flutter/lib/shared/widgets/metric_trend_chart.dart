@@ -22,13 +22,30 @@ import 'package:intl/intl.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 이번 주 꺾은선의 색. 값의 상태는 점으로 말하므로 선은 눈에 띄지 않게 둔다.
 const Color kMetricTrendLine = Color(0xFFDDE2E8);
 
 /// 목표 대비 상태색: 초과(빨강) / 그 외(초록).
+///
+/// 목표가 0 이면 초과로 보지 않는다. `v > goal` 만 두면 목표가 없는 지표의 **모든**
+/// 기록이 빨간 점이 되어, 같은 카드의 평균 뱃지(목표가 있을 때만 초과 판정)와 서로
+/// 다른 이야기를 한다.
 Color metricStatusColor(double v, double goal) =>
-    v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
+    goal > 0 && v > goal ? FigmaColors.dangerRed : FigmaColors.greenText;
+
+/// 월→일 요일 라벨. 홈 탭과 식단 탭이 **같은 문구**를 쓰도록 여기 둔다 — 한쪽만
+/// 하드코딩하면 영어 로케일에서 한글 요일이 그대로 남는다.
+List<String> weekDayLabels(AppLocalizations l) => <String>[
+  l.dietWeekdayMon,
+  l.dietWeekdayTue,
+  l.dietWeekdayWed,
+  l.dietWeekdayThu,
+  l.dietWeekdayFri,
+  l.dietWeekdaySat,
+  l.dietWeekdaySun,
+];
 
 /// 소수 첫째 자리까지만 남기고 정수는 콤마만. 당류 17.8 이 18 로 반올림돼
 /// 지표 카드·식단 탭 수치와 어긋나지 않도록.

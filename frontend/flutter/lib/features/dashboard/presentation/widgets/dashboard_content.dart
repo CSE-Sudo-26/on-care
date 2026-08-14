@@ -419,7 +419,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
     final AppLocalizations l = AppLocalizations.of(context);
     final Map<_NutTabKind, _NutData> nutrition = _nutritionFor(summary);
     final _NutData cfg = nutrition[_tab]!;
-    final List<String> days = _weekDayLabels(l);
+    final List<String> days = weekDayLabels(l);
     final int todayIdx = _todayIndex();
     final NumberFormat nf = NumberFormat('#,###');
 
@@ -773,7 +773,7 @@ class _ExerciseCard extends ConsumerWidget {
       for (int i = 0; i < baseCal.length; i++)
         if (i > todayIdx) 0 else baseCal[i],
     ];
-    final List<String> days = _weekDayLabels(l);
+    final List<String> days = weekDayLabels(l);
     final (double lo, double hi) = _barScale(week);
     final NumberFormat nf = NumberFormat('#,###');
 
@@ -1134,15 +1134,7 @@ const List<double> _demoExerciseWeekCalories = <double>[
   520,
 ];
 
-List<String> _weekDayLabels(AppLocalizations l) => <String>[
-  l.dietWeekdayMon,
-  l.dietWeekdayTue,
-  l.dietWeekdayWed,
-  l.dietWeekdayThu,
-  l.dietWeekdayFri,
-  l.dietWeekdaySat,
-  l.dietWeekdaySun,
-];
+
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
 /// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
@@ -1617,7 +1609,7 @@ class _ScheduleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final DateTime now = DateTime.now();
-    final String weekday = _weekDayLabels(l)[now.weekday - 1];
+    final String weekday = weekDayLabels(l)[now.weekday - 1];
     final String todayLabel = l.homeScheduleDate(weekday, now.month, now.day);
     // 트레이너 일정과 내가 만든 일정을 한 목록으로 보여 준다. 시간순으로 섞어야
     // '다음에 뭐가 있는지'를 한 번에 읽을 수 있다.

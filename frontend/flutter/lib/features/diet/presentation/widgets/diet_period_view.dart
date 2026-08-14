@@ -269,6 +269,7 @@ class _PeriodBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final List<String> labels = weekDayLabels(l);
     final bool over = goal > 0 && average > goal;
     final Color statusColor = over
         ? FigmaColors.dangerRed
@@ -388,7 +389,7 @@ class _PeriodBody extends StatelessWidget {
             MetricTrendChart(
               values: values,
               dayLabels: <String>[
-                for (final DateTime d in dates) _weekdayLabel(d),
+                for (final DateTime d in dates) labels[d.weekday - 1],
               ],
               goal: goal,
               ticks: ticks,
@@ -563,10 +564,6 @@ class _MetricPill extends StatelessWidget {
     );
   }
 }
-
-/// 요일 한 글자(월…일). 홈 탭 주간 추이의 요일 라벨과 같은 형식이다.
-String _weekdayLabel(DateTime d) =>
-    const <String>['월', '화', '수', '목', '금', '토', '일'][d.weekday - 1];
 
 /// 오늘이 이 범위의 몇 번째 칸인가. 범위 밖이면 마지막 칸 — 지난 주를 보고
 /// 있을 때 선이 중간에서 끊기지 않게 한다.
