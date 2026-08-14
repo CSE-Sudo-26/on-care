@@ -262,12 +262,10 @@ class _ConversationList extends StatelessWidget {
                     icon: Icons.forum_outlined,
                   )
                 : ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     itemCount: clients.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      indent: 76,
-                      color: AppColors.borderStrong,
-                    ),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.md),
                     itemBuilder: (context, index) {
                       final client = clients[index];
                       return _ConversationTile(
@@ -340,94 +338,111 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final alerts = healthAlertsFor(client);
-    return Material(
-      color: selected ? AppColors.accentSurface : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            border: selected
-                ? const Border(
-                    left: BorderSide(color: AppColors.primary, width: 3),
-                  )
-                : null,
-          ),
-          child: Row(
-            children: <Widget>[
-              ClientAvatar(label: client.avatar, active: client.active),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            client.name,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          client.lastTime,
-                          style: const TextStyle(
-                            color: AppColors.subtleForeground,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            client.lastMessage,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.mutedForeground,
-                              fontSize: 12.5,
-                              fontWeight: unread > 0
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (unread > 0)
-                          Container(
-                            margin: const EdgeInsets.only(left: AppSpacing.xs),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.all(AppRadius.pill),
-                            ),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(AppRadius.card),
+        boxShadow: kCardShadow,
+      ),
+      child: Material(
+        color: selected ? AppColors.accentSurface : AppColors.card,
+        borderRadius: const BorderRadius.all(AppRadius.card),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.card),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(AppRadius.card),
+              border: Border.all(
+                color: selected
+                    ? AppColors.accent.withValues(alpha: 0.5)
+                    : AppColors.border,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                ClientAvatar(
+                  label: client.avatar,
+                  size: 36,
+                  showStatus: true,
+                  active: client.active,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
                             child: Text(
-                              '$unread',
+                              client.name,
                               style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
+                          Text(
+                            client.lastTime,
+                            style: const TextStyle(
+                              color: AppColors.subtleForeground,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              client.lastMessage,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.mutedForeground,
+                                fontSize: 12.5,
+                                fontWeight: unread > 0
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          if (unread > 0)
+                            Container(
+                              margin: const EdgeInsets.only(
+                                left: AppSpacing.xs,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.all(AppRadius.pill),
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (alerts.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 6),
+                        AlertBadge(alert: alerts.first),
                       ],
-                    ),
-                    if (alerts.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 6),
-                      AlertBadge(alert: alerts.first),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -486,13 +501,10 @@ class _ThreadPanel extends StatelessWidget {
                   ),
                 ),
                 ActionButton(
-                  label: l.messagesProgram,
-                  onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                ActionButton(
-                  label: l.messagesSchedule,
-                  onPressed: () => context.go(AppRoutes.scheduleView('week')),
+                  key: const ValueKey<String>('messages-client-detail-button'),
+                  label: l.messagesClientDetail,
+                  onPressed: () =>
+                      context.go(AppRoutes.clientDetail(client.id)),
                 ),
               ],
             ),
@@ -530,19 +542,6 @@ class _ThreadPanel extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                TextButton(
-                  onPressed: () =>
-                      context.go(AppRoutes.clientDetail(client.id)),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(l.messagesClientDetail),
                 ),
               ],
             ),

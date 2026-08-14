@@ -461,6 +461,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatInputHint => '메시지 입력...';
 
   @override
+  String chatInsightDiscomfortTitle(String part) {
+    return '$part 불편 표현 감지';
+  }
+
+  @override
+  String get chatInsightBodyPartGeneral => '신체';
+
+  @override
+  String get chatInsightNegativeTitle => '부정적 피드백 감지';
+
+  @override
+  String get chatInsightDiscomfortDescription =>
+      'AI가 불편감 호소를 감지했어요. 증상을 확인하고 다음 운동 강도를 조절해 보세요.';
+
+  @override
+  String get chatInsightNegativeDescription =>
+      'AI가 운동 부담 또는 수행 어려움을 감지했어요. 원인을 확인하고 루틴 조정을 고려해 보세요.';
+
+  @override
+  String get chatInsightAddMemo => '메모에 추가';
+
+  @override
+  String get chatInsightMemoAdded => '메모 추가됨';
+
+  @override
+  String get chatInsightMemoSaved => 'AI 감지 내용을 트레이너 메모에 추가했어요.';
+
+  @override
   String coachSheetTitle(String name) {
     return '$name 코칭 상담';
   }
@@ -2017,7 +2045,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get messagesClientDetail => '회원 상세';
+  String get messagesClientDetail => '고객 상세 보기';
 
   @override
   String get messagesSelectPrompt => '왼쪽 목록에서 대화할 회원을 선택하세요.';

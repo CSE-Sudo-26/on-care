@@ -932,6 +932,54 @@ abstract class AppLocalizations {
   /// **'Type a message...'**
   String get chatInputHint;
 
+  /// No description provided for @chatInsightDiscomfortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{part} discomfort detected'**
+  String chatInsightDiscomfortTitle(String part);
+
+  /// No description provided for @chatInsightBodyPartGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical'**
+  String get chatInsightBodyPartGeneral;
+
+  /// No description provided for @chatInsightNegativeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Negative feedback detected'**
+  String get chatInsightNegativeTitle;
+
+  /// No description provided for @chatInsightDiscomfortDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AI detected a report of discomfort. Check the symptoms and consider adjusting the next workout\'s intensity.'**
+  String get chatInsightDiscomfortDescription;
+
+  /// No description provided for @chatInsightNegativeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AI detected workout strain or difficulty completing the plan. Check the cause and consider adjusting the routine.'**
+  String get chatInsightNegativeDescription;
+
+  /// No description provided for @chatInsightAddMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to memo'**
+  String get chatInsightAddMemo;
+
+  /// No description provided for @chatInsightMemoAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to memo'**
+  String get chatInsightMemoAdded;
+
+  /// No description provided for @chatInsightMemoSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI insight was added to the trainer memo.'**
+  String get chatInsightMemoSaved;
+
   /// No description provided for @coachSheetTitle.
   ///
   /// In en, this message translates to:
@@ -3743,7 +3791,7 @@ abstract class AppLocalizations {
   /// No description provided for @messagesClientDetail.
   ///
   /// In en, this message translates to:
-  /// **'Client details'**
+  /// **'View client details'**
   String get messagesClientDetail;
 
   /// No description provided for @messagesSelectPrompt.
