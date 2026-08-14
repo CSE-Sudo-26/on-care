@@ -84,18 +84,23 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 if (wide) ...<Widget>[
                   Row(
+                    key: const ValueKey<String>('dashboard-action-row'),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Expanded(flex: 15, child: TodayTimelineCard()),
+                      const Expanded(child: TodayTimelineCard()),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
-                        flex: 10,
+                        child: AttentionCard(
+                          entries: summary.attention,
+                          maxRows: 5,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
                         child: _TodayTasksCard(entries: summary.attention),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AttentionCard(entries: summary.attention, maxRows: 5),
                   const SizedBox(height: AppSpacing.lg),
                   AiSummaryCard(
                     summary: coachingSummary,
@@ -105,9 +110,9 @@ class DashboardPage extends ConsumerWidget {
                 ] else ...<Widget>[
                   const TodayTimelineCard(),
                   const SizedBox(height: AppSpacing.lg),
-                  _TodayTasksCard(entries: summary.attention),
-                  const SizedBox(height: AppSpacing.lg),
                   AttentionCard(entries: summary.attention),
+                  const SizedBox(height: AppSpacing.lg),
+                  _TodayTasksCard(entries: summary.attention),
                   const SizedBox(height: AppSpacing.lg),
                   AiSummaryCard(
                     summary: coachingSummary,
@@ -132,7 +137,7 @@ class _TodayTasksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final tasks = entries.take(4).toList();
+    final tasks = _buildTodayTasks(entries);
     return SectionCard(
       title: l.dashTodayTasks,
       trailing: Text(
@@ -149,18 +154,19 @@ class _TodayTasksCard extends StatelessWidget {
           ? EmptyHint(message: l.dashTasksEmpty, icon: Icons.task_alt)
           : Column(
               children: <Widget>[
-                for (final entry in tasks)
+                for (final task in tasks)
                   _TaskRow(
-                    entry: entry,
+                    key: ValueKey<String>('dashboard-task-${task.alert.name}'),
+                    task: task,
                     onTap: () {
-                      if (entry.primary == ClientAlert.unanswered) {
-                        context.go(AppRoutes.messagesFor(entry.client.id));
+                      if (task.alert == ClientAlert.unanswered) {
+                        context.go(AppRoutes.messagesFor(task.entry.client.id));
                         return;
                       }
                       context.go(
                         AppRoutes.clientDetail(
-                          entry.client.id,
-                          section: AttentionCard.sectionFor(entry.primary),
+                          task.entry.client.id,
+                          section: AttentionCard.sectionFor(task.alert),
                         ),
                       );
                     },
@@ -171,16 +177,49 @@ class _TodayTasksCard extends StatelessWidget {
   }
 }
 
-class _TaskRow extends StatelessWidget {
-  const _TaskRow({required this.entry, required this.onTap});
+/// Selects at most one task per action type so a sodium-heavy roster does not
+/// turn the whole checklist into duplicate diet reviews.
+List<_DashboardTask> _buildTodayTasks(List<AttentionClient> entries) {
+  const order = <ClientAlert>[
+    ClientAlert.unanswered,
+    ClientAlert.lowCompletion,
+    ClientAlert.sodiumOver,
+  ];
+  final usedClientIds = <String>{};
+  final tasks = <_DashboardTask>[];
+  for (final alert in order) {
+    final matching = entries
+        .where((entry) => entry.alerts.contains(alert))
+        .toList(growable: false);
+    final entry = matching
+        .where((candidate) => !usedClientIds.contains(candidate.client.id))
+        .firstOrNull;
+    final selected = entry ?? matching.firstOrNull;
+    if (selected == null) continue;
+    tasks.add(_DashboardTask(entry: selected, alert: alert));
+    usedClientIds.add(selected.client.id);
+  }
+  return tasks;
+}
+
+class _DashboardTask {
+  const _DashboardTask({required this.entry, required this.alert});
 
   final AttentionClient entry;
+  final ClientAlert alert;
+}
+
+class _TaskRow extends StatelessWidget {
+  const _TaskRow({super.key, required this.task, required this.onTap});
+
+  final _DashboardTask task;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final alert = entry.primary;
+    final alert = task.alert;
+    final entry = task.entry;
     final tone = switch (alert) {
       ClientAlert.unanswered => AppColors.primary,
       ClientAlert.sodiumOver => AppColors.overTarget,
