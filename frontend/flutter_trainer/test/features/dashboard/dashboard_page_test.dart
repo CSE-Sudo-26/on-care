@@ -192,6 +192,36 @@ void main() {
     expect(find.textContaining('/ 5 완료'), findsNothing);
   });
 
+  testWidgets('wide dashboard follows the 4-3-1 card layout', (tester) async {
+    await openDashboard(tester);
+
+    expect(find.byType(StatCard), findsNWidgets(4));
+    final actionRow = tester.widget<Row>(
+      find.byKey(const ValueKey<String>('dashboard-action-row')),
+    );
+    expect(actionRow.children.whereType<Expanded>(), hasLength(3));
+    expect(find.text('AI 코칭 요약'), findsOneWidget);
+  });
+
+  testWidgets('today tasks show one item from each available action type', (
+    tester,
+  ) async {
+    await openDashboard(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('dashboard-task-unanswered')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('dashboard-task-lowCompletion')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('dashboard-task-sodiumOver')),
+      findsOneWidget,
+    );
+  });
+
   group('AttentionCard.sectionFor', () {
     test('each alert opens the sub-tab that actually addresses it', () {
       // The row is a shortcut to the fix, not just to the client.
