@@ -895,7 +895,8 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                 const Icon(
                   Icons.sticky_note_2_outlined,
                   size: 17,
-                  color: AppColors.warning,
+                  // 메모다. 주의가 아니므로 빨강으로 올리지 않는다(#690).
+                  color: AppColors.brandOrange,
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
@@ -907,7 +908,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.warning,
+                          color: AppColors.brandOrange,
                         ),
                       ),
                       const SizedBox(height: 2),

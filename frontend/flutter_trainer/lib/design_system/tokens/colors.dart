@@ -22,7 +22,9 @@ class AppColors {
 
   /// Trainer identity orange — kept only as a small accent (the
   /// "트레이너" brand word, MY-tab highlights), not as the main color.
-  static const Color brandOrange = Color(0xFFFF953C); // 주의 오렌지(#FF953C)로 통일
+  /// 브랜드 주황 (`#FF953C`). **주의가 아닌** 강조에 쓴다 — 메모·안내 박스,
+  /// 진행 척도의 '부분', 지표 구분색 등. 주의는 [warning](빨강)이다.
+  static const Color brandOrange = Color(0xFFFF953C);
 
   // --- Accent (client navy) ---
   /// Navy used for client avatars, info chips, and the "AI 요약" card.
@@ -69,15 +71,18 @@ class AppColors {
   /// Success / "완료" green (`#34C759`).
   static const Color success = Color(0xFF34C759);
 
-  /// Warning orange (`#FF953C`) — a caution that is NOT a target being
-  /// exceeded: partial routine completion, a manual entry to double-check.
-  static const Color warning = Color(0xFFFF953C);
+  /// '주의' 빨강 (`#F04438`). [overTarget] 과 **같은 색이다.**
+  ///
+  /// 예전에는 주황(`#FF953C`)이었다. 목표 초과만 빨강이고 완만한 주의는 주황이라는
+  /// 규칙이었는데, 회원은 자기 폰에서 빨갛게 보고 있는 것을 트레이너는 주황으로
+  /// 봐서 **두 앱이 같은 사실을 다른 세기로** 말했다. 주의는 주의다. (#690)
+  ///
+  /// 메모·안내처럼 주의가 아닌 자리에는 쓰지 않는다 — 그런 곳은 [brandOrange].
+  static const Color warning = Color(0xFFF04438);
 
   /// "목표 초과" red (`#F04438`). Matches the member app's
   /// `FigmaColors.dangerRed` — a member who sees 나트륨 초과 in red on
   /// their phone must not see it in orange on their trainer's screen.
-  /// Reserved for a target actually being exceeded; use [warning] for
-  /// softer cautions.
   static const Color overTarget = Color(0xFFF04438);
 
   /// Destructive / delete red (`#FF3B30`).
