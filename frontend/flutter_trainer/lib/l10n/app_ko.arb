@@ -298,6 +298,8 @@
   "@reportsMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
   "reportsNoLastWeekMetricTrend": "지난 주 {metric} 추이는 아직 없어요",
   "@reportsNoLastWeekMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
+  "reportsNoMetricRecords": "이번 주 {metric} 기록이 아직 없어요",
+  "@reportsNoMetricRecords": {"placeholders": {"metric": {"type": "String"}}},
   "reportsSendStateSent": "전송됨",
   "reportsSendStateSending": "전송 중…",
   "reportsShare": "공유",

@@ -100,21 +100,33 @@ void main() {
               .map((e) => (e! as num).toDouble())
               .toList();
 
-      // 추이 그래프는 세 지표를 한 자리에서 갈아 끼운다. 한 고객의 세 계열
-      // 길이가 어긋나면 나트륨은 없다면서 칼로리는 한 주를 그린다(#746).
+      // 세 계열은 이번 주 월→일에 놓인다(#746). 화면이 요일 라벨과 함께
+      // 그리므로 길이는 늘 7이고, 오늘 값은 오늘 요일 칸에 들어간다 — 카드의
+      // 숫자와 그래프의 오늘 점이 같아야 한다.
+      final todayIndex = DateTime.now().weekday - 1;
       for (final c in clients) {
         expect(
-          <int>[caloriesWeek(c).length, sugarWeek(c).length],
-          everyElement(sodiumWeek(c).length),
+          <int>[
+            sodiumWeek(c).length,
+            caloriesWeek(c).length,
+            sugarWeek(c).length,
+          ],
+          everyElement(7),
           reason: '${c.name} 주간 계열 길이',
         );
-      }
-      // 계열의 마지막 값은 오늘 수치다 — 카드의 숫자와 그래프 끝점이 같아야
-      // 한다.
-      for (final c in clients.where((c) => sodiumWeek(c).isNotEmpty)) {
-        expect(caloriesWeek(c).last, c.caloriesToday.toDouble());
-        expect(sugarWeek(c).last, c.sugarG);
-        expect(sodiumWeek(c).last, c.sodiumMg);
+        expect(sodiumWeek(c)[todayIndex], c.sodiumMg, reason: c.name);
+        expect(
+          caloriesWeek(c)[todayIndex],
+          c.caloriesToday.toDouble(),
+          reason: c.name,
+        );
+        expect(sugarWeek(c)[todayIndex], c.sugarG, reason: c.name);
+        // 아직 오지 않은 요일은 누구에게나 0.
+        expect(
+          sodiumWeek(c).skip(todayIndex + 1),
+          everyElement(0),
+          reason: c.name,
+        );
       }
       // 당류는 소수를 잃지 않는다.
       expect(
@@ -123,19 +135,24 @@ void main() {
         reason: '소수 당류를 가진 고객',
       );
 
-      // 추이 모양: 한 주 전체, 끊긴 주, 한 점, 아무것도 없음 — 각각 다른
-      // 경로를 탄다.
-      expect(clients.where((c) => sodiumWeek(c).length == 7), isNotEmpty);
+      // 추이 모양: 지난 날을 모두 기록한 고객, 중간에 끊긴 고객, 하루만 있는
+      // 고객, 하나도 없는 고객 — 각각 다른 화면을 탄다. 계열이 요일에 고정되면서
+      // '꽉 찬 주'는 7일이 아니라 **오늘까지의 날 수**다.
+      int recorded(TrainerClientRow c) =>
+          sodiumWeek(c).where((v) => v > 0).length;
+      final elapsed = todayIndex + 1;
+      expect(clients.where((c) => recorded(c) == elapsed), isNotEmpty);
       expect(
-        clients.where((c) {
-          final n = sodiumWeek(c).length;
-          return n > 1 && n < 7;
-        }),
+        clients.where((c) => recorded(c) > 1 && recorded(c) < elapsed),
         isNotEmpty,
-        reason: '7일 미만 추이 (기록이 끊긴 고객)',
+        reason: '기록이 끊긴 고객',
       );
-      expect(clients.where((c) => sodiumWeek(c).length == 1), isNotEmpty);
-      expect(clients.where((c) => sodiumWeek(c).isEmpty), isNotEmpty);
+      expect(clients.where((c) => recorded(c) == 1), isNotEmpty);
+      expect(
+        clients.where((c) => recorded(c) == 0),
+        isNotEmpty,
+        reason: '기록이 하나도 없는 고객',
+      );
 
       // Alert combinations, including the two that are easy to lose.
       expect(
@@ -163,7 +180,7 @@ void main() {
 
       // A brand-new client: no meals, no history. `isLowCompletion` must
       // NOT flag an all-zero week, or day one reads as failure.
-      final blank = clients.where((c) => sodiumWeek(c).isEmpty).first;
+      final blank = clients.where((c) => recorded(c) == 0).first;
       expect(low(blank), isFalse);
       final meals = await (db.select(
         db.clientDietEntries,

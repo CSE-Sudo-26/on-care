@@ -51,6 +51,8 @@ part 'seed_clients.dart';
 /// fifteen sessions in one day.
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
+  // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
+  final todayIndex = DateTime.now().weekday - 1;
 
   if (await db.readValue('trainer_seeded_v9') == today) return;
 
@@ -108,9 +110,15 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               fatG: Value(client.fatG),
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(client.weekCompletion),
-              sodiumWeekJson: Value(jsonEncode(client.sodiumWeek)),
-              caloriesWeekJson: Value(jsonEncode(client.caloriesWeek)),
-              sugarWeekJson: Value(jsonEncode(client.sugarWeek)),
+              sodiumWeekJson: Value(
+                jsonEncode(_onWeekdays(client.sodiumWeek, todayIndex)),
+              ),
+              caloriesWeekJson: Value(
+                jsonEncode(_onWeekdays(client.caloriesWeek, todayIndex)),
+              ),
+              sugarWeekJson: Value(
+                jsonEncode(_onWeekdays(client.sugarWeek, todayIndex)),
+              ),
               sortOrder: Value(client.id),
             ),
           );
@@ -290,6 +298,23 @@ class _Chat {
   /// 라벨만 '화/수' 로 갈라 놓고 `createdAt` 은 전부 몇 분 안에 몰려 있어서,
   /// 날짜로 묶으려는 쪽(대화 중간의 AI 분석 안내)에서 하루로 보였다.
   final int dayIndex;
+}
+
+/// 시드의 "오래된→오늘" 계열을 **이번 주 월→일** 자리에 옮긴다.
+///
+/// 시드 배열은 마지막 값이 오늘이고 길이가 고객마다 다르다(기록이 끊긴
+/// 고객이 있다). 화면은 이 값을 요일 라벨과 함께 그리므로, 오늘을 오늘 요일
+/// 자리에 놓고 그 앞으로 하루씩 거슬러 채운다. 월요일보다 앞선 값은 지난
+/// 주의 것이라 버리고, 기록이 없는 날과 아직 오지 않은 요일은 0 이다 —
+/// 백엔드 `_daily_week` 와 같은 규칙이다(#746).
+List<T> _onWeekdays<T extends num>(List<T> series, int todayIndex) {
+  final zero = (0 is T ? 0 : 0.0) as T;
+  final week = List<T>.filled(7, zero);
+  for (var i = 0; i < series.length; i++) {
+    final index = todayIndex - (series.length - 1 - i);
+    if (index >= 0) week[index] = series[i];
+  }
+  return week;
 }
 
 class _Client {

@@ -982,6 +982,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reportsNoMetricRecords(String metric) {
+    return 'No $metric logged this week yet';
+  }
+
+  @override
   String get reportsSendStateSent => 'Sent';
 
   @override

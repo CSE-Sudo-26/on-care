@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import uuid4
 
 from app.core import clock
@@ -321,7 +322,11 @@ def test_trainer_clients_roster_aggregates_real_diet(client):
     assert jisu["fat_g"] == 48
     assert jisu["name"] == "이지수"
     assert len(jisu["sodium_week"]) == 7
-    assert jisu["sodium_week"][-1] == 1800  # 오늘 = 3끼 나트륨 합
+    # 계열은 이번 주 월→일이라 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에
+    # 놓인다(#746). 그 뒤 요일은 아직 오지 않아 0 이다.
+    today_index = date.today().weekday()
+    assert jisu["sodium_week"][today_index] == 1800  # 오늘 = 3끼 나트륨 합
+    assert all(v == 0 for v in jisu["sodium_week"][today_index + 1 :])
     assert len(jisu["week_completion"]) == 7
 
 

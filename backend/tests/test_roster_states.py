@@ -10,6 +10,10 @@
 """
 from __future__ import annotations
 
+from datetime import date
+
+import pytest
+
 _SODIUM_OVER = 2000  # 하루 나트륨 초과 기준
 _COMPLETION_LOW = 60  # 기록된 날 평균 이행률이 이 아래면 '이행률 저조'
 
@@ -75,14 +79,17 @@ def test_every_alert_state_is_reachable_through_the_api(client):
 def test_sparklines_cover_empty_short_and_full_weeks(client):
     """차트가 그려야 하는 기록 길이가 모두 존재한다.
 
-    전부 7일치면 '기록이 적을 때' 화면(빈 상태·단일 포인트)이 도달 불가능해진다.
+    전부 꽉 차 있으면 '기록이 적을 때' 화면(빈 상태·단일 포인트)이 도달
+    불가능해진다. 계열이 이번 주 월→일로 고정되면서(#746) '꽉 찬 주'는 7일이
+    아니라 **오늘까지의 날 수**다 — 아직 오지 않은 요일은 누구에게나 0 이다.
     """
+    elapsed = date.today().weekday() + 1
     lengths = {
         len([v for v in (r.get("sodium_week") or []) if v > 0]) for r in _roster(client)
     }
     assert 0 in lengths, "기록이 전혀 없는 고객이 없다"
-    assert any(0 < n < 7 for n in lengths), "기록이 일부만 있는 고객이 없다"
-    assert 7 in lengths, "한 주를 꽉 채운 고객이 없다"
+    assert any(0 < n < elapsed for n in lengths), "기록이 일부만 있는 고객이 없다"
+    assert elapsed in lengths, "이번 주를 하루도 빠짐없이 기록한 고객이 없다"
 
 
 def test_detailed_records_stay_with_the_original_three(client):
@@ -118,6 +125,30 @@ def test_roster_carries_all_three_daily_series(client):
     # 기록이 있는 회원이 하나라도 있어야 그래프가 그려진다.
     assert any(sum(r["calories_week"]) > 0 for r in rows), "칼로리 추이를 그릴 회원이 없다"
     assert any(sum(r["sugar_week"]) > 0 for r in rows), "당류 추이를 그릴 회원이 없다"
+
+
+def test_daily_series_sit_on_this_weeks_weekdays(client):
+    """계열은 롤링 7일이 아니라 **이번 주 월→일**이다. (#746)
+
+    화면이 요일 라벨과 함께 그리므로 창이 굴러가면 금요일 수치가 일요일 자리에
+    놓인다. 오늘 이후 요일은 아직 오지 않았으니 0 이고, 오늘 자리는 같은 응답의
+    오늘 합계와 같아야 한다.
+    """
+    today = date.today()
+    today_index = today.weekday()
+    rows = _roster(client)
+    for row in rows:
+        assert row["sodium_week"][today_index] == row["sodium_mg"], row["name"]
+        assert row["calories_week"][today_index] == row["calories"], row["name"]
+        # 계열은 소수 첫째 자리로 다듬고 오늘 합계는 그대로라, 그 반올림
+        # 폭까지만 같으면 된다(19.666… → 19.7).
+        assert row["sugar_week"][today_index] == pytest.approx(
+            row["sugar_g"], abs=0.05
+        ), row["name"]
+        # 아직 오지 않은 요일.
+        assert all(v == 0 for v in row["sodium_week"][today_index + 1 :]), row["name"]
+        assert all(v == 0 for v in row["calories_week"][today_index + 1 :]), row["name"]
+        assert all(v == 0 for v in row["sugar_week"][today_index + 1 :]), row["name"]
 
 
 def test_daily_sugar_keeps_its_decimals(client):

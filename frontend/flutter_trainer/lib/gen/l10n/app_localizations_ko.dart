@@ -952,6 +952,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String reportsNoMetricRecords(String metric) {
+    return '이번 주 $metric 기록이 아직 없어요';
+  }
+
+  @override
   String get reportsSendStateSent => '전송됨';
 
   @override

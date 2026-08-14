@@ -706,8 +706,12 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
         const SizedBox(height: AppSpacing.sm),
         // 주간 계열은 이번 주치만 들고 있다. 지난 주를 열면 나트륨 때와 같이
         // 없다고 말한다 — 이번 주 선을 지난 주 자리에 그리지 않는다.
-        if (!widget.report.isCurrentWeek || values.isEmpty)
+        if (!widget.report.isCurrentWeek)
           EmptyHint(message: l.reportsNoLastWeekMetricTrend(_label(l, _metric)))
+        // 기록이 하나도 없는 고객까지 바닥에 붙은 0 선을 그리면 "기록 없음"이
+        // "하루 0kcal" 처럼 읽힌다.
+        else if (values.isEmpty || values.every((v) => v == 0))
+          EmptyHint(message: l.reportsNoMetricRecords(_label(l, _metric)))
         else
           MetricTrendChart(
             values: values,

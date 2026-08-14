@@ -610,6 +610,8 @@
   "@reportsMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
   "reportsNoLastWeekMetricTrend": "No {metric} trend for last week yet",
   "@reportsNoLastWeekMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
+  "reportsNoMetricRecords": "No {metric} logged this week yet",
+  "@reportsNoMetricRecords": {"placeholders": {"metric": {"type": "String"}}},
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
   "reportsShare": "Share",

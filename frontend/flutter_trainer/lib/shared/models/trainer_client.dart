@@ -128,8 +128,15 @@ class TrainerClient {
   int get sodiumOverDays =>
       sodiumWeek.where((mg) => mg > sodiumTargetMg).length;
 
-  /// 7-day average sodium (mg), or `null` when no history exists.
-  int? get sodiumWeekAvg => sodiumWeek.isEmpty
-      ? null
-      : (sodiumWeek.reduce((a, b) => a + b) / sodiumWeek.length).round();
+  /// 이번 주 평균 나트륨(mg), 기록이 없으면 `null`.
+  ///
+  /// **기록된 날만** 나눈다. 주간 계열이 월→일로 고정되면서 아직 오지 않은
+  /// 요일이 0 으로 들어오는데, 그 0 까지 나누면 주 초반에는 평균이 실제보다
+  /// 낮게 나와 주의 배지가 조용해진다. 이행률 평균(`recordedCompletionMean`)
+  /// 이 쓰는 규칙과 같다.
+  int? get sodiumWeekAvg {
+    final recorded = sodiumWeek.where((mg) => mg > 0).toList(growable: false);
+    if (recorded.isEmpty) return null;
+    return (recorded.reduce((a, b) => a + b) / recorded.length).round();
+  }
 }

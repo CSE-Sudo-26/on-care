@@ -1778,6 +1778,12 @@ abstract class AppLocalizations {
   /// **'No {metric} trend for last week yet'**
   String reportsNoLastWeekMetricTrend(String metric);
 
+  /// No description provided for @reportsNoMetricRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No {metric} logged this week yet'**
+  String reportsNoMetricRecords(String metric);
+
   /// No description provided for @reportsSendStateSent.
   ///
   /// In en, this message translates to:
