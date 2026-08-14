@@ -694,6 +694,62 @@ class TrainerClient(Base):
     )
 
 
+class TrainerClientMemo(Base):
+    """트레이너가 담당 회원에 대해 남긴 메모. 회원에게는 보이지 않는다.
+
+    출처가 둘이다 — 트레이너가 회원 상세에서 직접 쓴 메모(source='trainer')와,
+    채팅에서 감지한 신호를 저장한 메모(source='chat_insight'). 둘을 한 테이블에
+    두는 이유는 회원 상세가 **하나의 목록**으로 보여 주기 때문이다.
+
+    `insight_id` 는 채팅 인사이트의 식별자다. 같은 인사이트를 여러 번 저장해도
+    메모가 늘지 않도록 (trainer, member, insight_id) 를 유일로 둔다 — 직접 쓴
+    메모는 이 값이 NULL 이라 제약에 걸리지 않는다(Postgres 는 NULL 을 서로 다른
+    값으로 본다).
+    """
+
+    __tablename__ = "trainer_client_memos"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        # 단독 인덱스를 두지 않는다 — 아래 (trainer_id, member_id) 복합 인덱스가
+        # 선행 컬럼으로 커버한다. 쓰기마다 갱신 비용만 늘 뿐이다.
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    member_id: Mapped[str] = mapped_column(
+        # 회원 삭제 CASCADE 가 이 컬럼으로 행을 찾으므로 단독 인덱스가 필요하다
+        # (복합 인덱스의 선행 컬럼이 아니라 커버되지 않는다).
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    body: Mapped[str] = mapped_column(Text, default="")
+    #: 'trainer' | 'chat_insight'
+    source: Mapped[str] = mapped_column(String(16), default="trainer")
+    insight_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: 채팅 인사이트 종류(discomfort|negativeFeedback). 직접 쓴 메모는 빈 문자열.
+    insight_kind: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        # 다른 경로(예: 일괄 수정)가 본문을 고쳐도 시각이 따라오도록 onupdate 를
+        # 건다 — TrainerProfile.updated_at 과 같은 규약.
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id", "member_id", "insight_id", name="uq_trainer_client_memo_insight"
+        ),
+        # 응답 스키마(TrainerMemoOut.source)가 두 값만 받으므로, 다른 값이 한 행이라도
+        # 들어가면 그 회원의 메모 **목록 전체**가 검증 실패로 500 이 된다. 입력은
+        # 이미 Literal 로 막지만 DB 에서도 못 박는다.
+        CheckConstraint(
+            "source IN ('trainer', 'chat_insight')",
+            name="ck_trainer_client_memo_source",
+        ),
+        Index("ix_trainer_client_memos_pair", "trainer_id", "member_id"),
+    )
+
+
 class TrainerRoutine(Base):
     """트레이너/AI가 회원에게 배정한 루틴 — 프론트 ClientAiRoutines 대응.
 

@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
@@ -327,12 +328,13 @@ class _Header extends ConsumerWidget {
                   repository: ref.read(clientRepositoryProvider),
                 ),
               ),
-              Tooltip(
-                message: l.clientTrainerMemoUnsupported,
-                child: ActionButton(
-                  label: l.clientTrainerMemo,
-                  icon: Icons.edit_note_outlined,
-                  onPressed: null,
+              ActionButton(
+                label: l.clientTrainerMemo,
+                icon: Icons.edit_note_outlined,
+                onPressed: () => showClientMemoDialog(
+                  context,
+                  clientId: client.id,
+                  clientName: client.name,
                 ),
               ),
             ],

@@ -7,7 +7,8 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/features/messages/data/chat_insight_memo_repository.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 
@@ -195,11 +196,13 @@ void main() {
       await settle(tester);
 
       expect(find.text('메모 추가됨'), findsOneWidget);
-      final memos = container
-          .read(chatInsightMemoRepositoryProvider)
-          .read('seed-client-1');
+      // 채팅에서 저장한 메모는 회원 상세가 읽는 것과 **같은** 메모 목록에 들어간다.
+      final memos = await container
+          .read(trainerMemoRepositoryProvider)
+          .fetch('seed-client-1');
       expect(memos, hasLength(1));
-      expect(memos.single.message, '무릎이 가볍게 당기긴 했는데 괜찮아요');
+      expect(memos.single.body, '무릎이 가볍게 당기긴 했는데 괜찮아요');
+      expect(memos.single.source, TrainerMemoSource.chatInsight);
     });
   });
 }

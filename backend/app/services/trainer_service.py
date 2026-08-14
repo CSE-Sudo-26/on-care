@@ -20,13 +20,13 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
-    TrainerClient, TrainerProfile, TrainerReservation, TrainerReservationSlot,
-    TrainerRoutine, TrainerSchedule, User,
+    TrainerClient, TrainerClientMemo, TrainerProfile, TrainerReservation,
+    TrainerReservationSlot, TrainerRoutine, TrainerSchedule, User,
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
-    TrainerNotificationSettings, WeeklyReportOut,
+    TrainerMemoOut, TrainerNotificationSettings, WeeklyReportOut,
 )
 from app.services import diet_photo_service, exercise_service, notification_service
 from app.services.coach import personal_ingest
@@ -963,6 +963,151 @@ def assign_routine(
     db.commit()
     db.refresh(rt)
     return _routine_out(rt)
+
+
+# ---- 회원별 트레이너 메모 (#706) ----
+
+class MemoNotFound(Exception):
+    """그 트레이너·회원 쌍에 그 id 의 메모가 없다(라우터가 404 로 변환)."""
+
+
+def _memo_out(memo: TrainerClientMemo) -> TrainerMemoOut:
+    return TrainerMemoOut(
+        id=memo.id,
+        body=memo.body,
+        source=memo.source,
+        insight_id=memo.insight_id,
+        insight_kind=memo.insight_kind,
+        created_at=memo.created_at,
+        updated_at=memo.updated_at,
+    )
+
+
+#: 메모 목록이 한 번에 내려주는 최대 건수. 메모는 지워지지 않고 쌓이기만 하는
+#: 데이터라, 오래 쓴 계정에서 응답이 무한정 커지는 것을 막는다(알림함과 같은 이유).
+_MEMO_LIMIT = 100
+
+
+def build_memos(db: Session, trainer_id: str, member_id: str) -> list[TrainerMemoOut]:
+    """담당 회원에 대해 내가 남긴 메모(최신 먼저, 최대 [_MEMO_LIMIT]건).
+
+    직접 쓴 메모와 채팅 인사이트 메모를 한 목록으로 돌려준다 — 회원 상세가
+    출처와 무관하게 "이 회원에 대해 남긴 기록"을 한 곳에서 보여 준다.
+
+    같은 시각에 만들어진 둘의 순서가 흔들리지 않게 id 로 tie-break 한다.
+    """
+    rows = db.scalars(
+        select(TrainerClientMemo)
+        .where(
+            TrainerClientMemo.trainer_id == trainer_id,
+            TrainerClientMemo.member_id == member_id,
+        )
+        .order_by(TrainerClientMemo.created_at.desc(), TrainerClientMemo.id.desc())
+        .limit(_MEMO_LIMIT)
+    ).all()
+    return [_memo_out(m) for m in rows]
+
+
+def find_memo_by_insight(
+    db: Session, trainer_id: str, member_id: str, insight_id: str
+) -> TrainerClientMemo | None:
+    return db.scalar(
+        select(TrainerClientMemo).where(
+            TrainerClientMemo.trainer_id == trainer_id,
+            TrainerClientMemo.member_id == member_id,
+            TrainerClientMemo.insight_id == insight_id,
+        )
+    )
+
+
+def create_memo(
+    db: Session, trainer_id: str, member_id: str,
+    body: str, source: str = "trainer",
+    insight_id: str | None = None, insight_kind: str = "",
+) -> TrainerMemoOut:
+    """회원 메모를 남긴다.
+
+    [insight_id] 가 오면 그 인사이트에 대해 멱등하다 — 채팅에서 같은 신호를 다시
+    저장해도 새 메모를 만들지 않고 먼저 저장된 메모를 그대로 돌려준다. 로컬
+    저장 시절 `insightId` 로 중복을 막던 의미를 서버에서 그대로 유지한다.
+    """
+    if insight_id:
+        existing = find_memo_by_insight(db, trainer_id, member_id, insight_id)
+        if existing is not None:
+            return _memo_out(existing)
+
+    now = datetime.now(timezone.utc)
+    memo = TrainerClientMemo(
+        id=f"memo-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        body=body,
+        source=source,
+        insight_id=insight_id,
+        insight_kind=insight_kind,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(memo)
+    # 같은 insight_id 로 동시에 들어온 두 요청이 나란히 위 조회를 통과하면 유니크
+    # 제약이 한쪽을 막는다. 그 충돌을 여기서 잡아 먼저 저장된 쪽을 돌려준다 —
+    # 클라이언트 입장에서는 어느 쪽이 이겼든 "이미 저장된 그 메모"가 나온다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if insight_id:
+            existing = find_memo_by_insight(db, trainer_id, member_id, insight_id)
+            if existing is not None:
+                return _memo_out(existing)
+        raise
+    db.commit()
+    db.refresh(memo)
+    return _memo_out(memo)
+
+
+def _owned_memo(
+    db: Session, trainer_id: str, member_id: str, memo_id: str
+) -> TrainerClientMemo:
+    """내가 이 회원에 대해 남긴 메모만 집는다.
+
+    남의 메모와 없는 메모를 똑같이 다룬다 — 존재 여부를 드러내면 id 를 훑는 것만
+    으로 다른 트레이너가 메모를 남겼다는 사실을 알 수 있다.
+    """
+    memo = db.scalar(
+        select(TrainerClientMemo).where(
+            TrainerClientMemo.id == memo_id,
+            TrainerClientMemo.trainer_id == trainer_id,
+            TrainerClientMemo.member_id == member_id,
+        )
+    )
+    if memo is None:
+        raise MemoNotFound("메모를 찾을 수 없습니다.")
+    return memo
+
+
+def update_memo(
+    db: Session, trainer_id: str, member_id: str, memo_id: str, fields: dict
+) -> TrainerMemoOut:
+    """메모 본문을 고친다. 출처(`source`/`insight_id`)는 그대로 둔다."""
+    memo = _owned_memo(db, trainer_id, member_id, memo_id)
+    if "body" in fields:
+        memo.body = fields["body"]
+    memo.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(memo)
+    return _memo_out(memo)
+
+
+def delete_memo(db: Session, trainer_id: str, member_id: str, memo_id: str) -> None:
+    """메모를 지운다.
+
+    비활성 플래그를 두지 않고 실제로 지운다 — 트레이너 혼자 보는 개인 메모라
+    '지웠는데 서버에 남아 있는' 상태가 UX 상 의미가 없다.
+    """
+    memo = _owned_memo(db, trainer_id, member_id, memo_id)
+    db.delete(memo)
+    db.commit()
 
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----

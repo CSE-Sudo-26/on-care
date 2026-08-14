@@ -625,6 +625,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The AI insight was added to the trainer memo.';
 
   @override
+  String get chatInsightMemoSaveFailed =>
+      'Couldn\'t add the memo. Please try again.';
+
+  @override
   String coachSheetTitle(String name) {
     return 'Coaching for $name';
   }
@@ -2240,11 +2244,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clientHealthGoals => 'Body profile & goals';
 
   @override
-  String get clientTrainerMemoUnsupported =>
-      'Trainer memo storage isn\'t supported yet.';
+  String get clientTrainerMemo => 'Memo';
 
   @override
-  String get clientTrainerMemo => 'Memo';
+  String clientTrainerMemoTitle(String name) {
+    return 'Memos on $name';
+  }
+
+  @override
+  String get clientTrainerMemoHint =>
+      'Note what you want to remember about this member';
+
+  @override
+  String get clientTrainerMemoAdd => 'Add memo';
+
+  @override
+  String get clientTrainerMemoEmpty => 'No memos yet.';
+
+  @override
+  String get clientTrainerMemoFromChat => 'From chat';
+
+  @override
+  String get clientTrainerMemoLoadFailed =>
+      'Couldn\'t load memos. Please try again.';
+
+  @override
+  String get clientTrainerMemoSaveFailed =>
+      'Couldn\'t save the memo. Please try again.';
+
+  @override
+  String get clientTrainerMemoDeleteFailed =>
+      'Couldn\'t delete the memo. Please try again.';
+
+  @override
+  String get clientTrainerMemoDeleteTitle => 'Delete this memo?';
+
+  @override
+  String get clientTrainerMemoDeleteBody =>
+      'A deleted memo can\'t be restored.';
 
   @override
   String get dashTaskReply => 'Reply';

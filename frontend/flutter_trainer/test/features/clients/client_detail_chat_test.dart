@@ -9,8 +9,10 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
@@ -60,6 +62,30 @@ class _ControllableChatRepository extends DriftChatRepository {
     required String clientId,
     required String text,
   }) => gate;
+}
+
+/// Stands in for the memo source the chat view reads to mark already-saved
+/// insights. Without it this test's real-API config would send the memo GET
+/// to a Dio with no server behind it.
+class _NoMemoRepository implements TrainerMemoRepository {
+  const _NoMemoRepository();
+
+  @override
+  Future<List<TrainerMemo>> fetch(String clientId) async =>
+      const <TrainerMemo>[];
+  @override
+  Future<TrainerMemo> create(
+    String clientId, {
+    required String body,
+    TrainerMemoSource source = TrainerMemoSource.trainer,
+    String? insightId,
+    String insightKind = '',
+  }) async => throw UnsupportedError('not used');
+  @override
+  Future<TrainerMemo> update(String clientId, String memoId, String body) =>
+      throw UnsupportedError('not used');
+  @override
+  Future<void> delete(String clientId, String memoId) async {}
 }
 
 class _StaticLiveChatRepository implements ChatRepository {
@@ -368,6 +394,9 @@ void main() {
             ),
             chatRepositoryProvider.overrideWithValue(
               _StaticLiveChatRepository(),
+            ),
+            trainerMemoRepositoryProvider.overrideWithValue(
+              const _NoMemoRepository(),
             ),
           ],
           child: MaterialApp(
