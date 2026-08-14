@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,6 +55,11 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
     widget.initialDate.year,
     widget.initialDate.month,
   );
+
+  /// 한 주 칸의 최소 높이. 남은 높이를 주 수로 나눈 값이 이보다 작아지면 —
+  /// 세로가 짧은 기기나 6주짜리 달 — 칸을 더 줄이는 대신 그리드를 스크롤한다.
+  /// 날짜 숫자와 일정 칩 한 줄이 들어가는 최소치다.
+  static const double _minRowHeight = 56;
 
   static const List<String> _weekdays = <String>[
     '일',
@@ -165,74 +172,126 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                 skipLoadingOnRefresh: true,
                 data: (List<ScheduleEvent> events) {
                   final byDay = _groupByDay(events);
-                  return GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 7,
-                          childAspectRatio: 0.72,
-                        ),
-                    itemCount: days.length,
-                    itemBuilder: (BuildContext _, int i) {
-                      final day = days[i];
-                      if (day == null) {
-                        return const DecoratedBox(
-                          decoration: BoxDecoration(
-                            border: Border(
-                              right: BorderSide(color: AppColors.border),
-                              bottom: BorderSide(color: AppColors.border),
+                  return LayoutBuilder(
+                    builder: (BuildContext _, BoxConstraints constraints) {
+                      // 칸 높이를 남은 세로 공간에서 정한다. 가로폭에서 고정
+                      // 비율로 잡으면 6주짜리 달의 마지막 주가 남은 높이를
+                      // 넘겨 잘렸다 — 스크롤도 꺼져 있어 8월이 22일에서
+                      // 끝나 보이던 원인이다(#669).
+                      // _daysInGrid 가 앞뒤를 채워 항상 7의 배수를 돌려주므로
+                      // 나누어떨어진다.
+                      final int rows = days.length ~/ 7;
+                      final double rowHeight = math.max(
+                        _minRowHeight,
+                        constraints.maxHeight / rows,
+                      );
+                      return GridView.builder(
+                        // 최소 높이에 걸려 다 담기지 않는 경우에만 스크롤이
+                        // 생긴다. 어떤 경우에도 잘라내지 않는다.
+                        physics: const ClampingScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              mainAxisExtent: rowHeight,
                             ),
-                          ),
-                        );
-                      }
-                      final isToday =
-                          day.year == today.year &&
-                          day.month == today.month &&
-                          day.day == today.day;
-                      final dayEvents =
-                          byDay[day.day] ?? const <ScheduleEvent>[];
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isToday
-                              ? AppColors.primary.withValues(alpha: 0.05)
-                              : null,
-                          border: const Border(
-                            right: BorderSide(color: AppColors.border),
-                            bottom: BorderSide(color: AppColors.border),
-                          ),
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              '${day.day}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: isToday ? AppColors.primary : null,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            for (final ScheduleEvent e in dayEvents)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 2),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: scheduleCategoryColor(e.category),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${e.time} ${e.title}'.trim(),
-                                  style: const TextStyle(fontSize: 9),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                        itemCount: days.length,
+                        itemBuilder: (BuildContext _, int i) {
+                          final day = days[i];
+                          if (day == null) {
+                            return const DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  right: BorderSide(color: AppColors.border),
+                                  bottom: BorderSide(color: AppColors.border),
                                 ),
                               ),
-                          ],
-                        ),
+                            );
+                          }
+                          final isToday =
+                              day.year == today.year &&
+                              day.month == today.month &&
+                              day.day == today.day;
+                          final dayEvents =
+                              byDay[day.day] ?? const <ScheduleEvent>[];
+                          return Container(
+                            key: Key('calendar-day-${day.day}'),
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? AppColors.primary.withValues(alpha: 0.05)
+                                  : null,
+                              border: const Border(
+                                right: BorderSide(color: AppColors.border),
+                                bottom: BorderSide(color: AppColors.border),
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  '${day.day}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isToday ? AppColors.primary : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                // 칸 높이는 남은 공간에서 정해지므로 일정이
+                                // 여럿인 날은 칩이 칸을 넘길 수 있다. 넘치는
+                                // 만큼은 ClipRect 가 잘라내고, OverflowBox 가
+                                // Column 에 무한 높이를 줘 오버플로 경고 없이
+                                // 그린다. 날짜 숫자는 언제나 남는다.
+                                //
+                                // 칸마다 ListView 를 두면 한 달에 스크롤 뷰가
+                                // 35~42개 생긴다 — 자르기만 하는 데 치르는
+                                // 값으로는 너무 비싸다.
+                                Expanded(
+                                  child: ClipRect(
+                                    child: OverflowBox(
+                                      alignment: Alignment.topLeft,
+                                      maxHeight: double.infinity,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          for (final ScheduleEvent e
+                                              in dayEvents)
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 2,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: scheduleCategoryColor(
+                                                  e.category,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '${e.time} ${e.title}'.trim(),
+                                                style: const TextStyle(
+                                                  fontSize: 9,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -248,21 +307,29 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            // 시스템 내비게이션 바 인셋만큼 더 띄운다 — 인셋이 있는 기기에서
+            // 마지막 주가 내비게이션 바 뒤로 들어가 보이지 않던 문제(#669).
+            SizedBox(
+              height: AppSpacing.md + MediaQuery.viewPaddingOf(context).bottom,
+            ),
           ],
         ),
       ),
     );
   }
 
+  /// 그 달의 그리드 칸. 앞쪽은 1일의 요일까지 비우고, 뒤쪽도 마지막 주가 7칸이
+  /// 되도록 채운다 — 채우지 않으면 마지막 주의 테두리가 중간에서 끊긴다.
   static List<DateTime?> _daysInGrid(DateTime month) {
     final first = DateTime(month.year, month.month);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final leading = first.weekday % 7; // Sunday-first
+    final trailing = (7 - (leading + lastDay.day) % 7) % 7;
     return <DateTime?>[
       for (int i = 0; i < leading; i++) null,
       for (int d = 1; d <= lastDay.day; d++)
         DateTime(month.year, month.month, d),
+      for (int i = 0; i < trailing; i++) null,
     ];
   }
 }
