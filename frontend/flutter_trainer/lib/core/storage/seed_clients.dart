@@ -56,6 +56,8 @@ const List<_Client> _clients = <_Client>[
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
     sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 3428],
+    caloriesWeek: <int>[940, 1010, 1120, 870, 1170, 990, 1067],
+    sugarWeek: <double>[15.7, 16.9, 18.7, 14.6, 19.6, 16.6, 17.8],
     diet: <_Meal>[
       _Meal(
         '아침',
@@ -209,6 +211,8 @@ const List<_Client> _clients = <_Client>[
     lastRoutine: '어제',
     weekCompletion: <int>[67, 100, 100, 100, 100, 0, 0],
     sodiumWeek: <int>[1700, 1950, 1600, 1800, 2100, 1750, 1800],
+    caloriesWeek: <int>[1600, 1760, 1380, 1850, 1560, 1480, 1680],
+    sugarWeek: <double>[36.1, 39.9, 31.2, 41.8, 35.3, 33.4, 38.0],
     diet: <_Meal>[
       _Meal('아침', '그릭요거트, 과일', 280, 200, carbsG: 40, proteinG: 15, fatG: 6),
       _Meal('점심', '현미밥, 불고기, 나물', 750, 980, carbsG: 90, proteinG: 35, fatG: 20),
@@ -273,6 +277,8 @@ const List<_Client> _clients = <_Client>[
     lastRoutine: '5일 전',
     weekCompletion: <int>[0, 33, 100, 0, 0, 0, 0],
     sodiumWeek: <int>[2600, 2500, 2300, 2450, 2200, 2550, 2400],
+    caloriesWeek: <int>[2200, 1720, 2310, 1950, 1850, 2000, 2100],
+    sugarWeek: <double>[57.8, 45.1, 60.5, 51.2, 48.4, 52.2, 55.0],
     diet: <_Meal>[
       _Meal('아침', '계란 3개, 토스트', 480, 520, carbsG: 35, proteinG: 28, fatG: 24),
       _Meal('점심', '짜장면', 890, 1200, carbsG: 120, proteinG: 25, fatG: 30),
@@ -338,6 +344,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 25, 0, 0, 50, 100, 100],
     // 나트륨도 같이 급락했다 반등: 외식이 끊긴 구간이 그대로 보인다.
     sodiumWeek: <int>[2900, 2600, 1500, 1250, 1400, 1900, 1650],
+    caloriesWeek: <int>[1250, 1670, 1410, 1340, 1440, 1600, 1520],
+    sugarWeek: <double>[26.2, 35.2, 29.8, 28.2, 30.4, 33.6, 32.0],
     diet: <_Meal>[
       _Meal('아침', '통밀토스트, 아보카도', 340, 290),
       _Meal('점심', '닭가슴살 도시락', 520, 640),
@@ -398,6 +406,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 100, 100, 100, 100, 100, 100],
     // 거의 평평한 스파크라인 — 목표선 근처에서 흔들리는 다른 고객과 대비된다.
     sodiumWeek: <int>[1300, 1250, 1100, 1200, 1150, 1090, 1180],
+    caloriesWeek: <int>[1930, 1630, 1540, 1660, 1840, 1440, 1750],
+    sugarWeek: <double>[24.2, 20.5, 19.4, 20.9, 23.1, 18.0, 22.0],
     diet: <_Meal>[
       _Meal('아침', '오트밀, 블루베리', 360, 150),
       _Meal('점심', '현미밥, 흰살생선, 나물', 640, 520),
@@ -451,6 +461,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 100, 100, 100, 100, 0, 0],
     // 같은 주말에 나트륨이 두 배로 뛴다.
     sodiumWeek: <int>[1400, 1350, 1500, 1420, 1380, 3100, 2750],
+    caloriesWeek: <int>[2100, 1990, 2150, 2370, 1850, 2490, 2260],
+    sugarWeek: <double>[63.2, 59.8, 64.6, 71.4, 55.8, 74.8, 68.0],
     diet: <_Meal>[
       _Meal('아침', '거름', 0, 0),
       _Meal('점심', '마라탕', 980, 1850),
@@ -508,6 +520,8 @@ const List<_Client> _clients = <_Client>[
     // 않는다는 규칙이 여기서 눈으로 확인된다 — 배지가 뜨면 안 된다.
     weekCompletion: <int>[0, 0, 0, 0, 0, 0, 0],
     sodiumWeek: <int>[],
+    caloriesWeek: <int>[],
+    sugarWeek: <double>[],
     diet: <_Meal>[],
     aiRoutine: <_Routine>[
       _Routine('체력 측정 걷기', 20, '유산소', '기초 체력 파악'),
@@ -535,6 +549,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[80, 60, 40, 33, 20, 0, 0],
     // …나트륨은 같은 기간 계속 올라간다. 두 그래프가 정확히 반대로 간다.
     sodiumWeek: <int>[1900, 2150, 2400, 2650, 2900, 3050, 3250],
+    caloriesWeek: <int>[2360, 2600, 2030, 2730, 2310, 2180, 2480],
+    sugarWeek: <double>[77.9, 86.1, 67.2, 90.2, 76.3, 72.2, 82.0],
     diet: <_Meal>[
       _Meal('아침', '편의점 삼각김밥 2개', 420, 780),
       _Meal('점심', '부대찌개, 공기밥', 920, 1650),
@@ -587,6 +603,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[50, 0, 33, 0, 25, 0, 0],
     // 야근 여부에 따라 위아래로 튄다.
     sodiumWeek: <int>[2100, 2600, 1800, 2900, 2200, 1600, 2280],
+    caloriesWeek: <int>[2150, 1680, 2260, 1910, 1800, 1950, 2050],
+    sugarWeek: <double>[49.4, 38.5, 51.7, 43.7, 41.4, 44.6, 47.0],
     diet: <_Meal>[
       _Meal('아침', '커피만', 20, 10),
       _Meal('점심', '김치찌개, 공기밥', 780, 1420),
@@ -639,6 +657,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[0, 0, 33, 67, 100, 100, 100],
     // 나트륨은 반대로 꾸준히 내려온다.
     sodiumWeek: <int>[2800, 2500, 2200, 1950, 1800, 1750, 1720],
+    caloriesWeek: <int>[1300, 1750, 1480, 1400, 1510, 1670, 1590],
+    sugarWeek: <double>[28.7, 38.5, 32.6, 30.8, 33.2, 36.8, 35.0],
     diet: <_Meal>[
       _Meal('아침', '두유, 삶은 계란', 260, 240),
       _Meal('점심', '비빔밥 (고추장 절반)', 680, 780),
@@ -692,6 +712,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[67, 67, 67, 67, 67, 67, 67],
     // 목표선(2000) 바로 위아래에서만 흔들린다. 경계 판정 확인용.
     sodiumWeek: <int>[1990, 2010, 1995, 2005, 1998, 2015, 2010],
+    caloriesWeek: <int>[2070, 1750, 1650, 1790, 1970, 1540, 1880],
+    sugarWeek: <double>[55.0, 46.5, 44.0, 47.5, 52.5, 41.0, 50.0],
     diet: <_Meal>[
       _Meal('아침', '시리얼, 우유', 380, 320),
       _Meal('점심', '백반 정식', 720, 980),
@@ -736,6 +758,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[33, 0, 0, 0, 0, 0, 0],
     // 3일치만 남기고 끊긴다. 7개 미만 스파크라인 렌더링 확인용.
     sodiumWeek: <int>[2100, 1950, 1030],
+    caloriesWeek: <int>[630, 850, 770],
+    sugarWeek: <double>[23.8, 31.9, 29.0],
     diet: <_Meal>[
       _Meal('아침', '토스트, 커피', 290, 310),
       _Meal('점심', '샌드위치', 480, 720),
@@ -779,6 +803,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 0, 100, 0, 100, 0, 0],
     // 1200 ↔ 3200. 스파크라인 최대 진폭 케이스.
     sodiumWeek: <int>[1200, 3100, 1350, 2950, 1100, 3200, 3100],
+    caloriesWeek: <int>[2750, 2960, 3280, 2560, 3430, 2900, 3120],
+    sugarWeek: <double>[80.1, 86.5, 95.5, 74.6, 100.1, 84.6, 91.0],
     diet: <_Meal>[
       _Meal('아침', '계란 5개, 오트밀', 720, 480),
       _Meal('점심', '치킨마요 덮밥 곱빼기', 1180, 1640),
@@ -832,6 +858,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 100, 100, 100, 100, 100, 100],
     // 그런데 나트륨은 7일 내내 목표선 위 — 높은 자리에서 평평하다.
     sodiumWeek: <int>[2400, 2550, 2700, 2600, 2800, 2650, 2680],
+    caloriesWeek: <int>[1820, 2020, 1570, 2110, 1790, 1690, 1920],
+    sugarWeek: <double>[41.8, 46.2, 36.1, 48.4, 40.9, 38.7, 44.0],
     diet: <_Meal>[
       _Meal('아침', '북엇국, 공기밥', 520, 1120),
       _Meal('점심', '칼국수', 880, 1260),
@@ -877,6 +905,8 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[100, 0, 0, 0, 0, 0, 0],
     // 측정값이 하나뿐인 스파크라인.
     sodiumWeek: <int>[1450],
+    caloriesWeek: <int>[1280],
+    sugarWeek: <double>[18.0],
     diet: <_Meal>[
       _Meal('아침', '바나나, 우유', 220, 130),
       _Meal('점심', '샐러드 볼', 430, 610),

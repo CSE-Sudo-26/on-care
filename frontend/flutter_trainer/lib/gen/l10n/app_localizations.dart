@@ -1766,17 +1766,17 @@ abstract class AppLocalizations {
   /// **'No workouts logged this week'**
   String get reportsNoWorkoutsThisWeek;
 
-  /// No description provided for @reportsSodiumTrend.
+  /// No description provided for @reportsMetricTrend.
   ///
   /// In en, this message translates to:
-  /// **'Sodium trend'**
-  String get reportsSodiumTrend;
+  /// **'{metric} trend'**
+  String reportsMetricTrend(String metric);
 
-  /// No description provided for @reportsNoLastWeekSodium.
+  /// No description provided for @reportsNoLastWeekMetricTrend.
   ///
   /// In en, this message translates to:
-  /// **'No sodium trend for last week yet'**
-  String get reportsNoLastWeekSodium;
+  /// **'No {metric} trend for last week yet'**
+  String reportsNoLastWeekMetricTrend(String metric);
 
   /// No description provided for @reportsSendStateSent.
   ///
@@ -3367,12 +3367,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{unit} over'**
   String metricOverBy(String unit);
-
-  /// No description provided for @chartNotEnoughData.
-  ///
-  /// In en, this message translates to:
-  /// **'Not enough data yet'**
-  String get chartNotEnoughData;
 
   /// No description provided for @authErrInvalidCredentials.
   ///

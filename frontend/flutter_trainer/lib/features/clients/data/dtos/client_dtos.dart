@@ -28,6 +28,8 @@ TrainerClient trainerClientFromJson(Map<String, Object?> json) {
     lastRoutine: _str(json['last_routine']),
     weekCompletion: _intList(json['week_completion']),
     sodiumWeek: _intList(json['sodium_week']),
+    caloriesWeek: _intList(json['calories_week']),
+    sugarWeek: _doubleList(json['sugar_week']),
   );
 }
 
@@ -110,6 +112,11 @@ double _double(Object? v) => v is num ? v.toDouble() : 0;
 List<int> _intList(Object? v) => v is List
     ? v.whereType<num>().map((n) => n.toInt()).toList(growable: false)
     : const <int>[];
+
+/// 당류처럼 소수를 유지해야 하는 계열. `_intList` 로 읽으면 6.3 이 6 이 된다.
+List<double> _doubleList(Object? v) => v is List
+    ? v.whereType<num>().map((n) => n.toDouble()).toList(growable: false)
+    : const <double>[];
 
 List<String> _strList(Object? v) => v is List
     ? v.whereType<String>().toList(growable: false)

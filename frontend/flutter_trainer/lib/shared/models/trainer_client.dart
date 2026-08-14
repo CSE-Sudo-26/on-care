@@ -2,6 +2,10 @@
 /// summary tile, and the AI comment all flip to the warning case.
 const int sodiumTargetMg = 2000;
 
+/// Daily calorie target (kcal). The weekly trend chart colours a day red
+/// above this, the same way the member app's home tab does.
+const int calorieTargetKcal = 2000;
+
 /// Daily sugar target (g). Over this, the diet summary 당류 tile warns.
 const int sugarTargetG = 50;
 
@@ -27,6 +31,8 @@ class TrainerClient {
     required this.lastRoutine,
     required this.weekCompletion,
     required this.sodiumWeek,
+    this.caloriesWeek = const <int>[],
+    this.sugarWeek = const <double>[],
     this.gender = '',
     this.age,
   });
@@ -87,6 +93,11 @@ class TrainerClient {
   /// [sodiumMg]). Empty for pre-v2 rows (before the next re-seed
   /// backfills it).
   final List<int> sodiumWeek;
+
+  /// 최근 7일 일별 칼로리·당류. [sodiumWeek] 와 같은 창이라 한 그래프에서 지표만
+  /// 바꿔 볼 수 있다(#746). 당류는 소수를 유지한다.
+  final List<int> caloriesWeek;
+  final List<double> sugarWeek;
 
   /// Stable display gender for roster rows that predate demographic fields.
   ///

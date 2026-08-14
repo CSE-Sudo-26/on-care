@@ -40,6 +40,11 @@ class TrainerClients extends Table {
   TextColumn get sodiumWeekJson => text().withDefault(
     const Constant('[]'),
   )(); // [.., 2100] len 7, ends today
+  // 나트륨과 **같은 창**의 칼로리·당류 추이(#746). 지표를 바꿔 가며 한 그래프로
+  // 보므로 셋의 길이·기준일이 같아야 x 축이 어긋나지 않는다. 당류는 소수를
+  // 유지한다 — 반올림하면 식단 탭 수치와 어긋난다.
+  TextColumn get caloriesWeekJson => text().withDefault(const Constant('[]'))();
+  TextColumn get sugarWeekJson => text().withDefault(const Constant('[]'))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -174,7 +179,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -211,6 +216,12 @@ class AppDatabase extends _$AppDatabase {
         // table would only add data-loss risk. Existing integers are read by
         // drift as doubles (for example 17 -> 17.0), while the v5 declaration
         // lets new values retain their fractional part.
+      }
+      // v6: 지표 선택형 추이 그래프가 쓸 주간 칼로리·당류(#746). 기본값이
+      // 있어 기존 데모 행도 그대로 읽히고, 다음 재시딩이 실제 값을 채운다.
+      if (from < 6) {
+        await m.addColumn(trainerClients, trainerClients.caloriesWeekJson);
+        await m.addColumn(trainerClients, trainerClients.sugarWeekJson);
       }
     },
   );

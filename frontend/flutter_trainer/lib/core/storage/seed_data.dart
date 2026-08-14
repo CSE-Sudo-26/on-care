@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v8']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v9']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,8 +26,11 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v8` (was `_v7`): 김민수's sugar now preserves the member
-/// app mock's 17.8g for #565. `_v7` aligned his diet for #527, `_v6` added
+/// The flag is `_v9` (was `_v8`): every client now carries a weekly
+/// 칼로리·당류 series for the metric-selectable trend chart (#746) —
+/// without a bump, anyone who opened the app today would keep rows whose
+/// new columns are still the empty default. `_v8` preserved 김민수's
+/// 17.8g sugar for #565, `_v7` aligned his diet for #527, `_v6` added
 /// client diet macros, and `_v5` had grown
 /// 김민수's thread from five messages
 /// to fifteen so the member and trainer demos tell the same story (#543).
@@ -49,7 +52,7 @@ part 'seed_clients.dart';
 Future<void> seedIfEmpty(AppDatabase db) async {
   final today = ymd(DateTime.now());
 
-  if (await db.readValue('trainer_seeded_v8') == today) return;
+  if (await db.readValue('trainer_seeded_v9') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -106,6 +109,8 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(client.weekCompletion),
               sodiumWeekJson: Value(jsonEncode(client.sodiumWeek)),
+              caloriesWeekJson: Value(jsonEncode(client.caloriesWeek)),
+              sugarWeekJson: Value(jsonEncode(client.sugarWeek)),
               sortOrder: Value(client.id),
             ),
           );
@@ -220,7 +225,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v8', today);
+    await db.putValue('trainer_seeded_v9', today);
   });
 }
 
@@ -302,6 +307,8 @@ class _Client {
     required this.lastRoutine,
     required this.weekCompletion,
     required this.sodiumWeek,
+    required this.caloriesWeek,
+    required this.sugarWeek,
     required this.diet,
     required this.aiRoutine,
     required this.history,
@@ -321,6 +328,10 @@ class _Client {
   final String lastRoutine;
   final List<int> weekCompletion;
   final List<int> sodiumWeek;
+
+  /// 나트륨과 같은 창의 칼로리·당류 추이. 지표 선택형 그래프가 쓴다(#746).
+  final List<int> caloriesWeek;
+  final List<double> sugarWeek;
   final List<_Meal> diet;
   double get carbsG => diet.fold(0, (total, meal) => total + meal.carbsG);
   double get proteinG => diet.fold(0, (total, meal) => total + meal.proteinG);

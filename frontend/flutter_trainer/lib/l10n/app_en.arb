@@ -606,8 +606,10 @@
   "reportsCompletionByDay": "Completion by day",
   "reportsNoLastWeekDaily": "No daily records for last week yet",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
-  "reportsSodiumTrend": "Sodium trend",
-  "reportsNoLastWeekSodium": "No sodium trend for last week yet",
+  "reportsMetricTrend": "{metric} trend",
+  "@reportsMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
+  "reportsNoLastWeekMetricTrend": "No {metric} trend for last week yet",
+  "@reportsNoLastWeekMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
   "reportsShare": "Share",
@@ -1168,7 +1170,6 @@
       }
     }
   },
-  "chartNotEnoughData": "Not enough data yet",
   "authErrInvalidCredentials": "That email or password isn't right.",
   "authErrEmailTaken": "That email is already registered.",
   "authErrInviteCodeInvalid": "That invite code isn't valid. Please check with your gym.",

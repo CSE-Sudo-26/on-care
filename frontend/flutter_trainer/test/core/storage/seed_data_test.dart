@@ -52,7 +52,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v8'), _todayString());
+      expect(await db.readValue('trainer_seeded_v9'), _todayString());
     });
 
     test(
@@ -91,8 +91,40 @@ void main() {
         return recorded.reduce((a, b) => a + b) / recorded.length < 60;
       }
 
-      // Sparkline shapes: a full week, a partial week, a single point, and
-      // nothing at all must all exist — each takes a different path.
+      List<double> caloriesWeek(TrainerClientRow c) =>
+          (jsonDecode(c.caloriesWeekJson) as List<Object?>)
+              .map((e) => (e! as num).toDouble())
+              .toList();
+      List<double> sugarWeek(TrainerClientRow c) =>
+          (jsonDecode(c.sugarWeekJson) as List<Object?>)
+              .map((e) => (e! as num).toDouble())
+              .toList();
+
+      // 추이 그래프는 세 지표를 한 자리에서 갈아 끼운다. 한 고객의 세 계열
+      // 길이가 어긋나면 나트륨은 없다면서 칼로리는 한 주를 그린다(#746).
+      for (final c in clients) {
+        expect(
+          <int>[caloriesWeek(c).length, sugarWeek(c).length],
+          everyElement(sodiumWeek(c).length),
+          reason: '${c.name} 주간 계열 길이',
+        );
+      }
+      // 계열의 마지막 값은 오늘 수치다 — 카드의 숫자와 그래프 끝점이 같아야
+      // 한다.
+      for (final c in clients.where((c) => sodiumWeek(c).isNotEmpty)) {
+        expect(caloriesWeek(c).last, c.caloriesToday.toDouble());
+        expect(sugarWeek(c).last, c.sugarG);
+        expect(sodiumWeek(c).last, c.sodiumMg);
+      }
+      // 당류는 소수를 잃지 않는다.
+      expect(
+        clients.where((c) => sugarWeek(c).any((v) => v != v.roundToDouble())),
+        isNotEmpty,
+        reason: '소수 당류를 가진 고객',
+      );
+
+      // 추이 모양: 한 주 전체, 끊긴 주, 한 점, 아무것도 없음 — 각각 다른
+      // 경로를 탄다.
       expect(clients.where((c) => sodiumWeek(c).length == 7), isNotEmpty);
       expect(
         clients.where((c) {
@@ -170,13 +202,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v8', '2020-01-01');
+      await db.putValue('trainer_seeded_v9', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v8'), _todayString());
+      expect(await db.readValue('trainer_seeded_v9'), _todayString());
     });
 
     test(
@@ -265,7 +297,7 @@ void main() {
 
         // Simulate an older build: already seeded TODAY under a previous
         // flag, plus a runtime (non-seed) client that must survive.
-        await db.putValue('trainer_seeded_v7', today);
+        await db.putValue('trainer_seeded_v8', today);
         await db
             .into(db.trainerClients)
             .insert(
@@ -299,7 +331,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v8'), today);
+        expect(await db.readValue('trainer_seeded_v9'), today);
       },
     );
 
@@ -321,7 +353,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v8', '2020-01-01');
+      await db.putValue('trainer_seeded_v9', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

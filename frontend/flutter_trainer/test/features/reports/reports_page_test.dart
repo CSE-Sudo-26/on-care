@@ -10,6 +10,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 import '../../helpers/client_factory.dart';
@@ -374,6 +375,55 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('추이 그래프는 고른 지표의 주간 계열을 그린다 (#746)', (tester) async {
+    final container = await openReports(tester);
+    final client = (await container.read(clientsProvider.future)).first;
+
+    Future<void> pickMetric(String name) async {
+      final chip = find.byKey(ValueKey<String>('trend-metric-$name'));
+      await tester.ensureVisible(chip);
+      await tester.pump();
+      await tester.tap(chip);
+      await settle(tester);
+    }
+
+    List<double> drawnValues() =>
+        tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).values;
+
+    // 기본은 칼로리 — 나트륨 하나만 보여 주던 자리를 세 지표가 나눠 쓴다.
+    expect(find.text('칼로리 추이'), findsOneWidget);
+    expect(
+      drawnValues(),
+      client.caloriesWeek.map((v) => v.toDouble()).toList(),
+    );
+
+    await pickMetric('sodium');
+    expect(find.text('나트륨 추이'), findsOneWidget);
+    expect(drawnValues(), client.sodiumWeek.map((v) => v.toDouble()).toList());
+
+    await pickMetric('sugar');
+    expect(find.text('당류 추이'), findsOneWidget);
+    // 당류는 소수를 유지한다 — 17.8 이 18 로 뭉개지면 요약 수치와 어긋난다.
+    expect(drawnValues(), client.sugarWeek);
+    expect(client.sugarWeek.any((v) => v != v.roundToDouble()), isTrue);
+  });
+
+  testWidgets('지난 주에는 고른 지표 이름으로 없다고 말한다 (#746)', (tester) async {
+    await openReports(tester);
+    await tester.tap(find.text('이전 주'));
+    await settle(tester);
+
+    expect(find.byType(MetricTrendChart), findsNothing);
+    expect(find.text('지난 주 칼로리 추이는 아직 없어요'), findsOneWidget);
+
+    final chip = find.byKey(const ValueKey<String>('trend-metric-sugar'));
+    await tester.ensureVisible(chip);
+    await tester.pump();
+    await tester.tap(chip);
+    await settle(tester);
+    expect(find.text('지난 주 당류 추이는 아직 없어요'), findsOneWidget);
   });
 }
 

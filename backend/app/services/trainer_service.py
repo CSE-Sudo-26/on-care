@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -129,9 +129,39 @@ def _today_totals(
 
 def _sodium_week(diet_rows: list[DietEntry], today: date) -> list[int]:
     """최근 7일 일별 나트륨 합(오래된→오늘). 기록 없는 날은 0."""
-    by_date: dict[str, int] = {}
+    return [
+        round(v) for v in _daily_week(diet_rows, today, lambda e: e.sodium_mg)
+    ]
+
+
+def _calories_week(diet_rows: list[DietEntry], today: date) -> list[int]:
+    """최근 7일 일별 칼로리 합. 나트륨과 같은 창·같은 규칙이다. (#746)"""
+    return [
+        round(v)
+        for v in _daily_week(diet_rows, today, lambda e: e.total_calories)
+    ]
+
+
+def _sugar_week(diet_rows: list[DietEntry], today: date) -> list[float]:
+    """최근 7일 일별 당류 합.
+
+    나트륨·칼로리와 달리 소수를 유지한다 — 당류는 6.3+8.5 처럼 소수로 쌓이고,
+    반올림하면 같은 회원의 식단 탭 수치와 어긋난다(`sugar_g` 가 Float 인 이유와
+    같다).
+    """
+    return [round(v, 1) for v in _daily_week(diet_rows, today, lambda e: e.sugar_g)]
+
+
+def _daily_week(
+    diet_rows: list[DietEntry], today: date, value: Callable[[DietEntry], float]
+) -> list[float]:
+    """최근 7일 일별 합(오래된→오늘). 기록 없는 날은 0.
+
+    세 지표가 같은 창을 봐야 그래프의 x 축이 서로 어긋나지 않는다.
+    """
+    by_date: dict[str, float] = {}
     for e in diet_rows:
-        by_date[e.date] = by_date.get(e.date, 0) + e.sodium_mg
+        by_date[e.date] = by_date.get(e.date, 0) + value(e)
     return [
         by_date.get((today - timedelta(days=off)).isoformat(), 0)
         for off in range(6, -1, -1)
@@ -257,6 +287,8 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
             ),
             week_completion=_week_completion(hist_by_member.get(link.member_id, []), monday),
             sodium_week=_sodium_week(diet_rows, today),
+            calories_week=_calories_week(diet_rows, today),
+            sugar_week=_sugar_week(diet_rows, today),
         ))
     return out
 

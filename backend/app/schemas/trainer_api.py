@@ -77,6 +77,10 @@ class TrainerClientOut(BaseModel):
     last_routine: str            # 마지막 루틴 전송 라벨(오늘/어제/N일 전)
     week_completion: list[int]   # 이번 주 일별 완료율 7개(월→일)
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
+    #: 최근 7일 일별 칼로리·당류. 나트륨과 같은 창이라 세 지표를 한 그래프에서
+    #: 바꿔 가며 볼 수 있다(#746). 당류만 소수를 유지한다.
+    calories_week: list[int] = Field(default_factory=list)
+    sugar_week: list[float] = Field(default_factory=list)
 
 
 class TrainerClientStatusUpdate(BaseModel):

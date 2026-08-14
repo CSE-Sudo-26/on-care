@@ -972,10 +972,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsNoWorkoutsThisWeek => 'No workouts logged this week';
 
   @override
-  String get reportsSodiumTrend => 'Sodium trend';
+  String reportsMetricTrend(String metric) {
+    return '$metric trend';
+  }
 
   @override
-  String get reportsNoLastWeekSodium => 'No sodium trend for last week yet';
+  String reportsNoLastWeekMetricTrend(String metric) {
+    return 'No $metric trend for last week yet';
+  }
 
   @override
   String get reportsSendStateSent => 'Sent';
@@ -1874,9 +1878,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String metricOverBy(String unit) {
     return '$unit over';
   }
-
-  @override
-  String get chartNotEnoughData => 'Not enough data yet';
 
   @override
   String get authErrInvalidCredentials =>

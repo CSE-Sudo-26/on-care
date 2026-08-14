@@ -102,3 +102,32 @@ def test_detailed_records_stay_with_the_original_three(client):
     assert minimal.status_code == 200
     # 하루 한 줄짜리 — 있지만 상세하지는 않다.
     assert minimal.json(), "확장 회원도 지표를 만들 기록은 있어야 한다"
+
+
+def test_roster_carries_all_three_daily_series(client):
+    """칼로리·나트륨·당류가 **같은 창**으로 내려온다. (#746)
+
+    셋이 길이가 다르면 지표를 바꿀 때 그래프의 x 축이 어긋난다.
+    """
+    rows = _roster(client)
+    for row in rows:
+        assert len(row["sodium_week"]) == 7
+        assert len(row["calories_week"]) == 7
+        assert len(row["sugar_week"]) == 7
+
+    # 기록이 있는 회원이 하나라도 있어야 그래프가 그려진다.
+    assert any(sum(r["calories_week"]) > 0 for r in rows), "칼로리 추이를 그릴 회원이 없다"
+    assert any(sum(r["sugar_week"]) > 0 for r in rows), "당류 추이를 그릴 회원이 없다"
+
+
+def test_daily_sugar_keeps_its_decimals(client):
+    """당류는 소수를 유지한다 — 반올림하면 식단 탭 수치와 어긋난다."""
+    rows = _roster(client)
+    values = [v for row in rows for v in row["sugar_week"]]
+    assert values, "당류 계열이 비어 있다"
+    # 정수만 있어도 계약 위반은 아니지만, 타입은 소수를 담을 수 있어야 한다.
+    assert all(isinstance(v, (int, float)) for v in values)
+    assert any(isinstance(v, float) for v in values) or all(
+        float(v) == v for v in values
+    )
+

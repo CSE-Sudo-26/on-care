@@ -942,10 +942,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsNoWorkoutsThisWeek => '이번 주 운동 기록이 없어요';
 
   @override
-  String get reportsSodiumTrend => '나트륨 추이';
+  String reportsMetricTrend(String metric) {
+    return '$metric 추이';
+  }
 
   @override
-  String get reportsNoLastWeekSodium => '지난 주 나트륨 추이는 아직 없어요';
+  String reportsNoLastWeekMetricTrend(String metric) {
+    return '지난 주 $metric 추이는 아직 없어요';
+  }
 
   @override
   String get reportsSendStateSent => '전송됨';
@@ -1816,9 +1820,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String metricOverBy(String unit) {
     return '$unit 초과';
   }
-
-  @override
-  String get chartNotEnoughData => '데이터가 아직 부족해요';
 
   @override
   String get authErrInvalidCredentials => '이메일 또는 비밀번호가 올바르지 않습니다.';
