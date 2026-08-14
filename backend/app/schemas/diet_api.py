@@ -66,6 +66,9 @@ class DietEntryOut(BaseModel):
     # Local/demo seeds may point at a bundled Flutter asset. Real API entries
     # do not own a client asset path, so they return null.
     photo_asset: str | None = None
+    # 회원이 올린 끼니 사진의 조회 경로(API base 기준 상대 경로). 사진이 없으면
+    # null — 사진 저장(#699) 이전 기록과 인식만 하고 사진을 못 남긴 기록이 있다.
+    photo_url: str | None = None
 
 
 class DietEntryUpdate(PartialUpdate):
@@ -93,9 +96,12 @@ class DietTodayResponse(BaseModel):
 
 
 class DietAnalyzeResponse(BaseModel):
-    """POST /diet/analyze 응답: 저장된 entry id + 분석 결과."""
+    """POST /diet/analyze 응답: 저장된 entry id + 분석 결과 (+ 사진 경로)."""
     entry_id: str
     analysis: DietAnalysis
+    # 방금 올린 사진의 조회 경로. 저장하지 못했으면 null 이며, 그때도 끼니 기록
+    # 자체는 저장된다(사진은 기록의 부속이지 조건이 아니다).
+    photo_url: str | None = None
 
 
 class DietRecommendationItem(BaseModel):

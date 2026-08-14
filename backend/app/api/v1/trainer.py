@@ -15,7 +15,7 @@ from datetime import date as _date
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -54,6 +54,7 @@ from app.schemas.trainer_api import (
 )
 from app.services import (
     consultation_service,
+    diet_photo_service,
     notification_service,
     trainer_routine_options_service,
     trainer_service,
@@ -341,6 +342,31 @@ def trainer_client_diet(
     if not _is_ymd(day):
         raise HTTPException(status_code=422, detail="date 는 YYYY-MM-DD 형식이어야 합니다.")
     return trainer_service.build_client_diet(db, member_id, day)
+
+
+@router.get("/trainer/clients/{member_id}/diet/photos/{photo_id}")
+def trainer_client_diet_photo(
+    member_id: str,
+    photo_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    """담당 고객이 올린 끼니 사진. (#699)
+
+    두 겹으로 막는다: 담당 링크가 없으면 404(다른 트레이너의 고객), 링크가 있어도
+    사진이 그 회원의 것이 아니면 404. 사진 id 를 알아도 담당이 아니면 열리지 않고,
+    담당이어도 남의 고객 사진은 열리지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    photo = diet_photo_service.get_owned_photo(db, photo_id, member_id)
+    if photo is None:
+        raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
+    return Response(
+        content=photo.data,
+        media_type=photo.content_type,
+        # 회원의 사적인 사진이다 — 공유 캐시에 남기지 않는다(회원 경로와 동일).
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 @router.get("/trainer/clients/{member_id}/history", response_model=list[RoutineHistoryOut])

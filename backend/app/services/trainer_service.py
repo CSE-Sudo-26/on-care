@@ -28,7 +28,7 @@ from app.schemas.trainer_api import (
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
     TrainerNotificationSettings, WeeklyReportOut,
 )
-from app.services import exercise_service, notification_service
+from app.services import diet_photo_service, exercise_service, notification_service
 from app.services.coach import personal_ingest
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
@@ -255,6 +255,9 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         .order_by(DietEntry.created_at, DietEntry.id)
     ).all()
 
+    # 사진은 id 만 한 번에 읽는다(바이트는 사진 라우트에서만 흐른다). (#699)
+    photo_ids = diet_photo_service.photo_ids_for_entries(db, [r.id for r in rows])
+
     out: list[ClientDietEntryOut] = []
     for r in rows:
         try:
@@ -262,6 +265,7 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
         except json.JSONDecodeError:
             foods = []
         items = ", ".join(f.get("name", "") for f in foods if f.get("name"))
+        photo_id = photo_ids.get(r.id)
         out.append(ClientDietEntryOut(
             meal=_meal_kr(r.meal_type),
             items=items,
@@ -270,8 +274,19 @@ def build_client_diet(db: Session, member_id: str, day: str) -> list[ClientDietE
             carbs_g=r.carbs_g,
             protein_g=r.protein_g,
             fat_g=r.fat_g,
+            photo_url=client_photo_url(member_id, photo_id) if photo_id else None,
         ))
     return out
+
+
+def client_photo_url(member_id: str, photo_id: str) -> str:
+    """담당 트레이너가 보는 고객 끼니 사진 경로(API base 기준 상대 경로).
+
+    회원 경로(`/diet/photos/{id}`)와 다른 이유는 접근 판정이 다르기 때문이다.
+    이 경로는 `member_id` 를 지나가므로 라우터가 담당 링크를 먼저 확인하고,
+    사진이 그 회원의 것인지까지 본다.
+    """
+    return f"/trainer/clients/{member_id}/diet/photos/{photo_id}"
 
 
 def build_client_history(

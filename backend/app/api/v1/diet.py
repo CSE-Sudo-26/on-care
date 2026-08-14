@@ -4,8 +4,9 @@
   GET  /diet/days/today          -> 오늘 식단 집계(나트륨·당류·macros + 코칭 메시지)
   GET  /diet/days/{date}         -> 지정 날짜 식단 집계
   GET  /diet/recommendations     -> 홈 AI 추천 식단(카탈로그에서 개인화 선택)
-  POST /diet/analyze             -> 사진 → 인식 → diet_entries 저장
+  POST /diet/analyze             -> 사진 → 인식 → diet_entries 저장(+ 사진 축소본)
   POST /diet/analyze?engine=yolo -> 엔진 강제(비교실험)
+  GET  /diet/photos/{photo_id}   -> 내 끼니 사진 원본 바이트(본인만)
   PUT/DELETE /diet/entries/{id}  -> 끼니/영양소 수정·삭제(본인 소유만)
 
 집계·코칭·저장 등 도메인 로직은 diet_service 로 이관했다(exercise_service 등과 일관).
@@ -17,7 +18,7 @@ import logging
 from datetime import date as Date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
@@ -30,7 +31,7 @@ from app.schemas.diet_api import (
     DietRecommendationsResponse,
     DietTodayResponse,
 )
-from app.services import diet_recommendation_service, diet_service
+from app.services import diet_photo_service, diet_recommendation_service, diet_service
 from app.services.coach import personal_ingest
 from app.services.nutrition.enrich import enrich_analysis
 from app.services.recognizer.factory import get_recognizer
@@ -131,9 +132,39 @@ async def diet_analyze(
             entry_id=entry.id, analysis=diet_service.entry_to_analysis(entry)
         )
 
+    # 인식이 끝난 사진을 끼니에 붙인다. 실패해도 끼니 기록은 그대로 남는다(#699).
+    photo = diet_photo_service.store_for_entry(db, current_user.id, entry.id, image_bytes)
+
     # 모델 원본 출력(raw_model_output)은 클라이언트로 내보내지 않음(디버깅 전용)
     analysis.raw_model_output = None
-    return DietAnalyzeResponse(entry_id=entry.id, analysis=analysis)
+    return DietAnalyzeResponse(
+        entry_id=entry.id,
+        analysis=analysis,
+        photo_url=diet_service.member_photo_url(photo.id) if photo else None,
+    )
+
+
+@router.get("/diet/photos/{photo_id}")
+def diet_photo(
+    photo_id: str,
+    current_user: CurrentUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    """내 끼니 사진. 남의 사진은 404 — 주소를 추측해도 열리지 않는다. (#699)
+
+    담당 트레이너는 이 경로가 아니라 `/trainer/clients/{id}/diet/photos/{photo_id}`
+    로 본다(회원 API 와 트레이너 API 의 역할 분리).
+    """
+    photo = diet_photo_service.get_owned_photo(db, photo_id, current_user.id)
+    if photo is None:
+        raise HTTPException(status_code=404, detail="사진을 찾을 수 없습니다.")
+    return Response(
+        content=photo.data,
+        media_type=photo.content_type,
+        # 사적인 이미지다 — 공유 캐시(프록시·CDN)에 남으면 안 된다. 사진 내용은
+        # 바뀌지 않으므로(끼니 하나에 사진 하나) 브라우저 캐시는 길게 허용한다.
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 @router.put("/diet/entries/{entry_id}", response_model=DietEntryOut)
