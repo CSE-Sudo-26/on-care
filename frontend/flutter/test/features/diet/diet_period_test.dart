@@ -254,14 +254,6 @@ void main() {
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-      // 이 화면은 좁은 폭에서 기간 토글 줄 등 **이 변경과 무관한 자리**가 이미
-      // 넘친다(#739). 그 예외까지 테스트를 깨면 여기서 무엇을 지키는지 흐려지므로
-      // 예외는 모아 두고, 제목 줄은 아래에서 **기하로** 확인한다. #739 가 해결되면
-      // 이 수집기를 걷어내고 화면 전체 기준으로 좁힐 수 있다.
-      final List<FlutterErrorDetails> caught = <FlutterErrorDetails>[];
-      final void Function(FlutterErrorDetails)? previous = FlutterError.onError;
-      FlutterError.onError = caught.add;
-
       await tester.pumpWidget(
         _app(
           overrides: <Override>[
@@ -273,9 +265,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // 핸들러는 **여기서** 되돌린다. tearDown 으로 미루면 `expect` 가 먼저 돌아
-      // 프레임워크가 "복구하지 않았다" 며 테스트를 거부한다.
-      FlutterError.onError = previous;
 
       final Element context = tester.element(find.byType(DietRecordPage));
       final AppLocalizations l = AppLocalizations.of(context);
@@ -312,16 +301,9 @@ void main() {
       // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
       expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
 
-      // 제목 줄 자체는 넘치지 않는다.
-      expect(
-        caught.where(
-          (FlutterErrorDetails d) =>
-              d.exceptionAsString().contains('overflowed') &&
-              d.toString().contains('meal-log-header'),
-        ),
-        isEmpty,
-        reason: '제목 줄이 넘쳤습니다.',
-      );
+      // 화면 어디에서도 넘치지 않는다. 화면 전체가 좁은 폭을 견디게 된 뒤로
+      // (#739) 이 단언을 이 자리에서 그대로 쓸 수 있다.
+      expect(tester.takeException(), isNull);
       expect(find.text(l.dietMealLog), findsOneWidget);
     });
 
