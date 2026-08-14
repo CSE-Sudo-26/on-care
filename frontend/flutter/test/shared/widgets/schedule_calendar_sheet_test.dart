@@ -257,4 +257,32 @@ void main() {
       reason: '달력이 하단 내비게이션 위를 덮어야 한다 — 바가 눌리면 시트가 그 뒤에 있다는 뜻',
     );
   });
+
+  testWidgets('시트 안에서 연 일정 추가 다이얼로그가 시트 위에 뜬다 (#680)', (
+    WidgetTester tester,
+  ) async {
+    // 시트를 루트 Navigator 로 옮기면서 시트가 여는 다이얼로그가 시트 뒤로
+    // 가지 않는지 확인한다. showDialog 도 기본이 루트라 나중에 밀린 쪽(다이얼로그)
+    // 이 위에 있어야 한다.
+    tester.view.physicalSize = const Size(900, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _openSheet(tester, august2026);
+    expect(find.byType(Dialog), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, '일정 추가'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    // 시트도 아직 살아 있다(다이얼로그가 시트를 대체한 것이 아니다).
+    expect(find.byKey(const Key('calendar-day-1')), findsOneWidget);
+
+    // 다이얼로그를 닫으면 달력으로 돌아온다 — 닫힌 뒤 provider 새로고침 경로가
+    // 그대로 도는지까지 본다(예외가 나면 pumpAndSettle 이 잡는다).
+    Navigator.of(tester.element(find.byType(Dialog))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byKey(const Key('calendar-day-31')), findsOneWidget);
+  });
 }
