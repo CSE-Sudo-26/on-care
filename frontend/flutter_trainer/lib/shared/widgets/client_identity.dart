@@ -43,6 +43,7 @@ class ClientIdentity extends StatelessWidget {
     this.nameStyle,
     this.demographicsStyle,
     this.maxLines = 1,
+    this.stacked = false,
     this.textAlign,
   });
 
@@ -50,6 +51,7 @@ class ClientIdentity extends StatelessWidget {
   final TextStyle? nameStyle;
   final TextStyle? demographicsStyle;
   final int maxLines;
+  final bool stacked;
   final TextAlign? textAlign;
 
   @override
@@ -68,29 +70,40 @@ class ClientIdentity extends StatelessWidget {
           fontSize: (resolvedNameStyle.fontSize ?? 14) - 3,
           fontWeight: FontWeight.w600,
         );
+    final name = Text(
+      client.name,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      textAlign: textAlign,
+      style: resolvedNameStyle,
+    );
+    final demographics = Text(
+      clientDemographicsLabel(context, client),
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      textAlign: textAlign,
+      style: resolvedDemographicsStyle,
+    );
+
+    if (stacked) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: textAlign == TextAlign.center
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[name, const SizedBox(height: 2), demographics],
+      );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: textAlign == TextAlign.center
           ? MainAxisAlignment.center
           : MainAxisAlignment.start,
       children: <Widget>[
-        Flexible(
-          child: Text(
-            client.name,
-            maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
-            style: resolvedNameStyle,
-          ),
-        ),
+        Flexible(child: name),
         const SizedBox(width: AppSpacing.xs),
-        Flexible(
-          child: Text(
-            clientDemographicsLabel(context, client),
-            maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
-            style: resolvedDemographicsStyle,
-          ),
-        ),
+        Flexible(child: demographics),
       ],
     );
   }

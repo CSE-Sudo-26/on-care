@@ -8,7 +8,6 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -25,6 +24,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
@@ -35,7 +35,6 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/shared/widgets/metric_tile.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -509,7 +508,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                           children: <Widget>[
                             _ProgramMemberSummary(client: selected),
                             const SizedBox(height: AppSpacing.lg),
-                            _DietSummaryCard(client: selected),
+                            NutritionSummaryCard(client: selected),
                             const SizedBox(height: AppSpacing.lg),
                             _AiAssistantPrompt(
                               clientName: selected.name,
@@ -561,9 +560,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         ),
       ),
       const SizedBox(height: AppSpacing.lg),
-      _sectionLabel(l.coachTodayDiet),
-      const SizedBox(height: AppSpacing.sm),
-      _DietSummaryCard(client: client),
+      NutritionSummaryCard(client: client),
     ];
   }
 
@@ -1100,6 +1097,7 @@ class _ClientChip extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               ClientIdentity(
                 client: client,
+                stacked: true,
                 nameStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1119,77 +1117,6 @@ class _ClientChip extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Diet summary — the shared metric tiles + the AI's verdict line.
-class _DietSummaryCard extends StatelessWidget {
-  const _DietSummaryCard({required this.client});
-
-  final TrainerClient client;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    final over = client.sodiumOverBudget;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              MetricTile(
-                label: l.metricCalories,
-                value: client.calories,
-                unit: 'kcal',
-                color: AppColors.accentDark,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              MetricTile(
-                label: l.metricSodium,
-                value: client.sodiumMg,
-                unit: 'mg',
-                color: AppColors.accentDark,
-                warn: over,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              MetricTile(
-                label: l.metricSugar,
-                value: client.sugarG,
-                unit: 'g',
-                color: AppColors.accentDark,
-                warn: client.sugarOverBudget,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.accentSurface,
-              borderRadius: BorderRadius.all(AppRadius.md),
-            ),
-            child: IconLabel(
-              icon: Icons.auto_awesome,
-              label: over ? l.coachVerdictSodium : l.coachVerdictBalanced,
-              color: AppColors.accent,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
