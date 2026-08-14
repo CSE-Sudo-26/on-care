@@ -113,8 +113,8 @@ ClientSearchFacts watchClientSearchFacts(
 /// 고객 검색 — the console header's client picker.
 ///
 /// Sits in the middle of every main tab's header and always searches the same
-/// roster and related records. A direct pick consistently opens the customer
-/// detail; explicit actions open the schedule, messages, coaching, or report.
+/// roster and related records. A direct pick opens the customer inside the
+/// current tab; explicit actions can still cross to another tab.
 ///
 /// Two forms: the inline field with a dropdown, and an icon opening the
 /// same search in a dialog. The icon is used when the shell is in its
@@ -190,15 +190,22 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     }
   }
 
-  void _submit() {
+  void _submit(ClientSearchFacts facts) {
     if (_results.isEmpty) return;
     final index = _highlight.clamp(0, _results.length - 1);
-    _pick(_results[index]);
+    _pick(_results[index], facts);
   }
 
-  void _pick(TrainerClient client) {
+  void _pick(TrainerClient client, ClientSearchFacts facts) {
     _close(clear: true);
-    _apply((client: client, route: clientSearchDestination(client)));
+    _apply((
+      client: client,
+      route: clientSearchDestination(
+        GoRouterState.of(context).uri,
+        client,
+        facts,
+      ),
+    ));
   }
 
   void _apply(_Pick pick) {
@@ -211,9 +218,10 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
   }
 
   Future<void> _openDialog() async {
+    final location = GoRouterState.of(context).uri;
     final pick = await showDialog<_Pick>(
       context: context,
-      builder: (_) => const _ClientSearchDialog(),
+      builder: (_) => _ClientSearchDialog(location: location),
     );
     if (pick == null || !mounted) return;
     _apply(pick);
@@ -260,7 +268,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
                 child: TapRegion(
                   groupId: this,
                   onTapOutside: (_) => _close(),
-                  child: _field(l),
+                  child: _field(l, facts),
                 ),
               ),
             ),
@@ -270,7 +278,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     );
   }
 
-  Widget _field(AppLocalizations l) {
+  Widget _field(AppLocalizations l, ClientSearchFacts facts) {
     return CallbackShortcuts(
       // The same keys the dropdown implies: ↑/↓ walk the rows, Esc backs
       // out. Enter is the field's own submit.
@@ -327,7 +335,7 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
           focusedBorder: _fieldBorder,
         ),
         onChanged: _onQueryChanged,
-        onSubmitted: (_) => _submit(),
+        onSubmitted: (_) => _submit(facts),
         onTap: () {
           if (_hasQuery) _dropdown.show();
         },
@@ -351,7 +359,11 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
             results: _results,
             facts: facts,
             highlighted: _highlight,
-            onPick: _pick,
+            footer: clientSearchFooter(
+              AppLocalizations.of(context),
+              GoRouterState.of(context).uri,
+            ),
+            onPick: (client) => _pick(client, facts),
             onOpenDestination: _openDestination,
           ),
         ),
@@ -376,6 +388,7 @@ class _ResultsCard extends StatelessWidget {
     required this.results,
     required this.facts,
     required this.highlighted,
+    required this.footer,
     required this.onPick,
     required this.onOpenDestination,
   });
@@ -385,6 +398,7 @@ class _ResultsCard extends StatelessWidget {
   final List<TrainerClient> results;
   final ClientSearchFacts facts;
   final int highlighted;
+  final String footer;
   final ValueChanged<TrainerClient> onPick;
   final void Function(TrainerClient client, String route) onOpenDestination;
 
@@ -448,7 +462,7 @@ class _ResultsCard extends StatelessWidget {
                 ),
               ),
             ),
-          _Footer(text: l.searchGoClientDetail),
+          _Footer(text: footer),
         ],
       ),
     );
@@ -684,7 +698,9 @@ class _Footer extends StatelessWidget {
 /// caller owns the page context, so the snackbar and the `go` both land
 /// on the console rather than on a route that is being dismissed.
 class _ClientSearchDialog extends ConsumerStatefulWidget {
-  const _ClientSearchDialog();
+  const _ClientSearchDialog({required this.location});
+
+  final Uri location;
 
   @override
   ConsumerState<_ClientSearchDialog> createState() =>
@@ -720,10 +736,10 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
     );
   }
 
-  void _submit() {
+  void _submit(ClientSearchFacts facts) {
     if (_results.isEmpty) return;
     final index = _highlight.clamp(0, _results.length - 1);
-    _pop(_results[index]);
+    _pop(_results[index], facts);
   }
 
   @override
@@ -794,7 +810,7 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                     focusedBorder: _fieldBorder,
                   ),
                   onChanged: _onQueryChanged,
-                  onSubmitted: (_) => _submit(),
+                  onSubmitted: (_) => _submit(facts),
                 ),
               ),
             ),
@@ -806,7 +822,8 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
                 results: _results,
                 facts: facts,
                 highlighted: _highlight,
-                onPick: _pop,
+                footer: clientSearchFooter(l, widget.location),
+                onPick: (client) => _pop(client, facts),
                 onOpenDestination: (client, route) => _popRoute(client, route),
               ),
             ],
@@ -816,8 +833,8 @@ class _ClientSearchDialogState extends ConsumerState<_ClientSearchDialog> {
     );
   }
 
-  void _pop(TrainerClient client) {
-    _popRoute(client, clientSearchDestination(client));
+  void _pop(TrainerClient client, ClientSearchFacts facts) {
+    _popRoute(client, clientSearchDestination(widget.location, client, facts));
   }
 
   void _popRoute(TrainerClient client, String route) {
