@@ -21,21 +21,35 @@ import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_pag
 /// Pure auth-guard policy for the router's `redirect`. Kept free of
 /// `BuildContext`/`GoRouterState` so it can be unit-tested directly.
 ///
-/// - signed-out (or still restoring) → forced onto the sign-in screen;
-/// - in the app (demo or authenticated) → kept off sign-in (bounced to
-///   the 대시보드, the console's home).
+/// - signed-out (or still restoring) → forced onto the sign-in screen,
+///   **carrying where they were headed** (`?from=`);
+/// - in the app (demo or authenticated) → kept off sign-in, and sent to
+///   the parked destination if there is one, else the 대시보드.
+///
+/// The parking is what makes a refresh survive: boot starts at the
+/// browser URL with the session still [SessionStatus.unknown], so the
+/// gate always sees the deep link first and must not throw it away
+/// before secure storage has answered. (#701)
+///
+/// [location] is the full location (path **and** query) — the parked
+/// destination rides on the query, so a path-only value would lose it.
 ///
 /// Returning `null` means "no redirect — stay put".
 String? sessionRedirect(SessionStatus status, String location) {
-  final onAuthRoute =
-      location == AppRoutes.signIn || location == AppRoutes.signUp;
+  final path = Uri.tryParse(location)?.path ?? location;
+  final onAuthRoute = path == AppRoutes.signIn || path == AppRoutes.signUp;
   switch (status) {
     case SessionStatus.unknown:
     case SessionStatus.signedOut:
-      return onAuthRoute ? null : AppRoutes.signIn;
+      return onAuthRoute ? null : AppRoutes.signInResuming(location);
     case SessionStatus.demo:
     case SessionStatus.authenticated:
-      return onAuthRoute ? AppRoutes.dashboard : null;
+      if (onAuthRoute) {
+        return AppRoutes.resumeTarget(location) ?? AppRoutes.dashboard;
+      }
+      // The platform boot location on a non-web launch is `/`, which
+      // matches no route; send it home rather than to an error screen.
+      return path == '/' ? AppRoutes.dashboard : null;
   }
 }
 
@@ -63,15 +77,26 @@ String? clientChatRedirect(String? id, String? section) {
 /// [readStatus] drives [sessionRedirect]; [refresh] should fire whenever
 /// the session changes so the guard re-evaluates without rebuilding the
 /// router (a rebuild would drop the navigation stack).
+///
+/// [initialLocation] is left null in production **on purpose**: the boot
+/// location is then the platform's — on web, the browser URL. Pinning it
+/// to the sign-in screen is what made every refresh land on the 대시보드
+/// no matter what the address bar said (#701). Tests pass it to boot at a
+/// given deep link, which is otherwise unreachable from a widget test.
 GoRouter buildAppRouter({
   required SessionStatus Function() readStatus,
   required Listenable refresh,
+  String? initialLocation,
 }) {
   return GoRouter(
-    initialLocation: AppRoutes.signIn,
+    initialLocation: initialLocation,
     refreshListenable: refresh,
-    redirect: (context, state) =>
-        sessionRedirect(readStatus(), state.matchedLocation),
+    redirect: (context, state) => sessionRedirect(
+      readStatus(),
+      // Full location, not `matchedLocation`: the parked destination
+      // rides on the query string.
+      state.uri.toString(),
+    ),
     routes: <RouteBase>[
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -202,6 +227,11 @@ GoRouter buildAppRouter({
   );
 }
 
+/// Where the router boots. Null (production) means the platform
+/// location — the browser URL on web. Tests override it to boot at a
+/// deep link and watch the auth gate hand it back after restore.
+final routerInitialLocationProvider = Provider<String?>((ref) => null);
+
 /// Riverpod-managed router. Bridges session changes into a [Listenable]
 /// so the auth guard re-evaluates without rebuilding the router.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -214,5 +244,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return buildAppRouter(
     readStatus: () => ref.read(sessionControllerProvider).status,
     refresh: refresh,
+    initialLocation: ref.read(routerInitialLocationProvider),
   );
 });

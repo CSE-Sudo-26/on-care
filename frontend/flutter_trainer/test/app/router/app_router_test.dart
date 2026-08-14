@@ -5,6 +5,7 @@ import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/features/auth/domain/entities/session_state.dart';
+import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_en.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 
@@ -19,11 +20,11 @@ void main() {
     test('signed-out is forced onto sign-in from any app route', () {
       expect(
         sessionRedirect(SessionStatus.signedOut, AppRoutes.clients),
-        AppRoutes.signIn,
+        '${AppRoutes.signIn}?from=%2Fclients',
       );
       expect(
         sessionRedirect(SessionStatus.unknown, AppRoutes.schedule),
-        AppRoutes.signIn,
+        '${AppRoutes.signIn}?from=%2Fschedule',
       );
     });
 
@@ -49,6 +50,82 @@ void main() {
       expect(
         sessionRedirect(SessionStatus.authenticated, AppRoutes.my),
         isNull,
+      );
+    });
+  });
+
+  // 새로고침·공유 링크는 부팅 위치가 곧 목적지다. 세션이 아직 unknown 인 첫
+  // 평가에서 그 목적지를 버리면 복원 뒤에는 돌아갈 곳이 남지 않는다. (#701)
+  group('deep-link resume', () {
+    const String thread = '/messages?client=user-demo';
+
+    test('the destination is parked on the sign-in URL while restoring', () {
+      expect(
+        sessionRedirect(SessionStatus.unknown, thread),
+        '${AppRoutes.signIn}?from=%2Fmessages%3Fclient%3Duser-demo',
+      );
+    });
+
+    test('a restored session lands back on the parked destination', () {
+      final parked = sessionRedirect(SessionStatus.unknown, thread)!;
+      expect(sessionRedirect(SessionStatus.authenticated, parked), thread);
+      expect(sessionRedirect(SessionStatus.demo, parked), thread);
+    });
+
+    test('the parked destination survives sitting on the login screen', () {
+      // 로그인 화면에 머무는 동안 리다이렉트가 다시 돌아도 `from` 이 날아가면
+      // 로그인 성공 시 돌아갈 자리를 잃는다.
+      final parked = sessionRedirect(SessionStatus.signedOut, thread)!;
+      expect(sessionRedirect(SessionStatus.signedOut, parked), isNull);
+      expect(AppRoutes.resumeTarget(parked), thread);
+    });
+
+    test('no parked destination still lands on the 대시보드', () {
+      expect(
+        sessionRedirect(SessionStatus.authenticated, AppRoutes.signIn),
+        AppRoutes.dashboard,
+      );
+    });
+
+    test('an off-site "from" is refused instead of redirected to', () {
+      const String forged = '${AppRoutes.signIn}?from=https%3A%2F%2Felsewhere';
+      expect(
+        sessionRedirect(SessionStatus.authenticated, forged),
+        AppRoutes.dashboard,
+      );
+      expect(AppRoutes.isRestorable('https://elsewhere/clients'), isFalse);
+      expect(AppRoutes.isRestorable('//elsewhere/clients'), isFalse);
+    });
+
+    test('an unknown path is not worth parking or resuming to', () {
+      expect(AppRoutes.isRestorable('/nope'), isFalse);
+      expect(sessionRedirect(SessionStatus.unknown, '/nope'), AppRoutes.signIn);
+      expect(
+        sessionRedirect(
+          SessionStatus.authenticated,
+          '${AppRoutes.signIn}?from=%2Fnope',
+        ),
+        AppRoutes.dashboard,
+      );
+    });
+
+    test('auth routes are never parked as a destination', () {
+      expect(AppRoutes.isRestorable(AppRoutes.signIn), isFalse);
+      expect(AppRoutes.isRestorable(AppRoutes.signUp), isFalse);
+    });
+
+    test('the platform root boots into the 대시보드, not an error screen', () {
+      // 웹이 아닌 실행의 기본 부팅 위치는 `/` 이고, 어떤 라우트와도 맞지 않는다.
+      expect(
+        sessionRedirect(SessionStatus.authenticated, '/'),
+        AppRoutes.dashboard,
+      );
+    });
+
+    test('client sub-paths are restorable', () {
+      expect(
+        AppRoutes.isRestorable(AppRoutes.clientDetail('seed-client-1')),
+        isTrue,
       );
     });
   });
@@ -115,6 +192,49 @@ void main() {
       // Auth gate redirected past sign-in into the shell.
       expect(find.text('로그인 없이 데모 둘러보기'), findsNothing);
       expect(find.text('대시보드'), findsWidgets);
+    });
+
+    testWidgets('a refresh on a deep link comes back to that screen', (
+      tester,
+    ) async {
+      // 부팅 위치 = 브라우저 URL. 세션이 복원될 때까지 로그인 화면을 거치더라도
+      // 열려 있던 스레드로 돌아와야 한다. (#701)
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        bootAt: AppRoutes.messagesFor('seed-client-1'),
+      );
+
+      expect(find.text('로그인 없이 데모 둘러보기'), findsNothing);
+      expect(currentLocation(tester), AppRoutes.messagesFor('seed-client-1'));
+    });
+
+    testWidgets('a deep link opened signed-out resumes after login', (
+      tester,
+    ) async {
+      final container = await pumpTrainerApp(
+        tester,
+        bootAt: AppRoutes.clientDetail('seed-client-1'),
+      );
+
+      // 세션이 없으니 로그인 화면이지만, 가려던 자리는 URL 에 남아 있다.
+      expect(find.text('로그인 없이 데모 둘러보기'), findsOneWidget);
+      expect(
+        AppRoutes.resumeTarget(currentLocation(tester)),
+        AppRoutes.clientDetail('seed-client-1'),
+      );
+
+      // 데모 진입은 로그인 폼 아래라 기본 테스트 화면에서는 화면 밖이다.
+      await tester.ensureVisible(find.text('로그인 없이 데모 둘러보기'));
+      await tester.pump();
+      await tester.tap(find.text('로그인 없이 데모 둘러보기'));
+      await settle(tester);
+
+      expect(
+        container.read(sessionControllerProvider).status,
+        isNot(SessionStatus.signedOut),
+      );
+      expect(currentLocation(tester), AppRoutes.clientDetail('seed-client-1'));
     });
 
     testWidgets('the sidebar lists every destination on a wide viewport', (

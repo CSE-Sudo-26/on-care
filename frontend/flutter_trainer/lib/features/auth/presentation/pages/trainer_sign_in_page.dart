@@ -35,9 +35,17 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
     super.dispose();
   }
 
+  /// 로그인 뒤에 갈 자리. 딥링크로 들어와 로그인 화면을 거친 경우 인증 게이트가
+  /// 목적지를 `?from=` 에 실어 두었으므로, 대시보드가 아니라 그 자리로 잇는다.
+  /// 그냥 로그인하러 온 경우에는 없으니 대시보드다. (#701)
+  String get _destination =>
+      AppRoutes.resumeTarget(GoRouterState.of(context).uri.toString()) ??
+      AppRoutes.dashboard;
+
   void _enterDemo() {
+    final destination = _destination;
     ref.read(sessionControllerProvider.notifier).enterDemo();
-    context.go(AppRoutes.dashboard);
+    context.go(destination);
   }
 
   void _onSignUp() => context.push(AppRoutes.signUp);
@@ -45,13 +53,14 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
   Future<void> _social(String provider) async {
     if (_loading) return;
     final messenger = ScaffoldMessenger.of(context);
+    final destination = _destination;
     setState(() => _loading = true);
     try {
       await ref
           .read(sessionControllerProvider.notifier)
           .socialLogin(provider: provider);
       if (!mounted) return;
-      context.go(AppRoutes.dashboard);
+      context.go(destination);
     } catch (_) {
       // 요청 중 화면을 떠났으면 여기서 끝낸다 — 아래 `AppLocalizations.of` 가
       // 이미 해제된 context 를 조회하게 된다.
@@ -68,6 +77,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
   Future<void> _login() async {
     if (_loading) return;
     final messenger = ScaffoldMessenger.of(context);
+    final destination = _destination;
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
@@ -84,7 +94,7 @@ class _TrainerSignInPageState extends ConsumerState<TrainerSignInPage> {
           .read(sessionControllerProvider.notifier)
           .login(email: email, password: password);
       if (!mounted) return;
-      context.go(AppRoutes.dashboard);
+      context.go(destination);
     } on AuthException catch (e) {
       if (!mounted) return;
       final AppLocalizations l = AppLocalizations.of(context);
