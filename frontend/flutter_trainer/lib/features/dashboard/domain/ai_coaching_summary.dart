@@ -46,6 +46,9 @@ enum CoachingPriority {
   }
 }
 
+/// 문장 자체가 아니라 화면이 로케일에 맞춰 표현해야 하는 규칙형 요약 상태.
+enum CoachingSummaryKind { details, noClients, allOnTrack }
+
 /// 식단·운동·건강 프로필·대화 기록을 종합한 오늘의 AI 코칭 요약.
 class AiCoachingSummary {
   const AiCoachingSummary({
@@ -53,12 +56,16 @@ class AiCoachingSummary {
     required this.clients,
     required this.generatedBy,
     required this.dataAsOf,
+    this.kind = CoachingSummaryKind.details,
+    this.totalClients = 0,
   });
 
   final String headline;
   final List<AiCoachingClientInsight> clients;
   final String generatedBy;
   final DateTime? dataAsOf;
+  final CoachingSummaryKind kind;
+  final int totalClients;
 
   factory AiCoachingSummary.fromJson(Map<String, Object?> json) {
     final rawClients = json['clients'];

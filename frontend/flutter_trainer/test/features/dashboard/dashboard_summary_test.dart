@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/features/dashboard/data/ai_coaching_summary_repository.dart';
+import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -219,6 +220,7 @@ void main() {
 
       expect(result.headline, contains('담당 고객이 등록되면'));
       expect(result.clients, isEmpty);
+      expect(result.kind, CoachingSummaryKind.noClients);
     });
 
     test('a clean roster is told so rather than left blank', () async {
@@ -231,6 +233,8 @@ void main() {
       );
 
       expect(result.headline, contains('목표 범위 안'));
+      expect(result.kind, CoachingSummaryKind.allOnTrack);
+      expect(result.totalClients, 1);
     });
   });
 }

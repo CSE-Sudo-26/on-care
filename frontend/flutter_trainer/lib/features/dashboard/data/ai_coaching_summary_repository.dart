@@ -47,6 +47,7 @@ class DemoAiCoachingSummaryRepository implements AiCoachingSummaryRepository {
         clients: const <AiCoachingClientInsight>[],
         generatedBy: 'rule',
         dataAsOf: DateTime.now(),
+        kind: CoachingSummaryKind.noClients,
       );
     }
     final selected = dashboard.attention.take(3).toList(growable: false);
@@ -58,6 +59,10 @@ class DemoAiCoachingSummaryRepository implements AiCoachingSummaryRepository {
       clients: insights,
       generatedBy: 'rule',
       dataAsOf: DateTime.now(),
+      kind: insights.isEmpty
+          ? CoachingSummaryKind.allOnTrack
+          : CoachingSummaryKind.details,
+      totalClients: dashboard.totalClients,
     );
   }
 

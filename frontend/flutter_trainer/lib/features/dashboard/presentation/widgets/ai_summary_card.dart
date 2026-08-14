@@ -114,11 +114,19 @@ class _SummaryBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final headline = switch (summary.kind) {
+      CoachingSummaryKind.noClients => l.dashAiNoClients,
+      CoachingSummaryKind.allOnTrack => l.dashAiAllOnTrack(
+        summary.totalClients,
+      ),
+      CoachingSummaryKind.details => summary.headline,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          summary.headline,
+          headline,
           style: const TextStyle(
             fontSize: 15,
             height: 1.5,
