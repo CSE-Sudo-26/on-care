@@ -278,6 +278,95 @@ def test_trainer_at_non_fitness_place_is_hidden(client, directory_trainer):
     assert client.get(f"/v1/trainers/{trainer_id}").status_code == 404
 
 
+# ---- 담당 트레이너는 소속 조건의 예외 (#691) ----
+
+@pytest.fixture
+def member_of(client, db_session):
+    """주어진 트레이너를 담당으로 가진 새 회원을 만드는 팩토리. (member_id, token)
+
+    끝나면 링크를 지운다 — 담당 링크 수를 세는 테스트가 있어 남겨 두면 깨진다.
+    """
+    from uuid import uuid4
+
+    from app.models import models
+    from tests.test_consultations import _register_member
+
+    created: list[str] = []
+
+    def _make(trainer_id: str) -> tuple[str, str]:
+        member_id, token = _register_member(client)
+        link_id = f"tc-{uuid4().hex[:12]}"
+        db_session.add(models.TrainerClient(
+            id=link_id, trainer_id=trainer_id, member_id=member_id, active=True,
+        ))
+        db_session.commit()
+        created.append(link_id)
+        return member_id, token
+
+    yield _make
+
+    from app.models import models as _models
+
+    for link_id in created:
+        row = db_session.get(_models.TrainerClient, link_id)
+        if row is not None:
+            db_session.delete(row)
+    db_session.commit()
+
+
+def test_my_coach_detail_survives_a_missing_gym(client, directory_trainer, member_of):
+    """소속이 비어도 **내 담당**의 상세는 읽혀야 한다. (#691)
+
+    `/me/coach` 는 담당 배정(`trainer_clients`)을 그대로 돌려주는데 상세만 소속
+    기준으로 404 를 내면, 회원 앱은 담당이 있다고 표시하면서 그 트레이너를 읽지
+    못한다 — 운동 탭의 예약 패널이 통째로 빠진다.
+    """
+    from tests.test_consultations import _auth
+
+    trainer_id = directory_trainer(gym_id=None)
+    _member_id, token = member_of(trainer_id)
+
+    assert client.get("/v1/me/coach", headers=_auth(token)).status_code == 200
+
+    r = client.get(f"/v1/trainers/{trainer_id}", headers=_auth(token))
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == trainer_id
+    # 소속이 없다는 사실 자체는 그대로 드러난다 — 앱이 소속 카드를 감출 수 있게.
+    assert r.json()["gym_id"] is None
+
+
+def test_coach_exception_does_not_leak_into_the_directory(
+    client, directory_trainer, member_of
+):
+    """예외는 "내 담당" 상세 한 자리뿐 — 목록·추천은 소속 조건 그대로다. (#451)"""
+    from tests.test_consultations import _auth
+
+    trainer_id = directory_trainer(gym_id=None)
+    _member_id, token = member_of(trainer_id)
+
+    assert trainer_id not in {
+        t["id"] for t in client.get("/v1/trainers", headers=_auth(token)).json()
+    }
+    assert trainer_id not in {
+        t["id"]
+        for t in client.get("/v1/trainers/recommended", headers=_auth(token)).json()
+    }
+
+
+def test_gymless_trainer_stays_404_for_other_members(
+    client, directory_trainer, member_of
+):
+    """담당이 아닌 회원에게는 여전히 404 — 예외가 다른 회원까지 열어 주면 안 된다."""
+    from tests.test_consultations import _auth, _register_member
+
+    trainer_id = directory_trainer(gym_id=None)
+    member_of(trainer_id)  # 담당인 회원은 따로 있다
+    _other_id, other_token = _register_member(client)
+
+    r = client.get(f"/v1/trainers/{trainer_id}", headers=_auth(other_token))
+    assert r.status_code == 404, r.text
+
+
 def test_gym_trainer_list_stays_a_subset_of_the_directory(client):
     """헬스장 상세의 소속 트레이너는 디렉터리에도 있어야 한다.
 
