@@ -936,9 +936,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsCompletionByDay => '요일별 운동 이행률';
 
   @override
-  String get reportsNoLastWeekDaily => '지난 주 요일별 기록은 아직 없어요';
-
-  @override
   String get reportsNoWorkoutsThisWeek => '이번 주 운동 기록이 없어요';
 
   @override

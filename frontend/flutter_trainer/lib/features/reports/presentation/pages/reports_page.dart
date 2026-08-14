@@ -592,22 +592,25 @@ class _ClientReport extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (!report.isCurrentWeek)
-                EmptyHint(message: l.reportsNoLastWeekDaily)
-              else if (client.weekCompletion.length == weekdayCount)
+              // 계열은 리포트가 자기 주의 것을 들고 온다 — 보고 있는 주가
+              // 어디든 같은 규칙으로 그린다(#752).
+              if (report.weekCompletion.length == weekdayCount)
                 BarSeriesChart(
-                  values: client.weekCompletion,
+                  values: report.weekCompletion,
                   labels: weekdayLabels(AppLocalizations.of(context)),
                   maxValue: 100,
                   height: 80,
                   showValues: true,
                   valueSuffix: '%',
-                  pendingFromIndex: elapsedWeekdays(DateTime.now()),
+                  // 아직 오지 않은 요일은 이번 주에만 있다.
+                  pendingFromIndex: report.isCurrentWeek
+                      ? elapsedWeekdays(DateTime.now())
+                      : null,
                 )
               else
                 EmptyHint(message: l.reportsNoWorkoutsThisWeek),
               const SizedBox(height: AppSpacing.lg),
-              _MetricTrendSection(client: client, report: report),
+              _MetricTrendSection(report: report),
               const SizedBox(height: AppSpacing.md),
               _FourWeekTrend(report: report),
             ],
@@ -632,9 +635,8 @@ enum _TrendMetric { calories, sodium, sugar }
 /// 눈금은 사용자 앱 `dashboard_content.dart` 의 값을 그대로 쓴다. 지표를 바꿔도
 /// 축 바닥이 항상 0 이라 세 그래프를 번갈아 봐도 기준선이 흔들리지 않는다.
 class _MetricTrendSection extends StatefulWidget {
-  const _MetricTrendSection({required this.client, required this.report});
+  const _MetricTrendSection({required this.report});
 
-  final TrainerClient client;
   final WeeklyReport report;
 
   @override
@@ -652,11 +654,11 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
 
   /// 선택한 지표의 요일별 값. 계열이 7일이 아니면(구버전 응답) 비워 둔다.
   List<double> get _values {
-    final client = widget.client;
+    final report = widget.report;
     final series = switch (_metric) {
-      _TrendMetric.calories => client.caloriesWeek.map((v) => v.toDouble()),
-      _TrendMetric.sodium => client.sodiumWeek.map((v) => v.toDouble()),
-      _TrendMetric.sugar => client.sugarWeek,
+      _TrendMetric.calories => report.caloriesWeek.map((v) => v.toDouble()),
+      _TrendMetric.sodium => report.sodiumWeek.map((v) => v.toDouble()),
+      _TrendMetric.sugar => report.sugarWeek,
     }.toList(growable: false);
     return series.length == weekdayCount ? series : const <double>[];
   }
@@ -704,21 +706,24 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        // 주간 계열은 이번 주치만 들고 있다. 지난 주를 열면 나트륨 때와 같이
-        // 없다고 말한다 — 이번 주 선을 지난 주 자리에 그리지 않는다.
-        if (!widget.report.isCurrentWeek)
-          EmptyHint(message: l.reportsNoLastWeekMetricTrend(_label(l, _metric)))
-        // 기록이 하나도 없는 고객까지 바닥에 붙은 0 선을 그리면 "기록 없음"이
+        // 기록이 하나도 없는 주까지 바닥에 붙은 0 선을 그리면 "기록 없음"이
         // "하루 0kcal" 처럼 읽힌다.
-        else if (values.isEmpty || values.every((v) => v == 0))
-          EmptyHint(message: l.reportsNoMetricRecords(_label(l, _metric)))
+        if (values.isEmpty || values.every((v) => v == 0))
+          EmptyHint(
+            message: widget.report.isCurrentWeek
+                ? l.reportsNoMetricRecords(_label(l, _metric))
+                : l.reportsNoLastWeekMetricTrend(_label(l, _metric)),
+          )
         else
           MetricTrendChart(
             values: values,
             dayLabels: weekdayLabels(l),
             goal: _goal,
             ticks: _ticks,
-            todayIndex: elapsedWeekdays(DateTime.now()) - 1,
+            // 지난 주는 이미 다 지났으니 선을 일요일까지 잇는다.
+            todayIndex: widget.report.isCurrentWeek
+                ? elapsedWeekdays(DateTime.now()) - 1
+                : weekdayCount - 1,
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
             // 따라가게 한다.
             replayKey: _metric,

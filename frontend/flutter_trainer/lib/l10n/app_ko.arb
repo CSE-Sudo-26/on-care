@@ -292,7 +292,6 @@
   "reportsCompletionAvg": "운동 이행률",
   "reportsSodiumOver": "나트륨 초과",
   "reportsCompletionByDay": "요일별 운동 이행률",
-  "reportsNoLastWeekDaily": "지난 주 요일별 기록은 아직 없어요",
   "reportsNoWorkoutsThisWeek": "이번 주 운동 기록이 없어요",
   "reportsMetricTrend": "{metric} 추이",
   "@reportsMetricTrend": {"placeholders": {"metric": {"type": "String"}}},

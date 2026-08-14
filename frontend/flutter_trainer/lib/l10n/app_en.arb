@@ -604,7 +604,6 @@
   "reportsCompletionAvg": "Workout completion",
   "reportsSodiumOver": "Sodium over target",
   "reportsCompletionByDay": "Completion by day",
-  "reportsNoLastWeekDaily": "No daily records for last week yet",
   "reportsNoWorkoutsThisWeek": "No workouts logged this week",
   "reportsMetricTrend": "{metric} trend",
   "@reportsMetricTrend": {"placeholders": {"metric": {"type": "String"}}},

@@ -1754,12 +1754,6 @@ abstract class AppLocalizations {
   /// **'Completion by day'**
   String get reportsCompletionByDay;
 
-  /// No description provided for @reportsNoLastWeekDaily.
-  ///
-  /// In en, this message translates to:
-  /// **'No daily records for last week yet'**
-  String get reportsNoLastWeekDaily;
-
   /// No description provided for @reportsNoWorkoutsThisWeek.
   ///
   /// In en, this message translates to:

@@ -966,9 +966,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsCompletionByDay => 'Completion by day';
 
   @override
-  String get reportsNoLastWeekDaily => 'No daily records for last week yet';
-
-  @override
   String get reportsNoWorkoutsThisWeek => 'No workouts logged this week';
 
   @override

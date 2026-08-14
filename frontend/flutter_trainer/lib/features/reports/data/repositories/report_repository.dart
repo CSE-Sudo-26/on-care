@@ -133,27 +133,38 @@ class DioReportRepository implements ReportRepository {
   }
 }
 
-/// Decodes `WeeklyReportOut`. [client] carries the chart series, which the
-/// report endpoint doesn't repeat (the roster already delivered them).
+/// Decodes `WeeklyReportOut`. 계열도 함께 온다 — 로스터의 것은 이번 주 것이라
+/// 과거 주 화면에 쓸 수 없다(#752).
 WeeklyReport weeklyReportFromJson(
   Map<String, dynamic> json,
   TrainerClient client,
 ) {
   int? optInt(String key) => (json[key] as num?)?.toInt();
+  List<int> ints(String key) => (json[key] as List<Object?>? ?? const <Object?>[])
+      .whereType<num>()
+      .map((n) => n.toInt())
+      .toList(growable: false);
+  List<double> doubles(String key) =>
+      (json[key] as List<Object?>? ?? const <Object?>[])
+          .whereType<num>()
+          .map((n) => n.toDouble())
+          .toList(growable: false);
   final weekStart =
       DateTime.tryParse(json['week_start'] as String? ?? '') ??
       weekStartOf(DateTime.now());
   return WeeklyReport(
     client: client,
     weekStart: weekStart,
-    // [client]'s weekday series describes the current week only, so the
-    // report has to say which week it is before anything renders them.
     isCurrentWeek: weekStartOf(weekStart) == weekStartOf(DateTime.now()),
     sessionsBooked: optInt('sessions_booked') ?? 0,
     sessionsDone: optInt('sessions_done') ?? 0,
     completionAvg: optInt('completion_avg'),
     sodiumOverDays: optInt('sodium_over_days') ?? 0,
     sodiumAvg: optInt('sodium_avg'),
+    weekCompletion: ints('week_completion'),
+    sodiumWeek: ints('sodium_week'),
+    caloriesWeek: ints('calories_week'),
+    sugarWeek: doubles('sugar_week'),
   );
 }
 
