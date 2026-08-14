@@ -597,13 +597,13 @@ void main() {
       // The open form's TextField adds an inner Scrollable — target the
       // page ListView explicitly.
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 4)); // reset window
@@ -677,13 +677,13 @@ void main() {
       await openTab(tester);
 
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await settle(tester);
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
 
@@ -740,13 +740,13 @@ void main() {
       await openTab(tester);
 
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await tester.pump();
 
       expect(find.text('김민수님에게 전송 완료!'), findsOneWidget);
@@ -859,13 +859,13 @@ void main() {
       await goTo(tester, AppRoutes.coaching);
 
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await settle(tester);
 
       expect(find.text('전송에 실패했어요. 다시 시도해 주세요'), findsNothing);
@@ -948,13 +948,13 @@ void main() {
 
       // Start 김민수's (slow) send, then switch to 이지수 mid-flight.
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await tester.pump(const Duration(milliseconds: 50));
 
       await tester.scrollUntilVisible(
@@ -1114,13 +1114,13 @@ void main() {
 
     Future<void> tapSend(WidgetTester tester) async {
       await tester.scrollUntilVisible(
-        find.text('회원에게 배정'),
+        find.text('고객에게 배정'),
         150,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.ensureVisible(find.text('회원에게 배정'));
+      await tester.ensureVisible(find.text('고객에게 배정'));
       await tester.pump();
-      await tester.tap(find.text('회원에게 배정'));
+      await tester.tap(find.text('고객에게 배정'));
       await settle(tester);
     }
 

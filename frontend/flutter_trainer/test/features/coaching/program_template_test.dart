@@ -100,7 +100,7 @@ void main() {
 
     testWidgets('중복 전송 이력 대신 회원 요약을 한 번만 보여 준다', (tester) async {
       await openCoaching(tester);
-      expect(find.text('회원 요약'), findsOneWidget);
+      expect(find.text('고객 요약'), findsOneWidget);
       expect(find.text('전송 이력'), findsNothing);
     });
   });

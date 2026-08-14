@@ -159,7 +159,7 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
   });
 
-  testWidgets('the detail scroll state does not leak into another client', (
+  testWidgets('the detail tab state does not leak into another client', (
     tester,
   ) async {
     await openWide(tester);
@@ -168,7 +168,7 @@ void main() {
     await settle(tester);
 
     expect(
-      find.byKey(const ValueKey<String>('client-detail-scroll-seed-client-1')),
+      find.byKey(const ValueKey<String>('client-detail-tabs-seed-client-1')),
       findsOneWidget,
     );
 
@@ -177,7 +177,7 @@ void main() {
     await settle(tester);
 
     expect(
-      find.byKey(const ValueKey<String>('client-detail-scroll-seed-client-2')),
+      find.byKey(const ValueKey<String>('client-detail-tabs-seed-client-2')),
       findsOneWidget,
     );
   });
@@ -293,7 +293,8 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('나트륨 초과'), findsWidgets);
-    expect(find.text('메시지'), findsOneWidget);
+    expect(find.text('고객 신체·목표 관리'), findsOneWidget);
+    expect(find.text('메모'), findsOneWidget);
   });
 
   testWidgets('a percent-encoded id round-trips through the path', (

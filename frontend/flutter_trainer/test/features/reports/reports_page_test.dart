@@ -281,7 +281,7 @@ void main() {
     final feedback = find.byWidgetPredicate(
       (widget) =>
           widget is TextField &&
-          widget.decoration?.hintText == '회원에게 전달할 코칭 피드백을 작성하세요.',
+          widget.decoration?.hintText == '고객에게 전달할 코칭 피드백을 작성하세요.',
     );
     await tester.enterText(feedback, '   ');
     await tester.pump();

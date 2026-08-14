@@ -95,7 +95,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authNoAccount => '계정이 없으신가요?';
 
   @override
-  String get authSignUp => '회원가입';
+  String get authSignUp => '계정 만들기';
 
   @override
   String get authBrowseDemo => '로그인 없이 데모 둘러보기';
@@ -152,7 +152,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authErrInviteCodeRequired => '헬스장에서 받은 초대 코드를 입력해 주세요';
 
   @override
-  String get authErrSignUpFailed => '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
+  String get authErrSignUpFailed => '가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get dashTitle => '대시보드';
@@ -425,7 +425,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsNew => '신규 고객';
 
   @override
-  String get clientsTitle => '회원 관리';
+  String get clientsTitle => '고객 관리';
 
   @override
   String get clientsManagementAttention => '관리 필요';
@@ -467,10 +467,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientsAddFailed => '등록에 실패했어요. 다시 시도해 주세요';
 
   @override
-  String get memberHealthLoadFailed => '회원 정보를 불러오지 못했어요. 다시 시도해 주세요';
+  String get memberHealthLoadFailed => '고객 정보를 불러오지 못했어요. 다시 시도해 주세요';
 
   @override
-  String get memberHealthSaveFailed => '회원 정보를 저장하지 못했어요. 다시 시도해 주세요';
+  String get memberHealthSaveFailed => '고객 정보를 저장하지 못했어요. 다시 시도해 주세요';
 
   @override
   String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
@@ -613,7 +613,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachSheetSubtitle => '이 회원의 식단·운동 기록을 근거로 답해요.';
+  String get coachSheetSubtitle => '이 고객의 식단·운동 기록을 근거로 답해요.';
 
   @override
   String get coachSheetHint => '예) 나트륨이 계속 높은데 어떤 식단을 권할까요?';
@@ -657,14 +657,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultEmptyHistory => '상담 요청 이력이 없어요';
 
   @override
-  String get consultEmptyHint => '회원이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요';
+  String get consultEmptyHint => '고객이 헬스장이나 나를 지정해 상담을 신청하면 여기에 표시돼요';
 
   @override
   String get consultActionFailed => '상담을 처리하지 못했어요';
 
   @override
   String consultApproved(String name) {
-    return '$name 회원을 담당 고객으로 등록했어요';
+    return '$name 고객을 담당으로 등록했어요';
   }
 
   @override
@@ -692,7 +692,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get consultRejectTitle => '상담 요청 반려';
 
   @override
-  String get consultRejectNotice => '입력한 사유는 회원에게 알림으로 전달돼요.';
+  String get consultRejectNotice => '입력한 사유는 고객에게 알림으로 전달돼요.';
 
   @override
   String get consultRejectHint => '예) 이번 달은 정원이 찼어요';
@@ -864,7 +864,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsTitle => '리포트';
 
   @override
-  String get reportsSubtitle => '이번 주 변화를 정리하고 회원에게 전달할 리포트를 작성하세요';
+  String get reportsSubtitle => '이번 주 변화를 정리하고 고객에게 전달할 리포트를 작성하세요';
 
   @override
   String get reportsPrevWeek => '이전 주';
@@ -1184,7 +1184,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String slotIntro(String date) {
-    return '$date에 회원이 예약할 시간을 엽니다.';
+    return '$date에 고객이 예약할 시간을 엽니다.';
   }
 
   @override
@@ -1434,13 +1434,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachTitle => '프로그램';
 
   @override
-  String get coachSubtitle => '회원별 운동 프로그램을 만들고 배정·관리하세요';
+  String get coachSubtitle => '고객별 운동 프로그램을 만들고 배정·관리하세요';
 
   @override
-  String get coachMemberPrograms => '회원별 프로그램';
+  String get coachMemberPrograms => '고객별 프로그램';
 
   @override
-  String get coachMemberSummary => '회원 요약';
+  String get coachMemberSummary => '고객 요약';
 
   @override
   String get reportsDataInsufficient => '데이터 부족';
@@ -1789,7 +1789,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get slotFlexible => '조율 가능';
 
   @override
-  String get unknownMember => '알 수 없는 회원';
+  String get unknownMember => '알 수 없는 고객';
 
   @override
   String get filterAll => '전체';
@@ -1926,7 +1926,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myDeleteAction => '탈퇴';
 
   @override
-  String get myDeleteHint => '담당 회원 연결과 예약이 함께 사라져요';
+  String get myDeleteHint => '담당 고객 연결과 예약이 함께 사라져요';
 
   @override
   String get myDeleteDemo => '데모 모드에는 지울 계정이 없어요';
@@ -1936,7 +1936,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myDeleteBody =>
-      '담당 회원 연결과 예약이 사라지고, 회원에게 알림이 전달돼요. 이 작업은 되돌릴 수 없어요.';
+      '담당 고객 연결과 예약이 사라지고, 고객에게 알림이 전달돼요. 이 작업은 되돌릴 수 없어요.';
 
   @override
   String get myDeleteFailed => '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요';
@@ -1993,7 +1993,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String routineDeleteBody(String name) {
-    return '$name 배정이 회원 앱에서도 사라져요.';
+    return '$name 배정이 고객 앱에서도 사라져요.';
   }
 
   @override
@@ -2066,7 +2066,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routineFeedbackTitle => '수행 피드백';
 
   @override
-  String get routineFeedbackHint => '회원에게 전할 코칭 피드백을 입력해 주세요';
+  String get routineFeedbackHint => '고객에게 전할 코칭 피드백을 입력해 주세요';
 
   @override
   String get routineFeedbackWrite => '피드백 작성';
@@ -2104,7 +2104,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navMessages => '메시지';
 
   @override
-  String get messagesSubtitle => '회원과 코칭 내용을 주고받고 빠르게 후속 조치하세요';
+  String get messagesSubtitle => '고객과 코칭 내용을 주고받고 빠르게 후속 조치하세요';
 
   @override
   String get messagesLoadFailed => '대화 목록을 불러오지 못했어요.';
@@ -2155,7 +2155,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesClientDetail => '고객 상세 보기';
 
   @override
-  String get messagesSelectPrompt => '왼쪽 목록에서 대화할 회원을 선택하세요.';
+  String get messagesSelectPrompt => '왼쪽 목록에서 대화할 고객을 선택하세요.';
 
   @override
   String get clientQuickMessages => '메시지';
@@ -2167,7 +2167,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clientQuickSchedule => '일정 등록';
 
   @override
-  String get clientHealthGoals => '회원 신체·목표 관리';
+  String get clientHealthGoals => '고객 신체·목표 관리';
 
   @override
   String get clientTrainerMemo => '메모';
@@ -2233,7 +2233,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorAssignUnsupported => '현재 서버는 평면 루틴 배정만 지원해요.';
 
   @override
-  String get programEditorAssign => '회원에게 배정';
+  String get programEditorAssign => '고객에게 배정';
 
   @override
   String get programEditorInfo => '프로그램 정보';
@@ -2358,7 +2358,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackSave => '피드백 저장';
 
   @override
-  String get reportsFeedbackHint => '회원에게 전달할 코칭 피드백을 작성하세요.';
+  String get reportsFeedbackHint => '고객에게 전달할 코칭 피드백을 작성하세요.';
 
   @override
   String get reportsFeedbackHelper => '초안은 서버에 저장되지 않으며, 전송 시 기존 채팅으로 전달됩니다.';
