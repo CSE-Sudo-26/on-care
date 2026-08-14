@@ -12,11 +12,11 @@ import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/auth/presentation/pages/trainer_sign_in_page.dart';
 import 'package:oncare_trainer/features/clients/presentation/pages/clients_page.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
-import 'package:oncare_trainer/features/consultations/presentation/pages/consultations_page.dart';
+import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:oncare_trainer/features/messages/presentation/pages/messages_page.dart';
 import 'package:oncare_trainer/features/schedule/presentation/pages/schedule_page.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
@@ -27,6 +27,16 @@ const String _clientId = 'user-demo';
 const String _consultationMemberName = '이지수';
 const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 const Duration _fixtureApiTimeout = Duration(seconds: 15);
+const String _rejectionNote = '#624 E2E 반복 실행 확인';
+
+/// 회원 스레드가 열린 자리 — 채팅은 이제 `/messages` 가 소유한다. (#692)
+final String _chatLocation = AppRoutes.messagesFor(_clientId);
+
+/// 열린 스레드를 가리키는 finder. `ChatView` 타입으로 찾으면 고객 상세에도 같은
+/// 위젯이 있던 시절 기준이라, 스레드가 실제로 **메시지 화면**에 떴는지 못 가린다.
+final Finder _chatThread = find.byKey(
+  ValueKey<String>('messages-thread-$_clientId'),
+);
 
 Future<void> _pumpUntil(
   WidgetTester tester,
@@ -131,20 +141,93 @@ Future<void> _openClient(WidgetTester tester) async {
   expect(_location(tester), AppRoutes.clientDetail(_clientId));
 }
 
-Future<void> _restartAtCurrentBrowserLocation(WidgetTester tester) async {
-  // integration_test exposes no WebDriver refresh command. Disposing and
-  // booting the production root at the unchanged browser URL exercises the
-  // two app contracts that a refresh relies on: secure-session restoration
-  // and GoRouter's platform-location restoration.
+/// 사이드바 → 메시지 → 회원 스레드.
+///
+/// 트레이너 웹 Figma 정렬(#665, #676) 이후 채팅은 고객 상세의 `client-chat-button`
+/// 이 아니라 **메시지 화면**에 있다. 고객 상세의 메시지 버튼도 결국 여기로 보내고
+/// (`/clients/<id>/chat` 은 라우터가 `/messages?client=<id>` 로 넘긴다), 회원 스레드는
+/// `messages-thread-<id>` 로 뜬다. (#692)
+Future<void> _openClientChat(WidgetTester tester) async {
+  await _openSidebar(tester, AppRoutes.messages);
+  await _pumpUntil(
+    tester,
+    find.byType(MessagesPage),
+    step: 'messages navigation',
+  );
+  final conversation = find.byKey(
+    const ValueKey<String>('messages-conversation-$_clientId'),
+  );
+  await _pumpUntil(tester, conversation, step: 'client conversation load');
+  await tester.tap(conversation);
+  await _pumpUntil(tester, _chatThread, step: 'client chat thread');
+  expect(_location(tester), _chatLocation);
+}
+
+/// 앱을 통째로 다시 띄운다 — 새로고침에 준하는 재부팅.
+///
+/// integration_test 에는 WebDriver 새로고침 명령이 없다. 프로덕션 루트를 버리고
+/// 다시 부팅하면 새로고침이 기대는 계약 하나가 그대로 걸린다: **보안 저장소의 세션이
+/// 살아남아 로그인 화면으로 되돌아가지 않는가.**
+///
+/// 위치는 복원되지 않는다. `buildAppRouter` 가 `initialLocation` 을 로그인 화면으로
+/// 고정해 두어(7083dccd), 부팅은 늘 로그인 라우트에서 시작하고 세션이 복원되면
+/// 인증 게이트가 대시보드로 보낸다 — 브라우저 URL 은 읽지 않는다. 이 스위트가
+/// 처음부터 딥링크 복원을 단언하고 있었지만, 스크립트의 헬스 체크가 막혀 한 번도
+/// 실행되지 않아 드러나지 않았다. (#692)
+Future<void> _reboot(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
   await bootstrap();
+  await _pumpUntil(tester, find.byType(AppShell), step: 'app reboot');
+  expect(
+    find.byType(TrainerSignInPage),
+    findsNothing,
+    reason: 'secure session did not survive the reboot',
+  );
+  expect(_location(tester), AppRoutes.dashboard);
 }
 
 String _ymd(DateTime value) =>
     '${value.year.toString().padLeft(4, '0')}-'
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
+
+/// 회원 계정으로 본 상담 요청 목록. 픽스처 준비와 결과 확인이 같은 창구를 쓴다.
+Future<List<Map<String, dynamic>>> _memberConsultations() async {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: _apiBaseUrl,
+      connectTimeout: _fixtureApiTimeout,
+      sendTimeout: _fixtureApiTimeout,
+      receiveTimeout: _fixtureApiTimeout,
+    ),
+  );
+  final login = await dio.post<Map<String, dynamic>>(
+    '/auth/login',
+    data: <String, String>{'username': _memberEmail, 'password': _password},
+    options: Options(contentType: Headers.formUrlEncodedContentType),
+  );
+  final token = login.data!['access_token'] as String;
+  final mine = await dio.get<List<dynamic>>(
+    '/consultations/me',
+    options: Options(
+      headers: <String, String>{'Authorization': 'Bearer $token'},
+    ),
+  );
+  return <Map<String, dynamic>>[
+    for (final item in mine.data ?? const <dynamic>[])
+      item as Map<String, dynamic>,
+  ];
+}
+
+/// 회원이 보는 상담 요청 한 건 — 트레이너가 남긴 결과·사유가 그대로 오는지 본다.
+Future<Map<String, dynamic>> _memberConsultation(String id) async {
+  final rows = await _memberConsultations();
+  return rows.firstWhere(
+    (row) => row['id'] == id,
+    orElse: () => throw StateError('상담 요청 $id 이 회원 목록에 없습니다.'),
+  );
+}
 
 Future<String> _ensurePendingConsultation() async {
   final dio = Dio(
@@ -164,9 +247,7 @@ Future<String> _ensurePendingConsultation() async {
   final auth = Options(
     headers: <String, String>{'Authorization': 'Bearer $token'},
   );
-  final mine = await dio.get<List<dynamic>>('/consultations/me', options: auth);
-  for (final item in mine.data ?? const <dynamic>[]) {
-    final row = item as Map<String, dynamic>;
+  for (final row in await _memberConsultations()) {
     if (row['status'] == 'pending' && row['trainer_id'] == 'trainer-demo') {
       return row['id'] as String;
     }
@@ -193,45 +274,29 @@ Future<String> _ensurePendingConsultation() async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('login, client sections, and refresh-equivalent restore', (
+  testWidgets('login, client evidence, and a session that survives a reboot', (
     tester,
   ) async {
     await _bootSignedOut(tester);
     await _loginThroughUi(tester);
     await _openClient(tester);
 
-    final tabs = find.byKey(const ValueKey<String>('client-detail-sub-tabs'));
-    final l = _l10n(tester);
-    await tester.tap(
-      find.descendant(of: tabs, matching: find.text(l.clientTabWorkout)),
-    );
+    // 식단·운동은 더 이상 서로 다른 탭이 아니다 — 한 스크롤에 함께 있고 URL 의
+    // section 은 순서만 정한다(#665, #676). 둘 다 떠 있는지로 확인한다.
     await _pumpUntil(
       tester,
       find.byType(WorkoutView),
-      step: 'client workout section',
+      step: 'client workout evidence',
     );
-    expect(
-      _location(tester),
-      AppRoutes.clientDetail(_clientId, section: 'workout'),
-      reason: 'customer context lost in workout section',
-    );
-    await tester.tap(find.byKey(const ValueKey<String>('client-chat-button')));
-    await _pumpUntil(
-      tester,
-      find.byType(ChatView),
-      step: 'client chat section',
-    );
-    final expectedLocation = AppRoutes.clientDetail(_clientId, section: 'chat');
-    expect(_location(tester), expectedLocation);
+    expect(find.byType(DietView), findsWidgets);
 
-    await _restartAtCurrentBrowserLocation(tester);
-    await _pumpUntil(
-      tester,
-      find.byType(ChatView),
-      step: 'session and client route restore',
-    );
-    expect(find.byType(TrainerSignInPage), findsNothing);
-    expect(_location(tester), expectedLocation);
+    await _openClientChat(tester);
+
+    // 재부팅해도 로그인 화면으로 되돌아가지 않는다. 열려 있던 스레드로는 돌아오지
+    // 않는다 — 라우터가 시작 위치를 로그인 화면으로 고정해 두어 세션이 복원되면
+    // 대시보드로 간다(`_reboot` 참고).
+    await _reboot(tester);
+    await _openClientChat(tester);
   });
 
   testWidgets('chat message is sent once and survives page re-entry', (
@@ -239,9 +304,7 @@ void main() {
   ) async {
     await _bootSignedOut(tester);
     await _loginThroughUi(tester);
-    await _openClient(tester);
-    await tester.tap(find.byKey(const ValueKey<String>('client-chat-button')));
-    await _pumpUntil(tester, find.byType(ChatView), step: 'chat navigation');
+    await _openClientChat(tester);
 
     final message = '#624 E2E ${DateTime.now().toUtc().toIso8601String()}';
     await tester.enterText(
@@ -252,15 +315,14 @@ void main() {
     await _pumpUntil(tester, find.text(message), step: 'chat send result');
     expect(find.text(message), findsOneWidget);
 
-    await _restartAtCurrentBrowserLocation(tester);
+    // 재부팅하고 스레드로 다시 들어오면, 방금 보낸 말이 로컬 상태가 아니라 서버에서
+    // 다시 온다. 한 건으로만 남는지도 여기서 걸린다(중복 발신 회귀).
+    await _reboot(tester);
+    await _openClientChat(tester);
     await _pumpUntil(
       tester,
-      find.byType(ChatView),
-      step: 'chat server refetch after page re-entry',
-    );
-    expect(
-      _location(tester),
-      AppRoutes.clientDetail(_clientId, section: 'chat'),
+      find.text(message),
+      step: 'chat server refetch after re-entry',
     );
     expect(find.text(message), findsOneWidget);
   });
@@ -271,11 +333,20 @@ void main() {
     final consultationId = await _ensurePendingConsultation();
     await _bootSignedOut(tester);
     await _loginThroughUi(tester);
-    await _openSidebar(tester, AppRoutes.consultations);
+
+    // 상담 요청은 사이드바 행이 아니라 **스케줄 탭의 인박스 시트**다 — 요청이
+    // 캘린더 일정이 되는 흐름이라 달력 옆으로 옮겼다(ce710418). (#692)
+    await _openSidebar(tester, AppRoutes.schedule);
     await _pumpUntil(
       tester,
-      find.byType(ConsultationsPage),
-      step: 'consultation inbox navigation',
+      find.byType(SchedulePage),
+      step: 'schedule navigation',
+    );
+    await tester.tap(find.text(_l10n(tester).consultTitle));
+    await _pumpUntil(
+      tester,
+      find.byType(ConsultationInboxSheet),
+      step: 'consultation inbox sheet',
     );
 
     final requestKey = ValueKey<String>('consultation-$consultationId');
@@ -298,35 +369,32 @@ void main() {
         of: find.byType(AlertDialog),
         matching: find.byType(TextField),
       ),
-      '#624 E2E 반복 실행 확인',
+      _rejectionNote,
     );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('consultation-reject-confirm')),
+    // 사유가 비면 확인 버튼이 비활성이다. `enterText` 는 프레임을 그려 주지 않으므로
+    // 여기서 한 번 그려야 버튼이 눌리는 상태로 바뀐다 — 안 그리면 탭이 조용히
+    // 무시되고 다이얼로그가 그대로 남는다.
+    final rejectConfirm = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextButton &&
+          widget.key == const ValueKey<String>('consultation-reject-confirm') &&
+          widget.onPressed != null,
+      description: 'enabled rejection confirm button',
     );
-    await _pumpUntil(
-      tester,
-      find.text(_l10n(tester).consultRejected),
-      step: 'consultation rejection result',
-    );
+    await _pumpUntil(tester, rejectConfirm, step: 'rejection note accepted');
+    await tester.tap(rejectConfirm);
+    // 시트는 대기 중인 요청만 보여 준다 — 거절한 건은 목록에서 빠진다.
     await _pumpUntilAbsent(
       tester,
       find.byKey(requestKey),
       step: 'pending consultation list refresh',
     );
-    expect(find.byKey(requestKey), findsNothing);
 
-    await tester.tap(find.text(_l10n(tester).consultShowAll));
-    await _pumpUntil(
-      tester,
-      find.byKey(requestKey),
-      step: 'rejected consultation history',
-    );
-    expect(
-      find.text(
-        _l10n(tester).consultStatusRejectedWithNote('#624 E2E 반복 실행 확인'),
-      ),
-      findsOneWidget,
-    );
+    // 시트에는 처리 이력을 다시 여는 자리가 없다(예전 페이지의 "전체 보기"). 사유가
+    // 회원에게 그대로 갔는지는 회원 계정으로 서버에 물어 확인한다.
+    final decided = await _memberConsultation(consultationId);
+    expect(decided['status'], 'rejected');
+    expect(decided['decision_note'], _rejectionNote);
   });
 
   testWidgets('schedule view/date selection opens the booked client', (
@@ -400,12 +468,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('session-chat-chip')));
     await _pumpUntil(
       tester,
-      find.byType(ChatView),
-      step: 'booked client detail navigation',
+      _chatThread,
+      step: 'booked client chat navigation',
     );
-    expect(
-      _location(tester),
-      AppRoutes.clientDetail(_clientId, section: 'chat'),
-    );
+    expect(_location(tester), _chatLocation);
   });
 }

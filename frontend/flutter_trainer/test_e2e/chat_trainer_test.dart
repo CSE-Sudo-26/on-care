@@ -20,8 +20,8 @@ import 'support/e2e_harness.dart';
 /// 사이드바 → 메시지 → 담당 회원 스레드.
 ///
 /// 트레이너 웹 Figma 정렬(#665, #676) 이후 채팅은 고객 상세의 버튼이 아니라 **메시지
-/// 화면**에 있다. 기존 `integration_test/trainer_web_core_flows_test.dart` 는 아직
-/// 사라진 `client-chat-button` 을 누르고 있어 그대로는 통과하지 못한다.
+/// 화면**에 있다. 브라우저 스위트(`integration_test/trainer_web_core_flows_test.dart`)
+/// 도 같은 경로를 쓴다(#692).
 Future<void> _openClientChat(WidgetTester tester) async {
   await tester.tap(
     find.byKey(ValueKey<String>('sidebar-${AppRoutes.messages}')),
