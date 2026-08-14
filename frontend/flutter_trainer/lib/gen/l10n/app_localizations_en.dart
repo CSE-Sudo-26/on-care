@@ -984,7 +984,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsSendStateSending => 'Sending…';
 
   @override
-  String get reportsSendAction => 'Send to client';
+  String get reportsShare => 'Share';
+
+  @override
+  String reportsShareSendTo(String name) {
+    return 'Send to $name';
+  }
+
+  @override
+  String get reportsShareNeedsFeedback => 'Write feedback first to send it.';
+
+  @override
+  String get reportsShareNoClient => 'Pick a client to see their report first.';
 
   @override
   String reportBodyTitle(String range) {

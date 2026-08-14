@@ -610,7 +610,11 @@
   "reportsNoLastWeekSodium": "No sodium trend for last week yet",
   "reportsSendStateSent": "Sent",
   "reportsSendStateSending": "Sending…",
-  "reportsSendAction": "Send to client",
+  "reportsShare": "Share",
+  "reportsShareSendTo": "Send to {name}",
+  "@reportsShareSendTo": {"placeholders": {"name": {"type": "String"}}},
+  "reportsShareNeedsFeedback": "Write feedback first to send it.",
+  "reportsShareNoClient": "Pick a client to see their report first.",
   "reportBodyTitle": "📊 Weekly report · {range}",
   "@reportBodyTitle": {
     "placeholders": {

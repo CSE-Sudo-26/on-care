@@ -1790,11 +1790,29 @@ abstract class AppLocalizations {
   /// **'Sending…'**
   String get reportsSendStateSending;
 
-  /// No description provided for @reportsSendAction.
+  /// No description provided for @reportsShare.
   ///
   /// In en, this message translates to:
-  /// **'Send to client'**
-  String get reportsSendAction;
+  /// **'Share'**
+  String get reportsShare;
+
+  /// No description provided for @reportsShareSendTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {name}'**
+  String reportsShareSendTo(String name);
+
+  /// No description provided for @reportsShareNeedsFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Write feedback first to send it.'**
+  String get reportsShareNeedsFeedback;
+
+  /// No description provided for @reportsShareNoClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a client to see their report first.'**
+  String get reportsShareNoClient;
 
   /// No description provided for @reportBodyTitle.
   ///

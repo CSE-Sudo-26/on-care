@@ -60,6 +60,31 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   /// A send is in flight for this client.
   String? _sending;
 
+  /// 피드백 입력창의 현재 내용. 전송 버튼이 헤더의 공유 메뉴로 올라가면서
+  /// 입력창과 전송이 서로 다른 위젯에 있게 되어, 그 사이를 잇는 값이다.
+  ///
+  /// `setState` 를 부르지 않는다 — 메뉴는 열릴 때 `itemBuilder` 가 이 값을 다시
+  /// 읽으므로, 글자 하나마다 리포트 화면 전체를 다시 그릴 이유가 없다.
+  String? _feedbackDraft;
+
+  /// [_feedbackDraft] 가 어느 리포트의 것인가(`고객|주`). 고객이나 주가 바뀌면
+  /// 남의 리포트에 쓰던 문구가 따라가지 않게 버린다.
+  String? _feedbackFor;
+
+  /// 입력창이 비었는가. 메뉴의 전송 항목을 잠그는 유일한 이유라, 이 값이
+  /// 바뀔 때만 다시 그린다 — 글자마다 화면 전체를 다시 그리지 않는다.
+  bool _feedbackBlank = false;
+
+  /// 이 리포트에 대해 실제로 보낼 문구 — 트레이너가 고친 게 있으면 그것,
+  /// 없으면 화면에 채워져 있는 기본 문구다.
+  String _messageFor(AppLocalizations l, WeeklyReport report) =>
+      _feedbackFor == _feedbackKey(report)
+      ? (_feedbackDraft ?? reportMessage(l, report))
+      : reportMessage(l, report);
+
+  static String _feedbackKey(WeeklyReport report) =>
+      '${report.client.id}|${report.weekStart.toIso8601String()}';
+
   @override
   void didUpdateWidget(ReportsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -78,6 +103,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _weekStart = _weekStart.add(Duration(days: 7 * direction));
       // A different week is a different report — allow sending again.
       _sent.clear();
+      _feedbackDraft = null;
+      _feedbackFor = null;
+      _feedbackBlank = false;
     });
   }
 
@@ -87,7 +115,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     setState(() {
       _weekStart = currentWeek;
       _sent.clear();
+      _feedbackDraft = null;
+      _feedbackFor = null;
+      _feedbackBlank = false;
     });
+  }
+
+  /// 헤더 공유 메뉴의 전송. 화면에 떠 있는 리포트와 입력창의 현재 문구를 함께
+  /// 보낸다 — 입력창과 전송 버튼이 서로 다른 위젯이 되면서 필요해진 연결이다.
+  Future<void> _sendSelected(WeeklyReport report) {
+    return _send(report, _messageFor(AppLocalizations.of(context), report));
   }
 
   Future<void> _send(WeeklyReport report, String message) async {
@@ -126,6 +163,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       to: ymd(_weekStart.add(const Duration(days: 6))),
     );
     final weekSessions = ref.watch(scheduleRangeProvider(range));
+    // 헤더는 본문(LayoutBuilder)보다 위에 있어 본문이 고른 고객을 볼 수 없다.
+    // 본문과 **같은 규칙**으로 여기서 한 번 더 고른다 — 메뉴 항목에 이름을
+    // 함께 보여 주므로 누구에게 가는 리포트인지 화면에서 드러난다.
+    final roster = clientsAsync.valueOrNull ?? const <TrainerClient>[];
+    final TrainerClient? shareTarget = roster.isEmpty
+        ? null
+        : roster.firstWhere((c) => c.id == _clientId, orElse: () => roster.first);
 
     return PageScaffold(
       key: ValueKey<String>('reports-${_clientId ?? 'list'}'),
@@ -144,7 +188,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             icon: Icons.today_outlined,
             onPressed: _goToCurrentWeek,
           ),
-        const _UnsupportedPdfExportAction(),
+        _ShareMenu(
+          client: shareTarget,
+          weekStart: _weekStart,
+          sent: shareTarget != null && _sent.contains(shareTarget.id),
+          sending: shareTarget != null && _sending == shareTarget.id,
+          feedbackBlank: _feedbackBlank,
+          onSend: _sendSelected,
+        ),
       ],
       child: clientsAsync.when(
         loading: () => const Padding(
@@ -232,9 +283,17 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     ),
                     data: (data) => _ClientReport(
                       report: data,
-                      sent: _sent.contains(selected.id),
-                      sending: _sending == selected.id,
-                      onSend: _send,
+                      initialFeedback: _messageFor(l, data),
+                      onFeedbackChanged: (text) {
+                        _feedbackDraft = text;
+                        _feedbackFor = _feedbackKey(data);
+                        // 비었는지 여부가 바뀔 때만 다시 그린다 — 그 외에는
+                        // 화면이 달라질 것이 없다.
+                        final blank = text.trim().isEmpty;
+                        if (blank != _feedbackBlank) {
+                          setState(() => _feedbackBlank = blank);
+                        }
+                      },
                     ),
                   );
 
@@ -398,15 +457,17 @@ Color _verdictTone(int? value, Color Function(int) verdict) =>
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
-    required this.sent,
-    required this.sending,
-    required this.onSend,
+    required this.initialFeedback,
+    required this.onFeedbackChanged,
   });
 
   final WeeklyReport report;
-  final bool sent;
-  final bool sending;
-  final void Function(WeeklyReport report, String message) onSend;
+
+  /// 입력창에 채워 둘 문구. 트레이너가 고치던 중이면 그 내용이다.
+  final String initialFeedback;
+
+  /// 입력창이 바뀔 때마다 현재 문구를 올려 준다 — 전송은 헤더 공유 메뉴가 한다.
+  final ValueChanged<String> onFeedbackChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -449,10 +510,8 @@ class _ClientReport extends StatelessWidget {
             key: ValueKey<String>(
               'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
             ),
-            initialText: reportMessage(l, report),
-            sent: sent,
-            sending: sending,
-            onSend: (message) => onSend(report, message),
+            initialText: initialFeedback,
+            onChanged: onFeedbackChanged,
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -727,15 +786,13 @@ class _FeedbackEditor extends StatefulWidget {
   const _FeedbackEditor({
     super.key,
     required this.initialText,
-    required this.sent,
-    required this.sending,
-    required this.onSend,
+    required this.onChanged,
   });
 
   final String initialText;
-  final bool sent;
-  final bool sending;
-  final ValueChanged<String> onSend;
+
+  /// 전송은 헤더의 공유 메뉴가 한다 — 이 위젯은 문구만 들고 올려 준다.
+  final ValueChanged<String> onChanged;
 
   @override
   State<_FeedbackEditor> createState() => _FeedbackEditorState();
@@ -745,8 +802,6 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.initialText,
   );
-
-  bool get _canSend => _controller.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -770,32 +825,12 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
         const SizedBox(height: AppSpacing.sm),
         TextField(
           controller: _controller,
-          onChanged: (_) => setState(() {}),
+          onChanged: widget.onChanged,
           minLines: 4,
           maxLines: 7,
           decoration: InputDecoration(
             hintText: l.reportsFeedbackHint,
             helperText: l.reportsFeedbackHelper,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ActionButton(
-            label: widget.sent
-                ? l.reportsSendStateSent
-                : (widget.sending
-                      ? l.reportsSendStateSending
-                      : l.reportsSendAction),
-            icon: widget.sent ? Icons.check : Icons.send_outlined,
-            primary: true,
-            onPressed: widget.sent || widget.sending || !_canSend
-                ? null
-                : () {
-                    final text = _controller.text.trim();
-                    if (text.isEmpty) return;
-                    widget.onSend(text);
-                  },
           ),
         ),
       ],
@@ -945,24 +980,101 @@ class _ReportAiCard extends StatelessWidget {
   }
 }
 
-class _UnsupportedPdfExportAction extends StatelessWidget {
-  const _UnsupportedPdfExportAction();
+/// 리포트를 내보내는 두 경로를 한 메뉴로 모은 헤더 액션. (#735)
+///
+/// 전에는 동작하는 `고객에게 전송` 이 피드백 입력창 아래에, 눌리지 않는
+/// `PDF 내보내기` 가 헤더에 따로 있어서 "이 리포트를 어떻게 내보내지"의 답이
+/// 화면 두 곳에 나뉘어 있었다.
+///
+/// 항목에 고객 이름을 함께 적는다 — 헤더는 본문보다 위에 있어 어느 리포트가
+/// 열려 있는지 눈으로 잇기 어렵고, 잘못된 고객에게 보내는 실수가 되돌릴 수
+/// 없는 종류이기 때문이다.
+class _ShareMenu extends ConsumerWidget {
+  const _ShareMenu({
+    required this.client,
+    required this.weekStart,
+    required this.sent,
+    required this.sending,
+    required this.feedbackBlank,
+    required this.onSend,
+  });
+
+  /// 리포트를 보고 있는 고객. 로스터가 비어 있으면 null.
+  final TrainerClient? client;
+
+  /// 화면이 보고 있는 주. 헤더의 주 이동과 같은 값을 써야 다른 주의 리포트를
+  /// 보내는 일이 없다.
+  final DateTime weekStart;
+  final bool sent;
+  final bool sending;
+
+  /// 피드백 입력창이 비었는가. 리포트 수치만 덩그러니 보내면 회원은 무슨 뜻인지
+  /// 알 수 없어, 전에도 빈 피드백은 보낼 수 없었다.
+  final bool feedbackBlank;
+
+  final Future<void> Function(WeeklyReport report) onSend;
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Tooltip(
-      message: l.reportsPdfUnsupported,
-      child: ActionButton(
-        key: const ValueKey<String>('reports-pdf-export-action'),
-        label: l.reportsPdfLabel,
-        icon: Icons.picture_as_pdf_outlined,
-        onPressed: null,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final target = client;
+    return MenuAnchor(
+      menuChildren: <Widget>[
+        MenuItemButton(
+          key: const ValueKey<String>('reports-share-send'),
+          leadingIcon: Icon(sent ? Icons.check : Icons.send_outlined, size: 18),
+          onPressed: target == null || sent || sending || feedbackBlank
+              ? null
+              : () => _send(context, ref, target),
+          child: Tooltip(
+            message: feedbackBlank && target != null && !sent && !sending
+                ? l.reportsShareNeedsFeedback
+                : '',
+            child: Text(
+              target == null
+                  ? l.reportsShareNoClient
+                  : (sent
+                        ? l.reportsSendStateSent
+                        : (sending
+                              ? l.reportsSendStateSending
+                              : l.reportsShareSendTo(target.name))),
+            ),
+          ),
+        ),
+        // PDF 생성 경로가 아직 없다. 항목을 숨기지 않는 이유는, 없는 기능이
+        // 아니라 아직 준비되지 않은 기능임을 화면에서 알 수 있어야 해서다.
+        MenuItemButton(
+          key: const ValueKey<String>('reports-share-pdf'),
+          leadingIcon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+          onPressed: null,
+          child: Tooltip(
+            message: l.reportsPdfUnsupported,
+            child: Text(l.reportsPdfLabel),
+          ),
+        ),
+      ],
+      builder: (context, controller, _) => ActionButton(
+        key: const ValueKey<String>('reports-share-action'),
+        label: l.reportsShare,
+        icon: Icons.ios_share,
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
       ),
     );
   }
-}
 
+  /// 화면에 떠 있는 그 주의 리포트를 읽어 전송한다.
+  ///
+  /// 아직 로딩 중이면 보낼 내용이 없으므로 아무 일도 하지 않는다 — 빈 리포트를
+  /// 보내는 것보다 낫다.
+  void _send(BuildContext context, WidgetRef ref, TrainerClient target) {
+    final report = ref
+        .read(weeklyReportProvider((client: target, weekStart: weekStart)))
+        .valueOrNull;
+    if (report == null) return;
+    onSend(report);
+  }
+}
 class _Figure extends StatelessWidget {
   const _Figure({
     required this.label,

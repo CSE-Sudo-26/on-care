@@ -954,7 +954,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsSendStateSending => '전송 중…';
 
   @override
-  String get reportsSendAction => '고객에게 전송';
+  String get reportsShare => '공유';
+
+  @override
+  String reportsShareSendTo(String name) {
+    return '$name님에게 전송';
+  }
+
+  @override
+  String get reportsShareNeedsFeedback => '피드백을 입력하면 전송할 수 있어요';
+
+  @override
+  String get reportsShareNoClient => '리포트를 볼 고객을 먼저 선택해 주세요';
 
   @override
   String reportBodyTitle(String range) {
