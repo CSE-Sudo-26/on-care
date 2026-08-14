@@ -65,6 +65,8 @@ class TrainerClientOut(BaseModel):
     goal: str
     last_message: str
     last_time: str
+    #: 트레이너 화면의 활성/휴면 배지. 담당 관계가 살아 있고(`TrainerClient.active`)
+    #: 트레이너가 휴면으로 내리지 않은(`dormant=False`) 회원만 True 다. (#707)
     active: bool
     calories: int                # 오늘 총 칼로리(회원 실데이터)
     sodium_mg: int               # 오늘 총 나트륨
@@ -75,6 +77,21 @@ class TrainerClientOut(BaseModel):
     last_routine: str            # 마지막 루틴 전송 라벨(오늘/어제/N일 전)
     week_completion: list[int]   # 이번 주 일별 완료율 7개(월→일)
     sodium_week: list[int]       # 최근 7일 일별 나트륨(오래된→오늘)
+
+
+class TrainerClientStatusUpdate(BaseModel):
+    """회원 활성/휴면 전환 입력. (#707)
+
+    `active=False` 는 **담당 관계 해제가 아니다** — 트레이너가 이 회원을 당분간
+    관리하지 않는다는 표시이고, 기록·식단·운동·채팅과 담당 링크는 그대로 남는다.
+    """
+    active: bool
+
+
+class TrainerClientStatusOut(BaseModel):
+    """전환 후의 상태. 로스터 카드의 `active` 와 같은 값이다."""
+    member_id: str
+    active: bool
 
 
 class DashboardCoachingClientOut(BaseModel):

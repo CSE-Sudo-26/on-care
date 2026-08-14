@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
@@ -82,6 +84,11 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
   late final TabController _tabController;
   late int _reportedIndex;
 
+  /// A 활성/휴면 write is in flight. The badge is a one-tap control, so
+  /// without this a second tap fires a second request and the two answers
+  /// land in whatever order the network decides.
+  bool _statusSaving = false;
+
   int get _routeIndex =>
       AppRoutes.clientTabSections.indexOf(widget.resolvedSection);
 
@@ -112,6 +119,41 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
     widget.onSectionChange(AppRoutes.clientTabSections[_reportedIndex]);
   }
 
+  /// Moves the client between 활성 and 휴면. (#707)
+  ///
+  /// Nothing is written to the badge here — it renders the roster, and the
+  /// roster only changes once the source confirms. A failed call therefore
+  /// leaves the previous state on screen instead of a value the server
+  /// never accepted, and the trainer can tap again.
+  Future<void> _setActive(String clientId, bool active) async {
+    if (_statusSaving) return;
+    setState(() => _statusSaving = true);
+    try {
+      await ref.read(clientRepositoryProvider).setClientActive(clientId, active);
+      if (!mounted) return;
+      setState(() => _statusSaving = false);
+    } on AppError catch (error) {
+      if (!mounted) return;
+      setState(() => _statusSaving = false);
+      final AppLocalizations l = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            serverDetailOr(l, error.message, l.clientStatusChangeFailed),
+          ),
+        ),
+      );
+    } on Object {
+      if (!mounted) return;
+      setState(() => _statusSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).clientStatusChangeFailed),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _tabController
@@ -127,9 +169,6 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
     // into an empty list (an unknown id used to render a nameless
     // "고객" chat and never-ending 식단/운동 spinners — codex review).
     final clientsAsync = ref.watch(clientsProvider);
-    final canManageRoster = ref
-        .watch(clientRepositoryProvider)
-        .supportsRosterMutations;
     // The unread count has to come along: without it `alertsFor` always
     // sees 0 and 답장 대기 could never appear here — so a client the
     // dashboard flagged in red would lose its reason on arrival.
@@ -182,11 +221,9 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
                   refresher.refreshClientData(client.id);
                 }
               },
-              onToggleActive: canManageRoster
-                  ? () => ref
-                        .read(clientRepositoryProvider)
-                        .setClientActive(client.id, !client.active)
-                  : null,
+              onToggleActive: _statusSaving
+                  ? null
+                  : () => _setActive(client.id, !client.active),
             ),
             Material(
               color: AppColors.card,

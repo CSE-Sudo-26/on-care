@@ -160,6 +160,7 @@
   "clientAskAi": "AI에게 묻기",
   "clientActive": "활성",
   "clientDormant": "휴면",
+  "clientStatusChangeFailed": "상태를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요",
   "clientClosePanel": "패널 닫기",
   "clientChat": "채팅",
   "clientChatWithUnread": "{name}님과 채팅, 안 읽은 메시지 {count}개",

@@ -49,7 +49,8 @@ from app.schemas.trainer_api import (
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
     ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
-    TrainerClientOut, TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
+    TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
+    TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
     TrainerMemoCreateRequest, TrainerMemoOut, TrainerMemoUpdateRequest,
     TrainerNotificationOut, TrainerNotificationSettings, TrainerNotificationSettingsUpdate,
     TrainerPasswordChange, WeeklyReportOut,
@@ -262,6 +263,31 @@ def trainer_clients(
     """담당 고객 로스터. 각 카드의 오늘 영양소와 나트륨 추세는
     회원의 실제 식단 기록(DietEntry)에서 집계한다 — 트레이너↔회원 실데이터 공유."""
     return trainer_service.build_roster(db, trainer.id)
+
+
+@router.put(
+    "/trainer/clients/{member_id}/status",
+    response_model=TrainerClientStatusOut,
+)
+def trainer_set_client_status(
+    member_id: str,
+    payload: TrainerClientStatusUpdate,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerClientStatusOut:
+    """담당 회원을 활성/휴면으로 전환한다. (#707)
+
+    담당 관계는 건드리지 않는다 — 휴면 회원도 기록·식단·운동·채팅이 그대로 남고
+    회원 앱의 담당 코치도 그대로다. 남의 고객·없는 회원은 404(소유권 경계),
+    담당이 이미 해제된 회원은 409 다.
+
+    같은 값을 다시 보내도 200 이고 상태가 흔들리지 않는다.
+    """
+    link = _require_client(db, trainer.id, member_id)
+    try:
+        return trainer_service.set_client_active(db, link, payload.active)
+    except trainer_service.ClientLinkDetached as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 def _member_health_out(db: Session, member_id: str) -> MemberHealthProfileOut:

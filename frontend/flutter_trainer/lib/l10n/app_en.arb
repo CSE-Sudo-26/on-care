@@ -294,6 +294,7 @@
   "clientAskAi": "Ask AI",
   "clientActive": "Active",
   "clientDormant": "Dormant",
+  "clientStatusChangeFailed": "Couldn't change the status. Please try again.",
   "clientClosePanel": "Close panel",
   "clientChat": "Chat",
   "clientChatWithUnread": "Chat with {name}, {count} unread",

@@ -55,27 +55,34 @@ TRAINER_ID = "trainer-demo"
 TRAINER_EMAIL = "trainer@oncare.com"
 TRAINER_NAME = "김트레이너"
 
-# 담당 회원: (user_id, email, name, goal, active, sort_order)
+# 담당 회원: (user_id, email, name, goal, active, dormant, sort_order)
 # 김민수는 회원 앱 데모 사용자(user-demo)와 동일 계정을 공유한다.
-_MEMBERS: list[tuple[str, str, str, str, bool, int]] = [
-    ("user-demo", "minsu@oncare.com", "김민수", "혈압 관리 · 체중 감량", True, 1),
-    ("user-jisu", "jisu@oncare.com", "이지수", "체력 강화 · 다이어트", True, 2),
-    ("user-sungho", "sungho@oncare.com", "박성호", "근력 향상", False, 3),
+#
+# `active` 와 `dormant` 는 다른 축이다(#707). 화면에는 둘 다 '휴면'으로 보이지만
+# 뜻이 다르므로 시드도 두 경우를 각각 남긴다:
+#   * 박성호 — 담당 관계가 해제된 과거 회원(active=False). 회원측 '내 코치'가
+#     비어 있어야 하고, 트레이너가 다시 활성으로 되돌릴 수 없다.
+#   * 문가영 — 담당은 그대로인데 트레이너가 휴면으로 내린 회원(dormant=True).
+#     활성/휴면 전환을 실 API 콘솔에서 그대로 눌러 볼 수 있는 fixture 다.
+_MEMBERS: list[tuple[str, str, str, str, bool, bool, int]] = [
+    ("user-demo", "minsu@oncare.com", "김민수", "혈압 관리 · 체중 감량", True, False, 1),
+    ("user-jisu", "jisu@oncare.com", "이지수", "체력 강화 · 다이어트", True, False, 2),
+    ("user-sungho", "sungho@oncare.com", "박성호", "근력 향상", False, False, 3),
     # 4~15: 트레이너 웹 목업 로스터와 같은 명단(#572). 주간 지표는 seed_roster 가
     # 채운다 — 화면 상태(나트륨 초과·이행률 저조·휴면·답장 대기)를 실 API 에서도
     # 재현하기 위한 fixture 다.
-    ("user-hayun", "hayun@oncare.demo", "정하윤", "산후 체력 회복", True, 4),
-    ("user-woojin", "woojin@oncare.demo", "최우진", "마라톤 완주 준비", True, 5),
-    ("user-kangseoyeon", "kangseoyeon@oncare.demo", "강서연", "체지방 감량", True, 6),
-    ("user-dohyun", "dohyun@oncare.demo", "임도현", "목표 설정 전", True, 7),
-    ("user-sera", "sera@oncare.demo", "오세라", "고혈압 관리", True, 8),
-    ("user-junhyuk", "junhyuk@oncare.demo", "배준혁", "수면 · 컨디션 개선", True, 9),
-    ("user-yuna", "yuna@oncare.demo", "신유나", "재활 후 복귀", True, 10),
-    ("user-jiho", "jiho@oncare.demo", "한지호", "현 체중 유지", True, 11),
-    ("user-gayoung", "gayoung@oncare.demo", "문가영", "체력 회복", False, 12),
-    ("user-taekyung", "taekyung@oncare.demo", "류태경", "벌크업", True, 13),
-    ("user-seojin", "seojin@oncare.demo", "백서진", "식습관 개선", True, 14),
-    ("user-eunchae", "eunchae@oncare.demo", "노은채", "운동 습관 만들기", True, 15),
+    ("user-hayun", "hayun@oncare.demo", "정하윤", "산후 체력 회복", True, False, 4),
+    ("user-woojin", "woojin@oncare.demo", "최우진", "마라톤 완주 준비", True, False, 5),
+    ("user-kangseoyeon", "kangseoyeon@oncare.demo", "강서연", "체지방 감량", True, False, 6),
+    ("user-dohyun", "dohyun@oncare.demo", "임도현", "목표 설정 전", True, False, 7),
+    ("user-sera", "sera@oncare.demo", "오세라", "고혈압 관리", True, False, 8),
+    ("user-junhyuk", "junhyuk@oncare.demo", "배준혁", "수면 · 컨디션 개선", True, False, 9),
+    ("user-yuna", "yuna@oncare.demo", "신유나", "재활 후 복귀", True, False, 10),
+    ("user-jiho", "jiho@oncare.demo", "한지호", "현 체중 유지", True, False, 11),
+    ("user-gayoung", "gayoung@oncare.demo", "문가영", "체력 회복", True, True, 12),
+    ("user-taekyung", "taekyung@oncare.demo", "류태경", "벌크업", True, False, 13),
+    ("user-seojin", "seojin@oncare.demo", "백서진", "식습관 개선", True, False, 14),
+    ("user-eunchae", "eunchae@oncare.demo", "노은채", "운동 습관 만들기", True, False, 15),
 ]
 
 _CERTIFICATIONS = ["생활스포츠지도사 2급", "퍼스널트레이닝 CPT", "스포츠 영양사"]
@@ -162,7 +169,7 @@ def _seed_trainer_account(db: Session) -> None:
 
 def _seed_member_accounts(db: Session) -> None:
     """담당 회원 User(멱등, 이메일 충돌 안전). user-demo 는 기존 데모 시드가 만든다."""
-    for user_id, email, name, _goal, _active, _order in _MEMBERS:
+    for user_id, email, name, _goal, _active, _dormant, _order in _MEMBERS:
         existing = db.scalar(select(models.User).where(models.User.id == user_id))
         if existing is not None:
             # 비밀번호가 비어 있으면 채운다. 이 시드보다 먼저 도는 데모 사용자 시드가
@@ -207,7 +214,7 @@ def _seed_client_links(db: Session) -> None:
     if trainer is None or trainer.role != "trainer":
         # 트레이너 계정이 없거나(시드 스킵) 역할이 트레이너가 아니면 링크를 만들지 않는다.
         return
-    for user_id, _email, _name, goal, active, order in _MEMBERS:
+    for user_id, _email, _name, goal, active, dormant, order in _MEMBERS:
         link_id = f"tc-{TRAINER_ID}-{user_id}"
         if db.scalar(select(models.TrainerClient.id).where(models.TrainerClient.id == link_id)):
             continue
@@ -227,6 +234,7 @@ def _seed_client_links(db: Session) -> None:
             member_id=user_id,
             goal=goal,
             active=active,
+            dormant=dormant,
             sort_order=order,
         ))
     _safe_commit(db, "담당 링크 시드 충돌")

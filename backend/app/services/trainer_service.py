@@ -25,8 +25,9 @@ from app.models.models import (
 )
 from app.schemas.trainer_api import (
     ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramItem, RoutineHistoryOut,
-    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerGymOut, TrainerMe,
-    TrainerMemoOut, TrainerNotificationSettings, WeeklyReportOut,
+    RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
+    TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
+    WeeklyReportOut,
 )
 from app.services import diet_photo_service, exercise_service, notification_service
 from app.services.coach import personal_ingest
@@ -163,6 +164,16 @@ def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]
     return {r.member_id: r for r in rows}
 
 
+def _roster_active(link: TrainerClient) -> bool:
+    """로스터 카드의 활성/휴면. (#707)
+
+    두 조건을 모두 만족해야 활성이다 — 담당 관계가 살아 있고(`active`), 트레이너가
+    휴면으로 내리지 않았을 것(`not dormant`). 담당이 해제된 과거 회원은 로스터에
+    이력으로 남는데, 그 카드는 예나 지금이나 휴면으로 보여야 한다.
+    """
+    return link.active and not link.dormant
+
+
 def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
     """트레이너의 담당 고객 로스터. 각 카드의 영양 지표는 회원 실데이터에서 집계.
 
@@ -230,7 +241,7 @@ def build_roster(db: Session, trainer_id: str) -> list[TrainerClientOut]:
             goal=link.goal,
             last_message=last_msg.body if last_msg else "",
             last_time=relative_time_label(last_msg.created_at) if last_msg else "-",
-            active=link.active,
+            active=_roster_active(link),
             calories=calories,
             sodium_mg=sodium_mg,
             sugar_g=sugar_g,
@@ -588,6 +599,40 @@ def unread_counts_for_trainer(db: Session, trainer_id: str) -> dict[str, int]:
         .group_by(ChatMessage.member_id)
     ).all()
     return {member_id: count for member_id, count in rows}
+
+
+# ---- 회원 활성/휴면 관리 상태 (#707) ----
+
+class ClientLinkDetached(Exception):
+    """담당 관계가 이미 해제된 회원이다(라우터가 409 로 변환)."""
+
+
+def set_client_active(
+    db: Session, link: TrainerClient, active: bool
+) -> TrainerClientStatusOut:
+    """담당 회원을 활성/휴면으로 전환한다.
+
+    `dormant` 만 건드린다 — 담당 링크(`active`)·루틴·기록·식단·채팅은 그대로다.
+    휴면 회원도 조회·채팅·루틴 배정이 전부 그대로 되고, 회원 앱에서 코치가
+    사라지지도 않는다. 트레이너의 관리 표시일 뿐이다.
+
+    이미 같은 상태면 아무것도 쓰지 않고 그 상태를 돌려준다 — 연타나 재시도가
+    상태를 흔들지 않는다(멱등).
+
+    담당이 이미 해제된 링크는 [ClientLinkDetached] 다. 여기서 `dormant` 를
+    내려 봐야 로스터는 계속 휴면으로 보이므로(`_roster_active`), 성공으로
+    응답하면 화면이 "저장했는데 그대로"가 된다. 담당 재배정은 이 기능의 범위가
+    아니다.
+    """
+    if not link.active:
+        raise ClientLinkDetached("담당 관계가 해제된 회원입니다.")
+    if link.dormant is not (not active):
+        link.dormant = not active
+        db.commit()
+        db.refresh(link)
+    return TrainerClientStatusOut(
+        member_id=link.member_id, active=_roster_active(link)
+    )
 
 
 # ---- 루틴 배정 (트레이너/AI → 회원, 양쪽에서 보이는 공유 데이터) ----
