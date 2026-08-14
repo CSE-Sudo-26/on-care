@@ -205,27 +205,44 @@ String _ymd(DateTime value) =>
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
 
+/// 픽스처 전용 클라이언트. 앱이 쓰는 Dio 와 별개다.
+final Dio _fixtureApi = Dio(
+  BaseOptions(
+    baseUrl: _apiBaseUrl,
+    connectTimeout: _fixtureApiTimeout,
+    sendTimeout: _fixtureApiTimeout,
+    receiveTimeout: _fixtureApiTimeout,
+  ),
+);
+
+/// 회원 토큰 — **한 번만 받아 재사용한다.**
+///
+/// 각 테스트가 로그아웃 상태에서 부팅하므로 화면 로그인만으로도 한 번 돌 때 네 번이다.
+/// 픽스처까지 매번 로그인하면 백엔드 인증 한도(IP·엔드포인트당 분당 10 회,
+/// `rate_limit_auth_per_minute`)에 걸려, 검증에 닿기도 전에 429 로 죽는다. 스위트를
+/// 연달아 돌리면 특히 그렇다. (CodeRabbit 지적)
+String? _cachedMemberToken;
+
+Future<Options> _memberAuth() async {
+  final cached = _cachedMemberToken;
+  if (cached == null) {
+    final login = await _fixtureApi.post<Map<String, dynamic>>(
+      '/auth/login',
+      data: <String, String>{'username': _memberEmail, 'password': _password},
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    _cachedMemberToken = login.data!['access_token'] as String;
+  }
+  return Options(
+    headers: <String, String>{'Authorization': 'Bearer $_cachedMemberToken'},
+  );
+}
+
 /// 회원 계정으로 본 상담 요청 목록. 픽스처 준비와 결과 확인이 같은 창구를 쓴다.
 Future<List<Map<String, dynamic>>> _memberConsultations() async {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: _apiBaseUrl,
-      connectTimeout: _fixtureApiTimeout,
-      sendTimeout: _fixtureApiTimeout,
-      receiveTimeout: _fixtureApiTimeout,
-    ),
-  );
-  final login = await dio.post<Map<String, dynamic>>(
-    '/auth/login',
-    data: <String, String>{'username': _memberEmail, 'password': _password},
-    options: Options(contentType: Headers.formUrlEncodedContentType),
-  );
-  final token = login.data!['access_token'] as String;
-  final mine = await dio.get<List<dynamic>>(
+  final mine = await _fixtureApi.get<List<dynamic>>(
     '/consultations/me',
-    options: Options(
-      headers: <String, String>{'Authorization': 'Bearer $token'},
-    ),
+    options: await _memberAuth(),
   );
   return <Map<String, dynamic>>[
     for (final item in mine.data ?? const <dynamic>[])
@@ -243,23 +260,6 @@ Future<Map<String, dynamic>> _memberConsultation(String id) async {
 }
 
 Future<String> _ensurePendingConsultation() async {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: _apiBaseUrl,
-      connectTimeout: _fixtureApiTimeout,
-      sendTimeout: _fixtureApiTimeout,
-      receiveTimeout: _fixtureApiTimeout,
-    ),
-  );
-  final login = await dio.post<Map<String, dynamic>>(
-    '/auth/login',
-    data: <String, String>{'username': _memberEmail, 'password': _password},
-    options: Options(contentType: Headers.formUrlEncodedContentType),
-  );
-  final token = login.data!['access_token'] as String;
-  final auth = Options(
-    headers: <String, String>{'Authorization': 'Bearer $token'},
-  );
   for (final row in await _memberConsultations()) {
     if (row['status'] == 'pending' && row['trainer_id'] == 'trainer-demo') {
       return row['id'] as String;
@@ -267,9 +267,9 @@ Future<String> _ensurePendingConsultation() async {
   }
 
   final preferredDate = DateTime.now().add(const Duration(days: 2));
-  final created = await dio.post<Map<String, dynamic>>(
+  final created = await _fixtureApi.post<Map<String, dynamic>>(
     '/consultations',
-    options: auth,
+    options: await _memberAuth(),
     data: <String, Object?>{
       'target_type': 'trainer',
       'trainer_id': 'trainer-demo',
