@@ -136,7 +136,8 @@ lib/
 ├─ core/           # drift DB·시드, 토큰 저장, 날짜 유틸(ymd·koreanDateLabel)
 ├─ shared/         # 여러 feature 공유: TrainerClient·ClientAlert 모델,
 │                  # ClientRepository/ChatRepository, PageScaffold·SectionCard·
-│                  # StatCard·ActionButton·mini_charts(BarSeriesChart·Sparkline)
+│                  # StatCard·ActionButton·mini_charts(BarSeriesChart)
+│                  # metric_trend_chart(주간 추이 꺾은선)
 ├─ design_system/  # 토큰(남색 primary + 오렌지 액센트), 테마
 └─ features/       # auth / dashboard / clients / schedule / coaching / reports / my
 ```
@@ -179,9 +180,13 @@ lib/
 - **색상**: 서비스 메인 = 남색(#2E7DAB). 오렌지는 "트레이너" 브랜드 워드·경고·수동 추가
   구분에만 (`brandOrange`/`warning`). 사이드바 활성 표시는 연한 남색 면 + 좌측
   인디케이터 — 본문이 이미 남색을 강조에 쓰므로 진한 pill 은 서로 부딪힌다
-- **차트는 직접 그린다**: 필요한 형태가 막대 시리즈와 스파크라인 둘뿐이라
-  (`shared/widgets/mini_charts.dart`) 차트 라이브러리를 넣지 않았다. 축·툴팁·줌이
-  필요한 분석 화면이 생기면 그때 도입한다
+- **차트는 직접 그린다**: 필요한 형태가 막대 시리즈(`shared/widgets/mini_charts.dart`)와
+  주간 추이 꺾은선(`shared/widgets/metric_trend_chart.dart`) 둘뿐이라 차트 라이브러리를
+  넣지 않았다. 축·툴팁·줌이 필요한 분석 화면이 생기면 그때 도입한다
+- **주간 추이는 사용자 앱과 같은 그림**: 리포트 탭의 칼로리·나트륨·당류 꺾은선은
+  사용자 앱 홈 탭과 같은 규칙으로 그린다(선은 오늘까지만, 점 색은 목표 초과 여부,
+  목표선 없음). 두 앱은 패키지가 갈라져 있어 코드를 공유하지 못하므로 한쪽만
+  고치지 않는다
 - **역할 전환 없음**: Figma의 "역할 전환" UI는 구현하지 않음 — 트레이너/회원은 계정으로 분리
 - **mock-first**: 전송 등 상호작용은 Figma와 동일한 in-memory mock.
   채팅과 스케줄(추가/수정/삭제·AI 루틴 등록)은 drift에 영속
