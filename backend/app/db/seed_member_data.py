@@ -81,6 +81,29 @@ _TODAY_MEALS: dict[
 }
 
 # 최근 7일 일별 나트륨(오래된→오늘). 마지막 값은 오늘 3끼 합과 일치.
+#: 시드가 채우는 과거 주 수(이번 주 포함) — `seed_roster` 와 같은 값이다.
+_HISTORY_WEEKS = 12
+
+#: 과거 주에 곱하는 계수 — `seed_roster` 의 같은 이름들과 값을 맞춘다.
+#: 지표마다 갈라 둔 이유는 그쪽 주석에 적어 뒀다.
+_SODIUM_FACTORS = (1.0, 0.96, 1.14, 0.82, 1.07, 0.78, 1.10)
+_CALORIE_FACTORS = (1.0, 0.92, 1.28, 0.88, 1.04, 0.95, 1.13)
+_SUGAR_FACTORS = (1.0, 1.12, 1.55, 0.88, 1.30, 0.96, 1.42)
+_COMPLETION_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+
+#: 요일별 하루 섭취량(월→일). 여기에 주 계수를 곱한다.
+_WEEKDAY_KCAL = (1710, 1830, 1560, 1900, 1680, 1450, 1600)
+_WEEKDAY_SUGAR = (41.5, 28.0, 45.5, 33.0, 38.5, 22.0, 30.0)
+
+#: 어제 하루의 합. 약속이 있어 칼로리·당류가 목표(2,000kcal·50g)를 넘는다.
+#:
+#: 요일이 아니라 **어제**에 못 박는다 — 요일에 못 박으면 데모를 여는 날에 따라
+#: 넘긴 날이 이번 주 밖으로 밀려난다. 두 Flutter 앱의 데모 시드가 같은 합계를
+#: 쓴다(트레이너 `seed_data.dart` 의 `_feast*`, 사용자 앱의 어제 큐레이션).
+_FEAST_KCAL = 2380
+_FEAST_SODIUM_MG = 2261
+_FEAST_SUGAR_G = 63.0
+
 _SODIUM_WEEK: dict[str, list[int]] = {
     "user-demo": [2400, 2200, 1900, 2050, 2300, 1850, 3428],
     "user-jisu": [1700, 1950, 1600, 1800, 2100, 1750, 1800],
@@ -599,12 +622,31 @@ def _seed_diet(db: Session, member_id: str) -> None:
                 engine="seed",
             ))
 
-    # 최근 6일 나트륨 추세 (해당 날짜에 기록이 없을 때만 — 중복 합산 방지)
-    for offset in range(1, 7):
+    # 과거 일별 기록 (해당 날짜에 기록이 없을 때만 — 중복 합산 방지).
+    # 리포트가 과거 주로 이동할 수 있어 이번 주만 채우면 한 주만 뒤로 가도
+    # 화면이 빈다(#752).
+    # 이미 기록이 있는 날짜를 한 번에 읽는다 — 날마다 조회하면 12주치 시딩이
+    # 눈에 띄게 느려진다.
+    logged = set(
+        db.scalars(
+            select(models.DietEntry.date).where(
+                models.DietEntry.user_id == member_id
+            )
+        ).all()
+    )
+    for offset in range(1, _HISTORY_WEEKS * 7):
         d = (today - timedelta(days=offset)).isoformat()
-        if _has_diet_on(db, member_id, d):
+        if d in logged:
             continue
-        na = sodium_week[6 - offset]
+        logged.add(d)
+        idx = (offset // 7) % len(_SODIUM_FACTORS)
+        weekday = (today - timedelta(days=offset)).weekday()
+        if offset == 1:
+            na, calories, sugar = _FEAST_SODIUM_MG, _FEAST_KCAL, _FEAST_SUGAR_G
+        else:
+            na = round(sodium_week[6 - (offset % 7)] * _SODIUM_FACTORS[idx])
+            calories = round(_WEEKDAY_KCAL[weekday] * _CALORIE_FACTORS[idx])
+            sugar = round(_WEEKDAY_SUGAR[weekday] * _SUGAR_FACTORS[idx], 1)
         db.add(models.DietEntry(
             id=f"seed-diet-{member_id}-{d}-agg",
             user_id=member_id,
@@ -612,12 +654,12 @@ def _seed_diet(db: Session, member_id: str) -> None:
             meal_type="lunch",
             time_label="",
             foods_json=json.dumps(
-                [{"name": "기록된 식단", "calories": 1500, "sodium_mg": na, "sugar_g": 0}],
+                [{"name": "기록된 식단", "calories": calories, "sodium_mg": na, "sugar_g": sugar}],
                 ensure_ascii=False,
             ),
-            total_calories=1500,
+            total_calories=calories,
             sodium_mg=na,
-            sugar_g=0,
+            sugar_g=sugar,
             engine="seed",
         ))
     _safe_commit(db)
@@ -629,33 +671,40 @@ def _seed_history(db: Session, member_id: str) -> None:
         return
 
     today = clock.today()
-    # 오늘 기록이 이미 있으면 스킵(멱등, 날짜 넘어가면 새로 시드)
-    if db.scalar(
-        select(models.RoutineHistory.id)
-        .where(
-            models.RoutineHistory.member_id == member_id,
-            models.RoutineHistory.date == today.isoformat(),
-        )
-        .limit(1)
-    ) is not None:
-        return
-
-    for idx, (rate, kind, exercises, feedback, note) in enumerate(sessions):
-        d = (today - timedelta(days=idx * 2)).isoformat()  # 오늘/이틀전/나흘전
-        hid = f"seed-hist-{member_id}-{d}"
-        if db.get(models.RoutineHistory, hid) is not None:
-            continue
-        db.add(models.RoutineHistory(
-            id=hid,
-            member_id=member_id,
-            trainer_id=TRAINER_ID if kind.startswith("PT") else None,
-            date=d,
-            kind_label=kind,
-            completion_rate=rate,
-            exercises_json=json.dumps(exercises, ensure_ascii=False),
-            client_feedback=feedback,
-            trainer_note=note,
-        ))
+    # 오늘/이틀전/나흘전을 한 주기로 두고 과거 주까지 되풀이한다. 리포트가
+    # 과거 주로 이동할 수 있어, 이번 주만 채우면 이행률이 곧 비어 버린다(#752).
+    #
+    # 멱등성은 행 id(회원+날짜)로 지킨다. 예전처럼 "오늘 기록이 있으면 통째로
+    # 건너뛰기" 로 두면, 오늘치가 이미 있는 DB 에는 과거 주가 영영 채워지지
+    # 않는다.
+    existing = set(
+        db.scalars(
+            select(models.RoutineHistory.id).where(
+                models.RoutineHistory.member_id == member_id
+            )
+        ).all()
+    )
+    for week in range(_HISTORY_WEEKS):
+        factor = _COMPLETION_FACTORS[week % len(_COMPLETION_FACTORS)]
+        for idx, (rate, kind, exercises, feedback, note) in enumerate(sessions):
+            d = (today - timedelta(days=idx * 2 + week * 7)).isoformat()
+            hid = f"seed-hist-{member_id}-{d}"
+            if hid in existing:
+                continue
+            existing.add(hid)
+            db.add(models.RoutineHistory(
+                id=hid,
+                member_id=member_id,
+                trainer_id=TRAINER_ID if kind.startswith("PT") else None,
+                date=d,
+                kind_label=kind,
+                completion_rate=min(100, round(rate * factor)),
+                exercises_json=json.dumps(exercises, ensure_ascii=False),
+                # 과거 주까지 같은 문구를 반복하면 화면이 복사본처럼 읽힌다 —
+                # 이번 주 것만 실제 대화를 남긴다.
+                client_feedback=feedback if week == 0 else "",
+                trainer_note=note if week == 0 else "",
+            ))
     _safe_commit(db)
 
 

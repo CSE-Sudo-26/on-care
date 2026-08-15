@@ -788,7 +788,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legendPartial => 'Partial';
 
   @override
-  String get legendMissed => 'Missed';
+  String get legendMissed => 'Not logged';
 
   @override
   String get clientFeedback => 'Client feedback';
@@ -929,9 +929,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitTimes => '';
 
   @override
-  String get unitDays => 'd';
-
-  @override
   String reportsCompletionRate(int rate) {
     return '$rate% completed';
   }
@@ -954,19 +951,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reportsPtSessions => 'PT sessions';
-
-  @override
   String get reportsCompletionAvg => 'Workout completion';
 
   @override
-  String get reportsSodiumOver => 'Sodium over target';
-
-  @override
-  String get reportsCompletionByDay => 'Completion by day';
-
-  @override
-  String get reportsNoLastWeekDaily => 'No daily records for last week yet';
+  String get reportsCompletionByDay => 'Weekly workout completion';
 
   @override
   String get reportsNoWorkoutsThisWeek => 'No workouts logged this week';
@@ -985,6 +973,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportsNoMetricRecords(String metric) {
     return 'No $metric logged this week yet';
   }
+
+  @override
+  String reportsCompletionBasis(int days) {
+    return 'Average of $days logged days';
+  }
+
+  @override
+  String get reportsDietTrend => 'Weekly diet trend';
+
+  @override
+  String reportsSodiumOverInline(int days) {
+    return '$days days over sodium';
+  }
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String workoutDoneOfTotal(int total, int done) {
+    return '$done of $total done';
+  }
+
+  @override
+  String get chartNoRecord => 'Not logged';
 
   @override
   String get reportsSendStateSent => 'Sent';
@@ -2502,11 +2516,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsFeedbackHint => 'Write coaching feedback for the client.';
 
   @override
-  String get reportsTrendTitle => 'Workout completion · Last 4 weeks';
+  String get reportsRecentWeeks => 'Last 4 weekly averages';
 
   @override
-  String reportsTrendWeek(int index) {
-    return 'Week $index';
+  String reportsGoalMarker(String value) {
+    return '│ Goal $value';
+  }
+
+  @override
+  String reportsWeeksAgo(int count) {
+    return '${count}w ago';
   }
 
   @override

@@ -5,8 +5,10 @@
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from uuid import uuid4
+
+from app.core import clock
 
 
 def _trainer_token(client) -> str:
@@ -400,3 +402,107 @@ def test_settings_need_a_trainer_account(client):
         "/v1/auth/login", data={"username": email, "password": "pw!"}
     ).json()["access_token"]
     assert client.get("/v1/trainer/me/settings", headers=_auth(member)).status_code == 403
+
+
+def test_report_carries_the_requested_weeks_daily_series(client, db_session):
+    """계열은 **그 주** 것이다. (#752)
+
+    로스터가 주는 계열은 이번 주 것이라, 과거 주 화면이 그것을 쓰면 지난 주
+    날짜 아래 이번 주 수치가 실린다. 리포트가 자기 주의 계열을 들고 온다.
+    """
+    import json
+
+    from app.models.models import DietEntry, RoutineHistory
+    from app.services.trainer_service import week_start_of
+
+    last_week = week_start_of(clock.today()) - timedelta(days=7)
+    sunday = (last_week + timedelta(days=6)).isoformat()
+    tuesday = (last_week + timedelta(days=1)).isoformat()
+    # 시드가 최근 며칠을 채워 두고 테스트 DB 는 실행 사이에 남는다. 이 주만
+    # 비우고 시작해야 몇 번을 돌려도 같은 결과가 나온다.
+    for model in (DietEntry, RoutineHistory):
+        owner = model.user_id if model is DietEntry else model.member_id
+        db_session.query(model).filter(
+            owner == "user-jisu",
+            model.date >= last_week.isoformat(),
+            model.date <= sunday,
+        ).delete(synchronize_session=False)
+    db_session.add(
+        DietEntry(
+            id=f"t-diet-{uuid4().hex[:8]}",
+            user_id="user-jisu",
+            date=tuesday,
+            meal_type="lunch",
+            time_label="",
+            foods_json=json.dumps([{"name": "지난 주 점심"}], ensure_ascii=False),
+            total_calories=700,
+            sodium_mg=2400,
+            sugar_g=12.5,
+            engine="test",
+        )
+    )
+    db_session.add(
+        RoutineHistory(
+            id=f"t-hist-{uuid4().hex[:8]}",
+            member_id="user-jisu",
+            trainer_id=None,
+            date=tuesday,
+            kind_label="자율 운동",
+            completion_rate=80,
+            exercises_json=json.dumps(
+                ["걷기 30분 ✓", "코어 강화 ✓", "스트레칭 ✗"], ensure_ascii=False
+            ),
+        )
+    )
+    db_session.commit()
+
+    token = _trainer_token(client)
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report",
+        params={"week_start": last_week.isoformat()},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    for key in ("week_completion", "sodium_week", "calories_week", "sugar_week"):
+        assert len(body[key]) == 7, key
+    # 화요일 자리에 그 주의 값이 놓인다.
+    assert body["sodium_week"][1] == 2400
+    assert body["calories_week"][1] == 700
+    assert body["sugar_week"][1] == 12.5
+    assert body["week_completion"][1] == 80
+    # 그날 이행률이 어디서 나온 값인지 — 배정된 운동이 함께 온다(#754).
+    assert len(body["days"]) == 7
+    assert body["days"][1]["completion"] == 80
+    assert body["days"][1]["exercises"] == [
+        "걷기 30분 ✓",
+        "코어 강화 ✓",
+        "스트레칭 ✗",
+    ]
+    assert body["days"][0]["completion"] == 0
+    assert body["days"][0]["exercises"] == []
+    # 기록이 없는 날은 0 이고, 이번 주 수치가 섞여 들어오지 않는다.
+    assert body["sodium_week"][0] == 0
+    assert body["sodium_avg"] == 2400  # 기록된 하루만 나눈다
+    assert body["sodium_over_days"] == 1
+    assert body["completion_avg"] == 80
+
+
+def test_report_rejects_a_week_that_has_not_arrived(client):
+    """아직 오지 않은 주는 값이 전부 0 인 리포트가 되어 회원에게 보낼 수 있다."""
+    token = _trainer_token(client)
+    next_week = (clock.today() + timedelta(days=7)).isoformat()
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report",
+        params={"week_start": next_week},
+        headers=_auth(token),
+    )
+    assert r.status_code == 422
+
+    sent = client.post(
+        "/v1/trainer/clients/user-jisu/report/send",
+        json={"week_start": next_week},
+        headers=_auth(token),
+    )
+    assert sent.status_code == 422

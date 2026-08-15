@@ -107,7 +107,8 @@ void main() {
         ),
       );
 
-      expect(find.text('-'), findsOneWidget);
+      // '-' 는 0 과 헷갈린다 — 기록이 없다는 말을 그대로 쓴다(#754).
+      expect(find.text('기록 없음'), findsOneWidget);
       expect(find.text('0%'), findsNothing);
       expect(find.text('75%'), findsOneWidget);
     });

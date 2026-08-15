@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -103,6 +103,28 @@ _METRICS: dict[str, dict] = {
     },
 }
 
+#: 시드가 채우는 과거 주 수(이번 주 포함). 리포트가 '최근 4주' 카드를 그리고
+#: 과거 주로 이동할 수 있어, 이번 주만 채우면 한 주만 뒤로 가도 화면이 빈다.
+#: 12주면 8주 전까지 뒤로 가도 4주 카드가 꽉 찬다(#752).
+_HISTORY_WEEKS = 12
+
+#: 과거 주에 곱하는 계수 — **지표마다 따로** 둔다. 난수를 쓰면 재시딩마다
+#: 이력이 바뀌어 어제 본 화면과 달라지므로 고정된 수를 돌려 쓴다.
+#:
+#: 예전에는 하나를 나눠 쓰고 폭도 ±11% 뿐이라 12주 내내 나트륨은 늘 초과하고
+#: 칼로리는 늘 목표 안이었다. 리포트의 목표선이 지표마다 한쪽 경우만 보여
+#: 준다는 뜻이다. 계수를 갈라 회식이 몰린 주와 코칭이 먹힌 주가 함께 나오게
+#: 한다. index 0 은 이번 주라 반드시 1.0 이다.
+_SODIUM_FACTORS = (1.0, 0.96, 1.14, 0.82, 1.07, 0.78, 1.10)
+_CALORIE_FACTORS = (1.0, 0.92, 1.28, 0.88, 1.04, 0.95, 1.13)
+_SUGAR_FACTORS = (1.0, 1.12, 1.55, 0.88, 1.30, 0.96, 1.42)
+#: 이행률은 좁게 흔든다 — 넓히면 100 에 붙어 잘려 여러 주가 같은 값이 된다.
+_COMPLETION_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+
+#: 칼로리 대비 당류 비율. 당류를 나트륨에서 끌어내면(예전 `나트륨/60`) 둘이
+#: 늘 붙어 다녀, 당류만 넘긴 주가 나올 수 없다.
+_SUGAR_PER_KCAL = 0.022
+
 #: 상세 기록은 기존 3명만 둔다. 여기 12명의 식단은 지표를 만들기 위한 한 줄짜리다.
 _MEAL_NAME = "기록된 식사"
 _ROUTINE_LABEL = "AI 루틴 · 자율 운동"
@@ -142,46 +164,103 @@ def _sodium_offsets(values: list[int], anchor: str) -> list[tuple[int, int]]:
 
 def _seed_sodium_days(db: Session, member_id: str, spec: dict) -> None:
     today = clock.today()
-    for offset, sodium in _sodium_offsets(spec["sodium"], spec.get("anchor", "recent")):
-        date = (today - timedelta(days=offset)).isoformat()
-        entry_id = f"seed-roster-diet-{member_id}-{date}"
-        if db.get(models.DietEntry, entry_id) is not None:
-            continue
-        # 하루 한 줄. 끼니별 상세는 기존 3명만 가진다.
-        calories = 500 + (sodium // 10)
-        db.add(models.DietEntry(
-            id=entry_id,
-            user_id=member_id,
-            date=date,
-            meal_type="lunch",
-            time_label="12:30",
-            foods_json=json.dumps(
-                [{"name": _MEAL_NAME, "calories": calories}], ensure_ascii=False
-            ),
-            total_calories=calories,
-            sodium_mg=sodium,
-            sugar_g=float(sodium) / 60.0,
-        ))
+    offsets = _sodium_offsets(spec["sodium"], spec.get("anchor", "recent"))
+    # 이미 있는 날짜를 **한 번에** 읽는다 — 날마다 조회하면 12주 × 15명에서
+    # 시딩이 눈에 띄게 느려진다.
+    existing = _existing_diet_ids(db, member_id)
+    for week in range(_HISTORY_WEEKS):
+        idx = week % len(_SODIUM_FACTORS)
+        for offset, base in offsets:
+            _seed_one_sodium_day(
+                db, member_id, today, offset + week * 7, base,
+                _SODIUM_FACTORS[idx], _CALORIE_FACTORS[idx],
+                _SUGAR_FACTORS[idx], existing,
+            )
+
+
+def _existing_diet_ids(db: Session, member_id: str) -> set[str]:
+    return set(
+        db.scalars(
+            select(models.DietEntry.id).where(models.DietEntry.user_id == member_id)
+        ).all()
+    )
+
+
+def _seed_one_sodium_day(
+    db: Session,
+    member_id: str,
+    today: date,
+    offset: int,
+    base: int,
+    sodium_factor: float,
+    calorie_factor: float,
+    sugar_factor: float,
+    existing: set[str],
+) -> None:
+    sodium = round(base * sodium_factor)
+    date_str = (today - timedelta(days=offset)).isoformat()
+    entry_id = f"seed-roster-diet-{member_id}-{date_str}"
+    if entry_id in existing:
+        return
+    existing.add(entry_id)
+    # 하루 한 줄. 끼니별 상세는 기존 3명만 가진다.
+    #
+    # 나트륨에서 칼로리를 끌어낸다 — 한 사람의 하루라 둘이 따로 놀면 안 된다.
+    # 예전 산식(500 + 나트륨/10)은 2,000mg 짜리 하루를 700kcal 로 만들어,
+    # 국물만 먹고 사는 사람처럼 보였다. 1.1~1.5mg/kcal 은 짜게 먹는 한식의
+    # 실제 범위다. 거기에 그 주의 식사량을 얹는다 — 계수가 갈라져 있어야
+    # 칼로리만 넘긴 주, 나트륨만 잡힌 주가 따로 나온다.
+    base_kcal = 900 + (sodium * 3) // 10
+    calories = round(base_kcal * calorie_factor)
+    sugar = round(base_kcal * _SUGAR_PER_KCAL * sugar_factor, 1)
+    db.add(models.DietEntry(
+        id=entry_id,
+        user_id=member_id,
+        date=date_str,
+        meal_type="lunch",
+        time_label="12:30",
+        foods_json=json.dumps(
+            [{"name": _MEAL_NAME, "calories": calories}], ensure_ascii=False
+        ),
+        total_calories=calories,
+        sodium_mg=sodium,
+        sugar_g=sugar,
+    ))
 
 
 def _seed_completion_days(db: Session, member_id: str, completion: list[int]) -> None:
-    monday = clock.today() - timedelta(days=clock.today().weekday())
-    for i, rate in enumerate(completion):
-        if rate <= 0:
-            continue  # 기록 없음 — 행을 만들면 '0% 수행'이라는 다른 뜻이 된다
-        date = (monday + timedelta(days=i)).isoformat()
-        hist_id = f"seed-roster-hist-{member_id}-{date}"
-        if db.get(models.RoutineHistory, hist_id) is not None:
-            continue
-        db.add(models.RoutineHistory(
-            id=hist_id,
-            member_id=member_id,
-            trainer_id=None,
-            date=date,
-            kind_label=_ROUTINE_LABEL,
-            completion_rate=rate,
-            exercises_json=json.dumps([], ensure_ascii=False),
-        ))
+    today = clock.today()
+    this_monday = today - timedelta(days=today.weekday())
+    existing = set(
+        db.scalars(
+            select(models.RoutineHistory.id).where(
+                models.RoutineHistory.member_id == member_id
+            )
+        ).all()
+    )
+    for week in range(_HISTORY_WEEKS):
+        monday = this_monday - timedelta(days=7 * week)
+        factor = _COMPLETION_FACTORS[week % len(_COMPLETION_FACTORS)]
+        for i, rate in enumerate(completion):
+            if rate <= 0:
+                continue  # 기록 없음 — 행을 만들면 '0% 수행'이라는 다른 뜻이 된다
+            day = monday + timedelta(days=i)
+            if day > today:
+                continue  # 아직 오지 않은 요일
+            date = day.isoformat()
+            hist_id = f"seed-roster-hist-{member_id}-{date}"
+            if hist_id in existing:
+                continue
+            existing.add(hist_id)
+            db.add(models.RoutineHistory(
+                id=hist_id,
+                member_id=member_id,
+                trainer_id=None,
+                date=date,
+                kind_label=_ROUTINE_LABEL,
+                completion_rate=min(100, round(rate * factor)),
+                exercises_json=json.dumps([], ensure_ascii=False),
+            ))
 
 
 def _seed_awaiting_message(db: Session, member_id: str) -> None:

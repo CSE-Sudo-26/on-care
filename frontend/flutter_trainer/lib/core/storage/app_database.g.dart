@@ -3950,6 +3950,474 @@ class TrainerScheduleEntriesCompanion
   }
 }
 
+class $ClientDailyMetricsTable extends ClientDailyMetrics
+    with TableInfo<$ClientDailyMetricsTable, ClientDailyMetricRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ClientDailyMetricsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientIdMeta = const VerificationMeta(
+    'clientId',
+  );
+  @override
+  late final GeneratedColumn<String> clientId = GeneratedColumn<String>(
+    'client_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completionMeta = const VerificationMeta(
+    'completion',
+  );
+  @override
+  late final GeneratedColumn<int> completion = GeneratedColumn<int>(
+    'completion',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _caloriesMeta = const VerificationMeta(
+    'calories',
+  );
+  @override
+  late final GeneratedColumn<int> calories = GeneratedColumn<int>(
+    'calories',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _sodiumMgMeta = const VerificationMeta(
+    'sodiumMg',
+  );
+  @override
+  late final GeneratedColumn<int> sodiumMg = GeneratedColumn<int>(
+    'sodium_mg',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _sugarGMeta = const VerificationMeta('sugarG');
+  @override
+  late final GeneratedColumn<double> sugarG = GeneratedColumn<double>(
+    'sugar_g',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _exercisesJsonMeta = const VerificationMeta(
+    'exercisesJson',
+  );
+  @override
+  late final GeneratedColumn<String> exercisesJson = GeneratedColumn<String>(
+    'exercises_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientId,
+    date,
+    completion,
+    calories,
+    sodiumMg,
+    sugarG,
+    exercisesJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'client_daily_metrics';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ClientDailyMetricRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(
+        _clientIdMeta,
+        clientId.isAcceptableOrUnknown(data['client_id']!, _clientIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('completion')) {
+      context.handle(
+        _completionMeta,
+        completion.isAcceptableOrUnknown(data['completion']!, _completionMeta),
+      );
+    }
+    if (data.containsKey('calories')) {
+      context.handle(
+        _caloriesMeta,
+        calories.isAcceptableOrUnknown(data['calories']!, _caloriesMeta),
+      );
+    }
+    if (data.containsKey('sodium_mg')) {
+      context.handle(
+        _sodiumMgMeta,
+        sodiumMg.isAcceptableOrUnknown(data['sodium_mg']!, _sodiumMgMeta),
+      );
+    }
+    if (data.containsKey('sugar_g')) {
+      context.handle(
+        _sugarGMeta,
+        sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
+      );
+    }
+    if (data.containsKey('exercises_json')) {
+      context.handle(
+        _exercisesJsonMeta,
+        exercisesJson.isAcceptableOrUnknown(
+          data['exercises_json']!,
+          _exercisesJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientId, date};
+  @override
+  ClientDailyMetricRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ClientDailyMetricRow(
+      clientId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      completion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion'],
+      )!,
+      calories: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}calories'],
+      )!,
+      sodiumMg: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sodium_mg'],
+      )!,
+      sugarG: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}sugar_g'],
+      )!,
+      exercisesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercises_json'],
+      )!,
+    );
+  }
+
+  @override
+  $ClientDailyMetricsTable createAlias(String alias) {
+    return $ClientDailyMetricsTable(attachedDatabase, alias);
+  }
+}
+
+class ClientDailyMetricRow extends DataClass
+    implements Insertable<ClientDailyMetricRow> {
+  final String clientId;
+  final String date;
+  final int completion;
+  final int calories;
+  final int sodiumMg;
+  final double sugarG;
+
+  /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
+  /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
+  /// 준다 — 이행률만으로는 67% 의 분모를 알 수 없다(#754).
+  final String exercisesJson;
+  const ClientDailyMetricRow({
+    required this.clientId,
+    required this.date,
+    required this.completion,
+    required this.calories,
+    required this.sodiumMg,
+    required this.sugarG,
+    required this.exercisesJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_id'] = Variable<String>(clientId);
+    map['date'] = Variable<String>(date);
+    map['completion'] = Variable<int>(completion);
+    map['calories'] = Variable<int>(calories);
+    map['sodium_mg'] = Variable<int>(sodiumMg);
+    map['sugar_g'] = Variable<double>(sugarG);
+    map['exercises_json'] = Variable<String>(exercisesJson);
+    return map;
+  }
+
+  ClientDailyMetricsCompanion toCompanion(bool nullToAbsent) {
+    return ClientDailyMetricsCompanion(
+      clientId: Value(clientId),
+      date: Value(date),
+      completion: Value(completion),
+      calories: Value(calories),
+      sodiumMg: Value(sodiumMg),
+      sugarG: Value(sugarG),
+      exercisesJson: Value(exercisesJson),
+    );
+  }
+
+  factory ClientDailyMetricRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ClientDailyMetricRow(
+      clientId: serializer.fromJson<String>(json['clientId']),
+      date: serializer.fromJson<String>(json['date']),
+      completion: serializer.fromJson<int>(json['completion']),
+      calories: serializer.fromJson<int>(json['calories']),
+      sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
+      sugarG: serializer.fromJson<double>(json['sugarG']),
+      exercisesJson: serializer.fromJson<String>(json['exercisesJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientId': serializer.toJson<String>(clientId),
+      'date': serializer.toJson<String>(date),
+      'completion': serializer.toJson<int>(completion),
+      'calories': serializer.toJson<int>(calories),
+      'sodiumMg': serializer.toJson<int>(sodiumMg),
+      'sugarG': serializer.toJson<double>(sugarG),
+      'exercisesJson': serializer.toJson<String>(exercisesJson),
+    };
+  }
+
+  ClientDailyMetricRow copyWith({
+    String? clientId,
+    String? date,
+    int? completion,
+    int? calories,
+    int? sodiumMg,
+    double? sugarG,
+    String? exercisesJson,
+  }) => ClientDailyMetricRow(
+    clientId: clientId ?? this.clientId,
+    date: date ?? this.date,
+    completion: completion ?? this.completion,
+    calories: calories ?? this.calories,
+    sodiumMg: sodiumMg ?? this.sodiumMg,
+    sugarG: sugarG ?? this.sugarG,
+    exercisesJson: exercisesJson ?? this.exercisesJson,
+  );
+  ClientDailyMetricRow copyWithCompanion(ClientDailyMetricsCompanion data) {
+    return ClientDailyMetricRow(
+      clientId: data.clientId.present ? data.clientId.value : this.clientId,
+      date: data.date.present ? data.date.value : this.date,
+      completion: data.completion.present
+          ? data.completion.value
+          : this.completion,
+      calories: data.calories.present ? data.calories.value : this.calories,
+      sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
+      sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      exercisesJson: data.exercisesJson.present
+          ? data.exercisesJson.value
+          : this.exercisesJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClientDailyMetricRow(')
+          ..write('clientId: $clientId, ')
+          ..write('date: $date, ')
+          ..write('completion: $completion, ')
+          ..write('calories: $calories, ')
+          ..write('sodiumMg: $sodiumMg, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('exercisesJson: $exercisesJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    clientId,
+    date,
+    completion,
+    calories,
+    sodiumMg,
+    sugarG,
+    exercisesJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClientDailyMetricRow &&
+          other.clientId == this.clientId &&
+          other.date == this.date &&
+          other.completion == this.completion &&
+          other.calories == this.calories &&
+          other.sodiumMg == this.sodiumMg &&
+          other.sugarG == this.sugarG &&
+          other.exercisesJson == this.exercisesJson);
+}
+
+class ClientDailyMetricsCompanion
+    extends UpdateCompanion<ClientDailyMetricRow> {
+  final Value<String> clientId;
+  final Value<String> date;
+  final Value<int> completion;
+  final Value<int> calories;
+  final Value<int> sodiumMg;
+  final Value<double> sugarG;
+  final Value<String> exercisesJson;
+  final Value<int> rowid;
+  const ClientDailyMetricsCompanion({
+    this.clientId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.completion = const Value.absent(),
+    this.calories = const Value.absent(),
+    this.sodiumMg = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.exercisesJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ClientDailyMetricsCompanion.insert({
+    required String clientId,
+    required String date,
+    this.completion = const Value.absent(),
+    this.calories = const Value.absent(),
+    this.sodiumMg = const Value.absent(),
+    this.sugarG = const Value.absent(),
+    this.exercisesJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : clientId = Value(clientId),
+       date = Value(date);
+  static Insertable<ClientDailyMetricRow> custom({
+    Expression<String>? clientId,
+    Expression<String>? date,
+    Expression<int>? completion,
+    Expression<int>? calories,
+    Expression<int>? sodiumMg,
+    Expression<double>? sugarG,
+    Expression<String>? exercisesJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (date != null) 'date': date,
+      if (completion != null) 'completion': completion,
+      if (calories != null) 'calories': calories,
+      if (sodiumMg != null) 'sodium_mg': sodiumMg,
+      if (sugarG != null) 'sugar_g': sugarG,
+      if (exercisesJson != null) 'exercises_json': exercisesJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ClientDailyMetricsCompanion copyWith({
+    Value<String>? clientId,
+    Value<String>? date,
+    Value<int>? completion,
+    Value<int>? calories,
+    Value<int>? sodiumMg,
+    Value<double>? sugarG,
+    Value<String>? exercisesJson,
+    Value<int>? rowid,
+  }) {
+    return ClientDailyMetricsCompanion(
+      clientId: clientId ?? this.clientId,
+      date: date ?? this.date,
+      completion: completion ?? this.completion,
+      calories: calories ?? this.calories,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
+      sugarG: sugarG ?? this.sugarG,
+      exercisesJson: exercisesJson ?? this.exercisesJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<String>(clientId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (completion.present) {
+      map['completion'] = Variable<int>(completion.value);
+    }
+    if (calories.present) {
+      map['calories'] = Variable<int>(calories.value);
+    }
+    if (sodiumMg.present) {
+      map['sodium_mg'] = Variable<int>(sodiumMg.value);
+    }
+    if (sugarG.present) {
+      map['sugar_g'] = Variable<double>(sugarG.value);
+    }
+    if (exercisesJson.present) {
+      map['exercises_json'] = Variable<String>(exercisesJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClientDailyMetricsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('date: $date, ')
+          ..write('completion: $completion, ')
+          ..write('calories: $calories, ')
+          ..write('sodiumMg: $sodiumMg, ')
+          ..write('sugarG: $sugarG, ')
+          ..write('exercisesJson: $exercisesJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3966,6 +4434,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ClientChatMessagesTable(this);
   late final $TrainerScheduleEntriesTable trainerScheduleEntries =
       $TrainerScheduleEntriesTable(this);
+  late final $ClientDailyMetricsTable clientDailyMetrics =
+      $ClientDailyMetricsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3978,6 +4448,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clientRoutineHistory,
     clientChatMessages,
     trainerScheduleEntries,
+    clientDailyMetrics,
   ];
 }
 
@@ -6033,6 +6504,261 @@ typedef $$TrainerScheduleEntriesTableProcessedTableManager =
       TrainerScheduleRow,
       PrefetchHooks Function()
     >;
+typedef $$ClientDailyMetricsTableCreateCompanionBuilder =
+    ClientDailyMetricsCompanion Function({
+      required String clientId,
+      required String date,
+      Value<int> completion,
+      Value<int> calories,
+      Value<int> sodiumMg,
+      Value<double> sugarG,
+      Value<String> exercisesJson,
+      Value<int> rowid,
+    });
+typedef $$ClientDailyMetricsTableUpdateCompanionBuilder =
+    ClientDailyMetricsCompanion Function({
+      Value<String> clientId,
+      Value<String> date,
+      Value<int> completion,
+      Value<int> calories,
+      Value<int> sodiumMg,
+      Value<double> sugarG,
+      Value<String> exercisesJson,
+      Value<int> rowid,
+    });
+
+class $$ClientDailyMetricsTableFilterComposer
+    extends Composer<_$AppDatabase, $ClientDailyMetricsTable> {
+  $$ClientDailyMetricsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completion => $composableBuilder(
+    column: $table.completion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get calories => $composableBuilder(
+    column: $table.calories,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sodiumMg => $composableBuilder(
+    column: $table.sodiumMg,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ClientDailyMetricsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ClientDailyMetricsTable> {
+  $$ClientDailyMetricsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completion => $composableBuilder(
+    column: $table.completion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get calories => $composableBuilder(
+    column: $table.calories,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sodiumMg => $composableBuilder(
+    column: $table.sodiumMg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get sugarG => $composableBuilder(
+    column: $table.sugarG,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ClientDailyMetricsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ClientDailyMetricsTable> {
+  $$ClientDailyMetricsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientId =>
+      $composableBuilder(column: $table.clientId, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get completion => $composableBuilder(
+    column: $table.completion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get calories =>
+      $composableBuilder(column: $table.calories, builder: (column) => column);
+
+  GeneratedColumn<int> get sodiumMg =>
+      $composableBuilder(column: $table.sodiumMg, builder: (column) => column);
+
+  GeneratedColumn<double> get sugarG =>
+      $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
+    builder: (column) => column,
+  );
+}
+
+class $$ClientDailyMetricsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ClientDailyMetricsTable,
+          ClientDailyMetricRow,
+          $$ClientDailyMetricsTableFilterComposer,
+          $$ClientDailyMetricsTableOrderingComposer,
+          $$ClientDailyMetricsTableAnnotationComposer,
+          $$ClientDailyMetricsTableCreateCompanionBuilder,
+          $$ClientDailyMetricsTableUpdateCompanionBuilder,
+          (
+            ClientDailyMetricRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ClientDailyMetricsTable,
+              ClientDailyMetricRow
+            >,
+          ),
+          ClientDailyMetricRow,
+          PrefetchHooks Function()
+        > {
+  $$ClientDailyMetricsTableTableManager(
+    _$AppDatabase db,
+    $ClientDailyMetricsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ClientDailyMetricsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ClientDailyMetricsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ClientDailyMetricsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> clientId = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<int> completion = const Value.absent(),
+                Value<int> calories = const Value.absent(),
+                Value<int> sodiumMg = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> exercisesJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ClientDailyMetricsCompanion(
+                clientId: clientId,
+                date: date,
+                completion: completion,
+                calories: calories,
+                sodiumMg: sodiumMg,
+                sugarG: sugarG,
+                exercisesJson: exercisesJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientId,
+                required String date,
+                Value<int> completion = const Value.absent(),
+                Value<int> calories = const Value.absent(),
+                Value<int> sodiumMg = const Value.absent(),
+                Value<double> sugarG = const Value.absent(),
+                Value<String> exercisesJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ClientDailyMetricsCompanion.insert(
+                clientId: clientId,
+                date: date,
+                completion: completion,
+                calories: calories,
+                sodiumMg: sodiumMg,
+                sugarG: sugarG,
+                exercisesJson: exercisesJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ClientDailyMetricsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ClientDailyMetricsTable,
+      ClientDailyMetricRow,
+      $$ClientDailyMetricsTableFilterComposer,
+      $$ClientDailyMetricsTableOrderingComposer,
+      $$ClientDailyMetricsTableAnnotationComposer,
+      $$ClientDailyMetricsTableCreateCompanionBuilder,
+      $$ClientDailyMetricsTableUpdateCompanionBuilder,
+      (
+        ClientDailyMetricRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ClientDailyMetricsTable,
+          ClientDailyMetricRow
+        >,
+      ),
+      ClientDailyMetricRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6054,4 +6780,6 @@ class $AppDatabaseManager {
         _db,
         _db.trainerScheduleEntries,
       );
+  $$ClientDailyMetricsTableTableManager get clientDailyMetrics =>
+      $$ClientDailyMetricsTableTableManager(_db, _db.clientDailyMetrics);
 }

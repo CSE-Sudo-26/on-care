@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
@@ -44,25 +48,75 @@ abstract interface class ReportRepository {
 /// Computes the report locally from the drift-backed streams.
 class LocalReportRepository implements ReportRepository {
   /// Creates the local source.
-  const LocalReportRepository(this._schedule, this._chat);
+  const LocalReportRepository(this._schedule, this._chat, this._db);
 
   final ScheduleRepository _schedule;
   final ChatRepository _chat;
+  final AppDatabase _db;
 
   @override
   Stream<WeeklyReport> watch({
     required TrainerClient client,
     required DateTime weekStart,
   }) {
+    final start = weekStartOf(weekStart);
     return _schedule
         .watchClientSessions((id: client.id, name: client.name))
-        .map(
-          (sessions) => buildWeeklyReport(
+        .asyncMap(
+          (sessions) async => buildWeeklyReport(
             client: client,
             sessions: sessions,
-            weekStart: weekStart,
+            weekStart: start,
+            // 데모도 그 주의 이력에서 계열을 만든다 — 로스터가 준 이번 주
+            // 계열을 과거 주에 붙이지 않는다(#752).
+            week: await _weekSeries(client.id, start),
           ),
         );
+  }
+
+  /// 저장된 운동 목록을 방어적으로 디코드. 깨진 값은 빈 목록으로.
+  static List<String> _exercises(String? encoded) {
+    if (encoded == null || encoded.isEmpty) return const <String>[];
+    try {
+      final decoded = jsonDecode(encoded);
+      if (decoded is! List) return const <String>[];
+      return decoded.whereType<String>().toList(growable: false);
+    } on FormatException {
+      return const <String>[];
+    }
+  }
+
+  /// 그 주(월→일)의 요일별 값. 기록이 하나도 없으면 null — 화면이 "없다"고
+  /// 말할 수 있어야 한다(0 으로 채우면 "하루 0kcal" 처럼 읽힌다).
+  Future<WeekSeries?> _weekSeries(String clientId, DateTime monday) async {
+    final sunday = monday.add(const Duration(days: 6));
+    final rows =
+        await (_db.select(_db.clientDailyMetrics)..where(
+              (t) =>
+                  t.clientId.equals(clientId) &
+                  t.date.isBiggerOrEqualValue(ymd(monday)) &
+                  t.date.isSmallerOrEqualValue(ymd(sunday)),
+            ))
+            .get();
+    if (rows.isEmpty) return null;
+    final byDate = <String, ClientDailyMetricRow>{
+      for (final row in rows) row.date: row,
+    };
+    ClientDailyMetricRow? on(int day) =>
+        byDate[ymd(monday.add(Duration(days: day)))];
+    return WeekSeries(
+      days: <ReportDay>[
+        for (var d = 0; d < 7; d++)
+          ReportDay(
+            completion: on(d)?.completion ?? 0,
+            exercises: _exercises(on(d)?.exercisesJson),
+          ),
+      ],
+      completion: <int>[for (var d = 0; d < 7; d++) on(d)?.completion ?? 0],
+      sodium: <int>[for (var d = 0; d < 7; d++) on(d)?.sodiumMg ?? 0],
+      calories: <int>[for (var d = 0; d < 7; d++) on(d)?.calories ?? 0],
+      sugar: <double>[for (var d = 0; d < 7; d++) on(d)?.sugarG ?? 0],
+    );
   }
 
   @override
@@ -133,27 +187,49 @@ class DioReportRepository implements ReportRepository {
   }
 }
 
-/// Decodes `WeeklyReportOut`. [client] carries the chart series, which the
-/// report endpoint doesn't repeat (the roster already delivered them).
+/// Decodes `WeeklyReportOut`. 계열도 함께 온다 — 로스터의 것은 이번 주 것이라
+/// 과거 주 화면에 쓸 수 없다(#752).
 WeeklyReport weeklyReportFromJson(
   Map<String, dynamic> json,
   TrainerClient client,
 ) {
   int? optInt(String key) => (json[key] as num?)?.toInt();
+  List<int> ints(String key) => (json[key] as List<Object?>? ?? const <Object?>[])
+      .whereType<num>()
+      .map((n) => n.toInt())
+      .toList(growable: false);
+  List<double> doubles(String key) =>
+      (json[key] as List<Object?>? ?? const <Object?>[])
+          .whereType<num>()
+          .map((n) => n.toDouble())
+          .toList(growable: false);
   final weekStart =
       DateTime.tryParse(json['week_start'] as String? ?? '') ??
       weekStartOf(DateTime.now());
   return WeeklyReport(
     client: client,
     weekStart: weekStart,
-    // [client]'s weekday series describes the current week only, so the
-    // report has to say which week it is before anything renders them.
     isCurrentWeek: weekStartOf(weekStart) == weekStartOf(DateTime.now()),
     sessionsBooked: optInt('sessions_booked') ?? 0,
     sessionsDone: optInt('sessions_done') ?? 0,
     completionAvg: optInt('completion_avg'),
     sodiumOverDays: optInt('sodium_over_days') ?? 0,
     sodiumAvg: optInt('sodium_avg'),
+    weekCompletion: ints('week_completion'),
+    sodiumWeek: ints('sodium_week'),
+    caloriesWeek: ints('calories_week'),
+    sugarWeek: doubles('sugar_week'),
+    days: <ReportDay>[
+      for (final day in (json['days'] as List<Object?>? ?? const <Object?>[]))
+        if (day is Map<String, dynamic>)
+          ReportDay(
+            completion: (day['completion'] as num?)?.toInt() ?? 0,
+            exercises:
+                (day['exercises'] as List<Object?>? ?? const <Object?>[])
+                    .whereType<String>()
+                    .toList(growable: false),
+          ),
+    ],
   );
 }
 
@@ -163,6 +239,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
     return LocalReportRepository(
       ref.watch(scheduleRepositoryProvider),
       ref.watch(chatRepositoryProvider),
+      ref.watch(appDatabaseProvider),
     );
   }
   return DioReportRepository(ref.watch(dioProvider));

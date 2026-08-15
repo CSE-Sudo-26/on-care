@@ -144,6 +144,30 @@ class TrainerScheduleEntries extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
+/// 고객의 하루치 집계 — 데모가 **과거 주**를 그릴 수 있게 하는 유일한 이력.
+///
+/// 다른 데모 테이블(식단·운동 기록)은 화면에 보여 줄 오늘치만 갖고 있고 날짜가
+/// 없다. 리포트는 어느 주든 열 수 있어야 하므로, 요일별 그래프와 주간 수치가
+/// 필요한 값만 날짜와 함께 따로 둔다. 오늘 행의 값은 고객 카드의 오늘 수치와
+/// 같게 시딩한다 — 같은 화면에서 두 숫자가 갈라지지 않도록. (#752)
+@DataClassName('ClientDailyMetricRow')
+class ClientDailyMetrics extends Table {
+  TextColumn get clientId => text()();
+  TextColumn get date => text()(); // YYYY-MM-DD
+  IntColumn get completion => integer().withDefault(const Constant(0))(); // 0..100
+  IntColumn get calories => integer().withDefault(const Constant(0))();
+  IntColumn get sodiumMg => integer().withDefault(const Constant(0))();
+  RealColumn get sugarG => real().withDefault(const Constant(0))();
+
+  /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
+  /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
+  /// 준다 — 이행률만으로는 67% 의 분모를 알 수 없다(#754).
+  TextColumn get exercisesJson => text().withDefault(const Constant('[]'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{clientId, date};
+}
+
 /// Trainer-app local database (drift-backed). Holds mock client /
 /// schedule data until the FastAPI backend lands. Designed fresh for
 /// the trainer app — the user app's database is not reused.
@@ -156,6 +180,7 @@ class TrainerScheduleEntries extends Table {
     ClientRoutineHistory,
     ClientChatMessages,
     TrainerScheduleEntries,
+    ClientDailyMetrics,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -179,7 +204,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -222,6 +247,18 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(trainerClients, trainerClients.caloriesWeekJson);
         await m.addColumn(trainerClients, trainerClients.sugarWeekJson);
+      }
+      // v7: 데모가 과거 주 리포트를 그리려면 날짜별 이력이 필요하다(#752).
+      // 새 테이블이라 기존 행은 건드리지 않고, 다음 재시딩이 채운다.
+      // v8: 요일별 상세가 쓸 그날의 운동 목록(#754). 기본값이 있어 기존 행도
+      // 그대로 읽히고, 다음 재시딩이 실제 값을 채운다.
+      //
+      // `createTable` 은 **현재** 정의로 만들므로 v7 을 갓 지난 DB 에는 이미
+      // 이 컬럼이 있다. 새로 만든 뒤 다시 붙이면 duplicate column 으로 죽는다.
+      if (from < 7) {
+        await m.createTable(clientDailyMetrics);
+      } else if (from < 8) {
+        await m.addColumn(clientDailyMetrics, clientDailyMetrics.exercisesJson);
       }
     },
   );

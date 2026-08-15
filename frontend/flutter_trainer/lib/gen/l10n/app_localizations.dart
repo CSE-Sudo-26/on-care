@@ -1469,7 +1469,7 @@ abstract class AppLocalizations {
   /// No description provided for @legendMissed.
   ///
   /// In en, this message translates to:
-  /// **'Missed'**
+  /// **'Not logged'**
   String get legendMissed;
 
   /// No description provided for @clientFeedback.
@@ -1688,12 +1688,6 @@ abstract class AppLocalizations {
   /// **''**
   String get unitTimes;
 
-  /// No description provided for @unitDays.
-  ///
-  /// In en, this message translates to:
-  /// **'d'**
-  String get unitDays;
-
   /// No description provided for @reportsCompletionRate.
   ///
   /// In en, this message translates to:
@@ -1730,35 +1724,17 @@ abstract class AppLocalizations {
   /// **'{name}\'s weekly report'**
   String reportsClientWeekly(String name);
 
-  /// No description provided for @reportsPtSessions.
-  ///
-  /// In en, this message translates to:
-  /// **'PT sessions'**
-  String get reportsPtSessions;
-
   /// No description provided for @reportsCompletionAvg.
   ///
   /// In en, this message translates to:
   /// **'Workout completion'**
   String get reportsCompletionAvg;
 
-  /// No description provided for @reportsSodiumOver.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium over target'**
-  String get reportsSodiumOver;
-
   /// No description provided for @reportsCompletionByDay.
   ///
   /// In en, this message translates to:
-  /// **'Completion by day'**
+  /// **'Weekly workout completion'**
   String get reportsCompletionByDay;
-
-  /// No description provided for @reportsNoLastWeekDaily.
-  ///
-  /// In en, this message translates to:
-  /// **'No daily records for last week yet'**
-  String get reportsNoLastWeekDaily;
 
   /// No description provided for @reportsNoWorkoutsThisWeek.
   ///
@@ -1783,6 +1759,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No {metric} logged this week yet'**
   String reportsNoMetricRecords(String metric);
+
+  /// No description provided for @reportsCompletionBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'Average of {days} logged days'**
+  String reportsCompletionBasis(int days);
+
+  /// No description provided for @reportsDietTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly diet trend'**
+  String get reportsDietTrend;
+
+  /// No description provided for @reportsSodiumOverInline.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days over sodium'**
+  String reportsSodiumOverInline(int days);
+
+  /// No description provided for @reportsMoreExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String reportsMoreExercises(int count);
+
+  /// No description provided for @workoutDoneOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} done'**
+  String workoutDoneOfTotal(int total, int done);
+
+  /// No description provided for @chartNoRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Not logged'**
+  String get chartNoRecord;
 
   /// No description provided for @reportsSendStateSent.
   ///
@@ -4442,17 +4454,23 @@ abstract class AppLocalizations {
   /// **'Write coaching feedback for the client.'**
   String get reportsFeedbackHint;
 
-  /// No description provided for @reportsTrendTitle.
+  /// No description provided for @reportsRecentWeeks.
   ///
   /// In en, this message translates to:
-  /// **'Workout completion · Last 4 weeks'**
-  String get reportsTrendTitle;
+  /// **'Last 4 weekly averages'**
+  String get reportsRecentWeeks;
 
-  /// No description provided for @reportsTrendWeek.
+  /// No description provided for @reportsGoalMarker.
   ///
   /// In en, this message translates to:
-  /// **'Week {index}'**
-  String reportsTrendWeek(int index);
+  /// **'│ Goal {value}'**
+  String reportsGoalMarker(String value);
+
+  /// No description provided for @reportsWeeksAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}w ago'**
+  String reportsWeeksAgo(int count);
 
   /// No description provided for @reportsAiTitle.
   ///

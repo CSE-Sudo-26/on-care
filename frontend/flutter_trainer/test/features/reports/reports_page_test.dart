@@ -150,7 +150,8 @@ void main() {
     final currentWeek = find.widgetWithText(ActionButton, '이번 주로');
     expect(currentWeek, findsOneWidget);
     expect(find.text('다음 주'), findsNothing);
-    expect(find.text('선택 주'), findsNWidgets(2));
+    // 비교 카드 두 곳과 최근 4주 목록에 같은 말이 쓰인다.
+    expect(find.text('선택 주'), findsWidgets);
 
     await tester.tap(currentWeek);
     await settle(tester);
@@ -392,38 +393,59 @@ void main() {
     List<double> drawnValues() =>
         tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).values;
 
+    // 어제는 약속이 있던 날이라 로스터의 평상시 배열 대신 그날 값이 그려진다.
+    // 어제가 주 안에서 몇 번째 칸인지는 데모를 여는 날마다 달라지므로 계산해서
+    // 덮는다 — 숫자를 박아 두면 하루만 지나도 깨진다.
+    final int feastSlot = DateTime.now().weekday - 2;
+    List<double> expected(List<num> series, double feast) {
+      final values = series.map((v) => v.toDouble()).toList();
+      if (feastSlot >= 0) values[feastSlot] = feast;
+      return values;
+    }
+
     // 기본은 칼로리 — 나트륨 하나만 보여 주던 자리를 세 지표가 나눠 쓴다.
     expect(find.text('칼로리 추이'), findsOneWidget);
-    expect(
-      drawnValues(),
-      client.caloriesWeek.map((v) => v.toDouble()).toList(),
-    );
+    expect(drawnValues(), expected(client.caloriesWeek, 2380));
 
     await pickMetric('sodium');
     expect(find.text('나트륨 추이'), findsOneWidget);
-    expect(drawnValues(), client.sodiumWeek.map((v) => v.toDouble()).toList());
+    expect(drawnValues(), expected(client.sodiumWeek, 2261));
 
     await pickMetric('sugar');
     expect(find.text('당류 추이'), findsOneWidget);
     // 당류는 소수를 유지한다 — 17.8 이 18 로 뭉개지면 요약 수치와 어긋난다.
-    expect(drawnValues(), client.sugarWeek);
+    expect(drawnValues(), expected(client.sugarWeek, 63.0));
     expect(client.sugarWeek.any((v) => v != v.roundToDouble()), isTrue);
   });
 
-  testWidgets('지난 주에는 고른 지표 이름으로 없다고 말한다 (#746)', (tester) async {
+  testWidgets('지난 주도 그 주의 계열로 그려지고 이번 주와 섞이지 않는다 (#752)', (
+    tester,
+  ) async {
     await openReports(tester);
+    List<double> drawnValues() =>
+        tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).values;
+
+
+    final thisWeek = drawnValues();
+    expect(thisWeek, hasLength(7));
+
     await tester.tap(find.text('이전'));
     await settle(tester);
 
-    expect(find.byType(MetricTrendChart), findsNothing);
-    expect(find.text('지난 주 칼로리 추이는 아직 없어요'), findsOneWidget);
+    // 과거 주도 그래프가 그려진다 — 예전에는 이 자리가 통째로 비어 있었다.
+    final lastWeek = drawnValues();
+    expect(lastWeek, hasLength(7));
+    expect(lastWeek, isNot(equals(thisWeek)), reason: '이번 주 수치가 그대로 실렸다');
+    // 지난 주는 이미 다 지났으니 마지막 요일까지 값이 있다.
+    expect(lastWeek.last, greaterThan(0));
+    // 지난 주 일요일에 '오늘' 표시가 붙으면 그 날이 오늘인 것처럼 읽힌다.
+    expect(
+      tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).markToday,
+      isFalse,
+    );
 
-    final chip = find.byKey(const ValueKey<String>('trend-metric-sugar'));
-    await tester.ensureVisible(chip);
-    await tester.pump();
-    await tester.tap(chip);
-    await settle(tester);
-    expect(find.text('지난 주 당류 추이는 아직 없어요'), findsOneWidget);
+    // 지난 주도 요약 줄이 그 주의 값으로 채워진다.
+    expect(find.text('최근 4주 평균'), findsOneWidget);
   });
 
   testWidgets('주를 가리키는 말은 이번 주·지난 주·선택 주 셋뿐이다', (tester) async {
@@ -440,9 +462,38 @@ void main() {
     // 과거 주에서는 제목도 보고 있는 주를 따라간다.
     expect(find.text('선택 주 vs 지난 주'), findsOneWidget);
     expect(find.text('이번 주 vs 지난 주'), findsNothing);
-    // 앞선 주는 상황과 무관하게 늘 '지난 주'.
-    expect(find.text('지난 주'), findsNWidgets(2));
+    // 앞선 주는 상황과 무관하게 늘 '지난 주' — 비교 카드와 최근 4주 목록이
+    // 같은 말을 쓴다.
+    expect(find.text('지난 주'), findsWidgets);
     expect(find.text('이전 주'), findsNothing);
+  });
+
+  testWidgets('평균이 며칠을 나눈 값인지 화면에 적힌다 (#754)', (tester) async {
+    final container = await openReports(tester);
+    final client = (await container.read(clientsProvider.future)).first;
+
+    // 기록이 없는 날은 평균에서 빠지므로 7 이 아니다 — 그 사실이 적혀 있어야
+    // 트레이너가 아래 막대를 세어 평균을 확인할 수 있다.
+    final logged = client.weekCompletion.where((v) => v > 0).length;
+    expect(logged, lessThan(7), reason: '기록이 빠진 날이 있는 고객이어야 한다');
+    // 마지막 줄에 이번 주가 앞선 세 주 옆에 놓인다. 며칠을 나눈 값인지는
+    // 값이 있는 막대를 세면 나오므로 따로 적지 않는다.
+    expect(find.text('최근 4주 평균'), findsOneWidget);
+
+    // 기록이 없는 날은 0% 가 아니라 기록이 없다고 말한다.
+    expect(find.text('0%'), findsNothing);
+    expect(find.text('기록 없음'), findsWidgets);
+
+    // 운동과 식단이 카드로 나뉘고, 각 카드 제목 줄에 그 카드의 수치가 남는다.
+    expect(find.text('주간 운동 이행률'), findsOneWidget);
+    expect(find.text('주간 식단 추이'), findsOneWidget);
+    // 며칠인지는 어제가 어느 요일이냐에 따라 달라진다 — 그 수치가 카드 제목
+    // 줄에 남는다는 것이 요지다.
+    expect(find.textContaining('나트륨 초과'), findsOneWidget);
+
+    // 요일 칸에는 운동 이름만 둔다 — 퍼센트는 바로 위 막대가 말하고,
+    // 아직 오지 않은 날은 빈칸으로 둔다.
+    expect(find.text('벤치프레스 4세트'), findsWidgets);
   });
 }
 

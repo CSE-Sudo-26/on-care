@@ -257,19 +257,19 @@ void main() {
       expect(find.text('피드백 수정'), findsOneWidget);
     });
 
-    testWidgets('김민수 averages only the weekdays that have happened', (
+    testWidgets('김민수 averages only the weekdays he actually logged', (
       tester,
     ) async {
       await openWorkout(tester, '김민수');
 
-      // 김민수's seeded week is [100, 67, 100, 0, 100, 67, 100]. Days
-      // after today haven't happened, so averaging all seven would report
-      // a number the member could not have earned yet.
+      // 김민수's seeded week is [100, 67, 100, 0, 100, 67, 100]. 아직 오지
+      // 않은 날은 물론, 기록이 없는 날(목요일 0)도 빼고 나눈다 — 주의 배지·
+      // 고객 검색·주간 리포트가 쓰는 규칙과 같아야 한 회원이 화면마다 다른
+      // 이행률로 보이지 않는다(#754).
       const week = <int>[100, 67, 100, 0, 100, 67, 100];
       final elapsed = elapsedWeekdays(DateTime.now());
-      final counted = week.take(elapsed).toList();
-      final expected = (counted.reduce((a, b) => a + b) / counted.length)
-          .round();
+      final logged = week.take(elapsed).where((rate) => rate > 0).toList();
+      final expected = (logged.reduce((a, b) => a + b) / logged.length).round();
 
       // The tab now opens on the routines it absorbed from the old 루틴
       // tab, so the completion card starts below the fold.
@@ -287,11 +287,13 @@ void main() {
         ),
         findsOneWidget,
       );
+      // 며칠을 나눈 값인지 화면에 적혀 있어야 막대를 세어 확인할 수 있다.
+      expect(find.text('기록한 ${logged.length}일 평균'), findsWidgets);
       // '완료' is also a PT session's status in the card above, so the
-      // legend is matched loosely; 부분/미완료 are legend-only.
+      // legend is matched loosely; 부분/기록 없음 are legend-only.
       expect(find.text('완료'), findsWidgets);
       expect(find.text('부분'), findsOneWidget);
-      expect(find.text('미완료'), findsOneWidget);
+      expect(find.text('기록 없음'), findsOneWidget);
 
       // History entries with feedback + note boxes. Lower list items are
       // built lazily — scroll each into view before asserting.
