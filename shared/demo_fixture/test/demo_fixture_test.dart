@@ -1,15 +1,24 @@
 import 'dart:io';
 
 import 'package:demo_fixture/demo_fixture.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:demo_fixture/src/fixture_json.g.dart';
+import 'package:test/test.dart';
 
-/// 에셋 번들 없이 파일에서 바로 읽는다 — 이 패키지 테스트는 앱 부팅 경로가 아니라
-/// 픽스처 자체를 본다.
+/// 사람이 고치는 원본 파일. 앱이 쓰는 것은 여기서 생성된 Dart 상수다.
 DemoFixture _load() =>
     DemoFixture.parse(File('assets/kim_minsu.json').readAsStringSync());
 
 void main() {
   final DemoFixture fixture = _load();
+
+  test('앱에 심긴 상수가 원본 JSON 과 같다', () {
+    // 둘이 갈라지면 앱만 옛 값을 들고 다닌다. 맞추는 방법은 손이 아니라
+    // `python3 tool/gen_demo_fixture.py` 다.
+    expect(
+      kimMinsuFixtureJson.trim(),
+      File('assets/kim_minsu.json').readAsStringSync().trim(),
+    );
+  });
 
   test('오늘·어제 합계가 시연에서 말하는 값 그대로다', () {
     // 이 두 날은 두 앱을 나란히 놓고 화면에서 직접 읽는 값이다. 픽스처가 바뀌어도

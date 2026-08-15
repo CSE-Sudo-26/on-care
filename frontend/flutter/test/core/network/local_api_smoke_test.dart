@@ -18,9 +18,6 @@ import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 /// interceptor → JSON → fromJson factory. If any of these layers
 /// drift apart, this lights up first.
 void main() {
-  // 시드가 공유 픽스처를 에셋에서 읽는다(#757) — rootBundle 을 쓰려면 바인딩이
-  // 먼저 서 있어야 한다.
-  TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase db;
   late Dio dio;
 

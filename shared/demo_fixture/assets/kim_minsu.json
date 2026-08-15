@@ -596,7 +596,7 @@
               "type": "stretching",
               "minutes": 5,
               "calories": 15,
-              "done": true
+              "done": false
             }
           ],
           "meals": [
@@ -670,7 +670,7 @@
               "type": "stretching",
               "minutes": 15,
               "calories": 45,
-              "done": false
+              "done": true
             }
           ],
           "meals": [
@@ -2248,7 +2248,7 @@
               "type": "stretching",
               "minutes": 5,
               "calories": 15,
-              "done": true
+              "done": false
             }
           ],
           "meals": [
@@ -2322,7 +2322,7 @@
               "type": "stretching",
               "minutes": 15,
               "calories": 45,
-              "done": false
+              "done": true
             }
           ],
           "meals": [

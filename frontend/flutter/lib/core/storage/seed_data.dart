@@ -103,7 +103,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
   await db.deleteValue('dashboard_ai_advice');
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
-  final DemoFixture demo = fixture ?? await DemoFixture.load();
+  final DemoFixture demo = fixture ?? DemoFixture.load();
   final List<FixtureDay> days = demo.daysFor(now);
 
   await db.transaction(() async {

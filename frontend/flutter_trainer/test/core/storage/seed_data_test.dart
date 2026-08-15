@@ -1,10 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+
+/// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
+/// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
+final DemoFixture _fixture = DemoFixture.parse(
+  File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+);
 
 String _todayString() {
   final now = DateTime.now();
@@ -52,7 +60,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v15'), _todayString());
+      expect(await db.readValue('trainer_seeded_v16'), _todayString());
     });
 
     test(
@@ -63,10 +71,44 @@ void main() {
         final minsu = await (db.select(
           db.trainerClients,
         )..where((c) => c.id.equals('seed-client-1'))).getSingle();
-        // frontend/flutter's current MockDietRepository daily total is 17.8g.
+        // 사용자 앱과 같은 픽스처에서 오는 값이다.
         expect(minsu.sugarG, 17.8);
       },
     );
+
+    test('김민수의 날짜별 값이 픽스처와 같다', () async {
+      // 사용자 앱도 같은 픽스처를 읽으므로, 이 단정이 곧 "두 앱을 나란히 놓고 같은
+      // 날짜를 봐도 숫자가 같다"는 뜻이다(#757).
+      await seedIfEmpty(db);
+
+      final Map<String, FixtureDay> byDate = <String, FixtureDay>{
+        for (final FixtureDay day in _fixture.daysFor(DateTime.now()))
+          day.date: day,
+      };
+
+      final rows =
+          await (db.select(db.clientDailyMetrics)
+                ..where((t) => t.clientId.equals('seed-client-1')))
+              .get();
+      expect(rows, isNotEmpty);
+      for (final row in rows) {
+        final FixtureDay day = byDate[row.date]!;
+        expect(row.calories, day.calories, reason: '${row.date} 칼로리');
+        expect(row.sodiumMg, day.sodiumMg, reason: '${row.date} 나트륨');
+        expect(row.sugarG, closeTo(day.sugarG, 0.001), reason: '${row.date} 당류');
+        expect(row.completion, day.completion, reason: '${row.date} 이행률');
+      }
+
+      // 기록이 없는 날은 행 자체가 없어야 한다 — 0 으로 채우면 주 평균이 내려간다.
+      final Set<String> seeded = rows.map((r) => r.date).toSet();
+      final Iterable<String> blank = byDate.values
+          .where((FixtureDay d) => !d.hasRecord)
+          .map((FixtureDay d) => d.date);
+      expect(blank, isNotEmpty, reason: '기록 없는 날이 픽스처에 있어야 이 검증이 뜻을 갖는다');
+      for (final String date in blank) {
+        expect(seeded, isNot(contains(date)), reason: '$date 는 기록이 없는 날이다');
+      }
+    });
 
     // The roster is a fixture for the *charts*, not just the list — its
     // whole point is that every state the console can render is reachable
@@ -240,13 +282,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v15', '2020-01-01');
+      await db.putValue('trainer_seeded_v16', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v15'), _todayString());
+      expect(await db.readValue('trainer_seeded_v16'), _todayString());
     });
 
     test(
@@ -369,7 +411,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v15'), today);
+        expect(await db.readValue('trainer_seeded_v16'), today);
       },
     );
 
@@ -391,7 +433,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v15', '2020-01-01');
+      await db.putValue('trainer_seeded_v16', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();

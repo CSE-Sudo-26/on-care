@@ -12,10 +12,7 @@ library;
 
 import 'dart:convert';
 
-import 'package:flutter/services.dart' show AssetBundle, rootBundle;
-
-/// 픽스처 에셋의 키. 두 앱 모두 이 경로로 읽는다.
-const String kDemoFixtureAsset = 'packages/demo_fixture/assets/kim_minsu.json';
+import 'package:demo_fixture/src/fixture_json.g.dart';
 
 /// 음식 한 가지.
 class FixtureFood {
@@ -213,13 +210,15 @@ class DemoFixture {
        _recent = recent,
        _weeks = weeks;
 
-  /// 에셋에서 읽는다. 앱 부팅 경로에서 쓴다.
-  static Future<DemoFixture> load({AssetBundle? bundle}) async =>
-      DemoFixture.parse(
-        await (bundle ?? rootBundle).loadString(kDemoFixtureAsset),
-      );
+  /// 앱에 심긴 픽스처. **동기**다.
+  ///
+  /// 에셋으로 두지 않는 이유: 에셋을 읽으려면 `rootBundle` 이 필요하고 그건 비동기라,
+  /// 가짜 비동기 안에서 도는 위젯 테스트가 펌프될 때까지 풀리지 않아 통째로 멈춘다.
+  /// 시드는 위젯 테스트의 부팅 경로에서도 불리므로 그 함정을 아예 없앤다.
+  factory DemoFixture.load() => DemoFixture.parse(kimMinsuFixtureJson);
 
-  /// 이미 읽어 둔 JSON 문자열에서 만든다. 테스트가 파일을 직접 읽어 넣을 때 쓴다.
+  /// 주어진 JSON 문자열에서 만든다. 테스트가 원본 파일을 직접 읽어 넣을 때 쓴다 —
+  /// 그래야 심긴 상수가 원본과 갈라졌는지도 함께 드러난다.
   factory DemoFixture.parse(String source) {
     final Map<String, Object?> json =
         jsonDecode(source) as Map<String, Object?>;

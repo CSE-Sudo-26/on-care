@@ -21,7 +21,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 
-#: 픽스처 원본. 두 Flutter 앱이 `packages/demo_fixture/…` 로 읽는다.
+#: 픽스처 원본. 사람이 읽고 고치는 파일이다.
 OUT = _ROOT / "shared/demo_fixture/assets/kim_minsu.json"
 
 #: 백엔드가 읽는 같은 파일. 내용은 [OUT] 과 **바이트까지 같아야 한다**
@@ -32,6 +32,14 @@ OUT = _ROOT / "shared/demo_fixture/assets/kim_minsu.json"
 #: 건 배포 워크플로를 건드리는 일이라 여기서 하지 않는다. 대신 이 스크립트가 두
 #: 곳에 함께 써서 손으로 맞출 일을 없앤다.
 OUT_BACKEND = _ROOT / "backend/app/db/demo_fixture_data.json"
+
+#: 두 Flutter 앱이 읽는 같은 내용. 에셋이 아니라 **Dart 상수**로 심는다.
+#:
+#: 에셋으로 두면 읽는 데 `rootBundle` 이 필요하고 그건 비동기다. 위젯 테스트는 가짜
+#: 비동기 안에서 도는데, 거기서 에셋을 기다리면 펌프될 때까지 풀리지 않아 테스트가
+#: 통째로 멈춘다 — 26초에 끝나던 파일이 10분을 넘겨도 끝나지 않았다. 상수로 두면
+#: 읽기가 동기라 그 함정이 없고, 새 테스트를 쓰는 사람이 밟을 일도 없다.
+OUT_DART = _ROOT / "shared/demo_fixture/lib/src/fixture_json.g.dart"
 
 HISTORY_WEEKS = 12
 
@@ -202,7 +210,10 @@ WEEK_STORIES: list[tuple[str, list[list[str | None] | None], dict[int, int]]] = 
             [B_EGG, L_DOE, D_SAL, S_NUT],
             [B_YOG, L_DOE, D_SLM, None],
         ],
-        {1: 1, 5: 1},
+        # 화·목이 낮다. 트레이너 스레드에서 김민수가 "화요일이랑 목요일이 야근이
+        # 많아요" 라고 답하는데, 이행률이 그 요일에 떨어져 있지 않으면 대화가 화면의
+        # 숫자와 어긋난다(`seed_clients.dart` 의 chat).
+        {1: 1, 3: 1},
     ),
     (
         "가볍게 간 한 주 — 세 지표가 모두 목표 안에 든다.",
@@ -481,12 +492,31 @@ def build() -> dict:
     }
 
 
+_DART_HEADER = '''// GENERATED — 손으로 고치지 말 것.
+//
+// `python3 tool/gen_demo_fixture.py` 가
+// `shared/demo_fixture/assets/kim_minsu.json` 과 함께 만든다. 고칠 값은 그 JSON 에
+// 있고, 두 파일이 어긋나면 패키지 테스트가 잡는다.
+
+/// 김민수 데모 픽스처의 JSON 원문.
+const String kimMinsuFixtureJson = r\'\'\'
+'''
+
+
 def main() -> None:
     payload = json.dumps(build(), ensure_ascii=False, indent=2) + "\n"
     for path in (OUT, OUT_BACKEND):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(payload, encoding="utf-8")
         print(f"wrote {path}")
+
+    # raw 문자열(r''')로 감싼다 — JSON 에 백슬래시 이스케이프가 들어와도 Dart 가 다시
+    # 해석하지 않는다. JSON 은 작은따옴표 세 개를 만들 수 없어(문자열 값은 큰따옴표로
+    # 이스케이프된다) 구분자와 부딪히지 않는다.
+    assert "'''" not in payload, "픽스처에 ''' 이 들어가면 raw 문자열이 깨진다"
+    OUT_DART.parent.mkdir(parents=True, exist_ok=True)
+    OUT_DART.write_text(_DART_HEADER + payload + "''';\n", encoding="utf-8")
+    print(f"wrote {OUT_DART}")
 
 
 if __name__ == "__main__":

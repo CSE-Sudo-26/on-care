@@ -174,6 +174,48 @@ void main() {
       );
     });
 
+    test('날짜별 값이 픽스처와 같다', () async {
+      // 트레이너 앱도 같은 픽스처를 읽으므로, 이 단정이 곧 "두 앱을 나란히 놓고 같은
+      // 날짜를 봐도 숫자가 같다"는 뜻이다(#757). 트레이너 쪽 짝은
+      // `flutter_trainer/test/core/storage/seed_data_test.dart` 에 있다.
+      await seedIfEmpty(db, fixture: _fixture);
+      final diet = await db.select(db.dietEntries).get();
+      final exercise = await db.select(db.exerciseSessions).get();
+
+      for (final FixtureDay day in _fixture.daysFor(DateTime.now())) {
+        final rows = diet.where((r) => r.date == day.date);
+        expect(
+          rows.fold<int>(0, (int sum, r) => sum + r.totalCalories),
+          day.calories,
+          reason: '${day.date} 칼로리',
+        );
+        expect(
+          rows.fold<int>(0, (int sum, r) => sum + r.sodiumMg),
+          day.sodiumMg,
+          reason: '${day.date} 나트륨',
+        );
+        expect(
+          rows.fold<double>(0, (double sum, r) => sum + r.sugarG),
+          closeTo(day.sugarG, 0.001),
+          reason: '${day.date} 당류',
+        );
+
+        // 운동은 **실제로 한** 항목만 쌓인다 — 이행률과 주간 운동 시간이 갈라지면
+        // 안 된다.
+        final int minutes = exercise
+            .where((r) => r.weekStart == day.weekStart && r.dayLabel == day.dayLabel)
+            .fold<int>(0, (int sum, r) => sum + r.minutes);
+        expect(
+          minutes,
+          day.doneExercises.fold<int>(
+            0,
+            (int sum, FixtureExercise e) => sum + e.minutes,
+          ),
+          reason: '${day.date} 운동 시간',
+        );
+      }
+    });
+
     test('지난 주 운동 세션도 시드된다', () async {
       await seedIfEmpty(db, fixture: _fixture);
       final exercise = await db.select(db.exerciseSessions).get();

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
@@ -25,6 +26,12 @@ part 'seed_clients.dart';
 /// - otherwise (first boot or date rolled over) → wipe every
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
+///
+/// 김민수(`seed-client-1`)의 하루는 이 파일이 만들지 않는다. 그는 사용자 앱의
+/// 데모 계정(`user-demo`)과 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 예전에는
+/// 두 앱과 백엔드가 각자 알고리즘으로 그의 과거를 만들어서 같은 날짜의 숫자가 서로
+/// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
+/// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
 ///
 /// The flag is `_v13` (was `_v12`): each weekday now gets its own routine
 /// so a week no longer repeats one workout (#754). `_v12` first carried that day's
@@ -56,12 +63,19 @@ part 'seed_clients.dart';
 /// the spread documented in `seed_clients.dart`. Note the schedule stays
 /// at six slots on purpose: fifteen clients on the books does not mean
 /// fifteen sessions in one day.
-Future<void> seedIfEmpty(AppDatabase db) async {
-  final today = ymd(DateTime.now());
+Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
+  final now = DateTime.now();
+  final today = ymd(now);
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
-  final todayIndex = DateTime.now().weekday - 1;
+  final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v15') == today) return;
+  if (await db.readValue('trainer_seeded_v16') == today) return;
+
+  // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
+  final _FixtureClient fixtureClient = _FixtureClient(
+    (fixture ?? DemoFixture.load()).daysFor(now),
+    todayIndex,
+  );
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -102,6 +116,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
 
     // ---- Re-insert clients + their nested data ----
     for (final client in _clients) {
+      // 김민수는 픽스처가 정한다. 나머지 고객은 이 파일의 값 그대로다.
+      final bool fromFixture = client.id == _fixtureClientId;
+
       await db
           .into(db.trainerClients)
           .insert(
@@ -113,42 +130,66 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               lastMessage: client.lastMessage,
               lastTime: client.lastTime,
               active: Value(client.active),
-              caloriesToday: client.calories,
-              sodiumMg: client.sodiumMg,
-              sugarG: client.sugarG,
-              carbsG: Value(client.carbsG),
-              proteinG: Value(client.proteinG),
-              fatG: Value(client.fatG),
+              caloriesToday: fromFixture
+                  ? fixtureClient.today.calories
+                  : client.calories,
+              sodiumMg: fromFixture
+                  ? fixtureClient.today.sodiumMg
+                  : client.sodiumMg,
+              sugarG: fromFixture ? fixtureClient.today.sugarG : client.sugarG,
+              carbsG: Value(
+                fromFixture ? fixtureClient.carbsToday : client.carbsG,
+              ),
+              proteinG: Value(
+                fromFixture ? fixtureClient.proteinToday : client.proteinG,
+              ),
+              fatG: Value(fromFixture ? fixtureClient.fatToday : client.fatG),
               lastRoutine: client.lastRoutine,
               weekCompletionJson: jsonEncode(
-                _upToToday(client.weekCompletion, todayIndex),
+                fromFixture
+                    ? fixtureClient.completionWeek
+                    : _upToToday(client.weekCompletion, todayIndex),
               ),
               sodiumWeekJson: Value(
-                jsonEncode(_onWeekdays(client.sodiumWeek, todayIndex)),
+                jsonEncode(
+                  fromFixture
+                      ? fixtureClient.sodiumWeek
+                      : _onWeekdays(client.sodiumWeek, todayIndex),
+                ),
               ),
               caloriesWeekJson: Value(
-                jsonEncode(_onWeekdays(client.caloriesWeek, todayIndex)),
+                jsonEncode(
+                  fromFixture
+                      ? fixtureClient.caloriesWeek
+                      : _onWeekdays(client.caloriesWeek, todayIndex),
+                ),
               ),
               sugarWeekJson: Value(
-                jsonEncode(_onWeekdays(client.sugarWeek, todayIndex)),
+                jsonEncode(
+                  fromFixture
+                      ? fixtureClient.sugarWeek
+                      : _onWeekdays(client.sugarWeek, todayIndex),
+                ),
               ),
               sortOrder: Value(client.id),
             ),
           );
 
+      final List<_Meal> diet = fromFixture ? fixtureClient.diet : client.diet;
+
       await db.batch((Batch b) {
         b.insertAll(db.clientDietEntries, <ClientDietEntriesCompanion>[
-          for (var i = 0; i < client.diet.length; i++)
+          for (var i = 0; i < diet.length; i++)
             ClientDietEntriesCompanion.insert(
               id: 'seed-diet-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              meal: client.diet[i].meal,
-              items: client.diet[i].items,
-              calories: client.diet[i].calories,
-              sodiumMg: client.diet[i].sodiumMg,
-              carbsG: Value(client.diet[i].carbsG),
-              proteinG: Value(client.diet[i].proteinG),
-              fatG: Value(client.diet[i].fatG),
+              meal: diet[i].meal,
+              items: diet[i].items,
+              calories: diet[i].calories,
+              sodiumMg: diet[i].sodiumMg,
+              carbsG: Value(diet[i].carbsG),
+              proteinG: Value(diet[i].proteinG),
+              fatG: Value(diet[i].fatG),
               sortOrder: Value(i),
             ),
         ]);
@@ -166,24 +207,29 @@ Future<void> seedIfEmpty(AppDatabase db) async {
             ),
         ]);
 
+        final List<_History> history = fromFixture
+            ? fixtureClient.history
+            : client.history;
         b.insertAll(db.clientRoutineHistory, <ClientRoutineHistoryCompanion>[
-          for (var i = 0; i < client.history.length; i++)
+          for (var i = 0; i < history.length; i++)
             ClientRoutineHistoryCompanion.insert(
               id: 'seed-history-${client.id}-$i',
               clientId: 'seed-client-${client.id}',
-              dateLabel: client.history[i].dateLabel,
-              label: client.history[i].label,
-              completionRate: client.history[i].completionRate,
-              exercisesJson: jsonEncode(client.history[i].exercises),
-              clientFeedback: Value(client.history[i].clientFeedback),
-              trainerNote: Value(client.history[i].trainerNote),
+              dateLabel: history[i].dateLabel,
+              label: history[i].label,
+              completionRate: history[i].completionRate,
+              exercisesJson: jsonEncode(history[i].exercises),
+              clientFeedback: Value(history[i].clientFeedback),
+              trainerNote: Value(history[i].trainerNote),
               sortOrder: Value(i),
             ),
         ]);
 
         b.insertAll(
           db.clientDailyMetrics,
-          _dailyMetrics(client, DateTime.now()).toList(growable: false),
+          fromFixture
+              ? fixtureClient.dailyMetrics().toList(growable: false)
+              : _dailyMetrics(client, now).toList(growable: false),
         );
 
         b.insertAll(db.clientChatMessages, <ClientChatMessagesCompanion>[
@@ -251,7 +297,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v15', today);
+    await db.putValue('trainer_seeded_v16', today);
   });
 }
 
@@ -382,25 +428,122 @@ const List<double> _completionFactors = <double>[
 /// 기록이 드문 고객(휴면·첫 주)은 과거에도 드물게 남는다 — 과거 주만 갑자기
 /// 성실해지면 화면이 그 고객의 이야기와 어긋난다. 기록이 하나도 없는 고객은
 /// 과거에도 없다.
-/// 김민수의 **어제** 하루. 약속이 있어 칼로리·당류가 목표를 넘는다.
-///
-/// 요일이 아니라 날짜로 고른다 — 데모를 여는 날마다 어제의 요일이 달라지므로,
-/// 요일에 못 박으면 어떤 날에는 이번 주에 초과일이 하나도 없게 된다.
-///
-/// 같은 합계를 사용자앱 데모(`flutter/lib/core/storage/seed_data.dart` 의
-/// `_feastDay`)와 백엔드 시드(`seed_member_data.py`)가 함께 쓴다. 두 앱을
-/// 나란히 놓고 시연하므로 한쪽만 고치면 그 자리에서 티가 난다.
-const int _feastCalories = 2380;
-const int _feastSodiumMg = 2261;
-const double _feastSugarG = 63.0;
+/// 픽스처가 정하는 고객. 김민수(1) 하나다 — 그만 사용자 앱의 데모 계정과 같은
+/// 사람이라 두 앱의 숫자를 맞춰야 한다(#757). 나머지 고객은 이 파일이 만든다.
+const int _fixtureClientId = 1;
 
-/// 잔칫날을 가진 고객. 김민수(1) 하나다 — 로스터 전체가 같은 날 과식하면
-/// 화면이 복사본처럼 읽힌다.
-const int _feastClientId = 1;
+/// 픽스처가 말하는 김민수를, 이 앱의 테이블이 기대하는 모양으로 옮긴다.
+///
+/// 여기에 계산은 없다 — 합계도 이행률도 픽스처 쪽 모델이 이미 갖고 있고, 이 클래스는
+/// 그것을 요일 자리에 놓거나 행 모양으로 바꾸기만 한다.
+class _FixtureClient {
+  _FixtureClient(this.days, this.todayIndex)
+    : today = days.last,
+      _thisWeek = days.where((FixtureDay d) => d.weekStart == days.last.weekStart)
+          .toList(growable: false);
+
+  final List<FixtureDay> days;
+  final int todayIndex;
+  final FixtureDay today;
+  final List<FixtureDay> _thisWeek;
+
+  double get carbsToday => _sumToday((FixtureMeal m) => m.carbsG);
+  double get proteinToday => _sumToday((FixtureMeal m) => m.proteinG);
+  double get fatToday => _sumToday((FixtureMeal m) => m.fatG);
+
+  double _sumToday(double Function(FixtureMeal) pick) {
+    final double total = today.meals.fold<double>(
+      0,
+      (double sum, FixtureMeal m) => sum + pick(m),
+    );
+    return (total * 10).round() / 10;
+  }
+
+  /// 오늘 끼니. 트레이너 화면은 끼니 이름과 음식 목록을 한 줄로 읽는다.
+  List<_Meal> get diet => <_Meal>[
+    for (final FixtureMeal meal in today.meals)
+      _Meal(
+        _mealLabel(meal.mealType),
+        meal.foods.map((FixtureFood f) => f.name).join(', '),
+        meal.calories,
+        meal.sodiumMg,
+        carbsG: meal.carbsG,
+        proteinG: meal.proteinG,
+        fatG: meal.fatG,
+      ),
+  ];
+
+  /// 고객 상세의 최근 운동 이력. 가까운 날부터, 운동이 있던 날만.
+  List<_History> get history => <_History>[
+    for (final FixtureDay day in days.reversed.where(
+      (FixtureDay d) => d.exercises.isNotEmpty,
+    ).take(3))
+      _History(
+        dateLabel: _historyLabel(day),
+        label: day.routineLabel,
+        completionRate: day.completion,
+        exercises: <String>[
+          for (final FixtureExercise e in day.exercises) e.label,
+        ],
+        clientFeedback: day.clientFeedback,
+        trainerNote: day.trainerNote,
+      ),
+  ];
+
+  /// 날짜 라벨. 예전에는 `'7/12 (오늘)'` 처럼 박아 두어 날이 바뀌어도 그대로였다.
+  String _historyLabel(FixtureDay day) {
+    final DateTime date = DateTime.parse(day.date);
+    final String base = '${date.month}/${date.day}';
+    return day.date == today.date ? '$base (오늘)' : base;
+  }
+
+  List<int> get caloriesWeek => _week<int>(0, (FixtureDay d) => d.calories);
+  List<int> get sodiumWeek => _week<int>(0, (FixtureDay d) => d.sodiumMg);
+  List<double> get sugarWeek => _week<double>(0.0, (FixtureDay d) => d.sugarG);
+  List<int> get completionWeek => _week<int>(0, (FixtureDay d) => d.completion);
+
+  /// 이번 주 값을 월→일 자리에 놓는다. 아직 오지 않은 요일은 0 이다 — 넣으면 주간
+  /// 추이 그래프가 빈 날을 막대로 그리고 주 평균도 실제보다 높아진다(#752).
+  List<T> _week<T extends num>(T zero, T Function(FixtureDay) pick) {
+    final List<T> week = List<T>.filled(7, zero);
+    for (final FixtureDay day in _thisWeek) {
+      final int index = DateTime.parse(day.date).weekday - 1;
+      if (index <= todayIndex) week[index] = pick(day);
+    }
+    return week;
+  }
+
+  /// 날짜별 하루 집계. 기록이 아예 없는 날은 넣지 않는다.
+  Iterable<ClientDailyMetricsCompanion> dailyMetrics() sync* {
+    for (final FixtureDay day in days) {
+      if (!day.hasRecord) continue;
+      yield ClientDailyMetricsCompanion.insert(
+        clientId: 'seed-client-$_fixtureClientId',
+        date: day.date,
+        completion: Value(day.completion),
+        calories: Value(day.calories),
+        sodiumMg: Value(day.sodiumMg),
+        sugarG: Value(day.sugarG),
+        exercisesJson: Value(
+          jsonEncode(<String>[
+            for (final FixtureExercise e in day.exercises) e.label,
+          ]),
+        ),
+      );
+    }
+  }
+}
+
+/// 끼니 종류 → 화면에 쓰는 한국어 라벨.
+String _mealLabel(String mealType) => switch (mealType) {
+  'breakfast' => '아침',
+  'lunch' => '점심',
+  'dinner' => '저녁',
+  _ => '간식',
+};
 
 Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now) sync* {
   final today = DateTime(now.year, now.month, now.day);
-  final yesterday = today.subtract(const Duration(days: 1));
   final monday = today.subtract(Duration(days: today.weekday - 1));
   final todayIndex = today.weekday - 1;
 
@@ -421,14 +564,9 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
     for (var day = 0; day < 7; day++) {
       final date = weekMonday.add(Duration(days: day));
       if (date.isAfter(today)) break;
-      final feast = client.id == _feastClientId && date == yesterday;
-      final cal = feast
-          ? _feastCalories
-          : _scaled(calories[day], calorieFactor);
-      final na = feast ? _feastSodiumMg : _scaled(sodium[day], sodiumFactor);
-      final sg = feast
-          ? _feastSugarG
-          : (day < sugar.length ? sugar[day] * sugarFactor : 0.0);
+      final cal = _scaled(calories[day], calorieFactor);
+      final na = _scaled(sodium[day], sodiumFactor);
+      final sg = day < sugar.length ? sugar[day] * sugarFactor : 0.0;
       final done = day < completion.length
           ? _scaled(completion[day], doneFactor).clamp(0, 100)
           : 0;

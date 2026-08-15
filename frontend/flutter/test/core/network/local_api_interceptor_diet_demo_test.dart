@@ -30,9 +30,6 @@ String _dateString(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}';
 
 void main() {
-  // 시드가 공유 픽스처를 에셋에서 읽는다(#757) — rootBundle 을 쓰려면 바인딩이
-  // 먼저 서 있어야 한다.
-  TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase db;
   late Dio dio;
 

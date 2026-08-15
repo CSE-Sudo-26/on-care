@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - "backend/**"
+      # 김민수 데모 픽스처는 세 곳이 함께 읽는다 — 이것만 바뀌어도 돌아야 한다(#757).
+      - "shared/demo_fixture/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "backend/**"
+      # 김민수 데모 픽스처는 세 곳이 함께 읽는다 — 이것만 바뀌어도 돌아야 한다(#757).
+      - "shared/demo_fixture/**"
       - ".github/workflows/backend-ci.yml"
 
 jobs:

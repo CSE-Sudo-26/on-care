@@ -1,3 +1,11 @@
+// GENERATED — 손으로 고치지 말 것.
+//
+// `python3 tool/gen_demo_fixture.py` 가
+// `shared/demo_fixture/assets/kim_minsu.json` 과 함께 만든다. 고칠 값은 그 JSON 에
+// 있고, 두 파일이 어긋나면 패키지 테스트가 잡는다.
+
+/// 김민수 데모 픽스처의 JSON 원문.
+const String kimMinsuFixtureJson = r'''
 {
   "version": 1,
   "readme": "김민수 데모 데이터의 단일 원본. 사용자앱·트레이너웹·백엔드가 이 파일만 읽는다. 날짜는 상대값이다 — weeks[].weeksAgo 는 이번 주 월요일에서 몇 주 거슬러 올라가는지, days[].weekday 는 월(0)~일(6). recent[].offset 은 오늘로부터의 일수이고 주 격자 위를 덮는다. 이행률은 exercises[].done 개수에서 계산한다 — 퍼센트를 따로 적지 않는다.",
@@ -3362,3 +3370,4 @@
     }
   ]
 }
+''';
