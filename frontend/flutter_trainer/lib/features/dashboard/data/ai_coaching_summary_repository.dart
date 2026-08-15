@@ -92,6 +92,8 @@ class DemoAiCoachingSummaryRepository implements AiCoachingSummaryRepository {
         ? RuleCoachingSignal.sodium
         : switch (entry.primary) {
             ClientAlert.sodiumOver => RuleCoachingSignal.sodium,
+            // 당류도 식단 신호다 — 코칭 문구는 나트륨과 같은 갈래를 탄다.
+            ClientAlert.sugarOver => RuleCoachingSignal.sodium,
             ClientAlert.lowCompletion => RuleCoachingSignal.lowCompletion,
             ClientAlert.unanswered => RuleCoachingSignal.unanswered,
           };

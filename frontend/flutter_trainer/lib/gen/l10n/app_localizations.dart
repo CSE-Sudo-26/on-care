@@ -3392,6 +3392,12 @@ abstract class AppLocalizations {
   /// **'Sodium over'**
   String get alertSodiumOver;
 
+  /// No description provided for @alertSugarOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar over target'**
+  String get alertSugarOver;
+
   /// No description provided for @alertLowCompletion.
   ///
   /// In en, this message translates to:

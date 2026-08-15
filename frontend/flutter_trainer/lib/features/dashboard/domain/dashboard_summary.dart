@@ -3,7 +3,7 @@ import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 export 'package:oncare_trainer/shared/models/client_alerts.dart'
-    show AttentionClient, ClientAlert, lowCompletionThreshold;
+    show AttentionClient, ClientAlert, alertSeverity, lowCompletionThreshold;
 
 /// Weekday labels for the 주간 이행률 chart, in the current locale.
 /// [TrainerClient.weekCompletion] is indexed 월→일, matching
@@ -113,15 +113,21 @@ DashboardSummary buildDashboardSummary({
     }
   }
 
-  // Most urgent alert type first; within a type, keep the incoming
-  // (coaching-priority) order. `List.sort` is not stable in Dart, so the
-  // original position is the explicit tiebreaker.
+  // 목표를 가장 크게 벗어난 회원부터. 예전에는 신호 **종류** 순으로 묶었는데,
+  // 카드가 다섯 행만 보여 주다 보니 첫 종류가 카드를 통째로 차지했다 — 배지를
+  // 회원별로 고르게 만들어도 화면은 여전히 한 가지 말만 했다(#767).
+  //
+  // 동점이면 들어온 순서를 지킨다. `List.sort` 는 안정 정렬이 아니라 원래
+  // 위치를 명시적 타이브레이커로 둔다.
   final order = <String, int>{
     for (var i = 0; i < clients.length; i++) clients[i].id: i,
   };
   attention.sort((a, b) {
-    final byAlert = a.primary.index.compareTo(b.primary.index);
-    if (byAlert != 0) return byAlert;
+    final bySeverity = alertSeverity(
+      b.client,
+      b.primary,
+    ).compareTo(alertSeverity(a.client, a.primary));
+    if (bySeverity != 0) return bySeverity;
     return (order[a.client.id] ?? 0).compareTo(order[b.client.id] ?? 0);
   });
 

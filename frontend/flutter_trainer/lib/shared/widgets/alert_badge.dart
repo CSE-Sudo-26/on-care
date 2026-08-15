@@ -16,6 +16,8 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 Color alertColor(ClientAlert alert) => switch (alert) {
   ClientAlert.unanswered => AppColors.primary,
   ClientAlert.sodiumOver => AppColors.overTarget,
+  // 회원 앱이 당류 초과를 빨갛게 보여 준다 — 같은 사실을 같은 세기로.
+  ClientAlert.sugarOver => AppColors.overTarget,
   ClientAlert.lowCompletion => AppColors.warning,
 };
 

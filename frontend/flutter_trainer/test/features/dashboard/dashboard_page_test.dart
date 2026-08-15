@@ -169,7 +169,10 @@ void main() {
       await openDashboard(tester);
 
       expect(find.text('AI 코칭 요약'), findsOneWidget);
-      expect(find.textContaining('김민수 고객'), findsWidgets);
+      // 머리말은 1순위 회원의 이름을 부른다. 그게 누구인지는 그날의 수치가
+      // 정하므로(#767 이후 초과 폭 순) 이름을 박지 않는다 — 박아 두면 시드가
+      // 조금만 움직여도 깨지고, 정작 검증하려는 건 "이름을 부른다" 는 것이다.
+      expect(find.textContaining('고객을 먼저 확인하고'), findsWidgets);
       expect(find.text('오늘 운동 중심'), findsWidgets);
       expect(find.textContaining('중강도 걷기'), findsWidgets);
       expect(find.text('판단 근거'), findsWidgets);

@@ -15,6 +15,13 @@ enum ClientAlert {
   /// Today's sodium is over the daily target.
   sodiumOver,
 
+  /// Today's sugar is over the daily target.
+  ///
+  /// 나트륨과 나란히 둔다 — 둘 다 식단 신호이고, "적을수록 낫다" 가 모든
+  /// 회원에게 성립한다. 칼로리는 그렇지 않아 배지로 두지 않는다: 벌크업
+  /// 회원에게 칼로리 초과는 잘한 것이다(#767).
+  sugarOver,
+
   /// This week's routine completion is low.
   lowCompletion,
 
@@ -28,6 +35,7 @@ enum ClientAlert {
   /// Badge text shown next to the client's name, in the current locale. (#501)
   String label(AppLocalizations l) => switch (this) {
     ClientAlert.sodiumOver => l.alertSodiumOver,
+    ClientAlert.sugarOver => l.alertSugarOver,
     ClientAlert.lowCompletion => l.alertLowCompletion,
     ClientAlert.unanswered => l.alertAwaitingReply,
   };
@@ -62,11 +70,44 @@ class AttentionClient {
 /// This is the full picture — what the 오늘 챙길 고객 list and the client
 /// detail header show. For the 주의 고객 *count* use [healthAlertsFor].
 List<ClientAlert> alertsFor(TrainerClient client, {int unread = 0}) {
+  // 건강 신호는 **그 회원에게 얼마나 나쁜지** 로 줄 세운다. 지표 종류의 고정
+  // 순서로 두면 나트륨이 1mg 만 넘어도 이행률 36% 를 덮어, 배지가 늘 같은 말을
+  // 한다(#767). 배지는 첫 신호 하나뿐이라 그 자리를 가장 급한 것에 준다.
+  final health =
+      <ClientAlert>[
+        if (client.sodiumOverBudget) ClientAlert.sodiumOver,
+        if (client.sugarOverBudget) ClientAlert.sugarOver,
+        if (isLowCompletion(client)) ClientAlert.lowCompletion,
+      ]..sort(
+        (a, b) => alertSeverity(client, b).compareTo(alertSeverity(client, a)),
+      );
+
   return <ClientAlert>[
-    if (client.sodiumOverBudget) ClientAlert.sodiumOver,
-    if (isLowCompletion(client)) ClientAlert.lowCompletion,
+    ...health,
+    // 답장 대기는 늘 마지막이다. 트레이너 자신의 받은편지함이지 회원의 건강
+    // 신호가 아니고, `답장 필요` 카운터가 이미 그 수를 보여 준다.
     if (unread > 0) ClientAlert.unanswered,
   ];
+}
+
+/// [alert] 가 [client] 에게 얼마나 나쁜지. 1 을 넘을수록 나쁘다.
+///
+/// 세 지표를 **같은 저울** 에 올린다. 나트륨·당류는 `값 ÷ 목표` 로 1 을 넘고,
+/// 이행률은 낮을수록 나쁘니 뒤집어 `기준선 ÷ 실제` 로 둔다. 그래야 "나트륨을
+/// 조금 넘긴 회원" 과 "이행률이 절반인 회원" 중 누가 더 급한지 견줄 수 있다.
+///
+/// 답장 대기는 0 이다 — 건강 신호가 아니라 견줄 저울이 없고, 늘 마지막이다.
+double alertSeverity(TrainerClient client, ClientAlert alert) => switch (alert) {
+  ClientAlert.sodiumOver => client.sodiumMg / sodiumTargetMg,
+  ClientAlert.sugarOver => client.sugarG / sugarTargetG,
+  ClientAlert.lowCompletion => _completionRatio(client),
+  ClientAlert.unanswered => 0,
+};
+
+double _completionRatio(TrainerClient client) {
+  final mean = recordedCompletionMean(client);
+  if (mean == null || mean <= 0) return double.infinity;
+  return lowCompletionThreshold / mean;
 }
 
 /// The subset of [alertsFor] that comes from the member's health data.

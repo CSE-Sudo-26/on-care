@@ -1852,6 +1852,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get alertSodiumOver => '나트륨 초과';
 
   @override
+  String get alertSugarOver => '당류 초과';
+
+  @override
   String get alertLowCompletion => '이행률 저조';
 
   @override
