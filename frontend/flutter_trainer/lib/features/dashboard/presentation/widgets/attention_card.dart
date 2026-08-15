@@ -32,6 +32,7 @@ class AttentionCard extends StatelessWidget {
   static String sectionFor(ClientAlert alert) => switch (alert) {
     ClientAlert.unanswered => 'chat',
     ClientAlert.sodiumOver => 'diet',
+    ClientAlert.sugarOver => 'diet',
     ClientAlert.lowCompletion => 'workout',
   };
 

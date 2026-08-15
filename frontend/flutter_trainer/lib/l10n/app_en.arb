@@ -1152,6 +1152,7 @@
   "unknownMember": "Unknown member",
   "filterAll": "All",
   "alertSodiumOver": "Sodium over",
+  "alertSugarOver": "Sugar over target",
   "alertLowCompletion": "Low completion",
   "alertAwaitingReply": "Awaiting reply",
   "clientLastRoutine": "Last routine",

@@ -223,11 +223,13 @@ class _TaskRow extends StatelessWidget {
     final tone = switch (alert) {
       ClientAlert.unanswered => AppColors.primary,
       ClientAlert.sodiumOver => AppColors.overTarget,
+      ClientAlert.sugarOver => AppColors.overTarget,
       ClientAlert.lowCompletion => AppColors.warning,
     };
     final type = switch (alert) {
       ClientAlert.unanswered => l.dashTaskReply,
       ClientAlert.sodiumOver => l.dashTaskDiet,
+      ClientAlert.sugarOver => l.dashTaskDiet,
       ClientAlert.lowCompletion => l.dashTaskWorkout,
     };
     return Padding(

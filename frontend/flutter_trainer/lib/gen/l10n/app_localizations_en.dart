@@ -1909,6 +1909,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alertSodiumOver => 'Sodium over';
 
   @override
+  String get alertSugarOver => 'Sugar over target';
+
+  @override
   String get alertLowCompletion => 'Low completion';
 
   @override
