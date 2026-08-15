@@ -425,15 +425,6 @@ void main() {
     List<double> drawnValues() =>
         tester.widget<MetricTrendChart>(find.byType(MetricTrendChart)).values;
 
-    // 어제는 약속이 있던 날이라 로스터의 평상시 배열 대신 그날 값이 그려진다.
-    // 어제가 주 안에서 몇 번째 칸인지는 데모를 여는 날마다 달라지므로 계산해서
-    // 덮는다 — 숫자를 박아 두면 하루만 지나도 깨진다.
-    final int feastSlot = DateTime.now().weekday - 2;
-    List<double> expected(List<num> series, double feast) {
-      final values = series.map((v) => v.toDouble()).toList();
-      if (feastSlot >= 0) values[feastSlot] = feast;
-      return values;
-    }
 
     final thisWeek = drawnValues();
     expect(thisWeek, hasLength(7));
