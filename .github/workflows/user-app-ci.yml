@@ -50,6 +50,16 @@ jobs:
           flutter-version: '3.44.9'
           cache: true
 
+      # 김민수 데모 픽스처는 두 앱과 백엔드가 함께 읽는다(#757). 픽스처 자체의
+      # 불변식(큐레이션 합계·이행률 산출·앱에 심긴 Dart 상수가 원본 JSON 과 같은지)은
+      # 앱 테스트가 보지 않으므로 여기서 한 번 돌린다. 트레이너 CI 에도 두면 같은
+      # 검사를 두 번 하게 되므로 이 한 곳에만 둔다.
+      - name: Test shared demo fixture
+        working-directory: shared/demo_fixture
+        run: |
+          dart pub get
+          dart test
+
       - name: Install dependencies
         run: flutter pub get
 
