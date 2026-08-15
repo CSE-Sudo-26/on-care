@@ -28,6 +28,7 @@ class WeeklyReport {
     this.sodiumWeek = const <int>[],
     this.caloriesWeek = const <int>[],
     this.sugarWeek = const <double>[],
+    this.days = const <ReportDay>[],
   });
 
   /// Who the report is about.
@@ -70,6 +71,10 @@ class WeeklyReport {
 
   /// 그 주의 일별 당류(g). 소수를 유지한다.
   final List<double> sugarWeek;
+
+  /// 요일별 상세(월→일). 이행률과 그날 배정된 운동을 함께 담는다 — 67% 가
+  /// 어디서 나온 값인지 화면에서 보이게 하는 자료다(#754).
+  final List<ReportDay> days;
 
   /// Sunday of the reported week.
   DateTime get weekEnd => weekStart.add(const Duration(days: 6));
@@ -133,10 +138,30 @@ WeeklyReport buildWeeklyReport({
     sodiumOverDays: series == null ? null : sodiumOverDaysOf(series.sodium),
     sodiumAvg: series == null ? null : recordedMean(series.sodium)?.round(),
     weekCompletion: series?.completion ?? const <int>[],
+    days: series?.days ?? const <ReportDay>[],
     sodiumWeek: series?.sodium ?? const <int>[],
     caloriesWeek: series?.calories ?? const <int>[],
     sugarWeek: series?.sugar ?? const <double>[],
   );
+}
+
+/// 리포트의 하루 — 이행률과 그날 배정된 운동.
+class ReportDay {
+  /// Creates a day.
+  const ReportDay({required this.completion, this.exercises = const <String>[]});
+
+  /// 그날 이행률(%). 0 은 기록이 없다는 뜻이다.
+  final int completion;
+
+  /// 배정된 운동 이름. 끝의 '✗' 는 건너뛴 운동을 뜻하는 저장 규칙이다 —
+  /// 운동 기록 탭과 같은 규칙을 쓴다.
+  final List<String> exercises;
+
+  /// 건너뛰지 않은 운동 수.
+  int get done => exercises.where((e) => !e.contains('✗')).length;
+
+  /// 배정된 운동 수.
+  int get total => exercises.length;
 }
 
 /// 한 주의 요일별 값 묶음(월→일). 데모는 drift 이력에서, 실서버는 리포트
@@ -148,10 +173,14 @@ class WeekSeries {
     required this.sodium,
     required this.calories,
     required this.sugar,
+    this.days = const <ReportDay>[],
   });
 
   /// 로스터가 준 이번 주 계열.
   factory WeekSeries.of(TrainerClient client) => WeekSeries(
+    days: <ReportDay>[
+      for (final rate in client.weekCompletion) ReportDay(completion: rate),
+    ],
     completion: client.weekCompletion,
     sodium: client.sodiumWeek,
     calories: client.caloriesWeek,
@@ -169,6 +198,9 @@ class WeekSeries {
 
   /// 일별 당류(g).
   final List<double> sugar;
+
+  /// 요일별 상세. 데모는 drift 이력에서, 실서버는 리포트 응답에서 온다.
+  final List<ReportDay> days;
 }
 
 /// 기록된 날(0 초과)만의 평균. 하나도 없으면 null — 0 으로 보고하면

@@ -762,7 +762,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get legendPartial => '부분';
 
   @override
-  String get legendMissed => '미완료';
+  String get legendMissed => '기록 없음';
 
   @override
   String get clientFeedback => '고객 피드백';
@@ -899,9 +899,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unitTimes => '회';
 
   @override
-  String get unitDays => '일';
-
-  @override
   String reportsCompletionRate(int rate) {
     return '완료율 $rate%';
   }
@@ -924,16 +921,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get reportsPtSessions => 'PT 세션';
-
-  @override
   String get reportsCompletionAvg => '운동 이행률';
 
   @override
-  String get reportsSodiumOver => '나트륨 초과';
-
-  @override
-  String get reportsCompletionByDay => '요일별 운동 이행률';
+  String get reportsCompletionByDay => '주간 운동 이행률';
 
   @override
   String get reportsNoWorkoutsThisWeek => '이번 주 운동 기록이 없어요';
@@ -952,6 +943,32 @@ class AppLocalizationsKo extends AppLocalizations {
   String reportsNoMetricRecords(String metric) {
     return '이번 주 $metric 기록이 아직 없어요';
   }
+
+  @override
+  String reportsCompletionBasis(int days) {
+    return '기록한 $days일 평균';
+  }
+
+  @override
+  String get reportsDietTrend => '주간 식단 추이';
+
+  @override
+  String reportsSodiumOverInline(int days) {
+    return '나트륨 초과 $days일';
+  }
+
+  @override
+  String reportsMoreExercises(int count) {
+    return '외 $count';
+  }
+
+  @override
+  String workoutDoneOfTotal(int total, int done) {
+    return '$total개 중 $done개 완료';
+  }
+
+  @override
+  String get chartNoRecord => '기록 없음';
 
   @override
   String get reportsSendStateSent => '전송됨';
@@ -2411,11 +2428,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackHint => '고객에게 전달할 코칭 피드백을 작성하세요.';
 
   @override
-  String get reportsTrendTitle => '운동 이행률 추세 · 최근 4주';
+  String get reportsRecentWeeks => '최근 4주 평균';
 
   @override
-  String reportsTrendWeek(int index) {
-    return '$index주';
+  String reportsGoalMarker(String value) {
+    return '│ 목표 $value';
+  }
+
+  @override
+  String reportsWeeksAgo(int count) {
+    return '$count주 전';
   }
 
   @override

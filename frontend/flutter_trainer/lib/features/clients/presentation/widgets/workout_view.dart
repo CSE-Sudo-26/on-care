@@ -21,6 +21,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/routine_history_
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -426,10 +427,13 @@ class _WeekCompletionCard extends StatelessWidget {
     // 아직 오지 않은 요일은 평균에서도 막대에서도 뺀다 — 0으로 세면
     // 주 초반일수록 실제보다 낮은 완료율이 나온다.
     final elapsed = elapsedWeekdays(DateTime.now());
-    final counted = week.take(elapsed).toList();
-    final avg = counted.isEmpty
+    // **기록한 날만** 나눈다. 기록이 없는 날의 0 까지 세면 같은 회원이 리포트
+    // 에서는 87%, 이 카드에서는 72% 가 되어 화면끼리 다른 말을 한다 — 주의
+    // 배지·고객 검색·주간 리포트가 쓰는 규칙과 하나로 맞춘다(#754).
+    final logged = week.take(elapsed).where((rate) => rate > 0).toList();
+    final avg = logged.isEmpty
         ? 0
-        : (counted.reduce((a, b) => a + b) / counted.length).round();
+        : (logged.reduce((a, b) => a + b) / logged.length).round();
 
     return Container(
       key: workoutWeekCompletionCardKey,
@@ -464,6 +468,14 @@ class _WeekCompletionCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          Text(
+            l.reportsCompletionBasis(logged.length),
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.disabledForeground,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
@@ -637,6 +649,23 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
                         color: AppColors.subtleForeground,
                       ),
                     ),
+                    // 옆의 링에 적힌 67% 가 어디서 나온 값인지 — 배정한 운동
+                    // 중 몇 개를 했는가다. 이 한 줄이 없으면 화면 어디에도
+                    // 그 분모가 없다(#754).
+                    if (entry.exercises.isNotEmpty)
+                      Text(
+                        l.workoutDoneOfTotal(
+                          entry.exercises.length,
+                          entry.exercises
+                              .where((line) => !line.contains('✗'))
+                              .length,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.disabledForeground,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -644,7 +673,7 @@ class _HistoryCardState extends ConsumerState<_HistoryCard> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          for (final line in entry.exercises) _ExerciseLine(line: line),
+          for (final line in entry.exercises) ExerciseLine(line: line),
           if (entry.clientFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             _NoteBox(
@@ -737,58 +766,6 @@ class _FeedbackDialogState extends State<_FeedbackDialog> {
 }
 
 /// Completion ring with the % inside (green 100 / orange partial / grey 0).
-/// One line of a logged routine.
-///
-/// The stored string marks its own outcome with a trailing '✓' / '✗'
-/// (see [RoutineHistoryEntry.exercises]). Those characters are a storage
-/// convention, not something to print: Flutter web has no glyph for them
-/// in the app's font stack and draws 두부 boxes. Read the marker, then
-/// render it as an icon and strike-through.
-class _ExerciseLine extends StatelessWidget {
-  const _ExerciseLine({required this.line});
-
-  final String line;
-
-  @override
-  Widget build(BuildContext context) {
-    final skipped = line.contains('✗');
-    final text = line.replaceAll(RegExp(r'\s*[✓✗]\s*'), ' ').trim();
-    final color = skipped
-        ? AppColors.disabledForeground
-        : AppColors.mutedForeground;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Icon(
-              skipped ? Icons.close : Icons.check,
-              size: 12,
-              color: skipped ? AppColors.disabledForeground : AppColors.success,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: color,
-                decoration: skipped ? TextDecoration.lineThrough : null,
-                decorationColor: color,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CompletionDonut extends StatelessWidget {
   const _CompletionDonut({required this.rate});
 

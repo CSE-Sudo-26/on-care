@@ -449,6 +449,9 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
             date=tuesday,
             kind_label="자율 운동",
             completion_rate=80,
+            exercises_json=json.dumps(
+                ["걷기 30분 ✓", "코어 강화 ✓", "스트레칭 ✗"], ensure_ascii=False
+            ),
         )
     )
     db_session.commit()
@@ -469,6 +472,16 @@ def test_report_carries_the_requested_weeks_daily_series(client, db_session):
     assert body["calories_week"][1] == 700
     assert body["sugar_week"][1] == 12.5
     assert body["week_completion"][1] == 80
+    # 그날 이행률이 어디서 나온 값인지 — 배정된 운동이 함께 온다(#754).
+    assert len(body["days"]) == 7
+    assert body["days"][1]["completion"] == 80
+    assert body["days"][1]["exercises"] == [
+        "걷기 30분 ✓",
+        "코어 강화 ✓",
+        "스트레칭 ✗",
+    ]
+    assert body["days"][0]["completion"] == 0
+    assert body["days"][0]["exercises"] == []
     # 기록이 없는 날은 0 이고, 이번 주 수치가 섞여 들어오지 않는다.
     assert body["sodium_week"][0] == 0
     assert body["sodium_avg"] == 2400  # 기록된 하루만 나눈다

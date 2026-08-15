@@ -738,6 +738,18 @@ class ClientCoachOut(BaseModel):
 
 # ---- 주간 리포트 (트레이너 → 회원) ----
 
+class WeeklyReportDayOut(BaseModel):
+    """리포트의 하루 — 그날의 이행률과 실제로 배정된 운동.
+
+    이행률만으로는 67% 가 어디서 나온 값인지 화면에서 알 수 없다. 배정된
+    운동과 건너뛴 운동을 함께 내려 주면 분모·분자가 드러난다(#754).
+    """
+    completion: int              # 0..100 (0 = 그날 기록 없음)
+    #: 운동 이름. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장 규칙이며 화면은
+    #: 그 표시를 읽어 아이콘으로 바꿔 그린다(운동 기록 탭과 같은 규칙).
+    exercises: list[str] = Field(default_factory=list)
+
+
 class WeeklyReportOut(BaseModel):
     """담당 고객 한 명의 한 주 — 트레이너가 회원에게 보낼 수 있는 요약."""
     member_id: str
@@ -755,6 +767,8 @@ class WeeklyReportOut(BaseModel):
     sodium_week: list[int] = Field(default_factory=list)
     calories_week: list[int] = Field(default_factory=list)
     sugar_week: list[float] = Field(default_factory=list)
+    #: 월→일 7칸. 이행률과 함께 그날의 운동 내역을 담는다(#754).
+    days: list[WeeklyReportDayOut] = Field(default_factory=list)
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)
 
 

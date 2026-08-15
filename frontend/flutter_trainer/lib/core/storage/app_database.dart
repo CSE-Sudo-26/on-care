@@ -159,6 +159,11 @@ class ClientDailyMetrics extends Table {
   IntColumn get sodiumMg => integer().withDefault(const Constant(0))();
   RealColumn get sugarG => real().withDefault(const Constant(0))();
 
+  /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
+  /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
+  /// 준다 — 이행률만으로는 67% 의 분모를 알 수 없다(#754).
+  TextColumn get exercisesJson => text().withDefault(const Constant('[]'))();
+
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{clientId, date};
 }
@@ -199,7 +204,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -245,8 +250,15 @@ class AppDatabase extends _$AppDatabase {
       }
       // v7: 데모가 과거 주 리포트를 그리려면 날짜별 이력이 필요하다(#752).
       // 새 테이블이라 기존 행은 건드리지 않고, 다음 재시딩이 채운다.
+      // v8: 요일별 상세가 쓸 그날의 운동 목록(#754). 기본값이 있어 기존 행도
+      // 그대로 읽히고, 다음 재시딩이 실제 값을 채운다.
+      //
+      // `createTable` 은 **현재** 정의로 만들므로 v7 을 갓 지난 DB 에는 이미
+      // 이 컬럼이 있다. 새로 만든 뒤 다시 붙이면 duplicate column 으로 죽는다.
       if (from < 7) {
         await m.createTable(clientDailyMetrics);
+      } else if (from < 8) {
+        await m.addColumn(clientDailyMetrics, clientDailyMetrics.exercisesJson);
       }
     },
   );

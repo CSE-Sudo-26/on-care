@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 
@@ -89,7 +90,7 @@ class BarSeriesChart extends StatelessWidget {
                       color: _colorFor(i),
                       label: showValues
                           ? missingIndices.contains(i)
-                                ? '-'
+                                ? AppLocalizations.of(context).chartNoRecord
                                 : '${values[i]}$valueSuffix'
                           : null,
                       pending: i >= pendingFrom,
@@ -171,7 +172,7 @@ class _Bar extends StatelessWidget {
     final ratio = pending || missing ? 0.0 : (value / ceiling).clamp(0.0, 1.0);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final labelHeight = label == null || pending ? 0.0 : 14.0;
+        final labelHeight = label == null || pending ? 0.0 : 16.0;
         final plot = (constraints.maxHeight - labelHeight).clamp(
           0.0,
           constraints.maxHeight,
@@ -186,7 +187,7 @@ class _Bar extends StatelessWidget {
                   child: Text(
                     label!,
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.mutedForeground,
                     ),

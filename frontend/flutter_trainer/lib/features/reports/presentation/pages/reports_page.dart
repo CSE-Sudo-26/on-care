@@ -19,6 +19,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+import 'package:oncare_trainer/shared/widgets/exercise_line.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
@@ -479,14 +480,6 @@ class _ClientPickerState extends State<_ClientPicker> {
 }
 
 /// One client's week, ready to send.
-/// Colour for a figure that may be unknown.
-///
-/// A null value renders "-", and painting that with the good/bad colour
-/// would state a verdict the data can't support — an unknown week would
-/// read as a clean one. Unknown gets the neutral foreground.
-Color _verdictTone(int? value, Color Function(int) verdict) =>
-    value == null ? AppColors.subtleForeground : verdict(value);
-
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
@@ -506,6 +499,14 @@ class _ClientReport extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
     final client = report.client;
+    // 지난 날인데 기록이 없는 요일. 아직 오지 않은 날과 구분해서 그린다.
+    final elapsed = report.isCurrentWeek
+        ? elapsedWeekdays(DateTime.now())
+        : weekdayCount;
+    final unlogged = <int>{
+      for (var i = 0; i < elapsed && i < report.weekCompletion.length; i++)
+        if (report.weekCompletion[i] == 0) i,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -537,6 +538,8 @@ class _ClientReport extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        const _ReportAiCard(),
+        const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.reportsFeedbackTitle,
           // 저장 버튼을 제목 행에 둔다 — 입력창 위에 버튼만 있는 줄이 따로
@@ -554,39 +557,8 @@ class _ClientReport extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        SectionCard(
-          title: l.reportsWeekly,
-          child: Row(
-            children: <Widget>[
-              _Figure(
-                label: l.reportsCompletionAvg,
-                value: report.completionAvg == null
-                    ? '-'
-                    : '${report.completionAvg}',
-                unit: '%',
-                tone: _verdictTone(
-                  report.completionAvg,
-                  (v) => v >= 70 ? AppColors.success : AppColors.warning,
-                ),
-              ),
-              _Figure(
-                label: l.reportsPtSessions,
-                value: '${report.sessionsDone}/${report.sessionsBooked}',
-                unit: l.unitTimes,
-              ),
-              _Figure(
-                label: l.reportsSodiumOver,
-                value: report.sodiumOverDays?.toString() ?? '-',
-                unit: l.unitDays,
-                tone: _verdictTone(
-                  report.sodiumOverDays,
-                  (v) => v > 2 ? AppColors.overTarget : AppColors.success,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        // 운동과 식단을 카드로 나눈다. 예전에는 나트륨 추이 그래프가 '요일별
+        // 운동 이행률' 카드 안에 있어 제목과 내용이 서로 다른 말을 했다(#754).
         SectionCard(
           title: l.reportsCompletionByDay,
           child: Column(
@@ -606,18 +578,36 @@ class _ClientReport extends StatelessWidget {
                   pendingFromIndex: report.isCurrentWeek
                       ? elapsedWeekdays(DateTime.now())
                       : null,
+                  // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
+                  // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
+                  missingIndices: unlogged,
                 )
               else
                 EmptyHint(message: l.reportsNoWorkoutsThisWeek),
-              const SizedBox(height: AppSpacing.lg),
-              _MetricTrendSection(report: report),
-              const SizedBox(height: AppSpacing.md),
-              _FourWeekTrend(report: report),
+              if (report.weekCompletion.length == weekdayCount) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                // 막대 바로 아래에 그날의 운동 내역. 67% 가 어디서 나온
+                // 값인지 같은 카드 안에서 답이 난다(#754).
+                _DailyDetail(report: report),
+              ],
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const _ReportAiCard(),
+        SectionCard(
+          title: l.reportsDietTrend,
+          trailing: Text(
+            l.reportsSodiumOverInline(report.sodiumOverDays ?? 0),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: (report.sodiumOverDays ?? 0) > 2
+                  ? AppColors.overTarget
+                  : AppColors.subtleForeground,
+            ),
+          ),
+          child: _MetricTrendSection(report: report),
+        ),
       ],
     );
   }
@@ -731,6 +721,128 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
             replayKey: _metric,
             formatTick: metricTrendNumber,
           ),
+        const Divider(height: AppSpacing.xl, color: AppColors.border),
+        _FourWeekMetricTrend(
+          report: widget.report,
+          label: _label(l, _metric),
+          values: (WeeklyReport r) => switch (_metric) {
+            _TrendMetric.calories => r.caloriesWeek,
+            _TrendMetric.sodium => r.sodiumWeek,
+            _TrendMetric.sugar => r.sugarWeek,
+          },
+          goal: _goal,
+          unit: switch (_metric) {
+            _TrendMetric.calories => 'kcal',
+            _TrendMetric.sodium => 'mg',
+            _TrendMetric.sugar => 'g',
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// 선택한 영양 지표의 최근 4주 주간 평균 — 운동 카드의 같은 블록과 짝이다.
+///
+/// 이번 주 꺾은선은 "이번 주에 언제 튀었나"만 말한다. 트레이너가 정말 알고
+/// 싶은 건 **코칭이 먹히고 있나**이고, 그건 주 단위 평균 넷을 나란히 놓아야
+/// 보인다(#754).
+///
+/// 새로 받아 오는 값이 없다 — 운동 카드가 이미 지난 세 주의 리포트를 보고
+/// 있고, 그 리포트가 각자 자기 주의 계열을 들고 있다.
+class _FourWeekMetricTrend extends ConsumerWidget {
+  const _FourWeekMetricTrend({
+    required this.report,
+    required this.label,
+    required this.values,
+    required this.goal,
+    required this.unit,
+  });
+
+  final WeeklyReport report;
+
+  /// 지표 이름(칼로리·나트륨·당류).
+  final String label;
+
+  /// 한 주의 리포트에서 이 지표의 요일별 계열을 꺼내는 방법.
+  final List<num> Function(WeeklyReport) values;
+
+  /// 목표. 눈금과 주의 색의 기준을 겸한다.
+  final double goal;
+
+  /// 눈금 끝은 목표의 1.5배. 목표를 눈금 끝으로 삼으면 — 김민수의 나트륨처럼
+  /// 네 주가 모두 목표를 넘은 경우 — 막대 넷이 전부 꽉 차 버려 어느 주가 더
+  /// 나빴는지가 사라진다. 여유를 두고 2/3 지점에 목표선을 그으면 초과 여부와
+  /// 주별 차이를 함께 읽는다.
+  static const double _headroom = 1.5;
+
+  /// 값 뒤에 붙는 단위.
+  final String unit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final weeks = <AsyncValue<WeeklyReport>>[
+      for (var offset = 3; offset >= 0; offset--)
+        ref.watch(
+          weeklyReportProvider((
+            client: report.client,
+            weekStart: report.weekStart.subtract(Duration(days: 7 * offset)),
+          )),
+        ),
+    ];
+    final labels = <String>[
+      l.reportsWeeksAgo(3),
+      l.reportsWeeksAgo(2),
+      l.reportsLastWeek,
+      report.isCurrentWeek ? l.reportsThisWeek : l.reportsSelectedWeek,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                '${l.reportsRecentWeeks} · $label',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.subtleForeground,
+                ),
+              ),
+            ),
+            // 세로선이 무엇인지 한 번은 적어 준다.
+            Text(
+              l.reportsGoalMarker('${metricTrendNumber(goal)}$unit'),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        for (var i = 0; i < weeks.length; i++)
+          () {
+            final week = weeks[i].valueOrNull;
+            // 기록한 날만 평균한다 — 아직 오지 않은 날을 0 으로 세면 이번 주가
+            // 늘 나아 보인다. 화면 곳곳이 같은 규칙을 쓴다.
+            final mean = week == null ? null : recordedMean(values(week));
+            return _WeekTrendBar(
+              label: labels[i],
+              fraction: mean == null ? null : mean / (goal * _headroom),
+              goalFraction: 1 / _headroom,
+              text: mean == null
+                  ? '-'
+                  : '${metricTrendNumber(mean.round())}$unit',
+              loading: weeks[i].isLoading,
+              current: i == weeks.length - 1,
+              warn: mean != null && mean > goal,
+              valueWidth: 62,
+            );
+          }(),
       ],
     );
   }
@@ -996,6 +1108,15 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
   }
 }
 
+/// 최근 4주 이행률 — 얇은 가로 막대 넷.
+///
+/// 예전에는 세로 막대 네 개짜리 카드였다. 값이 넷뿐인데 카드 하나를 통째로
+/// 썼다. 가로로 눕히면 길이를 바로 견줄 수 있어 자리를 훨씬 덜 쓰고도 흐름이
+/// 읽힌다(#754).
+///
+/// 지난 주 대비 변화는 적지 않는다 — 위 '이번 주 vs 지난 주' 카드가 이미 같은
+/// 값을 말한다. 이 블록이 더 말해 주는 것은 **네 주의 흐름**이다: 두 주만 보면
+/// 나아지는 것처럼 보이는 주도 네 주를 늘어놓으면 오르내림이 드러난다.
 class _FourWeekTrend extends ConsumerWidget {
   const _FourWeekTrend({required this.report});
 
@@ -1004,7 +1125,7 @@ class _FourWeekTrend extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final reports = <AsyncValue<WeeklyReport>>[
+    final weeks = <AsyncValue<WeeklyReport>>[
       for (var offset = 3; offset >= 0; offset--)
         ref.watch(
           weeklyReportProvider((
@@ -1013,84 +1134,163 @@ class _FourWeekTrend extends ConsumerWidget {
           )),
         ),
     ];
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.md),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            l.reportsTrendTitle,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+    final labels = <String>[
+      l.reportsWeeksAgo(3),
+      l.reportsWeeksAgo(2),
+      l.reportsLastWeek,
+      report.isCurrentWeek ? l.reportsThisWeek : l.reportsSelectedWeek,
+    ];
+    // 폭은 위 요일별 그래프에 맞춘다. 좁게 묶으면 같은 카드 안에서 두 블록이
+    // 남남처럼 보이고, 길게 뻗을수록 84% 와 87% 의 차이가 눈에 들어온다.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          l.reportsRecentWeeks,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.subtleForeground,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              for (var index = 0; index < reports.length; index++)
-                Expanded(
-                  child: _TrendBar(
-                    label: l.reportsTrendWeek(index + 1),
-                    value: reports[index].valueOrNull?.completionAvg,
-                    loading: reports[index].isLoading,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        for (var i = 0; i < weeks.length; i++)
+          () {
+            final value = weeks[i].valueOrNull?.completionAvg;
+            return _WeekTrendBar(
+              label: labels[i],
+              fraction: value == null ? null : value / 100,
+              text: value == null ? '-' : '$value%',
+              loading: weeks[i].isLoading,
+              current: i == weeks.length - 1,
+              // 이행률이 이 아래면 주의로 본다 — 주의 배지와 같은 기준.
+              warn: value != null && value < 70,
+            );
+          }(),
+      ],
+    );
+  }
+}
+
+/// 한 주 한 줄 — 라벨 · 가로 막대 · 값.
+///
+/// 이행률(%)과 영양 지표(kcal·mg·g)가 같은 줄 모양을 쓴다. 값의 뜻은 부르는
+/// 쪽이 정하고, 여기서는 **길이와 색만** 그린다.
+class _WeekTrendBar extends StatelessWidget {
+  const _WeekTrendBar({
+    required this.label,
+    required this.fraction,
+    required this.text,
+    required this.loading,
+    required this.current,
+    this.warn = false,
+    this.goalFraction,
+    this.valueWidth = 40,
+  });
+
+  final String label;
+
+  /// 막대 길이(0~1). 기록이 없으면 null — 막대를 그리지 않는다.
+  final double? fraction;
+
+  /// 오른쪽에 찍을 값. 기록이 없으면 부르는 쪽이 '-' 를 준다.
+  final String text;
+
+  final bool loading;
+
+  /// 보고 있는 주. 앞선 주와 눈에 띄게 구분한다.
+  final bool current;
+
+  /// 목표를 벗어난 주(이행률이 낮거나, 영양 지표가 목표를 넘었거나).
+  final bool warn;
+
+  /// 눈금 위 목표의 위치(0~1). 막대가 이 선을 넘었는지가 곧 목표 초과다.
+  /// 목표가 눈금 끝과 같으면(이행률 100%) 선을 긋지 않는다 — 테두리와 겹친다.
+  final double? goalFraction;
+
+  /// 값 칸 너비. 'kcal' 처럼 단위가 붙으면 넓혀 준다.
+  final double valueWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    // 목표를 벗어난 주는 빨강, 그 밖은 브랜드 색. 보고 있는 주만 제 색을
+    // 쓰고 앞선 주는 흐리게 깔아, 색으로 초과 여부를 읽으면서도 어느 줄이
+    // 이번 주인지 헷갈리지 않게 한다.
+    final base = warn ? AppColors.overTarget : AppColors.primary;
+    final tone = fraction == null
+        ? AppColors.borderStrong
+        : current
+        ? base
+        : base.withValues(alpha: 0.35);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: 52,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                color: current
+                    ? AppColors.foreground
+                    : AppColors.subtleForeground,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(AppRadius.pill),
+              child: Stack(
+                children: <Widget>[
+                  Container(height: 9, color: AppColors.inputBackground),
+                  // 눈금 위쪽 끝을 고정해 둔다 — 그 주의 최댓값에 맞춰 늘이면
+                  // 2,288 과 2,166 이 전혀 다른 길이로 보인다.
+                  FractionallySizedBox(
+                    widthFactor: (fraction ?? 0).clamp(0.0, 1.0),
+                    child: Container(height: 9, color: tone),
                   ),
-                ),
-            ],
+                  // 목표선은 채움 위에 긋는다 — 아래 깔면 넘긴 주에서 가려져,
+                  // 정작 넘겼는지 봐야 할 때 보이지 않는다.
+                  if (goalFraction != null && goalFraction! < 1)
+                    FractionallySizedBox(
+                      widthFactor: goalFraction!,
+                      alignment: Alignment.centerLeft,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width: 1.5,
+                          height: 9,
+                          color: AppColors.accentDark,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: valueWidth,
+            child: Text(
+              loading ? '…' : text,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: current ? FontWeight.w800 : FontWeight.w600,
+                color: current
+                    ? AppColors.foreground
+                    : AppColors.mutedForeground,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-class _TrendBar extends StatelessWidget {
-  const _TrendBar({
-    required this.label,
-    required this.value,
-    required this.loading,
-  });
-
-  final String label;
-  final int? value;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: <Widget>[
-        Text(
-          loading ? '…' : (value == null ? '-' : '$value%'),
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 36,
-          height: value == null ? 12 : 18 + value!.clamp(0, 100) * 0.55,
-          decoration: BoxDecoration(
-            color: value == null
-                ? AppColors.inputBackground
-                : AppColors.primary.withValues(alpha: 0.25 + 0.007 * value!),
-            borderRadius: const BorderRadius.vertical(top: AppRadius.sm),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.subtleForeground,
-            fontSize: 10.5,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _ReportAiCard extends StatelessWidget {
   const _ReportAiCard();
 
@@ -1292,58 +1492,71 @@ class _ShareMenu extends ConsumerWidget {
   }
 }
 
-class _Figure extends StatelessWidget {
-  const _Figure({
-    required this.label,
-    required this.value,
-    required this.unit,
-    this.tone,
-  });
 
-  final String label;
-  final String value;
-  final String unit;
-  final Color? tone;
+/// 요일별 운동 내역 — 막대 아래에 하루하루를 이행률·운동 이름과 함께 적는다.
+///
+/// 예전에는 이행률·PT 세션·나트륨 초과를 큰 숫자로 보여 주는 카드가 따로
+/// 있었다. 그 세 숫자는 트레이너 피드백 초안에 문장으로 이미 적혀 있어 같은
+/// 값을 두 번 보여 주는 셈이었고, 정작 "87% 가 어디서 나왔나" 는 어디에도
+/// 없었다. 막대 바로 아래에 표로 두면 같은 카드 안에서 답이 난다(#754).
+class _DailyDetail extends StatelessWidget {
+  const _DailyDetail({required this.report});
+
+  final WeeklyReport report;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // 막대 아래에 요일 칸을 그대로 이어 붙인다 — 월요일 막대 밑에
+        // 월요일에 한 운동이 온다.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (var i = 0; i < weekdayCount; i++)
+              _DailyDetailColumn(
+                day: i < report.days.length ? report.days[i] : null,
+              ),
+          ],
+        ),
+        if (report.completionAvg != null) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(height: 1, thickness: 1, color: AppColors.border),
+          const SizedBox(height: AppSpacing.sm),
+          // 마지막 줄에 이번 주를 앞선 세 주 옆에 놓는다. 며칠을 나눈
+          // 값인지는 따로 적지 않는다 — 값이 있는 막대를 세면 나온다(#754).
+          _FourWeekTrend(report: report),
+        ]
+      ],
+    );
+  }
+}
+
+/// 요일 한 칸의 내역 — 막대 바로 아래에 그날 한 일을 세로로 적는다.
+class _DailyDetailColumn extends StatelessWidget {
+  const _DailyDetailColumn({required this.day});
+
+  final ReportDay? day;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = day?.exercises ?? const <String>[];
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.subtleForeground,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: tone ?? AppColors.foreground,
-                ),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                unit,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.subtleForeground,
-                ),
-              ),
-            ],
-          ),
-        ],
+      // 막대와 같은 좌우 여백을 써야 칸이 세로로 맞는다.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2.5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // 이행률과 몇 개 중 몇 개인지는 적지 않는다 — 퍼센트는 바로 위
+            // 막대가 이미 말하고, 개수는 아래 ✓/✗ 를 세면 나온다. 기록이 없는
+            // 날은 막대 쪽에 '기록 없음' 이 적히고, 아직 오지 않은 날은 비워
+            // 둔다 — 빈칸이 곧 "아직" 이다.
+            for (final name in names)
+              ExerciseLine(line: name, fontSize: 11.5, maxLines: 2),
+          ],
+        ),
       ),
     );
   }

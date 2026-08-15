@@ -31,7 +31,8 @@ from app.schemas.trainer_api import (
     ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
     TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
-    TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportOut,
+    TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportDayOut,
+    WeeklyReportOut,
 )
 from app.services import diet_photo_service, exercise_service, notification_service
 from app.services.coach import personal_ingest
@@ -181,6 +182,45 @@ def _week_completion(hist_rows: list[RoutineHistory], monday: date) -> list[int]
         vals = by_date.get((monday + timedelta(days=i)).isoformat())
         out.append(max(vals) if vals else 0)
     return out
+
+
+def _week_days(
+    hist_rows: list[RoutineHistory], monday: date, week: list[int]
+) -> list[WeeklyReportDayOut]:
+    """요일별 이행률 + 그날 배정된 운동(월→일).
+
+    같은 날 기록이 여럿이면 이행률과 **같은 기록**의 운동을 쓴다 — 완료율은
+    최댓값을 택하므로, 다른 기록의 운동 목록을 붙이면 화면에서 67% 옆에 3/3
+    이 놓이는 어긋남이 생긴다.
+    """
+    best: dict[str, RoutineHistory] = {}
+    for h in hist_rows:
+        current = best.get(h.date)
+        if current is None or h.completion_rate > current.completion_rate:
+            best[h.date] = h
+    out: list[WeeklyReportDayOut] = []
+    for i in range(7):
+        row = best.get((monday + timedelta(days=i)).isoformat())
+        out.append(
+            WeeklyReportDayOut(
+                completion=week[i] if i < len(week) else 0,
+                exercises=_exercise_names(row),
+            )
+        )
+    return out
+
+
+def _exercise_names(row: RoutineHistory | None) -> list[str]:
+    """저장된 운동 목록을 방어적으로 디코드. 깨진 값은 빈 목록으로."""
+    if row is None or not row.exercises_json:
+        return []
+    try:
+        names = json.loads(row.exercises_json)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(names, list):
+        return []
+    return [n for n in names if isinstance(n, str)]
 
 
 def _latest_by_member(db: Session, model, trainer_id: str, member_ids: list[str]):
@@ -2495,6 +2535,7 @@ def build_weekly_report(
         )
     ).all()
     week = _week_completion(hist, monday)
+    days = _week_days(hist, monday, week)
     recorded = [d for d in week if d > 0]
     # 기록이 하나도 없으면 null — 0% 로 보고하면 "아무것도 안 했다"는 거짓말이 된다.
     completion_avg = round(sum(recorded) / len(recorded)) if recorded else None
@@ -2527,6 +2568,7 @@ def build_weekly_report(
         sodium_over_days=sodium_over_days,
         sodium_avg=sodium_avg,
         week_completion=week,
+        days=days,
         sodium_week=sodium_week,
         calories_week=_calories_week(diet_rows, monday),
         sugar_week=_sugar_week(diet_rows, monday),

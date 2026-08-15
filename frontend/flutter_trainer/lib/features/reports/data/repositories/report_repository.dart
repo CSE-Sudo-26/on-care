@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +74,18 @@ class LocalReportRepository implements ReportRepository {
         );
   }
 
+  /// 저장된 운동 목록을 방어적으로 디코드. 깨진 값은 빈 목록으로.
+  static List<String> _exercises(String? encoded) {
+    if (encoded == null || encoded.isEmpty) return const <String>[];
+    try {
+      final decoded = jsonDecode(encoded);
+      if (decoded is! List) return const <String>[];
+      return decoded.whereType<String>().toList(growable: false);
+    } on FormatException {
+      return const <String>[];
+    }
+  }
+
   /// 그 주(월→일)의 요일별 값. 기록이 하나도 없으면 null — 화면이 "없다"고
   /// 말할 수 있어야 한다(0 으로 채우면 "하루 0kcal" 처럼 읽힌다).
   Future<WeekSeries?> _weekSeries(String clientId, DateTime monday) async {
@@ -91,6 +105,13 @@ class LocalReportRepository implements ReportRepository {
     ClientDailyMetricRow? on(int day) =>
         byDate[ymd(monday.add(Duration(days: day)))];
     return WeekSeries(
+      days: <ReportDay>[
+        for (var d = 0; d < 7; d++)
+          ReportDay(
+            completion: on(d)?.completion ?? 0,
+            exercises: _exercises(on(d)?.exercisesJson),
+          ),
+      ],
       completion: <int>[for (var d = 0; d < 7; d++) on(d)?.completion ?? 0],
       sodium: <int>[for (var d = 0; d < 7; d++) on(d)?.sodiumMg ?? 0],
       calories: <int>[for (var d = 0; d < 7; d++) on(d)?.calories ?? 0],
@@ -198,6 +219,17 @@ WeeklyReport weeklyReportFromJson(
     sodiumWeek: ints('sodium_week'),
     caloriesWeek: ints('calories_week'),
     sugarWeek: doubles('sugar_week'),
+    days: <ReportDay>[
+      for (final day in (json['days'] as List<Object?>? ?? const <Object?>[]))
+        if (day is Map<String, dynamic>)
+          ReportDay(
+            completion: (day['completion'] as num?)?.toInt() ?? 0,
+            exercises:
+                (day['exercises'] as List<Object?>? ?? const <Object?>[])
+                    .whereType<String>()
+                    .toList(growable: false),
+          ),
+    ],
   );
 }
 

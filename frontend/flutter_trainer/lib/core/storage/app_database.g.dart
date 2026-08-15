@@ -4022,6 +4022,18 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _exercisesJsonMeta = const VerificationMeta(
+    'exercisesJson',
+  );
+  @override
+  late final GeneratedColumn<String> exercisesJson = GeneratedColumn<String>(
+    'exercises_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     clientId,
@@ -4030,6 +4042,7 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
     calories,
     sodiumMg,
     sugarG,
+    exercisesJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4083,6 +4096,15 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
         sugarG.isAcceptableOrUnknown(data['sugar_g']!, _sugarGMeta),
       );
     }
+    if (data.containsKey('exercises_json')) {
+      context.handle(
+        _exercisesJsonMeta,
+        exercisesJson.isAcceptableOrUnknown(
+          data['exercises_json']!,
+          _exercisesJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4116,6 +4138,10 @@ class $ClientDailyMetricsTable extends ClientDailyMetrics
         DriftSqlType.double,
         data['${effectivePrefix}sugar_g'],
       )!,
+      exercisesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exercises_json'],
+      )!,
     );
   }
 
@@ -4133,6 +4159,11 @@ class ClientDailyMetricRow extends DataClass
   final int calories;
   final int sodiumMg;
   final double sugarG;
+
+  /// 그날 배정된 운동 이름 JSON. 끝의 '✓'/'✗' 는 수행 여부를 나타내는 저장
+  /// 규칙이며, 리포트의 요일별 상세가 이 값을 읽어 몇 개 중 몇 개인지 보여
+  /// 준다 — 이행률만으로는 67% 의 분모를 알 수 없다(#754).
+  final String exercisesJson;
   const ClientDailyMetricRow({
     required this.clientId,
     required this.date,
@@ -4140,6 +4171,7 @@ class ClientDailyMetricRow extends DataClass
     required this.calories,
     required this.sodiumMg,
     required this.sugarG,
+    required this.exercisesJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4150,6 +4182,7 @@ class ClientDailyMetricRow extends DataClass
     map['calories'] = Variable<int>(calories);
     map['sodium_mg'] = Variable<int>(sodiumMg);
     map['sugar_g'] = Variable<double>(sugarG);
+    map['exercises_json'] = Variable<String>(exercisesJson);
     return map;
   }
 
@@ -4161,6 +4194,7 @@ class ClientDailyMetricRow extends DataClass
       calories: Value(calories),
       sodiumMg: Value(sodiumMg),
       sugarG: Value(sugarG),
+      exercisesJson: Value(exercisesJson),
     );
   }
 
@@ -4176,6 +4210,7 @@ class ClientDailyMetricRow extends DataClass
       calories: serializer.fromJson<int>(json['calories']),
       sodiumMg: serializer.fromJson<int>(json['sodiumMg']),
       sugarG: serializer.fromJson<double>(json['sugarG']),
+      exercisesJson: serializer.fromJson<String>(json['exercisesJson']),
     );
   }
   @override
@@ -4188,6 +4223,7 @@ class ClientDailyMetricRow extends DataClass
       'calories': serializer.toJson<int>(calories),
       'sodiumMg': serializer.toJson<int>(sodiumMg),
       'sugarG': serializer.toJson<double>(sugarG),
+      'exercisesJson': serializer.toJson<String>(exercisesJson),
     };
   }
 
@@ -4198,6 +4234,7 @@ class ClientDailyMetricRow extends DataClass
     int? calories,
     int? sodiumMg,
     double? sugarG,
+    String? exercisesJson,
   }) => ClientDailyMetricRow(
     clientId: clientId ?? this.clientId,
     date: date ?? this.date,
@@ -4205,6 +4242,7 @@ class ClientDailyMetricRow extends DataClass
     calories: calories ?? this.calories,
     sodiumMg: sodiumMg ?? this.sodiumMg,
     sugarG: sugarG ?? this.sugarG,
+    exercisesJson: exercisesJson ?? this.exercisesJson,
   );
   ClientDailyMetricRow copyWithCompanion(ClientDailyMetricsCompanion data) {
     return ClientDailyMetricRow(
@@ -4216,6 +4254,9 @@ class ClientDailyMetricRow extends DataClass
       calories: data.calories.present ? data.calories.value : this.calories,
       sodiumMg: data.sodiumMg.present ? data.sodiumMg.value : this.sodiumMg,
       sugarG: data.sugarG.present ? data.sugarG.value : this.sugarG,
+      exercisesJson: data.exercisesJson.present
+          ? data.exercisesJson.value
+          : this.exercisesJson,
     );
   }
 
@@ -4227,14 +4268,22 @@ class ClientDailyMetricRow extends DataClass
           ..write('completion: $completion, ')
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
-          ..write('sugarG: $sugarG')
+          ..write('sugarG: $sugarG, ')
+          ..write('exercisesJson: $exercisesJson')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(clientId, date, completion, calories, sodiumMg, sugarG);
+  int get hashCode => Object.hash(
+    clientId,
+    date,
+    completion,
+    calories,
+    sodiumMg,
+    sugarG,
+    exercisesJson,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4244,7 +4293,8 @@ class ClientDailyMetricRow extends DataClass
           other.completion == this.completion &&
           other.calories == this.calories &&
           other.sodiumMg == this.sodiumMg &&
-          other.sugarG == this.sugarG);
+          other.sugarG == this.sugarG &&
+          other.exercisesJson == this.exercisesJson);
 }
 
 class ClientDailyMetricsCompanion
@@ -4255,6 +4305,7 @@ class ClientDailyMetricsCompanion
   final Value<int> calories;
   final Value<int> sodiumMg;
   final Value<double> sugarG;
+  final Value<String> exercisesJson;
   final Value<int> rowid;
   const ClientDailyMetricsCompanion({
     this.clientId = const Value.absent(),
@@ -4263,6 +4314,7 @@ class ClientDailyMetricsCompanion
     this.calories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.exercisesJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ClientDailyMetricsCompanion.insert({
@@ -4272,6 +4324,7 @@ class ClientDailyMetricsCompanion
     this.calories = const Value.absent(),
     this.sodiumMg = const Value.absent(),
     this.sugarG = const Value.absent(),
+    this.exercisesJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientId = Value(clientId),
        date = Value(date);
@@ -4282,6 +4335,7 @@ class ClientDailyMetricsCompanion
     Expression<int>? calories,
     Expression<int>? sodiumMg,
     Expression<double>? sugarG,
+    Expression<String>? exercisesJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4291,6 +4345,7 @@ class ClientDailyMetricsCompanion
       if (calories != null) 'calories': calories,
       if (sodiumMg != null) 'sodium_mg': sodiumMg,
       if (sugarG != null) 'sugar_g': sugarG,
+      if (exercisesJson != null) 'exercises_json': exercisesJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4302,6 +4357,7 @@ class ClientDailyMetricsCompanion
     Value<int>? calories,
     Value<int>? sodiumMg,
     Value<double>? sugarG,
+    Value<String>? exercisesJson,
     Value<int>? rowid,
   }) {
     return ClientDailyMetricsCompanion(
@@ -4311,6 +4367,7 @@ class ClientDailyMetricsCompanion
       calories: calories ?? this.calories,
       sodiumMg: sodiumMg ?? this.sodiumMg,
       sugarG: sugarG ?? this.sugarG,
+      exercisesJson: exercisesJson ?? this.exercisesJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4336,6 +4393,9 @@ class ClientDailyMetricsCompanion
     if (sugarG.present) {
       map['sugar_g'] = Variable<double>(sugarG.value);
     }
+    if (exercisesJson.present) {
+      map['exercises_json'] = Variable<String>(exercisesJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4351,6 +4411,7 @@ class ClientDailyMetricsCompanion
           ..write('calories: $calories, ')
           ..write('sodiumMg: $sodiumMg, ')
           ..write('sugarG: $sugarG, ')
+          ..write('exercisesJson: $exercisesJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6451,6 +6512,7 @@ typedef $$ClientDailyMetricsTableCreateCompanionBuilder =
       Value<int> calories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<String> exercisesJson,
       Value<int> rowid,
     });
 typedef $$ClientDailyMetricsTableUpdateCompanionBuilder =
@@ -6461,6 +6523,7 @@ typedef $$ClientDailyMetricsTableUpdateCompanionBuilder =
       Value<int> calories,
       Value<int> sodiumMg,
       Value<double> sugarG,
+      Value<String> exercisesJson,
       Value<int> rowid,
     });
 
@@ -6500,6 +6563,11 @@ class $$ClientDailyMetricsTableFilterComposer
 
   ColumnFilters<double> get sugarG => $composableBuilder(
     column: $table.sugarG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6542,6 +6610,11 @@ class $$ClientDailyMetricsTableOrderingComposer
     column: $table.sugarG,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ClientDailyMetricsTableAnnotationComposer
@@ -6572,6 +6645,11 @@ class $$ClientDailyMetricsTableAnnotationComposer
 
   GeneratedColumn<double> get sugarG =>
       $composableBuilder(column: $table.sugarG, builder: (column) => column);
+
+  GeneratedColumn<String> get exercisesJson => $composableBuilder(
+    column: $table.exercisesJson,
+    builder: (column) => column,
+  );
 }
 
 class $$ClientDailyMetricsTableTableManager
@@ -6620,6 +6698,7 @@ class $$ClientDailyMetricsTableTableManager
                 Value<int> calories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<String> exercisesJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDailyMetricsCompanion(
                 clientId: clientId,
@@ -6628,6 +6707,7 @@ class $$ClientDailyMetricsTableTableManager
                 calories: calories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                exercisesJson: exercisesJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6638,6 +6718,7 @@ class $$ClientDailyMetricsTableTableManager
                 Value<int> calories = const Value.absent(),
                 Value<int> sodiumMg = const Value.absent(),
                 Value<double> sugarG = const Value.absent(),
+                Value<String> exercisesJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDailyMetricsCompanion.insert(
                 clientId: clientId,
@@ -6646,6 +6727,7 @@ class $$ClientDailyMetricsTableTableManager
                 calories: calories,
                 sodiumMg: sodiumMg,
                 sugarG: sugarG,
+                exercisesJson: exercisesJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
