@@ -401,6 +401,7 @@ class _PeriodBody extends StatelessWidget {
               // 보고 있으면) 마지막 칸까지 전부 그린다.
               todayIndex: _todayIndexIn(dates),
               replayKey: replayKey,
+              goalLabel: '${AppLocalizations.of(context).homeGoal}\n${format(goal)}',
               formatTick: (double v) => format(v),
             )
           else

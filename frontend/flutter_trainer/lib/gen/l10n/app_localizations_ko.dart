@@ -2431,6 +2431,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsRecentWeeks => '최근 4주 평균';
 
   @override
+  String chartGoalLabel(String value) {
+    return '목표\n$value';
+  }
+
+  @override
   String reportsGoalMarker(String value) {
     return '│ 목표 $value';
   }
