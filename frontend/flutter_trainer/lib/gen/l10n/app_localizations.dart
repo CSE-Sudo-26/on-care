@@ -4472,6 +4472,12 @@ abstract class AppLocalizations {
   /// **'Feedback draft storage isn\'t supported yet.'**
   String get reportsFeedbackSaveUnsupported;
 
+  /// No description provided for @reportsFeedbackDraftNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A draft filled in from this week\'s figures. Check it over before sending.'**
+  String get reportsFeedbackDraftNote;
+
   /// No description provided for @reportsFeedbackRestore.
   ///
   /// In en, this message translates to:

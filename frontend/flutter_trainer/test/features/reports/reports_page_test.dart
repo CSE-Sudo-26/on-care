@@ -562,6 +562,15 @@ void main() {
     expect(after, contains('· '));
   });
 
+  testWidgets('초안이 자동으로 채워졌다고 입력창이 말해 준다 (#755)', (tester) async {
+    await openReports(tester);
+
+    // 회원에게 그대로 나가는 글이라, 확인하고 보내라는 신호가 그 자리에
+    // 있어야 한다. 'AI' 라고 하지 않는다 — 이 초안은 수치에서 조립한
+    // 템플릿이지 생성된 문장이 아니다.
+    expect(find.text('수치에서 자동으로 채운 초안이에요. 보내기 전에 확인하고 고쳐 주세요.'), findsOneWidget);
+  });
+
   testWidgets('가져온 요약을 초안으로 되돌린다 (#755)', (tester) async {
     await openReports(tester);
 

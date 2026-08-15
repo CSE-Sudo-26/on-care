@@ -1477,6 +1477,7 @@
   "@reportsPreviousValue": {"placeholders": {"value": {"type": "String"}}},
   "reportsFeedbackTitle": "Trainer feedback",
   "reportsFeedbackSaveUnsupported": "Feedback draft storage isn't supported yet.",
+  "reportsFeedbackDraftNote": "A draft filled in from this week's figures. Check it over before sending.",
   "reportsFeedbackRestore": "Restore draft",
   "reportsFeedbackSave": "Save feedback",
   "reportsFeedbackHint": "Write coaching feedback for the client.",

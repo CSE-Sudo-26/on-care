@@ -2447,6 +2447,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackSaveUnsupported => '피드백 초안 저장 API가 아직 없어요.';
 
   @override
+  String get reportsFeedbackDraftNote =>
+      '수치에서 자동으로 채운 초안이에요. 보내기 전에 확인하고 고쳐 주세요.';
+
+  @override
   String get reportsFeedbackRestore => '초안으로 되돌리기';
 
   @override

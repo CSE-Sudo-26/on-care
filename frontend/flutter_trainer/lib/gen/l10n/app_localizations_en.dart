@@ -2534,6 +2534,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Feedback draft storage isn\'t supported yet.';
 
   @override
+  String get reportsFeedbackDraftNote =>
+      'A draft filled in from this week\'s figures. Check it over before sending.';
+
+  @override
   String get reportsFeedbackRestore => 'Restore draft';
 
   @override
