@@ -170,12 +170,17 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
             children: <Widget>[
               Icon(Icons.auto_awesome, size: 16, color: FigmaColors.primary),
               SizedBox(width: 6),
-              Text(
-                'AI 맞춤 운동',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
+              // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
+              Flexible(
+                child: Text(
+                  'AI 맞춤 운동',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                  ),
                 ),
               ),
             ],
@@ -329,47 +334,61 @@ class _RecommendedExerciseRowState
                 ),
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Text(
-                    '${routine.type} · '
-                    '${routine.completedMinutes ?? routine.minutes}분',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: FigmaColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (routine.completed)
-                    const Row(
-                      children: <Widget>[
-                        Icon(Icons.check_circle, size: 16, color: Colors.green),
-                        SizedBox(width: 4),
-                        Text('수행 완료'),
-                      ],
-                    )
-                  else
-                    SizedBox(
-                      height: 30,
-                      child: OutlinedButton(
-                        key: Key('completeRoutine-${routine.id}'),
-                        onPressed: _saving ? null : _complete,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                        ),
-                        child: _saving
-                            ? const SizedBox.square(
-                                dimension: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('수행 완료'),
+              // 오른쪽 묶음도 접힌다. 고정 폭으로 두면 큰 글자 배율에서
+              // 운동 이름 쪽을 다 밀어낸 뒤에도 줄이 넘쳤다(#766).
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Text(
+                      '${routine.type} · '
+                      '${routine.completedMinutes ?? routine.minutes}분',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: FigmaColors.primary,
                       ),
                     ),
-                ],
+                    const SizedBox(height: 4),
+                    if (routine.completed)
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                          SizedBox(width: 4),
+                          Flexible(child: Text('수행 완료')),
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        height: 30,
+                        child: OutlinedButton(
+                          key: Key('completeRoutine-${routine.id}'),
+                          onPressed: _saving ? null : _complete,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                          ),
+                          child: _saving
+                              ? const SizedBox.square(
+                                  dimension: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  '수행 완료',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -548,12 +567,18 @@ class _ChatButton extends StatelessWidget {
                 color: FigmaColors.primary,
               ),
               const SizedBox(width: 8),
-              const Text(
-                '트레이너와 채팅',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: FigmaColors.primary,
+              // 큰 글자 배율에서 라벨이 버튼을 넘겼다. 안 읽은 개수 배지는
+              // 접지 않는다 — 몇 건인지가 이 버튼을 누를 이유다(#766).
+              const Flexible(
+                child: Text(
+                  '트레이너와 채팅',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.primary,
+                  ),
                 ),
               ),
               if (unread > 0) ...<Widget>[

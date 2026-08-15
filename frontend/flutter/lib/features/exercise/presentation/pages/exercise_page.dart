@@ -154,12 +154,19 @@ class _SubTabs extends StatelessWidget {
                 color: on ? FigmaColors.primary : FigmaColors.textMuted,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: on ? FigmaColors.ink : AppColors.mutedForeground,
+              // 라벨은 남는 폭 안에서 접힌다. 아이콘·라벨 둘 다 고정 폭이면
+              // 320px 에서 탭 두 개가 화면을 넘겼다 — 영어(`Exercise log`)는
+              // 기본 배율에서도 넘친다(#766). 아이콘은 접지 않는다.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: on ? FigmaColors.ink : AppColors.mutedForeground,
+                  ),
                 ),
               ),
             ],
@@ -394,12 +401,18 @@ class _ExerciseWeekStrip extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                Text(
-                  l.dietWeekLabel(center.month, _weekOfMonth(center)),
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+                // 영어의 주 라벨은 한국어보다 훨씬 길다. 고정 폭으로 두면
+                // 좁은 화면에서 오늘 버튼을 밀어내며 넘친다(#766).
+                Flexible(
+                  child: Text(
+                    l.dietWeekLabel(center.month, _weekOfMonth(center)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
                 ),
                 if (showTodayButton)
@@ -437,13 +450,17 @@ class _ExerciseWeekStrip extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
+                    // 셀마다 제 크기를 요구하면 일곱의 합이 화면을 넘는다 —
+                    // 영어 요일 라벨(Mon/Tue)이 한글 한 글자보다 넓다(#766).
                     for (final DateTime d in days)
-                      _WeekDay(
-                        day: d,
-                        label: _weekday(l, d.weekday),
-                        isToday: d == today,
-                        isSelected: d == selected,
-                        onTap: () => onSelect(d),
+                      Expanded(
+                        child: _WeekDay(
+                          day: d,
+                          label: _weekday(l, d.weekday),
+                          isToday: d == today,
+                          isSelected: d == selected,
+                          onTap: () => onSelect(d),
+                        ),
                       ),
                   ],
                 ),
@@ -708,12 +725,18 @@ class _WeekDay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: labelColor,
+          // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
+          // 사라진다 — 좁아도 읽을 수 있어야 한다(#766).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
+              ),
             ),
           ),
           const SizedBox(height: 3),
@@ -987,21 +1010,33 @@ class _ActivityStatusState extends State<_ActivityStatus> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        // 식단 탭 `영양 요약` 의 같은 줄과 같은 구조로 둔다(#761) — 남는 폭은
+        // 제목과 토글 **사이**로 가고, 둘 다 좁아지면 접힌다. `Spacer` 로 밀면
+        // 정렬은 맞지만 접힐 자리가 없어 320px 에서 줄이 넘쳤다(#766).
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Text(
-              l.exActivityTitle,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  l.exActivityTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: FigmaColors.ink,
+                  ),
+                ),
               ),
             ),
-            const Spacer(),
-            _PeriodToggle(
-              active: _period,
-              labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
-              onChanged: (int i) => setState(() => _period = i),
+            Flexible(
+              child: _PeriodToggle(
+                active: _period,
+                labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
+                onChanged: (int i) => setState(() => _period = i),
+              ),
             ),
           ],
         ),
@@ -1268,6 +1303,8 @@ class _PeriodToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      // 줄 오른쪽 끝에 붙었는지를 테스트가 잴 수 있어야 한다(#766).
+      key: const ValueKey<String>('exercise-period-toggle'),
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: FigmaColors.statBg,
@@ -1276,28 +1313,37 @@ class _PeriodToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+          // 좁은 화면·큰 글자 배율에서는 세 탭의 최소 폭 합이 남는 폭보다
+          // 커진다. 접히게 두어야 줄이 넘치지 않는다 — 식단 탭의 같은 토글과
+          // 같은 처리다(#739, #766). 보통 폭에서는 최소 폭 그대로라 모양이 같다.
           for (int i = 0; i < labels.length; i++)
-            GestureDetector(
-              onTap: () => onChanged(i),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: active == i ? FigmaColors.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  labels[i],
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+            Flexible(
+              child: GestureDetector(
+                onTap: () => onChanged(i),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
                     color: active == i
-                        ? Colors.white
-                        : AppColors.mutedForeground,
+                        ? FigmaColors.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    labels[i],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: active == i
+                          ? Colors.white
+                          : AppColors.mutedForeground,
+                    ),
                   ),
                 ),
               ),
@@ -1447,13 +1493,15 @@ class _ActivityChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // 범례 셋은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 320px 에서
+          // 넘쳤고, 라벨을 줄이면 무슨 색이 무엇인지가 사라진다(#766).
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 6,
             children: <Widget>[
               _Legend(color: FigmaColors.primary, label: l.exTypeCardio),
-              const SizedBox(width: 16),
               _Legend(color: const Color(0xFF1B6FA8), label: l.exTypeStrength),
-              const SizedBox(width: 16),
               _Legend(
                 color: const Color(0xFFD4EEF8),
                 label: l.exTypeStretching,
@@ -1473,7 +1521,9 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `Wrap` 안에서는 가로 제약이 없다 — 제 폭만 차지해야 줄바꿈이 계산된다.
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
           width: 10,
@@ -1484,12 +1534,16 @@ class _Legend extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.mutedForeground,
+        // 배율이 크면 범례 하나가 한 줄보다 넓어진다. 그때는 라벨 안에서
+        // 줄을 바꾼다(#766).
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.mutedForeground,
+            ),
           ),
         ),
       ],
@@ -1967,25 +2021,34 @@ class _DemoPtLogCard extends StatelessWidget {
                 color: FigmaColors.primary,
               ),
               SizedBox(width: 6),
-              Text(
-                '오늘 완료한 PT',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: FigmaColors.ink,
+              // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
+              Flexible(
+                child: Text(
+                  '오늘 완료한 PT',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: FigmaColors.ink,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          const Row(
+          // 칩 둘은 좁아지면 다음 줄로 넘긴다. 한 줄에 붙여 두면 320px 기본
+          // 배율에서도 카드를 크게 넘겼고, 칩 글자를 줄이면 몇 회차인지·몇 시
+          // 수업인지가 사라진다(#766).
+          const Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: <Widget>[
               _MetaChip(
                 icon: Icons.check_circle,
                 text: '18:00 수업 완료',
                 color: FigmaColors.statusGreen,
               ),
-              SizedBox(width: 6),
               _MetaChip(icon: Icons.person_outline, text: '김트레이너와 12회차'),
             ],
           ),
@@ -1996,22 +2059,33 @@ class _DemoPtLogCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 3, 0, 3),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: FigmaColors.primary,
-                      shape: BoxShape.circle,
+                  Padding(
+                    // 항목이 두 줄로 접히면 점이 가운데로 뜬다. 첫 줄 높이에
+                    // 맞춰 위쪽에 고정한다.
+                    padding: const EdgeInsets.only(top: 7),
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: FigmaColors.primary,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    it,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.foreground,
+                  // 말줄임이 아니라 줄바꿈이다. `벤치프레스 40kg · 4세트` 가
+                  // `벤치프레스 40k…` 가 되면 몇 세트인지가 사라진다 — 접혀도
+                  // 뜻이 남아야 한다(#766).
+                  Expanded(
+                    child: Text(
+                      it,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.foreground,
+                      ),
                     ),
                   ),
                 ],
@@ -2113,12 +2187,16 @@ class _MetaChip extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 11, color: color),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
+          // 배율 1.6 이상에서는 칩 하나가 카드보다 넓어진다. 그때는 칩 안에서
+          // 줄을 바꾼다 — 말줄임하면 몇 시 수업인지·몇 회차인지가 사라진다(#766).
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ],
