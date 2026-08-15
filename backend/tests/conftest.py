@@ -35,6 +35,63 @@ os.environ.setdefault("DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
+#: 테스트는 오프라인 해시 임베더를 쓴다.
+#:
+#: DB 를 비우고 시작하면서 공공 RAG 문서(8건)가 매 실행 다시 적재된다. 로컬
+#: `.env` 에 실제 GEMINI_API_KEY 가 있으면 그 적재가 **네트워크 임베딩 호출**이
+#: 되어, 스위트가 느려질 뿐 아니라 외부 서비스에 의존하게 된다. 키가 없는 CI 는
+#: 이미 해시로 폴백하므로, 여기서 못 박아 로컬을 CI 와 같은 경로로 만든다
+#: (`recognizer` 를 stub 으로 고정하는 것과 같은 이유다).
+#:
+#: 두 임베더가 `embed_dim` 을 공유해 벡터 차원은 달라지지 않는다.
+os.environ.setdefault("EMBEDDER", "hash")
+
+
+#: 이 DB 를 비워도 되는가.
+#:
+#: 로컬은 같은 DB 를 계속 재사용한다. 그래서 고정 id 를 넣는 테스트가 두 번째
+#: 실행부터 중복 키로 깨지고, "첫 질문에는 이력이 없다" 처럼 빈 상태를 전제로 한
+#: 테스트도 지난 실행이 남긴 행에 걸린다. 매 실행을 CI 와 같은 빈 상태에서
+#: 시작하게 만드는 것이 이 판정의 목적이다(#762).
+#:
+#: **원격 DB 는 어떤 경우에도 건드리지 않는다.** 공유 DB(Neon)를 가리킨 채
+#: 스위트를 돌리는 실수가 팀 데이터를 지우는 일로 이어지면 안 된다. 로컬이라도
+#: 앱 기본 DB(개발·데모용)면 비우지 않는다 — 그쪽은 사람이 직접 쓰는 DB 다.
+def _is_disposable(url: str) -> bool:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url.replace("postgresql+psycopg://", "postgresql://"))
+    if parsed.hostname not in {"localhost", "127.0.0.1"}:
+        return False
+    name = (parsed.path or "").lstrip("/")
+    return bool(name) and name != "oncare"
+
+
+def _reset_database(url: str) -> None:
+    """스키마는 두고 행만 비운다.
+
+    `DROP SCHEMA` 가 아니라 `TRUNCATE` 인 이유는 pgvector 확장과 alembic 이력을
+    살려 두기 위해서다 — 확장 생성은 superuser 권한이 필요해 지우면 되살릴 수
+    없다. 테이블이 아직 없으면(새 DB) 지울 것도 없다.
+    """
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            names = [
+                row[0]
+                for row in conn.execute(
+                    text(
+                        "SELECT tablename FROM pg_tables "
+                        "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
+                    )
+                )
+            ]
+            if names:
+                joined = ", ".join(f'public."{n}"' for n in names)
+                conn.execute(text(f"TRUNCATE {joined} RESTART IDENTITY CASCADE"))
+    finally:
+        engine.dispose()
+
 
 def _db_available() -> bool:
     try:
@@ -52,6 +109,10 @@ def client():
     """FastAPI TestClient. DB 가 없으면 skip."""
     if not _db_available():
         pytest.skip("DB 연결 불가 — CI(Postgres 서비스)에서 실행됩니다.")
+    # 앱 기동(lifespan)이 스키마와 데모 시드를 채우기 **전에** 비운다. 뒤에
+    # 비우면 시드까지 날아가 시드를 읽는 테스트가 전부 깨진다.
+    if _is_disposable(DATABASE_URL):
+        _reset_database(DATABASE_URL)
     from fastapi.testclient import TestClient
 
     from app.main import app
