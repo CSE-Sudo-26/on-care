@@ -223,17 +223,82 @@ int sodiumOverDaysOf(List<int> sodium) =>
 /// reads, so it must look like something their trainer wrote, not a
 /// system dump.
 String reportMessage(AppLocalizations l, WeeklyReport report) {
-  final lines = <String>[
-    l.reportBodyTitle(report.rangeLabel(l)),
-    l.reportBodySessions(report.sessionsDone, report.sessionsBooked),
-    if (report.completionAvg != null)
-      l.reportBodyCompletion(report.completionAvg!),
-    if (report.sodiumAvg != null)
-      l.reportBodySodium(report.sodiumAvg!, report.sodiumOverDays ?? 0),
-    report.isGoodWeek ? l.reportBodyPraise : l.reportBodyEncourage,
+  final paragraphs = <String>[
+    // 첫 줄에 무슨 메시지인지가 있어야 한다 — 회원의 대화방에는 다른 메시지도
+    // 함께 쌓인다.
+    l.reportBodyGreeting(report.client.name, report.rangeLabel(l)),
   ];
-  return lines.join('\n');
+
+  final workout = <String>[];
+  final completion = report.completionAvg;
+  if (completion != null) {
+    workout.add(
+      completion >= 70
+          ? l.reportBodyCompletionGood(completion)
+          : l.reportBodyCompletionLow(completion),
+    );
+  }
+  if (report.sessionsBooked > 0) {
+    workout.add(l.reportBodySessions(report.sessionsDone, report.sessionsBooked));
+  }
+  final skipped = _skippedNames(report);
+  if (skipped.isNotEmpty) {
+    workout.add(l.reportBodySkipped(_topicParticle(skipped.join(', '))));
+  }
+  if (workout.isNotEmpty) paragraphs.add(workout.join(' '));
+
+  final diet = <String>[];
+  final sodium = report.sodiumAvg;
+  if (sodium != null) {
+    final over = report.sodiumOverDays ?? 0;
+    diet.add(
+      over > 0
+          ? l.reportBodySodiumOver(sodium, over)
+          : l.reportBodySodiumOk(sodium),
+    );
+  }
+  final recorded = report.caloriesWeek.where((v) => v > 0).toList();
+  if (recorded.isNotEmpty) {
+    final mean = recorded.fold<double>(0, (a, b) => a + b) / recorded.length;
+    diet.add(l.reportBodyCalories(mean.round()));
+  }
+  if (diet.isNotEmpty) paragraphs.add(diet.join(' '));
+
+  paragraphs.add(
+    // 인사말만 남았으면 가리킬 '이 부분'이 없다. 기록이 없는 주에 격려부터
+    // 하면 회원이 무엇을 하라는 말인지 알 수 없다.
+    paragraphs.length == 1
+        ? l.reportBodyNoRecords
+        : (report.isGoodWeek ? l.reportBodyPraise : l.reportBodyEncourage),
+  );
+  return paragraphs.join('\n\n');
 }
+
+/// 그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다.
+List<String> _skippedNames(WeeklyReport report) {
+  final names = <String>[];
+  for (final day in report.days) {
+    for (final line in day.exercises) {
+      if (!line.contains('✗')) continue;
+      final name = line.replaceAll('✗', '').trim();
+      if (name.isNotEmpty && !names.contains(name)) names.add(name);
+    }
+  }
+  return names.take(3).toList(growable: false);
+}
+
+/// `은`/`는` 을 받침에 맞춰 붙인다.
+///
+/// `은(는)` 은 사람이 쓴 글로 읽히지 않는다 — 회원이 그대로 받는 문장이라
+/// 기계가 쓴 티가 나는 자리를 남기지 않는다. 백엔드의 `_topic` 과 같은 규칙이다.
+String _topicParticle(String word) {
+  if (word.isEmpty) return word;
+  final last = word.codeUnitAt(word.length - 1);
+  final isHangul = last >= 0xAC00 && last <= 0xD7A3;
+  final hasBatchim = isHangul && (last - 0xAC00) % 28 != 0;
+  return '$word${hasBatchim ? '은' : '는'}';
+}
+
 
 /// The trainer's own week — the numbers that answer "how am I doing?".
 class TrainerWeekStats {

@@ -1021,23 +1021,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsShareNoClient => 'Pick a client to see their report first.';
 
   @override
-  String reportBodyTitle(String range) {
-    return '📊 Weekly report · $range';
+  String reportBodyGreeting(String name, String range) {
+    return '$name, here\'s your weekly report for $range.';
   }
 
   @override
   String reportBodySessions(int done, int booked) {
-    return 'PT sessions: $done/$booked completed';
+    return 'We got through $done of $booked PT sessions.';
   }
 
   @override
-  String reportBodyCompletion(int avg) {
-    return 'Average workout completion: $avg%';
+  String reportBodyCompletionGood(int avg) {
+    return 'You kept up well this week — $avg% of your workouts done.';
   }
 
   @override
-  String reportBodySodium(int avg, int days) {
-    return 'Average sodium: ${avg}mg · over target on $days days';
+  String reportBodyCompletionLow(int avg) {
+    return 'Workout completion came in at $avg% this week. Sounds like a busy one.';
+  }
+
+  @override
+  String reportBodySkipped(String names) {
+    return 'One thing — $names got skipped. If that was a condition thing, tell me at the next session and I\'ll swap in an alternative.';
+  }
+
+  @override
+  String reportBodySodiumOver(int avg, int days) {
+    return 'Sodium averaged ${avg}mg a day, over the 2,000mg target on $days days. Leaving half the broth behind saves 400-500mg a day.';
+  }
+
+  @override
+  String reportBodySodiumOk(int avg) {
+    return 'Sodium averaged ${avg}mg a day — comfortably inside your target.';
+  }
+
+  @override
+  String reportBodyCalories(int avg) {
+    return 'Calories averaged ${avg}kcal a day.';
   }
 
   @override
@@ -1046,7 +1066,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBodyEncourage =>
-      'Let\'s tighten things up next week. I\'ll adjust your routine.';
+      'Let\'s focus on just that one thing next week. I\'ll adjust your routine and send it over.';
+
+  @override
+  String get reportBodyNoRecords =>
+      'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.';
 
   @override
   String get schedTitle => 'Schedule';
@@ -2510,6 +2534,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Feedback draft storage isn\'t supported yet.';
 
   @override
+  String get reportsFeedbackRestore => 'Restore draft';
+
+  @override
   String get reportsFeedbackSave => 'Save feedback';
 
   @override
@@ -2535,6 +2562,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI coaching assistant · Report summary';
+
+  @override
+  String get reportsAiGenerated => 'AI generated';
+
+  @override
+  String get reportsAiLoading => 'Writing this week\'s summary…';
+
+  @override
+  String get reportsAiUseAsDraft => 'Use as feedback';
+
+  @override
+  String get reportsAiRegenerate => 'Regenerate';
 
   @override
   String get reportsAiUnavailable =>

@@ -1832,29 +1832,53 @@ abstract class AppLocalizations {
   /// **'Pick a client to see their report first.'**
   String get reportsShareNoClient;
 
-  /// No description provided for @reportBodyTitle.
+  /// No description provided for @reportBodyGreeting.
   ///
   /// In en, this message translates to:
-  /// **'📊 Weekly report · {range}'**
-  String reportBodyTitle(String range);
+  /// **'{name}, here\'s your weekly report for {range}.'**
+  String reportBodyGreeting(String name, String range);
 
   /// No description provided for @reportBodySessions.
   ///
   /// In en, this message translates to:
-  /// **'PT sessions: {done}/{booked} completed'**
+  /// **'We got through {done} of {booked} PT sessions.'**
   String reportBodySessions(int done, int booked);
 
-  /// No description provided for @reportBodyCompletion.
+  /// No description provided for @reportBodyCompletionGood.
   ///
   /// In en, this message translates to:
-  /// **'Average workout completion: {avg}%'**
-  String reportBodyCompletion(int avg);
+  /// **'You kept up well this week — {avg}% of your workouts done.'**
+  String reportBodyCompletionGood(int avg);
 
-  /// No description provided for @reportBodySodium.
+  /// No description provided for @reportBodyCompletionLow.
   ///
   /// In en, this message translates to:
-  /// **'Average sodium: {avg}mg · over target on {days} days'**
-  String reportBodySodium(int avg, int days);
+  /// **'Workout completion came in at {avg}% this week. Sounds like a busy one.'**
+  String reportBodyCompletionLow(int avg);
+
+  /// No description provided for @reportBodySkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'One thing — {names} got skipped. If that was a condition thing, tell me at the next session and I\'ll swap in an alternative.'**
+  String reportBodySkipped(String names);
+
+  /// No description provided for @reportBodySodiumOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium averaged {avg}mg a day, over the 2,000mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.'**
+  String reportBodySodiumOver(int avg, int days);
+
+  /// No description provided for @reportBodySodiumOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium averaged {avg}mg a day — comfortably inside your target.'**
+  String reportBodySodiumOk(int avg);
+
+  /// No description provided for @reportBodyCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories averaged {avg}kcal a day.'**
+  String reportBodyCalories(int avg);
 
   /// No description provided for @reportBodyPraise.
   ///
@@ -1865,8 +1889,14 @@ abstract class AppLocalizations {
   /// No description provided for @reportBodyEncourage.
   ///
   /// In en, this message translates to:
-  /// **'Let\'s tighten things up next week. I\'ll adjust your routine.'**
+  /// **'Let\'s focus on just that one thing next week. I\'ll adjust your routine and send it over.'**
   String get reportBodyEncourage;
+
+  /// No description provided for @reportBodyNoRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s nothing logged this week, so nothing to sum up. Let\'s plan next week\'s start together.'**
+  String get reportBodyNoRecords;
 
   /// No description provided for @schedTitle.
   ///
@@ -4442,6 +4472,12 @@ abstract class AppLocalizations {
   /// **'Feedback draft storage isn\'t supported yet.'**
   String get reportsFeedbackSaveUnsupported;
 
+  /// No description provided for @reportsFeedbackRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore draft'**
+  String get reportsFeedbackRestore;
+
   /// No description provided for @reportsFeedbackSave.
   ///
   /// In en, this message translates to:
@@ -4483,6 +4519,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI coaching assistant · Report summary'**
   String get reportsAiTitle;
+
+  /// No description provided for @reportsAiGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'AI generated'**
+  String get reportsAiGenerated;
+
+  /// No description provided for @reportsAiLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing this week\'s summary…'**
+  String get reportsAiLoading;
+
+  /// No description provided for @reportsAiUseAsDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Use as feedback'**
+  String get reportsAiUseAsDraft;
+
+  /// No description provided for @reportsAiRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get reportsAiRegenerate;
 
   /// No description provided for @reportsAiUnavailable.
   ///
