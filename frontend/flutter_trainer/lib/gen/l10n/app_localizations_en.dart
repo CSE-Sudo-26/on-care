@@ -2519,6 +2519,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsRecentWeeks => 'Last 4 weekly averages';
 
   @override
+  String chartGoalLabel(String value) {
+    return 'Goal\n$value';
+  }
+
+  @override
   String reportsGoalMarker(String value) {
     return '│ Goal $value';
   }

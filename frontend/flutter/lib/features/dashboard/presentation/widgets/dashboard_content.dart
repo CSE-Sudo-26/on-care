@@ -491,10 +491,10 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
+                      // 목표는 그래프의 목표선 라벨이 말한다 — 카드 위에 또
+                      // 적으면 한 화면에서 같은 말이 두 번 나온다(#756).
                       _ChartLegend(
                         title: l.homeWeeklyMetricTrend(_nutLabel(l, _tab)),
-                        goalText:
-                            '${l.homeGoal} ${nf.format(cfg.goal)}${cfg.unit}',
                       ),
                       const SizedBox(height: 6),
                       MetricTrendChart(
@@ -506,6 +506,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                         // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을
                         // 눈으로 따라가게 한다.
                         replayKey: _tab,
+                        goalLabel: '${l.homeGoal}\n${nf.format(cfg.goal)}',
                         formatTick: nf.format,
                       ),
                     ],
@@ -1757,22 +1758,15 @@ class _ScheduleItemCard extends StatelessWidget {
 }
 
 class _ChartLegend extends StatelessWidget {
-  const _ChartLegend({required this.title, required this.goalText});
+  const _ChartLegend({required this.title});
 
   /// "주간 {지표} 추이" — 선택된 지표에 따라 바뀌는 그래프 왼쪽 상단 제목.
   final String title;
 
-  /// "목표 2,000kcal" 처럼 지표별 목표 수치. 그래프 오른쪽 상단에 표기.
-  final String goalText;
-
   @override
   Widget build(BuildContext context) {
-    // 범례(이번 주/지난 주)는 제거. 왼쪽에 그래프 제목, 오른쪽에 목표 수치를
-    // 카드 우측 끝('자세히 >')과 같은 열로 맞춘다.
-    //
-    // 남는 가로 공간은 제목 쪽 Expanded 가 전부 흡수해야 목표 수치가 그래프
-    // 오른쪽 끝에 붙는다. 목표 수치를 Expanded 로 두면 제목(Flexible)과 공간을
-    // 반씩 나눠 가져 오른쪽 끝에서 한참 못 미친 자리에 멈춘다.
+    // 범례(이번 주/지난 주)와 목표 수치는 제거. 목표는 그래프 안의 목표선
+    // 라벨이 말한다(#756).
     return Row(
       children: <Widget>[
         Expanded(
@@ -1785,16 +1779,6 @@ class _ChartLegend extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          goalText,
-          maxLines: 1,
-          style: const TextStyle(
-            fontSize: 14.5,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.primary,
           ),
         ),
       ],

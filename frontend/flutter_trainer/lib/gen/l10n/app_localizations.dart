@@ -4460,6 +4460,12 @@ abstract class AppLocalizations {
   /// **'Last 4 weekly averages'**
   String get reportsRecentWeeks;
 
+  /// No description provided for @chartGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal\n{value}'**
+  String chartGoalLabel(String value);
+
   /// No description provided for @reportsGoalMarker.
   ///
   /// In en, this message translates to:

@@ -758,6 +758,8 @@
   "reportsFeedbackSave": "피드백 저장",
   "reportsFeedbackHint": "고객에게 전달할 코칭 피드백을 작성하세요.",
   "reportsRecentWeeks": "최근 4주 평균",
+  "chartGoalLabel": "목표\n{value}",
+  "@chartGoalLabel": {"placeholders": {"value": {"type": "String"}}},
   "reportsGoalMarker": "│ 목표 {value}",
   "@reportsGoalMarker": {"placeholders": {"value": {"type": "String"}}},
   "reportsWeeksAgo": "{count}주 전",

@@ -80,6 +80,7 @@ class MetricTrendChart extends StatelessWidget {
     required this.ticks,
     required this.todayIndex,
     required this.replayKey,
+    this.goalLabel,
     required this.formatTick,
     this.height = 68,
     super.key,
@@ -90,7 +91,8 @@ class MetricTrendChart extends StatelessWidget {
   final List<String> dayLabels;
   final double goal;
 
-  /// 가로 눈금선을 그릴 값들. 지표마다 다르다.
+  /// 축의 위아래를 정하는 값들. 그리지는 않는다 — 지표별 축 성질을 잡는
+  /// [metricTrendScale] 의 입력이다.
   final List<double> ticks;
 
   /// 선을 여기까지만 잇는다. 지난 주처럼 전부 지난 구간이면 마지막 index.
@@ -98,6 +100,10 @@ class MetricTrendChart extends StatelessWidget {
 
   /// 바뀌면 진입 애니메이션을 처음부터 다시 그린다.
   final Object replayKey;
+
+  /// 목표선에 붙는 문구(예: `목표 2,000`). null 이면 선만 그린다. 문구를 밖에서
+  /// 받는 것은 두 앱의 로케일 자원이 갈라져 있어서다.
+  final String? goalLabel;
 
   final String Function(double) formatTick;
   final double height;
@@ -112,22 +118,27 @@ class MetricTrendChart extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // 눈금 라벨을 각 값의 실제 높이에 맞춰 배치.
+        // 목표선의 실제 높이에 맞춰 라벨 하나. 칸은 목표가 없어도 자리를
+        // 지킨다 — 지표를 바꿀 때 그래프 폭이 흔들리지 않는다.
+        //
+        // 폭은 눈금 라벨이 쓰던 38 그대로다. `목표 2,000` 을 한 줄로 두면 이
+        // 칸이 넓어져야 하는데, 그러면 360px 영어 로케일에서 요일 라벨 줄이
+        // 넘친다. 두 줄로 접어 폭을 지킨다.
         SizedBox(
           width: 38,
           height: height,
           child: Stack(
             children: <Widget>[
-              for (final double t in ticks)
+              if (goalLabel != null && goal > 0 && goal >= lo && goal <= hi)
                 Positioned(
                   right: 0,
-                  top: (height - ((t - lo) / (hi - lo)) * height - 8).clamp(
+                  top: (height - ((goal - lo) / (hi - lo)) * height - 13).clamp(
                     0.0,
-                    height - 16,
+                    height - 26,
                   ),
                   child: SizedBox(
-                    height: 16,
-                    child: Center(child: _AxisLabel(formatTick(t))),
+                    height: 26,
+                    child: Center(child: _AxisLabel(goalLabel!)),
                   ),
                 ),
             ],
@@ -207,6 +218,7 @@ class _AxisLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     textAlign: TextAlign.right,
+    maxLines: 2,
     style: const TextStyle(
       fontSize: 10,
       fontWeight: FontWeight.w600,
@@ -248,13 +260,23 @@ class MetricTrendPainter extends CustomPainter {
     double dx(int i) => cur.length <= 1 ? w / 2 : (i / (cur.length - 1)) * w;
     double dy(double v) => h - ((v - lo) / span) * h;
 
-    final Paint grid = Paint()
-      ..color = const Color(0xFFEFF3F7)
-      ..strokeWidth = 1;
-    for (final double t in ticks) {
-      if (t < lo || t > hi) continue;
-      final double gy = dy(t);
-      canvas.drawLine(Offset(0, gy), Offset(w, gy), grid);
+    // 목표선 하나. 점선이라 데이터 꺾은선과 경쟁하지 않는다. 축 밖으로 나가는
+    // 목표(범위를 벗어난 주)는 그리지 않는다 — 가장자리에 붙어 테두리처럼
+    // 보인다.
+    if (goal > 0 && goal >= lo && goal <= hi) {
+      final goalY = dy(goal);
+      final Paint dash = Paint()
+        ..color = AppColors.mutedForeground.withValues(alpha: 0.45)
+        ..strokeWidth = 1;
+      const double dashW = 4;
+      const double gapW = 3;
+      for (double x = 0; x < w; x += dashW + gapW) {
+        canvas.drawLine(
+          Offset(x, goalY),
+          Offset(math.min(x + dashW, w), goalY),
+          dash,
+        );
+      }
     }
 
     final int lastIdx = todayIndex.clamp(0, cur.length - 1);

@@ -719,6 +719,7 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
             // 따라가게 한다.
             replayKey: _metric,
+            goalLabel: l.chartGoalLabel(metricTrendNumber(_goal)),
             formatTick: metricTrendNumber,
           ),
         const Divider(height: AppSpacing.xl, color: AppColors.border),

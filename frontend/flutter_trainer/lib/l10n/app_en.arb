@@ -1495,6 +1495,8 @@
   "reportsFeedbackSave": "Save feedback",
   "reportsFeedbackHint": "Write coaching feedback for the client.",
   "reportsRecentWeeks": "Last 4 weekly averages",
+  "chartGoalLabel": "Goal\n{value}",
+  "@chartGoalLabel": {"placeholders": {"value": {"type": "String"}}},
   "reportsGoalMarker": "│ Goal {value}",
   "@reportsGoalMarker": {"placeholders": {"value": {"type": "String"}}},
   "reportsWeeksAgo": "{count}w ago",
