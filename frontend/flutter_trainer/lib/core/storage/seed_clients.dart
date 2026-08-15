@@ -49,77 +49,30 @@ const List<_Client> _clients = <_Client>[
     lastTime: '18:18',
     threadHandled: true,
     active: true,
-    calories: 1067,
-    // 오늘은 짬뽕 한 그릇이 나트륨을 다 썼다(3200mg). 칼로리가 낮은 건 저녁을
-    // 아직 안 적었기 때문이고, 저 조합이 오늘 코칭 알림의 근거다.
+    // 김민수의 수치는 **여기에 없다.** 그는 사용자 앱의 데모 계정(`user-demo`)과
+    // 같은 사람이라 두 앱을 나란히 놓고 시연하는데, 각자 만들면 같은 날짜의 숫자가
+    // 어긋난다(#757). 하루 합계·요일별 계열·끼니·운동 이력은 공유 픽스처
+    // (`shared/demo_fixture`)가 정하고 `seed_data.dart` 가 그걸 읽어 넣는다.
     //
-    // 나머지 날은 나트륨 ÷ 칼로리가 1.0~1.5mg/kcal 안에 들어야 한다. 한식이
-    // 짜다 해도 900kcal 짜리 하루가 2,000mg 을 넘기려면 국물만 먹어야 한다 —
-    // 회원을 추가할 때 이 비율을 먼저 확인할 것.
-    //
-    // 이 배열은 요일에 붙는 평상시 값이다. **어제** 하루만 약속이 있어 칼로리·
-    // 당류가 목표를 넘는데, 그건 여기가 아니라 `seed_data.dart` 의 `_feastDay`
-    // 가 날짜로 덮어쓴다 — 어제가 무슨 요일인지는 데모를 여는 날마다 달라진다.
-    sodiumMg: 3428,
-    // Keep this aligned with the member app's current mock daily total.
-    sugarG: 17.8,
+    // 그래서 아래 필드는 비워 둔다 — 값을 남겨 두면 어느 쪽이 진짜인지 알 수 없고,
+    // 한쪽만 고쳤을 때 조용히 갈린다. 나머지 고객은 예전대로 이 파일이 정한다.
+    calories: 0,
+    sodiumMg: 0,
+    sugarG: 0,
     lastRoutine: '오늘',
-    weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
-    sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 3428],
-    caloriesWeek: <int>[1620, 1710, 1830, 1560, 1900, 1680, 1067],
-    sugarWeek: <double>[36.0, 41.5, 28.0, 45.5, 33.0, 38.5, 17.8],
-    diet: <_Meal>[
-      _Meal(
-        '아침',
-        '스크램블 에그, 딸기',
-        217,
-        221,
-        carbsG: 10,
-        proteinG: 13.5,
-        fatG: 14.5,
-      ),
-      _Meal('점심', '짬뽕', 750, 3200, carbsG: 107, proteinG: 29, fatG: 22.5),
-      _Meal(
-        '간식',
-        '아이스 아메리카노, 견과류 한 봉',
-        100,
-        7,
-        carbsG: 3,
-        proteinG: 2.5,
-        fatG: 8,
-      ),
-    ],
+    weekCompletion: <int>[],
+    sodiumWeek: <int>[],
+    caloriesWeek: <int>[],
+    sugarWeek: <double>[],
+    diet: <_Meal>[],
     aiRoutine: <_Routine>[
       _Routine('저강도 유산소 (걷기)', 30, '유산소', '혈압 안정에 효과적'),
       _Routine('하체 스트레칭', 15, '스트레칭', '혈액순환 개선'),
       _Routine('코어 강화', 10, '근력', '기초대사량 향상'),
     ],
-    history: <_History>[
-      _History(
-        dateLabel: '7/12 (오늘)',
-        label: 'PT 세션 · 트레이너 지도',
-        completionRate: 100,
-        exercises: <String>['레그프레스 3세트', '레그컬 3세트', '하체 스트레칭'],
-        clientFeedback: '무릎이 좀 당겼지만 트레이너님 덕분에 잘 마쳤어요 😊',
-        trainerNote: '무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.',
-      ),
-      _History(
-        dateLabel: '7/10',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 67,
-        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '스트레칭 ✗ (생략)'],
-        clientFeedback: '스트레칭은 시간이 없어서 못 했어요',
-        trainerNote: '',
-      ),
-      _History(
-        dateLabel: '7/8',
-        label: 'AI 루틴 · 자율 운동',
-        completionRate: 100,
-        exercises: <String>['걷기 30분 ✓', '코어 강화 10분 ✓', '하체 스트레칭 15분 ✓'],
-        clientFeedback: '오늘은 다 했어요! 뿌듯해요 💪',
-        trainerNote: '',
-      ),
-    ],
+    // 운동 이력도 픽스처가 정한다. 예전에는 날짜 라벨이 `'7/12 (오늘)'` 로 박혀
+    // 있어 데모를 언제 열든 7월 12일이 "오늘"이었다.
+    history: <_History>[],
     // 김민수는 회원 앱 데모 사용자(user-demo)와 같은 사람이라, 이 스레드는
     // 두 앱에 같은 대화로 보여야 한다. 같은 목록이
     // `frontend/flutter/lib/features/member_coach/data/repositories/mock_member_coach_repository.dart`
@@ -129,10 +82,13 @@ const List<_Client> _clients = <_Client>[
     // **이미 진행 중인** 코칭의 한 토막이다. 김민수는 PT 12회차를 지난 회원이라
     // 첫 인사로 시작하면 앱의 다른 화면(운동 이력·AI 코치 카드)과 어긋난다.
     //
-    // 대화의 근거는 이 파일의 숫자에서 가져왔다 — 이행률 톱니형(화 67·목 0)이
-    // "화·목에 야근"이라는 답과 맞물린다. 반대로 요일별 나트륨 mg 은 인용하지
-    // 않는다: 회원 앱 데모의 주간 수치가 여기와 달라, 수치를 단정하면 둘 중
-    // 한 화면과 반드시 어긋난다(목표 2,000mg 만 인용).
+    // 대화의 근거는 픽스처의 숫자다 — 이번 주 이행률이 화·목에 떨어져 있고(화 50·
+    // 목 67), 그게 "화·목에 야근"이라는 답과 맞물린다. 픽스처의 주차별 이야기를
+    // 손볼 때 이 대화도 함께 읽을 것.
+    //
+    // 요일별 나트륨 mg 은 여전히 인용하지 않는다(목표 2,000mg 만 인용). 이제는 두
+    // 앱이 같은 수치를 보지만, 그 수치는 데모를 여는 요일에 따라 달라진다 —
+    // 대화에 숫자를 박으면 어떤 날에는 화면과 어긋난다.
     chat: <_Chat>[
       // 1일차.
       _Chat(

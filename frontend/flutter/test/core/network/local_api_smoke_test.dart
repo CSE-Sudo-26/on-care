@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,9 +69,25 @@ void main() {
     final week = ExerciseWeek.fromJson(res.data!);
     expect(week.dailyMinutes.length, 7);
     expect(week.dayLabels, <String>['월', '화', '수', '목', '금', '토', '일']);
-    // v2 seed has multi-type rows per day so the stacked chart fills.
-    // Sum: 월 40 + 화 60 + 수 50 + 목 65 + 금 55 + 토 80 + 일 0 = 350.
-    expect(week.totalMinutes, 350);
+    // 합계는 픽스처가 정한다(#757). 여기 숫자를 적어 두면 요일마다 달라지는 값을
+    // 고정하게 되고(이번 주는 오늘까지만 시드된다), 픽스처를 고칠 때마다 깨진다.
+    final DateTime now = DateTime.now();
+    final String monday = _dateString(
+      DateTime(now.year, now.month, now.day - (now.weekday - 1)),
+    );
+    final int expectedMinutes = DemoFixture.parse(
+      File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+    ).daysFor(now).where((FixtureDay d) => d.weekStart == monday).fold<int>(
+      0,
+      (int sum, FixtureDay d) =>
+          sum +
+          d.doneExercises.fold<int>(
+            0,
+            (int m, FixtureExercise e) => m + e.minutes,
+          ),
+    );
+    expect(week.totalMinutes, expectedMinutes);
+    expect(expectedMinutes, greaterThan(0), reason: '이번 주 운동이 하나도 없으면 검증이 빈다');
     // 홈 '주간 추이' 차트가 데모 상수로 폴백하지 않도록 일별 칼로리도 내려준다.
     expect(week.dailyCalories.length, 7);
     expect(week.dailyCalories.reduce((a, b) => a + b), week.totalCalories);
@@ -124,9 +143,10 @@ void main() {
   });
 }
 
-String _daysAgoString(int days) {
-  final date = DateTime.now().subtract(Duration(days: days));
-  return '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
-}
+String _daysAgoString(int days) =>
+    _dateString(DateTime.now().subtract(Duration(days: days)));
+
+String _dateString(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-'
+    '${date.month.toString().padLeft(2, '0')}-'
+    '${date.day.toString().padLeft(2, '0')}';

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +29,48 @@ const Map<String, String> seedClientIds = <String, String>{
   '이지수': 'seed-client-2',
   '박성호': 'seed-client-3',
 };
+
+/// 김민수의 값은 시드가 아니라 공유 픽스처가 정한다(#757). 기대값을 여기에 적으면
+/// 픽스처와 두 벌이 되어 한쪽만 고쳤을 때 조용히 갈린다.
+final DemoFixture _fixture = DemoFixture.parse(
+  File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+);
+
+/// 운동 이력 맨 위 줄의 날짜 라벨. 오늘을 따라 움직인다.
+String _todayHistoryLabel() {
+  final DateTime now = DateTime.now();
+  return '${now.month}/${now.day} (오늘)';
+}
+
+/// 운동 이력 세 줄 안에서 김민수가 거른 항목의 이름. 화면은 ✓/✗ 표시를 떼고
+/// 취소선으로 보여 주므로 이름만 남는다.
+String _minsuSkippedExercise() {
+  final List<FixtureDay> recent = _fixture
+      .daysFor(DateTime.now())
+      .reversed
+      .where((FixtureDay d) => d.exercises.isNotEmpty)
+      .take(3)
+      .toList();
+  for (final FixtureDay day in recent) {
+    for (final FixtureExercise exercise in day.exercises) {
+      if (!exercise.done) return exercise.name;
+    }
+  }
+  throw StateError('최근 사흘에 거른 항목이 없다 — 취소선 렌더링을 볼 수 없다');
+}
+
+/// 김민수의 이번 주 요일별 이행률(월→일). 아직 오지 않은 요일은 0.
+List<int> _minsuCompletionWeek(DateTime now) {
+  final List<FixtureDay> days = _fixture.daysFor(now);
+  final String monday = days.last.weekStart;
+  final List<int> week = List<int>.filled(7, 0);
+  for (final FixtureDay day in days.where(
+    (FixtureDay d) => d.weekStart == monday,
+  )) {
+    week[DateTime.parse(day.date).weekday - 1] = day.completion;
+  }
+  return week;
+}
 
 /// Fails the first `watchHistory`; every other read still succeeds.
 class _HistoryFailsOnceRepository extends DriftClientRepository {
@@ -155,9 +200,12 @@ void main() {
         db,
       ).watchHistory('seed-client-1').first;
       expect(history.length, 3);
-      expect(history.first.dateLabel, '7/12 (오늘)');
+      // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
+      // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
+      final DateTime now = DateTime.now();
+      expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
       expect(history.first.completionRate, 100);
-      expect(history.first.exercises, contains('레그프레스 3세트'));
+      expect(history.first.exercises, contains('레그프레스 3세트 ✓'));
       expect(history.first.trainerNote, isNotEmpty);
       // Later entries have no trainer note (box hidden).
       expect(history[1].trainerNote, isEmpty);
@@ -262,11 +310,10 @@ void main() {
     ) async {
       await openWorkout(tester, '김민수');
 
-      // 김민수's seeded week is [100, 67, 100, 0, 100, 67, 100]. 아직 오지
-      // 않은 날은 물론, 기록이 없는 날(목요일 0)도 빼고 나눈다 — 주의 배지·
-      // 고객 검색·주간 리포트가 쓰는 규칙과 같아야 한 회원이 화면마다 다른
-      // 이행률로 보이지 않는다(#754).
-      const week = <int>[100, 67, 100, 0, 100, 67, 100];
+      // 아직 오지 않은 날은 물론, 기록이 없는 날(휴식인 수요일 0)도 빼고 나눈다 —
+      // 주의 배지·고객 검색·주간 리포트가 쓰는 규칙과 같아야 한 회원이 화면마다
+      // 다른 이행률로 보이지 않는다(#754).
+      final week = _minsuCompletionWeek(DateTime.now());
       final elapsed = elapsedWeekdays(DateTime.now());
       final logged = week.take(elapsed).where((rate) => rate > 0).toList();
       final expected = (logged.reduce((a, b) => a + b) / logged.length).round();
@@ -298,27 +345,29 @@ void main() {
       // History entries with feedback + note boxes. Lower list items are
       // built lazily — scroll each into view before asserting.
       await tester.scrollUntilVisible(
-        find.text('7/12 (오늘)'),
+        find.text(_todayHistoryLabel()),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('7/12 (오늘)'), findsOneWidget);
+      expect(find.text(_todayHistoryLabel()), findsOneWidget);
       expect(find.text('100%'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('트레이너 메모'),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('트레이너 메모'), findsOneWidget); // only 7/12 has one
+      expect(find.text('트레이너 메모'), findsOneWidget); // 오늘 것만 메모가 있다
       expect(find.text('무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정.'), findsOneWidget);
       expect(find.text('고객 피드백'), findsWidgets);
       // A skipped exercise line renders (struck-through content present).
+      // 어느 항목을 걸렀는지는 픽스처가 정한다 — 이름을 여기 적으면 두 벌이 된다.
+      final String skipped = _minsuSkippedExercise();
       await tester.scrollUntilVisible(
-        find.text('스트레칭 (생략)'),
+        find.text(skipped),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('스트레칭 (생략)'), findsOneWidget);
+      expect(find.text(skipped), findsOneWidget);
     });
 
     testWidgets('a failed 운동 기록 load does not take the routines with it', (
@@ -365,7 +414,7 @@ void main() {
       );
       await settle(tester);
       await tester.scrollUntilVisible(
-        find.text('7/12 (오늘)'),
+        find.text(_todayHistoryLabel()),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
@@ -374,7 +423,7 @@ void main() {
           container.read(clientRepositoryProvider)
               as _HistoryFailsOnceRepository;
       expect(repository.watchHistoryCalls, 2);
-      expect(find.text('7/12 (오늘)'), findsOneWidget);
+      expect(find.text(_todayHistoryLabel()), findsOneWidget);
     });
 
     testWidgets('배정 루틴 실패만 재시도해 다른 영역을 보존한다', (tester) async {

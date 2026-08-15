@@ -11,8 +11,10 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,14 +78,21 @@ void main() {
     });
 
     test('지난 날짜도 그 날짜의 문장을 쓴다', () async {
-      final yesterday = _dateString(
-        DateTime.now().subtract(const Duration(days: 1)),
-      );
+      final DateTime now = DateTime.now();
+      final yesterday = _dateString(now.subtract(const Duration(days: 1)));
       final res = await dio.get<Map<String, Object?>>(
         '/diet/days/$yesterday',
       );
 
-      expect(res.data!['ai_coach_message'], '나트륨을 잘 조절했고 단백질도 고르게 섭취한 하루였어요.');
+      // 문장은 픽스처가 갖고 있다 — 여기에 다시 적으면 두 벌이 되어 한쪽만 고쳤을 때
+      // 조용히 갈린다(#757).
+      final FixtureDay day = DemoFixture.parse(
+        File(
+          '../../shared/demo_fixture/assets/kim_minsu.json',
+        ).readAsStringSync(),
+      ).daysFor(now).firstWhere((FixtureDay d) => d.date == yesterday);
+      expect(day.dayMessage, isNotEmpty, reason: '어제는 큐레이션된 날이다');
+      expect(res.data!['ai_coach_message'], day.dayMessage);
     });
 
     test('끼니를 수정해도 코멘트와 사진이 남는다', () async {

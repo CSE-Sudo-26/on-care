@@ -1,11 +1,22 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
+
+/// 시드가 읽는 것과 같은 픽스처. 테스트에서는 에셋 번들 대신 파일로 읽는다 — 번들이
+/// 준비됐는지에 기대지 않고 시드 자체만 본다.
+final DemoFixture _fixture = DemoFixture.parse(
+  File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+);
+
+/// 픽스처가 덮는 구간 밖의 offset. 그 앞으로는 기록이 없어야 한다.
+final int _beyondFixture = _fixture.historyWeeks * 7 + 5;
 
 String _todayString() {
   final now = DateTime.now();
@@ -34,7 +45,7 @@ void main() {
 
   group('seedIfEmpty', () {
     test('first run seeds diet/exercise/schedule with today\'s date', () async {
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
 
       final today = _todayString();
       final diet = await db.select(db.dietEntries).get();
@@ -49,11 +60,18 @@ void main() {
       // 큐레이션 사흘 앞으로도 기록이 이어진다 — 날짜를 옮기면 대부분
       // 비어 있던 데모 문제(#671).
       expect(diet.where((r) => r.date == _daysAgoString(3)), isNotEmpty);
-      expect(diet.where((r) => r.date == _daysAgoString(30)), isNotEmpty);
+      // 한 달을 거슬러 올라가도 대부분의 날에 기록이 있다. "모든 날"이 아닌 이유는
+      // 픽스처가 기록 없는 날을 일부러 남겨 두기 때문이다.
+      final int loggedInLastMonth = <int>[
+        for (int offset = 3; offset < 33; offset++) offset,
+      ].where((int offset) {
+        return diet.any((r) => r.date == _daysAgoString(offset));
+      }).length;
+      expect(loggedInLastMonth, greaterThan(20));
       expect(
-        diet.where((r) => r.date == _daysAgoString(kDemoDietHistoryDays + 5)),
+        diet.where((r) => r.date == _daysAgoString(_beyondFixture)),
         isEmpty,
-        reason: '히스토리는 한 달치까지만 채운다',
+        reason: '픽스처가 덮는 구간(${_fixture.historyWeeks}주) 밖은 비어 있어야 한다',
       );
       final salmonDinner = diet.firstWhere(
         (row) => row.id == 'seed-diet-two-days-ago-dinner',
@@ -122,15 +140,18 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v16'), today);
+      expect(await db.readValue('seeded_v17'), today);
     });
 
     test('과거 식단은 날짜마다 값이 달라 추이가 직선이 되지 않는다', () async {
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final diet = await db.select(db.dietEntries).get();
 
+      // 픽스처가 덮는 구간 전체를 본다. 기록이 없는 날은 12주 안에 흩어져 있어서
+      // 최근 한 달만 보면 "전부 기록됨"으로 읽힌다.
+      final int span = _fixture.historyWeeks * 7;
       final Map<String, int> caloriesByDate = <String, int>{};
-      for (int offset = 3; offset < 3 + kDemoDietHistoryDays; offset++) {
+      for (int offset = 3; offset < span; offset++) {
         final String date = _daysAgoString(offset);
         final int kcal = diet
             .where((r) => r.date == date)
@@ -148,13 +169,55 @@ void main() {
       // 볼 수 있어야 한다.
       expect(
         caloriesByDate.length,
-        lessThan(kDemoDietHistoryDays),
+        lessThan(span - 3),
         reason: '기록 없는 날이 최소 하나는 남아야 한다',
       );
     });
 
+    test('날짜별 값이 픽스처와 같다', () async {
+      // 트레이너 앱도 같은 픽스처를 읽으므로, 이 단정이 곧 "두 앱을 나란히 놓고 같은
+      // 날짜를 봐도 숫자가 같다"는 뜻이다(#757). 트레이너 쪽 짝은
+      // `flutter_trainer/test/core/storage/seed_data_test.dart` 에 있다.
+      await seedIfEmpty(db, fixture: _fixture);
+      final diet = await db.select(db.dietEntries).get();
+      final exercise = await db.select(db.exerciseSessions).get();
+
+      for (final FixtureDay day in _fixture.daysFor(DateTime.now())) {
+        final rows = diet.where((r) => r.date == day.date);
+        expect(
+          rows.fold<int>(0, (int sum, r) => sum + r.totalCalories),
+          day.calories,
+          reason: '${day.date} 칼로리',
+        );
+        expect(
+          rows.fold<int>(0, (int sum, r) => sum + r.sodiumMg),
+          day.sodiumMg,
+          reason: '${day.date} 나트륨',
+        );
+        expect(
+          rows.fold<double>(0, (double sum, r) => sum + r.sugarG),
+          closeTo(day.sugarG, 0.001),
+          reason: '${day.date} 당류',
+        );
+
+        // 운동은 **실제로 한** 항목만 쌓인다 — 이행률과 주간 운동 시간이 갈라지면
+        // 안 된다.
+        final int minutes = exercise
+            .where((r) => r.weekStart == day.weekStart && r.dayLabel == day.dayLabel)
+            .fold<int>(0, (int sum, r) => sum + r.minutes);
+        expect(
+          minutes,
+          day.doneExercises.fold<int>(
+            0,
+            (int sum, FixtureExercise e) => sum + e.minutes,
+          ),
+          reason: '${day.date} 운동 시간',
+        );
+      }
+    });
+
     test('지난 주 운동 세션도 시드된다', () async {
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final exercise = await db.select(db.exerciseSessions).get();
 
       final DateTime now = DateTime.now();
@@ -165,11 +228,7 @@ void main() {
       );
       final Set<String> weekStarts = exercise.map((r) => r.weekStart).toSet();
 
-      for (
-        int weeksAgo = 0;
-        weeksAgo <= kDemoExerciseHistoryWeeks;
-        weeksAgo++
-      ) {
+      for (int weeksAgo = 0; weeksAgo < _fixture.historyWeeks; weeksAgo++) {
         final DateTime monday = thisMonday.subtract(
           Duration(days: 7 * weeksAgo),
         );
@@ -185,7 +244,7 @@ void main() {
       // 수치를 템플릿 한 곳으로 모으면서(#677) 데모 화면의 문구·사진·시각이
       // 바뀌면 안 된다. 합계는 다른 테스트가 보므로 여기서는 표현만 못박는다.
       // 세 필드를 아홉 행 모두 검증한다 — 일부만 보면 나머지가 조용히 바뀐다.
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final diet = await db.select(db.dietEntries).get();
       DietEntryRow row(String id) => diet.firstWhere((r) => r.id == id);
 
@@ -256,7 +315,7 @@ void main() {
       // companion() 의 id 는 선택 인자다. 큐레이션 호출에서 빠뜨리면
       // `seed-diet-2026-08-14-lunch` 같은 날짜 id 로 조용히 바뀌는데, 화면과
       // 테스트가 이 리터럴 id 로 행을 찾는다.
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final diet = await db.select(db.dietEntries).get();
       final Set<String> ids = diet.map((r) => r.id).toSet();
 
@@ -292,7 +351,7 @@ void main() {
     test('같은 음식은 어느 날짜에 쓰이든 영양 수치가 하나다', () async {
       // #677 이 없애려는 상태: 큐레이션 쪽과 히스토리 쪽에 같은 음식의 수치가
       // 두 벌 존재해, 한쪽만 고치면 조용히 갈린다.
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final diet = await db.select(db.dietEntries).get();
 
       final Map<String, Set<String>> fingerprintsByFood =
@@ -333,18 +392,21 @@ void main() {
         reason: '여러 날짜에 쓰이는 음식이 없으면 이 검증이 아무것도 지키지 못한다',
       );
       expect(
-        datesByFood['짬뽕']?.length ?? 0,
+        datesByFood['된장찌개']?.length ?? 0,
         greaterThan(1),
-        reason: '짬뽕은 오늘(큐레이션)과 히스토리 양쪽에 쓰인다',
+        reason: '된장찌개는 여러 날의 점심·저녁에 함께 쓰인다',
       );
+      // 짬뽕은 오늘 하루의 이야기다 — 한 끼로 하루 나트륨을 다 쓰는 끼니라
+      // 격자에 섞으면 그날의 나트륨÷칼로리가 현실에서 벗어난다.
+      expect(datesByFood['짬뽕'], <String>{_todayString()});
     });
 
     test('same-day re-run is a no-op (does not duplicate rows)', () async {
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final dietBefore = await db.select(db.dietEntries).get();
       final exerciseBefore = await db.select(db.exerciseSessions).get();
 
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final dietAfter = await db.select(db.dietEntries).get();
       final exerciseAfter = await db.select(db.exerciseSessions).get();
 
@@ -353,7 +415,7 @@ void main() {
     });
 
     test('diet seed has consistent realistic nutrition totals', () async {
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       final allDiet = await db.select(db.dietEntries).get();
       final diet = allDiet
           .where((entry) => entry.date == _todayString())
@@ -401,16 +463,16 @@ void main() {
 
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
-      await seedIfEmpty(db);
-      await db.putValue('seeded_v16', '2020-01-01');
+      await seedIfEmpty(db, fixture: _fixture);
+      await db.putValue('seeded_v17', '2020-01-01');
 
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
 
       final today = _todayString();
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
       expect(diet.where((r) => r.date == today).length, 3);
-      expect(await db.readValue('seeded_v16'), today);
+      expect(await db.readValue('seeded_v17'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -433,11 +495,11 @@ void main() {
             ),
           );
 
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
 
       // Legacy flag cleared, current flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v16'), _todayString());
+      expect(await db.readValue('seeded_v17'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -465,10 +527,10 @@ void main() {
             ),
           );
 
-      await seedIfEmpty(db);
+      await seedIfEmpty(db, fixture: _fixture);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v16', '2020-01-01');
-      await seedIfEmpty(db);
+      await db.putValue('seeded_v17', '2020-01-01');
+      await seedIfEmpty(db, fixture: _fixture);
 
       final diet = await db.select(db.dietEntries).get();
       expect(

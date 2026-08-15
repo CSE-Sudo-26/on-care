@@ -10,12 +10,19 @@
 실제 데이터"다. 트레이너 API 는 이 데이터를 그대로 읽어 로스터를 집계하므로,
 트레이너↔회원 데이터 공유가 시드 단계에서부터 실제로 성립한다.
 
+김민수(`user-demo`)만은 이 파일이 값을 만들지 않는다. 그는 사용자 앱의 데모 계정과
+같은 사람이라 두 앱을 나란히 놓고 시연하는데, 세 곳이 각자 계산하니 같은 날짜의
+숫자가 서로 달랐다(#757). 그의 하루는 `app/db/demo_fixture.py` 가 읽는 픽스처가
+정하고, 여기서는 그것을 테이블에 옮기기만 한다. 나머지 회원은 아래 상수들이 만든다.
+
 멱등 + 날짜 인식:
 - 오늘 식단은 회원에게 오늘 DietEntry 가 없을 때만 3끼를 넣는다.
 - 최근 6일 나트륨 추세는 해당 날짜에 DietEntry 가 없을 때만 1건씩 넣는다
   (이미 '오늘'로 들어갔던 날은 건너뛰어 중복 합산을 막는다).
 - 운동기록은 회원에게 오늘 기록이 없을 때만 최근 3세션을 넣는다.
 날짜가 넘어가면 자연히 '오늘'이 새로 시드되고 과거 데이터는 누적되어 실제 이력이 된다.
+픽스처 회원은 다르게 움직인다 — 날짜가 넘어가면 그의 `seed-` 행을 지우고 픽스처를
+다시 깐다. 픽스처는 "오늘로부터 며칠 전"으로 적혀 있어 그래야 하루씩 앞으로 미끄러진다.
 """
 from __future__ import annotations
 
@@ -24,12 +31,13 @@ import logging
 import time
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.config import get_settings
+from app.db.demo_fixture import FixtureExercise, load_fixture
 from app.db.seed_trainer import TRAINER_ID, _MEMBERS
 from app.db.session import SessionLocal
 from app.models import models
@@ -60,14 +68,12 @@ def _safe_commit(db: Session) -> None:
 # 회원별 오늘 3끼 (meal_type, 음식, 칼로리, 나트륨, 당류, 탄수화물, 단백질, 지방)
 # — 프론트 seed 와 동일 수치.
 # 하루 나트륨 합 == _SODIUM_WEEK[member][-1](오늘) 이 되도록 맞춰 둠.
+#
+# 김민수(`user-demo`)는 여기 없다 — 그의 하루는 픽스처가 정한다(#757). 아래 상수는
+# 전부 그를 뺀 나머지 회원용이다.
 _TODAY_MEALS: dict[
     str, list[tuple[str, str, int, int, float, float, float, float]]
 ] = {
-    "user-demo": [
-        ("breakfast", "스크램블 에그, 딸기", 217, 221, 6.3, 10, 13.5, 14.5),
-        ("lunch", "짬뽕", 750, 3200, 8.5, 107, 29, 22.5),
-        ("snack", "아이스 아메리카노, 견과류 한 봉", 100, 7, 3, 3, 2.5, 8),
-    ],
     "user-jisu": [
         ("breakfast", "그릭요거트, 과일", 280, 200, 38, 40, 15, 6),
         ("lunch", "현미밥, 불고기, 나물", 750, 980, 0, 90, 35, 20),
@@ -105,7 +111,6 @@ _FEAST_SODIUM_MG = 2261
 _FEAST_SUGAR_G = 63.0
 
 _SODIUM_WEEK: dict[str, list[int]] = {
-    "user-demo": [2400, 2200, 1900, 2050, 2300, 1850, 3428],
     "user-jisu": [1700, 1950, 1600, 1800, 2100, 1750, 1800],
     "user-sungho": [2600, 2500, 2300, 2450, 2200, 2550, 2400],
 }
@@ -113,15 +118,6 @@ _SODIUM_WEEK: dict[str, list[int]] = {
 # 최근 운동 세션(최신순): (완료율, 종류라벨, 운동목록, 회원피드백, 트레이너메모).
 # 오늘/이틀전/나흘전 날짜로 시드. PT 세션은 trainer_id 를 붙인다.
 _HISTORY: dict[str, list[tuple[int, str, list[str], str, str]]] = {
-    "user-demo": [
-        (100, "PT 세션 · 트레이너 지도", ["레그프레스 3세트", "레그컬 3세트", "하체 스트레칭"],
-         "무릎이 좀 당겼지만 트레이너님 덕분에 잘 마쳤어요 😊",
-         "무릎 가동범위 체크 필요. 다음 세션 중량 조절 예정."),
-        (67, "AI 루틴 · 자율 운동", ["걷기 30분 ✓", "코어 강화 10분 ✓", "스트레칭 ✗ (생략)"],
-         "스트레칭은 시간이 없어서 못 했어요", ""),
-        (100, "AI 루틴 · 자율 운동", ["걷기 30분 ✓", "코어 강화 10분 ✓", "하체 스트레칭 15분 ✓"],
-         "오늘은 다 했어요! 뿌듯해요 💪", ""),
-    ],
     "user-jisu": [
         (100, "AI 루틴 · 자율 운동", ["인터벌 런닝 25분 ✓", "스쿼트 3세트 ✓", "플랭크 10분 ✓"],
          "런닝이 힘들었는데 다 했어요! 숨이 많이 찼어요",
@@ -232,20 +228,12 @@ _ROUTINES: dict[str, list[tuple[str, int, str, str]]] = {
     ],
 }
 
-# 사용자 앱 데모 회원(김민수)의 이번 주 운동 세션 — 프론트 MockExerciseRepository 와 동일.
-# (요일, 종류, 분, 칼로리). 수요일은 휴식 → 목~일 4일 연속. 주간 칼로리 헤드라인은
-# 백엔드가 세션 합(=2450)으로 계산한다(프론트 목업의 튜닝 헤드라인 1980 은 세션 합과
-# 무관한 표시값이라 재현 대상이 아니다 — 실서비스는 합계가 정답).
-_EXERCISE_WEEK: dict[str, list[tuple[str, str, int, int]]] = {
-    "user-demo": [
-        ("월", "cardio", 40, 300),
-        ("화", "strength", 60, 420),
-        ("목", "cardio", 65, 480),
-        ("금", "cardio", 55, 400),
-        ("토", "cardio", 45, 330),
-        ("일", "strength", 50, 520),
-    ],
-}
+# 회원별 이번 주 운동 세션 — (요일, 종류, 분, 칼로리).
+#
+# 김민수는 여기 없다 — 그의 운동은 픽스처가 날짜별 루틴 항목으로 갖고 있고, 세션은
+# 그중 실제로 한 항목에서 나온다(#757). 지금은 다른 회원의 주간 세션이 없어 비어
+# 있지만, 생기면 여기에 적는다.
+_EXERCISE_WEEK: dict[str, list[tuple[str, str, int, int]]] = {}
 
 # day_label → 요일 인덱스(월=0 … 일=6, date.weekday() 와 동일). 운동 시드는 이 인덱스로
 # "오늘까지의 요일"만 넣어, 주중 실행 시 미래 요일이 이번 주 합계·streak 에 잡히는 것을 막는다.
@@ -316,11 +304,14 @@ def seed_member_health_data() -> None:
             if user_id not in valid:
                 # 계정/링크 없음(이메일 충돌 등) → FK 오류 방지 위해 건너뛴다.
                 continue
-            _seed_diet(db, user_id)
-            _seed_history(db, user_id)
+            if user_id == load_fixture().user_app_seed_id:
+                _seed_from_fixture(db, user_id)
+            else:
+                _seed_diet(db, user_id)
+                _seed_history(db, user_id)
+                _seed_exercise(db, user_id)
             _seed_chat(db, user_id)
             _seed_routines(db, user_id)
-            _seed_exercise(db, user_id)
             _seed_health_profile(db, user_id)
         _seed_schedule(db, valid)
     finally:
@@ -580,6 +571,175 @@ def _seed_routines(db: Session, member_id: str) -> None:
             sort_order=i,
         ))
     _safe_commit(db)
+
+
+#: 픽스처가 소유한 행의 id 접두사. `seed-` 로 시작하므로 기존의 "시드 행만 훑는다"
+#: 규칙(RAG 적재·사용자 데이터 보존)에 그대로 걸리고, 예전 시드가 만든 행과는
+#: 구별된다 — 그래야 이미 돌던 DB 에서 옛 행을 지우고 픽스처로 갈아끼울 수 있다.
+_FIXTURE_ID_PREFIX = "seed-fix-"
+
+
+def _by_type(
+    exercises: tuple[FixtureExercise, ...],
+) -> dict[str, tuple[int, int]]:
+    """운동을 종류별로 합친다 — {종류: (분, 칼로리)}. 픽스처 순서를 유지한다."""
+    totals: dict[str, tuple[int, int]] = {}
+    for exercise in exercises:
+        minutes, calories = totals.get(exercise.type, (0, 0))
+        totals[exercise.type] = (
+            minutes + exercise.minutes,
+            calories + exercise.calories,
+        )
+    return totals
+
+
+def _seed_from_fixture(db: Session, member_id: str) -> None:
+    """픽스처 회원(김민수)의 식단·운동기록·운동세션을 픽스처 그대로 깐다.
+
+    다른 회원과 달리 **다시 깐다**. 픽스처는 "오늘로부터 며칠 전"으로 적혀 있어서
+    날짜가 넘어가면 모든 날이 하루씩 앞으로 미끄러져야 하는데, 있는 날을 건너뛰는
+    방식으로는 예전 값이 그 자리에 남아 사용자 앱과 어긋난다. 사용자 앱 시드도
+    같은 규칙으로 움직인다.
+
+    지우는 것은 `seed-` 로 시작하는 행뿐이다 — 회원이 앱에서 직접 남긴 기록은 다른
+    id 를 갖고 그대로 살아남는다.
+    """
+    fixture = load_fixture()
+    today = clock.today()
+    days = fixture.days_for(today)
+
+    # 이 회원의 행 id 는 픽스처와 오늘 날짜만으로 정해진다 — 넣기 전에도 알 수 있다.
+    kept_refs = _fixture_row_ids(member_id, days)
+
+    # 문지기보다 **먼저** 쓸어낸다. 뒤에 두면, 이미 픽스처로 한 번 깔린 DB 는 문지기에
+    # 걸려 되돌아가므로 예전 행을 가리키던 문서가 영영 남는다.
+    _drop_orphaned_personal_docs(db, member_id, kept_refs)
+
+    # 오늘치가 이미 픽스처로 깔려 있으면 여기서 끝낸다. 기동마다 수백 행을 지웠다
+    # 넣는 것을 막는 문지기다.
+    #
+    # 접두사가 `seed-fix-` 인 이유: 예전 시드도 오늘 3끼를 `seed-diet-{회원}-{날짜}-0`
+    # 으로 넣었다. 그 id 를 문지기로 삼으면 이미 돌던 DB 에서는 옛 행이 문지기에
+    # 걸려 픽스처가 영영 깔리지 않는다 — 실제로 그렇게 나왔다.
+    marker = f"{_FIXTURE_ID_PREFIX}diet-{member_id}-{today.isoformat()}-0"
+    if db.scalar(
+        select(models.DietEntry.id).where(models.DietEntry.id == marker).limit(1)
+    ) is not None:
+        _safe_commit(db)
+        return
+
+    for model in (models.DietEntry, models.ExerciseSession):
+        db.query(model).filter(
+            model.user_id == member_id, model.id.like("seed-%")
+        ).delete(synchronize_session=False)
+    db.query(models.RoutineHistory).filter(
+        models.RoutineHistory.member_id == member_id,
+        models.RoutineHistory.id.like("seed-%"),
+    ).delete(synchronize_session=False)
+
+    for day in days:
+        # 행 id 는 **날짜에서 만든다**. 픽스처가 시연용으로 못 박아 둔 id 는 사용자
+        # 앱의 로컬 DB 것이다 — 백엔드는 과거를 지우지 않고 쌓아 두므로 날짜가
+        # 없는 id 를 쓰면 다음 날 같은 id 로 부딪힌다.
+        for index, meal in enumerate(day.meals):
+            db.add(models.DietEntry(
+                id=f"{_FIXTURE_ID_PREFIX}diet-{member_id}-{day.iso}-{index}",
+                user_id=member_id,
+                date=day.iso,
+                meal_type=meal.meal_type,
+                time_label=meal.time_label,
+                foods_json=meal.foods_json(),
+                total_calories=meal.calories,
+                carbs_g=meal.carbs_g,
+                protein_g=meal.protein_g,
+                fat_g=meal.fat_g,
+                sodium_mg=meal.sodium_mg,
+                sugar_g=meal.sugar_g,
+                engine="seed",
+            ))
+
+        if not day.exercises:
+            continue  # 휴식일. 이력에도 세션에도 남기지 않는다.
+
+        db.add(models.RoutineHistory(
+            id=f"{_FIXTURE_ID_PREFIX}hist-{member_id}-{day.iso}",
+            member_id=member_id,
+            trainer_id=TRAINER_ID if day.is_pt else None,
+            date=day.iso,
+            kind_label=day.routine_label,
+            completion_rate=day.completion,
+            exercises_json=json.dumps(
+                [e.label for e in day.exercises], ensure_ascii=False
+            ),
+            client_feedback=day.client_feedback,
+            trainer_note=day.trainer_note,
+        ))
+
+        # 세션은 **실제로 한** 운동만 쌓는다. 못 한 항목까지 넣으면 이행률은 67% 인데
+        # 주간 운동 시간은 100% 인 날이 나온다.
+        #
+        # 하루에 같은 종류가 둘일 수 있어(PT 날의 레그프레스·레그컬은 둘 다 근력)
+        # 종류로 합친다. 주간 활동 그래프가 하루·종류당 한 칸을 그리므로 나눠 넣을
+        # 자리도 없다.
+        for kind, (minutes, calories) in _by_type(day.done_exercises).items():
+            db.add(models.ExerciseSession(
+                id=f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}",
+                user_id=member_id,
+                week_start=day.week_start,
+                day_label=day.day_label,
+                type=kind,
+                minutes=minutes,
+                calories=calories,
+                intensity="moderate",
+            ))
+
+    _safe_commit(db)
+
+
+def _fixture_row_ids(member_id: str, days: list) -> set[str]:
+    """픽스처가 이 회원에게 넣을 식단·운동 행 id 전부.
+
+    삽입과 **같은 규칙**으로 만든다 — 한쪽만 고치면 멀쩡한 문서가 고아로 몰려
+    지워진다. 개인 RAG 문서 정리(`_drop_orphaned_personal_docs`)가 이 집합을 쓴다.
+    """
+    ids: set[str] = set()
+    for day in days:
+        for index in range(len(day.meals)):
+            ids.add(f"{_FIXTURE_ID_PREFIX}diet-{member_id}-{day.iso}-{index}")
+        for kind in _by_type(day.done_exercises):
+            ids.add(f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}")
+    return ids
+
+
+def _drop_orphaned_personal_docs(
+    db: Session, member_id: str, kept_refs: set[str]
+) -> None:
+    """지워진 시드 행을 가리키는 개인 RAG 문서를 함께 지운다.
+
+    개인 문서는 행 id(`source_ref`)로 그 기록을 가리킨다. 픽스처를 다시 깔면서 행을
+    지우면 문서만 남는데, 적재는 **추가만** 하므로 그 문서는 영영 남아 **옛 수치를
+    말한다** — 코치가 같은 날짜에 대해 새 값과 옛 값을 함께 인용하게 된다.
+
+    식단·운동 문서만 대상이다. 대화(`seed-chat-…`)는 이 함수가 건드리는 행이
+    아니므로 그대로 둔다.
+    """
+    stale = db.query(models.CoachDocument).filter(
+        models.CoachDocument.user_id == member_id,
+        or_(
+            models.CoachDocument.source_ref.like("seed-diet-%"),
+            models.CoachDocument.source_ref.like("seed-ex-%"),
+            models.CoachDocument.source_ref.like(f"{_FIXTURE_ID_PREFIX}diet-%"),
+            models.CoachDocument.source_ref.like(f"{_FIXTURE_ID_PREFIX}ex-%"),
+        ),
+        models.CoachDocument.source_ref.notin_(kept_refs or {""}),
+    )
+    removed = stale.delete(synchronize_session=False)
+    if removed:
+        logger.info(
+            "dropped %s stale personal docs for %s (fixture reseed)",
+            removed,
+            member_id,
+        )
 
 
 def _has_diet_on(db: Session, member_id: str, day: str) -> bool:

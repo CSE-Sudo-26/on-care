@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:demo_fixture/demo_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +42,22 @@ class _SummaryFailsRepository implements ReportRepository {
     required DateTime weekStart,
     required String message,
   }) async {}
+}
+
+/// 이번 주 리포트의 요일 칸에 실제로 뜨는 김민수의 운동 이름 하나.
+///
+/// 값은 공유 픽스처가 갖고 있다(#757). 화면은 ✓/✗ 표시를 떼고 이름만 보여 준다.
+String _minsuExerciseThisWeek() {
+  final DemoFixture fixture = DemoFixture.parse(
+    File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
+  );
+  final List<FixtureDay> days = fixture.daysFor(DateTime.now());
+  final String monday = days.last.weekStart;
+  for (final FixtureDay day in days.reversed) {
+    if (day.weekStart != monday) break;
+    if (day.exercises.isNotEmpty) return day.exercises.first.name;
+  }
+  throw StateError('이번 주에 운동한 날이 없다 — 요일 칸이 전부 비어 검증이 뜻을 잃는다');
 }
 
 class _ReportFailsOncePerKeyRepository implements ReportRepository {
@@ -527,7 +546,10 @@ void main() {
 
     // 요일 칸에는 운동 이름만 둔다 — 퍼센트는 바로 위 막대가 말하고,
     // 아직 오지 않은 날은 빈칸으로 둔다.
-    expect(find.text('벤치프레스 4세트'), findsWidgets);
+    //
+    // 목록의 첫 고객은 김민수라, 그의 운동 이름은 공유 픽스처가 정한다(#757).
+    // 이름을 여기 적으면 픽스처와 두 벌이 되어 한쪽만 고쳤을 때 조용히 갈린다.
+    expect(find.text(_minsuExerciseThisWeek()), findsWidgets);
   });
 
   testWidgets('요약 카드가 안내문 대신 이번 주 요약을 말한다 (#755)', (tester) async {

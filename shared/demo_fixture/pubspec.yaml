@@ -1,0 +1,15 @@
+name: demo_fixture
+description: "김민수 데모 데이터의 단일 원본 — 사용자앱·트레이너웹·백엔드가 함께 읽는다."
+publish_to: 'none'
+version: 1.0.0
+
+# 사용자 앱(^3.10.0)과 트레이너 앱(^3.12.0) 양쪽이 쓰므로 더 낮은 쪽에 맞춘다.
+environment:
+  sdk: ^3.10.0
+
+# Flutter 에 기대지 않는 순수 Dart 패키지다. 픽스처는 에셋이 아니라 생성된 Dart
+# 상수(`lib/src/fixture_json.g.dart`)로 들어 있어 읽기가 동기다 — 위젯 테스트의 가짜
+# 비동기 안에서 에셋을 기다리다 멈추는 일을 없앤다.
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  test: ^1.25.0
