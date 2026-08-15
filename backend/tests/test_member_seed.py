@@ -81,6 +81,48 @@ def test_exercise_seed_is_idempotent(client, db_session):
     assert _count() == before
 
 
+def test_no_personal_doc_points_at_a_deleted_seed_row(client, db_session):
+    """지워진 시드 행을 가리키는 개인 RAG 문서가 남지 않는다.
+
+    개인 문서 적재는 추가만 한다. 픽스처를 다시 깔며 행을 지우면 문서만 남아 **옛
+    수치를 말하고**, 코치가 같은 날짜에 새 값과 옛 값을 함께 인용하게 된다.
+    """
+    from app.models.models import CoachDocument, DietEntry, ExerciseSession
+
+    refs = db_session.scalars(
+        select(CoachDocument.source_ref).where(
+            CoachDocument.user_id == _MEMBER_ID
+        )
+    ).all()
+    diet_ids = set(
+        db_session.scalars(
+            select(DietEntry.id).where(DietEntry.user_id == _MEMBER_ID)
+        ).all()
+    )
+    exercise_ids = set(
+        db_session.scalars(
+            select(ExerciseSession.id).where(
+                ExerciseSession.user_id == _MEMBER_ID
+            )
+        ).all()
+    )
+
+    orphans = [
+        ref
+        for ref in refs
+        if ref
+        and (ref.startswith("seed-diet-") or ref.startswith("seed-fix-diet-"))
+        and ref not in diet_ids
+    ] + [
+        ref
+        for ref in refs
+        if ref
+        and (ref.startswith("seed-ex-") or ref.startswith("seed-fix-ex-"))
+        and ref not in exercise_ids
+    ]
+    assert not orphans, f"삭제된 행을 가리키는 개인 문서가 남았습니다: {orphans[:5]}"
+
+
 def test_seeded_days_match_the_fixture(client, db_session):
     """DB 에 들어간 김민수의 하루가 픽스처가 말하는 값과 같다.
 

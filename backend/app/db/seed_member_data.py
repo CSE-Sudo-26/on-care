@@ -31,7 +31,7 @@ import logging
 import time
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -608,8 +608,15 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
     today = clock.today()
     days = fixture.days_for(today)
 
-    # 오늘치가 이미 픽스처로 깔려 있으면 아무것도 하지 않는다. 기동마다 수백 행을
-    # 지웠다 넣는 것을 막는 문지기다.
+    # 이 회원의 행 id 는 픽스처와 오늘 날짜만으로 정해진다 — 넣기 전에도 알 수 있다.
+    kept_refs = _fixture_row_ids(member_id, days)
+
+    # 문지기보다 **먼저** 쓸어낸다. 뒤에 두면, 이미 픽스처로 한 번 깔린 DB 는 문지기에
+    # 걸려 되돌아가므로 예전 행을 가리키던 문서가 영영 남는다.
+    _drop_orphaned_personal_docs(db, member_id, kept_refs)
+
+    # 오늘치가 이미 픽스처로 깔려 있으면 여기서 끝낸다. 기동마다 수백 행을 지웠다
+    # 넣는 것을 막는 문지기다.
     #
     # 접두사가 `seed-fix-` 인 이유: 예전 시드도 오늘 3끼를 `seed-diet-{회원}-{날짜}-0`
     # 으로 넣었다. 그 id 를 문지기로 삼으면 이미 돌던 DB 에서는 옛 행이 문지기에
@@ -618,6 +625,7 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
     if db.scalar(
         select(models.DietEntry.id).where(models.DietEntry.id == marker).limit(1)
     ) is not None:
+        _safe_commit(db)
         return
 
     for model in (models.DietEntry, models.ExerciseSession):
@@ -684,7 +692,54 @@ def _seed_from_fixture(db: Session, member_id: str) -> None:
                 calories=calories,
                 intensity="moderate",
             ))
+
     _safe_commit(db)
+
+
+def _fixture_row_ids(member_id: str, days: list) -> set[str]:
+    """픽스처가 이 회원에게 넣을 식단·운동 행 id 전부.
+
+    삽입과 **같은 규칙**으로 만든다 — 한쪽만 고치면 멀쩡한 문서가 고아로 몰려
+    지워진다. 개인 RAG 문서 정리(`_drop_orphaned_personal_docs`)가 이 집합을 쓴다.
+    """
+    ids: set[str] = set()
+    for day in days:
+        for index in range(len(day.meals)):
+            ids.add(f"{_FIXTURE_ID_PREFIX}diet-{member_id}-{day.iso}-{index}")
+        for kind in _by_type(day.done_exercises):
+            ids.add(f"{_FIXTURE_ID_PREFIX}ex-{member_id}-{day.iso}-{kind}")
+    return ids
+
+
+def _drop_orphaned_personal_docs(
+    db: Session, member_id: str, kept_refs: set[str]
+) -> None:
+    """지워진 시드 행을 가리키는 개인 RAG 문서를 함께 지운다.
+
+    개인 문서는 행 id(`source_ref`)로 그 기록을 가리킨다. 픽스처를 다시 깔면서 행을
+    지우면 문서만 남는데, 적재는 **추가만** 하므로 그 문서는 영영 남아 **옛 수치를
+    말한다** — 코치가 같은 날짜에 대해 새 값과 옛 값을 함께 인용하게 된다.
+
+    식단·운동 문서만 대상이다. 대화(`seed-chat-…`)는 이 함수가 건드리는 행이
+    아니므로 그대로 둔다.
+    """
+    stale = db.query(models.CoachDocument).filter(
+        models.CoachDocument.user_id == member_id,
+        or_(
+            models.CoachDocument.source_ref.like("seed-diet-%"),
+            models.CoachDocument.source_ref.like("seed-ex-%"),
+            models.CoachDocument.source_ref.like(f"{_FIXTURE_ID_PREFIX}diet-%"),
+            models.CoachDocument.source_ref.like(f"{_FIXTURE_ID_PREFIX}ex-%"),
+        ),
+        models.CoachDocument.source_ref.notin_(kept_refs or {""}),
+    )
+    removed = stale.delete(synchronize_session=False)
+    if removed:
+        logger.info(
+            "dropped %s stale personal docs for %s (fixture reseed)",
+            removed,
+            member_id,
+        )
 
 
 def _has_diet_on(db: Session, member_id: str, day: str) -> bool:
