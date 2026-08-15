@@ -47,6 +47,9 @@ DashboardSummary _summary({String? adviceKey, String? sodiumWarning}) =>
 /// 보내, 홈이 그 값을 ARB 보다 우선하는 바람에 영어 로케일에서도 한국어가
 /// 나왔다(#435). 이제 둘 다 키만 싣고 문장은 ARB 가 갖는다.
 void main() {
+  // 시드가 공유 픽스처를 에셋에서 읽는다(#757) — rootBundle 을 쓰려면 바인딩이
+  // 먼저 서 있어야 한다.
+  TestWidgetsFlutterBinding.ensureInitialized();
   test('데모 mock 요약은 문구가 아니라 키를 싣는다', () async {
     final DashboardSummary summary = await MockDashboardRepository(
       FakeDietRepository(),

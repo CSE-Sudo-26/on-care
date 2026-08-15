@@ -33,6 +33,12 @@ dependencies:
   # incompatible with retrofit 4.9.2 (switch on Parser is non-exhaustive
   # for Parser.DartMappable), which blocks `build_runner build`.
 
+  # --- 데모 데이터 ---
+  # 김민수의 하루는 트레이너 앱·백엔드와 같은 픽스처에서 온다(#757). 두 앱을
+  # 나란히 놓고 시연하므로 각자 만들면 같은 날짜의 숫자가 어긋난다.
+  demo_fixture:
+    path: ../../shared/demo_fixture
+
   # --- Local persistence ---
   drift: ^2.20.3
   drift_flutter: ^0.2.4
