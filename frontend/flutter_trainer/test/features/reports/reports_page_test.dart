@@ -8,6 +8,7 @@ import 'package:oncare_trainer/features/reports/data/repositories/report_reposit
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
@@ -16,9 +17,42 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
 
+/// 요약 생성만 실패한다 — 리포트 본문은 정상이라 카드 하나만 폴백으로 간다.
+class _SummaryFailsRepository implements ReportRepository {
+  @override
+  Stream<WeeklyReport> watch({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) => Stream<WeeklyReport>.value(
+    buildWeeklyReport(client: client, sessions: const [], weekStart: weekStart),
+  );
+
+  @override
+  Future<ReportSummary> summary({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async => throw StateError('summary provider down');
+
+  @override
+  Future<void> send({
+    required String clientId,
+    required DateTime weekStart,
+    required String message,
+  }) async {}
+}
+
 class _ReportFailsOncePerKeyRepository implements ReportRepository {
   final Map<String, int> _attempts = <String, int>{};
   final List<ReportKey> calls = <ReportKey>[];
+
+  @override
+  Future<ReportSummary> summary({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async => ruleReportSummary(
+    buildWeeklyReport(client: client, sessions: const [], weekStart: weekStart),
+    client,
+  );
 
   @override
   Stream<WeeklyReport> watch({
@@ -495,6 +529,90 @@ void main() {
     // 아직 오지 않은 날은 빈칸으로 둔다.
     expect(find.text('벤치프레스 4세트'), findsWidgets);
   });
+
+  testWidgets('요약 카드가 안내문 대신 이번 주 요약을 말한다 (#755)', (tester) async {
+    await openReports(tester);
+
+    // 예전에는 이 자리에 "API 연결 후 사용할 수 있어요" 만 있었다.
+    expect(find.text('실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.'), findsNothing);
+    // 데모에는 모델이 없어 수치에서 조립한 문장이 온다 — 그래서 'AI 생성'
+    // 배지는 달리지 않는다. 트레이너가 이 문장을 어디까지 믿을지 알아야 한다.
+    expect(find.text('AI 생성'), findsNothing);
+    expect(find.textContaining('운동 이행률'), findsWidgets);
+  });
+
+  testWidgets('요약을 피드백 초안으로 가져온다 (#755)', (tester) async {
+    await openReports(tester);
+
+    // 헤더의 통합 검색창도 TextField 다 — 피드백 입력창만 집는다.
+    final field = find.byWidgetPredicate(
+      (w) => w is TextField && w.minLines == 4,
+    );
+    final before = tester.widget<TextField>(field).controller!.text;
+
+    await tester.ensureVisible(find.text('피드백으로 가져오기'));
+    await tester.pump();
+    await tester.tap(find.text('피드백으로 가져오기'));
+    await settle(tester);
+
+    final after = tester.widget<TextField>(field).controller!.text;
+    expect(after, isNot(before), reason: '입력창이 요약으로 바뀌지 않았다');
+    // 제목 줄과 근거가 함께 들어가야 트레이너가 손볼 재료가 된다.
+    expect(after, contains('고객은'));
+    expect(after, contains('· '));
+  });
+
+  testWidgets('초안이 자동으로 채워졌다고 입력창이 말해 준다 (#755)', (tester) async {
+    await openReports(tester);
+
+    // 회원에게 그대로 나가는 글이라, 확인하고 보내라는 신호가 그 자리에
+    // 있어야 한다. 'AI' 라고 하지 않는다 — 이 초안은 수치에서 조립한
+    // 템플릿이지 생성된 문장이 아니다.
+    expect(find.text('수치에서 자동으로 채운 초안이에요. 보내기 전에 확인하고 고쳐 주세요.'), findsOneWidget);
+  });
+
+  testWidgets('가져온 요약을 초안으로 되돌린다 (#755)', (tester) async {
+    await openReports(tester);
+
+    final field = find.byWidgetPredicate(
+      (w) => w is TextField && w.minLines == 4,
+    );
+    final draft = tester.widget<TextField>(field).controller!.text;
+
+    // 되돌릴 것이 없으면 버튼은 꺼져 있다.
+    ActionButton restore() => tester.widget<ActionButton>(
+      find.widgetWithText(ActionButton, '초안으로 되돌리기'),
+    );
+    expect(restore().onPressed, isNull);
+
+    await tester.ensureVisible(find.text('피드백으로 가져오기'));
+    await tester.pump();
+    await tester.tap(find.text('피드백으로 가져오기'));
+    await settle(tester);
+    expect(tester.widget<TextField>(field).controller!.text, isNot(draft));
+
+    await tester.ensureVisible(find.text('초안으로 되돌리기'));
+    await tester.pump();
+    await tester.tap(find.text('초안으로 되돌리기'));
+    await settle(tester);
+
+    expect(tester.widget<TextField>(field).controller!.text, draft);
+  });
+
+  testWidgets('요약 생성이 실패해도 카드가 안내문으로 돌아간다 (#755)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(_SummaryFailsRepository()),
+      ],
+    );
+
+    expect(
+      find.text('실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.'),
+      findsOneWidget,
+    );
+  });
+
 }
 
 /// Chat repository whose sends always fail.

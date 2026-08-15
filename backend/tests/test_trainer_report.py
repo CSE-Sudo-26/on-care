@@ -506,3 +506,98 @@ def test_report_rejects_a_week_that_has_not_arrived(client):
         headers=_auth(token),
     )
     assert sent.status_code == 422
+
+
+# ---- 리포트 요약 (#755) ----
+#
+# 요약은 화면이 이미 보여 주는 수치만 인용해야 한다. 모델이 근거를 지어내면
+# 트레이너가 그걸 회원에게 그대로 보낸다 — 그래서 계약 위반으로 보고 규칙 기반
+# 요약으로 되돌아간다.
+
+def _report(**over):
+    from app.schemas.trainer_api import WeeklyReportDayOut, WeeklyReportOut
+
+    base = dict(
+        member_id="m", member_name="김민수",
+        week_start="2026-08-10", week_end="2026-08-16",
+        sessions_booked=1, sessions_done=1,
+        completion_avg=87, sodium_over_days=4, sodium_avg=2288,
+        calories_week=[1710, 1830, 1560, 1900, 1680, 1067, 0],
+        days=[WeeklyReportDayOut(completion=67, exercises=["풀업 3세트 ✗"])],
+        message="",
+    )
+    base.update(over)
+    return WeeklyReportOut(**base)
+
+
+def test_summary_evidence_quotes_only_screen_figures():
+    """근거 문장은 화면의 수치에서 만든다 — 여기 없는 말은 인용될 수 없다."""
+    from app.services import trainer_report_summary_service as svc
+
+    lines = svc._evidence(_report())
+
+    assert "운동 이행률 평균 87%" in lines
+    assert any("나트륨 평균 2288mg" in line for line in lines)
+    assert any("풀업 3세트" in line for line in lines)
+
+
+def test_summary_falls_back_when_model_invents_evidence():
+    """입력에 없는 근거를 만들어 오면 규칙 기반으로 되돌린다."""
+    import json
+
+    import pytest
+
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report()
+    evidence = svc._evidence(report)
+    invented = json.dumps(
+        {"headline": "좋았습니다", "points": ["체지방 3kg 감소"]}, ensure_ascii=False
+    )
+
+    with pytest.raises(ValueError):
+        svc._decode(invented, report, evidence)
+
+
+def test_summary_accepts_verbatim_evidence():
+    import json
+
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report()
+    evidence = svc._evidence(report)
+    ok = json.dumps(
+        {"headline": "이행률은 좋았고 나트륨을 챙기면 됩니다.", "points": [evidence[0]]},
+        ensure_ascii=False,
+    )
+
+    out = svc._decode(ok, report, evidence)
+
+    assert out.generated_by == "llm"
+    assert out.points == [evidence[0]]
+    assert out.week_start == "2026-08-10"
+
+
+def test_rule_summary_names_both_the_good_and_the_watch():
+    """잘한 점만 적으면 트레이너가 고칠 게 없고, 지적만 적으면 회원에게 못 보낸다."""
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report()
+    out = svc._rule_summary(report, svc._evidence(report))
+
+    assert out.generated_by == "rule"
+    assert "87%" in out.headline
+    assert "2288mg" in out.headline
+
+
+def test_rule_summary_without_records_does_not_invent_a_week():
+    from app.services import trainer_report_summary_service as svc
+
+    report = _report(
+        completion_avg=None, sodium_avg=None, sodium_over_days=0,
+        sessions_booked=0, sessions_done=0, calories_week=[], days=[],
+    )
+    out = svc._rule_summary(report, svc._evidence(report))
+
+    assert out.points == []
+    assert "기록이 없어" in out.headline

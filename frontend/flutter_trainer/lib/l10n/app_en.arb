@@ -625,46 +625,31 @@
   "@reportsShareSendTo": {"placeholders": {"name": {"type": "String"}}},
   "reportsShareNeedsFeedback": "Write feedback first to send it.",
   "reportsShareNoClient": "Pick a client to see their report first.",
-  "reportBodyTitle": "📊 Weekly report · {range}",
-  "@reportBodyTitle": {
-    "placeholders": {
-      "range": {
-        "type": "String"
-      }
-    }
+  "reportBodyGreeting": "{name}, here's your weekly report for {range}.",
+  "@reportBodyGreeting": {
+    "placeholders": {"name": {"type": "String"}, "range": {"type": "String"}}
   },
-  "reportBodySessions": "PT sessions: {done}/{booked} completed",
+  "reportBodySessions": "We got through {done} of {booked} PT sessions.",
   "@reportBodySessions": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "booked": {
-        "type": "int"
-      }
-    }
+    "placeholders": {"done": {"type": "int"}, "booked": {"type": "int"}}
   },
-  "reportBodyCompletion": "Average workout completion: {avg}%",
-  "@reportBodyCompletion": {
-    "placeholders": {
-      "avg": {
-        "type": "int"
-      }
-    }
+  "reportBodyCompletionGood": "You kept up well this week — {avg}% of your workouts done.",
+  "@reportBodyCompletionGood": {"placeholders": {"avg": {"type": "int"}}},
+  "reportBodyCompletionLow": "Workout completion came in at {avg}% this week. Sounds like a busy one.",
+  "@reportBodyCompletionLow": {"placeholders": {"avg": {"type": "int"}}},
+  "reportBodySkipped": "One thing — {names} got skipped. If that was a condition thing, tell me at the next session and I'll swap in an alternative.",
+  "@reportBodySkipped": {"placeholders": {"names": {"type": "String"}}},
+  "reportBodySodiumOver": "Sodium averaged {avg}mg a day, over the 2,000mg target on {days} days. Leaving half the broth behind saves 400-500mg a day.",
+  "@reportBodySodiumOver": {
+    "placeholders": {"avg": {"type": "int"}, "days": {"type": "int"}}
   },
-  "reportBodySodium": "Average sodium: {avg}mg · over target on {days} days",
-  "@reportBodySodium": {
-    "placeholders": {
-      "avg": {
-        "type": "int"
-      },
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "reportBodySodiumOk": "Sodium averaged {avg}mg a day — comfortably inside your target.",
+  "@reportBodySodiumOk": {"placeholders": {"avg": {"type": "int"}}},
+  "reportBodyCalories": "Calories averaged {avg}kcal a day.",
+  "@reportBodyCalories": {"placeholders": {"avg": {"type": "int"}}},
   "reportBodyPraise": "Great week — let's keep this pace next week!",
-  "reportBodyEncourage": "Let's tighten things up next week. I'll adjust your routine.",
+  "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
+  "reportBodyNoRecords": "There's nothing logged this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
   "schedSent": "Sent",
   "schedDeleteTitle": "Delete session",
@@ -1492,6 +1477,8 @@
   "@reportsPreviousValue": {"placeholders": {"value": {"type": "String"}}},
   "reportsFeedbackTitle": "Trainer feedback",
   "reportsFeedbackSaveUnsupported": "Feedback draft storage isn't supported yet.",
+  "reportsFeedbackDraftNote": "A draft filled in from this week's figures. Check it over before sending.",
+  "reportsFeedbackRestore": "Restore draft",
   "reportsFeedbackSave": "Save feedback",
   "reportsFeedbackHint": "Write coaching feedback for the client.",
   "reportsRecentWeeks": "Last 4 weekly averages",
@@ -1502,6 +1489,10 @@
   "reportsWeeksAgo": "{count}w ago",
   "@reportsWeeksAgo": {"placeholders": {"count": {"type": "int"}}},
   "reportsAiTitle": "AI coaching assistant · Report summary",
+  "reportsAiGenerated": "AI generated",
+  "reportsAiLoading": "Writing this week's summary…",
+  "reportsAiUseAsDraft": "Use as feedback",
+  "reportsAiRegenerate": "Regenerate",
   "reportsAiUnavailable": "Available after the report summary API is connected. No summary is generated now.",
   "reportsPdfUnsupported": "PDF generation isn't supported yet.",
   "reportsPdfLabel": "Export PDF",

@@ -772,6 +772,18 @@ class WeeklyReportOut(BaseModel):
     message: str                 # 회원에게 전송될 본문(미리보기와 동일)
 
 
+class ReportSummaryOut(BaseModel):
+    """리포트 요약 — 트레이너가 피드백 초안으로 가져다 고칠 재료."""
+    member_id: str
+    week_start: str              # YYYY-MM-DD (월요일)
+    headline: str                # 이번 주를 한 문장으로
+    #: 근거가 된 수치 문장. 리포트 화면이 이미 보여 주는 값만 담는다 — 요약과
+    #: 그래프가 다른 값을 말하면 트레이너가 어느 쪽을 믿어야 할지 모른다.
+    points: list[str] = Field(default_factory=list)
+    #: `llm` | `rule`. 공급자 장애·미설정이면 규칙 기반으로 되돌아간다.
+    generated_by: str
+
+
 class ReportSendRequest(BaseModel):
     """리포트 전송 — 본문을 직접 주면 그것을, 없으면 서버 생성본을 보낸다."""
     week_start: str | None = Field(default=None, description="YYYY-MM-DD (기본: 이번 주)")

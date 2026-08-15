@@ -2582,26 +2582,102 @@ def report_message(report: WeeklyReportOut) -> str:
 
     별도 리포트 함이 아니라 이미 읽고 있는 대화에 도착하도록 평문으로 쓴다 —
     시스템 덤프가 아니라 담당 트레이너가 쓴 말처럼 보여야 한다.
+
+    리포트 요약 카드(`trainer_report_summary_service`)와 **역할이 다르다.**
+    카드는 트레이너가 훑는 메모라 짧고 건조하다. 이 글은 회원이 받는 편지라
+    문단으로 쓰고, 수치마다 그래서 무엇을 하면 되는지를 붙인다. 트레이너가
+    손보지 않고 그대로 보내도 사람이 쓴 것으로 읽혀야 한다.
+
+    기록이 없는 항목은 문장을 아예 뺀다 — '이행률 0%'는 거짓말이다.
     """
     start = date.fromisoformat(report.week_start)
     end = date.fromisoformat(report.week_end)
     good = (report.completion_avg or 0) >= 70 and report.sodium_over_days <= 2
-    lines = [
-        f"📊 {start.month}월 {start.day}일 – {end.month}월 {end.day}일 주간 리포트",
-        f"PT 세션 {report.sessions_done}/{report.sessions_booked}회 완료",
+    period = f"{start.month}월 {start.day}일 – {end.month}월 {end.day}일"
+
+    paragraphs: list[str] = [
+        # 첫 줄에 무슨 메시지인지가 있어야 한다 — 회원의 대화방에는 다른
+        # 메시지도 함께 쌓인다.
+        f"{report.member_name}님, {period} 주간 리포트 정리해서 보내드려요."
     ]
+
+    workout: list[str] = []
     if report.completion_avg is not None:
-        lines.append(f"운동 이행률 평균 {report.completion_avg}%")
-    if report.sodium_avg is not None:
-        lines.append(
-            f"나트륨 평균 {report.sodium_avg}mg · 목표 초과 {report.sodium_over_days}일"
+        workout.append(
+            f"이번 주 운동은 평균 {report.completion_avg}%로 잘 따라오셨어요."
+            if report.completion_avg >= 70
+            else f"이번 주 운동 이행률은 평균 {report.completion_avg}%였어요. 많이 바쁘셨나 봐요."
         )
-    lines.append(
-        "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 유지해요!"
-        if good
-        else "다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요."
-    )
-    return "\n".join(lines)
+    if report.sessions_booked:
+        workout.append(
+            f"PT 세션은 {report.sessions_done}/{report.sessions_booked}회 진행했어요."
+        )
+    skipped = _skipped_names(report)
+    if skipped:
+        workout.append(
+            f"다만 {_topic(', '.join(skipped))} 건너뛰셨더라고요. 컨디션 때문이었다면 "
+            "다음 세션 때 말씀해 주세요. 대체 동작으로 바꿔 둘게요."
+        )
+    if workout:
+        paragraphs.append(" ".join(workout))
+
+    diet: list[str] = []
+    if report.sodium_avg is not None:
+        diet.append(
+            f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표(2,000mg)를 "
+            f"{report.sodium_over_days}일 넘겼어요. 국물을 절반만 남기셔도 "
+            "하루 400~500mg은 줄어듭니다."
+            if report.sodium_over_days > 0
+            else f"나트륨은 하루 평균 {report.sodium_avg:,}mg으로 목표 안에서 잘 지키고 계세요."
+        )
+    recorded = [v for v in report.calories_week if v > 0]
+    if recorded:
+        diet.append(
+            f"칼로리는 하루 평균 {round(sum(recorded) / len(recorded)):,}kcal이에요."
+        )
+    if diet:
+        paragraphs.append(" ".join(diet))
+
+    if len(paragraphs) == 1:
+        # 인사말만 남았다 — 가리킬 '이 부분'이 없다. 기록이 없는 주에 격려부터
+        # 하면 회원이 무엇을 하라는 말인지 알 수 없다.
+        paragraphs.append(
+            "이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. "
+            "다음 주 시작을 같이 잡아 봐요."
+        )
+    else:
+        paragraphs.append(
+            "이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!"
+            if good
+            else "다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요."
+        )
+    return "\n\n".join(paragraphs)
+
+
+def _topic(word: str) -> str:
+    """`은`/`는` 을 받침에 맞춰 붙인다.
+
+    `은(는)` 은 사람이 쓴 글로 읽히지 않는다 — 회원이 그대로 받는 문장이라
+    기계가 쓴 티가 나는 자리를 남기지 않는다.
+    """
+    if not word:
+        return word
+    last = word[-1]
+    has_batchim = "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 != 0
+    return f"{word}{'은' if has_batchim else '는'}"
+
+
+def _skipped_names(report: WeeklyReportOut) -> list[str]:
+    """그 주에 건너뛴 운동 이름. 이행률이 왜 100%가 아닌지의 답이다."""
+    names: list[str] = []
+    for day in report.days:
+        for line in day.exercises:
+            if "✗" not in line:
+                continue
+            name = line.replace("✗", "").strip()
+            if name and name not in names:
+                names.append(name)
+    return names[:3]
 
 
 # ---- 알림 수신 설정 ----

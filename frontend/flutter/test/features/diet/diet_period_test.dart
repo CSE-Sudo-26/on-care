@@ -60,14 +60,17 @@ class _SparseDietRepository extends FakeDietRepository {
   }
 }
 
-Widget _app({List<Override> overrides = const <Override>[]}) {
+Widget _app({
+  List<Override> overrides = const <Override>[],
+  String locale = 'ko',
+}) {
   return ProviderScope(
     overrides: overrides,
-    child: const MaterialApp(
-      locale: Locale('ko'),
+    child: MaterialApp(
+      locale: Locale(locale),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: DietRecordPage(),
+      home: const DietRecordPage(),
     ),
   );
 }
@@ -240,72 +243,77 @@ void main() {
       expect(find.text(l.dietMealLog), findsOneWidget);
     });
 
-    testWidgets('좁은 화면·큰 글자 배율에서 먼저 접히는 것은 날짜다 (#687 리뷰)', (
-      WidgetTester tester,
-    ) async {
-      // 제목·날짜·추가 버튼이 한 줄이라, 폭이 좁거나 글자 배율이 크면 셋의 최소 폭
-      // 합이 화면을 넘긴다. 접히는 쪽은 날짜여야 한다 — 추가 버튼이 밀려나면 끼니를
-      // 넣을 수 없다.
-      // 폭만 좁힌다. 높이를 넉넉히 두는 이유는 `ListView` 가 보이는 자식만 만들기
-      // 때문이다 — 짧은 화면에서는 끼니 목록이 아래로 밀려 아예 그려지지 않는다.
-      tester.view.physicalSize = const Size(320, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    // 로케일도 축이다. 영어 라벨이 더 길어 같은 폭에서 먼저 넘친다 — 날짜
+    // 스트립이 딱 그래서 영어에서만 넘치고 있었다(#743).
+    for (final String locale in <String>['ko', 'en']) {
+      testWidgets('$locale · 좁은 화면·큰 글자 배율에서 먼저 접히는 것은 날짜다 (#687 리뷰)', (
+        WidgetTester tester,
+      ) async {
+        // 제목·날짜·추가 버튼이 한 줄이라, 폭이 좁거나 글자 배율이 크면 셋의 최소 폭
+        // 합이 화면을 넘긴다. 접히는 쪽은 날짜여야 한다 — 추가 버튼이 밀려나면 끼니를
+        // 넣을 수 없다.
+        // 폭만 좁힌다. 높이를 넉넉히 두는 이유는 `ListView` 가 보이는 자식만 만들기
+        // 때문이다 — 짧은 화면에서는 끼니 목록이 아래로 밀려 아예 그려지지 않는다.
+        tester.view.physicalSize = const Size(320, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-      await tester.pumpWidget(
-        _app(
-          overrides: <Override>[
-            dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
-            accountRepositoryProvider.overrideWithValue(
-              MockAccountRepository(),
-            ),
-          ],
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _app(
+            locale: locale,
+            overrides: <Override>[
+              dietRepositoryProvider.overrideWithValue(FakeDietRepository()),
+              accountRepositoryProvider.overrideWithValue(
+                MockAccountRepository(),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final Element context = tester.element(find.byType(DietRecordPage));
-      final AppLocalizations l = AppLocalizations.of(context);
-      final DateTime now = DateTime.now();
-      final String todayLabel = MaterialLocalizations.of(
-        context,
-      ).formatMediumDate(DateTime(now.year, now.month, now.day));
+        final Element context = tester.element(find.byType(DietRecordPage));
+        final AppLocalizations l = AppLocalizations.of(context);
+        final DateTime now = DateTime.now();
+        final String todayLabel = MaterialLocalizations.of(
+          context,
+        ).formatMediumDate(DateTime(now.year, now.month, now.day));
 
-      final Finder header = find.byKey(
-        const ValueKey<String>('meal-log-header'),
-      );
-      final Finder date = find.descendant(
-        of: header,
-        matching: find.text(todayLabel),
-      );
-      final Finder addButton = find.descendant(
-        of: header,
-        matching: find.text(l.dietAddMeal),
-      );
-      expect(date, findsOneWidget);
-      expect(addButton, findsOneWidget);
+        final Finder header = find.byKey(
+          const ValueKey<String>('meal-log-header'),
+        );
+        final Finder date = find.descendant(
+          of: header,
+          matching: find.text(todayLabel),
+        );
+        final Finder addButton = find.descendant(
+          of: header,
+          matching: find.text(l.dietAddMeal),
+        );
+        expect(date, findsOneWidget);
+        expect(addButton, findsOneWidget);
 
-      // 날짜는 한 줄로 접힌다.
-      final Text dateText = tester.widget<Text>(date);
-      expect(dateText.maxLines, 1);
-      expect(dateText.overflow, TextOverflow.ellipsis);
+        // 날짜는 한 줄로 접힌다.
+        final Text dateText = tester.widget<Text>(date);
+        expect(dateText.maxLines, 1);
+        expect(dateText.overflow, TextOverflow.ellipsis);
 
-      // 추가 버튼이 제목 줄 안에 남는다 — 밀려나면 끼니를 넣을 수 없다.
-      final Rect headerRect = tester.getRect(header);
-      final Rect addRect = tester.getRect(addButton);
-      expect(addRect.left, greaterThanOrEqualTo(headerRect.left));
-      expect(addRect.right, lessThanOrEqualTo(headerRect.right + 0.5));
+        // 추가 버튼이 제목 줄 안에 남는다 — 밀려나면 끼니를 넣을 수 없다.
+        final Rect headerRect = tester.getRect(header);
+        final Rect addRect = tester.getRect(addButton);
+        expect(addRect.left, greaterThanOrEqualTo(headerRect.left));
+        expect(addRect.right, lessThanOrEqualTo(headerRect.right + 0.5));
 
-      // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
-      expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
+        // 날짜와 추가 버튼이 겹치지 않는다. 겹치면 화면상 글자가 버튼을 파고든다.
+        expect(tester.getRect(date).right, lessThanOrEqualTo(addRect.left + 0.5));
 
-      // 화면 어디에서도 넘치지 않는다. 화면 전체가 좁은 폭을 견디게 된 뒤로
-      // (#739) 이 단언을 이 자리에서 그대로 쓸 수 있다.
-      expect(tester.takeException(), isNull);
-      expect(find.text(l.dietMealLog), findsOneWidget);
-    });
+        // 화면 어디에서도 넘치지 않는다. 화면 전체가 좁은 폭을 견디게 된 뒤로
+        // (#739) 이 단언을 이 자리에서 그대로 쓸 수 있다.
+        expect(tester.takeException(), isNull);
+        expect(find.text(l.dietMealLog), findsOneWidget);
+      });
+    }
 
     testWidgets('토글은 영양 요약 섹션만 바꾸고, 날짜 스트립·끼니 목록은 남는다 (#681)', (
       WidgetTester tester,
