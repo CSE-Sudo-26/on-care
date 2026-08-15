@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v10']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v11']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,7 +26,9 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v10` (was `_v9`): the demo now carries dated daily history
+/// The flag is `_v11` (was `_v10`): dated daily history now reaches 12 weeks
+/// back so the '최근 4주' card stays full while moving into the past (#752).
+/// `_v10` first added dated daily history
 /// so past weeks render (#752) — without a bump, anyone who opened the app
 /// today would keep rows with no history behind them. `_v9` anchored the
 /// weekly series onto weekdays, and every client now carries a weekly
@@ -57,7 +59,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = DateTime.now().weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v10') == today) return;
+  if (await db.readValue('trainer_seeded_v11') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -245,7 +247,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v10', today);
+    await db.putValue('trainer_seeded_v11', today);
   });
 }
 
@@ -313,13 +315,22 @@ class _Chat {
 }
 
 
-/// 데모가 들고 있는 주 수 — 이번 주 + 지난 4주. '최근 4주' 카드가 4주를 읽고,
-/// 리포트의 '이전' 이동도 그만큼은 채워져 있어야 화면이 비지 않는다.
-const int _demoHistoryWeeks = 5;
+/// 데모가 들고 있는 주 수(이번 주 포함). '최근 4주' 카드는 보고 있는 주에서
+/// 3주를 더 거슬러 읽으므로, 뒤로 이동한 만큼 더 있어야 카드가 꽉 찬다.
+/// 12주면 8주 전까지 뒤로 가도 빈 칸이 없다. 백엔드 시드도 같은 값이다(#752).
+const int _demoHistoryWeeks = 12;
 
 /// 주마다 곱하는 계수. 과거로 갈수록 값이 조금씩 다르게 보이도록 고정된 수를
 /// 돌려 쓴다 — 난수를 쓰면 재시딩마다 이력이 바뀌어 어제 본 화면과 달라진다.
-const List<double> _weekFactors = <double>[1.0, 0.94, 1.08, 0.9, 1.05];
+const List<double> _weekFactors = <double>[
+  1.0,
+  0.94,
+  1.08,
+  0.9,
+  1.05,
+  0.97,
+  1.11,
+];
 
 /// 고객의 날짜별 하루 집계. 이번 주는 카드에 보이는 값 그대로, 지난 주들은
 /// **같은 요일 자리에** 같은 기록 습관으로 채운다.

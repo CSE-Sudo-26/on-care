@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
 from app.core import clock
@@ -163,3 +165,23 @@ def test_daily_sugar_keeps_its_decimals(client):
         float(v) == v for v in values
     )
 
+
+def test_seeded_history_reaches_back_far_enough_for_the_trend_card(client):
+    """'최근 4주' 카드는 보고 있는 주에서 3주를 더 거슬러 읽는다. (#752)
+
+    이번 주만 시딩하면 리포트에서 한 주만 뒤로 가도 카드가 비고, 이행률·나트륨도
+    `-` 가 된다. 실서버 모드가 데모보다 빈약해지지 않도록 여기서 못 박는다.
+    """
+    token = _trainer_token(client)
+    # 8주 전을 열어도 카드가 꽉 차려면 그 앞 3주까지 기록이 있어야 한다.
+    week = clock.today() - timedelta(days=7 * 11)
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report",
+        params={"week_start": week.isoformat()},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert sum(body["sodium_week"]) > 0, "11주 전 나트륨 기록이 없다"
+    assert body["sodium_avg"] is not None
+    assert sum(body["week_completion"]) > 0, "11주 전 운동 기록이 없다"

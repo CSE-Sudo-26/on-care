@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -103,6 +103,15 @@ _METRICS: dict[str, dict] = {
     },
 }
 
+#: 시드가 채우는 과거 주 수(이번 주 포함). 리포트가 '최근 4주' 카드를 그리고
+#: 과거 주로 이동할 수 있어, 이번 주만 채우면 한 주만 뒤로 가도 화면이 빈다.
+#: 12주면 8주 전까지 뒤로 가도 4주 카드가 꽉 찬다(#752).
+_HISTORY_WEEKS = 12
+
+#: 과거 주에 곱하는 계수. 난수를 쓰면 재시딩마다 이력이 바뀌어 어제 본 화면과
+#: 달라지므로 고정된 수를 돌려 쓴다.
+_WEEK_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+
 #: 상세 기록은 기존 3명만 둔다. 여기 12명의 식단은 지표를 만들기 위한 한 줄짜리다.
 _MEAL_NAME = "기록된 식사"
 _ROUTINE_LABEL = "AI 루틴 · 자율 운동"
@@ -142,46 +151,91 @@ def _sodium_offsets(values: list[int], anchor: str) -> list[tuple[int, int]]:
 
 def _seed_sodium_days(db: Session, member_id: str, spec: dict) -> None:
     today = clock.today()
-    for offset, sodium in _sodium_offsets(spec["sodium"], spec.get("anchor", "recent")):
-        date = (today - timedelta(days=offset)).isoformat()
-        entry_id = f"seed-roster-diet-{member_id}-{date}"
-        if db.get(models.DietEntry, entry_id) is not None:
-            continue
-        # 하루 한 줄. 끼니별 상세는 기존 3명만 가진다.
-        calories = 500 + (sodium // 10)
-        db.add(models.DietEntry(
-            id=entry_id,
-            user_id=member_id,
-            date=date,
-            meal_type="lunch",
-            time_label="12:30",
-            foods_json=json.dumps(
-                [{"name": _MEAL_NAME, "calories": calories}], ensure_ascii=False
-            ),
-            total_calories=calories,
-            sodium_mg=sodium,
-            sugar_g=float(sodium) / 60.0,
-        ))
+    offsets = _sodium_offsets(spec["sodium"], spec.get("anchor", "recent"))
+    # 이미 있는 날짜를 **한 번에** 읽는다 — 날마다 조회하면 12주 × 15명에서
+    # 시딩이 눈에 띄게 느려진다.
+    existing = _existing_diet_ids(db, member_id)
+    for week in range(_HISTORY_WEEKS):
+        factor = _WEEK_FACTORS[week % len(_WEEK_FACTORS)]
+        for offset, base in offsets:
+            _seed_one_sodium_day(
+                db, member_id, today, offset + week * 7, base, factor, existing
+            )
+
+
+def _existing_diet_ids(db: Session, member_id: str) -> set[str]:
+    return set(
+        db.scalars(
+            select(models.DietEntry.id).where(models.DietEntry.user_id == member_id)
+        ).all()
+    )
+
+
+def _seed_one_sodium_day(
+    db: Session,
+    member_id: str,
+    today: date,
+    offset: int,
+    base: int,
+    factor: float,
+    existing: set[str],
+) -> None:
+    sodium = round(base * factor)
+    date_str = (today - timedelta(days=offset)).isoformat()
+    entry_id = f"seed-roster-diet-{member_id}-{date_str}"
+    if entry_id in existing:
+        return
+    existing.add(entry_id)
+    # 하루 한 줄. 끼니별 상세는 기존 3명만 가진다.
+    calories = 500 + (sodium // 10)
+    db.add(models.DietEntry(
+        id=entry_id,
+        user_id=member_id,
+        date=date_str,
+        meal_type="lunch",
+        time_label="12:30",
+        foods_json=json.dumps(
+            [{"name": _MEAL_NAME, "calories": calories}], ensure_ascii=False
+        ),
+        total_calories=calories,
+        sodium_mg=sodium,
+        sugar_g=float(sodium) / 60.0,
+    ))
 
 
 def _seed_completion_days(db: Session, member_id: str, completion: list[int]) -> None:
-    monday = clock.today() - timedelta(days=clock.today().weekday())
-    for i, rate in enumerate(completion):
-        if rate <= 0:
-            continue  # 기록 없음 — 행을 만들면 '0% 수행'이라는 다른 뜻이 된다
-        date = (monday + timedelta(days=i)).isoformat()
-        hist_id = f"seed-roster-hist-{member_id}-{date}"
-        if db.get(models.RoutineHistory, hist_id) is not None:
-            continue
-        db.add(models.RoutineHistory(
-            id=hist_id,
-            member_id=member_id,
-            trainer_id=None,
-            date=date,
-            kind_label=_ROUTINE_LABEL,
-            completion_rate=rate,
-            exercises_json=json.dumps([], ensure_ascii=False),
-        ))
+    today = clock.today()
+    this_monday = today - timedelta(days=today.weekday())
+    existing = set(
+        db.scalars(
+            select(models.RoutineHistory.id).where(
+                models.RoutineHistory.member_id == member_id
+            )
+        ).all()
+    )
+    for week in range(_HISTORY_WEEKS):
+        monday = this_monday - timedelta(days=7 * week)
+        factor = _WEEK_FACTORS[week % len(_WEEK_FACTORS)]
+        for i, rate in enumerate(completion):
+            if rate <= 0:
+                continue  # 기록 없음 — 행을 만들면 '0% 수행'이라는 다른 뜻이 된다
+            day = monday + timedelta(days=i)
+            if day > today:
+                continue  # 아직 오지 않은 요일
+            date = day.isoformat()
+            hist_id = f"seed-roster-hist-{member_id}-{date}"
+            if hist_id in existing:
+                continue
+            existing.add(hist_id)
+            db.add(models.RoutineHistory(
+                id=hist_id,
+                member_id=member_id,
+                trainer_id=None,
+                date=date,
+                kind_label=_ROUTINE_LABEL,
+                completion_rate=min(100, round(rate * factor)),
+                exercises_json=json.dumps([], ensure_ascii=False),
+            ))
 
 
 def _seed_awaiting_message(db: Session, member_id: str) -> None:

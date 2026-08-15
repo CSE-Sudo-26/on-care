@@ -52,7 +52,7 @@ void main() {
       }
 
       expect(await db.select(db.clientChatMessages).get(), isNotEmpty);
-      expect(await db.readValue('trainer_seeded_v10'), _todayString());
+      expect(await db.readValue('trainer_seeded_v11'), _todayString());
     });
 
     test(
@@ -154,6 +154,27 @@ void main() {
         reason: '기록이 하나도 없는 고객',
       );
 
+      // '최근 4주' 카드는 보고 있는 주에서 3주를 더 거슬러 읽는다. 과거로
+      // 이동해도 카드가 꽉 차려면 그만큼 더 있어야 한다(#752).
+      final full = clients.firstWhere(
+        (c) => sodiumWeek(c).where((v) => v > 0).length > 3,
+      );
+      final twelveWeeksAgo = DateTime.now().subtract(
+        const Duration(days: 7 * 11),
+      );
+      final dailyRows =
+          await (db.select(db.clientDailyMetrics)
+                ..where((t) => t.clientId.equals(full.id)))
+              .get();
+      final oldest = dailyRows
+          .map((row) => row.date)
+          .reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+      expect(
+        DateTime.parse(oldest).isBefore(twelveWeeksAgo),
+        isTrue,
+        reason: '${full.name} 이력이 12주에 못 미친다 ($oldest)',
+      );
+
       // Alert combinations, including the two that are easy to lose.
       expect(
         clients.where((c) => c.sodiumMg > 2000 && !low(c)),
@@ -219,13 +240,13 @@ void main() {
 
     test('stale flag (different date) re-seeds schedule onto today', () async {
       await seedIfEmpty(db);
-      await db.putValue('trainer_seeded_v10', '2020-01-01');
+      await db.putValue('trainer_seeded_v11', '2020-01-01');
 
       await seedIfEmpty(db);
 
       final schedule = await db.select(db.trainerScheduleEntries).get();
       expect(schedule.every((s) => s.date == _todayString()), isTrue);
-      expect(await db.readValue('trainer_seeded_v10'), _todayString());
+      expect(await db.readValue('trainer_seeded_v11'), _todayString());
     });
 
     test(
@@ -314,7 +335,7 @@ void main() {
 
         // Simulate an older build: already seeded TODAY under a previous
         // flag, plus a runtime (non-seed) client that must survive.
-        await db.putValue('trainer_seeded_v9', today);
+        await db.putValue('trainer_seeded_v10', today);
         await db
             .into(db.trainerClients)
             .insert(
@@ -348,7 +369,7 @@ void main() {
         expect(week.length, 7);
         expect(week.any((v) => (v as num) > 0), isTrue);
 
-        expect(await db.readValue('trainer_seeded_v10'), today);
+        expect(await db.readValue('trainer_seeded_v11'), today);
       },
     );
 
@@ -370,7 +391,7 @@ void main() {
           );
 
       // Force a re-seed.
-      await db.putValue('trainer_seeded_v10', '2020-01-01');
+      await db.putValue('trainer_seeded_v11', '2020-01-01');
       await seedIfEmpty(db);
 
       final chat = await db.select(db.clientChatMessages).get();
