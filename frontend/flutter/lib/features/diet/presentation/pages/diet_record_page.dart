@@ -453,12 +453,18 @@ class _DateStrip extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                Text(
-                  weekLabel,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
+                // 영어의 주 라벨은 한국어보다 훨씬 길다. 고정 폭으로 두면
+                // 320px 에서 오늘 버튼을 밀어내며 넘친다(#743).
+                Flexible(
+                  child: Text(
+                    weekLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
                 ),
                 if (showTodayButton)
@@ -495,17 +501,21 @@ class _DateStrip extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
+                    // 셀마다 제 크기를 요구하면 일곱의 합이 화면을 넘는다 —
+                    // 영어 요일 라벨(Mon/Tue)이 한글 한 글자보다 넓다(#743).
                     for (final DateTime d in days)
-                      _DayCell(
-                        // 날짜 셀을 지목할 수 있어야 '선택한 날' 계약을 테스트가
-                        // 확인할 수 있다(#687).
-                        key: ValueKey<String>(
-                          'diet-day-${d.year}-${d.month}-${d.day}',
+                      Expanded(
+                        child: _DayCell(
+                          // 날짜 셀을 지목할 수 있어야 '선택한 날' 계약을
+                          // 테스트가 확인할 수 있다(#687).
+                          key: ValueKey<String>(
+                            'diet-day-${d.year}-${d.month}-${d.day}',
+                          ),
+                          day: d,
+                          isToday: d == today,
+                          isSelected: d == selected,
+                          onTap: () => onSelect(d),
                         ),
-                        day: d,
-                        isToday: d == today,
-                        isSelected: d == selected,
-                        onTap: () => onSelect(d),
                       ),
                   ],
                 ),
@@ -571,12 +581,18 @@ class _DayCell extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            _weekdayLabel(l, day.weekday),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: labelColor,
+          // 말줄임이 아니라 축소다. 'Mon' 이 'M…' 이 되면 무슨 요일인지가
+          // 사라진다 — 좁아도 읽을 수 있어야 한다(#743).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _weekdayLabel(l, day.weekday),
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
+              ),
             ),
           ),
           const SizedBox(height: 3),
@@ -1576,15 +1592,20 @@ class _MealCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    // 숫자는 말줄임하지 않는다. `1,850 kcal` 이 `1,85…` 가 되면
+                    // 넘치는 것보다 나쁘다 — 다른 값으로 읽힌다(#743).
                     Flexible(
-                      child: Text(
-                        '${_formatInt(meal.total)} ${l.unitKcal}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.primary,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${_formatInt(meal.total)} ${l.unitKcal}',
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: FigmaColors.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -1628,17 +1649,23 @@ class _MealCard extends StatelessWidget {
                                   // 영양 문자열도 접힌다. 이름만 접히게 두면
                                   // `350kcal · 1,200mg · 12g` 자체가 좁은 폭을
                                   // 넘겨(320px 에서 최대 122px) 줄이 잘렸다(#739).
+                                  //
+                                  // 다만 말줄임이 아니라 축소다 — `1,200mg` 이
+                                  // `1,2…` 가 되면 다른 값으로 읽힌다(#743).
                                   Flexible(
-                                    child: Text(
-                                      '${f.kcal}${l.unitKcal} · '
-                                      '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
-                                      '${_formatG(f.sugarG)}${l.dietUnitG}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.mutedForeground,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        '${f.kcal}${l.unitKcal} · '
+                                        '${_formatInt(f.sodiumMg)}${l.dietUnitMg} · '
+                                        '${_formatG(f.sugarG)}${l.dietUnitG}',
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.mutedForeground,
+                                        ),
                                       ),
                                     ),
                                   ),
