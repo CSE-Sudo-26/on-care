@@ -27,7 +27,7 @@ const int kDemoExerciseHistoryWeeks = 4;
 
 /// Date-aware idempotent seeder. Runs at bootstrap.
 ///
-/// **Flag format (v4+).** `AppKeyValues['seeded_v15']` stores the
+/// **Flag format (v4+).** `AppKeyValues['seeded_v16']` stores the
 /// *date string* the seed last ran with (`YYYY-MM-DD`). Behaviour:
 ///
 /// - `null` (first ever boot, or upgrading from v1/v2) — wipe any
@@ -58,7 +58,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   final twoDaysAgo = _fmtDate(now.subtract(const Duration(days: 2)));
   final weekStart = _fmtDate(_mondayOfThisWeek(now));
 
-  final seedDate = await db.readValue('seeded_v15');
+  final seedDate = await db.readValue('seeded_v16');
   if (seedDate == today) {
     // Already seeded for today — leave both seed rows and user rows
     // untouched.
@@ -132,23 +132,33 @@ Future<void> seedIfEmpty(AppDatabase db) async {
           timeLabel: '15:30',
           aiComment: '당류와 칼로리가 낮고 견과류의 건강한 지방이 채워져 완벽한 간식입니다.',
         ),
+        // 어제는 약속이 있던 날 — 하루 합이 2,380kcal · 2,261mg · 63.0g 으로
+        // 칼로리와 당류가 목표(2,000kcal · 50g)를 넘는다. 목표선과 초과 색이
+        // 실제로 동작하는지 시연에서 눈으로 확인하려면 넘긴 날이 하나는 있어야
+        // 하고, **어제**여야 데모를 여는 날이 언제든 항상 화면에 들어온다.
+        //
+        // 트레이너 앱 데모(`flutter_trainer` 의 `seed_data.dart`)와 백엔드
+        // 시드가 같은 합계를 쓴다. 두 앱을 나란히 놓고 시연하므로 한쪽만
+        // 고치면 그 자리에서 티가 난다.
         _mealOatmealBanana.companion(
           yesterday,
           id: 'seed-diet-yesterday-breakfast',
           timeLabel: '08:10',
           aiComment: '오트밀로 식이섬유를 챙겼어요. 바나나가 들어가 당류는 다소 높은 편이에요.',
         ),
-        _mealChickenSalad.companion(
+        _mealVegetableBibimbap.companion(
           yesterday,
           id: 'seed-diet-yesterday-lunch',
           timeLabel: '12:30',
-          aiComment: '닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.',
+          aiComment: '야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.',
         ),
-        _mealDoenjangRiceDinner.companion(
+        _mealSamgyeopsalDinner.companion(
           yesterday,
           id: 'seed-diet-yesterday-dinner',
-          timeLabel: '18:45',
-          aiComment: '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
+        ),
+        _mealCakeLatteSnack.companion(
+          yesterday,
+          id: 'seed-diet-yesterday-snack',
         ),
         _mealGreekYogurtNuts.companion(
           twoDaysAgo,
@@ -423,7 +433,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     }),
   );
 
-  await db.putValue('seeded_v15', today);
+  await db.putValue('seeded_v16', today);
 }
 
 // ─────────────────────────────────────────────── 과거 기록 (데모 히스토리) ──
@@ -783,6 +793,69 @@ const _SeedMeal _mealCoffeeNuts = _SeedMeal(
       carbsG: 1,
       proteinG: 2,
       fatG: 8,
+    ),
+  ],
+);
+
+// ---- 약속이 있던 어제 ----------------------------------------------------
+//
+// 어제 하루만 칼로리·당류가 목표를 넘는다. 아침·점심은 평소대로 먹고 저녁에
+// 약속이 있어 고기와 디저트가 얹힌 하루다 — 아래 두 끼가 그 몫이다.
+
+const _SeedMeal _mealSamgyeopsalDinner = _SeedMeal(
+  slug: 'dinner',
+  mealType: 'dinner',
+  timeLabel: '19:30',
+  // 삼겹살 사진 에셋이 없어 가장 가까운 한식 상차림을 쓴다.
+  photoAsset: 'assets/images/diet-doenjang-rice.jpeg',
+  aiComment: '고기와 술이 함께여서 칼로리가 크게 올라갔어요. 다음 날은 가볍게 시작해 보세요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '삼겹살 2인분',
+      calories: 620,
+      sodiumMg: 880,
+      sugarG: 1,
+      carbsG: 2,
+      proteinG: 42,
+      fatG: 50,
+    ),
+    _foodRice,
+    _SeedFood(
+      '소주 1병',
+      calories: 55,
+      sodiumMg: 0,
+      sugarG: 0,
+      carbsG: 0,
+      proteinG: 0,
+      fatG: 0,
+    ),
+  ],
+);
+
+const _SeedMeal _mealCakeLatteSnack = _SeedMeal(
+  slug: 'snack',
+  mealType: 'snack',
+  timeLabel: '21:10',
+  photoAsset: 'assets/images/snack-coffee-nuts.jpg',
+  aiComment: '디저트로 당류가 하루 목표를 넘었어요.',
+  foods: <_SeedFood>[
+    _SeedFood(
+      '초코 케이크 한 조각',
+      calories: 330,
+      sodiumMg: 280,
+      sugarG: 24,
+      carbsG: 42,
+      proteinG: 5,
+      fatG: 15,
+    ),
+    _SeedFood(
+      '카페라떼',
+      calories: 100,
+      sodiumMg: 95,
+      sugarG: 5.3,
+      carbsG: 10,
+      proteinG: 5,
+      fatG: 4,
     ),
   ],
 );

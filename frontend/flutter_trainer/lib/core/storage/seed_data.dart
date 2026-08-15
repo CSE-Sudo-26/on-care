@@ -13,7 +13,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v11']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v15']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -26,7 +26,9 @@ part 'seed_clients.dart';
 ///   `seed-`-prefixed row and re-insert, sliding the trainer's schedule
 ///   onto today so the 스케줄 탭 is never empty on a later calendar day.
 ///
-/// The flag is `_v11` (was `_v10`): dated daily history now reaches 12 weeks
+/// The flag is `_v13` (was `_v12`): each weekday now gets its own routine
+/// so a week no longer repeats one workout (#754). `_v12` first carried that day's
+/// exercise list for the report's 요일별 상세 (#754). `_v11` reached 12 weeks
 /// back so the '최근 4주' card stays full while moving into the past (#752).
 /// `_v10` first added dated daily history
 /// so past weeks render (#752) — without a bump, anyone who opened the app
@@ -59,7 +61,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = DateTime.now().weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v11') == today) return;
+  if (await db.readValue('trainer_seeded_v15') == today) return;
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
   // (not DateTime.now()) keeps seed messages ordered before ANY reply
@@ -118,7 +120,9 @@ Future<void> seedIfEmpty(AppDatabase db) async {
               proteinG: Value(client.proteinG),
               fatG: Value(client.fatG),
               lastRoutine: client.lastRoutine,
-              weekCompletionJson: jsonEncode(client.weekCompletion),
+              weekCompletionJson: jsonEncode(
+                _upToToday(client.weekCompletion, todayIndex),
+              ),
               sodiumWeekJson: Value(
                 jsonEncode(_onWeekdays(client.sodiumWeek, todayIndex)),
               ),
@@ -247,7 +251,7 @@ Future<void> seedIfEmpty(AppDatabase db) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v11', today);
+    await db.putValue('trainer_seeded_v15', today);
   });
 }
 
@@ -322,7 +326,48 @@ const int _demoHistoryWeeks = 12;
 
 /// 주마다 곱하는 계수. 과거로 갈수록 값이 조금씩 다르게 보이도록 고정된 수를
 /// 돌려 쓴다 — 난수를 쓰면 재시딩마다 이력이 바뀌어 어제 본 화면과 달라진다.
-const List<double> _weekFactors = <double>[
+/// 과거 주를 흔드는 계수 — **지표마다 따로** 둔다.
+///
+/// 예전에는 넷이 한 계수를 나눠 쓰고 폭도 ±11% 뿐이라, 12주 내내 나트륨은 늘
+/// 초과하고 칼로리·당류는 늘 목표 안이었다. 목표선도 색도 지표마다 한쪽
+/// 경우만 보여 줬다. 사람은 그렇게 살지 않는다 — 회식이 몰린 주는 칼로리도
+/// 당류도 같이 넘고, 코칭이 먹힌 주는 나트륨이 목표 안으로 들어온다.
+///
+/// index 0 은 이번 주다. 반드시 1.0 — 이번 주 값은 카드에 보이는 그대로여야
+/// 한다.
+const List<double> _calorieFactors = <double>[
+  1.0,
+  0.92,
+  1.28, // 회식이 몰린 주 — 목표를 넘긴다.
+  0.88,
+  1.04,
+  0.95,
+  1.13,
+];
+
+const List<double> _sodiumFactors = <double>[
+  1.0,
+  0.96,
+  1.14,
+  0.82, // 코칭이 먹힌 주 — 목표 안으로 들어온다.
+  1.07,
+  0.78,
+  1.10,
+];
+
+const List<double> _sugarFactors = <double>[
+  1.0,
+  1.12,
+  1.55, // 칼로리를 넘긴 그 주. 단 것도 같이 늘었다.
+  0.88,
+  1.30,
+  0.96,
+  1.42,
+];
+
+/// 이행률은 좁게 흔든다. 폭을 넓히면 100 에 붙어 잘려(clamp) 여러 주가 같은
+/// 값이 되고, 오히려 변화가 사라진다.
+const List<double> _completionFactors = <double>[
   1.0,
   0.94,
   1.08,
@@ -331,21 +376,40 @@ const List<double> _weekFactors = <double>[
   0.97,
   1.11,
 ];
-
 /// 고객의 날짜별 하루 집계. 이번 주는 카드에 보이는 값 그대로, 지난 주들은
 /// **같은 요일 자리에** 같은 기록 습관으로 채운다.
 ///
 /// 기록이 드문 고객(휴면·첫 주)은 과거에도 드물게 남는다 — 과거 주만 갑자기
 /// 성실해지면 화면이 그 고객의 이야기와 어긋난다. 기록이 하나도 없는 고객은
 /// 과거에도 없다.
+/// 김민수의 **어제** 하루. 약속이 있어 칼로리·당류가 목표를 넘는다.
+///
+/// 요일이 아니라 날짜로 고른다 — 데모를 여는 날마다 어제의 요일이 달라지므로,
+/// 요일에 못 박으면 어떤 날에는 이번 주에 초과일이 하나도 없게 된다.
+///
+/// 같은 합계를 사용자앱 데모(`flutter/lib/core/storage/seed_data.dart` 의
+/// `_feastDay`)와 백엔드 시드(`seed_member_data.py`)가 함께 쓴다. 두 앱을
+/// 나란히 놓고 시연하므로 한쪽만 고치면 그 자리에서 티가 난다.
+const int _feastCalories = 2380;
+const int _feastSodiumMg = 2261;
+const double _feastSugarG = 63.0;
+
+/// 잔칫날을 가진 고객. 김민수(1) 하나다 — 로스터 전체가 같은 날 과식하면
+/// 화면이 복사본처럼 읽힌다.
+const int _feastClientId = 1;
+
 Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now) sync* {
   final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
   final monday = today.subtract(Duration(days: today.weekday - 1));
   final todayIndex = today.weekday - 1;
 
   for (var back = 0; back < _demoHistoryWeeks; back++) {
     final weekMonday = monday.subtract(Duration(days: 7 * back));
-    final factor = _weekFactors[back % _weekFactors.length];
+    final calorieFactor = _calorieFactors[back % _calorieFactors.length];
+    final sodiumFactor = _sodiumFactors[back % _sodiumFactors.length];
+    final sugarFactor = _sugarFactors[back % _sugarFactors.length];
+    final doneFactor = _completionFactors[back % _completionFactors.length];
     // 이번 주는 오늘까지만, 지난 주들은 일요일까지 — 지난 주에 '아직 오지 않은
     // 요일'은 없다.
     final anchor = back == 0 ? todayIndex : 6;
@@ -357,11 +421,16 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
     for (var day = 0; day < 7; day++) {
       final date = weekMonday.add(Duration(days: day));
       if (date.isAfter(today)) break;
-      final cal = _scaled(calories[day], factor);
-      final na = _scaled(sodium[day], factor);
-      final sg = day < sugar.length ? sugar[day] * factor : 0.0;
+      final feast = client.id == _feastClientId && date == yesterday;
+      final cal = feast
+          ? _feastCalories
+          : _scaled(calories[day], calorieFactor);
+      final na = feast ? _feastSodiumMg : _scaled(sodium[day], sodiumFactor);
+      final sg = feast
+          ? _feastSugarG
+          : (day < sugar.length ? sugar[day] * sugarFactor : 0.0);
       final done = day < completion.length
-          ? _scaled(completion[day], factor).clamp(0, 100)
+          ? _scaled(completion[day], doneFactor).clamp(0, 100)
           : 0;
       if (cal == 0 && na == 0 && sg == 0 && done == 0) continue;
       yield ClientDailyMetricsCompanion.insert(
@@ -371,6 +440,13 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
         calories: Value(cal),
         sodiumMg: Value(na),
         sugarG: Value(double.parse((sg).toStringAsFixed(1))),
+        exercisesJson: Value(
+          jsonEncode(
+            date == today
+                ? _exercisesFor(client, done, today: true)
+                : _routineFor(client.id, day, done),
+          ),
+        ),
       );
     }
   }
@@ -378,6 +454,61 @@ Iterable<ClientDailyMetricsCompanion> _dailyMetrics(_Client client, DateTime now
 
 /// 이번 주는 값을 그대로 두고(계수 1) 과거 주만 흔든다.
 int _scaled(num value, double factor) => (value * factor).round();
+
+/// 요일마다 다른 루틴. 한 고객이 한 주 내내 같은 운동만 하면 화면이 복사본
+/// 처럼 읽힌다 — 요일과 고객을 함께 돌려 서로 다른 조합이 나오게 한다.
+const List<List<String>> _routinePool = <List<String>>[
+  <String>['스쿼트 4세트', '런지 3세트', '레그컬 3세트'],
+  <String>['벤치프레스 4세트', '푸시업 3세트', '덤벨 플라이 3세트'],
+  <String>['데드리프트 4세트', '바벨 로우 3세트', '풀업 3세트'],
+  <String>['숄더 프레스 4세트', '사이드 레터럴 3세트', '페이스 풀 3세트'],
+  <String>['런닝 30분', '사이클 20분', '코어 서킷 10분'],
+  <String>['레그프레스 4세트', '힙 쓰러스트 3세트', '카프 레이즈 3세트'],
+  <String>['플랭크 3세트', '버피 3세트', '마운틴 클라이머 3세트'],
+];
+
+/// 그날의 운동 목록 — 이행률과 **맞게** ✓/✗ 를 붙인다.
+///
+/// 67% 인 날에 3개 모두 ✓ 인 목록을 붙이면 화면에서 "67%" 옆에 "3개 중 3개
+/// 완료" 가 놓여 서로 다른 말을 한다(#754).
+///
+/// 오늘만은 고객의 큐레이션된 운동 기록을 그대로 쓴다 — 같은 날을 리포트와
+/// 고객 상세의 운동 기록이 각각 다른 운동으로 보여 주면 안 된다.
+List<String> _exercisesFor(_Client client, int completion, {bool today = false}) {
+  if (completion <= 0) return const <String>[];
+  if (today && client.history.isNotEmpty) {
+    var best = client.history.first;
+    for (final entry in client.history) {
+      if ((entry.completionRate - completion).abs() <
+          (best.completionRate - completion).abs()) {
+        best = entry;
+      }
+    }
+    return best.exercises;
+  }
+  return const <String>[];
+}
+
+/// 요일·고객으로 고른 루틴에 이행률만큼 ✓ 를 매긴다.
+List<String> _routineFor(int clientId, int weekday, int completion) {
+  if (completion <= 0) return const <String>[];
+  final names = _routinePool[(clientId + weekday) % _routinePool.length];
+  final done = (names.length * completion / 100).round().clamp(1, names.length);
+  return <String>[
+    for (var i = 0; i < names.length; i++)
+      '${names[i]} ${i < done ? '✓' : '✗'}',
+  ];
+}
+
+/// 아직 오지 않은 요일을 지운다.
+///
+/// 시드의 이행률 배열은 월→일 한 주치라, 그대로 쓰면 수요일에 열어도 주말이
+/// 채워져 있다. 운동 추이 카드가 오지 않은 날을 막대로 그리고, 주 평균도
+/// 그 날들을 포함해 실제보다 높게 나온다 — 화면은 비워 두고 평균만 포함하는
+/// 어긋남이 여기서 생겼다(#752).
+List<int> _upToToday(List<int> week, int todayIndex) => <int>[
+  for (var i = 0; i < week.length; i++) i <= todayIndex ? week[i] : 0,
+];
 
 /// 시드의 "오래된→오늘" 계열을 **이번 주 월→일** 자리에 옮긴다.
 ///

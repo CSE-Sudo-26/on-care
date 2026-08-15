@@ -108,9 +108,22 @@ _METRICS: dict[str, dict] = {
 #: 12주면 8주 전까지 뒤로 가도 4주 카드가 꽉 찬다(#752).
 _HISTORY_WEEKS = 12
 
-#: 과거 주에 곱하는 계수. 난수를 쓰면 재시딩마다 이력이 바뀌어 어제 본 화면과
-#: 달라지므로 고정된 수를 돌려 쓴다.
-_WEEK_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+#: 과거 주에 곱하는 계수 — **지표마다 따로** 둔다. 난수를 쓰면 재시딩마다
+#: 이력이 바뀌어 어제 본 화면과 달라지므로 고정된 수를 돌려 쓴다.
+#:
+#: 예전에는 하나를 나눠 쓰고 폭도 ±11% 뿐이라 12주 내내 나트륨은 늘 초과하고
+#: 칼로리는 늘 목표 안이었다. 리포트의 목표선이 지표마다 한쪽 경우만 보여
+#: 준다는 뜻이다. 계수를 갈라 회식이 몰린 주와 코칭이 먹힌 주가 함께 나오게
+#: 한다. index 0 은 이번 주라 반드시 1.0 이다.
+_SODIUM_FACTORS = (1.0, 0.96, 1.14, 0.82, 1.07, 0.78, 1.10)
+_CALORIE_FACTORS = (1.0, 0.92, 1.28, 0.88, 1.04, 0.95, 1.13)
+_SUGAR_FACTORS = (1.0, 1.12, 1.55, 0.88, 1.30, 0.96, 1.42)
+#: 이행률은 좁게 흔든다 — 넓히면 100 에 붙어 잘려 여러 주가 같은 값이 된다.
+_COMPLETION_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+
+#: 칼로리 대비 당류 비율. 당류를 나트륨에서 끌어내면(예전 `나트륨/60`) 둘이
+#: 늘 붙어 다녀, 당류만 넘긴 주가 나올 수 없다.
+_SUGAR_PER_KCAL = 0.022
 
 #: 상세 기록은 기존 3명만 둔다. 여기 12명의 식단은 지표를 만들기 위한 한 줄짜리다.
 _MEAL_NAME = "기록된 식사"
@@ -156,10 +169,12 @@ def _seed_sodium_days(db: Session, member_id: str, spec: dict) -> None:
     # 시딩이 눈에 띄게 느려진다.
     existing = _existing_diet_ids(db, member_id)
     for week in range(_HISTORY_WEEKS):
-        factor = _WEEK_FACTORS[week % len(_WEEK_FACTORS)]
+        idx = week % len(_SODIUM_FACTORS)
         for offset, base in offsets:
             _seed_one_sodium_day(
-                db, member_id, today, offset + week * 7, base, factor, existing
+                db, member_id, today, offset + week * 7, base,
+                _SODIUM_FACTORS[idx], _CALORIE_FACTORS[idx],
+                _SUGAR_FACTORS[idx], existing,
             )
 
 
@@ -177,17 +192,27 @@ def _seed_one_sodium_day(
     today: date,
     offset: int,
     base: int,
-    factor: float,
+    sodium_factor: float,
+    calorie_factor: float,
+    sugar_factor: float,
     existing: set[str],
 ) -> None:
-    sodium = round(base * factor)
+    sodium = round(base * sodium_factor)
     date_str = (today - timedelta(days=offset)).isoformat()
     entry_id = f"seed-roster-diet-{member_id}-{date_str}"
     if entry_id in existing:
         return
     existing.add(entry_id)
     # 하루 한 줄. 끼니별 상세는 기존 3명만 가진다.
-    calories = 500 + (sodium // 10)
+    #
+    # 나트륨에서 칼로리를 끌어낸다 — 한 사람의 하루라 둘이 따로 놀면 안 된다.
+    # 예전 산식(500 + 나트륨/10)은 2,000mg 짜리 하루를 700kcal 로 만들어,
+    # 국물만 먹고 사는 사람처럼 보였다. 1.1~1.5mg/kcal 은 짜게 먹는 한식의
+    # 실제 범위다. 거기에 그 주의 식사량을 얹는다 — 계수가 갈라져 있어야
+    # 칼로리만 넘긴 주, 나트륨만 잡힌 주가 따로 나온다.
+    base_kcal = 900 + (sodium * 3) // 10
+    calories = round(base_kcal * calorie_factor)
+    sugar = round(base_kcal * _SUGAR_PER_KCAL * sugar_factor, 1)
     db.add(models.DietEntry(
         id=entry_id,
         user_id=member_id,
@@ -199,7 +224,7 @@ def _seed_one_sodium_day(
         ),
         total_calories=calories,
         sodium_mg=sodium,
-        sugar_g=float(sodium) / 60.0,
+        sugar_g=sugar,
     ))
 
 
@@ -215,7 +240,7 @@ def _seed_completion_days(db: Session, member_id: str, completion: list[int]) ->
     )
     for week in range(_HISTORY_WEEKS):
         monday = this_monday - timedelta(days=7 * week)
-        factor = _WEEK_FACTORS[week % len(_WEEK_FACTORS)]
+        factor = _COMPLETION_FACTORS[week % len(_COMPLETION_FACTORS)]
         for i, rate in enumerate(completion):
             if rate <= 0:
                 continue  # 기록 없음 — 행을 만들면 '0% 수행'이라는 다른 뜻이 된다

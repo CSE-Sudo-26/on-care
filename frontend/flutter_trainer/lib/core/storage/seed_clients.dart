@@ -50,14 +50,24 @@ const List<_Client> _clients = <_Client>[
     threadHandled: true,
     active: true,
     calories: 1067,
+    // 오늘은 짬뽕 한 그릇이 나트륨을 다 썼다(3200mg). 칼로리가 낮은 건 저녁을
+    // 아직 안 적었기 때문이고, 저 조합이 오늘 코칭 알림의 근거다.
+    //
+    // 나머지 날은 나트륨 ÷ 칼로리가 1.0~1.5mg/kcal 안에 들어야 한다. 한식이
+    // 짜다 해도 900kcal 짜리 하루가 2,000mg 을 넘기려면 국물만 먹어야 한다 —
+    // 회원을 추가할 때 이 비율을 먼저 확인할 것.
+    //
+    // 이 배열은 요일에 붙는 평상시 값이다. **어제** 하루만 약속이 있어 칼로리·
+    // 당류가 목표를 넘는데, 그건 여기가 아니라 `seed_data.dart` 의 `_feastDay`
+    // 가 날짜로 덮어쓴다 — 어제가 무슨 요일인지는 데모를 여는 날마다 달라진다.
     sodiumMg: 3428,
     // Keep this aligned with the member app's current mock daily total.
     sugarG: 17.8,
     lastRoutine: '오늘',
     weekCompletion: <int>[100, 67, 100, 0, 100, 67, 100],
     sodiumWeek: <int>[2400, 2200, 1900, 2050, 2300, 1850, 3428],
-    caloriesWeek: <int>[940, 1010, 1120, 870, 1170, 990, 1067],
-    sugarWeek: <double>[15.7, 16.9, 18.7, 14.6, 19.6, 16.6, 17.8],
+    caloriesWeek: <int>[1620, 1710, 1830, 1560, 1900, 1680, 1067],
+    sugarWeek: <double>[36.0, 41.5, 28.0, 45.5, 33.0, 38.5, 17.8],
     diet: <_Meal>[
       _Meal(
         '아침',
@@ -758,7 +768,7 @@ const List<_Client> _clients = <_Client>[
     weekCompletion: <int>[33, 0, 0, 0, 0, 0, 0],
     // 3일치만 남기고 끊긴다. 7개 미만 스파크라인 렌더링 확인용.
     sodiumWeek: <int>[2100, 1950, 1030],
-    caloriesWeek: <int>[630, 850, 770],
+    caloriesWeek: <int>[1350, 1420, 770],
     sugarWeek: <double>[23.8, 31.9, 29.0],
     diet: <_Meal>[
       _Meal('아침', '토스트, 커피', 290, 310),

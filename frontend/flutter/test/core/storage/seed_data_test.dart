@@ -43,7 +43,8 @@ void main() {
 
       expect(diet, isNotEmpty);
       expect(diet.where((r) => r.date == today).length, 3);
-      expect(diet.where((r) => r.date == _daysAgoString(1)).length, 3);
+      // 어제는 약속이 있던 날 — 저녁 뒤에 디저트가 하나 더 붙는다.
+      expect(diet.where((r) => r.date == _daysAgoString(1)).length, 4);
       expect(diet.where((r) => r.date == _daysAgoString(2)).length, 3);
       // 큐레이션 사흘 앞으로도 기록이 이어진다 — 날짜를 옮기면 대부분
       // 비어 있던 데모 문제(#671).
@@ -83,7 +84,8 @@ void main() {
             .toSet(),
         <String>{'breakfast', 'lunch', 'snack'},
       );
-      // 큐레이션 사흘 중 간식은 오늘 하루뿐이다(과거 히스토리는 별도).
+      // 큐레이션 사흘 중 간식은 오늘과 어제 둘뿐이다(과거 히스토리는 별도).
+      // 어제 것은 약속 뒤의 디저트라 그날 당류를 목표 위로 올린다.
       expect(
         diet
             .where(
@@ -96,7 +98,7 @@ void main() {
                   ].contains(row.date),
             )
             .length,
-        1,
+        2,
       );
       // Schedule seeds a couple of events on today (for the dashboard's
       // "오늘의 일정") plus a few spread across the current month (for the
@@ -120,7 +122,7 @@ void main() {
         reason: 'exercise sessions for the current week must be seeded',
       );
 
-      expect(await db.readValue('seeded_v15'), today);
+      expect(await db.readValue('seeded_v16'), today);
     });
 
     test('과거 식단은 날짜마다 값이 달라 추이가 직선이 되지 않는다', () async {
@@ -211,13 +213,18 @@ void main() {
             ),
             'seed-diet-yesterday-lunch': (
               '12:30',
-              '닭가슴살과 채소로 단백질과 식이섬유를 고르게 섭취했어요.',
-              'assets/images/diet-chicken-salad.jpg',
+              '야채가 풍부한 비빔밥이에요. 고추장을 줄이면 나트륨을 더 조절할 수 있어요.',
+              'assets/images/diet-vegetable-bibimbap.jpg',
             ),
             'seed-diet-yesterday-dinner': (
-              '18:45',
-              '밥과 찌개를 함께 섭취해 포만감은 좋지만 국물은 조금 남기면 좋아요.',
+              '19:30',
+              '고기와 술이 함께여서 칼로리가 크게 올라갔어요. 다음 날은 가볍게 시작해 보세요.',
               'assets/images/diet-doenjang-rice.jpeg',
+            ),
+            'seed-diet-yesterday-snack': (
+              '21:10',
+              '디저트로 당류가 하루 목표를 넘었어요.',
+              'assets/images/snack-coffee-nuts.jpg',
             ),
             'seed-diet-two-days-ago-breakfast': (
               '08:35',
@@ -262,6 +269,7 @@ void main() {
           'seed-diet-yesterday-breakfast',
           'seed-diet-yesterday-lunch',
           'seed-diet-yesterday-dinner',
+          'seed-diet-yesterday-snack',
           'seed-diet-two-days-ago-breakfast',
           'seed-diet-two-days-ago-lunch',
           'seed-diet-two-days-ago-dinner',
@@ -394,7 +402,7 @@ void main() {
     test('stale flag (different date) re-seeds with today', () async {
       // Pretend the seed last ran a week ago.
       await seedIfEmpty(db);
-      await db.putValue('seeded_v15', '2020-01-01');
+      await db.putValue('seeded_v16', '2020-01-01');
 
       await seedIfEmpty(db);
 
@@ -402,7 +410,7 @@ void main() {
       final diet = await db.select(db.dietEntries).get();
       expect(diet, isNotEmpty);
       expect(diet.where((r) => r.date == today).length, 3);
-      expect(await db.readValue('seeded_v15'), today);
+      expect(await db.readValue('seeded_v16'), today);
     });
 
     test('legacy seeded_v2=true flag is migrated and cleared', () async {
@@ -429,7 +437,7 @@ void main() {
 
       // Legacy flag cleared, current flag set to today.
       expect(await db.readValue('seeded_v2'), isNull);
-      expect(await db.readValue('seeded_v15'), _todayString());
+      expect(await db.readValue('seeded_v16'), _todayString());
 
       // Stale seed-prefixed row was wiped and replaced with today's
       // seed batch.
@@ -459,7 +467,7 @@ void main() {
 
       await seedIfEmpty(db);
       // Force a re-seed by ageing the flag.
-      await db.putValue('seeded_v15', '2020-01-01');
+      await db.putValue('seeded_v16', '2020-01-01');
       await seedIfEmpty(db);
 
       final diet = await db.select(db.dietEntries).get();

@@ -84,8 +84,25 @@ _TODAY_MEALS: dict[
 #: 시드가 채우는 과거 주 수(이번 주 포함) — `seed_roster` 와 같은 값이다.
 _HISTORY_WEEKS = 12
 
-#: 과거 주에 곱하는 계수 — `seed_roster._WEEK_FACTORS` 와 같다.
-_WEEK_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+#: 과거 주에 곱하는 계수 — `seed_roster` 의 같은 이름들과 값을 맞춘다.
+#: 지표마다 갈라 둔 이유는 그쪽 주석에 적어 뒀다.
+_SODIUM_FACTORS = (1.0, 0.96, 1.14, 0.82, 1.07, 0.78, 1.10)
+_CALORIE_FACTORS = (1.0, 0.92, 1.28, 0.88, 1.04, 0.95, 1.13)
+_SUGAR_FACTORS = (1.0, 1.12, 1.55, 0.88, 1.30, 0.96, 1.42)
+_COMPLETION_FACTORS = (1.0, 0.94, 1.08, 0.9, 1.05, 0.97, 1.11)
+
+#: 요일별 하루 섭취량(월→일). 여기에 주 계수를 곱한다.
+_WEEKDAY_KCAL = (1710, 1830, 1560, 1900, 1680, 1450, 1600)
+_WEEKDAY_SUGAR = (41.5, 28.0, 45.5, 33.0, 38.5, 22.0, 30.0)
+
+#: 어제 하루의 합. 약속이 있어 칼로리·당류가 목표(2,000kcal·50g)를 넘는다.
+#:
+#: 요일이 아니라 **어제**에 못 박는다 — 요일에 못 박으면 데모를 여는 날에 따라
+#: 넘긴 날이 이번 주 밖으로 밀려난다. 두 Flutter 앱의 데모 시드가 같은 합계를
+#: 쓴다(트레이너 `seed_data.dart` 의 `_feast*`, 사용자 앱의 어제 큐레이션).
+_FEAST_KCAL = 2380
+_FEAST_SODIUM_MG = 2261
+_FEAST_SUGAR_G = 63.0
 
 _SODIUM_WEEK: dict[str, list[int]] = {
     "user-demo": [2400, 2200, 1900, 2050, 2300, 1850, 3428],
@@ -622,9 +639,14 @@ def _seed_diet(db: Session, member_id: str) -> None:
         if d in logged:
             continue
         logged.add(d)
-        factor = _WEEK_FACTORS[(offset // 7) % len(_WEEK_FACTORS)]
-        na = round(sodium_week[6 - (offset % 7)] * factor)
-        calories = round(1500 * factor)
+        idx = (offset // 7) % len(_SODIUM_FACTORS)
+        weekday = (today - timedelta(days=offset)).weekday()
+        if offset == 1:
+            na, calories, sugar = _FEAST_SODIUM_MG, _FEAST_KCAL, _FEAST_SUGAR_G
+        else:
+            na = round(sodium_week[6 - (offset % 7)] * _SODIUM_FACTORS[idx])
+            calories = round(_WEEKDAY_KCAL[weekday] * _CALORIE_FACTORS[idx])
+            sugar = round(_WEEKDAY_SUGAR[weekday] * _SUGAR_FACTORS[idx], 1)
         db.add(models.DietEntry(
             id=f"seed-diet-{member_id}-{d}-agg",
             user_id=member_id,
@@ -632,12 +654,12 @@ def _seed_diet(db: Session, member_id: str) -> None:
             meal_type="lunch",
             time_label="",
             foods_json=json.dumps(
-                [{"name": "기록된 식단", "calories": calories, "sodium_mg": na, "sugar_g": 0}],
+                [{"name": "기록된 식단", "calories": calories, "sodium_mg": na, "sugar_g": sugar}],
                 ensure_ascii=False,
             ),
             total_calories=calories,
             sodium_mg=na,
-            sugar_g=round(na / 60.0, 1),
+            sugar_g=sugar,
             engine="seed",
         ))
     _safe_commit(db)
@@ -663,7 +685,7 @@ def _seed_history(db: Session, member_id: str) -> None:
         ).all()
     )
     for week in range(_HISTORY_WEEKS):
-        factor = _WEEK_FACTORS[week % len(_WEEK_FACTORS)]
+        factor = _COMPLETION_FACTORS[week % len(_COMPLETION_FACTORS)]
         for idx, (rate, kind, exercises, feedback, note) in enumerate(sessions):
             d = (today - timedelta(days=idx * 2 + week * 7)).isoformat()
             hid = f"seed-hist-{member_id}-{d}"
