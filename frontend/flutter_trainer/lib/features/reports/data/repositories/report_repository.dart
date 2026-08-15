@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -33,6 +34,15 @@ abstract interface class ReportRepository {
   /// a session 완료 in another tab updates the report in place. The Dio
   /// source emits once (fetch → value), like the other API repositories.
   Stream<WeeklyReport> watch({
+    required TrainerClient client,
+    required DateTime weekStart,
+  });
+
+  /// [client] 의 [weekStart] 주 요약.
+  ///
+  /// 리포트 본문과 **따로** 가져온다. 실서버는 생성에 몇 초가 걸리는데 한
+  /// 응답에 묶으면 고객을 고를 때마다 화면 전체가 그만큼 멈춘다(#755).
+  Future<ReportSummary> summary({
     required TrainerClient client,
     required DateTime weekStart,
   });
@@ -72,6 +82,17 @@ class LocalReportRepository implements ReportRepository {
             week: await _weekSeries(client.id, start),
           ),
         );
+  }
+
+  @override
+  Future<ReportSummary> summary({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async {
+    // 데모에는 모델이 없다. 실서버가 공급자 장애에서 쓰는 것과 **같은** 규칙
+    // 기반 요약을 쓴다 — 데모에서 본 문장이 실서버의 실패 화면과 같아진다.
+    final report = await watch(client: client, weekStart: weekStart).first;
+    return ruleReportSummary(report, client);
   }
 
   /// 저장된 운동 목록을 방어적으로 디코드. 깨진 값은 빈 목록으로.
@@ -168,6 +189,30 @@ class DioReportRepository implements ReportRepository {
   }
 
   @override
+  Future<ReportSummary> summary({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/trainer/clients/${Uri.encodeComponent(client.id)}/report/summary',
+        queryParameters: <String, String>{'week_start': ymd(weekStart)},
+      );
+      final json = res.data;
+      if (json == null) throw const ServerError();
+      return ReportSummary(
+        headline: (json['headline'] as String? ?? '').trim(),
+        points: (json['points'] as List<Object?>? ?? const <Object?>[])
+            .whereType<String>()
+            .toList(growable: false),
+        generatedBy: json['generated_by'] as String? ?? 'rule',
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
   Future<void> send({
     required String clientId,
     required DateTime weekStart,
@@ -257,3 +302,14 @@ final weeklyReportProvider = StreamProvider.family<WeeklyReport, ReportKey>((
       .watch(reportRepositoryProvider)
       .watch(client: key.client, weekStart: key.weekStart);
 });
+
+/// 한 주의 리포트 요약. 리포트 본문과 따로 부른다(#755).
+///
+/// `autoDispose` 다 — 고객·주를 옮겨 다니는 화면이라 남겨 두면 본 적 있는 모든
+/// 주의 요약이 메모리에 쌓인다. 다시 생성하려면 이 provider 를 무효화한다.
+final reportSummaryProvider =
+    FutureProvider.autoDispose.family<ReportSummary, ReportKey>((ref, key) {
+      return ref
+          .watch(reportRepositoryProvider)
+          .summary(client: key.client, weekStart: key.weekStart);
+    });

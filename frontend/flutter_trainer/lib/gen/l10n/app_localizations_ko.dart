@@ -991,30 +991,55 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsShareNoClient => '리포트를 볼 고객을 먼저 선택해 주세요';
 
   @override
-  String reportBodyTitle(String range) {
-    return '📊 $range 주간 리포트';
+  String reportBodyGreeting(String name, String range) {
+    return '$name님, $range 주간 리포트 정리해서 보내드려요.';
   }
 
   @override
   String reportBodySessions(int done, int booked) {
-    return 'PT 세션 $done/$booked회 완료';
+    return 'PT 세션은 $done/$booked회 진행했어요.';
   }
 
   @override
-  String reportBodyCompletion(int avg) {
-    return '운동 이행률 평균 $avg%';
+  String reportBodyCompletionGood(int avg) {
+    return '이번 주 운동은 평균 $avg%로 잘 따라오셨어요.';
   }
 
   @override
-  String reportBodySodium(int avg, int days) {
-    return '나트륨 평균 ${avg}mg · 목표 초과 $days일';
+  String reportBodyCompletionLow(int avg) {
+    return '이번 주 운동 이행률은 평균 $avg%였어요. 많이 바쁘셨나 봐요.';
   }
 
   @override
-  String get reportBodyPraise => '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 유지해요!';
+  String reportBodySkipped(String names) {
+    return '다만 $names 건너뛰셨더라고요. 컨디션 때문이었다면 다음 세션 때 말씀해 주세요. 대체 동작으로 바꿔 둘게요.';
+  }
 
   @override
-  String get reportBodyEncourage => '다음 주에는 조금만 더 챙겨봐요. 제가 루틴을 조정해 둘게요.';
+  String reportBodySodiumOver(int avg, int days) {
+    return '나트륨은 하루 평균 ${avg}mg으로 목표(2,000mg)를 $days일 넘겼어요. 국물을 절반만 남기셔도 하루 400~500mg은 줄어듭니다.';
+  }
+
+  @override
+  String reportBodySodiumOk(int avg) {
+    return '나트륨은 하루 평균 ${avg}mg으로 목표 안에서 잘 지키고 계세요.';
+  }
+
+  @override
+  String reportBodyCalories(int avg) {
+    return '칼로리는 하루 평균 ${avg}kcal이에요.';
+  }
+
+  @override
+  String get reportBodyPraise => '이번 주 정말 잘하셨어요. 다음 주도 이 페이스 그대로 가요!';
+
+  @override
+  String get reportBodyEncourage =>
+      '다음 주에는 이 부분만 같이 신경 써 봐요. 루틴은 제가 조정해서 올려둘게요.';
+
+  @override
+  String get reportBodyNoRecords =>
+      '이번 주는 남은 기록이 없어서 정리해 드릴 내용이 없네요. 다음 주 시작을 같이 잡아 봐요.';
 
   @override
   String get schedTitle => '스케줄';
@@ -2422,6 +2447,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackSaveUnsupported => '피드백 초안 저장 API가 아직 없어요.';
 
   @override
+  String get reportsFeedbackDraftNote =>
+      '수치에서 자동으로 채운 초안이에요. 보내기 전에 확인하고 고쳐 주세요.';
+
+  @override
+  String get reportsFeedbackRestore => '초안으로 되돌리기';
+
+  @override
   String get reportsFeedbackSave => '피드백 저장';
 
   @override
@@ -2447,6 +2479,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsAiTitle => 'AI 코칭 보조 · 리포트 요약';
+
+  @override
+  String get reportsAiGenerated => 'AI 생성';
+
+  @override
+  String get reportsAiLoading => '이번 주 요약을 만들고 있어요…';
+
+  @override
+  String get reportsAiUseAsDraft => '피드백으로 가져오기';
+
+  @override
+  String get reportsAiRegenerate => '다시 생성';
 
   @override
   String get reportsAiUnavailable =>

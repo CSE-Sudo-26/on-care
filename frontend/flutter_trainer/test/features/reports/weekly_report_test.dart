@@ -205,9 +205,13 @@ void main() {
       );
 
       final message = reportMessage(_ko, report);
+      // 회원이 그대로 받는 편지다 — 첫 줄에 무슨 메시지인지, 본문은 문단으로,
+      // 마지막은 다음 주 이야기로 끝난다(#755).
+      expect(message, startsWith('김민수님,'));
       expect(message, contains('주간 리포트'));
-      expect(message, contains('PT 세션 1/1회 완료'));
+      expect(message, contains('PT 세션은 1/1회 진행했어요'));
       expect(message, contains('이번 주 정말 잘하셨어요'));
+      expect(message, contains('\n\n'), reason: '한 덩어리가 아니라 문단으로 나뉘어야 한다');
     });
 
     test('omits figures the client has no data for', () {

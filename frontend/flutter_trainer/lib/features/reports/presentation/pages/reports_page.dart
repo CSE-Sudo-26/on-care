@@ -11,6 +11,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
     show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
+import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -71,6 +72,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   /// [_feedbackDraft] 가 어느 리포트의 것인가(`고객|주`). 고객이나 주가 바뀌면
   /// 남의 리포트에 쓰던 문구가 따라가지 않게 버린다.
   String? _feedbackFor;
+
+  /// 입력창을 새 문구로 다시 만들 때 올린다.
+  ///
+  /// `TextEditingController` 는 한 번 만들어지면 initialText 를 다시 읽지
+  /// 않는다. 요약을 초안으로 가져오는 건 드문 동작이라, 컨트롤러를 밖으로
+  /// 끌어내는 대신 위젯 키를 바꿔 다시 만든다.
+  int _draftEpoch = 0;
 
   /// 입력창이 비었는가. 메뉴의 전송 항목을 잠그는 유일한 이유라, 이 값이
   /// 바뀔 때만 다시 그린다 — 글자마다 화면 전체를 다시 그리지 않는다.
@@ -303,7 +311,24 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       ),
                       data: (data) => _ClientReport(
                         report: data,
+                        draftEpoch: _draftEpoch,
                         initialFeedback: _messageFor(l, data),
+                        // 트레이너가 손댄 흔적이 있을 때만 켠다 — 누를 게
+                        // 없는 버튼을 띄워 두지 않는다.
+                        canRestoreDraft:
+                            _messageFor(l, data) != reportMessage(l, data),
+                        onRestoreDraft: () => setState(() {
+                          _feedbackDraft = null;
+                          _feedbackFor = null;
+                          _feedbackBlank = false;
+                          _draftEpoch++;
+                        }),
+                        onUseSummaryAsDraft: (draft) => setState(() {
+                          _feedbackDraft = draft;
+                          _feedbackFor = _feedbackKey(data);
+                          _feedbackBlank = draft.trim().isEmpty;
+                          _draftEpoch++;
+                        }),
                         onFeedbackChanged: (text) {
                           _feedbackDraft = text;
                           _feedbackFor = _feedbackKey(data);
@@ -483,14 +508,30 @@ class _ClientPickerState extends State<_ClientPicker> {
 class _ClientReport extends StatelessWidget {
   const _ClientReport({
     required this.report,
+    required this.draftEpoch,
+    required this.canRestoreDraft,
+    required this.onRestoreDraft,
     required this.initialFeedback,
+    required this.onUseSummaryAsDraft,
     required this.onFeedbackChanged,
   });
 
   final WeeklyReport report;
 
   /// 입력창에 채워 둘 문구. 트레이너가 고치던 중이면 그 내용이다.
+  /// 바뀌면 입력창을 새 문구로 다시 만든다.
+  final int draftEpoch;
+
+  /// 입력창이 자동 생성 초안과 달라져 되돌릴 것이 있는가.
+  final bool canRestoreDraft;
+
+  /// 입력창을 자동 생성 초안으로 되돌린다.
+  final VoidCallback onRestoreDraft;
+
   final String initialFeedback;
+
+  /// 요약을 피드백 초안으로 옮긴다.
+  final ValueChanged<String> onUseSummaryAsDraft;
 
   /// 입력창이 바뀔 때마다 현재 문구를 올려 준다 — 전송은 헤더 공유 메뉴가 한다.
   final ValueChanged<String> onFeedbackChanged;
@@ -538,19 +579,36 @@ class _ClientReport extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        const _ReportAiCard(),
+        _ReportAiCard(report: report, onUseAsDraft: onUseSummaryAsDraft),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
           title: l.reportsFeedbackTitle,
           // 저장 버튼을 제목 행에 둔다 — 입력창 위에 버튼만 있는 줄이 따로
           // 있으면 카드가 그만큼 세로로 늘어난다.
-          trailing: Tooltip(
-            message: l.reportsFeedbackSaveUnsupported,
-            child: ActionButton(label: l.reportsFeedbackSave, onPressed: null),
+          // 되돌리기를 저장 옆에 둔다 — 입력창을 되돌릴 수단이 그 입력창 바로
+          // 위에 있어야 한다.
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ActionButton(
+                label: l.reportsFeedbackRestore,
+                icon: Icons.undo,
+                onPressed: canRestoreDraft ? onRestoreDraft : null,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Tooltip(
+                message: l.reportsFeedbackSaveUnsupported,
+                child: ActionButton(
+                  label: l.reportsFeedbackSave,
+                  onPressed: null,
+                ),
+              ),
+            ],
           ),
           child: _FeedbackEditor(
             key: ValueKey<String>(
-              'feedback-${report.client.id}-${report.weekStart.toIso8601String()}',
+              'feedback-${report.client.id}-'
+              '${report.weekStart.toIso8601String()}-$draftEpoch',
             ),
             initialText: initialFeedback,
             onChanged: onFeedbackChanged,
@@ -1100,11 +1158,27 @@ class _FeedbackEditorState extends State<_FeedbackEditor> {
       controller: _controller,
       onChanged: widget.onChanged,
       minLines: 4,
-      maxLines: 7,
+      // 내용에 맞춰 자란다. 초안이 문단 글이 되면서 7줄에서 잘려, 트레이너가
+      // 보낼 글을 스크롤해야만 다 읽을 수 있었다 — 손보기 전에 전체를 읽는
+      // 것이 이 입력창의 용도다(#755).
+      maxLines: null,
       // 입력 글씨의 기본은 bodyLarge(17)라 카드의 다른 글씨보다 유독 컸다.
       // 임의의 숫자 대신 타이포 스케일의 한 단계 아래를 쓴다.
       style: Theme.of(context).textTheme.bodySmall,
-      decoration: InputDecoration(hintText: l.reportsFeedbackHint),
+      decoration: InputDecoration(
+        hintText: l.reportsFeedbackHint,
+        // 이 글은 회원에게 그대로 나간다. 무엇이 이미 채워져 있는지와 보내기
+        // 전에 할 일을 그 자리에서 말해 준다 — 'AI' 라고 하지 않는 이유는
+        // 이 초안이 수치에서 조립한 템플릿이지 생성된 문장이 아니어서다.
+        helperText: l.reportsFeedbackDraftNote,
+        helperMaxLines: 2,
+        // 본문과 같은 톤이면 초안의 일부처럼 읽힌다 — 안내는 한 단계 연하게.
+        helperStyle: const TextStyle(
+          color: AppColors.disabledForeground,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
@@ -1292,12 +1366,28 @@ class _WeekTrendBar extends StatelessWidget {
     );
   }
 }
-class _ReportAiCard extends StatelessWidget {
-  const _ReportAiCard();
+/// 리포트 요약 카드 — 트레이너가 매주 같은 문장을 처음부터 쓰지 않게 한다.
+///
+/// 결과는 그대로 읽는 글이 아니라 **피드백 초안으로 가져다 고칠 재료**다.
+/// 그래서 `피드백으로 가져오기` 가 이 카드의 본래 동선이고, 문장이 마음에 안
+/// 들면 다시 생성한다(#755).
+///
+/// 데모에는 모델이 없어 수치에서 조립한 문장이 온다. 실서버도 공급자 장애면
+/// 같은 문장으로 되돌아온다 — 그 경우 `생성` 배지를 달지 않아, 트레이너가 이
+/// 문장을 어디까지 믿을지 알 수 있다.
+class _ReportAiCard extends ConsumerWidget {
+  const _ReportAiCard({required this.report, required this.onUseAsDraft});
+
+  final WeeklyReport report;
+
+  /// 요약을 피드백 입력창으로 옮긴다.
+  final void Function(String draft) onUseAsDraft;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final key = (client: report.client, weekStart: report.weekStart);
+    final summary = ref.watch(reportSummaryProvider(key));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -1306,6 +1396,7 @@ class _ReportAiCard extends StatelessWidget {
         border: Border.all(color: AppColors.aiCardGradientEnd),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const Icon(Icons.auto_awesome, color: AppColors.primary, size: 19),
           const SizedBox(width: AppSpacing.sm),
@@ -1313,21 +1404,54 @@ class _ReportAiCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  l.reportsAiTitle,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        l.reportsAiTitle,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (summary.valueOrNull?.isGenerated ?? false)
+                      Text(
+                        l.reportsAiGenerated,
+                        style: const TextStyle(
+                          color: AppColors.subtleForeground,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  l.reportsAiUnavailable,
-                  style: const TextStyle(
-                    color: AppColors.mutedForeground,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
+                summary.when(
+                  loading: () => Text(
+                    l.reportsAiLoading,
+                    style: const TextStyle(
+                      color: AppColors.mutedForeground,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  // 생성이 실패해도 카드가 비지 않는다 — 예전 안내문으로
+                  // 되돌아가 그 자리에 무엇이 올지는 말해 준다.
+                  error: (_, _) => Text(
+                    l.reportsAiUnavailable,
+                    style: const TextStyle(
+                      color: AppColors.mutedForeground,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  data: (value) => _SummaryBody(
+                    summary: value,
+                    onRegenerate: () =>
+                        ref.invalidate(reportSummaryProvider(key)),
+                    onUseAsDraft: () => onUseAsDraft(value.asDraft),
                   ),
                 ),
               ],
@@ -1337,6 +1461,100 @@ class _ReportAiCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SummaryBody extends StatelessWidget {
+  const _SummaryBody({
+    required this.summary,
+    required this.onRegenerate,
+    required this.onUseAsDraft,
+  });
+
+  final ReportSummary summary;
+  final VoidCallback onRegenerate;
+  final VoidCallback onUseAsDraft;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          summary.headline,
+          style: const TextStyle(
+            color: AppColors.foreground,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            height: 1.4,
+          ),
+        ),
+        for (final point in summary.points) ...<Widget>[
+          const SizedBox(height: 2),
+          Text(
+            '· $point',
+            style: const TextStyle(
+              color: AppColors.mutedForeground,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: <Widget>[
+            _SummaryAction(
+              label: l.reportsAiUseAsDraft,
+              icon: Icons.edit_note,
+              onTap: onUseAsDraft,
+            ),
+            const SizedBox(width: AppSpacing.md),
+            _SummaryAction(
+              label: l.reportsAiRegenerate,
+              icon: Icons.refresh,
+              onTap: onRegenerate,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryAction extends StatelessWidget {
+  const _SummaryAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: const BorderRadius.all(AppRadius.sm),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 리포트를 내보내는 두 경로를 한 메뉴로 모은 헤더 액션. (#735)

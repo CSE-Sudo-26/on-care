@@ -44,7 +44,8 @@ from app.schemas.trainer_api import (
     ClientCoachRequest, ClientDietEntryOut,
     DashboardCoachingSummaryOut,
     MemberHealthProfileOut, MemberHealthProfileUpdate,
-    ReportSendRequest, RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
+    ReportSendRequest, ReportSummaryOut,
+    RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineFeedbackRequest,
     ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
@@ -63,6 +64,7 @@ from app.services import (
     diet_photo_service,
     notification_service,
     trainer_dashboard_coaching_service,
+    trainer_report_summary_service,
     trainer_routine_options_service,
     trainer_service,
 )
@@ -1151,6 +1153,36 @@ def trainer_client_report(
     """담당 고객의 주간 리포트. 아무 요일을 줘도 그 주의 월요일로 정규화한다."""
     _require_client(db, trainer.id, member_id)
     return trainer_service.build_weekly_report(
+        db, trainer.id, member_id, _report_week(week_start or trainer_service.today_iso())
+    )
+
+
+@router.get(
+    "/trainer/clients/{member_id}/report/summary",
+    response_model=ReportSummaryOut,
+)
+def trainer_client_report_summary(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    week_start: str | None = Query(None, description="YYYY-MM-DD (기본: 이번 주)"),
+) -> ReportSummaryOut:
+    """그 주의 리포트 요약.
+
+    리포트 본문과 **따로** 부른다. 생성에 몇 초가 걸리는데 한 응답에 묶으면
+    고객을 고를 때마다 화면 전체가 그만큼 멈춘다.
+    """
+    _require_client(db, trainer.id, member_id)
+    settings = get_settings()
+    if settings.rate_limit_enabled:
+        # 트레이너 단위로 비용 버킷을 나눈다 — 같은 헬스장의 다른 트레이너가
+        # 한도를 대신 소진하지 않게.
+        limiter.check(
+            f"report-summary:trainer:{trainer.id}",
+            settings.routine_options_per_minute,
+            60.0,
+        )
+    return trainer_report_summary_service.generate_summary(
         db, trainer.id, member_id, _report_week(week_start or trainer_service.today_iso())
     )
 
