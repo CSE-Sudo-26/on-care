@@ -56,8 +56,12 @@ def test_exercise_seed_skips_future_weekdays(client, db_session):
 
 
 def test_exercise_seed_is_idempotent(client, db_session):
-    """재실행해도 세션 수가 늘지 않는다(세션 id 단위 멱등)."""
-    from app.db.seed_member_data import _seed_exercise
+    """재실행해도 세션 수가 늘지 않는다.
+
+    김민수는 픽스처 회원이라 `_seed_from_fixture` 가 그의 `seed-` 행을 통째로
+    다시 깐다 — 그래도 결과는 같아야 한다(오늘치가 이미 있으면 손대지 않는다).
+    """
+    from app.db.seed_member_data import _seed_from_fixture
     from app.models.models import ExerciseSession
 
     def _count() -> int:
@@ -72,9 +76,44 @@ def test_exercise_seed_is_idempotent(client, db_session):
 
     before = _count()
     assert before > 0
-    _seed_exercise(db_session, _MEMBER_ID)
-    _seed_exercise(db_session, _MEMBER_ID)
+    _seed_from_fixture(db_session, _MEMBER_ID)
+    _seed_from_fixture(db_session, _MEMBER_ID)
     assert _count() == before
+
+
+def test_seeded_days_match_the_fixture(client, db_session):
+    """DB 에 들어간 김민수의 하루가 픽스처가 말하는 값과 같다.
+
+    두 앱은 같은 픽스처를 읽으므로, 이 단정이 곧 "백엔드로 붙여도 데모에서 보던
+    숫자가 그대로"라는 뜻이다(#757).
+    """
+    from app.db.demo_fixture import load_fixture
+    from app.models.models import DietEntry, RoutineHistory
+
+    days = {d.iso: d for d in load_fixture().days_for(clock.today())}
+
+    rows = db_session.scalars(
+        select(DietEntry).where(DietEntry.user_id == _MEMBER_ID)
+    ).all()
+    totals: dict[str, int] = {}
+    for row in rows:
+        if not row.id.startswith("seed-"):
+            continue  # 회원이 직접 남긴 기록은 픽스처 소관이 아니다.
+        totals[row.date] = totals.get(row.date, 0) + row.total_calories
+    assert totals, "김민수 식단 시드가 없습니다."
+    for iso, calories in totals.items():
+        assert calories == days[iso].calories, f"{iso} 칼로리가 픽스처와 다릅니다."
+
+    history = db_session.scalars(
+        select(RoutineHistory).where(RoutineHistory.member_id == _MEMBER_ID)
+    ).all()
+    assert history, "김민수 운동 이력 시드가 없습니다."
+    for row in history:
+        if not row.id.startswith("seed-"):
+            continue
+        assert row.completion_rate == days[row.date].completion, (
+            f"{row.date} 이행률이 픽스처와 다릅니다."
+        )
 
 
 def test_health_profile_seeded_once(client, db_session):
