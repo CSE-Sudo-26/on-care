@@ -310,6 +310,7 @@ class _PeriodToggle extends StatelessWidget {
       DietPeriodTab.month: l.exThisMonth,
     };
     return Container(
+      key: const ValueKey<String>('diet-period-toggle'),
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: FigmaColors.statBg,
@@ -384,28 +385,33 @@ class _NutritionSectionHeader extends StatelessWidget {
         period == DietPeriodTab.day ? 10 : 0,
       ),
       child: Row(
+        // 줄 자체를 지목할 수 있어야 토글이 줄 오른쪽 끝에 붙었는지를 테스트가
+        // 잴 수 있다(#761).
+        key: const ValueKey<String>('nutrition-section-header'),
+        // 남는 폭을 제목과 토글 **사이**로 보낸다. 제목을 `Expanded` 로 늘리면
+        // 제목이 절반을 tight 로 가져가고, 그 절반을 다 쓰지 않은 토글의 잔여분이
+        // 줄 끝에 빈 자리로 쌓여 토글이 가운데에 떴다(#761). 넓은 화면일수록 심했다.
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          // 토글을 카드 오른쪽 끝에 붙인다 — 운동 탭 '운동 현황' 과 같은 자리라
-          // 두 탭을 오가며 같은 곳에서 기간을 바꾼다.
-          //
-          // `Spacer` 가 아니라 `Expanded` 로 미는 이유: 좁은 화면·큰 글자 배율에서
-          // 제목이 토글을 밀어내 Row 가 넘치던 문제(#684 리뷰)를 그대로 막아야
-          // 한다. 제목이 남은 자리를 다 쓰되 먼저 줄어든다.
-          Expanded(
-            child: Text(
-              l.dietNutritionSummary,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
+          // 제목·토글 둘 다 접힌다. 좁은 화면·큰 글자 배율에서 제목이 토글을
+          // 밀어내 Row 가 넘치던 문제(#684 리뷰, #739)를 그대로 막아야 한다.
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text(
+                l.dietNutritionSummary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: FigmaColors.ink,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          // 큰 글자 배율에서는 토글 자체가 남는 폭보다 커진다. 접히게 두어야 줄이
-          // 넘치지 않는다(#739). 보통 배율에서는 최소 폭 그대로라 모양이 같다.
+          // 토글은 카드 오른쪽 끝 — 운동 탭 '운동 현황' 과 같은 자리라 두 탭을
+          // 오가며 같은 곳에서 기간을 바꾼다.
           Flexible(
             child: _PeriodToggle(active: period, onChanged: onChanged),
           ),
@@ -1389,6 +1395,10 @@ class _MealLog extends StatelessWidget {
         children: <Widget>[
           Row(
             key: const ValueKey<String>('meal-log-header'),
+            // 추가 버튼은 늘 오른쪽 끝이다. `Spacer` 로 밀면 제목+날짜 묶음이
+            // 배정받은 폭을 다 쓰지 않은 만큼 버튼 뒤에 빈 자리가 쌓여, 버튼이
+            // 줄 가운데로 당겨졌다(#761).
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               // 제목은 날짜에 매이지 않는다. 이 목록은 늘 **선택한 날**을 보여 주므로
               // '오늘의 식단' 이면 사흘 전을 골랐을 때 제목이 거짓말이 된다(#687).
@@ -1436,7 +1446,7 @@ class _MealLog extends StatelessWidget {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               _AddButton(onTap: onAdd),
             ],
           ),
@@ -1536,59 +1546,64 @@ class _MealCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
+                  key: const ValueKey<String>('meal-card-header'),
+                  // 화살표는 늘 카드 오른쪽 끝이다. `Spacer` 로 밀면 접히는
+                  // 배지·시각이 배정받은 폭을 다 쓰지 않고, 그 잔여분이 화살표
+                  // **뒤에** 쌓여 화살표가 카드 가운데에 떴다(#761).
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    // 배지·시각·칼로리는 남는 폭 안에서 접힌다. 넷 다 고정 폭이면
-                    // 320px 에서 줄이 넘쳤다(#739). 화살표만 접지 않는다 — 카드를
-                    // 누를 수 있다는 표시가 사라지면 안 된다.
+                    // 배지·시각은 한 덩이로 묶어 왼쪽에 붙인다. 바깥 줄을 늘
+                    // '앞 묶음 | 화살표' 두 덩이로 두어야 `spaceBetween` 이
+                    // 시각을 가운데로 밀어내지 않는다.
+                    //
+                    // 묶음 안에서는 남는 폭 안으로 접힌다. 고정 폭이면 320px 에서
+                    // 줄이 넘쳤다(#739). 화살표만 접지 않는다 — 카드를 누를 수
+                    // 있다는 표시가 사라지면 안 된다.
                     Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: FigmaColors.primaryA(0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          mealBadge(l, meal.mealType),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: FigmaColors.primary,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: FigmaColors.primaryA(0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                mealBadge(l, meal.mealType),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: FigmaColors.primary,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              meal.time,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        meal.time,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Flexible(
-                      child: Text(
-                        '${_formatInt(meal.total)} ${l.unitKcal}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: FigmaColors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
+                    // 끼니 합계는 여기 적지 않는다 — 바로 아래 배지 줄의
+                    // `칼로리 …kcal` 과 같은 값이다. 같은 숫자를 두 번 읽히게
+                    // 두면 어느 쪽이 무엇인지 되레 흐려진다(#761).
                     const Icon(
                       Icons.chevron_right,
                       size: 16,
