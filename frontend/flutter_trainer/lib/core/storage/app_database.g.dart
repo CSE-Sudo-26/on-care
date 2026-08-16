@@ -3402,6 +3402,21 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _programSentMeta = const VerificationMeta(
+    'programSent',
+  );
+  @override
+  late final GeneratedColumn<bool> programSent = GeneratedColumn<bool>(
+    'program_sent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("program_sent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -3426,6 +3441,7 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     status,
     note,
     programJson,
+    programSent,
     sortOrder,
   ];
   @override
@@ -3511,6 +3527,15 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         ),
       );
     }
+    if (data.containsKey('program_sent')) {
+      context.handle(
+        _programSentMeta,
+        programSent.isAcceptableOrUnknown(
+          data['program_sent']!,
+          _programSentMeta,
+        ),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -3566,6 +3591,10 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         DriftSqlType.string,
         data['${effectivePrefix}program_json'],
       )!,
+      programSent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}program_sent'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -3599,6 +3628,11 @@ class TrainerScheduleRow extends DataClass
   final String status;
   final String note;
   final String programJson;
+
+  /// 완료한 세션의 프로그램을 회원에게 보냈는가. 데모에는 받을 회원 백엔드가
+  /// 없어 전송은 이 표시로 끝나지만, 화면이 '전송됨' 을 사실대로 말하고 같은
+  /// 세션을 두 번 보내지 않게 하려면 어딘가에 남아야 한다(#822).
+  final bool programSent;
   final int sortOrder;
   const TrainerScheduleRow({
     required this.id,
@@ -3611,6 +3645,7 @@ class TrainerScheduleRow extends DataClass
     required this.status,
     required this.note,
     required this.programJson,
+    required this.programSent,
     required this.sortOrder,
   });
   @override
@@ -3628,6 +3663,7 @@ class TrainerScheduleRow extends DataClass
     map['status'] = Variable<String>(status);
     map['note'] = Variable<String>(note);
     map['program_json'] = Variable<String>(programJson);
+    map['program_sent'] = Variable<bool>(programSent);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -3646,6 +3682,7 @@ class TrainerScheduleRow extends DataClass
       status: Value(status),
       note: Value(note),
       programJson: Value(programJson),
+      programSent: Value(programSent),
       sortOrder: Value(sortOrder),
     );
   }
@@ -3666,6 +3703,7 @@ class TrainerScheduleRow extends DataClass
       status: serializer.fromJson<String>(json['status']),
       note: serializer.fromJson<String>(json['note']),
       programJson: serializer.fromJson<String>(json['programJson']),
+      programSent: serializer.fromJson<bool>(json['programSent']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -3683,6 +3721,7 @@ class TrainerScheduleRow extends DataClass
       'status': serializer.toJson<String>(status),
       'note': serializer.toJson<String>(note),
       'programJson': serializer.toJson<String>(programJson),
+      'programSent': serializer.toJson<bool>(programSent),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
@@ -3698,6 +3737,7 @@ class TrainerScheduleRow extends DataClass
     String? status,
     String? note,
     String? programJson,
+    bool? programSent,
     int? sortOrder,
   }) => TrainerScheduleRow(
     id: id ?? this.id,
@@ -3710,6 +3750,7 @@ class TrainerScheduleRow extends DataClass
     status: status ?? this.status,
     note: note ?? this.note,
     programJson: programJson ?? this.programJson,
+    programSent: programSent ?? this.programSent,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   TrainerScheduleRow copyWithCompanion(TrainerScheduleEntriesCompanion data) {
@@ -3730,6 +3771,9 @@ class TrainerScheduleRow extends DataClass
       programJson: data.programJson.present
           ? data.programJson.value
           : this.programJson,
+      programSent: data.programSent.present
+          ? data.programSent.value
+          : this.programSent,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -3747,6 +3791,7 @@ class TrainerScheduleRow extends DataClass
           ..write('status: $status, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
+          ..write('programSent: $programSent, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
@@ -3764,6 +3809,7 @@ class TrainerScheduleRow extends DataClass
     status,
     note,
     programJson,
+    programSent,
     sortOrder,
   );
   @override
@@ -3780,6 +3826,7 @@ class TrainerScheduleRow extends DataClass
           other.status == this.status &&
           other.note == this.note &&
           other.programJson == this.programJson &&
+          other.programSent == this.programSent &&
           other.sortOrder == this.sortOrder);
 }
 
@@ -3795,6 +3842,7 @@ class TrainerScheduleEntriesCompanion
   final Value<String> status;
   final Value<String> note;
   final Value<String> programJson;
+  final Value<bool> programSent;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const TrainerScheduleEntriesCompanion({
@@ -3808,6 +3856,7 @@ class TrainerScheduleEntriesCompanion
     this.status = const Value.absent(),
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
+    this.programSent = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3822,6 +3871,7 @@ class TrainerScheduleEntriesCompanion
     required String status,
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
+    this.programSent = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3839,6 +3889,7 @@ class TrainerScheduleEntriesCompanion
     Expression<String>? status,
     Expression<String>? note,
     Expression<String>? programJson,
+    Expression<bool>? programSent,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -3853,6 +3904,7 @@ class TrainerScheduleEntriesCompanion
       if (status != null) 'status': status,
       if (note != null) 'note': note,
       if (programJson != null) 'program_json': programJson,
+      if (programSent != null) 'program_sent': programSent,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3869,6 +3921,7 @@ class TrainerScheduleEntriesCompanion
     Value<String>? status,
     Value<String>? note,
     Value<String>? programJson,
+    Value<bool>? programSent,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -3883,6 +3936,7 @@ class TrainerScheduleEntriesCompanion
       status: status ?? this.status,
       note: note ?? this.note,
       programJson: programJson ?? this.programJson,
+      programSent: programSent ?? this.programSent,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -3921,6 +3975,9 @@ class TrainerScheduleEntriesCompanion
     if (programJson.present) {
       map['program_json'] = Variable<String>(programJson.value);
     }
+    if (programSent.present) {
+      map['program_sent'] = Variable<bool>(programSent.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -3943,6 +4000,7 @@ class TrainerScheduleEntriesCompanion
           ..write('status: $status, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
+          ..write('programSent: $programSent, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -6177,6 +6235,7 @@ typedef $$TrainerScheduleEntriesTableCreateCompanionBuilder =
       required String status,
       Value<String> note,
       Value<String> programJson,
+      Value<bool> programSent,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6192,6 +6251,7 @@ typedef $$TrainerScheduleEntriesTableUpdateCompanionBuilder =
       Value<String> status,
       Value<String> note,
       Value<String> programJson,
+      Value<bool> programSent,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6252,6 +6312,11 @@ class $$TrainerScheduleEntriesTableFilterComposer
 
   ColumnFilters<String> get programJson => $composableBuilder(
     column: $table.programJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6320,6 +6385,11 @@ class $$TrainerScheduleEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -6368,6 +6438,11 @@ class $$TrainerScheduleEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get programJson => $composableBuilder(
     column: $table.programJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
     builder: (column) => column,
   );
 
@@ -6431,6 +6506,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
+                Value<bool> programSent = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerScheduleEntriesCompanion(
@@ -6444,6 +6520,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 status: status,
                 note: note,
                 programJson: programJson,
+                programSent: programSent,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -6459,6 +6536,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 required String status,
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
+                Value<bool> programSent = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerScheduleEntriesCompanion.insert(
@@ -6472,6 +6550,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 status: status,
                 note: note,
                 programJson: programJson,
+                programSent: programSent,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),

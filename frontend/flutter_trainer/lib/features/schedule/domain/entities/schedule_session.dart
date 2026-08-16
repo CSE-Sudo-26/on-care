@@ -45,10 +45,15 @@ class ScheduleSession {
     required this.status,
     required this.note,
     required this.program,
+    this.programSent = false,
   });
 
   /// Row id.
   final String id;
+
+  /// 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미 보낸
+  /// 세션은 화면에서 다른 것을 말해야 한다(#822).
+  final bool programSent;
 
   /// Calendar day (`YYYY-MM-DD`). Carried on the entity because the week
   /// calendar and the client's 루틴 tab both render sessions from more
