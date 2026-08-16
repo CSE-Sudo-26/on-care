@@ -785,8 +785,10 @@ class TrainerRoutine(Base):
     __tablename__ = "trainer_routines"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    trainer_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    #: 배정한 트레이너. 담당 트레이너가 없는 회원에게 AI 가 안전 범위에서 직접
+    #: 추천한 개인운동은 이 값이 비어 있다(#782) — 승인할 사람이 없기 때문이다.
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
     )
     member_id: Mapped[str] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
