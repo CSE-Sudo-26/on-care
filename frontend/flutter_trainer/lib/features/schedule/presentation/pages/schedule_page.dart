@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -64,6 +65,13 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   /// Session shown in the week view's detail panel.
   String? _selectedSessionId;
+
+  /// 프로그램 전송이 진행 중인 세션. 두 번 눌러 두 번 보내지 않는다.
+  String? _sendingProgramId;
+
+  /// 세션별 전송 멱등키. 실패한 시도의 키를 그대로 다시 써야 재시도가 중복
+  /// 배정을 만들지 않는다(#581 과 같은 규약).
+  final Map<String, String> _sendRequestIds = <String, String>{};
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -240,6 +248,35 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // the session stays 예정 and the trainer is told (review PR 237).
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l.schedCompleteFailed)));
+    }
+  }
+
+  /// 완료한 세션의 프로그램을 그 회원에게 보낸다. (#822)
+  ///
+  /// 멱등키를 실어 보내므로 실패 후 다시 눌러도 회원의 루틴이 두 벌 생기지
+  /// 않는다. 성공하면 세션 행에 남아, 화면이 '전송됨' 을 사실대로 말한다.
+  Future<void> _sendProgram(ScheduleSession s) async {
+    if (_sendingProgramId != null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
+    setState(() => _sendingProgramId = s.id);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .sendProgram(
+            s.id,
+            clientRequestId: _sendRequestIds[s.id] ??= newClientRequestId(),
+          );
+      if (!mounted) return;
+      _sendRequestIds.remove(s.id); // 다음 전송은 새 시도다.
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.schedSentTo(s.clientName))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l.coachSendFailed)));
+    } finally {
+      if (mounted) setState(() => _sendingProgramId = null);
     }
   }
 
@@ -481,6 +518,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ? () => _confirmComplete(session)
               : null,
           programDateLabel: dateText,
+          sendingProgram: _sendingProgramId == session.id,
+          onSendProgram: () => _sendProgram(session),
           inlineEditor: _editingScheduleId == session.id
               ? _SessionSheet(
                   key: ValueKey<String>('week-session-editor-${session.id}'),
@@ -623,6 +662,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               ? () => _confirmComplete(s)
               : null,
           programDateLabel: dateLabel,
+          sendingProgram: _sendingProgramId == s.id,
+          onSendProgram: () => _sendProgram(s),
           inlineEditor: _editingScheduleId == s.id
               ? _SessionSheet(
                   key: ValueKey<String>('inline-session-editor-${s.id}'),
@@ -1828,6 +1869,8 @@ class _TimelineRow extends StatelessWidget {
     required this.onChat,
     required this.onComplete,
     required this.programDateLabel,
+    required this.sendingProgram,
+    required this.onSendProgram,
     required this.inlineEditor,
   });
 
@@ -1839,6 +1882,12 @@ class _TimelineRow extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final String programDateLabel;
+
+  /// 이 세션의 프로그램 전송이 진행 중인가. (#822)
+  final bool sendingProgram;
+
+  /// 완료한 세션의 프로그램을 회원에게 보낸다.
+  final VoidCallback onSendProgram;
   final Widget? inlineEditor;
 
   /// 예정 sessions only — flips to 완료 and logs the 운동기록.
@@ -1880,6 +1929,8 @@ class _TimelineRow extends StatelessWidget {
                   onChat: onChat,
                   onComplete: onComplete,
                   programDateLabel: programDateLabel,
+                  sendingProgram: sendingProgram,
+                  onSendProgram: onSendProgram,
                   inlineEditor: inlineEditor,
                 ),
         ),
@@ -1925,6 +1976,8 @@ class _SessionCard extends ConsumerWidget {
     required this.onChat,
     required this.onComplete,
     required this.programDateLabel,
+    required this.sendingProgram,
+    required this.onSendProgram,
     required this.inlineEditor,
   });
 
@@ -1937,6 +1990,12 @@ class _SessionCard extends ConsumerWidget {
   final VoidCallback onChat;
   final String programDateLabel;
   final Widget? inlineEditor;
+
+  /// 이 세션의 프로그램 전송이 진행 중인가. (#822)
+  final bool sendingProgram;
+
+  /// 완료한 세션의 프로그램을 회원에게 보낸다.
+  final VoidCallback onSendProgram;
 
   /// 예정 sessions only — flips to 완료 and logs the 운동기록.
   final VoidCallback? onComplete;
@@ -2076,6 +2135,11 @@ class _SessionCard extends ConsumerWidget {
                       _SendButton(
                         clientName: s.clientName,
                         dateLabel: programDateLabel,
+                        sent: s.programSent,
+                        sending: sendingProgram,
+                        onSend: (s.programSent || sendingProgram)
+                            ? null
+                            : onSendProgram,
                       ),
                     ],
                   ],
@@ -2398,44 +2462,74 @@ class _NoteBox extends StatelessWidget {
 }
 
 class _SendButton extends StatelessWidget {
-  const _SendButton({required this.clientName, required this.dateLabel});
+  const _SendButton({
+    required this.clientName,
+    required this.dateLabel,
+    required this.sent,
+    required this.sending,
+    required this.onSend,
+  });
 
   final String clientName;
   final String dateLabel;
 
+  /// 이미 보낸 세션인가. 보낸 뒤에는 같은 자리에서 그 사실을 말한다 — 다시
+  /// 누를 수 있게 두면 트레이너가 두 번 보냈는지 알 수 없다.
+  final bool sent;
+
+  /// 전송이 진행 중인가.
+  final bool sending;
+
+  /// 보내기. 이미 보냈거나 진행 중이면 null 이다.
+  final VoidCallback? onSend;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    return Tooltip(
-      message: l.schedSendUnsupported,
-      child: Container(
-        height: 42,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: AppColors.inputBackground,
-          borderRadius: BorderRadius.all(AppRadius.lg),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(
-              Icons.send_outlined,
-              size: 15,
-              color: AppColors.disabledForeground,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Flexible(
-              child: Text(
-                l.schedSentProgramTo(clientName, dateLabel),
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.disabledForeground,
+    final Color foreground = sent
+        ? AppColors.success
+        : (sending ? AppColors.disabledForeground : AppColors.primary);
+    return Material(
+      color: AppColors.inputBackground,
+      borderRadius: const BorderRadius.all(AppRadius.lg),
+      child: InkWell(
+        key: const ValueKey<String>('schedule-send-program'),
+        onTap: onSend,
+        borderRadius: const BorderRadius.all(AppRadius.lg),
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (sending)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(
+                  sent ? Icons.check_circle_outline : Icons.send_outlined,
+                  size: 15,
+                  color: foreground,
+                ),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  sent
+                      ? l.schedSentTo(clientName)
+                      : l.schedSentProgramTo(clientName, dateLabel),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: foreground,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
