@@ -312,31 +312,31 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
               ),
             ),
             const SizedBox(height: 20),
-            // 2) AI 피드백
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _ExerciseFeedback(message: week.aiCoachMessage),
-            ),
-            const SizedBox(height: 20),
-            // 3) 운동 현황 (오늘 / 이번 주 / 이번 달)
+            // 2) 운동 현황 (오늘 / 이번 주 / 이번 달)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _ActivityStatus(week: week),
             ),
             const SizedBox(height: 20),
-            // 4) 운동 현황에 이어 담당 트레이너와 직접 추천 운동을 확인한다.
-            const CoachCard(),
-            // 5) 오늘 완료한 PT 일지 (트레이너 연동)
+            // 3) 오늘 완료한 PT 일지 (트레이너 피드백 포함)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: _PtLogCard(),
             ),
             const SizedBox(height: 20),
-            // 6) 건강 기록과 PT 피드백 기반 AI 맞춤 개인운동
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: AiRecommendedExerciseCard(),
+            // 4) AI 코칭 — 코칭 포인트와 추천 개인운동.
+            //
+            // PT 피드백 바로 다음에 둔다. `오늘 PT 에서 받은 피드백 → 그래서
+            // 어떤 관리가 필요한지 → 어떤 개인운동을 하면 되는지` 가 한 흐름으로
+            // 읽혀야 한다. 예전에는 조언이 맨 위, 추천 운동이 맨 아래라 그 사이를
+            // 회원이 직접 이어 붙여야 했다(#782).
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: AiCoachingCard(coachingPoint: week.aiCoachMessage),
             ),
+            const SizedBox(height: 20),
+            // 5) 담당 트레이너 — 관계와 소통만. 추천 운동은 AI 코칭에 모였다.
+            const CoachCard(),
           ],
         ],
       ),
@@ -1751,58 +1751,6 @@ class _StackedBarPainter extends CustomPainter {
       oldDelegate.todayIndex != todayIndex ||
       oldDelegate.todayLabel != todayLabel ||
       oldDelegate.progress != progress;
-}
-
-class _ExerciseFeedback extends StatelessWidget {
-  const _ExerciseFeedback({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    if (message.trim().isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: FigmaColors.softBlue,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: FigmaColors.primaryA(0.15)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const OniAvatar(size: 40),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  l.exAiFeedback,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: FigmaColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    height: 1.5,
-                    fontWeight: FontWeight.w500,
-                    color: FigmaColors.ink,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ───────────────────────────────────── 오늘 완료한 PT 일지 ──
