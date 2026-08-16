@@ -754,3 +754,92 @@ def test_member_own_log_still_editable(client):
     assert put.status_code == 200, put.text
     assert put.json()["source"] == "member"
     assert client.delete(f"/v1/exercise/sessions/{sid}", headers=mh).status_code == 200
+
+
+def test_send_completed_program_assigns_routine_once(client, db_session, make_pt_session):
+    """완료한 세션의 프로그램이 회원 루틴으로 가고, 두 번 눌러도 한 번만 간다. (#822)
+
+    수업 뒤 "오늘 이걸 했습니다" 를 넘기는 자리다. 새 배정 경로가 아니라 코칭
+    탭과 같은 배정을 타므로, 회원 화면에는 출처마다 다른 루틴이 생기지 않는다.
+    """
+    token = _tok(client)
+    sid = make_pt_session(
+        token,
+        time="19:30",
+        duration_minutes=50,
+        program=[
+            {"name": "레그프레스", "sets": 3, "reps": "12회", "weight": "80kg"},
+            {"name": "코어 강화", "sets": 3, "reps": "10회", "weight": ""},
+        ],
+    )
+
+    # 시드에 이미 배정된 루틴이 있으므로 개수의 **변화**로 센다.
+    before = client.get("/v1/trainer/clients/user-jisu/routines", headers=_h(token))
+    assert before.status_code == 200
+    before_count = len(before.json())
+
+    # 완료 전에는 보낼 수 없다 — 아직 한 것이 아니라 할 것이다.
+    early = client.post(
+        f"/v1/trainer/schedule/{sid}/program/send", json={}, headers=_h(token)
+    )
+    assert early.status_code == 400
+
+    done = client.post(
+        f"/v1/trainer/schedule/{sid}/complete", json={"note": ""}, headers=_h(token)
+    )
+    assert done.status_code == 200
+    assert done.json()["program_sent"] is False
+
+    sent = client.post(
+        f"/v1/trainer/schedule/{sid}/program/send",
+        json={"client_request_id": "send-1"},
+        headers=_h(token),
+    )
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["program_sent"] is True
+
+    routines = client.get(
+        "/v1/trainer/clients/user-jisu/routines", headers=_h(token)
+    ).json()
+    assert len(routines) == before_count + 1, "전송이 회원 루틴을 만들지 않았다"
+
+    # 두 번째 호출은 멱등 — 회원 루틴이 겹치지 않는다.
+    again = client.post(
+        f"/v1/trainer/schedule/{sid}/program/send",
+        json={"client_request_id": "send-1"},
+        headers=_h(token),
+    )
+    assert again.status_code == 200
+    assert again.json()["program_sent"] is True
+    after = client.get(
+        "/v1/trainer/clients/user-jisu/routines", headers=_h(token)
+    ).json()
+    assert len(after) == len(routines), "재전송이 회원 루틴을 늘렸다"
+
+    # 조회 경로도 전송 사실을 그대로 말한다.
+    listed = client.get(
+        "/v1/trainer/schedule", params={"date": _today()}, headers=_h(token)
+    ).json()
+    row = next(s for s in listed if s["id"] == sid)
+    assert row["program_sent"] is True
+
+
+def test_send_program_requires_a_linked_member_and_a_program(client, make_pt_session):
+    """보낼 상대나 보낼 내용이 없으면 400 — 빈 루틴이 회원에게 가지 않는다. (#822)"""
+    token = _tok(client)
+
+    # 프로그램이 없는 세션
+    empty = make_pt_session(token, time="20:30", duration_minutes=30, program=[])
+    client.post(
+        f"/v1/trainer/schedule/{empty}/complete", json={"note": ""}, headers=_h(token)
+    )
+    r = client.post(
+        f"/v1/trainer/schedule/{empty}/program/send", json={}, headers=_h(token)
+    )
+    assert r.status_code == 400
+
+    # 없는 일정
+    missing = client.post(
+        "/v1/trainer/schedule/no-such-session/program/send", json={}, headers=_h(token)
+    )
+    assert missing.status_code == 404
