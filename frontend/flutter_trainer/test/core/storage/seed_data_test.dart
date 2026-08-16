@@ -116,7 +116,15 @@ void main() {
     // flattening the data back out to fifteen similar weeks fails here
     // rather than silently making half the UI unreachable.
     test('the roster covers the states the console has to render', () async {
-      await seedIfEmpty(db);
+      // 시계를 고정한다. 이 테스트가 요구하는 스펙트럼("기록이 끊긴 고객" 등)은
+      // 주가 얼마나 지났는지에 달려 있어, 실행한 날에 맡기면 주 초에는 존재할
+      // 수 없다 — 월요일이면 모두에게 하루치뿐이다(#826).
+      //
+      // 목요일에 고정한다. 계열은 월요일 이전 값을 지난주로 버리므로(#746),
+      // 네 가지 모양이 한 주 안에 모두 나타나려면 며칠이 지나 있어야 한다.
+      // 2026-08-20 은 목요일이다.
+      final pinned = DateTime(2026, 8, 20, 10);
+      await seedIfEmpty(db, clock: pinned);
       final clients = await db.select(db.trainerClients).get();
 
       List<int> sodiumWeek(TrainerClientRow c) =>
@@ -145,7 +153,7 @@ void main() {
       // 세 계열은 이번 주 월→일에 놓인다(#746). 화면이 요일 라벨과 함께
       // 그리므로 길이는 늘 7이고, 오늘 값은 오늘 요일 칸에 들어간다 — 카드의
       // 숫자와 그래프의 오늘 점이 같아야 한다.
-      final todayIndex = DateTime.now().weekday - 1;
+      final todayIndex = pinned.weekday - 1;
       for (final c in clients) {
         expect(
           <int>[
@@ -201,9 +209,10 @@ void main() {
       final full = clients.firstWhere(
         (c) => sodiumWeek(c).where((v) => v > 0).length > 3,
       );
-      final twelveWeeksAgo = DateTime.now().subtract(
-        const Duration(days: 7 * 11),
-      );
+      // 시드가 고정된 날짜 기준으로 만들어졌으므로, 얼마나 거슬러 올라가는지도
+      // 그 날짜에서 센다. 실제 오늘로 재면 시드가 만들어진 주와 어긋나 CI 가
+      // 도는 날에 따라 결과가 달라진다(#826).
+      final twelveWeeksAgo = pinned.subtract(const Duration(days: 7 * 11));
       final dailyRows =
           await (db.select(db.clientDailyMetrics)
                 ..where((t) => t.clientId.equals(full.id)))
