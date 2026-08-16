@@ -326,6 +326,21 @@ void main() {
       expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
     });
 
+    testWidgets('목표를 넘긴 날은 링을 채우되 100%라고 적지 않는다 (#820)', (tester) async {
+      // 강서연은 2,260 / 2,000 kcal 로 목표를 넘겼다.
+      await openDiet(tester, '강서연');
+
+      final ring = tester.widget<CircularProgressIndicator>(
+        find.byKey(const Key('client-nutrition-calorie-progress')),
+      );
+      // 링은 한 바퀴에서 멈춘다 — 넘긴 양은 링이 그릴 수 없다.
+      expect(ring.value, 1.0);
+      // 숫자는 자르지 않는다. '100%' 는 바로 아래 '목표보다 260 kcal 넘었어요'
+      // 와 정면으로 어긋난다.
+      expect(find.text('113%'), findsOneWidget);
+      expect(find.text('100%'), findsNothing);
+    });
+
     testWidgets('normal sodium and sugar use the user app sugar green', (
       tester,
     ) async {
