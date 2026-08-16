@@ -109,7 +109,9 @@ class _MainShellState extends ConsumerState<MainShell>
       body: navigationShell,
       floatingActionButton: OniFab(
         key: const Key('coachingFab'),
-        onTap: () => showCoachingSheet(context),
+        // 배지는 시트가 실제로 보여 줄 카드 수를 따른다. 열어서 확인하면 내려간다.
+        badgeCount: ref.watch(coachingBadgeCountProvider),
+        onTap: () => showCoachingSheet(context, ref: ref),
       ),
       bottomNavigationBar: SizedBox(
         height: barHeight + lift + effectiveBottomPadding,
