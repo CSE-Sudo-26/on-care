@@ -31,6 +31,23 @@ class _EmptyScheduleRepository implements ScheduleRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  /// 이 파일의 테스트는 그리드 모양만 본다 — 수정·삭제는 하루 시트 테스트가 맡는다.
+  @override
+  Future<ScheduleEvent> updateEvent(
+    String id, {
+    String? date,
+    String? time,
+    String? title,
+    ScheduleCategory? category,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteEvent(String id) async {
+    throw UnimplementedError();
+  }
 }
 
 /// 시트를 띄우는 버튼 하나짜리 화면.
@@ -284,5 +301,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
     expect(find.byKey(const Key('calendar-day-31')), findsOneWidget);
+  });
+
+  testWidgets('날짜 칸을 누르면 그 날의 일정이 펼쳐진다 (#784)', (WidgetTester tester) async {
+    // 예전에는 칸도 일정 칩도 어떤 탭에도 반응하지 않아, 한 번 넣은 일정을 열어
+    // 보거나 고치거나 지울 방법이 아예 없었다.
+    tester.view.physicalSize = const Size(900, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    const ScheduleEvent event = ScheduleEvent(
+      id: 'evt-1',
+      date: '2026-08-15',
+      time: '10:00',
+      title: '병원 정기검진',
+      category: ScheduleCategory.hospital,
+    );
+    await _openSheet(
+      tester,
+      august2026,
+      events: const <ScheduleEvent>[event],
+    );
+
+    await tester.tap(find.byKey(const Key('calendar-day-15')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('editEvent-evt-1')), findsOneWidget);
+    expect(find.byKey(const Key('deleteEvent-evt-1')), findsOneWidget);
+    // 빈 날에서도 그 날짜로 이어 만들 수 있어야 한다.
+    expect(find.byKey(const Key('dayEventsAdd')), findsOneWidget);
+  });
+
+  testWidgets('일정이 없는 날을 눌러도 그 날짜로 추가할 수 있다 (#784)', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _openSheet(tester, august2026);
+
+    await tester.tap(find.byKey(const Key('calendar-day-3')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이 날에는 일정이 없어요'), findsOneWidget);
+    expect(find.byKey(const Key('dayEventsAdd')), findsOneWidget);
   });
 }
