@@ -209,6 +209,12 @@ class LocalApiInterceptor extends Interceptor {
     if (method == 'PUT' && path.startsWith('/exercise/sessions/')) {
       return _exerciseUpdate;
     }
+    if (method == 'PUT' && path.startsWith('/schedule/events/')) {
+      return _scheduleUpdate;
+    }
+    if (method == 'DELETE' && path.startsWith('/schedule/events/')) {
+      return _scheduleDelete;
+    }
     return null;
   }
 
@@ -1138,6 +1144,73 @@ class LocalApiInterceptor extends Interceptor {
         'color_hex': colorHex,
       },
     );
+  }
+
+  /// PUT /schedule/events/{id} — 준 필드만 바꾼다(FastAPI 의 `exclude_unset`).
+  ///
+  /// 시간을 지우는 것은 `''` 를 넘기는 것이지 생략이 아니다. 그래서 키가 있는지
+  /// 로 판단하고, 값이 빈 문자열이어도 그대로 반영한다.
+  Future<Response<Object?>> _scheduleUpdate(RequestOptions options) async {
+    final id = options.path.split('/').last;
+    final existing = await (_db.select(
+      _db.scheduleEvents,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (existing == null) return _notFound(options, '일정을 찾을 수 없습니다.');
+
+    final body = _jsonBody(options);
+    final date = (body['date'] as String?)?.trim();
+    final time = (body['time'] as String?)?.trim();
+    final title = (body['title'] as String?)?.trim();
+    final category = (body['category'] as String?)?.trim();
+
+    // 생성과 같은 계약을 건다 — 수정으로 형식을 무너뜨릴 수 있으면 검증한 의미가
+    // 없다(#785 에서 저장·조회가 어긋나 일정이 사라졌던 것과 같은 경로).
+    if (date != null && !isScheduleDate(date)) {
+      return _badRequest(options, 'date must be YYYY-MM-DD');
+    }
+    if (time != null && !isScheduleTime(time)) {
+      return _badRequest(options, 'time must be HH:mm or empty');
+    }
+    if (title != null && title.isEmpty) {
+      return _badRequest(options, 'title must not be empty');
+    }
+
+    final String nextCategory = category ?? existing.category;
+    final (emoji, colorHex) = _scheduleStyle(nextCategory);
+    await (_db.update(_db.scheduleEvents)..where((t) => t.id.equals(id))).write(
+      ScheduleEventsCompanion(
+        date: date == null ? const Value.absent() : Value(date),
+        time: time == null ? const Value.absent() : Value(time),
+        title: title == null ? const Value.absent() : Value(title),
+        category: category == null ? const Value.absent() : Value(category),
+        // 카테고리가 바뀌면 이모지·색도 따라간다. 생성 때와 같은 규칙이라
+        // 수정한 일정만 다른 색으로 남지 않는다.
+        emoji: category == null ? const Value.absent() : Value(emoji),
+        colorHex: category == null ? const Value.absent() : Value(colorHex),
+      ),
+    );
+
+    final updated = await (_db.select(
+      _db.scheduleEvents,
+    )..where((t) => t.id.equals(id))).getSingle();
+    return _ok(options, <String, Object?>{
+      'id': updated.id,
+      'date': updated.date,
+      'time': updated.time,
+      'title': updated.title,
+      'category': updated.category,
+      'emoji': updated.emoji,
+      'color_hex': updated.colorHex,
+    });
+  }
+
+  Future<Response<Object?>> _scheduleDelete(RequestOptions options) async {
+    final id = options.path.split('/').last;
+    final n = await (_db.delete(
+      _db.scheduleEvents,
+    )..where((t) => t.id.equals(id))).go();
+    if (n == 0) return _notFound(options, '일정을 찾을 수 없습니다.');
+    return _ok(options, <String, Object?>{'status': 'deleted'});
   }
 
   // ---- Notifications ----

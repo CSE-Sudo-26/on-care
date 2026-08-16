@@ -42,6 +42,23 @@ class _CapturingRepository implements ScheduleRepository {
   @override
   Future<List<ScheduleEvent>> fetchByMonth(String month) async =>
       const <ScheduleEvent>[];
+
+  /// 이 파일은 새로 만드는 흐름만 본다. 수정은 하루 시트 테스트가 맡는다.
+  @override
+  Future<ScheduleEvent> updateEvent(
+    String id, {
+    String? date,
+    String? time,
+    String? title,
+    ScheduleCategory? category,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteEvent(String id) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
