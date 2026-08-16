@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashCheckSodiumCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Check sodium & completion'**
+  /// **'Check diet & completion'**
   String get dashCheckSodiumCompletion;
 
   /// No description provided for @dashWeeklyCompletion.
