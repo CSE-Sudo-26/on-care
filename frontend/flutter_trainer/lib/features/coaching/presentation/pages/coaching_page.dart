@@ -1160,12 +1160,16 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
         Container(
           key: const ValueKey<String>('program-client-data-tabs'),
           height: 44,
-          padding: const EdgeInsets.all(AppSpacing.xxs / 2),
+          padding: EdgeInsets.zero,
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: const BorderRadius.all(AppRadius.pill),
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(AppRadius.pill),
             border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
           ),
+          clipBehavior: Clip.antiAlias,
           child: Row(
             children: <Widget>[
               Expanded(
@@ -1178,7 +1182,6 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                   }),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xxs / 2),
               Expanded(
                 child: _ClientDataTab(
                   label: l.clientTabWorkout,
