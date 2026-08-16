@@ -92,28 +92,31 @@ void main() {
       expect(seongho[1].items, '짜장면'); // 점심
     });
 
-    test('client rows carry this week\'s sodium history on its weekdays', () async {
-      final clients = await DriftClientRepository(db).watchClients().first;
-      // 계열은 이번 주 월→일이다(#746). 요일 라벨과 함께 그리므로 길이는 늘
-      // 7이고, 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에 놓인다.
-      final todayIndex = DateTime.now().weekday - 1;
-      for (final c in clients) {
-        expect(c.sodiumWeek, hasLength(7), reason: c.name);
-        expect(c.sodiumWeek[todayIndex], c.sodiumMg, reason: c.name);
-        // 아직 오지 않은 요일은 누구에게나 0 — 기록 없음과 같은 표현이다.
-        expect(
-          c.sodiumWeek.skip(todayIndex + 1),
-          everyElement(0),
-          reason: c.name,
-        );
-      }
-      final minsu = clients.firstWhere((c) => c.name == '김민수');
-      expect(minsu.sodiumOverDays, greaterThan(0)); // 2400/2200/2300… over
-      expect(minsu.sodiumWeekAvg, isNotNull);
+    test(
+      'client rows carry this week\'s sodium history on its weekdays',
+      () async {
+        final clients = await DriftClientRepository(db).watchClients().first;
+        // 계열은 이번 주 월→일이다(#746). 요일 라벨과 함께 그리므로 길이는 늘
+        // 7이고, 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에 놓인다.
+        final todayIndex = DateTime.now().weekday - 1;
+        for (final c in clients) {
+          expect(c.sodiumWeek, hasLength(7), reason: c.name);
+          expect(c.sodiumWeek[todayIndex], c.sodiumMg, reason: c.name);
+          // 아직 오지 않은 요일은 누구에게나 0 — 기록 없음과 같은 표현이다.
+          expect(
+            c.sodiumWeek.skip(todayIndex + 1),
+            everyElement(0),
+            reason: c.name,
+          );
+        }
+        final minsu = clients.firstWhere((c) => c.name == '김민수');
+        expect(minsu.sodiumOverDays, greaterThan(0)); // 2400/2200/2300… over
+        expect(minsu.sodiumWeekAvg, isNotNull);
 
-      final jisu = clients.firstWhere((c) => c.name == '이지수');
-      expect(jisu.sodiumOverDays, 1); // only the 2100 day is over
-    });
+        final jisu = clients.firstWhere((c) => c.name == '이지수');
+        expect(jisu.sodiumOverDays, 1); // only the 2100 day is over
+      },
+    );
   });
 
   group('DietView', () {
@@ -278,6 +281,21 @@ void main() {
         scrollable: detailScrollable('seed-client-1'),
       );
       expect(find.textContaining('나트륨이 목표치를 1428mg 초과했어요'), findsOneWidget);
+    });
+
+    testWidgets('목표를 넘긴 날은 링을 채우되 100%라고 적지 않는다 (#820)', (tester) async {
+      // 강서연은 2,260 / 2,000 kcal 로 목표를 넘겼다.
+      await openDiet(tester, '강서연');
+
+      final ring = tester.widget<CircularProgressIndicator>(
+        find.byKey(const Key('client-nutrition-calorie-progress')),
+      );
+      // 링은 한 바퀴에서 멈춘다 — 넘긴 양은 링이 그릴 수 없다.
+      expect(ring.value, 1.0);
+      // 숫자는 자르지 않는다. '100%' 는 바로 아래 '목표보다 260 kcal 넘었어요'
+      // 와 정면으로 어긋난다.
+      expect(find.text('113%'), findsOneWidget);
+      expect(find.text('100%'), findsNothing);
     });
 
     testWidgets('normal sodium and sugar use the user app sugar green', (
