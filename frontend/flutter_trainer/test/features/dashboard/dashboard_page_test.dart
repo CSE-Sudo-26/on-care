@@ -110,16 +110,17 @@ void main() {
   ) async {
     await openDashboard(tester);
 
-    // Six threads are waiting on a reply, but 주의 counts only health
-    // signals: 8 clients over the sodium target plus 문가영, who is under
-    // it and flagged for 이행률 alone — nine. 답장 대기 still shows in the
-    // list; it just isn't 주의. If the two ever merge again the card
-    // would read higher and stop meaning anything.
+    // 답장을 기다리는 스레드가 여섯이지만 주의는 건강 신호만 센다 — 나트륨 5 ·
+    // 당류 1 · 이행률 2 로 여덟이다. 답장 대기는 목록에는 남되 주의가 아니다.
+    // 둘이 다시 합쳐지면 이 카드가 더 큰 수를 말하며 뜻을 잃는다.
+    //
+    // 류태경(벌크업)은 칼로리가 3,120kcal 로 높지만 여기 없다 — 칼로리는 신호가
+    // 아니고, 그의 식단 수치는 목표 안이다(#767·#768).
     final attention = tester.widget<StatCard>(
       find.ancestor(of: find.text('주의 고객'), matching: find.byType(StatCard)),
     );
-    expect(attention.value, '9');
-    expect(find.text('나트륨·이행률 확인'), findsOneWidget);
+    expect(attention.value, '8');
+    expect(find.text('식단·이행률 확인'), findsOneWidget);
   });
 
   testWidgets('a KPI deep-links into the pre-filtered roster', (tester) async {
