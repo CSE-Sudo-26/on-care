@@ -96,7 +96,14 @@ void main() {
         // 재빌드될 때 스크롤 위치가 초기화되어 바닥에 닿기 전에 훑기가 끝난다.
         // 다시 열면 목록을 새로 받아오므로, 확인하려는 계약("연 자리가 슬롯 목록에
         // 보인다")은 그대로 두고 타이밍 의존만 걷어낼 수 있다.
-        await tester.tap(find.byIcon(Icons.close));
+        // 닫기 아이콘은 시트 안에서만 찾는다. 트리 전체를 뒤지면 같은 화면에 다른
+        // 닫기 컨트롤이 붙는 순간 여러 개가 잡혀 깨진다.
+        await tester.tap(
+          find.descendant(
+            of: find.byType(ReservationSlotsSheet),
+            matching: find.byIcon(Icons.close),
+          ),
+        );
         await pumpUntilAbsent(
           tester,
           find.byType(ReservationSlotsSheet),
