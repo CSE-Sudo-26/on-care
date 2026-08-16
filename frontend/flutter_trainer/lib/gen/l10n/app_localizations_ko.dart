@@ -207,7 +207,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashNoIssues => '이상 없음';
 
   @override
-  String get dashCheckSodiumCompletion => '식단·이행률 확인';
+  String get dashCheckSodiumCompletion => '나트륨·이행률 확인';
 
   @override
   String get dashWeeklyCompletion => '주간 세션 이행률';

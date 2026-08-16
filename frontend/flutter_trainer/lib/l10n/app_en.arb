@@ -110,7 +110,7 @@
   "dashAllReplied": "All replied",
   "dashAttentionClients": "Needs attention",
   "dashNoIssues": "No issues",
-  "dashCheckSodiumCompletion": "Check diet & completion",
+  "dashCheckSodiumCompletion": "Check sodium & completion",
   "dashWeeklyCompletion": "Weekly session completion",
   "dashAveragePercent": "Avg {percent}%",
   "@dashAveragePercent": {

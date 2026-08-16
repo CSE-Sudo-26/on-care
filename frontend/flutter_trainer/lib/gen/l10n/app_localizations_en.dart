@@ -214,7 +214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashNoIssues => 'No issues';
 
   @override
-  String get dashCheckSodiumCompletion => 'Check diet & completion';
+  String get dashCheckSodiumCompletion => 'Check sodium & completion';
 
   @override
   String get dashWeeklyCompletion => 'Weekly session completion';

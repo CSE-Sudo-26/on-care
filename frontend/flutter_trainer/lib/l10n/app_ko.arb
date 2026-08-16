@@ -64,7 +64,7 @@
   "dashAllReplied": "모두 답장했어요",
   "dashAttentionClients": "주의 고객",
   "dashNoIssues": "이상 없음",
-  "dashCheckSodiumCompletion": "식단·이행률 확인",
+  "dashCheckSodiumCompletion": "나트륨·이행률 확인",
   "dashWeeklyCompletion": "주간 세션 이행률",
   "dashAveragePercent": "평균 {percent}%",
   "dashNoRecordsThisWeek": "아직 이번 주 기록이 없어요",
