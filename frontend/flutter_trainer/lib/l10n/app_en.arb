@@ -110,7 +110,7 @@
   "dashAllReplied": "All replied",
   "dashAttentionClients": "Needs attention",
   "dashNoIssues": "No issues",
-  "dashCheckSodiumCompletion": "Check sodium & completion",
+  "dashCheckSodiumCompletion": "Check diet & completion",
   "dashWeeklyCompletion": "Weekly session completion",
   "dashAveragePercent": "Avg {percent}%",
   "@dashAveragePercent": {
@@ -430,10 +430,7 @@
     }
   },
   "programNone": "No program recorded",
-  "weekCompletionRate": "This week's completion",
   "legendDone": "Done",
-  "legendPartial": "Partial",
-  "legendMissed": "Not logged",
   "clientFeedback": "Client feedback",
   "trainerNote": "Trainer's note",
   "dietLoadFailed": "Couldn't load meals",
@@ -608,8 +605,6 @@
   "@reportsNoLastWeekMetricTrend": {"placeholders": {"metric": {"type": "String"}}},
   "reportsNoMetricRecords": "No {metric} logged this week yet",
   "@reportsNoMetricRecords": {"placeholders": {"metric": {"type": "String"}}},
-  "reportsCompletionBasis": "Average of {days} logged days",
-  "@reportsCompletionBasis": {"placeholders": {"days": {"type": "int"}}},
   "reportsDietTrend": "Weekly diet trend",
   "reportsSodiumOverInline": "{days} days over sodium",
   "@reportsSodiumOverInline": {"placeholders": {"days": {"type": "int"}}},

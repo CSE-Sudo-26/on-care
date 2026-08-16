@@ -214,7 +214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashNoIssues => 'No issues';
 
   @override
-  String get dashCheckSodiumCompletion => 'Check sodium & completion';
+  String get dashCheckSodiumCompletion => 'Check diet & completion';
 
   @override
   String get dashWeeklyCompletion => 'Weekly session completion';
@@ -779,16 +779,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programNone => 'No program recorded';
 
   @override
-  String get weekCompletionRate => 'This week\'s completion';
-
-  @override
   String get legendDone => 'Done';
-
-  @override
-  String get legendPartial => 'Partial';
-
-  @override
-  String get legendMissed => 'Not logged';
 
   @override
   String get clientFeedback => 'Client feedback';
@@ -972,11 +963,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String reportsNoMetricRecords(String metric) {
     return 'No $metric logged this week yet';
-  }
-
-  @override
-  String reportsCompletionBasis(int days) {
-    return 'Average of $days logged days';
   }
 
   @override

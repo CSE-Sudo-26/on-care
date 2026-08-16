@@ -6,8 +6,6 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
-import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays, weekdayCount, weekdayLabels;
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -27,10 +25,6 @@ import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
-const workoutWeekCompletionCardKey = ValueKey<String>(
-  'workout-week-completion-card',
-);
-
 /// 운동 — the whole prescription→execution loop for one client, in the
 /// order the trainer reasons about it.
 ///
@@ -44,7 +38,7 @@ class WorkoutView extends ConsumerWidget {
   /// Creates the workout view for [client].
   const WorkoutView({super.key, required this.client, this.embedded = false});
 
-  /// The client whose history is shown (carries weekCompletion).
+  /// The client whose routines, sessions and history are shown.
   final TrainerClient client;
 
   /// When true, lets the member detail own the single page scroll.
@@ -75,8 +69,6 @@ class WorkoutView extends ConsumerWidget {
         week: exerciseWeek,
         onRetry: () => ref.invalidate(clientExerciseWeekProvider(client.id)),
       ),
-      const SizedBox(height: AppSpacing.md),
-      _WeekCompletionCard(week: client.weekCompletion),
       const SizedBox(height: AppSpacing.lg),
       Text(
         l.workoutRecords,
@@ -401,8 +393,8 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
-/// Completion color scale shared by the bars and donuts: 100 = done
-/// (green), partial = orange, 0 = untouched (grey).
+/// Completion color scale for the per-record donuts: 100 = done (green),
+/// partial = orange, 0 = untouched (grey).
 ///
 /// '부분' 은 진행 상태이지 주의가 아니다. 빨강으로 올리면 아무것도 하지 않은
 /// 0%(회색)보다 부분 완료가 더 위험해 보여 척도가 뒤집힌다(#690).
@@ -410,158 +402,6 @@ Color _rateColor(int rate) {
   if (rate >= 100) return AppColors.success;
   if (rate > 0) return AppColors.brandOrange;
   return AppColors.borderStrong;
-}
-
-/// "이번 주 완료율" — average % + 월~일 bars + legend.
-class _WeekCompletionCard extends StatelessWidget {
-  const _WeekCompletionCard({required this.week});
-
-  final List<int> week;
-
-  /// 요일 라벨은 로케일을 따르므로 const 로 둘 수 없다. (#501)
-  static List<String> _days(AppLocalizations l) => weekdayLabels(l);
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l = AppLocalizations.of(context);
-    // 아직 오지 않은 요일은 평균에서도 막대에서도 뺀다 — 0으로 세면
-    // 주 초반일수록 실제보다 낮은 완료율이 나온다.
-    final elapsed = elapsedWeekdays(DateTime.now());
-    // **기록한 날만** 나눈다. 기록이 없는 날의 0 까지 세면 같은 회원이 리포트
-    // 에서는 87%, 이 카드에서는 72% 가 되어 화면끼리 다른 말을 한다 — 주의
-    // 배지·고객 검색·주간 리포트가 쓰는 규칙과 하나로 맞춘다(#754).
-    final logged = week.take(elapsed).where((rate) => rate > 0).toList();
-    final avg = logged.isEmpty
-        ? 0
-        : (logged.reduce((a, b) => a + b) / logged.length).round();
-
-    return Container(
-      key: workoutWeekCompletionCardKey,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: const BorderRadius.all(AppRadius.card),
-        boxShadow: kCardShadow,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  l.weekCompletionRate,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.foreground,
-                  ),
-                ),
-              ),
-              Text(
-                '$avg%',
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            l.reportsCompletionBasis(logged.length),
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.disabledForeground,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            // Tallest bar (40) + gap (4) + day label (~14) with headroom.
-            height: 64,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                for (var i = 0; i < week.length && i < weekdayCount; i++) ...[
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        Container(
-                          height: i >= elapsed
-                              ? 4
-                              : (4 + week[i] * 0.36).clamp(4, 40).toDouble(),
-                          decoration: BoxDecoration(
-                            color: i >= elapsed
-                                ? AppColors.border
-                                : _rateColor(week[i]),
-                            borderRadius: const BorderRadius.all(AppRadius.xs),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _days(l)[i],
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: i >= elapsed
-                                ? AppColors.disabledForeground
-                                : AppColors.subtleForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (i < week.length - 1) const SizedBox(width: AppSpacing.xs),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              _LegendDot(color: AppColors.success, label: l.legendDone),
-              const SizedBox(width: AppSpacing.md),
-              _LegendDot(color: AppColors.brandOrange, label: l.legendPartial),
-              const SizedBox(width: AppSpacing.md),
-              _LegendDot(color: AppColors.borderStrong, label: l.legendMissed),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppColors.subtleForeground,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// A single workout record: date/kind, completion donut, exercise lines

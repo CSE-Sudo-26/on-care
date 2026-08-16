@@ -6,14 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays;
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart'
-    show workoutWeekCompletionCardKey;
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -57,19 +53,6 @@ String _minsuSkippedExercise() {
     }
   }
   throw StateError('최근 사흘에 거른 항목이 없다 — 취소선 렌더링을 볼 수 없다');
-}
-
-/// 김민수의 이번 주 요일별 이행률(월→일). 아직 오지 않은 요일은 0.
-List<int> _minsuCompletionWeek(DateTime now) {
-  final List<FixtureDay> days = _fixture.daysFor(now);
-  final String monday = days.last.weekStart;
-  final List<int> week = List<int>.filled(7, 0);
-  for (final FixtureDay day in days.where(
-    (FixtureDay d) => d.weekStart == monday,
-  )) {
-    week[DateTime.parse(day.date).weekday - 1] = day.completion;
-  }
-  return week;
 }
 
 /// Fails the first `watchHistory`; every other read still succeeds.
@@ -305,42 +288,20 @@ void main() {
       expect(find.text('피드백 수정'), findsOneWidget);
     });
 
-    testWidgets('김민수 averages only the weekdays he actually logged', (
-      tester,
-    ) async {
+    testWidgets('김민수 운동 기록이 날짜·이행률·메모와 함께 보인다', (tester) async {
       await openWorkout(tester, '김민수');
 
-      // 아직 오지 않은 날은 물론, 기록이 없는 날(휴식인 수요일 0)도 빼고 나눈다 —
-      // 주의 배지·고객 검색·주간 리포트가 쓰는 규칙과 같아야 한 회원이 화면마다
-      // 다른 이행률로 보이지 않는다(#754).
-      final week = _minsuCompletionWeek(DateTime.now());
-      final elapsed = elapsedWeekdays(DateTime.now());
-      final logged = week.take(elapsed).where((rate) => rate > 0).toList();
-      final expected = (logged.reduce((a, b) => a + b) / logged.length).round();
-
-      // The tab now opens on the routines it absorbed from the old 루틴
-      // tab, so the completion card starts below the fold.
+      // The tab opens on the routines it absorbed from the old 루틴 tab;
+      // 이번 주는 운동 추이 카드 하나로만 요약한다 — 같은 주를 완료율 카드로
+      // 한 번 더 세던 자리는 걷어냈다.
       expect(find.text('배정된 루틴'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('이번 주 완료율'),
+        find.text('이번 주 운동 추이'),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 완료율'), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(workoutWeekCompletionCardKey),
-          matching: find.text('$expected%'),
-        ),
-        findsOneWidget,
-      );
-      // 며칠을 나눈 값인지 화면에 적혀 있어야 막대를 세어 확인할 수 있다.
-      expect(find.text('기록한 ${logged.length}일 평균'), findsWidgets);
-      // '완료' is also a PT session's status in the card above, so the
-      // legend is matched loosely; 부분/기록 없음 are legend-only.
-      expect(find.text('완료'), findsWidgets);
-      expect(find.text('부분'), findsOneWidget);
-      expect(find.text('기록 없음'), findsOneWidget);
+      expect(find.text('이번 주 운동 추이'), findsOneWidget);
+      expect(find.text('이번 주 완료율'), findsNothing);
 
       // History entries with feedback + note boxes. Lower list items are
       // built lazily — scroll each into view before asserting.
@@ -393,11 +354,11 @@ void main() {
       expect(find.text('배정된 루틴'), findsOneWidget);
       expect(find.text('PT 프로그램 이력'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('이번 주 완료율'),
+        find.text('이번 주 운동 추이'),
         150,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 완료율'), findsOneWidget);
+      expect(find.text('이번 주 운동 추이'), findsOneWidget);
       // The failure is reported in place, where the history would be.
       await tester.scrollUntilVisible(
         find.text('운동 기록을 불러오지 못했어요'),
@@ -407,11 +368,14 @@ void main() {
       expect(find.text('운동 기록을 불러오지 못했어요'), findsOneWidget);
       expect(find.text('history transport detail'), findsNothing);
 
-      await tester.tap(
-        find.byKey(
-          const ValueKey<String>('workout-history-retry-seed-client-1'),
-        ),
+      // 재시도 버튼은 안내 문구 바로 아래라, 문구가 보이는 지점에서 아직
+      // 화면 밖일 수 있다 — 눌러야 할 것을 직접 끌어올린다.
+      final retry = find.byKey(
+        const ValueKey<String>('workout-history-retry-seed-client-1'),
       );
+      await tester.ensureVisible(retry);
+      await settle(tester);
+      await tester.tap(retry);
       await settle(tester);
       await tester.scrollUntilVisible(
         find.text(_todayHistoryLabel()),
@@ -491,11 +455,11 @@ void main() {
       );
       expect(find.textContaining('복구 PT'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('이번 주 완료율'),
+        find.text('이번 주 운동 추이'),
         200,
         scrollable: detailScrollable('seed-client-1'),
       );
-      expect(find.text('이번 주 완료율'), findsOneWidget);
+      expect(find.text('이번 주 운동 추이'), findsOneWidget);
     });
   });
 }
