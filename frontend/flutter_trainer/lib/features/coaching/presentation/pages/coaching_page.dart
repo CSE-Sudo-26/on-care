@@ -1171,6 +1171,7 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
           ),
           clipBehavior: Clip.antiAlias,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Expanded(
                 child: _ClientDataTab(
