@@ -216,6 +216,7 @@ class FigmaCircleButton extends StatelessWidget {
     this.dotColor = FigmaColors.orange,
     this.size = 36,
     this.iconSize = 18,
+    this.enabled = true,
   });
 
   final IconData icon;
@@ -225,8 +226,17 @@ class FigmaCircleButton extends StatelessWidget {
   final double size;
   final double iconSize;
 
+  /// 지금 쓸 수 있는 버튼인지. false 면 흐리게 그린다.
+  ///
+  /// [onTap] 과 따로 두는 이유: 쓸 수 없다는 것과 눌러도 소용없다는 것은 다르다.
+  /// 왜 쓸 수 없는지 알려 주려면 흐린 채로도 탭을 받아야 한다. 예전에는 이 구분이
+  /// 없어서, 담당 트레이너가 없을 때 채팅 버튼이 멀쩡한 모습으로 죽어 있었다(#786).
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
+    // `onTap` 이 아예 없으면 그것도 쓸 수 없는 상태다.
+    final bool usable = enabled && onTap != null;
     return SizedBox(
       width: size,
       height: size,
@@ -235,13 +245,19 @@ class FigmaCircleButton extends StatelessWidget {
         children: <Widget>[
           Positioned.fill(
             child: Material(
-              color: FigmaColors.softBlue,
+              color: usable ? FigmaColors.softBlue : FigmaColors.track,
               shape: const CircleBorder(),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
                 child: Center(
-                  child: Icon(icon, size: iconSize, color: FigmaColors.primary),
+                  child: Icon(
+                    icon,
+                    size: iconSize,
+                    color: usable
+                        ? FigmaColors.primary
+                        : FigmaColors.textFaint,
+                  ),
                 ),
               ),
             ),
