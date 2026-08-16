@@ -226,13 +226,14 @@ class DriftClientRepository implements ClientRepository {
     return MemberHealthProfile(
       memberId: clientId,
       memberName: row.name,
-      heightCm: saved.containsKey('height_cm')
-          ? (saved['height_cm'] as num?)?.toDouble()
-          : 175,
-      weightKg: saved.containsKey('weight_kg')
-          ? (saved['weight_kg'] as num?)?.toDouble()
-          : 72,
-      gender: saved['gender'] as String? ?? 'male',
+      // 키·체중은 저장된 적이 없으면 비운다. 예전에는 175/72 를 채웠는데,
+      // 트레이너가 입력한 값과 앱이 지어낸 값이 화면에서 구분되지 않았고,
+      // 그대로 저장하면 남의 신체 정보로 굳었다(#818).
+      heightCm: (saved['height_cm'] as num?)?.toDouble(),
+      weightKg: (saved['weight_kg'] as num?)?.toDouble(),
+      // 성별은 로스터가 이미 말하고 있는 값을 따른다. 고정 'male' 을 두던
+      // 시절에는 헤더가 '여성'인 회원의 대화상자가 '남성'으로 열렸다(#818).
+      gender: saved['gender'] as String? ?? _toEntity(row).rosterGender,
       conditions: saved['conditions'] as String? ?? '',
       goals: saved['goals'] as String? ?? row.goal,
       weeklyWorkoutGoal: saved.containsKey('weekly_workout_goal')
