@@ -11,6 +11,7 @@ import 'package:oncare/features/schedule/domain/entities/schedule_event.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
 import 'package:oncare/shared/widgets/modals/add_event_dialog.dart';
+import 'package:oncare/shared/widgets/modals/day_events_sheet.dart';
 
 String _monthKey(DateTime m) =>
     '${m.year}-${m.month.toString().padLeft(2, '0')}';
@@ -74,6 +75,18 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
     '금',
     '토',
   ];
+
+  /// 그 날의 일정을 펼친다. 시트에서 무언가 바뀌었으면 달을 다시 읽는다 —
+  /// 수정·삭제·추가가 그리드에 곧바로 보여야 한다.
+  Future<void> _openDay(DateTime day, List<ScheduleEvent> events) async {
+    final bool? changed = await showDayEventsSheet(
+      context,
+      date: day,
+      events: events,
+    );
+    if (changed != true || !mounted) return;
+    ref.invalidate(scheduleMonthProvider(_monthKey(_month)));
+  }
 
   Map<int, List<ScheduleEvent>> _groupByDay(List<ScheduleEvent> events) {
     final map = <int, List<ScheduleEvent>>{};
@@ -194,11 +207,10 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                         // 생긴다. 어떤 경우에도 잘라내지 않는다.
                         physics: const ClampingScrollPhysics(),
                         padding: EdgeInsets.zero,
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 7,
-                              mainAxisExtent: rowHeight,
-                            ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisExtent: rowHeight,
+                        ),
                         itemCount: days.length,
                         itemBuilder: (BuildContext _, int i) {
                           final day = days[i];
@@ -218,81 +230,88 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
                               day.day == today.day;
                           final dayEvents =
                               byDay[day.day] ?? const <ScheduleEvent>[];
-                          return Container(
+                          return InkWell(
                             key: Key('calendar-day-${day.day}'),
-                            decoration: BoxDecoration(
-                              color: isToday
-                                  ? AppColors.primary.withValues(alpha: 0.05)
-                                  : null,
-                              border: const Border(
-                                right: BorderSide(color: AppColors.border),
-                                bottom: BorderSide(color: AppColors.border),
-                              ),
-                            ),
-                            padding: const EdgeInsets.all(4),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  '${day.day}',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: isToday ? AppColors.primary : null,
-                                  ),
+                            // 칸을 눌러 그 날의 일정을 펼친다. 예전에는 칸도 칩도
+                            // 어떤 탭에도 반응하지 않아, 한 번 넣은 일정을 열어
+                            // 보거나 고치거나 지울 방법이 없었다(#784).
+                            onTap: () => _openDay(day, dayEvents),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isToday
+                                    ? AppColors.primary.withValues(alpha: 0.05)
+                                    : null,
+                                border: const Border(
+                                  right: BorderSide(color: AppColors.border),
+                                  bottom: BorderSide(color: AppColors.border),
                                 ),
-                                const SizedBox(height: 2),
-                                // 칸 높이는 남은 공간에서 정해지므로 일정이
-                                // 여럿인 날은 칩이 칸을 넘길 수 있다. 넘치는
-                                // 만큼은 ClipRect 가 잘라내고, OverflowBox 가
-                                // Column 에 무한 높이를 줘 오버플로 경고 없이
-                                // 그린다. 날짜 숫자는 언제나 남는다.
-                                //
-                                // 칸마다 ListView 를 두면 한 달에 스크롤 뷰가
-                                // 35~42개 생긴다 — 자르기만 하는 데 치르는
-                                // 값으로는 너무 비싸다.
-                                Expanded(
-                                  child: ClipRect(
-                                    child: OverflowBox(
-                                      alignment: Alignment.topLeft,
-                                      maxHeight: double.infinity,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          for (final ScheduleEvent e
-                                              in dayEvents)
-                                            Container(
-                                              margin: const EdgeInsets.only(
-                                                bottom: 2,
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 4,
-                                                    vertical: 2,
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    '${day.day}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: isToday ? AppColors.primary : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  // 칸 높이는 남은 공간에서 정해지므로 일정이
+                                  // 여럿인 날은 칩이 칸을 넘길 수 있다. 넘치는
+                                  // 만큼은 ClipRect 가 잘라내고, OverflowBox 가
+                                  // Column 에 무한 높이를 줘 오버플로 경고 없이
+                                  // 그린다. 날짜 숫자는 언제나 남는다.
+                                  //
+                                  // 칸마다 ListView 를 두면 한 달에 스크롤 뷰가
+                                  // 35~42개 생긴다 — 자르기만 하는 데 치르는
+                                  // 값으로는 너무 비싸다.
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: OverflowBox(
+                                        alignment: Alignment.topLeft,
+                                        maxHeight: double.infinity,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            for (final ScheduleEvent e
+                                                in dayEvents)
+                                              Container(
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 2,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: scheduleCategoryColor(
+                                                    e.category,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: scheduleCategoryColor(
-                                                  e.category,
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                '${e.time} ${e.title}'.trim(),
-                                                style: const TextStyle(
-                                                  fontSize: 9,
+                                                child: Text(
+                                                  '${e.time} ${e.title}'.trim(),
+                                                  style: const TextStyle(
+                                                    fontSize: 9,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                            ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           );
                         },

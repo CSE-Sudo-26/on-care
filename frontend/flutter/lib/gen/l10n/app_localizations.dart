@@ -2012,35 +2012,11 @@ abstract class AppLocalizations {
   /// **'✦ AI top pick'**
   String get exAiTopPick;
 
-  /// No description provided for @exSendHealthSummary.
+  /// No description provided for @exGymDetailHint.
   ///
   /// In en, this message translates to:
-  /// **'Share Health Summary'**
-  String get exSendHealthSummary;
-
-  /// No description provided for @exSendHealthSummaryBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Share your recent workouts and health profile summary\nwith the {gym} trainer?'**
-  String exSendHealthSummaryBody(String gym);
-
-  /// No description provided for @exCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get exCancel;
-
-  /// No description provided for @exSend.
-  ///
-  /// In en, this message translates to:
-  /// **'Share'**
-  String get exSend;
-
-  /// No description provided for @exHealthSummarySent.
-  ///
-  /// In en, this message translates to:
-  /// **'Shared your health summary with {gym}'**
-  String exHealthSummarySent(String gym);
+  /// **'See trainers and request a consultation'**
+  String get exGymDetailHint;
 
   /// No description provided for @exReasonTrainer.
   ///

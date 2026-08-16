@@ -91,11 +91,16 @@ class CoachCard extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: FigmaColors.textMuted,
-                    ),
+                    // 화살표는 '누르면 간다'는 신호다. 트레이너 상세로 갈 수
+                    // 없을 때(myTrainerProvider 가 아직 없거나 연결이 끊긴
+                    // 경우)는 지운다 — 예전에는 화살표만 남아 눌러도 아무 일이
+                    // 없었다(#786).
+                    if (assignedTrainer != null)
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: FigmaColors.textMuted,
+                      ),
                   ],
                 ),
               ),

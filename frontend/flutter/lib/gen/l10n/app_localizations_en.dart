@@ -1075,23 +1075,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exAiTopPick => '✦ AI top pick';
 
   @override
-  String get exSendHealthSummary => 'Share Health Summary';
-
-  @override
-  String exSendHealthSummaryBody(String gym) {
-    return 'Share your recent workouts and health profile summary\nwith the $gym trainer?';
-  }
-
-  @override
-  String get exCancel => 'Cancel';
-
-  @override
-  String get exSend => 'Share';
-
-  @override
-  String exHealthSummarySent(String gym) {
-    return 'Shared your health summary with $gym';
-  }
+  String get exGymDetailHint => 'See trainers and request a consultation';
 
   @override
   String exReasonTrainer(String name, String role) {

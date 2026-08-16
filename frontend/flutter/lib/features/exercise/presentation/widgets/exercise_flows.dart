@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -654,9 +656,14 @@ class _GymLocatorSheetState extends ConsumerState<_GymLocatorSheet> {
   }
 }
 
-/// A nearby-gym result card driven by a real [Gym]. The two actions wire to
-/// local flows (there is no O2O endpoint): 트레이너 채팅 opens the 1:1 상담
-/// sheet, 건강 요약 전달 confirms then shows a success SnackBar.
+/// 주변 헬스장 결과 카드. 누르면 그 헬스장 상세로 간다 — 소속 트레이너를 보고
+/// 상담을 신청하는 자리다.
+///
+/// 예전에는 '건강 요약 전달' 버튼이 있었다. 확인을 받고 성공 스낵바를 띄웠지만
+/// 실제로는 아무 데도 보내지 않았다(전달받을 서버 경로도, 트레이너앱 화면도
+/// 없다). 회원은 자기 건강 정보가 넘어간 것으로 알고 기다리게 된다 — 미구현보다
+/// 나쁘다. 그래서 문구를 고치는 대신, 실제로 동작하는 다음 걸음으로 바꿨다(#787).
+/// 상담 신청은 운동 목표·건강 목적·메모를 담아 트레이너에게 실제로 저장된다.
 class _GymResult extends ConsumerWidget {
   const _GymResult({required this.gym, this.top = false});
 
@@ -688,213 +695,179 @@ class _GymResult extends ConsumerWidget {
         .valueOrNull
         ?.firstOrNull;
     final String reason = _reason(l, trainer);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: Key('gym-result-${gym.id}'),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: top ? FigmaColors.primaryA(0.25) : FigmaColors.hairline,
-        ),
-        boxShadow: kCardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (top) ...<Widget>[
-            AiPill(
-              l.exAiTopPick,
-              background: FigmaColors.primary,
-              color: Colors.white,
+        // 시트를 먼저 닫는다 — 상세를 시트 위에 얹으면 뒤로 가기가 시트로
+        // 돌아와 운동 탭까지 두 번 걸린다.
+        onTap: () {
+          Navigator.of(context).pop();
+          context.push(AppRoutes.gymDetailPath(gym.id));
+        },
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: top ? FigmaColors.primaryA(0.25) : FigmaColors.hairline,
             ),
-            const SizedBox(height: 8),
-          ],
-          Row(
+            boxShadow: kCardShadow,
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      gym.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: FigmaColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      gym.address,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                  ],
+              if (top) ...<Widget>[
+                AiPill(
+                  l.exAiTopPick,
+                  background: FigmaColors.primary,
+                  color: Colors.white,
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                const SizedBox(height: 8),
+              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  // 카카오 Local 은 평점을 주지 않는다(rating 0) — "0.0★" 대신
-                  // 뱃지를 통째로 감춘다.
-                  if (gym.rating > 0)
-                    Row(
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const Icon(
-                          Icons.star,
-                          size: 13,
-                          color: Color(0xFFF5B400),
-                        ),
-                        const SizedBox(width: 2),
                         Text(
-                          gym.rating.toStringAsFixed(1),
+                          gym.name,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: FigmaColors.ink,
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          gym.address,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
                       ],
                     ),
-                  Text(
-                    '${gym.distanceKm.toStringAsFixed(1)}km',
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.mutedForeground,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      // 카카오 Local 은 평점을 주지 않는다(rating 0) — "0.0★" 대신
+                      // 뱃지를 통째로 감춘다.
+                      if (gym.rating > 0)
+                        Row(
+                          children: <Widget>[
+                            const Icon(
+                              Icons.star,
+                              size: 13,
+                              color: Color(0xFFF5B400),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              gym.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: FigmaColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                      Text(
+                        '${gym.distanceKm.toStringAsFixed(1)}km',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (gym.tags.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: FigmaColors.softBlue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: <Widget>[
+                          for (final String t in gym.tags)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: FigmaColors.primaryA(0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                t,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: FigmaColors.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (reason.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 6),
+                        Text(
+                          reason,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.5,
+                            color: FigmaColors.ink,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              // 이 카드가 어디로 가는지 한 줄로 말해 둔다 — 누를 수 있다는 표시이자,
+              // 눌러서 무엇을 할 수 있는지에 대한 답이다.
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      l.exGymDetailHint,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.primary,
+                      ),
                     ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: FigmaColors.primary,
                   ),
                 ],
               ),
             ],
           ),
-          if (gym.tags.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: FigmaColors.softBlue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: <Widget>[
-                      for (final String t in gym.tags)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: FigmaColors.primaryA(0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            t,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: FigmaColors.primary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (reason.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 6),
-                    Text(
-                      reason,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        height: 1.5,
-                        color: FigmaColors.ink,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => _sendHealthSummary(context, gym.name),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: FigmaColors.primary,
-                side: BorderSide(color: FigmaColors.primaryA(0.3)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                l.exSendHealthSummary,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
-}
-
-/// Confirms and "sends" the user's health summary to the gym/trainer. There is
-/// no O2O backend yet, so this is a local confirm dialog + success SnackBar.
-Future<void> _sendHealthSummary(BuildContext context, String gymName) async {
-  final AppLocalizations l = AppLocalizations.of(context);
-  final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-  final bool? confirmed = await showDialog<bool>(
-    context: context,
-    builder: (BuildContext ctx) => AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        l.exSendHealthSummary,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-          color: FigmaColors.ink,
-        ),
-      ),
-      content: Text(
-        l.exSendHealthSummaryBody(gymName),
-        style: const TextStyle(
-          fontSize: 14,
-          height: 1.5,
-          color: AppColors.foreground,
-        ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(
-            l.exCancel,
-            style: const TextStyle(color: AppColors.mutedForeground),
-          ),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          style: FilledButton.styleFrom(backgroundColor: FigmaColors.primary),
-          child: Text(l.exSend),
-        ),
-      ],
-    ),
-  );
-  if (confirmed != true) return;
-  messenger.showSnackBar(
-    SnackBar(content: Text(l.exHealthSummarySent(gymName))),
-  );
 }
 
 // ─────────────────────────────────────────────────────────────── 지도 ──

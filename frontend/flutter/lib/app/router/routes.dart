@@ -15,7 +15,6 @@ class AppRoutes {
   static const String dietEntryDetail = '/diet/entries/:entryId';
   static const String myPoints = '/my-health/points';
   static const String mySettings = '/my-health/settings/:section';
-  static const String place = '/place';
   static const String gyms = '/gyms';
   static const String trainers = '/trainers';
   static const String gymDetail = '/gyms/:gymId';

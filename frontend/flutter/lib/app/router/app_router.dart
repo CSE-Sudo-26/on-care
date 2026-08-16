@@ -27,7 +27,6 @@ import 'package:oncare/features/exercise/presentation/pages/trainer_list_page.da
 import 'package:oncare/features/my_health/presentation/pages/my_health_page.dart';
 import 'package:oncare/features/my_health/presentation/widgets/my_flows.dart';
 import 'package:oncare/features/notification/presentation/pages/notification_page.dart';
-import 'package:oncare/features/place/presentation/pages/place_page.dart';
 
 /// Pure auth-guard policy for the router's `redirect`. Kept free of
 /// `BuildContext`/`GoRouterState` so it can be unit-tested directly.
@@ -152,10 +151,6 @@ GoRouter buildAppRouter({
           'privacy' => const LegalDocumentPage(document: 'privacy'),
           _ => const SupportPage(),
         },
-      ),
-      GoRoute(
-        path: AppRoutes.place,
-        builder: (context, state) => const PlacePage(),
       ),
       GoRoute(
         path: AppRoutes.gyms,

@@ -552,25 +552,7 @@
   },
   "exGymsLoadError": "Couldn't load gyms.",
   "exAiTopPick": "✦ AI top pick",
-  "exSendHealthSummary": "Share Health Summary",
-  "exSendHealthSummaryBody": "Share your recent workouts and health profile summary\nwith the {gym} trainer?",
-  "@exSendHealthSummaryBody": {
-    "placeholders": {
-      "gym": {
-        "type": "String"
-      }
-    }
-  },
-  "exCancel": "Cancel",
-  "exSend": "Share",
-  "exHealthSummarySent": "Shared your health summary with {gym}",
-  "@exHealthSummarySent": {
-    "placeholders": {
-      "gym": {
-        "type": "String"
-      }
-    }
-  },
+  "exGymDetailHint": "See trainers and request a consultation",
   "exReasonTrainer": "Personal trainer {name}{role} on site",
   "@exReasonTrainer": {
     "placeholders": {

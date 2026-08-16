@@ -13,7 +13,12 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 /// "AI 건강 도우미" bottom sheet — the daily coaching digest opened from the
 /// floating Oni button and the Home coaching banner. Its CTA hands off to the
 /// AI chat. Mirrors the Figma `CoachingSheet`.
-Future<void> showCoachingSheet(BuildContext context) {
+Future<void> showCoachingSheet(BuildContext context, {WidgetRef? ref}) {
+  // 열어서 봤으면 배지를 내린다. 읽을 것이 없는데도 남는 숫자는 알림 벨의
+  // 미읽음 점과 같은 종류의 거짓말이다(#788).
+  ref?.read(coachingSeenCountProvider.notifier).state = ref.read(
+    coachingSuggestionCountProvider,
+  );
   return showModalBottomSheet<void>(
     context: context,
     // 탭 페이지마다 Navigator 가 따로 있어 기본값으로 열면 시트가 그 안에 뜬다.
@@ -26,6 +31,41 @@ Future<void> showCoachingSheet(BuildContext context) {
     builder: (BuildContext ctx) => const _CoachingSheet(),
   );
 }
+
+/// 실제 제안을 받지 못했을 때 시트가 대신 그리는 기본 카드 수.
+///
+/// [_cardsOf] 의 길이와 같아야 한다 — 배지 숫자와 시트에 실제로 보이는 카드 수가
+/// 어긋나면 배지가 다시 거짓말을 한다. 위젯 테스트가 두 값을 맞춰 둔다.
+const int kCoachFallbackCardCount = 2;
+
+/// 지금 코칭 시트가 보여 줄 카드 수. 배지와 시트가 같은 규칙을 읽는다.
+final coachingSuggestionCountProvider = Provider<int>((ref) {
+  if (ref.watch(appConfigProvider).useMockApi) return kCoachFallbackCardCount;
+  final List<AiSuggestion>? live = ref
+      .watch(aiCoachStateProvider)
+      .asData
+      ?.value
+      .suggestions;
+  // 로딩·에러·빈 응답이면 시트가 기본 카드로 떨어지므로 수도 그것을 따른다.
+  return (live == null || live.isEmpty) ? kCoachFallbackCardCount : live.length;
+}, name: 'coachingSuggestionCount');
+
+/// 마지막으로 시트를 열어 확인한 카드 수.
+///
+/// 배지는 이 값을 넘는 만큼만 뜬다. 새 제안이 늘면 다시 뜨고, 다 본 뒤에는
+/// 사라진다. 앱을 다시 켜면 초기화된다 — 코칭 카드는 하루 단위 요약이라
+/// 영구 저장까지 할 만한 상태가 아니다.
+final coachingSeenCountProvider = StateProvider<int>(
+  (ref) => 0,
+  name: 'coachingSeenCount',
+);
+
+/// 플로팅 버튼에 띄울 배지 숫자. 볼 것이 없으면 0.
+final coachingBadgeCountProvider = Provider<int>((ref) {
+  final int count = ref.watch(coachingSuggestionCountProvider);
+  final int seen = ref.watch(coachingSeenCountProvider);
+  return count > seen ? count - seen : 0;
+}, name: 'coachingBadgeCount');
 
 class _CoachCard {
   const _CoachCard({
