@@ -450,11 +450,14 @@ void main() {
   });
 
   group('CoachingPage', () {
-    Future<void> openTab(WidgetTester tester) async {
+    Future<void> openTab(
+      WidgetTester tester, {
+      Size size = const Size(1600, 1200),
+    }) async {
       // Desktop surface: the workspace splits into overview | editor,
       // so both columns are on screen the way a trainer sees them.
       tester.view.devicePixelRatio = 1.0;
-      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.physicalSize = size;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await pumpTrainerApp(
@@ -502,6 +505,103 @@ void main() {
         expect(avatar.size, 32);
       },
     );
+
+    testWidgets(
+      'wide workspace prioritizes AI request and keeps client context visible',
+      (tester) async {
+        await openTab(tester);
+
+        final mainColumn = find.byKey(
+          const ValueKey<String>('coaching-wide-main-column'),
+        );
+        final assistant = find.byKey(
+          const ValueKey<String>('coaching-wide-ai-prompt'),
+        );
+        final overview = find.byKey(
+          const ValueKey<String>('coaching-wide-client-overview'),
+        );
+        final nutrition = find.byKey(
+          const Key('client-nutrition-summary-card'),
+        );
+        final sodium = find.byKey(const Key('client-nutrition-sodium-status'));
+        final sugar = find.byKey(const Key('client-nutrition-sugar-status'));
+
+        expect(mainColumn, findsOneWidget);
+        expect(assistant, findsOneWidget);
+        expect(overview, findsOneWidget);
+        expect(
+          tester.getTopLeft(assistant).dy,
+          lessThan(tester.getTopLeft(overview).dy),
+        );
+        expect(
+          tester.getCenter(assistant).dx,
+          closeTo(tester.getCenter(mainColumn).dx, 1),
+        );
+        expect(
+          find.byKey(const ValueKey<String>('program-member-completion-chart')),
+          findsOneWidget,
+        );
+        expect(tester.getSize(nutrition).width, greaterThan(310));
+        expect(
+          tester.getTopLeft(sodium).dx,
+          lessThan(tester.getTopLeft(sugar).dx),
+        );
+        final nutritionRect = tester.getRect(nutrition);
+        final viewportWidth = tester.view.physicalSize.width;
+        for (final status in <Finder>[sodium, sugar]) {
+          final statusRect = tester.getRect(status);
+          expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
+          expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
+          expect(statusRect.left, greaterThanOrEqualTo(0));
+          expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('wide breakpoint keeps nutrition status cards in bounds', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(900, 1200));
+
+      final nutrition = find.byKey(const Key('client-nutrition-summary-card'));
+      final nutritionRect = tester.getRect(nutrition);
+      final viewportWidth = tester.view.physicalSize.width;
+      for (final status in <Finder>[
+        find.byKey(const Key('client-nutrition-sodium-status')),
+        find.byKey(const Key('client-nutrition-sugar-status')),
+      ]) {
+        expect(status, findsOneWidget);
+        final statusRect = tester.getRect(status);
+        expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
+        expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
+        expect(statusRect.left, greaterThanOrEqualTo(0));
+        expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('wide client list shows five rows and scrolls the rest', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      final listFinder = find.byKey(
+        const ValueKey<String>('program-client-list-scroll'),
+      );
+      expect(listFinder, findsOneWidget);
+      expect(tester.getSize(listFinder).height, 80 * 5);
+      final list = tester.widget<ListView>(listFinder);
+      expect(list.controller, isNotNull);
+      expect(list.controller!.position.maxScrollExtent, greaterThan(0));
+
+      await tester.drag(listFinder, const Offset(0, -240));
+      await tester.pumpAndSettle();
+
+      expect(list.controller!.offset, greaterThan(0));
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('compact client picker stacks demographics below the name', (
       tester,
