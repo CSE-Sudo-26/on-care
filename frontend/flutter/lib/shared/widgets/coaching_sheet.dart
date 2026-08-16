@@ -16,6 +16,10 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 Future<void> showCoachingSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // 탭 페이지마다 Navigator 가 따로 있어 기본값으로 열면 시트가 그 안에 뜬다.
+    // MainShell 의 하단 바와 + 버튼은 그 바깥이라 시트 **위에** 그려지고, 스크림도
+    // 걸리지 않은 채 눌린다 — 시트를 열어 둔 채 탭이 바뀐다(#791).
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,

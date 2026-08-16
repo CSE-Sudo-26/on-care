@@ -112,6 +112,8 @@ Future<void> showExerciseAddSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다(#791).
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
@@ -403,6 +405,8 @@ class _Label extends StatelessWidget {
 Future<void> showGymLocatorSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다(#791).
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,
