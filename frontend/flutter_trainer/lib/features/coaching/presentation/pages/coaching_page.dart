@@ -1146,9 +1146,9 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
           height: 44,
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
-            color: AppColors.accentSurface,
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: const BorderRadius.all(AppRadius.pill),
-            border: Border.all(color: AppColors.borderStrong),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: <Widget>[
@@ -1222,15 +1222,13 @@ class _ClientDataTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.card : const Color(0x00000000),
           borderRadius: const BorderRadius.all(AppRadius.pill),
-          border: selected
-              ? Border.all(color: AppColors.primary.withValues(alpha: 0.12))
-              : null,
+          border: selected ? Border.all(color: AppColors.card) : null,
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(
-                    color: AppColors.foreground.withValues(alpha: 0.07),
-                    blurRadius: 6,
-                    offset: const Offset(0, 1),
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
