@@ -1141,32 +1141,39 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
       key: const ValueKey<String>('program-client-data-switcher'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Align(
-          alignment: Alignment.center,
-          child: SegmentedButton<_ClientDataView>(
-            key: const ValueKey<String>('program-client-data-tabs'),
-            segments: <ButtonSegment<_ClientDataView>>[
-              ButtonSegment<_ClientDataView>(
-                value: _ClientDataView.diet,
-                label: Text(l.clientTabDiet),
-                icon: const Icon(Icons.restaurant_outlined, size: 16),
+        Container(
+          key: const ValueKey<String>('program-client-data-tabs'),
+          height: 44,
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: AppColors.accentSurface,
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            border: Border.all(color: AppColors.borderStrong),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: _ClientDataTab(
+                  label: l.clientTabDiet,
+                  icon: Icons.restaurant_outlined,
+                  selected: _view == _ClientDataView.diet,
+                  onTap: () => setState(() {
+                    _view = _ClientDataView.diet;
+                  }),
+                ),
               ),
-              ButtonSegment<_ClientDataView>(
-                value: _ClientDataView.workout,
-                label: Text(l.clientTabWorkout),
-                icon: const Icon(Icons.fitness_center_outlined, size: 16),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: _ClientDataTab(
+                  label: l.clientTabWorkout,
+                  icon: Icons.fitness_center_outlined,
+                  selected: _view == _ClientDataView.workout,
+                  onTap: () => setState(() {
+                    _view = _ClientDataView.workout;
+                  }),
+                ),
               ),
             ],
-            selected: <_ClientDataView>{_view},
-            onSelectionChanged: (selection) => setState(() {
-              _view = selection.first;
-            }),
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              textStyle: WidgetStatePropertyAll(
-                TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-              ),
-            ),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -1186,6 +1193,74 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _ClientDataTab extends StatelessWidget {
+  const _ClientDataTab({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? AppColors.primary : AppColors.mutedForeground;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.card : const Color(0x00000000),
+          borderRadius: const BorderRadius.all(AppRadius.pill),
+          border: selected
+              ? Border.all(color: AppColors.primary.withValues(alpha: 0.12))
+              : null,
+          boxShadow: selected
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: AppColors.foreground.withValues(alpha: 0.07),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: const Color(0x00000000),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(icon, size: 17, color: foreground),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
