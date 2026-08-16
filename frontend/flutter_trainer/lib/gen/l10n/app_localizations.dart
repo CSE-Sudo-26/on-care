@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashCheckSodiumCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Check sodium & completion'**
+  /// **'Check diet & completion'**
   String get dashCheckSodiumCompletion;
 
   /// No description provided for @dashWeeklyCompletion.
@@ -1448,29 +1448,11 @@ abstract class AppLocalizations {
   /// **'No program recorded'**
   String get programNone;
 
-  /// No description provided for @weekCompletionRate.
-  ///
-  /// In en, this message translates to:
-  /// **'This week\'s completion'**
-  String get weekCompletionRate;
-
   /// No description provided for @legendDone.
   ///
   /// In en, this message translates to:
   /// **'Done'**
   String get legendDone;
-
-  /// No description provided for @legendPartial.
-  ///
-  /// In en, this message translates to:
-  /// **'Partial'**
-  String get legendPartial;
-
-  /// No description provided for @legendMissed.
-  ///
-  /// In en, this message translates to:
-  /// **'Not logged'**
-  String get legendMissed;
 
   /// No description provided for @clientFeedback.
   ///
@@ -1759,12 +1741,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No {metric} logged this week yet'**
   String reportsNoMetricRecords(String metric);
-
-  /// No description provided for @reportsCompletionBasis.
-  ///
-  /// In en, this message translates to:
-  /// **'Average of {days} logged days'**
-  String reportsCompletionBasis(int days);
 
   /// No description provided for @reportsDietTrend.
   ///

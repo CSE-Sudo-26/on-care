@@ -753,16 +753,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programNone => '등록된 프로그램 없음';
 
   @override
-  String get weekCompletionRate => '이번 주 완료율';
-
-  @override
   String get legendDone => '완료';
-
-  @override
-  String get legendPartial => '부분';
-
-  @override
-  String get legendMissed => '기록 없음';
 
   @override
   String get clientFeedback => '고객 피드백';
@@ -942,11 +933,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String reportsNoMetricRecords(String metric) {
     return '이번 주 $metric 기록이 아직 없어요';
-  }
-
-  @override
-  String reportsCompletionBasis(int days) {
-    return '기록한 $days일 평균';
   }
 
   @override
