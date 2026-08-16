@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
@@ -91,32 +92,74 @@ void main() {
       expect(jisu.first.items, '그릭요거트, 과일');
       expect(seongho[1].items, '짜장면'); // 점심
     });
+  });
+
+  group('seeded weekly series', () {
+    // 계열은 이번 주 월→일이다(#746). 아래 두 테스트는 시드 시계를 고정한다 —
+    // 무엇이 이번 주에 남는지는 요일마다 다르므로, 실행한 날에 기대값을 맡기면
+    // 코드를 건드리지 않아도 월·화요일에 깨진다(#826).
+    Future<List<TrainerClient>> seededOn(DateTime pinned) async {
+      // 이 그룹의 `db` 와 겹쳐 열어 두면 drift 가 인스턴스 중복을 경고한다.
+      // 로스터를 읽고 나면 볼 일이 없으므로 그 자리에서 닫는다.
+      final pinnedDb = AppDatabase.forTesting(NativeDatabase.memory());
+      try {
+        await seedIfEmpty(pinnedDb, clock: pinned);
+        return await DriftClientRepository(pinnedDb).watchClients().first;
+      } finally {
+        await pinnedDb.close();
+      }
+    }
 
     test(
       'client rows carry this week\'s sodium history on its weekdays',
       () async {
-        final clients = await DriftClientRepository(db).watchClients().first;
-        // 계열은 이번 주 월→일이다(#746). 요일 라벨과 함께 그리므로 길이는 늘
-        // 7이고, 오늘 값은 마지막 칸이 아니라 오늘 요일 칸에 놓인다.
-        final todayIndex = DateTime.now().weekday - 1;
-        for (final c in clients) {
-          expect(c.sodiumWeek, hasLength(7), reason: c.name);
-          expect(c.sodiumWeek[todayIndex], c.sodiumMg, reason: c.name);
-          // 아직 오지 않은 요일은 누구에게나 0 — 기록 없음과 같은 표현이다.
-          expect(
-            c.sodiumWeek.skip(todayIndex + 1),
-            everyElement(0),
-            reason: c.name,
-          );
+        // 2026-08-19 은 수요일, 2026-08-17 은 월요일이다.
+        for (final pinned in <DateTime>[
+          DateTime(2026, 8, 19, 10),
+          DateTime(2026, 8, 17, 10),
+        ]) {
+          final clients = await seededOn(pinned);
+          final todayIndex = pinned.weekday - 1;
+          for (final c in clients) {
+            // 요일 라벨과 함께 그리므로 길이는 늘 7이고, 오늘 값은 마지막 칸이
+            // 아니라 오늘 요일 칸에 놓인다.
+            expect(c.sodiumWeek, hasLength(7), reason: '${c.name} on $pinned');
+            expect(
+              c.sodiumWeek[todayIndex],
+              c.sodiumMg,
+              reason: '${c.name} on $pinned',
+            );
+            // 아직 오지 않은 요일은 누구에게나 0 — 기록 없음과 같은 표현이다.
+            expect(
+              c.sodiumWeek.skip(todayIndex + 1),
+              everyElement(0),
+              reason: '${c.name} on $pinned',
+            );
+          }
         }
-        final minsu = clients.firstWhere((c) => c.name == '김민수');
-        expect(minsu.sodiumOverDays, greaterThan(0)); // 2400/2200/2300… over
-        expect(minsu.sodiumWeekAvg, isNotNull);
-
-        final jisu = clients.firstWhere((c) => c.name == '이지수');
-        expect(jisu.sodiumOverDays, 1); // only the 2100 day is over
       },
     );
+
+    test('a seeded day from before Monday stays in last week', () async {
+      // 이지수의 시드에서 목표를 넘는 날은 2100 하나뿐이고, 그 값은 오늘에서
+      // 이틀 앞이다. 수요일에는 이번 주에 남고 월요일에는 잘려 나간다 — 잘린
+      // 날이 집계에 남으면 지난주 기록을 이번 주로 세는 것이다.
+      final onWednesday = await seededOn(DateTime(2026, 8, 19, 10));
+      final jisuWed = onWednesday.firstWhere((c) => c.name == '이지수');
+      expect(jisuWed.sodiumWeek.first, 2100);
+      expect(jisuWed.sodiumOverDays, 1);
+
+      final onMonday = await seededOn(DateTime(2026, 8, 17, 10));
+      final jisuMon = onMonday.firstWhere((c) => c.name == '이지수');
+      expect(jisuMon.sodiumWeek.where((mg) => mg > 0), hasLength(1));
+      expect(jisuMon.sodiumOverDays, 0);
+
+      // 픽스처가 정하는 김민수는 자기 날짜대로 놓이므로, 오늘까지의 기록이
+      // 있는 한 주 평균이 잡힌다.
+      final minsu = onWednesday.firstWhere((c) => c.name == '김민수');
+      expect(minsu.sodiumOverDays, greaterThan(0));
+      expect(minsu.sodiumWeekAvg, isNotNull);
+    });
   });
 
   group('DietView', () {
