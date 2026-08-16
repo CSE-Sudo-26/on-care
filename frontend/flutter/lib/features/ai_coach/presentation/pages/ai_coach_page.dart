@@ -201,7 +201,12 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
               ],
             ),
           ),
-          _circle(Icons.more_horiz, () {}),
+          // 뒤로 버튼과 같은 폭의 빈 자리. 오른쪽에 놓을 동작이 아직 없어서
+          // 두는 것이지, 누를 것이 있는 자리가 아니다 — 예전에는 여기 '⋯'
+          // 버튼이 있었는데 콜백이 비어 있어 눌러도 아무 일이 없었다(#783).
+          // 대화 초기화 같은 메뉴를 붙이려면 서버에 저장된 대화를 지우는
+          // 경로(`GET /ai-coach/messages` 의 짝)가 먼저 필요하다.
+          const SizedBox(width: 36),
         ],
       ),
     );
@@ -414,24 +419,11 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
         ),
         child: Row(
           children: <Widget>[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: FigmaColors.primaryA(0.25),
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.add,
-                size: 16,
-                color: FigmaColors.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
+            // 예전에는 여기 '+' 원형이 있었다. 제스처 위젯이 없는 순수
+            // Container 라서 첨부 버튼처럼 보이기만 하고 눌리지 않았다(#783).
+            // 붙일 동작(사진·기록 첨부)이 생기면 그때 실제 버튼으로 되살린다.
+            // 원형이 빠진 만큼 글자가 테두리에 붙어서, 최소한의 여백만 남긴다.
+            const SizedBox(width: 6),
             Expanded(
               child: TextField(
                 controller: _controller,
