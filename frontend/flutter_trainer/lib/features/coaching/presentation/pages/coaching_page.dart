@@ -24,14 +24,12 @@ import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dar
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
-    show elapsedWeekdays, weekdayCount, weekdayLabels;
+import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
-import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -425,6 +423,9 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           return LayoutBuilder(
             builder: (context, constraints) {
               final wide = constraints.maxWidth >= AppLayout.splitBreakpoint;
+              // 3열의 고정 폭(목록 260 + 우측 360 + 간격 48)과 페이지 여백을
+              // 빼고도 편집기가 최소 600px을 가져야 한다.
+              final fullWidth = constraints.maxWidth >= 1320;
               if (!wide) {
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(
@@ -459,10 +460,22 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     children: <Widget>[
                       SizedBox(
                         width: 260,
-                        child: _MemberProgramList(
-                          clients: clients,
-                          selectedId: selected.id,
-                          onSelect: _selectClient,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _MemberProgramList(
+                              clients: clients,
+                              selectedId: selected.id,
+                              onSelect: _selectClient,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _TemplateCard(
+                              key: const ValueKey<String>(
+                                'program-template-sidebar',
+                              ),
+                              onApply: _applyTemplate,
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: AppSpacing.lg),
@@ -484,40 +497,60 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                               ),
                               const SizedBox(height: AppSpacing.lg),
                             ],
-                            Row(
-                              key: const ValueKey<String>(
-                                'coaching-wide-client-overview',
-                              ),
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                SizedBox(
-                                  width: 300,
-                                  child: _ProgramMemberSummary(
-                                    client: selected,
+                            if (!fullWidth) ...<Widget>[
+                              Row(
+                                key: const ValueKey<String>(
+                                  'coaching-wide-client-overview',
+                                ),
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  SizedBox(
+                                    width: 300,
+                                    child: _ProgramMemberSummary(
+                                      key: const ValueKey<String>(
+                                        'program-client-summary',
+                                      ),
+                                      client: selected,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: AppSpacing.lg),
-                                Expanded(
-                                  child: NutritionSummaryCard(client: selected),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.lg),
+                                  const SizedBox(width: AppSpacing.lg),
+                                  Expanded(
+                                    child: _ClientDataSwitcher(
+                                      client: selected,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
                             ..._editorChildren(selected, showAssistant: false),
-                            const SizedBox(height: AppSpacing.lg),
-                            _TemplateCard(
-                              onApply: (template) => setState(() {
-                                _appliedTemplate = template;
-                                _templateRevision++;
-                                _registered = false;
-                                _sent = false;
-                              }),
-                            ),
                             // 좁은 화면은 _libraryChildren 이 같은 카드를 붙인다.
                             ...?_savedProgramsCard(),
                           ],
                         ),
                       ),
+                      if (fullWidth) ...<Widget>[
+                        const SizedBox(width: AppSpacing.lg),
+                        SizedBox(
+                          key: const ValueKey<String>(
+                            'coaching-wide-client-overview',
+                          ),
+                          width: 360,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _ProgramMemberSummary(
+                                key: const ValueKey<String>(
+                                  'program-client-summary',
+                                ),
+                                client: selected,
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              _ClientDataSwitcher(client: selected),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -568,14 +601,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
   /// material, secondary to the editor.
   List<Widget> _libraryChildren(TrainerClient client) {
     return <Widget>[
-      _TemplateCard(
-        onApply: (template) => setState(() {
-          _appliedTemplate = template;
-          _templateRevision++;
-          _registered = false;
-          _sent = false;
-        }),
-      ),
+      _TemplateCard(onApply: _applyTemplate),
       // 저장한 프로그램이 하나도 없으면 카드 자체가 나오지 않는다 — 아직
       // 저장한 적 없는 트레이너의 화면은 지금과 같다.
       ...?_savedProgramsCard(),
@@ -583,6 +609,13 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       _SendHistoryCard(client: client),
     ];
   }
+
+  void _applyTemplate(ProgramTemplate template) => setState(() {
+    _appliedTemplate = template;
+    _templateRevision++;
+    _registered = false;
+    _sent = false;
+  });
 
   /// The saved-program list, or null when the trainer has saved none.
   ///
@@ -867,7 +900,7 @@ class _MemberProgramList extends StatefulWidget {
 }
 
 class _MemberProgramListState extends State<_MemberProgramList> {
-  static const double _rowHeight = 80;
+  static const double _baseRowHeight = 84;
   static const int _visibleRows = 5;
 
   final ScrollController _scroll = ScrollController();
@@ -895,12 +928,13 @@ class _MemberProgramListState extends State<_MemberProgramList> {
 
   void _revealSelected() {
     if (!_scroll.hasClients) return;
+    final rowHeight = _rowHeight(context);
     final index = widget.clients.indexWhere(
       (client) => client.id == widget.selectedId,
     );
     if (index < 0) return;
-    final top = index * _rowHeight;
-    final bottom = top + _rowHeight;
+    final top = index * rowHeight;
+    final bottom = top + rowHeight;
     final viewportTop = _scroll.offset;
     final viewportBottom = viewportTop + _scroll.position.viewportDimension;
     final target = top < viewportTop
@@ -915,11 +949,12 @@ class _MemberProgramListState extends State<_MemberProgramList> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final rowHeight = _rowHeight(context);
     return SectionCard(
       title: l.coachMemberPrograms,
       dense: true,
       child: SizedBox(
-        height: _rowHeight * _visibleRows,
+        height: rowHeight * _visibleRows,
         child: Scrollbar(
           controller: _scroll,
           thumbVisibility: widget.clients.length > _visibleRows,
@@ -928,7 +963,7 @@ class _MemberProgramListState extends State<_MemberProgramList> {
             controller: _scroll,
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             itemCount: widget.clients.length,
-            itemExtent: _rowHeight,
+            itemExtent: rowHeight,
             itemBuilder: (context, index) {
               final client = widget.clients[index];
               final selected = client.id == widget.selectedId;
@@ -1000,23 +1035,37 @@ class _MemberProgramListState extends State<_MemberProgramList> {
       ),
     );
   }
+
+  double _rowHeight(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final extraScale = (scale - 1).clamp(0.0, 2.0);
+    return _baseRowHeight + 84 * extraScale;
+  }
 }
 
-class _ProgramMemberSummary extends StatelessWidget {
-  const _ProgramMemberSummary({required this.client});
+class _ProgramMemberSummary extends ConsumerWidget {
+  const _ProgramMemberSummary({super.key, required this.client});
 
   final TrainerClient client;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final alerts = healthAlertsFor(client);
-    final completion = recordedCompletionMean(client)?.round();
-    final elapsed = elapsedWeekdays(DateTime.now());
-    final unlogged = <int>{
-      for (var i = 0; i < elapsed && i < client.weekCompletion.length; i++)
-        if (client.weekCompletion[i] == 0) i,
-    };
+    final sessions = ref
+        .watch(clientSessionsProvider((id: client.id, name: client.name)))
+        .valueOrNull;
+    final completed = sessions?.where((session) => session.isDone);
+    final latest = completed == null || completed.isEmpty
+        ? null
+        : completed.first;
+    final exercises = latest?.program
+        .map((exercise) => exercise.name)
+        .where((name) => name.isNotEmpty)
+        .toList(growable: false);
+    final workout = exercises == null || exercises.isEmpty
+        ? '-'
+        : exercises.take(2).join(' · ');
+    final minutes = latest?.durationMinutes;
     return SectionCard(
       title: l.coachMemberSummary,
       dense: true,
@@ -1054,58 +1103,98 @@ class _ProgramMemberSummary extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          _SummaryLine(label: l.clientTabWorkout, value: workout),
           _SummaryLine(
-            label: l.dashAttentionClients,
-            value: alerts.isEmpty ? '-' : alerts.first.label(l),
-            warning: alerts.isNotEmpty,
+            label: l.routineFieldMinutes,
+            value: minutes == null || minutes == 0
+                ? '-'
+                : l.minutesShort(minutes),
           ),
-          _SummaryLine(label: l.aiGoal, value: client.goal),
-          _SummaryLine(
-            label: l.reportsCompletionAvg,
-            value: completion == null ? '-' : '$completion%',
-          ),
-          _SummaryLine(label: l.aiRecentRoutine, value: client.lastRoutine),
-          if (client.weekCompletion.length == weekdayCount) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l.reportsCompletionByDay,
-              style: const TextStyle(
-                color: AppColors.mutedForeground,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            BarSeriesChart(
-              key: const ValueKey<String>('program-member-completion-chart'),
-              values: client.weekCompletion,
-              labels: weekdayLabels(l),
-              maxValue: 100,
-              height: 64,
-              showValues: true,
-              valueSuffix: '%',
-              pendingFromIndex: elapsed,
-              missingIndices: unlogged,
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
+enum _ClientDataView { diet, workout }
+
+class _ClientDataSwitcher extends ConsumerStatefulWidget {
+  const _ClientDataSwitcher({required this.client});
+
+  final TrainerClient client;
+
+  @override
+  ConsumerState<_ClientDataSwitcher> createState() =>
+      _ClientDataSwitcherState();
+}
+
+class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
+  _ClientDataView _view = _ClientDataView.diet;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final exerciseWeek = ref.watch(
+      clientExerciseWeekProvider(widget.client.id),
+    );
+    return Column(
+      key: const ValueKey<String>('program-client-data-switcher'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Align(
+          alignment: Alignment.center,
+          child: SegmentedButton<_ClientDataView>(
+            key: const ValueKey<String>('program-client-data-tabs'),
+            segments: <ButtonSegment<_ClientDataView>>[
+              ButtonSegment<_ClientDataView>(
+                value: _ClientDataView.diet,
+                label: Text(l.clientTabDiet),
+                icon: const Icon(Icons.restaurant_outlined, size: 16),
+              ),
+              ButtonSegment<_ClientDataView>(
+                value: _ClientDataView.workout,
+                label: Text(l.clientTabWorkout),
+                icon: const Icon(Icons.fitness_center_outlined, size: 16),
+              ),
+            ],
+            selected: <_ClientDataView>{_view},
+            onSelectionChanged: (selection) => setState(() {
+              _view = selection.first;
+            }),
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              textStyle: WidgetStatePropertyAll(
+                TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: _view == _ClientDataView.diet
+              ? NutritionSummaryCard(
+                  key: ValueKey<String>('program-diet-${widget.client.id}'),
+                  client: widget.client,
+                )
+              : WeeklyExerciseTrendCard(
+                  key: ValueKey<String>('program-workout-${widget.client.id}'),
+                  week: exerciseWeek,
+                  onRetry: () => ref.invalidate(
+                    clientExerciseWeekProvider(widget.client.id),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({
-    required this.label,
-    required this.value,
-    this.warning = false,
-  });
+  const _SummaryLine({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool warning;
 
   @override
   Widget build(BuildContext context) {
@@ -1126,8 +1215,8 @@ class _SummaryLine extends StatelessWidget {
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: warning ? AppColors.overTarget : AppColors.foreground,
+            style: const TextStyle(
+              color: AppColors.foreground,
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
             ),
@@ -1300,7 +1389,7 @@ String _dateChipLabel(AppLocalizations l, int offset) {
 
 /// One selectable register-day chip.
 class _TemplateCard extends StatelessWidget {
-  const _TemplateCard({required this.onApply});
+  const _TemplateCard({super.key, required this.onApply});
 
   final ValueChanged<ProgramTemplate> onApply;
 
