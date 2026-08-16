@@ -43,6 +43,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          // 라우터를 세우면 MainShell 도 함께 그려진다. 그 안의 Oni 배지가
+          // appConfigProvider 를 읽으므로 여기서 넘겨야 한다 — 없으면
+          // 'must be overridden in ProviderScope' 로 화면이 아예 뜨지 않는다(#805).
+          appConfigProvider.overrideWithValue(_config),
           // 헬스장은 연결돼 있고 담당 트레이너만 없는 상태 — 이 버튼이 뜨는 조건.
           myGymProvider.overrideWith((ref) async => _gym),
           myTrainerProvider.overrideWith((ref) async => null),
