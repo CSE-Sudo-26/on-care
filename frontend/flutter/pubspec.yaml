@@ -64,6 +64,8 @@ dependencies:
   # 같은 출처로 맞춘다. 카카오는 Flutter 용 지도 SDK 가 없어 web 은 JS SDK 를
   # HtmlElementView 로 직접 삽입하므로 pub 의존성이 필요 없다.
   url_launcher: ^6.3.1
+  # 인증된 API로 받은 리포트 PDF binary를 앱 안에서 미리보기한다(#778).
+  printing: ^5.14.2
   image_picker: ^1.2.3
 
   # NOTE: Social-login SDKs (sign_in_with_apple / google_sign_in /

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,9 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_sender.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -61,6 +66,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   /// A send is in flight for this client.
   String? _sending;
+
+  /// PDF binary를 만드는 동안 내보내기 중복 요청을 막는다.
+  bool _generatingPdf = false;
 
   /// 피드백 입력창의 현재 내용. 전송 버튼이 헤더의 공유 메뉴로 올라가면서
   /// 입력창과 전송이 서로 다른 위젯에 있게 되어, 그 사이를 잇는 값이다.
@@ -163,6 +171,50 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
   }
 
+  Future<void> _openPdfExport(WeeklyReport report) async {
+    if (_generatingPdf) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final feedback = _messageFor(AppLocalizations.of(context), report);
+    setState(() => _generatingPdf = true);
+    try {
+      WeeklyReport? previous;
+      try {
+        previous = await ref.read(
+          weeklyReportProvider((
+            client: report.client,
+            weekStart: report.weekStart.subtract(const Duration(days: 7)),
+          )).future,
+        );
+      } catch (_) {
+        // 전주 집계가 없어도 현재 주차 PDF는 생성할 수 있다.
+      }
+      final bytes = await ref
+          .read(reportPdfGeneratorProvider)
+          .generate(
+            report: report,
+            feedback: feedback,
+            previousReport: previous,
+          );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => ReportPdfExportDialog(report: report, bytes: bytes),
+      );
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).reportsPdfGenerationFailed,
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generatingPdf = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
@@ -211,6 +263,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           sending: shareTarget != null && _sending == shareTarget.id,
           feedbackBlank: _feedbackBlank,
           onSend: _sendSelected,
+          generatingPdf: _generatingPdf,
+          onPdf: _openPdfExport,
         ),
       ],
       child: clientsAsync.when(
@@ -1366,6 +1420,7 @@ class _WeekTrendBar extends StatelessWidget {
     );
   }
 }
+
 /// 리포트 요약 카드 — 트레이너가 매주 같은 문장을 처음부터 쓰지 않게 한다.
 ///
 /// 결과는 그대로 읽는 글이 아니라 **피드백 초안으로 가져다 고칠 재료**다.
@@ -1590,6 +1645,8 @@ class _ShareMenu extends ConsumerWidget {
     required this.sending,
     required this.feedbackBlank,
     required this.onSend,
+    required this.generatingPdf,
+    required this.onPdf,
   });
 
   /// 리포트를 보고 있는 고객. 로스터가 비어 있으면 null.
@@ -1606,6 +1663,8 @@ class _ShareMenu extends ConsumerWidget {
   final bool feedbackBlank;
 
   final Future<void> Function(WeeklyReport report) onSend;
+  final bool generatingPdf;
+  final Future<void> Function(WeeklyReport report) onPdf;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1668,18 +1727,17 @@ class _ShareMenu extends ConsumerWidget {
               ),
             ),
           ),
-          // PDF 생성 경로가 아직 없다. 항목을 숨기지 않는 이유는, 없는 기능이
-          // 아니라 아직 준비되지 않은 기능임을 화면에서 알 수 있어야 해서다.
           Directionality(
             textDirection: TextDirection.ltr,
             child: MenuItemButton(
               key: const ValueKey<String>('reports-share-pdf'),
               style: _itemStyle,
               leadingIcon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
-              onPressed: null,
-              child: Tooltip(
-                message: l.reportsPdfUnsupported,
-                child: Text(l.reportsPdfLabel),
+              onPressed: target == null || generatingPdf
+                  ? null
+                  : () => _pdf(ref, target),
+              child: Text(
+                generatingPdf ? l.reportsPdfGenerating : l.reportsPdfLabel,
               ),
             ),
           ),
@@ -1709,8 +1767,120 @@ class _ShareMenu extends ConsumerWidget {
     if (report == null) return;
     onSend(report);
   }
+
+  void _pdf(WidgetRef ref, TrainerClient target) {
+    final report = ref
+        .read(weeklyReportProvider((client: target, weekStart: weekStart)))
+        .valueOrNull;
+    if (report != null) onPdf(report);
+  }
 }
 
+/// A generated report's explicit delivery actions.
+///
+/// Kept public so the save and print boundaries can be exercised without
+/// generating a PDF in a widget test.
+class ReportPdfExportDialog extends ConsumerStatefulWidget {
+  const ReportPdfExportDialog({
+    required this.report,
+    required this.bytes,
+    super.key,
+  });
+
+  final WeeklyReport report;
+  final Uint8List bytes;
+
+  @override
+  ConsumerState<ReportPdfExportDialog> createState() =>
+      _ReportPdfExportDialogState();
+}
+
+class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
+  bool _sending = false;
+
+  String get _fileName {
+    final safeName = widget.report.client.name.replaceAll(
+      RegExp(r'[/\\:*?"<>|]'),
+      '_',
+    );
+    return '${safeName}_${ymd(widget.report.weekStart)}_주간리포트.pdf';
+  }
+
+  Future<void> _run(Future<void> Function() action, String success) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      if (mounted) messenger.showSnackBar(SnackBar(content: Text(success)));
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l.reportsPdfActionFailed)),
+        );
+      }
+    }
+  }
+
+  Future<void> _send() async {
+    if (_sending) return;
+    setState(() => _sending = true);
+    final l = AppLocalizations.of(context);
+    await _run(
+      () => ref
+          .read(reportPdfSenderProvider)
+          .send(
+            clientId: widget.report.client.id,
+            weekStart: widget.report.weekStart,
+            bytes: widget.bytes,
+            fileName: _fileName,
+          ),
+      l.reportsPdfSent(widget.report.client.name),
+    );
+    if (mounted) setState(() => _sending = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final actions = ref.read(reportPdfActionsProvider);
+    return AlertDialog(
+      title: Text(l.reportsPdfLabel),
+      content: Text(l.reportsPdfReady(widget.report.client.name)),
+      actions: <Widget>[
+        TextButton.icon(
+          key: const ValueKey<String>('report-pdf-send'),
+          onPressed: _sending ? null : _send,
+          icon: const Icon(Icons.send_outlined),
+          label: Text(
+            _sending ? l.reportsPdfSending : l.reportsPdfSendToClient,
+          ),
+        ),
+        TextButton.icon(
+          key: const ValueKey<String>('report-pdf-save'),
+          onPressed: () => _run(
+            () => actions.save(widget.bytes, _fileName),
+            l.reportsPdfSaveStarted,
+          ),
+          icon: const Icon(Icons.download_outlined),
+          label: Text(l.reportsPdfSave),
+        ),
+        TextButton.icon(
+          key: const ValueKey<String>('report-pdf-print'),
+          onPressed: () => _run(
+            () => actions.print(widget.bytes, _fileName),
+            l.reportsPdfPrintOpened,
+          ),
+          icon: const Icon(Icons.print_outlined),
+          label: Text(l.reportsPdfPrint),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l.reportsPdfClose),
+        ),
+      ],
+    );
+  }
+}
 
 /// 요일별 운동 내역 — 막대 아래에 하루하루를 이행률·운동 이름과 함께 적는다.
 ///
@@ -1746,7 +1916,7 @@ class _DailyDetail extends StatelessWidget {
           // 마지막 줄에 이번 주를 앞선 세 주 옆에 놓는다. 며칠을 나눈
           // 값인지는 따로 적지 않는다 — 값이 있는 막대를 세면 나온다(#754).
           _FourWeekTrend(report: report),
-        ]
+        ],
       ],
     );
   }

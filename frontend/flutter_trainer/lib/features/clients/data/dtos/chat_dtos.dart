@@ -18,6 +18,24 @@ ClientChatMessage chatMessageFromJson(Map<String, Object?> json) {
     body: _requiredString(json, 'body'),
     timeLabel: _requiredString(json, 'time_label'),
     createdAt: _parseTime(json['created_at']),
+    attachment: _pdfAttachment(json['attachment']),
+  );
+}
+
+ChatPdfAttachment? _pdfAttachment(Object? value) {
+  if (value == null) return null;
+  if (value is! Map<String, Object?> || value['type'] != 'pdf') {
+    throw const FormatException('Invalid trainer chat attachment.');
+  }
+  final size = value['file_size'];
+  if (size is! int || size < 0) {
+    throw const FormatException('Invalid trainer PDF attachment size.');
+  }
+  return ChatPdfAttachment(
+    fileName: _requiredString(value, 'file_name'),
+    fileId: _requiredString(value, 'file_id'),
+    fileSize: size,
+    downloadPath: _requiredString(value, 'download_path'),
   );
 }
 

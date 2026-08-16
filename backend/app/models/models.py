@@ -808,6 +808,14 @@ class TrainerRoutine(Base):
     # 재전송 중복 배정 방지용 멱등키(전송 시도당 1회 생성). NULL 허용 → 기존/무키
     # 요청은 제약 밖. DietEntry.idempotency_key 와 같은 방식이다.
     client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # #778: 주간 리포트 PDF 1종만 지원한다. 기존 텍스트 메시지는
+    # 모두 NULL이므로 기존 응답과 조회 흐름을 그대로 유지한다.
+    attachment_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    attachment_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    attachment_file_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    attachment_file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -1490,8 +1490,19 @@
   "reportsAiUseAsDraft": "Use as feedback",
   "reportsAiRegenerate": "Regenerate",
   "reportsAiUnavailable": "Available after the report summary API is connected. No summary is generated now.",
-  "reportsPdfUnsupported": "PDF generation isn't supported yet.",
   "reportsPdfLabel": "Export PDF",
-  "reportsPrintUnsupported": "Available after PDF/print report snapshots are supported.",
-  "reportsPrintLabel": "Print"
+  "reportsPdfGenerating": "Generating PDF…",
+  "reportsPdfGenerationFailed": "Couldn't generate the PDF. Please try again.",
+  "reportsPdfReady": "{name}'s weekly report is ready.",
+  "@reportsPdfReady": {"placeholders": {"name": {"type": "String"}}},
+  "reportsPdfSending": "Sending…",
+  "reportsPdfSendToClient": "Send to client",
+  "reportsPdfSave": "Save PDF",
+  "reportsPdfPrint": "Print",
+  "reportsPdfClose": "Close",
+  "reportsPdfActionFailed": "Couldn't complete the action. Please try again.",
+  "reportsPdfSent": "Sent the PDF to {name}.",
+  "@reportsPdfSent": {"placeholders": {"name": {"type": "String"}}},
+  "reportsPdfSaveStarted": "Started saving the PDF.",
+  "reportsPdfPrintOpened": "Opened the print dialog."
 }

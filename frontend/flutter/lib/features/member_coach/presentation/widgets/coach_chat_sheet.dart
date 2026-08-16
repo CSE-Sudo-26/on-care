@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/member_coach/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
+import 'package:printing/printing.dart';
 
 /// 루트 화면 위에 채팅 페이지를 열어 하단 내비게이션과 플로팅 버튼을 가린다.
 Future<void> openTrainerChatPage(
@@ -370,13 +372,13 @@ class _BannerFrame extends StatelessWidget {
   }
 }
 
-class _Bubble extends StatelessWidget {
+class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message});
 
   final CoachMessage message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final fromMe = message.fromMe;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -430,14 +432,27 @@ class _Bubble extends StatelessWidget {
                       bottomRight: Radius.circular(fromMe ? 4 : 14),
                     ),
                   ),
-                  child: Text(
-                    message.body,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
-                      fontWeight: FontWeight.w500,
-                      color: fromMe ? Colors.white : FigmaColors.ink,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        message.body,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                          color: fromMe ? Colors.white : FigmaColors.ink,
+                        ),
+                      ),
+                      if (message.attachment
+                          case final attachment?) ...<Widget>[
+                        const SizedBox(height: 8),
+                        _PdfCard(
+                          attachment: attachment,
+                          onOpen: () => _openPdf(context, ref, attachment),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -460,6 +475,79 @@ class _Bubble extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _openPdf(
+    BuildContext context,
+    WidgetRef ref,
+    CoachPdfAttachment attachment,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await ref
+          .read(chatPdfRepositoryProvider)
+          .download(attachment.downloadPath);
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          child: SizedBox(
+            width: 760,
+            height: 720,
+            child: PdfPreview(
+              build: (_) async => bytes,
+              pdfFileName: attachment.fileName,
+              allowSharing: false,
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('PDF를 열지 못했습니다.')));
+    }
+  }
+}
+
+class _PdfCard extends StatelessWidget {
+  const _PdfCard({required this.attachment, required this.onOpen});
+
+  final CoachPdfAttachment attachment;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white.withValues(alpha: 0.92),
+    borderRadius: BorderRadius.circular(10),
+    child: InkWell(
+      key: ValueKey<String>('coach-pdf-${attachment.fileId}'),
+      onTap: onOpen,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.picture_as_pdf, color: Color(0xffb3261e)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(attachment.fileName, overflow: TextOverflow.ellipsis),
+                  Text(_fileSize(attachment.fileSize)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.open_in_new, size: 18),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  static String _fileSize(int bytes) => bytes >= 1024 * 1024
+      ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+      : '${(bytes / 1024).toStringAsFixed(1)} KB';
 }
 
 class _InputBar extends StatelessWidget {

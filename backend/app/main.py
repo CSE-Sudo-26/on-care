@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
     ai_coach,
+    chat_attachments,
     coach_docs,
     consultations,
     dashboard,
@@ -115,6 +116,7 @@ app.include_router(schedule.router, prefix=settings.api_v1_prefix)
 app.include_router(notifications.router, prefix=settings.api_v1_prefix)
 app.include_router(places.router, prefix=settings.api_v1_prefix)
 app.include_router(ai_coach.router, prefix=settings.api_v1_prefix)
+app.include_router(chat_attachments.router, prefix=settings.api_v1_prefix)
 app.include_router(coach_docs.router, prefix=settings.api_v1_prefix)
 app.include_router(trainer.router, prefix=settings.api_v1_prefix)
 app.include_router(member_coach.router, prefix=settings.api_v1_prefix)

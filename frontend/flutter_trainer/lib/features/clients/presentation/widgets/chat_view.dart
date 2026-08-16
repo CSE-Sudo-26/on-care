@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:printing/printing.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+import 'package:oncare_trainer/features/clients/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare_trainer/features/messages/domain/chat_context_insight.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 import 'package:oncare_trainer/shared/widgets/icon_label.dart';
@@ -512,14 +514,14 @@ class _SentBanner extends StatelessWidget {
   }
 }
 
-class _Bubble extends StatelessWidget {
+class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message, required this.avatar});
 
   final ClientChatMessage message;
   final String avatar;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final fromTrainer = message.fromTrainer;
     final bubble = Column(
       crossAxisAlignment: fromTrainer
@@ -543,16 +545,28 @@ class _Bubble extends StatelessWidget {
               bottomRight: Radius.circular(fromTrainer ? 4 : 16),
             ),
           ),
-          child: Text(
-            message.body,
-            style: TextStyle(
-              fontSize: 13.5,
-              height: 1.4,
-              fontWeight: FontWeight.w500,
-              color: fromTrainer
-                  ? AppColors.accentForeground
-                  : AppColors.foreground,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                message.body,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  color: fromTrainer
+                      ? AppColors.accentForeground
+                      : AppColors.foreground,
+                ),
+              ),
+              if (message.attachment case final attachment?) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                _ChatPdfCard(
+                  attachment: attachment,
+                  onOpen: () => _openPdf(context, ref, attachment),
+                ),
+              ],
+            ],
           ),
         ),
         const SizedBox(height: 3),
@@ -580,6 +594,79 @@ class _Bubble extends StatelessWidget {
       ],
     );
   }
+
+  Future<void> _openPdf(
+    BuildContext context,
+    WidgetRef ref,
+    ChatPdfAttachment attachment,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await ref
+          .read(trainerChatPdfRepositoryProvider)
+          .download(attachment.downloadPath);
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          child: SizedBox(
+            width: 760,
+            height: 720,
+            child: PdfPreview(
+              build: (_) async => bytes,
+              pdfFileName: attachment.fileName,
+              allowSharing: false,
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('PDF를 열지 못했습니다.')));
+    }
+  }
+}
+
+class _ChatPdfCard extends StatelessWidget {
+  const _ChatPdfCard({required this.attachment, required this.onOpen});
+
+  final ChatPdfAttachment attachment;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.card.withValues(alpha: 0.92),
+    borderRadius: const BorderRadius.all(AppRadius.sm),
+    child: InkWell(
+      key: ValueKey<String>('trainer-chat-pdf-${attachment.fileId}'),
+      onTap: onOpen,
+      borderRadius: const BorderRadius.all(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.picture_as_pdf, color: AppColors.destructive),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(attachment.fileName, overflow: TextOverflow.ellipsis),
+                  Text(_fileSize(attachment.fileSize)),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const Icon(Icons.open_in_new, size: 18),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  static String _fileSize(int bytes) => bytes >= 1024 * 1024
+      ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+      : '${(bytes / 1024).toStringAsFixed(1)} KB';
 }
 
 class _InputBar extends StatelessWidget {

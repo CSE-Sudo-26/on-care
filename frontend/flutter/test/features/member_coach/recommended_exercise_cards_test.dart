@@ -82,6 +82,30 @@ class _ReadTrackingMemberCoachRepository extends MockMemberCoachRepository {
   }
 }
 
+class _PdfMemberCoachRepository extends MockMemberCoachRepository {
+  static final List<CoachMessage> _messages = <CoachMessage>[
+    CoachMessage(
+      id: 'pdf-message',
+      sender: CoachSender.trainer,
+      body: '이번 주 리포트입니다.',
+      timeLabel: '18:20',
+      createdAt: DateTime(2026, 8, 16, 18, 20),
+      attachment: const CoachPdfAttachment(
+        fileName: '김고객_2026-08-10_주간리포트.pdf',
+        fileId: 'pdf-file',
+        fileSize: 2048,
+        downloadPath: '/chat/attachments/pdf-file',
+      ),
+    ),
+  ];
+
+  @override
+  Future<List<CoachMessage>> fetchChat() async => _messages;
+
+  @override
+  Stream<List<CoachMessage>> watchChat() => Stream.value(_messages);
+}
+
 /// 데모(목업) 설정 — 채팅 화면이 `appConfigProvider` 를 읽어 안내 배너 노출을
 /// 가른다. 이 provider 는 기본값 없이 던지므로 테스트마다 넣어 줘야 한다.
 const AppConfig _demoConfig = AppConfig(
@@ -539,5 +563,25 @@ void main() {
     final TextField input = tester.widget<TextField>(find.byType(TextField));
     expect(input.controller?.text, '다시 보낼 메시지');
     expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
+  });
+
+  testWidgets('PDF attachment를 파일명과 크기가 있는 카드로 표시한다', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _PdfMemberCoachRepository(),
+          ),
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('coach-pdf-pdf-file')), findsOneWidget);
+    expect(find.text('김고객_2026-08-10_주간리포트.pdf'), findsOneWidget);
+    expect(find.text('2.0 KB'), findsOneWidget);
+    expect(find.byIcon(Icons.open_in_new), findsOneWidget);
   });
 }

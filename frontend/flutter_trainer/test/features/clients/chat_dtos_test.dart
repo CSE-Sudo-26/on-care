@@ -18,6 +18,26 @@ void main() {
       expect(m.fromTrainer, isTrue);
       expect(m.timeLabel, '18:10');
       expect(m.createdAt, DateTime.parse('2026-07-30T18:10:00'));
+      expect(m.attachment, isNull);
+    });
+
+    test('maps an optional PDF attachment', () {
+      final m = chatMessageFromJson(<String, Object?>{
+        'id': 'pdf-1',
+        'sender': 'trainer',
+        'body': '이번 주 리포트입니다.',
+        'time_label': '18:10',
+        'created_at': '2026-07-30T18:10:00',
+        'attachment': <String, Object?>{
+          'type': 'pdf',
+          'file_name': '김고객_주간리포트.pdf',
+          'file_id': 'abc123',
+          'file_size': 2048,
+          'download_path': '/chat/attachments/abc123',
+        },
+      });
+      expect(m.attachment?.fileName, '김고객_주간리포트.pdf');
+      expect(m.attachment?.fileSize, 2048);
     });
 
     test('maps the client sender', () {

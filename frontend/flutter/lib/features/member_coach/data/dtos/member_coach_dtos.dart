@@ -112,6 +112,24 @@ CoachMessage coachMessageFromJson(Map<String, Object?> json) {
     body: _requiredString(json, 'body'),
     timeLabel: _requiredString(json, 'time_label'),
     createdAt: _requiredDateTime(json, 'created_at'),
+    attachment: _pdfAttachment(json['attachment']),
+  );
+}
+
+CoachPdfAttachment? _pdfAttachment(Object? value) {
+  if (value == null) return null;
+  if (value is! Map<String, Object?> || value['type'] != 'pdf') {
+    throw const FormatException('Invalid member chat attachment.');
+  }
+  final size = value['file_size'];
+  if (size is! int || size < 0) {
+    throw const FormatException('Invalid PDF attachment size.');
+  }
+  return CoachPdfAttachment(
+    fileName: _requiredString(value, 'file_name'),
+    fileId: _requiredString(value, 'file_id'),
+    fileSize: size,
+    downloadPath: _requiredString(value, 'download_path'),
   );
 }
 
