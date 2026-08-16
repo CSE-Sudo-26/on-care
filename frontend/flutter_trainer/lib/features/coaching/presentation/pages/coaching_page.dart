@@ -525,8 +525,10 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                               const SizedBox(height: AppSpacing.lg),
                             ],
                             ..._editorChildren(selected, showAssistant: false),
-                            // 좁은 화면은 _libraryChildren 이 같은 카드를 붙인다.
+                            // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
                             ...?_savedProgramsCard(),
+                            const SizedBox(height: AppSpacing.lg),
+                            _SendHistoryCard(client: selected),
                           ],
                         ),
                       ),

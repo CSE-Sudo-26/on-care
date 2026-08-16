@@ -339,6 +339,24 @@ Future<void> _selectExerciseAction(
   await tester.pump();
 }
 
+void _expectNutritionStatusCardsInBounds(WidgetTester tester) {
+  final nutrition = find.byKey(const Key('client-nutrition-summary-card'));
+  expect(nutrition, findsOneWidget);
+  final nutritionRect = tester.getRect(nutrition);
+  final viewportWidth = tester.view.physicalSize.width;
+  for (final status in <Finder>[
+    find.byKey(const Key('client-nutrition-sodium-status')),
+    find.byKey(const Key('client-nutrition-sugar-status')),
+  ]) {
+    expect(status, findsOneWidget);
+    final statusRect = tester.getRect(status);
+    expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
+    expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
+    expect(statusRect.left, greaterThanOrEqualTo(0));
+    expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
+  }
+}
+
 void main() {
   test('real API mode never exposes bundled drift recommendations', () async {
     final container = ProviderContainer(
@@ -575,15 +593,8 @@ void main() {
           tester.getTopLeft(sodium).dx,
           lessThan(tester.getTopLeft(sugar).dx),
         );
-        final nutritionRect = tester.getRect(nutrition);
-        final viewportWidth = tester.view.physicalSize.width;
-        for (final status in <Finder>[sodium, sugar]) {
-          final statusRect = tester.getRect(status);
-          expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
-          expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
-          expect(statusRect.left, greaterThanOrEqualTo(0));
-          expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
-        }
+        _expectNutritionStatusCardsInBounds(tester);
+        expect(find.text('전송 이력'), findsOneWidget);
         expect(
           tester.getBottomRight(sugar).dy,
           lessThanOrEqualTo(tester.view.physicalSize.height),
@@ -666,20 +677,7 @@ void main() {
     ) async {
       await openTab(tester, size: const Size(900, 1200));
 
-      final nutrition = find.byKey(const Key('client-nutrition-summary-card'));
-      final nutritionRect = tester.getRect(nutrition);
-      final viewportWidth = tester.view.physicalSize.width;
-      for (final status in <Finder>[
-        find.byKey(const Key('client-nutrition-sodium-status')),
-        find.byKey(const Key('client-nutrition-sugar-status')),
-      ]) {
-        expect(status, findsOneWidget);
-        final statusRect = tester.getRect(status);
-        expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
-        expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
-        expect(statusRect.left, greaterThanOrEqualTo(0));
-        expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
-      }
+      _expectNutritionStatusCardsInBounds(tester);
       expect(tester.takeException(), isNull);
     });
 
