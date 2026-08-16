@@ -211,6 +211,66 @@ class _Avatar extends StatelessWidget {
 }
 
 /// Spinner shown inside a sheet while `profileProvider` is loading.
+/// 프로필을 못 읽었을 때의 화면.
+///
+/// 예전에는 빈 [UserProfile] 로 폼을 그렸다. 화면만 보면 조회 성공과 구별되지
+/// 않아, 기본값이 내 설정인 것처럼 보이고 그대로 저장하면 서버에 있던 실제 값이
+/// 기본값으로 덮였다(#789). 읽지 못했으면 읽지 못했다고 말하고, 저장 자체를
+/// 막는 것이 맞다.
+class _LoadFailed extends StatelessWidget {
+  const _LoadFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+      child: Column(
+        children: <Widget>[
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 32,
+            color: FigmaColors.textMuted,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '설정을 불러오지 못했어요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: FigmaColors.ink,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '지금 저장하면 기존 설정이 지워질 수 있어 편집을 잠갔어요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.4,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            key: const Key('mySettingsRetry'),
+            onPressed: onRetry,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FigmaColors.primary,
+              side: BorderSide(color: FigmaColors.primaryA(0.4)),
+              minimumSize: const Size(48, 44),
+            ),
+            child: Text(l.actionRetry),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SheetLoader extends StatelessWidget {
   const _SheetLoader();
 
@@ -304,9 +364,11 @@ class ProfileSettingsPage extends ConsumerWidget {
       data: (UserProfile p) => _ProfileForm(initial: p),
       loading: () =>
           _shell(context, l.myProfileTitle, const <Widget>[_SheetLoader()]),
-      error: (_, _) => const _ProfileForm(
-        initial: UserProfile(id: '', name: '', email: ''),
-      ),
+      // 건강 목표와 같은 이유로 폼을 그리지 않는다 — 빈 프로필을 저장하면
+      // 이름·연락처가 지워진다(#789).
+      error: (_, _) => _shell(context, l.myProfileTitle, <Widget>[
+        _LoadFailed(onRetry: () => ref.invalidate(profileProvider)),
+      ]),
     );
   }
 }
@@ -466,9 +528,9 @@ class HealthGoalsPage extends ConsumerWidget {
     return profile.when(
       data: (UserProfile p) => _GoalsForm(initial: p),
       loading: () => _shell(context, '건강 목표', const <Widget>[_SheetLoader()]),
-      error: (_, _) => const _GoalsForm(
-        initial: UserProfile(id: '', name: '', email: ''),
-      ),
+      error: (_, _) => _shell(context, '건강 목표', <Widget>[
+        _LoadFailed(onRetry: () => ref.invalidate(profileProvider)),
+      ]),
     );
   }
 }

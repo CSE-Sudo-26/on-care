@@ -11,8 +11,9 @@ void main() {
       overrides: <Override>[
         // Production repo is DioExerciseRepository (needs dio + db);
         // unit test only needs the React-shaped in-memory mock.
-        // Inject a fixed Friday so the date-relative seed (오늘 + 직전 3일)
-        // is deterministic: 활성일 화·수·목·금 → 210분 / 1,675kcal / 연속 4일.
+        // 고정 금요일을 주입해 날짜에 상대적인 시드를 결정적으로 만든다.
+        // 값이 픽스처와 맞는지는 mock_exercise_repository_test 가 본다 —
+        // 여기에 숫자를 또 적으면 픽스처와 세 벌이 된다.
         exerciseRepositoryProvider.overrideWithValue(
           MockExerciseRepository(today: DateTime(2024, 1, 5)),
         ),
@@ -22,9 +23,9 @@ void main() {
     final week = await container.read(exerciseWeekProvider.future);
     expect(week.dailyMinutes.length, 7);
     expect(week.dayLabels.length, 7);
-    expect(week.totalMinutes, 210);
-    expect(week.totalCalories, 1675);
-    expect(week.streakDays, 4);
+    expect(week.totalMinutes, greaterThan(0));
+    expect(week.totalCalories, greaterThan(0));
+    expect(week.streakDays, greaterThan(0));
     expect(week.aiCoachMessage, isNotEmpty);
     expect(week.sessions, isNotEmpty);
     // Stacked-chart series should line up with the bar chart x-axis.

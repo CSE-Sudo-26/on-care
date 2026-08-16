@@ -193,7 +193,7 @@ void main() {
     );
   });
 
-  testWidgets('gym finder removes only the unused trainer chat action', (
+  testWidgets('gym finder result leads to the gym detail, not a fake send', (
     WidgetTester tester,
   ) async {
     await pumpGymTab(tester, hasMyGym: false);
@@ -205,7 +205,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('트레이너 채팅'), findsNothing);
-    expect(find.text(l.exSendHealthSummary), findsWidgets);
+    // '건강 요약 전달' 은 보내는 곳 없이 성공 스낵바만 띄웠다 — 실제로 동작하는
+    // 다음 걸음(헬스장 상세 → 상담 신청)으로 바꿨다(#787).
+    expect(find.textContaining('건강 요약'), findsNothing);
+    expect(find.text(l.exGymDetailHint), findsWidgets);
   });
 
   testWidgets('pending consultation shows one action and reuses status UI', (

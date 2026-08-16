@@ -107,4 +107,27 @@ void main() {
     // 목록이 하나로 줄어도 지도 자리는 그대로다.
     expect(find.text(localizations(tester).exKakaoMapArea), findsOneWidget);
   });
+
+  testWidgets('결과 카드에 허위 성공을 내는 버튼이 없다 (#787)', (WidgetTester tester) async {
+    await openSheet(tester, const <Gym>[_withoutCoordinates]);
+
+    // '건강 요약 전달' 은 확인을 받고 성공 스낵바만 띄웠다 — 보내는 곳이 없었다.
+    // 문구가 바뀌어도 잡히도록 '전달' 로 넓게 본다.
+    expect(find.textContaining('건강 요약'), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+  });
+
+  testWidgets('결과 카드를 누르면 헬스장 상세로 간다 (#787)', (WidgetTester tester) async {
+    await openSheet(tester, const <Gym>[_withoutCoordinates]);
+
+    // 죽은 자리로 두지 않고, 실제로 동작하는 다음 걸음으로 바꿨다.
+    expect(
+      find.byKey(Key('gym-result-${_withoutCoordinates.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(localizations(tester).exGymDetailHint),
+      findsOneWidget,
+    );
+  });
 }

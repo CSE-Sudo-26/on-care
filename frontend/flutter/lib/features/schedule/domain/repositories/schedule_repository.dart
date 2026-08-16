@@ -15,4 +15,21 @@ abstract class ScheduleRepository {
     String time = '',
     ScheduleCategory category = ScheduleCategory.other,
   });
+
+  /// PUT /schedule/events/{id} — 준 필드만 바꾼다.
+  ///
+  /// 넘기지 않은 항목은 서버가 그대로 둔다. 시간을 지우는 것은 `''` 를 넘기는
+  /// 것이지 생략이 아니다 — 생략은 "안 바꿈" 이다.
+  Future<ScheduleEvent> updateEvent(
+    String id, {
+    String? date,
+    String? time,
+    String? title,
+    ScheduleCategory? category,
+  });
+
+  /// DELETE /schedule/events/{id}.
+  ///
+  /// 되돌릴 수 없다. 부르기 전에 사용자 확인을 받는 것은 화면의 몫이다.
+  Future<void> deleteEvent(String id);
 }
