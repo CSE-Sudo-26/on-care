@@ -56,9 +56,15 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
 
   static String _key(String clientId) => 'trainer_memos:$clientId';
 
+  /// This client's stored memos.
+  ///
+  /// Always a **fresh growable list**: every caller below sorts, edits or
+  /// removes in place. Returning `const []` for the empty cases made the
+  /// first read of a client with no memos throw on `..sort()`, so the memo
+  /// dialog showed a load failure instead of its empty state (#814).
   List<TrainerMemo> _read(String clientId) {
     final raw = _prefs.getString(_key(clientId));
-    if (raw == null) return const <TrainerMemo>[];
+    if (raw == null) return <TrainerMemo>[];
     try {
       return (jsonDecode(raw) as List<Object?>)
           .map(
@@ -70,7 +76,7 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
     } on Object {
       // A payload written by an older build is not worth crashing the
       // screen over — the demo starts from an empty list instead.
-      return const <TrainerMemo>[];
+      return <TrainerMemo>[];
     }
   }
 
