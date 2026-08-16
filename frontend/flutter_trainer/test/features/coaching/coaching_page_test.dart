@@ -21,6 +21,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entr
 import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_week.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -30,6 +31,7 @@ import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
+import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -462,36 +464,84 @@ void main() {
       );
     }
 
-    testWidgets('defaults to the first client with verdict and routine', (
+    testWidgets(
+      'defaults to the first client with nutrition graph and routine',
+      (tester) async {
+        await openTab(tester);
+
+        expect(find.text('프로그램'), findsWidgets);
+        expect(find.byType(NutritionSummaryCard), findsOneWidget);
+        expect(
+          find.byKey(const Key('client-nutrition-summary-card')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('client-nutrition-calorie-progress')),
+          findsOneWidget,
+        );
+        expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
+        expect(find.text('혈압 안정에 효과적'), findsOneWidget);
+        final programCard = find.byKey(
+          const ValueKey<String>('program-client-seed-client-1'),
+        );
+        expect(programCard, findsOneWidget);
+        expect(
+          find.descendant(of: programCard, matching: find.text('운동 이행률')),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: programCard,
+            matching: find.textContaining('운동 이행률 '),
+          ),
+          findsOneWidget,
+        );
+        final avatar = tester.widget<ClientAvatar>(
+          find.descendant(of: programCard, matching: find.byType(ClientAvatar)),
+        );
+        expect(avatar.size, 32);
+      },
+    );
+
+    testWidgets('compact client picker stacks demographics below the name', (
       tester,
     ) async {
-      await openTab(tester);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(800, 1200);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.coaching,
+      );
 
-      expect(find.text('프로그램'), findsWidgets);
-      // 김민수 (3428mg, over) → cardio-boost verdict.
-      expect(find.text('AI 판단: 나트륨 초과 → 유산소 강화 권장'), findsOneWidget);
-      expect(find.text('17.8'), findsOneWidget);
-      expect(find.text('저강도 유산소 (걷기)'), findsOneWidget);
-      expect(find.text('혈압 안정에 효과적'), findsOneWidget);
-      final programCard = find.byKey(
-        const ValueKey<String>('program-client-seed-client-1'),
+      final minsuIdentity = find.byWidgetPredicate(
+        (widget) =>
+            widget is ClientIdentity &&
+            widget.stacked &&
+            widget.client.id == 'seed-client-1',
       );
-      expect(programCard, findsOneWidget);
+      expect(minsuIdentity, findsOneWidget);
+      final identity = tester.widget<ClientIdentity>(minsuIdentity);
+      final demographics = clientDemographicsLabel(
+        tester.element(minsuIdentity),
+        identity.client,
+      );
+      final name = find.descendant(
+        of: minsuIdentity,
+        matching: find.text(identity.client.name),
+      );
+      final detail = find.descendant(
+        of: minsuIdentity,
+        matching: find.text(demographics),
+      );
       expect(
-        find.descendant(of: programCard, matching: find.text('운동 이행률')),
-        findsNothing,
+        tester.getTopLeft(detail).dy,
+        greaterThan(tester.getTopLeft(name).dy),
       );
-      expect(
-        find.descendant(
-          of: programCard,
-          matching: find.textContaining('운동 이행률 '),
-        ),
-        findsOneWidget,
-      );
-      final avatar = tester.widget<ClientAvatar>(
-        find.descendant(of: programCard, matching: find.byType(ClientAvatar)),
-      );
-      expect(avatar.size, 32);
+      expect(find.byType(NutritionSummaryCard), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('opens the A/B assistant inline in the AI routine tab', (
@@ -547,19 +597,33 @@ void main() {
       expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
     });
 
-    testWidgets('switching client updates the verdict and suggestions', (
-      tester,
-    ) async {
-      await openTab(tester);
+    testWidgets(
+      'switching client updates the nutrition graph and suggestions',
+      (tester) async {
+        await openTab(tester);
 
-      await tester.tap(find.text('이지수'));
-      await settle(tester);
+        final progressFinder = find.byKey(
+          const Key('client-nutrition-calorie-progress'),
+        );
+        final initialProgress = tester
+            .widget<CircularProgressIndicator>(progressFinder)
+            .value;
 
-      // 이지수 (1800mg, under) → balanced verdict + her routine.
-      expect(find.text('AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지'), findsOneWidget);
-      expect(find.text('인터벌 런닝'), findsOneWidget);
-      expect(find.text('저강도 유산소 (걷기)'), findsNothing);
-    });
+        await tester.tap(find.text('이지수'));
+        await settle(tester);
+
+        expect(
+          find.byKey(const Key('client-nutrition-summary-card')),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<CircularProgressIndicator>(progressFinder).value,
+          isNot(initialProgress),
+        );
+        expect(find.text('인터벌 런닝'), findsOneWidget);
+        expect(find.text('저강도 유산소 (걷기)'), findsNothing);
+      },
+    );
 
     testWidgets('adding and deleting a custom exercise', (tester) async {
       await openTab(tester);
@@ -1096,6 +1160,10 @@ void main() {
       bool includeInitialSuggestions = true,
       void Function(_CapturingScheduleRepository repo)? captureSchedule,
     }) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1600, 1200);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final routineRepo = _SpyTrainerRoutineRepository(
         throwOnAssign: assignError,
       );
