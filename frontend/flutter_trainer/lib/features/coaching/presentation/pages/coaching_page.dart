@@ -33,6 +33,7 @@ import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
@@ -1066,6 +1067,10 @@ class _ProgramMemberSummary extends ConsumerWidget {
         ? '-'
         : exercises.take(2).join(' · ');
     final minutes = latest?.durationMinutes;
+    final dietAlerts = <ClientAlert>[
+      if (client.sodiumOverBudget) ClientAlert.sodiumOver,
+      if (client.sugarOverBudget) ClientAlert.sugarOver,
+    ];
     return SectionCard(
       title: l.coachMemberSummary,
       dense: true,
@@ -1102,6 +1107,17 @@ class _ProgramMemberSummary extends ConsumerWidget {
               ),
             ],
           ),
+          if (dietAlerts.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              key: const ValueKey<String>('program-client-health-alerts'),
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final alert in dietAlerts) AlertBadge(alert: alert),
+              ],
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           _SummaryLine(label: l.clientTabWorkout, value: workout),
           _SummaryLine(
@@ -1144,7 +1160,7 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
         Container(
           key: const ValueKey<String>('program-client-data-tabs'),
           height: 44,
-          padding: const EdgeInsets.all(AppSpacing.xs),
+          padding: const EdgeInsets.all(AppSpacing.xxs),
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: const BorderRadius.all(AppRadius.pill),
@@ -1162,7 +1178,7 @@ class _ClientDataSwitcherState extends ConsumerState<_ClientDataSwitcher> {
                   }),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: AppSpacing.xxs),
               Expanded(
                 child: _ClientDataTab(
                   label: l.clientTabWorkout,

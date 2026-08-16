@@ -559,6 +559,10 @@ void main() {
           findsOneWidget,
         );
         expect(
+          find.descendant(of: summary, matching: find.text('나트륨 초과')),
+          findsOneWidget,
+        );
+        expect(
           find.byKey(const ValueKey<String>('program-member-completion-chart')),
           findsNothing,
         );
