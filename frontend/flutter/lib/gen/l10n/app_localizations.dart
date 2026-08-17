@@ -2642,6 +2642,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send your message. Please try again'**
   String get coachChatSendFailed;
 
+  /// No description provided for @coachChatPdfOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the PDF. Please try again'**
+  String get coachChatPdfOpenFailed;
+
   /// No description provided for @coachChatInputHint.
   ///
   /// In en, this message translates to:

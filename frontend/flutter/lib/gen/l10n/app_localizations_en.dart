@@ -1429,6 +1429,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t send your message. Please try again';
 
   @override
+  String get coachChatPdfOpenFailed =>
+      'Couldn\'t open the PDF. Please try again';
+
+  @override
   String get coachChatInputHint => 'Message your trainer...';
 
   @override

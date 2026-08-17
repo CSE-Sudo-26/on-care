@@ -790,6 +790,7 @@
   "coachChatBack": "Back",
   "coachChatLoadFailed": "Couldn't load the conversation",
   "coachChatSendFailed": "Couldn't send your message. Please try again",
+  "coachChatPdfOpenFailed": "Couldn't open the PDF. Please try again",
   "coachChatInputHint": "Message your trainer...",
   "coachChatDemoAnalyzed": "AI analyzed your diet and exercise data",
   "coachChatDemoReportSent": "A summary report was sent to {trainer}",

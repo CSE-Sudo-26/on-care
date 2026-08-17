@@ -1094,6 +1094,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send the message. Please try again'**
   String get chatSendFailed;
 
+  /// No description provided for @chatPdfOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the PDF. Please try again'**
+  String get chatPdfOpenFailed;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:
@@ -4711,6 +4717,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opened the print dialog.'**
   String get reportsPdfPrintOpened;
+
+  /// No description provided for @reportsPdfMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Here\'s your weekly report.'**
+  String get reportsPdfMessage;
+
+  /// No description provided for @reportsPdfFallbackClient.
+  ///
+  /// In en, this message translates to:
+  /// **'client'**
+  String get reportsPdfFallbackClient;
 }
 
 class _AppLocalizationsDelegate

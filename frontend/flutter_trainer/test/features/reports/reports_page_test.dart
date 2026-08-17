@@ -258,10 +258,10 @@ void main() {
           .onPressed,
       isNull,
     );
-    await openShareMenu(tester); // 열린 메뉴를 닫고 실패 후 다시 연다.
+    await openShareMenu(tester); // 열려 있는 메뉴를 닫는다. 재시도는 아래에서 연다.
     first.completeError(StateError('render failed'));
     await settle(tester);
-    expect(find.text('PDF를 생성하지 못했습니다. 다시 시도해 주세요.'), findsOneWidget);
+    expect(find.text('PDF를 생성하지 못했어요. 다시 시도해 주세요.'), findsOneWidget);
 
     // 실패가 현재 리포트를 없애지 않고, 재시도는 액션 대화상자로 이어진다.
     await openShareMenu(tester);

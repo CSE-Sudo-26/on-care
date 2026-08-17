@@ -578,6 +578,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSendFailed => 'Couldn\'t send the message. Please try again';
 
   @override
+  String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
+
+  @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
 
   @override
@@ -2675,4 +2678,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsPdfPrintOpened => 'Opened the print dialog.';
+
+  @override
+  String get reportsPdfMessage => 'Here\'s your weekly report.';
+
+  @override
+  String get reportsPdfFallbackClient => 'client';
 }

@@ -318,6 +318,7 @@
   },
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
+  "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
   "chatLoadFailed": "Couldn't load the conversation",
   "chatDemoAnalyzed": "AI analysed {name}'s meals and workouts",
   "@chatDemoAnalyzed": {
@@ -1524,5 +1525,7 @@
   "reportsPdfSent": "Sent the PDF to {name}.",
   "@reportsPdfSent": {"placeholders": {"name": {"type": "String"}}},
   "reportsPdfSaveStarted": "Started saving the PDF.",
-  "reportsPdfPrintOpened": "Opened the print dialog."
+  "reportsPdfPrintOpened": "Opened the print dialog.",
+  "reportsPdfMessage": "Here's your weekly report.",
+  "reportsPdfFallbackClient": "client"
 }

@@ -481,6 +481,7 @@ class _Bubble extends ConsumerWidget {
     WidgetRef ref,
     CoachPdfAttachment attachment,
   ) async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       final bytes = await ref
@@ -502,7 +503,7 @@ class _Bubble extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('PDF를 열지 못했습니다.')));
+      messenger.showSnackBar(SnackBar(content: Text(l.coachChatPdfOpenFailed)));
     }
   }
 }
