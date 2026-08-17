@@ -11,6 +11,7 @@ class ClientDietEntry {
     this.proteinG = 0,
     this.fatG = 0,
     this.photoUrl,
+    this.photoAsset,
   });
 
   /// Meal label (아침 | 점심 | 저녁 | 간식).
@@ -42,4 +43,9 @@ class ClientDietEntry {
   /// 담당 트레이너 전용 경로다(`/trainer/clients/<id>/diet/photos/<photo>`).
   /// 회원 앱이 받는 경로와 다르며, 접근 판정은 서버가 담당 링크로 한다.
   final String? photoUrl;
+
+  /// 데모에서 이 끼니로 보여 줄 번들 이미지 경로. 실 API 모드에서는 늘 null
+  /// 이고 [photoUrl] 이 쓰인다 — 데모에는 회원이 올린 사진을 받아 올 백엔드가
+  /// 없어 사진이 한 장도 뜨지 않았다(#819).
+  final String? photoAsset;
 }

@@ -5,7 +5,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 
 void main() {
   test(
-    'v3 to v9 adds macro·주간 계열 columns and preserves existing rows',
+    'v3 to v10 adds macro·주간 계열 columns and preserves existing rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -82,7 +82,7 @@ void main() {
       final meal = await db.select(db.clientDietEntries).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 9);
+      expect(version.read<int>('user_version'), 10);
       expect(client.id, 'existing-client');
       expect(client.caloriesToday, 500);
       expect(client.sugarG, 12.0);
@@ -100,7 +100,7 @@ void main() {
     },
   );
 
-  test('v4 to v9 preserves integer sugar and all client rows', () async {
+  test('v4 to v10 preserves integer sugar and all client rows', () async {
     final executor = NativeDatabase.memory(
       setup: (database) {
         database.execute('''
@@ -152,6 +152,19 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
+        // v1 부터 있던 테이블이다. 스냅샷이 빼먹으면 그 위에서 도는
+        // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#819).
+        database.execute('''
+          CREATE TABLE client_diet_entries (
+            id TEXT NOT NULL PRIMARY KEY,
+            client_id TEXT NOT NULL,
+            meal TEXT NOT NULL,
+            items TEXT NOT NULL,
+            calories INTEGER NOT NULL,
+            sodium_mg INTEGER NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
         database.execute('PRAGMA user_version = 4');
       },
     );
@@ -162,7 +175,7 @@ void main() {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-    expect(version.read<int>('user_version'), 9);
+    expect(version.read<int>('user_version'), 10);
     expect(clients, hasLength(2));
     expect(clients[0].name, '기존 회원 A');
     expect(clients[0].sugarG, 12.0);
@@ -176,7 +189,7 @@ void main() {
   });
 
   test(
-    'v5 to v9 adds the weekly calorie·sugar series to existing rows',
+    'v5 to v10 adds the weekly calorie·sugar series to existing rows',
     () async {
       final executor = NativeDatabase.memory(
         setup: (database) {
@@ -228,6 +241,19 @@ void main() {
             sort_order INTEGER NOT NULL DEFAULT 0
           )
         ''');
+          // v1 부터 있던 테이블이다. 스냅샷이 빼먹으면 그 위에서 도는
+          // 마이그레이션이 실제 DB 와 다른 것을 보게 된다(#819).
+          database.execute('''
+          CREATE TABLE client_diet_entries (
+            id TEXT NOT NULL PRIMARY KEY,
+            client_id TEXT NOT NULL,
+            meal TEXT NOT NULL,
+            items TEXT NOT NULL,
+            calories INTEGER NOT NULL,
+            sodium_mg INTEGER NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
           database.execute('PRAGMA user_version = 5');
         },
       );
@@ -237,7 +263,7 @@ void main() {
       final client = await db.select(db.trainerClients).getSingle();
       final version = await db.customSelect('PRAGMA user_version').getSingle();
 
-      expect(version.read<int>('user_version'), 9);
+      expect(version.read<int>('user_version'), 10);
       // 기존 값은 그대로 두고, 새 계열만 기본값으로 붙는다.
       expect(client.sugarG, 17.8);
       expect(client.sodiumWeekJson, '[700,800]');

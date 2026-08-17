@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,6 +97,25 @@ void main() {
       minsu.every((m) => m.calories == 0 || m.carbsG + m.proteinG + m.fatG > 0),
       isTrue,
     );
+  });
+
+  test('사진을 가리키는 끼니는 실제로 그 파일이 있다', () async {
+    // 자산 경로가 어긋나면 화면은 조용히 사진만 빼고 그린다 — 데모를 열기
+    // 전까지 아무도 모른다(#819).
+    final meals = await db.select(db.clientDietEntries).get();
+    final withPhoto = meals.where((m) => m.photoAsset != null).toList();
+    expect(withPhoto, isNotEmpty, reason: '데모 끼니에 사진이 하나도 붙지 않았다');
+
+    for (final meal in withPhoto) {
+      expect(
+        File(meal.photoAsset!).existsSync(),
+        isTrue,
+        reason: '${meal.items}: ${meal.photoAsset} 파일이 없다',
+      );
+    }
+
+    // pubspec 이 이 디렉터리를 자산으로 싣고 있어야 빌드에 포함된다.
+    expect(File('pubspec.yaml').readAsStringSync(), contains('assets/images/'));
   });
 
   test('디코딩한 주간 계열은 그대로다', () async {
