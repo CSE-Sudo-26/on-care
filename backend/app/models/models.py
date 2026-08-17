@@ -820,6 +820,13 @@ class TrainerRoutine(Base):
     session_order: Mapped[int] = mapped_column(Integer, default=0)
     #: 그 세션의 운동 구성. 초안의 운동 항목과 같은 형식이다.
     exercises_json: Mapped[str] = mapped_column(Text, default="[]")
+    #: 이 제안이 무엇을 보고 만들어졌나 — 짧은 근거 문구 목록(#790).
+    #: `["최근 PT 피드백 반영", "혈압 관리 목표"]` 처럼 트레이너가 승인 판단에
+    #: 쓰는 재료다. `reason` 과 나눠 둔 이유는 그쪽이 **회원에게 전달되는
+    #: 문구**라는 것이다 — 한 필드에 담으면 내부 판단이 회원 화면에 함께 나간다.
+    evidence_json: Mapped[str] = mapped_column(
+        Text, default="[]", server_default="[]"
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     # 재전송 중복 배정 방지용 멱등키(전송 시도당 1회 생성). NULL 허용 → 기존/무키
     # 요청은 제약 밖. DietEntry.idempotency_key 와 같은 방식이다.
