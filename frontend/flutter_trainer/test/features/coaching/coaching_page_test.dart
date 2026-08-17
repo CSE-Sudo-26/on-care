@@ -13,6 +13,7 @@ import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_re
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -823,7 +824,16 @@ void main() {
       await tester.tap(find.text('추천 목록으로'));
       await tester.pumpAndSettle();
 
-      expect(find.text('저강도 걷기'), findsOneWidget);
+      // 편집기 안으로 범위를 좁힌다 — 같은 이름의 운동이 위쪽 `AI 개인운동
+      // 제안` 영역(#790)에도 뜰 수 있고, 이 테스트가 확인하는 것은 검토한
+      // 후보가 **추천 목록**에 남아 있는지다.
+      expect(
+        find.descendant(
+          of: find.byType(ProgramEditorWorkspace),
+          matching: find.text('저강도 걷기'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('AI 생성 후 트레이너 검토 완료'), findsWidgets);
     });
 

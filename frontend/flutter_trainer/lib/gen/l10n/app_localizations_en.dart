@@ -2366,6 +2366,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programSavedNew => 'New program';
 
   @override
+  String get suggestionReviewTitle => 'AI personal exercises';
+
+  @override
+  String suggestionReviewBadge(int count) {
+    return '$count to review';
+  }
+
+  @override
+  String suggestionReviewIntro(String name) {
+    return 'Prepared for $name from recent PT feedback and exercise records. The client sees only what you recommend.';
+  }
+
+  @override
+  String get suggestionReviewEmpty =>
+      'No AI personal exercises are waiting for review.';
+
+  @override
+  String get suggestionReviewLoadFailed => 'Couldn\'t load the AI suggestions.';
+
+  @override
+  String get suggestionApprove => 'Recommend to client';
+
+  @override
+  String get suggestionDismiss => 'Don\'t recommend';
+
+  @override
+  String suggestionApproved(String name, String client) {
+    return 'Recommended $name to $client.';
+  }
+
+  @override
+  String suggestionDismissed(String name) {
+    return '$name won\'t be recommended.';
+  }
+
+  @override
+  String get suggestionActionFailed =>
+      'Couldn\'t finish that. Please try again.';
+
+  @override
+  String get suggestionAlreadyReviewed =>
+      'This suggestion was already reviewed. The list has been refreshed.';
+
+  @override
+  String get suggestionEditTitle => 'Edit personal exercise';
+
+  @override
+  String get suggestionEditSubmit => 'Edit and recommend';
+
+  @override
+  String get suggestionEditName => 'Exercise';
+
+  @override
+  String get suggestionEditMemo => 'Note for the client';
+
+  @override
+  String get suggestionEditMemoHint => 'Stop if your right shoulder hurts.';
+
+  @override
   String get programDraftSaved => 'Program saved.';
 
   @override
