@@ -354,7 +354,26 @@ class _Header extends ConsumerWidget {
             alignment: WrapAlignment.end,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
+            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표 · 메모.
+            // 넷이 같은 무게로 보이면 어느 것이 이 화면의 주된 동작인지 읽히지
+            // 않는다.
             children: <Widget>[
+              // 이 회원을 보다가 바로 이어지는 두 자리. 예전에는 식단·운동을
+              // 다 읽고도 메시지 탭·프로그램 탭으로 건너가 같은 사람을 목록에서
+              // 다시 찾아야 했다(#823).
+              ActionButton(
+                key: const ValueKey<String>('client-detail-open-messages'),
+                label: l.clientQuickMessages,
+                icon: Icons.chat_bubble_outline,
+                primary: true,
+                onPressed: () => context.go(AppRoutes.messagesFor(client.id)),
+              ),
+              ActionButton(
+                key: const ValueKey<String>('client-detail-open-program'),
+                label: l.clientQuickProgram,
+                icon: Icons.auto_awesome_outlined,
+                onPressed: () => context.go(AppRoutes.coachingFor(client.id)),
+              ),
               ActionButton(
                 label: l.clientHealthGoals,
                 icon: Icons.badge_outlined,
