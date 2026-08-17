@@ -63,6 +63,12 @@ class ClientDietEntries extends Table {
   RealColumn get carbsG => real().withDefault(const Constant(0))();
   RealColumn get proteinG => real().withDefault(const Constant(0))();
   RealColumn get fatG => real().withDefault(const Constant(0))();
+
+  /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
+  /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
+  /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
+  /// 데모에서 확인할 수 없었다(#819).
+  TextColumn get photoAsset => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -210,7 +216,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -274,6 +280,11 @@ class AppDatabase extends _$AppDatabase {
           trainerScheduleEntries,
           trainerScheduleEntries.programSent,
         );
+      }
+      // v10: 데모 끼니의 사진 자산(#819). nullable 이라 기존 행은 사진 없이
+      // 그대로 읽히고, 다음 재시딩이 값을 채운다.
+      if (from < 10) {
+        await m.addColumn(clientDietEntries, clientDietEntries.photoAsset);
       }
     },
   );

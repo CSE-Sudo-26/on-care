@@ -324,6 +324,7 @@ class DriftClientRepository implements ClientRepository {
               carbsG: row.carbsG,
               proteinG: row.proteinG,
               fatG: row.fatG,
+              photoAsset: row.photoAsset,
             ),
           )
           .toList(),
