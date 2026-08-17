@@ -34,7 +34,12 @@ from app.schemas.trainer_api import (
     TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportDayOut,
     WeeklyReportOut,
 )
-from app.services import diet_photo_service, exercise_service, notification_service
+from app.services import (
+    auto_routine_service,
+    diet_photo_service,
+    exercise_service,
+    notification_service,
+)
 from app.services.coach import personal_ingest
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
@@ -793,8 +798,13 @@ ROUTINE_DISMISSED = "dismissed"
 ROUTINE_STATUSES = frozenset({ROUTINE_APPROVED, ROUTINE_PENDING, ROUTINE_DISMISSED})
 
 
-def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
+def build_routines(
+    db: Session, member_id: str, trainer_id: str | None
+) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순).
+
+    [trainer_id] 가 None 이면 트레이너 없이 만들어진 자동 추천을 읽는다 —
+    SQLAlchemy 가 `== None` 을 `IS NULL` 로 옮기므로 조건은 그대로 쓴다.
 
     한 프로그램의 세션들은 `sort_order` 를 연속으로 받으므로 이 정렬만으로
     세션 순서가 지켜진다 — 별도 그룹핑 없이 배열 순서가 곧 프로그램 순서다.
@@ -830,7 +840,7 @@ class RoutineNotFound(Exception):
 
 
 def _owned_routine(
-    db: Session, trainer_id: str, member_id: str, routine_id: str
+    db: Session, trainer_id: str | None, member_id: str, routine_id: str
 ) -> TrainerRoutine:
     """이 트레이너가 이 회원에게 배정한 루틴. 아니면 [RoutineNotFound]. (#504)
 
@@ -1087,7 +1097,7 @@ def dismiss_routine_suggestion(
 
 def complete_assigned_routine(
     db: Session,
-    trainer_id: str,
+    trainer_id: str | None,
     member_id: str,
     routine_id: str,
     *,
@@ -2561,10 +2571,16 @@ def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
 
 
 def build_member_routines(db: Session, member_id: str) -> list[RoutineOut]:
-    """회원이 받은 루틴(담당 트레이너 배정). 담당 없으면 빈 목록."""
+    """회원이 받은 개인운동.
+
+    담당 트레이너가 있으면 그 트레이너가 배정한 것(승인된 것만, #790).
+    담당이 없으면 AI 가 안전 범위에서 직접 준비한 것(#782) — 예전에는 이 경우
+    늘 빈 목록이라, 트레이너 없는 회원은 운동 탭에서 받을 것이 아무것도 없었다.
+    """
     trainer_id = get_member_trainer_id(db, member_id)
     if trainer_id is None:
-        return []
+        auto_routine_service.ensure_auto_routines(db, member_id)
+        return build_routines(db, member_id, None)
     return build_routines(db, member_id, trainer_id)
 
 
