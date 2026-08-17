@@ -512,6 +512,9 @@ Future<void> showDietResultSheet(
 ) {
   return showModalBottomSheet<void>(
     context: context,
+    // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다. 식단 추가 시트와
+    // 같은 규칙이다 — 그 시트가 이 시트를 열므로 둘이 같은 층에 있어야 한다(#791).
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: FigmaColors.sheetScrim,

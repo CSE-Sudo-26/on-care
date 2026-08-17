@@ -1044,23 +1044,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exAiTopPick => '✦ AI 추천 1순위';
 
   @override
-  String get exSendHealthSummary => '건강 요약 전달';
-
-  @override
-  String exSendHealthSummaryBody(String gym) {
-    return '최근 운동 기록과 건강 프로필 요약을\n$gym 트레이너에게 전달할까요?';
-  }
-
-  @override
-  String get exCancel => '취소';
-
-  @override
-  String get exSend => '전달하기';
-
-  @override
-  String exHealthSummarySent(String gym) {
-    return '$gym에 건강 요약을 전달했어요';
-  }
+  String get exGymDetailHint => '소속 트레이너 보고 상담 신청하기';
 
   @override
   String exReasonTrainer(String name, String role) {

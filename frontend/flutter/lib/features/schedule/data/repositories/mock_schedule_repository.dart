@@ -65,4 +65,24 @@ class MockScheduleRepository implements ScheduleRepository {
       category: category,
     );
   }
+
+  @override
+  Future<ScheduleEvent> updateEvent(
+    String id, {
+    String? date,
+    String? time,
+    String? title,
+    ScheduleCategory? category,
+  }) async {
+    return ScheduleEvent(
+      id: id,
+      date: date ?? '',
+      time: time ?? '',
+      title: title ?? '',
+      category: category ?? ScheduleCategory.other,
+    );
+  }
+
+  @override
+  Future<void> deleteEvent(String id) async {}
 }

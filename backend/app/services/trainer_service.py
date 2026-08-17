@@ -34,7 +34,13 @@ from app.schemas.trainer_api import (
     TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportDayOut,
     WeeklyReportOut,
 )
-from app.services import diet_photo_service, exercise_service, notification_service
+from app.services import (
+    auto_routine_service,
+    diet_photo_service,
+    exercise_service,
+    notification_service,
+    routine_suggestion_service,
+)
 from app.services.coach import personal_ingest
 
 # 일일 나트륨 목표(mg). 프론트 `sodiumTargetMg` 와 같은 값 — 리포트의
@@ -797,15 +803,44 @@ def delete_trainer_account(db: Session, trainer: User) -> None:
     db.commit()
 
 
-def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
+#: 배정 행의 검토 상태. AI 후보는 pending 으로 들어와 트레이너 판단을 기다린다.
+#:
+#: 기본이 approved 인 이유는 하위 호환이다 — 이 값이 생기기 전의 배정은 모두
+#: 트레이너가 보낸 것이므로 그대로 회원에게 보여야 한다.
+ROUTINE_APPROVED = "approved"
+ROUTINE_PENDING = "pending"
+ROUTINE_DISMISSED = "dismissed"
+ROUTINE_STATUSES = frozenset({ROUTINE_APPROVED, ROUTINE_PENDING, ROUTINE_DISMISSED})
+
+
+def build_routines(
+    db: Session,
+    member_id: str,
+    trainer_id: str | None,
+    *,
+    for_member: bool = False,
+) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순).
+
+    [trainer_id] 가 None 이면 트레이너 없이 만들어진 자동 추천을 읽는다 —
+    SQLAlchemy 가 `== None` 을 `IS NULL` 로 옮기므로 조건은 그대로 쓴다.
+
+    [for_member] 는 이 목록이 회원에게 가는지를 말한다. 회원용이면 제안의 근거를
+    싣지 않는다 — 트레이너의 판단 재료이기 때문이다(#790).
 
     한 프로그램의 세션들은 `sort_order` 를 연속으로 받으므로 이 정렬만으로
     세션 순서가 지켜진다 — 별도 그룹핑 없이 배열 순서가 곧 프로그램 순서다.
     """
     rows = db.scalars(
         select(TrainerRoutine)
-        .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
+        .where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            # 검토를 기다리는 후보와 거절된 후보는 '배정된 루틴'이 아니다.
+            # 회원 화면은 물론 트레이너의 배정 목록에도 섞이면 안 된다 —
+            # 검토는 전용 목록(list_routine_suggestions)에서 한다(#790).
+            TrainerRoutine.status == ROUTINE_APPROVED,
+        )
         .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
     ).all()
     routine_ids = [row.id for row in rows]
@@ -819,7 +854,12 @@ def build_routines(db: Session, member_id: str, trainer_id: str) -> list[Routine
                 )
             ).all()
         }
-    return [_routine_out(row, completed.get(row.id)) for row in rows]
+    return [
+        _routine_out(
+            row, completed.get(row.id), include_evidence=not for_member
+        )
+        for row in rows
+    ]
 
 
 class RoutineNotFound(Exception):
@@ -827,7 +867,7 @@ class RoutineNotFound(Exception):
 
 
 def _owned_routine(
-    db: Session, trainer_id: str, member_id: str, routine_id: str
+    db: Session, trainer_id: str | None, member_id: str, routine_id: str
 ) -> TrainerRoutine:
     """이 트레이너가 이 회원에게 배정한 루틴. 아니면 [RoutineNotFound]. (#504)
 
@@ -892,8 +932,18 @@ def delete_routine(
 
 
 def _routine_out(
-    rt: TrainerRoutine, completion: ExerciseSession | None = None
+    rt: TrainerRoutine,
+    completion: ExerciseSession | None = None,
+    *,
+    include_evidence: bool = True,
 ) -> RoutineOut:
+    """루틴 한 건의 응답.
+
+    [include_evidence] 를 끄면 근거를 싣지 않는다 — 회원에게 가는 응답이다.
+    근거(`최근 근력운동 비중 높음`)는 트레이너가 승인 여부를 판단하는 재료이지
+    회원이 읽을 문구가 아니다. 화면이 감추는 것과 응답에 담지 않는 것은 다르다
+    (#790).
+    """
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
@@ -901,6 +951,9 @@ def _routine_out(
         session_name=rt.session_name,
         session_order=rt.session_order,
         exercises=draft_exercises(rt.exercises_json),
+        evidence=(
+            suggestion_evidence(rt.evidence_json) if include_evidence else []
+        ),
         completed=completion is not None,
         completed_at=completion.completed_at if completion is not None else None,
         completed_minutes=completion.minutes if completion is not None else None,
@@ -922,9 +975,178 @@ _ROUTINE_EXERCISE_TYPES = {
 }
 
 
-def complete_assigned_routine(
+
+# ─────────────────────────────────── AI 개인운동 제안 검토 ───────────────────
+
+class RoutineAlreadyReviewed(Exception):
+    """이미 승인/거절된 제안을 다시 검토하려 했다."""
+
+
+def create_routine_suggestion(
     db: Session,
     trainer_id: str,
+    member_id: str,
+    *,
+    name: str,
+    minutes: int,
+    type_: str,
+    reason: str,
+    evidence: Sequence[str] | None = None,
+    client_request_id: str | None = None,
+) -> RoutineOut:
+    """AI 개인운동 후보를 검토 대기(pending) 로 만든다.
+
+    [assign_routine] 과 나눠 둔 이유: 배정은 회원에게 곧바로 닿는 행동이고 알림도
+    나가지만, 후보는 아직 아무에게도 닿지 않는다. 알림은 승인 시점에 나간다 —
+    트레이너가 보지도 않은 운동으로 회원이 먼저 알림을 받으면 안 된다(#790).
+    """
+    if client_request_id:
+        existing = find_routine_by_client_request(
+            db, trainer_id, member_id, client_request_id
+        )
+        if existing is not None:
+            return _routine_out(existing)
+
+    max_order = db.scalar(
+        select(func.max(TrainerRoutine.sort_order)).where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    rt = TrainerRoutine(
+        id=f"rt-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        name=name,
+        minutes=minutes,
+        type=type_,
+        reason=reason,
+        source="ai",
+        status=ROUTINE_PENDING,
+        sort_order=(max_order or 0) + 1,
+        evidence_json=json.dumps(list(evidence or []), ensure_ascii=False),
+        client_request_id=client_request_id,
+        created_at=clock.now(),
+    )
+    db.add(rt)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = find_routine_by_client_request(
+                db, trainer_id, member_id, client_request_id
+            )
+            if existing is not None:
+                return _routine_out(existing)
+        raise
+    db.commit()
+    db.refresh(rt)
+    return _routine_out(rt)
+
+
+def list_routine_suggestions(
+    db: Session, trainer_id: str, member_id: str
+) -> list[RoutineOut]:
+    """검토를 기다리는 AI 개인운동 제안. 승인·거절한 것은 빠진다.
+
+    조회 자리에서 그날 후보를 준비한다(`routine_suggestion_service`). 트레이너가
+    회원을 골라 생성을 요청해야만 후보가 생기면 관리 부담이 줄지 않는다 — AI 가
+    먼저 준비하고 트레이너는 판단만 하는 것이 이 기능의 요구다(#790). 회원 조회가
+    자동 추천을 준비하는 것(`build_member_routines`)과 같은 방식이다.
+    """
+    routine_suggestion_service.ensure_suggestions(db, trainer_id, member_id)
+    rows = db.scalars(
+        select(TrainerRoutine)
+        .where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            TrainerRoutine.status == ROUTINE_PENDING,
+        )
+        .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
+    ).all()
+    return [_routine_out(row) for row in rows]
+
+
+def _pending_suggestion(
+    db: Session, trainer_id: str, suggestion_id: str
+) -> TrainerRoutine:
+    """검토할 수 있는 제안 하나. 남의 것·없는 것은 [RoutineNotFound].
+
+    이미 처리된 제안은 [RoutineAlreadyReviewed] 로 나눈다 — 없는 것과 같은 답을
+    주면, 두 번 눌렀을 때 트레이너가 "사라졌다" 로 읽는다. 실제로는 이미 반영됐다.
+    """
+    row = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == suggestion_id,
+            TrainerRoutine.trainer_id == trainer_id,
+        )
+    )
+    if row is None:
+        raise RoutineNotFound("제안을 찾을 수 없습니다.")
+    if row.status != ROUTINE_PENDING:
+        raise RoutineAlreadyReviewed("이미 검토한 제안입니다.")
+    return row
+
+
+def approve_routine_suggestion(
+    db: Session,
+    trainer_id: str,
+    suggestion_id: str,
+    *,
+    name: str | None = None,
+    minutes: int | None = None,
+    type_: str | None = None,
+    reason: str | None = None,
+) -> RoutineOut:
+    """제안을 승인해 회원에게 배정한다. 준 값이 있으면 그것으로 고쳐서 승인한다.
+
+    새 행을 만들지 않고 이 행의 상태를 바꾼다. 후보와 배정이 같은 행이라
+    회원 조회·완료 처리·프로그램 묶음이 지금 쓰는 경로를 그대로 지난다.
+    """
+    row = _pending_suggestion(db, trainer_id, suggestion_id)
+    if name is not None:
+        row.name = name
+    if minutes is not None:
+        row.minutes = minutes
+    if type_ is not None:
+        row.type = type_
+    if reason is not None:
+        row.reason = reason
+    row.status = ROUTINE_APPROVED
+    row.reviewed_at = clock.now()
+    row.reviewed_by = trainer_id
+
+    # 알림은 여기서 나간다 — 회원이 볼 수 있게 된 시점이 곧 알릴 시점이다.
+    notification_service.queue(
+        db,
+        member_id=row.member_id,
+        kind=notification_service.EXERCISE,
+        category=notification_service.MEMBER_ROUTINE,
+        title="새 운동 루틴이 배정되었어요",
+        body=f"{row.name} · {row.minutes}분",
+    )
+    db.commit()
+    db.refresh(row)
+    return _routine_out(row)
+
+
+def dismiss_routine_suggestion(
+    db: Session, trainer_id: str, suggestion_id: str
+) -> RoutineOut:
+    """제안을 추천하지 않기로 한다. 회원 배정도 알림도 만들지 않는다."""
+    row = _pending_suggestion(db, trainer_id, suggestion_id)
+    row.status = ROUTINE_DISMISSED
+    row.reviewed_at = clock.now()
+    row.reviewed_by = trainer_id
+    db.commit()
+    db.refresh(row)
+    return _routine_out(row)
+
+
+def complete_assigned_routine(
+    db: Session,
+    trainer_id: str | None,
     member_id: str,
     routine_id: str,
     *,
@@ -938,6 +1160,10 @@ def complete_assigned_routine(
     모은다. 이름은 스냅샷이라 이후 배정 수정·철회에 흔들리지 않는다.
     """
     routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    # 승인되지 않은 후보는 회원에게 보이지도 않는다. id 를 알아내 직접 호출해도
+    # 완료로 넘어가지 않게 여기서 막는다 — 조회만 거르면 경로가 하나 남는다(#790).
+    if routine.status != ROUTINE_APPROVED:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
     existing = db.scalar(
         select(ExerciseSession).where(
             ExerciseSession.assigned_routine_id == routine_id
@@ -1414,6 +1640,34 @@ class ProgramDraftNotFound(Exception):
     """그 트레이너에게 그 id 의 초안이 없다(라우터가 404 로 변환)."""
 
 
+#: 근거 문구 하나의 길이 상한. 스키마
+#: (`RoutineSuggestionCreateRequest.evidence`)와 같은 값이다 — 예전 행이나 손으로
+#: 고친 값이 화면 한 줄을 넘기지 않게 읽는 쪽에서도 자른다.
+_EVIDENCE_MAX_LEN = 40
+
+#: 한 제안이 들고 다니는 근거 수 상한. 스키마와 같은 값이다.
+_EVIDENCE_MAX_ITEMS = 4
+
+
+def suggestion_evidence(evidence_json: str) -> list[str]:
+    """제안의 근거 문구를 읽는다. 깨진 값이면 빈 목록이다. (#790)
+
+    `draft_exercises` 와 같은 이유로 관대하다 — 근거 하나가 이상해서 제안 카드
+    자체가 안 뜨면, 트레이너는 검토할 것이 있는지조차 알 수 없다.
+    """
+    try:
+        raw = json.loads(evidence_json) if evidence_json else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(raw, list):
+        return []
+    return [
+        item.strip()[:_EVIDENCE_MAX_LEN]
+        for item in raw[:_EVIDENCE_MAX_ITEMS]
+        if isinstance(item, str) and item.strip()
+    ]
+
+
 def draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
     """저장된 운동 목록을 읽는다. 깨진 항목이 목록 전체를 막지 않는다.
 
@@ -1638,6 +1892,7 @@ def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
         id=s.id, date=s.date, time=s.time, client_name=s.client_name,
         type=s.type, duration_minutes=s.duration_minutes, status=s.status,
         note=s.note, program=_program_items(s.program_json),
+        program_sent=s.program_sent_at is not None,
     )
 
 
@@ -2132,6 +2387,67 @@ def _add_member_exercise_log(
     return row
 
 
+def send_session_program(
+    db: Session,
+    trainer_id: str,
+    session_id: str,
+    *,
+    client_request_id: str | None = None,
+) -> ScheduleSessionOut | None:
+    """완료한 세션의 프로그램을 그 회원에게 배정한다. (#822)
+
+    수업을 마친 뒤 "오늘 이걸 했습니다" 를 회원 앱으로 넘기는 자리다. 새 배정
+    경로를 만들지 않고 [assign_program] 을 그대로 쓴다 — 회원이 받는 모양이
+    트레이너가 코칭 탭에서 보내던 것과 같아야, 회원 화면에 출처마다 다른 루틴이
+    생기지 않는다.
+
+    - 소유 슬롯 아님 → None(404).
+    - 회원이 없는 슬롯(상담·공백) → ScheduleError(400): 보낼 상대가 없다.
+    - 완료 전 → ScheduleError(400): 아직 한 것이 아니라 할 것이다.
+    - 프로그램이 비었으면 → ScheduleError(400): 빈 루틴만 간다.
+    - 이미 보냈으면 그대로 반환(멱등). 두 번 눌러도 회원 루틴이 겹치지 않는다.
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if not s.member_id:
+        raise ScheduleError("회원이 연결되지 않은 일정입니다.")
+    if s.status != "완료":
+        raise ScheduleError("완료한 일정만 보낼 수 있습니다.")
+    items = _program_items(s.program_json)
+    if not items:
+        raise ScheduleError("보낼 프로그램이 없습니다.")
+    if s.program_sent_at is not None:
+        return _schedule_out(s)  # 멱등 no-op
+
+    # 일정의 프로그램 항목({name,sets,reps,weight})을 배정 계약의 운동으로 옮긴다.
+    # 세션은 하나다 — 회원 화면에 없던 세션 라벨이 생기지 않는다.
+    exercises = [
+        ProgramDraftExercise(
+            id=f"{s.id}#{index}",
+            name=item.name,
+            sets=str(item.sets) if item.sets else "",
+            reps=item.reps,
+            weight=item.weight,
+        )
+        for index, item in enumerate(items)
+    ]
+    assign_program(
+        db,
+        trainer_id,
+        s.member_id,
+        name=f"{s.date} {s.type}".strip() or s.date,
+        sessions=[ProgramDraftSession(id=s.id, name="", exercises=exercises)],
+        client_request_id=client_request_id,
+    )
+    # 배정이 커밋된 뒤에만 보낸 것으로 남긴다. 반대 순서면 배정에 실패한 세션이
+    # 화면에서 '전송됨' 이 되어 다시 보낼 수 없다.
+    s.program_sent_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
+
+
 def complete_session(
     db: Session, trainer_id: str, session_id: str, note: str
 ) -> ScheduleSessionOut | None:
@@ -2332,11 +2648,17 @@ def build_member_coach(db: Session, member_id: str) -> MemberCoachOut | None:
 
 
 def build_member_routines(db: Session, member_id: str) -> list[RoutineOut]:
-    """회원이 받은 루틴(담당 트레이너 배정). 담당 없으면 빈 목록."""
+    """회원이 받은 개인운동.
+
+    담당 트레이너가 있으면 그 트레이너가 배정한 것(승인된 것만, #790).
+    담당이 없으면 AI 가 안전 범위에서 직접 준비한 것(#782) — 예전에는 이 경우
+    늘 빈 목록이라, 트레이너 없는 회원은 운동 탭에서 받을 것이 아무것도 없었다.
+    """
     trainer_id = get_member_trainer_id(db, member_id)
     if trainer_id is None:
-        return []
-    return build_routines(db, member_id, trainer_id)
+        auto_routine_service.ensure_auto_routines(db, member_id)
+        return build_routines(db, member_id, None, for_member=True)
+    return build_routines(db, member_id, trainer_id, for_member=True)
 
 
 #: 회원 세션 목록 상한 — 시간이 지나며 누적되는 PT 세션을 최근 것 위주로 잘라 응답 크기를 묶는다.

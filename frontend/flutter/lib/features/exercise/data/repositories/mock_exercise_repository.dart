@@ -1,24 +1,30 @@
+import 'package:demo_fixture/demo_fixture.dart';
+
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 
-/// In-memory stateful mock for demo mode (`useMockApi`). Seeds the
-/// "상황 1: 오늘 PT 받은 날" scenario as a **4-day streak ending today**, then
-/// keeps add/update/delete in memory for the app session so the weekly
-/// summary·chart·count reflect edits made through the app (issue #294).
+/// In-memory stateful mock for demo mode (`useMockApi`). The week it starts
+/// from is **김민수의 공유 픽스처**(`shared/demo_fixture`)이고, 그 위에서
+/// add/update/delete 를 앱 세션 동안 메모리로 이어받아 주간 요약·차트·횟수가
+/// 앱에서 한 편집을 그대로 따라간다(#294).
 ///
-/// The seed is anchored to the real weekday (via [_todayIdx]) so the home
-/// 운동 카드와 운동 탭이 같은 '오늘'을 가리킨다. [_sessions] is the single
-/// source of truth: per-day minutes, the stacked-chart series
-/// (유산소/근력/스트레칭), per-day calories, and the weekly totals are all
-/// derived from it in [_buildWeek], keeping the invariant
-/// `daily == cardio + strength + stretching` for every day.
+/// 픽스처를 읽는 이유: 예전에는 이 목업이 "오늘 + 직전 3일" 을 스스로 박아
+/// 넣어서, 같은 사람인데 트레이너웹은 6회·사용자앱은 4회로 갈렸다(#771).
+/// 식단·홈 요약은 이미 픽스처 하나를 보고 있었고 운동만 빠져 있었다(#757).
+///
+/// [_sessions] is the single source of truth for the live week: per-day
+/// minutes, the stacked-chart series (유산소/근력/스트레칭), per-day calories,
+/// and the weekly totals are all derived from it in [_buildWeek], keeping the
+/// invariant `daily == cardio + strength + stretching` for every day.
 class MockExerciseRepository implements ExerciseRepository {
   /// [today] defaults to the real date; tests inject a fixed date so the
-  /// date-relative seed stays deterministic.
-  MockExerciseRepository({DateTime? today})
+  /// date-relative fixture stays deterministic. [fixture] defaults to the
+  /// bundled 김민수 픽스처.
+  MockExerciseRepository({DateTime? today, DemoFixture? fixture})
     : _today = _dateOnly(today ?? DateTime.now()),
-      _todayIdx = (today ?? DateTime.now()).weekday - 1 {
-    _sessions.addAll(_seed(_todayIdx));
+      _todayIdx = (today ?? DateTime.now()).weekday - 1,
+      _fixture = fixture ?? DemoFixture.load() {
+    _sessions.addAll(_sessionsForWeek(0));
     _totalCalories = _sessions.fold<int>(
       0,
       (int acc, ExerciseSession s) => acc + s.calories,
@@ -28,8 +34,10 @@ class MockExerciseRepository implements ExerciseRepository {
   /// Today's weekday index (0 = Mon … 6 = Sun).
   final int _todayIdx;
 
-  /// 자정으로 자른 오늘. 지난 주 조회가 몇 주 전인지 세는 기준이다.
+  /// 자정으로 자른 오늘. 픽스처의 상대 날짜를 실제 날짜로 붙이는 기준이다.
   final DateTime _today;
+
+  final DemoFixture _fixture;
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -45,55 +53,68 @@ class MockExerciseRepository implements ExerciseRepository {
   static const String _aiCoachMessage =
       '12회차 PT 완료! 코치님이 강조하신 어깨 회전근개 스트레칭과 마무리 유산소로 완벽히 정리해보세요.';
 
-  /// Seeds 오늘 + 직전 3일(4일 연속)을 실제 요일에 맞춰 채운다. offset 0 = 오늘
-  /// (12회차 PT·근력 중심), 1..3 = 직전 날(유산소/근력/스트레칭 혼합). 주 시작
-  /// (월) 이전으로 넘어가는 offset 은 이번 주 뷰 밖이라 생략한다.
-  static List<ExerciseSession> _seed(int todayIdx) {
-    const Map<int, List<(ExerciseType, int, int)>> plans =
-        <int, List<(ExerciseType, int, int)>>{
-          0: <(ExerciseType, int, int)>[(ExerciseType.strength, 50, 520)],
-          1: <(ExerciseType, int, int)>[
-            (ExerciseType.cardio, 45, 328),
-            (ExerciseType.strength, 10, 73),
-            (ExerciseType.stretching, 5, 37),
-          ],
-          2: <(ExerciseType, int, int)>[
-            (ExerciseType.cardio, 45, 315),
-            (ExerciseType.strength, 5, 36),
-            (ExerciseType.stretching, 5, 36),
-          ],
-          3: <(ExerciseType, int, int)>[
-            (ExerciseType.cardio, 30, 225),
-            (ExerciseType.strength, 10, 70),
-            (ExerciseType.stretching, 5, 35),
-          ],
-        };
+  /// [weeksAgo] 주 전의 세션. 픽스처가 **실제로 한** 운동만 갖고 있으므로 못 한
+  /// 항목은 여기에 없다 — 이행률 67% 인 날의 주간 시간이 100% 로 잡히지 않는다.
+  ///
+  /// 하루에 같은 종류가 둘일 수 있어(PT 날의 레그프레스·레그컬은 둘 다 근력)
+  /// 종류로 합친다. 주간 활동 그래프가 하루·종류당 한 칸을 그리는 규칙이고,
+  /// 사용자앱의 drift 시드(`seed_data.dart`)도 같은 규칙으로 쌓는다.
+  List<ExerciseSession> _sessionsForWeek(int weeksAgo) {
+    final String weekStart = _ymd(
+      _addDays(_today, -(_todayIdx + 7 * weeksAgo)),
+    );
     final List<ExerciseSession> out = <ExerciseSession>[];
-    for (final int offset in <int>[3, 2, 1, 0]) {
-      final int wi = todayIdx - offset;
-      if (wi < 0) continue; // 주 시작(월) 이전은 이번 주 뷰 밖.
-      final String label = _dayLabels[wi];
-      final bool isToday = offset == 0;
-      int k = 0;
-      for (final (ExerciseType type, int min, int kcal) in plans[offset]!) {
+    for (final FixtureDay day in _fixture.daysFor(_today).where(
+      (FixtureDay d) => d.weekStart == weekStart,
+    )) {
+      final Map<ExerciseType, List<FixtureExercise>> byType =
+          <ExerciseType, List<FixtureExercise>>{};
+      for (final FixtureExercise e in day.doneExercises) {
+        byType.putIfAbsent(_typeOf(e), () => <FixtureExercise>[]).add(e);
+      }
+      for (final MapEntry<ExerciseType, List<FixtureExercise>> entry
+          in byType.entries) {
         out.add(
           ExerciseSession(
-            id: isToday ? 's-today' : 's-d$offset-${k++}',
-            dayLabel: label,
-            dateLabel: isToday ? '오늘' : '$label요일',
-            timeLabel: isToday ? '18:00' : null,
-            type: type,
-            minutes: min,
-            calories: kcal,
-            items: isToday
-                ? const <String>['벤치프레스 40kg 4세트', '덤벨 숄더프레스 10kg 4세트']
-                : const <String>[],
+            id: 'seed-ex-${day.date}-${entry.key.name}',
+            dayLabel: day.dayLabel,
+            dateLabel: _dateLabel(day.date),
+            // PT 날만 시각이 있다. 자율 운동은 픽스처가 시각을 갖지 않는다.
+            timeLabel: day.isPt ? '18:00' : null,
+            type: entry.key,
+            minutes: entry.value.fold<int>(
+              0,
+              (int sum, FixtureExercise e) => sum + e.minutes,
+            ),
+            calories: entry.value.fold<int>(
+              0,
+              (int sum, FixtureExercise e) => sum + e.calories,
+            ),
+            items: <String>[
+              for (final FixtureExercise e in entry.value) e.name,
+            ],
           ),
         );
       }
     }
+    // 최근 요일이 위로 — 프로토타입의 오늘 / 어제 / 그 이전 묶음이 위에서
+    // 아래로 읽힌다.
+    out.sort(
+      (ExerciseSession a, ExerciseSession b) =>
+          _dayLabels.indexOf(b.dayLabel) - _dayLabels.indexOf(a.dayLabel),
+    );
     return out;
   }
+
+  /// 픽스처의 종류 문자열(`cardio`|`strength`|`stretching`) → [ExerciseType].
+  ExerciseType _typeOf(FixtureExercise e) => switch (e.type) {
+    'cardio' => ExerciseType.cardio,
+    'walking' => ExerciseType.walking,
+    'strength' => ExerciseType.strength,
+    'stretching' => ExerciseType.stretching,
+    'yoga' => ExerciseType.yoga,
+    _ => ExerciseType.other,
+  };
 
   final List<ExerciseSession> _sessions = <ExerciseSession>[];
 
@@ -119,68 +140,38 @@ class MockExerciseRepository implements ExerciseRepository {
 
   /// [weekStart] 가 이번 주에서 몇 주 전인지. 이번 주면 0.
   int _weeksAgo(DateTime weekStart) {
-    final DateTime thisMonday = _today.subtract(Duration(days: _todayIdx));
+    final DateTime thisMonday = _addDays(_today, -_todayIdx);
     final int days = thisMonday.difference(_dateOnly(weekStart)).inDays;
     return days <= 0 ? 0 : (days / 7).round();
   }
 
-  /// 지난 주의 기록. 주마다 조금씩 다른 값이라야 주간 비교가 뜻을 갖는다 —
-  /// 오래된 주일수록 조금 적게(요즘 늘고 있다), 그리고 주마다 쉬는 날이 하루씩
-  /// 밀린다. 인메모리 CRUD 는 이번 주에만 적용되므로 여기서는 파생값만 만든다.
-  ExerciseWeek _pastWeek(int weeksAgo) {
-    const List<(ExerciseType, int, int)> dayPlan = <(ExerciseType, int, int)>[
-      (ExerciseType.cardio, 35, 260),
-      (ExerciseType.strength, 15, 105),
-      (ExerciseType.stretching, 10, 40),
-    ];
-    final double scale = (1 - weeksAgo * 0.1).clamp(0.4, 1.0);
-    final int restDay = weeksAgo % 7; // 주마다 쉬는 요일이 하나씩 밀린다.
-    final List<ExerciseSession> sessions = <ExerciseSession>[];
-    for (int i = 0; i < _dayLabels.length; i++) {
-      if (i == restDay) continue;
-      int k = 0;
-      for (final (ExerciseType type, int min, int kcal) in dayPlan) {
-        // 요일마다 종목 구성이 조금씩 달라지도록 한 종목씩 건너뛴다.
-        if ((i + k) % 3 == 2) {
-          k++;
-          continue;
-        }
-        final int minutes = (min * scale).round();
-        if (minutes <= 0) {
-          k++;
-          continue;
-        }
-        sessions.add(
-          ExerciseSession(
-            id: 'past-$weeksAgo-$i-${k++}',
-            dayLabel: _dayLabels[i],
-            dateLabel: _dateLabel(weeksAgo, i),
-            type: type,
-            minutes: minutes,
-            calories: (kcal * scale).round(),
-          ),
-        );
-      }
-    }
-    return _weekFrom(
-      sessions,
-      aiCoachMessage: '지난 기록이에요. 이번 주와 견줘 보면 흐름이 보여요.',
-    );
+  /// 지난 주의 기록. 이번 주와 같은 픽스처에서 오므로 주간 비교가 실제 기록
+  /// 끼리의 비교다. 픽스처가 덮는 주(`historyWeeks`)를 넘어가면 빈 주다 —
+  /// 없는 기록을 지어내면 트레이너웹과 다시 갈린다.
+  ///
+  /// 인메모리 CRUD 는 이번 주에만 적용된다.
+  ExerciseWeek _pastWeek(int weeksAgo) => _weekFrom(
+    _sessionsForWeek(weeksAgo),
+    aiCoachMessage: '지난 기록이에요. 이번 주와 견줘 보면 흐름이 보여요.',
+  );
+
+  /// 세션 카드 위의 날짜 라벨. LocalApiInterceptor·FastAPI 와 같은 규칙이라
+  /// 목업으로 보던 화면과 실 경로로 보는 화면의 문구가 같다.
+  String _dateLabel(String date) {
+    final DateTime parsed = DateTime.parse(date);
+    final int diff = _today.difference(_dateOnly(parsed)).inDays;
+    if (diff == 0) return '오늘';
+    if (diff == 1) return '어제';
+    return '${parsed.month}월 ${parsed.day}일';
   }
 
-  /// 지난 주 어느 요일의 "M월 D일" 라벨.
-  String _dateLabel(int weeksAgo, int dayIdx) {
-    final DateTime monday = _today.subtract(
-      Duration(days: _todayIdx + 7 * weeksAgo),
-    );
-    // Duration 이 아니라 날짜 성분으로 더한다(서머타임 안전).
-    final DateTime date = DateTime(
-      monday.year,
-      monday.month,
-      monday.day + dayIdx,
-    );
-    return '${date.month}월 ${date.day}일';
-  }
+  static DateTime _addDays(DateTime d, int days) =>
+      DateTime(d.year, d.month, d.day + days);
+
+  static String _ymd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   @override
   Future<ExerciseSession> addSession({

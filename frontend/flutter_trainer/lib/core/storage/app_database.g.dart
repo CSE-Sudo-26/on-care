@@ -1361,6 +1361,17 @@ class $ClientDietEntriesTable extends ClientDietEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _photoAssetMeta = const VerificationMeta(
+    'photoAsset',
+  );
+  @override
+  late final GeneratedColumn<String> photoAsset = GeneratedColumn<String>(
+    'photo_asset',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -1384,6 +1395,7 @@ class $ClientDietEntriesTable extends ClientDietEntries
     carbsG,
     proteinG,
     fatG,
+    photoAsset,
     sortOrder,
   ];
   @override
@@ -1461,6 +1473,12 @@ class $ClientDietEntriesTable extends ClientDietEntries
         fatG.isAcceptableOrUnknown(data['fat_g']!, _fatGMeta),
       );
     }
+    if (data.containsKey('photo_asset')) {
+      context.handle(
+        _photoAssetMeta,
+        photoAsset.isAcceptableOrUnknown(data['photo_asset']!, _photoAssetMeta),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -1512,6 +1530,10 @@ class $ClientDietEntriesTable extends ClientDietEntries
         DriftSqlType.double,
         data['${effectivePrefix}fat_g'],
       )!,
+      photoAsset: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_asset'],
+      ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -1536,6 +1558,12 @@ class ClientDietEntryRow extends DataClass
   final double carbsG;
   final double proteinG;
   final double fatG;
+
+  /// 데모에서 이 끼니를 대신 보여 줄 번들 이미지 경로. 실 API 모드의 사진은
+  /// 회원이 올린 것을 인증된 경로로 받아 오지만(#699), 데모에는 그 백엔드가
+  /// 없어 사진이 한 장도 뜨지 않았다 — 사진 인식이 이 제품의 핵심인데
+  /// 데모에서 확인할 수 없었다(#819).
+  final String? photoAsset;
   final int sortOrder;
   const ClientDietEntryRow({
     required this.id,
@@ -1547,6 +1575,7 @@ class ClientDietEntryRow extends DataClass
     required this.carbsG,
     required this.proteinG,
     required this.fatG,
+    this.photoAsset,
     required this.sortOrder,
   });
   @override
@@ -1561,6 +1590,9 @@ class ClientDietEntryRow extends DataClass
     map['carbs_g'] = Variable<double>(carbsG);
     map['protein_g'] = Variable<double>(proteinG);
     map['fat_g'] = Variable<double>(fatG);
+    if (!nullToAbsent || photoAsset != null) {
+      map['photo_asset'] = Variable<String>(photoAsset);
+    }
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -1576,6 +1608,9 @@ class ClientDietEntryRow extends DataClass
       carbsG: Value(carbsG),
       proteinG: Value(proteinG),
       fatG: Value(fatG),
+      photoAsset: photoAsset == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoAsset),
       sortOrder: Value(sortOrder),
     );
   }
@@ -1595,6 +1630,7 @@ class ClientDietEntryRow extends DataClass
       carbsG: serializer.fromJson<double>(json['carbsG']),
       proteinG: serializer.fromJson<double>(json['proteinG']),
       fatG: serializer.fromJson<double>(json['fatG']),
+      photoAsset: serializer.fromJson<String?>(json['photoAsset']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -1611,6 +1647,7 @@ class ClientDietEntryRow extends DataClass
       'carbsG': serializer.toJson<double>(carbsG),
       'proteinG': serializer.toJson<double>(proteinG),
       'fatG': serializer.toJson<double>(fatG),
+      'photoAsset': serializer.toJson<String?>(photoAsset),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
@@ -1625,6 +1662,7 @@ class ClientDietEntryRow extends DataClass
     double? carbsG,
     double? proteinG,
     double? fatG,
+    Value<String?> photoAsset = const Value.absent(),
     int? sortOrder,
   }) => ClientDietEntryRow(
     id: id ?? this.id,
@@ -1636,6 +1674,7 @@ class ClientDietEntryRow extends DataClass
     carbsG: carbsG ?? this.carbsG,
     proteinG: proteinG ?? this.proteinG,
     fatG: fatG ?? this.fatG,
+    photoAsset: photoAsset.present ? photoAsset.value : this.photoAsset,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   ClientDietEntryRow copyWithCompanion(ClientDietEntriesCompanion data) {
@@ -1649,6 +1688,9 @@ class ClientDietEntryRow extends DataClass
       carbsG: data.carbsG.present ? data.carbsG.value : this.carbsG,
       proteinG: data.proteinG.present ? data.proteinG.value : this.proteinG,
       fatG: data.fatG.present ? data.fatG.value : this.fatG,
+      photoAsset: data.photoAsset.present
+          ? data.photoAsset.value
+          : this.photoAsset,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -1665,6 +1707,7 @@ class ClientDietEntryRow extends DataClass
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
@@ -1681,6 +1724,7 @@ class ClientDietEntryRow extends DataClass
     carbsG,
     proteinG,
     fatG,
+    photoAsset,
     sortOrder,
   );
   @override
@@ -1696,6 +1740,7 @@ class ClientDietEntryRow extends DataClass
           other.carbsG == this.carbsG &&
           other.proteinG == this.proteinG &&
           other.fatG == this.fatG &&
+          other.photoAsset == this.photoAsset &&
           other.sortOrder == this.sortOrder);
 }
 
@@ -1709,6 +1754,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
   final Value<double> carbsG;
   final Value<double> proteinG;
   final Value<double> fatG;
+  final Value<String?> photoAsset;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const ClientDietEntriesCompanion({
@@ -1721,6 +1767,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1734,6 +1781,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     this.carbsG = const Value.absent(),
     this.proteinG = const Value.absent(),
     this.fatG = const Value.absent(),
+    this.photoAsset = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1752,6 +1800,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Expression<double>? carbsG,
     Expression<double>? proteinG,
     Expression<double>? fatG,
+    Expression<String>? photoAsset,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -1765,6 +1814,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       if (carbsG != null) 'carbs_g': carbsG,
       if (proteinG != null) 'protein_g': proteinG,
       if (fatG != null) 'fat_g': fatG,
+      if (photoAsset != null) 'photo_asset': photoAsset,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1780,6 +1830,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     Value<double>? carbsG,
     Value<double>? proteinG,
     Value<double>? fatG,
+    Value<String?>? photoAsset,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -1793,6 +1844,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
       carbsG: carbsG ?? this.carbsG,
       proteinG: proteinG ?? this.proteinG,
       fatG: fatG ?? this.fatG,
+      photoAsset: photoAsset ?? this.photoAsset,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -1828,6 +1880,9 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
     if (fatG.present) {
       map['fat_g'] = Variable<double>(fatG.value);
     }
+    if (photoAsset.present) {
+      map['photo_asset'] = Variable<String>(photoAsset.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -1849,6 +1904,7 @@ class ClientDietEntriesCompanion extends UpdateCompanion<ClientDietEntryRow> {
           ..write('carbsG: $carbsG, ')
           ..write('proteinG: $proteinG, ')
           ..write('fatG: $fatG, ')
+          ..write('photoAsset: $photoAsset, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3402,6 +3458,21 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _programSentMeta = const VerificationMeta(
+    'programSent',
+  );
+  @override
+  late final GeneratedColumn<bool> programSent = GeneratedColumn<bool>(
+    'program_sent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("program_sent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -3426,6 +3497,7 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
     status,
     note,
     programJson,
+    programSent,
     sortOrder,
   ];
   @override
@@ -3511,6 +3583,15 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         ),
       );
     }
+    if (data.containsKey('program_sent')) {
+      context.handle(
+        _programSentMeta,
+        programSent.isAcceptableOrUnknown(
+          data['program_sent']!,
+          _programSentMeta,
+        ),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -3566,6 +3647,10 @@ class $TrainerScheduleEntriesTable extends TrainerScheduleEntries
         DriftSqlType.string,
         data['${effectivePrefix}program_json'],
       )!,
+      programSent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}program_sent'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -3599,6 +3684,11 @@ class TrainerScheduleRow extends DataClass
   final String status;
   final String note;
   final String programJson;
+
+  /// 완료한 세션의 프로그램을 회원에게 보냈는가. 데모에는 받을 회원 백엔드가
+  /// 없어 전송은 이 표시로 끝나지만, 화면이 '전송됨' 을 사실대로 말하고 같은
+  /// 세션을 두 번 보내지 않게 하려면 어딘가에 남아야 한다(#822).
+  final bool programSent;
   final int sortOrder;
   const TrainerScheduleRow({
     required this.id,
@@ -3611,6 +3701,7 @@ class TrainerScheduleRow extends DataClass
     required this.status,
     required this.note,
     required this.programJson,
+    required this.programSent,
     required this.sortOrder,
   });
   @override
@@ -3628,6 +3719,7 @@ class TrainerScheduleRow extends DataClass
     map['status'] = Variable<String>(status);
     map['note'] = Variable<String>(note);
     map['program_json'] = Variable<String>(programJson);
+    map['program_sent'] = Variable<bool>(programSent);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -3646,6 +3738,7 @@ class TrainerScheduleRow extends DataClass
       status: Value(status),
       note: Value(note),
       programJson: Value(programJson),
+      programSent: Value(programSent),
       sortOrder: Value(sortOrder),
     );
   }
@@ -3666,6 +3759,7 @@ class TrainerScheduleRow extends DataClass
       status: serializer.fromJson<String>(json['status']),
       note: serializer.fromJson<String>(json['note']),
       programJson: serializer.fromJson<String>(json['programJson']),
+      programSent: serializer.fromJson<bool>(json['programSent']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -3683,6 +3777,7 @@ class TrainerScheduleRow extends DataClass
       'status': serializer.toJson<String>(status),
       'note': serializer.toJson<String>(note),
       'programJson': serializer.toJson<String>(programJson),
+      'programSent': serializer.toJson<bool>(programSent),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
@@ -3698,6 +3793,7 @@ class TrainerScheduleRow extends DataClass
     String? status,
     String? note,
     String? programJson,
+    bool? programSent,
     int? sortOrder,
   }) => TrainerScheduleRow(
     id: id ?? this.id,
@@ -3710,6 +3806,7 @@ class TrainerScheduleRow extends DataClass
     status: status ?? this.status,
     note: note ?? this.note,
     programJson: programJson ?? this.programJson,
+    programSent: programSent ?? this.programSent,
     sortOrder: sortOrder ?? this.sortOrder,
   );
   TrainerScheduleRow copyWithCompanion(TrainerScheduleEntriesCompanion data) {
@@ -3730,6 +3827,9 @@ class TrainerScheduleRow extends DataClass
       programJson: data.programJson.present
           ? data.programJson.value
           : this.programJson,
+      programSent: data.programSent.present
+          ? data.programSent.value
+          : this.programSent,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -3747,6 +3847,7 @@ class TrainerScheduleRow extends DataClass
           ..write('status: $status, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
+          ..write('programSent: $programSent, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
@@ -3764,6 +3865,7 @@ class TrainerScheduleRow extends DataClass
     status,
     note,
     programJson,
+    programSent,
     sortOrder,
   );
   @override
@@ -3780,6 +3882,7 @@ class TrainerScheduleRow extends DataClass
           other.status == this.status &&
           other.note == this.note &&
           other.programJson == this.programJson &&
+          other.programSent == this.programSent &&
           other.sortOrder == this.sortOrder);
 }
 
@@ -3795,6 +3898,7 @@ class TrainerScheduleEntriesCompanion
   final Value<String> status;
   final Value<String> note;
   final Value<String> programJson;
+  final Value<bool> programSent;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const TrainerScheduleEntriesCompanion({
@@ -3808,6 +3912,7 @@ class TrainerScheduleEntriesCompanion
     this.status = const Value.absent(),
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
+    this.programSent = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3822,6 +3927,7 @@ class TrainerScheduleEntriesCompanion
     required String status,
     this.note = const Value.absent(),
     this.programJson = const Value.absent(),
+    this.programSent = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3839,6 +3945,7 @@ class TrainerScheduleEntriesCompanion
     Expression<String>? status,
     Expression<String>? note,
     Expression<String>? programJson,
+    Expression<bool>? programSent,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
@@ -3853,6 +3960,7 @@ class TrainerScheduleEntriesCompanion
       if (status != null) 'status': status,
       if (note != null) 'note': note,
       if (programJson != null) 'program_json': programJson,
+      if (programSent != null) 'program_sent': programSent,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3869,6 +3977,7 @@ class TrainerScheduleEntriesCompanion
     Value<String>? status,
     Value<String>? note,
     Value<String>? programJson,
+    Value<bool>? programSent,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
@@ -3883,6 +3992,7 @@ class TrainerScheduleEntriesCompanion
       status: status ?? this.status,
       note: note ?? this.note,
       programJson: programJson ?? this.programJson,
+      programSent: programSent ?? this.programSent,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -3921,6 +4031,9 @@ class TrainerScheduleEntriesCompanion
     if (programJson.present) {
       map['program_json'] = Variable<String>(programJson.value);
     }
+    if (programSent.present) {
+      map['program_sent'] = Variable<bool>(programSent.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -3943,6 +4056,7 @@ class TrainerScheduleEntriesCompanion
           ..write('status: $status, ')
           ..write('note: $note, ')
           ..write('programJson: $programJson, ')
+          ..write('programSent: $programSent, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5088,6 +5202,7 @@ typedef $$ClientDietEntriesTableCreateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -5102,6 +5217,7 @@ typedef $$ClientDietEntriesTableUpdateCompanionBuilder =
       Value<double> carbsG,
       Value<double> proteinG,
       Value<double> fatG,
+      Value<String?> photoAsset,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -5157,6 +5273,11 @@ class $$ClientDietEntriesTableFilterComposer
 
   ColumnFilters<double> get fatG => $composableBuilder(
     column: $table.fatG,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5220,6 +5341,11 @@ class $$ClientDietEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -5261,6 +5387,11 @@ class $$ClientDietEntriesTableAnnotationComposer
 
   GeneratedColumn<double> get fatG =>
       $composableBuilder(column: $table.fatG, builder: (column) => column);
+
+  GeneratedColumn<String> get photoAsset => $composableBuilder(
+    column: $table.photoAsset,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -5315,6 +5446,7 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDietEntriesCompanion(
@@ -5327,6 +5459,7 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -5341,6 +5474,7 @@ class $$ClientDietEntriesTableTableManager
                 Value<double> carbsG = const Value.absent(),
                 Value<double> proteinG = const Value.absent(),
                 Value<double> fatG = const Value.absent(),
+                Value<String?> photoAsset = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ClientDietEntriesCompanion.insert(
@@ -5353,6 +5487,7 @@ class $$ClientDietEntriesTableTableManager
                 carbsG: carbsG,
                 proteinG: proteinG,
                 fatG: fatG,
+                photoAsset: photoAsset,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -6177,6 +6312,7 @@ typedef $$TrainerScheduleEntriesTableCreateCompanionBuilder =
       required String status,
       Value<String> note,
       Value<String> programJson,
+      Value<bool> programSent,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6192,6 +6328,7 @@ typedef $$TrainerScheduleEntriesTableUpdateCompanionBuilder =
       Value<String> status,
       Value<String> note,
       Value<String> programJson,
+      Value<bool> programSent,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6252,6 +6389,11 @@ class $$TrainerScheduleEntriesTableFilterComposer
 
   ColumnFilters<String> get programJson => $composableBuilder(
     column: $table.programJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6320,6 +6462,11 @@ class $$TrainerScheduleEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -6368,6 +6515,11 @@ class $$TrainerScheduleEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get programJson => $composableBuilder(
     column: $table.programJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get programSent => $composableBuilder(
+    column: $table.programSent,
     builder: (column) => column,
   );
 
@@ -6431,6 +6583,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
+                Value<bool> programSent = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerScheduleEntriesCompanion(
@@ -6444,6 +6597,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 status: status,
                 note: note,
                 programJson: programJson,
+                programSent: programSent,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -6459,6 +6613,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 required String status,
                 Value<String> note = const Value.absent(),
                 Value<String> programJson = const Value.absent(),
+                Value<bool> programSent = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TrainerScheduleEntriesCompanion.insert(
@@ -6472,6 +6627,7 @@ class $$TrainerScheduleEntriesTableTableManager
                 status: status,
                 note: note,
                 programJson: programJson,
+                programSent: programSent,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),

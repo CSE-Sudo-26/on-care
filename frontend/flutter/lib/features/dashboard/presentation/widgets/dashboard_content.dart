@@ -66,15 +66,17 @@ class DashboardContent extends StatelessWidget {
             // 지역적으로 얻는다 — 헤더 전체를 다시 그리지 않는다.
             Consumer(
               builder: (BuildContext context, WidgetRef ref, Widget? _) =>
-FigmaTabHeader(
-                  title: 'On - Care',
-                  leading: const HeartLogo(),
-                  trailingAction: const TrainerChatHeaderButton(),
-                  onBell: onNotificationTap,
-                  bellHasUnread:
-                      (ref.watch(notificationUnreadProvider).valueOrNull ?? 0) > 0,
-                  onCalendar: onCalendarTap,
-                ),
+                  FigmaTabHeader(
+                    title: 'On - Care',
+                    leading: const HeartLogo(),
+                    trailingAction: const TrainerChatHeaderButton(),
+                    onBell: onNotificationTap,
+                    bellHasUnread:
+                        (ref.watch(notificationUnreadProvider).valueOrNull ??
+                            0) >
+                        0,
+                    onCalendar: onCalendarTap,
+                  ),
             ),
             const SizedBox(height: 8),
             Consumer(
@@ -90,7 +92,9 @@ FigmaTabHeader(
                           ),
                       data: (DashboardSummary summary) => _DashboardData(
                         summary: summary,
-                        onCoachingTap: () => showCoachingSheet(context),
+                        // 홈 배너로 열어도 같은 시트다 — 배지도 같이 내려간다.
+                        onCoachingTap: () =>
+                            showCoachingSheet(context, ref: ref),
                         onDietTap: () => context.go(AppRoutes.diet),
                         onExerciseTap: () => context.go(AppRoutes.exercise),
                       ),
@@ -1134,8 +1138,6 @@ const List<double> _demoExerciseWeekCalories = <double>[
   330,
   520,
 ];
-
-
 
 /// 오늘 요일 인덱스(0=월 … 6=일). 고정 라벨 배열 `_weekDayLabels` 와 함께 써서
 /// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)

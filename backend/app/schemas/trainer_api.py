@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import ClassVar, Literal
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -290,6 +290,9 @@ class RoutineOut(BaseModel):
     session_order: int = 0
     #: 그 세션의 운동 구성. 예전에는 이름만 `reason` 에 이어 붙였다.
     exercises: list[ProgramDraftExercise] = Field(default_factory=list)
+    #: 이 추천이 무엇을 보고 만들어졌나 — 트레이너 검토용 근거 문구(#790).
+    #: 트레이너가 직접 배정한 루틴은 비어 있다.
+    evidence: list[str] = Field(default_factory=list)
     completed: bool = False
     completed_at: _datetime | None = None
     completed_minutes: int | None = None
@@ -311,6 +314,40 @@ class RoutineAssignRequest(BaseModel):
     #: 전송 시도당 클라이언트가 만드는 멱등키. 재시도 시 **같은 키를 다시 보내야**
     #: 중복 배정이 막힌다. 없으면 기존처럼 매 요청이 새 배정이다(#581).
     client_request_id: str | None = Field(default=None, max_length=64)
+
+
+class RoutineSuggestionCreateRequest(BaseModel):
+    """AI 개인운동 후보 등록. 검토 대기 상태로만 만들어진다.
+
+    승인 전에는 회원에게 닿지 않으므로 알림도 나가지 않는다.
+    """
+
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=0, le=600)
+    type: RoutineType
+    reason: str = Field(default="", max_length=200)
+    #: 이 후보의 근거 문구. 트레이너가 승인 판단에 쓰는 재료이고 회원에게는
+    #: 전달되지 않는다. 개수·길이를 묶는 이유는 카드 한 장이 읽히는 분량을
+    #: 넘기면 근거가 오히려 판단을 방해하기 때문이다 — AI 내부 분석을 길게
+    #: 노출하지 않는 것이 이 기능의 요구다(#790).
+    evidence: list[Annotated[str, Field(min_length=1, max_length=40)]] = Field(
+        default_factory=list, max_length=4
+    )
+    #: 재전송 중복 생성 방지용 멱등키. 배정(`AssignRoutineRequest`)과 같은 규약이다.
+    client_request_id: str | None = Field(default=None, max_length=64)
+
+
+class RoutineSuggestionApproveRequest(PartialUpdate):
+    """제안 승인. 필드를 주면 그것으로 고쳐서 승인한다(수정 후 추천).
+
+    아무 필드도 주지 않으면 그대로 승인이다. `RoutineUpdateRequest` 와 같은 이유로
+    명시적 null 은 422 다 — 이름·시간을 '지우는 것'은 기능이 아니다.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    minutes: int | None = Field(default=None, ge=0, le=600)
+    type: RoutineType | None = None
+    reason: str | None = Field(default=None, max_length=200)
 
 
 class RoutineUpdateRequest(PartialUpdate):
@@ -601,6 +638,19 @@ class ScheduleSessionOut(BaseModel):
     status: str          # 예정|완료|공백
     note: str
     program: list[ProgramItem]
+    #: 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미
+    #: 보낸 세션은 화면에서 다른 것을 말해야 한다(#822).
+    program_sent: bool = False
+
+
+class ScheduleProgramSendRequest(BaseModel):
+    """완료한 세션의 프로그램을 회원에게 보내는 입력. (#822)
+
+    본문은 멱등키뿐이다 — 무엇을 보낼지는 세션 행이 이미 알고 있고, 클라이언트가
+    다시 실어 보내면 화면과 저장된 프로그램이 갈릴 수 있다. 재시도에 같은 키를
+    다시 보내면 배정이 두 번 만들어지지 않는다(단일·프로그램 배정과 같은 규약).
+    """
+    client_request_id: str | None = Field(default=None, max_length=48)
 
 
 class ScheduleCreateRequest(BaseModel):

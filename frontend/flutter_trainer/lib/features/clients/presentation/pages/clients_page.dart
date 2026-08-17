@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -46,16 +47,9 @@ class ClientsPage extends ConsumerStatefulWidget {
   ConsumerState<ClientsPage> createState() => _ClientsPageState();
 }
 
-enum _ManagementFilter { all, attention, active, dormant }
-
-enum _ClientSort { priority, name }
-
 class _ClientsPageState extends ConsumerState<ClientsPage> {
-  _ManagementFilter _managementFilter = _ManagementFilter.all;
-  _ClientSort _sort = _ClientSort.priority;
-
   void _clearFilters() {
-    setState(() => _managementFilter = _ManagementFilter.all);
+    ref.read(rosterViewProvider.notifier).state = const RosterView();
     context.go(AppRoutes.clients);
   }
 
@@ -74,6 +68,9 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 정렬·관리 필터는 이 화면이 아니라 provider 가 들고 있다 — 목록과 상세가
+    // 서로 다른 라우트라, 지역 상태로 두면 고객을 여는 순간 초기화된다(#816).
+    final view = ref.watch(rosterViewProvider);
     // Priority ordering: sodium-over clients first, then recent chat.
     final clientsAsync = ref.watch(prioritizedClientsProvider);
     final unread =
@@ -117,20 +114,20 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
         var list = applyClientFilter(all, activeFilter, unread: unread);
         list = list
             .where((client) {
-              switch (_managementFilter) {
-                case _ManagementFilter.all:
+              switch (view.filter) {
+                case RosterManagementFilter.all:
                   return true;
-                case _ManagementFilter.attention:
+                case RosterManagementFilter.attention:
                   return healthAlertsFor(client).isNotEmpty ||
                       (unread[client.id] ?? 0) > 0;
-                case _ManagementFilter.active:
+                case RosterManagementFilter.active:
                   return client.active;
-                case _ManagementFilter.dormant:
+                case RosterManagementFilter.dormant:
                   return !client.active;
               }
             })
             .toList(growable: false);
-        if (_sort == _ClientSort.name) {
+        if (view.sort == RosterSort.name) {
           list = [...list]..sort((a, b) => a.name.compareTo(b.name));
         }
         // An id that isn't on the roster (deleted client, stale link) is
@@ -164,7 +161,11 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 totalCount: all.length,
                 trailingPadding: wide ? AppSpacing.sm : 0,
                 onOpen: (id) => context.go(
-                  AppRoutes.clientDetail(id, section: widget.section),
+                  AppRoutes.clientDetail(
+                    id,
+                    section: widget.section,
+                    filter: widget.filter,
+                  ),
                 ),
                 onClearFilter: _clearFilters,
               );
@@ -175,7 +176,11 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                   section: widget.section,
                   showBack: true,
                   onSectionChange: (next) => context.go(
-                    AppRoutes.clientDetail(selected, section: next),
+                    AppRoutes.clientDetail(
+                      selected,
+                      section: next,
+                      filter: widget.filter,
+                    ),
                   ),
                   onClose: () => context.go(AppRoutes.clients),
                 );
@@ -198,7 +203,11 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                               section: widget.section,
                               showBack: false,
                               onSectionChange: (next) => context.go(
-                                AppRoutes.clientDetail(selected, section: next),
+                                AppRoutes.clientDetail(
+                                  selected,
+                                  section: next,
+                                  filter: widget.filter,
+                                ),
                               ),
                               onClose: () => context.go(AppRoutes.clients),
                             ),
@@ -211,13 +220,16 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 children: <Widget>[
                   if (wide || selected == null)
                     _MemberManagementToolbar(
-                      managementFilter: _managementFilter,
-                      sort: _sort,
+                      managementFilter: view.filter,
+                      sort: view.sort,
                       shownCount: list.length,
                       activeCount: all.where((client) => client.active).length,
                       onFilterChanged: (value) =>
-                          setState(() => _managementFilter = value),
-                      onSortChanged: (value) => setState(() => _sort = value),
+                          ref.read(rosterViewProvider.notifier).state = view
+                              .copyWith(filter: value),
+                      onSortChanged: (value) =>
+                          ref.read(rosterViewProvider.notifier).state = view
+                              .copyWith(sort: value),
                     ),
                   Expanded(
                     child: Padding(
@@ -261,12 +273,12 @@ class _MemberManagementToolbar extends StatelessWidget {
     required this.onSortChanged,
   });
 
-  final _ManagementFilter managementFilter;
-  final _ClientSort sort;
+  final RosterManagementFilter managementFilter;
+  final RosterSort sort;
   final int shownCount;
   final int activeCount;
-  final ValueChanged<_ManagementFilter> onFilterChanged;
-  final ValueChanged<_ClientSort> onSortChanged;
+  final ValueChanged<RosterManagementFilter> onFilterChanged;
+  final ValueChanged<RosterSort> onSortChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -283,17 +295,17 @@ class _MemberManagementToolbar extends StatelessWidget {
         runSpacing: AppSpacing.sm,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          _ToolbarMenu<_ManagementFilter>(
+          _ToolbarMenu<RosterManagementFilter>(
             value: managementFilter,
             label: _managementLabel(l, managementFilter),
-            items: _ManagementFilter.values,
+            items: RosterManagementFilter.values,
             itemLabel: (value) => _managementLabel(l, value),
             onSelected: onFilterChanged,
           ),
-          _ToolbarMenu<_ClientSort>(
+          _ToolbarMenu<RosterSort>(
             value: sort,
             label: _sortLabel(l, sort),
-            items: _ClientSort.values,
+            items: RosterSort.values,
             itemLabel: (value) => _sortLabel(l, value),
             onSelected: onSortChanged,
           ),
@@ -310,24 +322,24 @@ class _MemberManagementToolbar extends StatelessWidget {
     );
   }
 
-  String _managementLabel(AppLocalizations l, _ManagementFilter value) {
+  String _managementLabel(AppLocalizations l, RosterManagementFilter value) {
     switch (value) {
-      case _ManagementFilter.all:
+      case RosterManagementFilter.all:
         return l.filterAll;
-      case _ManagementFilter.attention:
+      case RosterManagementFilter.attention:
         return l.clientsManagementAttention;
-      case _ManagementFilter.active:
+      case RosterManagementFilter.active:
         return l.clientActive;
-      case _ManagementFilter.dormant:
+      case RosterManagementFilter.dormant:
         return l.clientDormant;
     }
   }
 
-  String _sortLabel(AppLocalizations l, _ClientSort value) {
+  String _sortLabel(AppLocalizations l, RosterSort value) {
     switch (value) {
-      case _ClientSort.priority:
+      case RosterSort.priority:
         return l.clientsSortPriority;
-      case _ClientSort.name:
+      case RosterSort.name:
         return l.clientsSortName;
     }
   }

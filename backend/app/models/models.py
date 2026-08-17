@@ -785,8 +785,10 @@ class TrainerRoutine(Base):
     __tablename__ = "trainer_routines"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    trainer_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    #: 배정한 트레이너. 담당 트레이너가 없는 회원에게 AI 가 안전 범위에서 직접
+    #: 추천한 개인운동은 이 값이 비어 있다(#782) — 승인할 사람이 없기 때문이다.
+    trainer_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
     )
     member_id: Mapped[str] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
@@ -796,6 +798,20 @@ class TrainerRoutine(Base):
     type: Mapped[str] = mapped_column(String(20))  # 유산소|근력|스트레칭
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
+    #: 검토 상태 — approved(회원에게 노출) | pending(트레이너 검토 대기) |
+    #: dismissed(추천하지 않기로 함).
+    #:
+    #: 기본이 approved 인 것이 하위 호환의 핵심이다. 지금까지의 배정은 모두
+    #: 트레이너가 보낸 것이므로 그대로 회원에게 보여야 한다. AI 가 만든 후보만
+    #: pending 으로 들어와 승인 전까지 회원 조회에서 빠진다.
+    status: Mapped[str] = mapped_column(String(20), default="approved", index=True)
+    #: 트레이너가 승인/거절한 시각. pending 인 동안은 비어 있다.
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: 검토한 트레이너 id. 배정 트레이너와 같지만, 나중에 대리 검토가 생겨도
+    #: 누가 판단했는지는 남아야 한다.
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     #: 여러 세션을 한 프로그램으로 묶는 이름. 단일 루틴 배정은 빈 문자열이다.
     program_name: Mapped[str] = mapped_column(String(100), default="")
     #: 이 루틴이 어느 세션인가. 세션이 하나뿐이면 비어 있다.
@@ -804,6 +820,13 @@ class TrainerRoutine(Base):
     session_order: Mapped[int] = mapped_column(Integer, default=0)
     #: 그 세션의 운동 구성. 초안의 운동 항목과 같은 형식이다.
     exercises_json: Mapped[str] = mapped_column(Text, default="[]")
+    #: 이 제안이 무엇을 보고 만들어졌나 — 짧은 근거 문구 목록(#790).
+    #: `["최근 PT 피드백 반영", "혈압 관리 목표"]` 처럼 트레이너가 승인 판단에
+    #: 쓰는 재료다. `reason` 과 나눠 둔 이유는 그쪽이 **회원에게 전달되는
+    #: 문구**라는 것이다 — 한 필드에 담으면 내부 판단이 회원 화면에 함께 나간다.
+    evidence_json: Mapped[str] = mapped_column(
+        Text, default="[]", server_default="[]"
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     # 재전송 중복 배정 방지용 멱등키(전송 시도당 1회 생성). NULL 허용 → 기존/무키
     # 요청은 제약 밖. DietEntry.idempotency_key 와 같은 방식이다.
@@ -969,6 +992,11 @@ class TrainerSchedule(Base):
     status: Mapped[str] = mapped_column(String(10), default="예정")  # 예정|완료|공백
     note: Mapped[str] = mapped_column(Text, default="")
     program_json: Mapped[str] = mapped_column(Text, default="[]")
+    # 완료한 세션의 프로그램을 회원에게 보낸 시각. NULL 은 아직 보내지 않은
+    # 것이다 — 화면의 '전송됨' 표시와 재전송 방지가 이 값을 읽는다(#822).
+    program_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     # 트레이너의 예약 생성 시도 단위 멱등키. 다른 create operation 과는 테이블이
     # 달라 같은 문자열을 써도 충돌하지 않는다. NULL 은 구버전 요청 호환용이다.

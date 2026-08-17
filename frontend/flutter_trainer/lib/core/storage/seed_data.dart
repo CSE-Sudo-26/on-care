@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v15']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v18']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -33,7 +33,11 @@ part 'seed_clients.dart';
 /// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
 /// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
 ///
-/// The flag is `_v13` (was `_v12`): each weekday now gets its own routine
+/// The flag is `_v18` (was `_v16`): 끼니마다 탄단지와 사진이 채워졌다(#819) — 열량만
+/// 있고 영양소가 0 이면 식단 탭이 근거 없이 숫자만 보여 주고, 사진이 없으면
+/// 이 제품의 핵심인 사진 인식을 데모에서 확인할 수 없다. 올리지 않으면
+/// 오늘 이미 접속한 브라우저는 날짜가 넘어갈 때까지 옛 값을 그대로 쓴다.
+/// `_v13` 은 요일마다 다른 루틴을 넣었다: each weekday now gets its own routine
 /// so a week no longer repeats one workout (#754). `_v12` first carried that day's
 /// exercise list for the report's 요일별 상세 (#754). `_v11` reached 12 weeks
 /// back so the '최근 4주' card stays full while moving into the past (#752).
@@ -63,13 +67,24 @@ part 'seed_clients.dart';
 /// the spread documented in `seed_clients.dart`. Note the schedule stays
 /// at six slots on purpose: fifteen clients on the books does not mean
 /// fifteen sessions in one day.
-Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
-  final now = DateTime.now();
+///
+/// [clock] is the moment this seeding is anchored to. Production leaves it
+/// out and gets the real one; tests pin it, because what lands in the week
+/// depends on the weekday — a series is placed relative to today and
+/// anything before Monday belongs to last week. Pinned dates are the only
+/// way to assert that rule in both directions instead of on whichever day
+/// the suite happens to run (#826).
+Future<void> seedIfEmpty(
+  AppDatabase db, {
+  DemoFixture? fixture,
+  DateTime? clock,
+}) async {
+  final DateTime now = clock ?? DateTime.now();
   final today = ymd(now);
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v16') == today) return;
+  if (await db.readValue('trainer_seeded_v18') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -190,6 +205,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
               carbsG: Value(diet[i].carbsG),
               proteinG: Value(diet[i].proteinG),
               fatG: Value(diet[i].fatG),
+              photoAsset: Value(diet[i].photoAsset),
               sortOrder: Value(i),
             ),
         ]);
@@ -297,7 +313,7 @@ Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v16', today);
+    await db.putValue('trainer_seeded_v18', today);
   });
 }
 
@@ -315,6 +331,7 @@ class _Meal {
     this.carbsG = 0,
     this.proteinG = 0,
     this.fatG = 0,
+    this.photoAsset,
   });
   final String meal;
   final String items;
@@ -323,6 +340,9 @@ class _Meal {
   final double carbsG;
   final double proteinG;
   final double fatG;
+
+  /// 데모에서 이 끼니로 보여 줄 번들 이미지. 없으면 사진 없이 그린다. (#819)
+  final String? photoAsset;
 }
 
 class _Routine {
@@ -470,6 +490,9 @@ class _FixtureClient {
         carbsG: meal.carbsG,
         proteinG: meal.proteinG,
         fatG: meal.fatG,
+        // 공유 픽스처가 이미 끼니마다 사진을 가리키고 있다(#757). 회원 앱만
+        // 쓰던 그 값을 트레이너 데모도 함께 읽는다(#819).
+        photoAsset: meal.photoAsset,
       ),
   ];
 

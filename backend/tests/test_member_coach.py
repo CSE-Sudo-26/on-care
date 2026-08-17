@@ -124,8 +124,11 @@ def test_member_without_coach_404(client):
     assert client.post(
         "/v1/me/coach/chat", json={"text": "hi"}, headers=_h(tok)
     ).status_code == 404
-    # 받은 루틴은 빈 목록(에러 아님)
-    assert client.get("/v1/me/coach/routines", headers=_h(tok)).json() == []
+    # 루틴은 에러가 아니다. 예전에는 빈 목록이었지만, 지금은 담당이 없는 회원에게
+    # AI 가 안전 범위에서 직접 준비해 준다(#782) — 트레이너가 배정한 것은 없다.
+    routines = client.get("/v1/me/coach/routines", headers=_h(tok))
+    assert routines.status_code == 200
+    assert all(r["source"] == "ai" for r in routines.json())
 
 
 def test_trainer_token_rejected_on_member_coach(client):
@@ -145,7 +148,11 @@ def test_inactive_link_member_has_no_current_coach(client):
         "/v1/auth/login", data={"username": "sungho@oncare.com", "password": "oncare123"}
     ).json()["access_token"]
     assert client.get("/v1/me/coach", headers=_h(tok)).status_code == 404
-    assert client.get("/v1/me/coach/routines", headers=_h(tok)).json() == []
+    # 휴면 링크만 있는 회원도 '담당 없음'이라, 트레이너 배정 대신 AI 자동 추천을
+    # 받는다(#782). 배정된 것이 새어 나오지 않는지가 이 줄의 관심사다.
+    routines = client.get("/v1/me/coach/routines", headers=_h(tok))
+    assert routines.status_code == 200
+    assert all(r["source"] == "ai" for r in routines.json())
     assert client.post(
         "/v1/me/coach/chat", json={"text": "안녕하세요"}, headers=_h(tok)
     ).status_code == 404

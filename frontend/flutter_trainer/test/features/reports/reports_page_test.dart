@@ -610,12 +610,28 @@ void main() {
   });
 
   testWidgets('평균이 며칠을 나눈 값인지 화면에 적힌다 (#754)', (tester) async {
-    final container = await openReports(tester);
-    final client = (await container.read(clientsProvider.future)).first;
+    // 기록이 빠진 날을 시드에 기대지 않고 여기서 못 박는다. 시드의 주간 계열은
+    // 이번 주 요일 자리에 놓이므로(#746) 월요일에는 오늘 하루만 남고, 기록이
+    // 빠진 날이 아예 없어 이 테스트가 요일에 따라 깨졌다(#826).
+    const weekCompletion = <int>[80, 0, 90, 70, 0, 60, 0];
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        clientsProvider.overrideWith(
+          (ref) => Stream<List<TrainerClient>>.value(<TrainerClient>[
+            makeClient(
+              id: 'week-client',
+              name: '주간고객',
+              weekCompletion: weekCompletion,
+            ),
+          ]),
+        ),
+      ],
+    );
 
     // 기록이 없는 날은 평균에서 빠지므로 7 이 아니다 — 그 사실이 적혀 있어야
     // 트레이너가 아래 막대를 세어 평균을 확인할 수 있다.
-    final logged = client.weekCompletion.where((v) => v > 0).length;
+    final logged = weekCompletion.where((v) => v > 0).length;
     expect(logged, lessThan(7), reason: '기록이 빠진 날이 있는 고객이어야 한다');
     // 마지막 줄에 이번 주가 앞선 세 주 옆에 놓인다. 며칠을 나눈 값인지는
     // 값이 있는 막대를 세면 나오므로 따로 적지 않는다.
@@ -631,12 +647,17 @@ void main() {
     // 며칠인지는 어제가 어느 요일이냐에 따라 달라진다 — 그 수치가 카드 제목
     // 줄에 남는다는 것이 요지다.
     expect(find.textContaining('나트륨 초과'), findsOneWidget);
+  });
 
+  testWidgets('요일 칸에 그날 한 운동 이름이 남는다 (#754)', (tester) async {
     // 요일 칸에는 운동 이름만 둔다 — 퍼센트는 바로 위 막대가 말하고,
     // 아직 오지 않은 날은 빈칸으로 둔다.
     //
     // 목록의 첫 고객은 김민수라, 그의 운동 이름은 공유 픽스처가 정한다(#757).
     // 이름을 여기 적으면 픽스처와 두 벌이 되어 한쪽만 고쳤을 때 조용히 갈린다.
+    // 시드 로스터를 그대로 쓰므로 위 테스트와 달리 고객을 바꾸지 않는다.
+    await openReports(tester);
+
     expect(find.text(_minsuExerciseThisWeek()), findsWidgets);
   });
 

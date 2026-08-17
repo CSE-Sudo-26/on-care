@@ -105,6 +105,22 @@ class _MealCard extends StatelessWidget {
           if (entry.photoUrl case final String path) ...<Widget>[
             ClientMealPhoto(path: path),
             const SizedBox(width: AppSpacing.md),
+          ]
+          // 데모에는 사진을 받아 올 백엔드가 없어 시드가 번들 이미지를
+          // 가리킨다. 실 API 모드에서는 위의 경로만 쓰인다(#819).
+          else if (entry.photoAsset case final String asset) ...<Widget>[
+            ClipRRect(
+              borderRadius: const BorderRadius.all(AppRadius.card),
+              child: Image.asset(
+                asset,
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+                // 자산이 빠져도 끼니 카드는 그대로 읽혀야 한다.
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
           ],
           Expanded(
             child: Column(

@@ -238,6 +238,8 @@ class _GymDetails extends StatelessWidget {
 Future<void> _pickTrainerForConsultation(BuildContext context, Gym gym) {
   return showModalBottomSheet<void>(
     context: context,
+    // 하단 바·+ 버튼이 시트 위로 올라오지 않도록 루트에 올린다(#791).
+    useRootNavigator: true,
     backgroundColor: Colors.white,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(

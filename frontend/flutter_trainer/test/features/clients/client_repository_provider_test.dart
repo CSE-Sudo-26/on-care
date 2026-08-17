@@ -157,6 +157,35 @@ void main() {
     },
   );
 
+  test('an untouched health profile agrees with the roster identity', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedIfEmpty(db);
+    final repository = DriftClientRepository(db);
+    final clients = await repository.watchClients().first;
+
+    for (final client in clients) {
+      final profile = await repository.fetchHealthProfile(client.id);
+      // 헤더가 '여성'이라고 말하는 회원의 대화상자가 '남성'으로 열리면 안 된다.
+      // 예전에는 모두에게 고정 'male' 을 돌려줬다(#818).
+      expect(profile.gender, client.rosterGender, reason: client.name);
+      // 재본 적 없는 키·체중은 지어내지 않는다 — 트레이너가 입력한 값과
+      // 구분되지 않으면 그대로 저장돼 남의 신체 정보로 굳는다.
+      expect(profile.heightCm, isNull, reason: client.name);
+      expect(profile.weightKg, isNull, reason: client.name);
+    }
+
+    // 저장한 값은 그대로 돌아온다.
+    final first = clients.first;
+    await repository.updateHealthProfile(first.id, <String, Object?>{
+      'gender': 'other',
+      'height_cm': 171.0,
+    });
+    final saved = await repository.fetchHealthProfile(first.id);
+    expect(saved.gender, 'other');
+    expect(saved.heightCm, 171.0);
+  });
+
   test('watching clientsProvider + prioritizedClientsProvider together issues '
       'exactly one GET /trainer/clients in real-API mode (review: the two '
       'providers used to each fetch independently)', () async {

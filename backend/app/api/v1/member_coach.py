@@ -98,7 +98,9 @@ def complete_my_routine(
     """나에게 배정된 루틴을 회원 운동 기록으로 한 번만 완료한다."""
     if payload.intensity not in {"light", "moderate", "high"}:
         raise HTTPException(status_code=400, detail="허용되지 않는 운동 강도입니다.")
-    trainer_id = _my_trainer_or_404(db, member.id)
+    # 담당 트레이너가 없는 회원도 AI 자동 추천을 수행한다(#782). 예전에는 여기서
+    # 404 로 끊겨, 화면에 보이는 운동을 완료할 수 없었다.
+    trainer_id = trainer_service.get_member_trainer_id(db, member.id)
     try:
         return trainer_service.complete_assigned_routine(
             db,

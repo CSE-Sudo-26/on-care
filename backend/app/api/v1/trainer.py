@@ -49,9 +49,11 @@ from app.schemas.trainer_api import (
     ReportSendRequest, ReportSummaryOut,
     RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineFeedbackRequest,
+    RoutineSuggestionApproveRequest, RoutineSuggestionCreateRequest,
     ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
-    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
+    ScheduleCompleteRequest,
+    ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
@@ -578,6 +580,111 @@ def trainer_assign_routine(
     )
 
 
+# ---- AI 개인운동 제안 검토 (#790) ----
+
+@router.get(
+    "/trainer/clients/{member_id}/routine-suggestions",
+    response_model=list[RoutineOut],
+)
+def trainer_routine_suggestions(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RoutineOut]:
+    """검토를 기다리는 AI 개인운동 제안 목록.
+
+    배정 목록(`GET .../routines`)과 나눠 둔다 — 배정은 이미 회원이 보는 것이고
+    제안은 아직 아무에게도 닿지 않은 것이라, 한 목록에 섞이면 어느 쪽이 회원에게
+    갔는지 알 수 없다.
+
+    이 조회가 그날 후보를 준비한다(멱등). 준비된 후보는 승인 전까지 회원 조회에
+    나타나지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.list_routine_suggestions(db, trainer.id, member_id)
+
+
+@router.post(
+    "/trainer/clients/{member_id}/routine-suggestions",
+    response_model=RoutineOut,
+    status_code=201,
+)
+def trainer_create_routine_suggestion(
+    member_id: str,
+    payload: RoutineSuggestionCreateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """AI 개인운동 후보를 검토 대기로 등록한다. 회원에게는 아직 보이지 않는다."""
+    _require_client(db, trainer.id, member_id)
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="운동 이름이 필요합니다.")
+    return trainer_service.create_routine_suggestion(
+        db,
+        trainer.id,
+        member_id,
+        name=payload.name.strip(),
+        minutes=payload.minutes,
+        type_=payload.type,
+        reason=payload.reason,
+        evidence=payload.evidence,
+        client_request_id=payload.client_request_id,
+    )
+
+
+@router.post(
+    "/trainer/routine-suggestions/{suggestion_id}/approve",
+    response_model=RoutineOut,
+)
+def trainer_approve_routine_suggestion(
+    suggestion_id: str,
+    payload: RoutineSuggestionApproveRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """제안을 승인해 회원에게 배정한다. 준 필드가 있으면 고쳐서 승인한다."""
+    fields = payload.model_dump(exclude_unset=True)
+    name = fields.get("name")
+    if name is not None and not name.strip():
+        raise HTTPException(status_code=400, detail="운동 이름이 필요합니다.")
+    try:
+        return trainer_service.approve_routine_suggestion(
+            db,
+            trainer.id,
+            suggestion_id,
+            name=name.strip() if name is not None else None,
+            minutes=fields.get("minutes"),
+            type_=fields.get("type"),
+            reason=fields.get("reason"),
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_service.RoutineAlreadyReviewed as exc:
+        # 두 번 눌렀거나 다른 창에서 이미 처리한 경우다. 404 로 뭉개면 트레이너가
+        # "사라졌다" 로 읽는데, 실제로는 이미 반영돼 있다.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/trainer/routine-suggestions/{suggestion_id}/dismiss",
+    response_model=RoutineOut,
+)
+def trainer_dismiss_routine_suggestion(
+    suggestion_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> RoutineOut:
+    """제안을 추천하지 않기로 한다. 회원 배정도 알림도 만들지 않는다."""
+    try:
+        return trainer_service.dismiss_routine_suggestion(
+            db, trainer.id, suggestion_id
+        )
+    except trainer_service.RoutineNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except trainer_service.RoutineAlreadyReviewed as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.post(
     "/trainer/clients/{member_id}/program",
     response_model=list[RoutineOut],
@@ -1063,6 +1170,34 @@ def trainer_complete_session(
     """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
     try:
         out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post(
+    "/trainer/schedule/{session_id}/program/send",
+    response_model=ScheduleSessionOut,
+)
+def trainer_send_session_program(
+    session_id: str,
+    payload: ScheduleProgramSendRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """완료한 세션의 프로그램을 그 회원에게 보낸다. (#822)
+
+    수업을 마친 뒤 오늘 한 것을 회원 앱으로 넘기는 마지막 한 걸음이다. 배정
+    자체는 코칭 탭의 프로그램 배정과 같은 경로를 타므로, 회원은 출처와 무관하게
+    같은 모양의 루틴을 받는다. 같은 세션을 두 번 눌러도 배정은 한 번이다.
+    """
+    try:
+        out = trainer_service.send_session_program(
+            db, trainer.id, session_id,
+            client_request_id=payload.client_request_id,
+        )
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     if out is None:

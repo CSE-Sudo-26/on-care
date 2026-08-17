@@ -57,9 +57,15 @@ def test_every_alert_state_is_reachable_through_the_api(client):
     """화면 상태를 그릴 수 있는 고객이 상태별로 최소 1명씩 있다."""
     rows = _roster(client)
 
+    # 계열은 이번 주 월→일이라(#746) 주 초에는 지난 날이 얼마 없다. '3일 초과'
+    # 같은 상수를 기대하면 코드를 아무도 건드리지 않아도 월·화요일에 깨진다 —
+    # 지난 날 수 안에서 셀 수 있는 만큼으로 본다(#833).
+    elapsed = clock.today().weekday() + 1
+    over_days_needed = min(3, elapsed)
     sodium_over = [
         r for r in rows
-        if sum(1 for v in r.get("sodium_week") or [] if v > _SODIUM_OVER) >= 3
+        if sum(1 for v in r.get("sodium_week") or [] if v > _SODIUM_OVER)
+        >= over_days_needed
     ]
     assert sodium_over, "나트륨 초과 경고를 그릴 고객이 없다"
 
@@ -92,8 +98,14 @@ def test_sparklines_cover_empty_short_and_full_weeks(client):
         len([v for v in (r.get("sodium_week") or []) if v > 0]) for r in _roster(client)
     }
     assert 0 in lengths, "기록이 전혀 없는 고객이 없다"
-    assert any(0 < n < elapsed for n in lengths), "기록이 일부만 있는 고객이 없다"
     assert elapsed in lengths, "이번 주를 하루도 빠짐없이 기록한 고객이 없다"
+    # '일부만' 은 0 과 '꽉 찬 주' 사이가 존재해야 성립한다. 월요일에는 지난
+    # 날이 하루뿐이라 그 사이가 없다 — 시드가 잘못된 것이 아니라 아직 주가
+    # 시작되지 않은 것이다(#833).
+    if elapsed >= 3:
+        assert any(
+            0 < n < elapsed for n in lengths
+        ), "기록이 일부만 있는 고객이 없다"
 
 
 def test_detailed_records_stay_with_the_original_three(client):
