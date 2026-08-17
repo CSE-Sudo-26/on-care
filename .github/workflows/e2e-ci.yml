@@ -1,0 +1,175 @@
+name: E2E CI
+
+# 실 API E2E 스위트(`tool/run_*_e2e.sh`)를 PR 마다 돌린다. (#796)
+#
+# 이 스위트들은 `test/` 밖의 `test_e2e/` 에 있어 두 앱 CI 의 `flutter test` 에 잡히지
+# 않는다. 백엔드가 필요해서 그렇게 뒀는데, 그 결과 **사람이 기억해서 로컬에서 돌릴
+# 때만** 검증됐다. 실제로 그 대가를 세 번 치렀다.
+#
+#  * main 의 `create-slot` 이 깨진 채 남아 있었는데 아무도 몰랐다
+#  * 그 수정 커밋이 머지에서 누락된 것도 브랜치 정리 중 우연히 발견했다(#779)
+#  * #779 자체도 실행 검증 없이 올라갔다
+#
+# 브라우저는 필요 없다. `IntegrationTestWidgetsFlutterBinding` 을 `flutter test` 로
+# 돌리는 구조라 ChromeDriver 없이 백엔드만 있으면 된다.
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/flutter/**"
+      - "frontend/flutter_trainer/**"
+      - "tool/run_*_e2e.sh"
+      - ".github/workflows/e2e-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/flutter/**"
+      - "frontend/flutter_trainer/**"
+      - "tool/run_*_e2e.sh"
+      - ".github/workflows/e2e-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Real-API E2E (member app + trainer web)
+    runs-on: ubuntu-latest
+    # 스위트 세 개가 순서대로 돌고 각각 단계마다 앱을 새로 부팅한다. 기본 360분은
+    # 과하고, 30분이면 여유가 충분하면서 매달림은 확실히 끊는다.
+    timeout-minutes: 30
+
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: oncare
+          POSTGRES_PASSWORD: oncare
+          POSTGRES_DB: oncare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U oncare"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      ENV: dev
+      DATABASE_URL: postgresql+psycopg://oncare:oncare@localhost:5432/oncare
+      # 데모 계정(트레이너·회원)이 있어야 스위트가 로그인할 수 있다.
+      SEED_DEMO_DATA: "true"
+      # 스위트는 한 번 돌 때 로그인을 여러 번 한다 — 단계마다 로그아웃 상태에서
+      # 부팅하고, 픽스처가 다른 계정으로 또 붙는다. 기본 한도는 IP·엔드포인트당
+      # 분당 10회라 그대로 두면 로그인이 429 로 막히고, 화면에서는 "로그인 화면에서
+      # 안 넘어감" 으로만 보인다.
+      RATE_LIMIT_ENABLED: "false"
+      API_BASE_URL: http://localhost:8000/v1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          # 시드는 앱 기동 훅에서 돈다(`main.py` → `init_db()`). 그래서 마이그레이션만
+          # 돌리고 끝내면 데모 계정이 없다 — 반드시 서버를 띄워야 한다.
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > "$RUNNER_TEMP/backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/backend.pid"
+
+      - name: Wait for backend
+        run: |
+          set -euo pipefail
+          # 첫 기동은 시드(공공 식품 DB·데모 데이터·RAG 적재)까지 하므로 시간이 걸린다.
+          for i in $(seq 1 60); do
+            if curl --fail --silent --max-time 5 "$API_BASE_URL/healthz" >/dev/null; then
+              echo "backend ready after ${i}0s"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::백엔드가 10분 안에 뜨지 않았습니다."
+          exit 1
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          # 두 앱 CI 와 같은 버전으로 고정한다. 새 stable 이 나온 순간 아무도 코드를
+          # 건드리지 않았는데 깨지는 일을 막는다(#659).
+          flutter-version: '3.44.9'
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: |
+          set -euo pipefail
+          (cd frontend/flutter && flutter pub get)
+          (cd frontend/flutter_trainer && flutter pub get)
+
+      - name: Run E2E suites
+        run: |
+          set -euo pipefail
+          # 러너를 글롭으로 찾는다. 스위트가 늘어도(#640 의 상담처럼) 이 파일을 고칠
+          # 필요가 없다 — `tool/run_<이름>_e2e.sh` 규약만 지키면 자동으로 포함된다.
+          shopt -s nullglob
+          runners=(tool/run_*_e2e.sh)
+          if [ ${#runners[@]} -eq 0 ]; then
+            echo "::error::tool/run_*_e2e.sh 를 하나도 찾지 못했습니다."
+            exit 1
+          fi
+          echo "실행할 스위트: ${runners[*]}"
+          failed=()
+          for r in "${runners[@]}"; do
+            echo "::group::$r"
+            # 하나가 실패해도 나머지를 마저 돌린다. 첫 실패에서 멈추면 한 번의 CI 로
+            # 얻을 수 있는 정보가 스위트 하나로 줄어든다.
+            if bash "$r"; then
+              echo "✅ $r"
+            else
+              echo "::error::$r 실패"
+              failed+=("$r")
+            fi
+            echo "::endgroup::"
+          done
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "::error::실패한 스위트: ${failed[*]}"
+            exit 1
+          fi
+
+      - name: Backend log (on failure)
+        if: failure()
+        run: tail -200 "$RUNNER_TEMP/backend.log" || true
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/backend.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/backend.pid")" 2>/dev/null || true
+          fi
