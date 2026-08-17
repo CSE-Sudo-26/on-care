@@ -52,8 +52,15 @@ class _Item {
   final num current;
   final num target;
 
+  /// 링이 그리는 비율. 한 바퀴에서 멈춘다 — 넘긴 양은 링이 아니라 옆의
+  /// 문구가 말한다.
   double get ratio =>
       target <= 0 ? 0 : (current / target).clamp(0.0, 1.0).toDouble();
+
+  /// 화면에 적는 비율. 링과 달리 자르지 않는다. 예전에는 링의 비율을 그대로
+  /// 적어, 목표를 260kcal 넘긴 날에도 '100% 달성률' 이라고 말했다 — 바로
+  /// 아래의 '목표보다 260 kcal 넘었어요' 와 정면으로 어긋났다(#820).
+  double get labelRatio => target <= 0 ? 0 : current / target;
 
   bool get isOverGoal => current > target;
 
@@ -283,7 +290,7 @@ class _CalorieRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
-                    '${(calories.ratio * 100).round()}%',
+                    '${(calories.labelRatio * 100).round()}%',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,

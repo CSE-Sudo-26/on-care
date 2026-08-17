@@ -98,11 +98,23 @@ class AppRoutes {
 
   /// Builds `/clients/<id>/<section>`. Ids are percent-encoded — a
   /// backend member id is not guaranteed to be URL-safe.
-  static String clientDetail(String id, {String? section}) {
+  ///
+  /// [filter] carries the roster preset (`f`) into the detail URL. Dropping
+  /// it is what made the 대시보드 '주의 고객' 카드 → 목록 → 고객 순서에서
+  /// 필터가 사라지게 했다: 상세는 별개 라우트라 쿼리를 물려주지 않으면 그
+  /// 자리에서 전체 로스터로 돌아간다(#816).
+  static String clientDetail(String id, {String? section, String? filter}) {
     final safeSection = clientSections.contains(section)
         ? section!
         : defaultClientSection;
-    return '$clients/${Uri.encodeComponent(id)}/$safeSection';
+    final path = '$clients/${Uri.encodeComponent(id)}/$safeSection';
+    // 빈 맵을 넘기면 `?` 만 붙은 주소가 나온다 — 필터가 없을 때는 쿼리 자체를
+    // 만들지 않는다.
+    if (filter == null) return path;
+    return Uri(
+      path: path,
+      queryParameters: <String, String>{'f': filter},
+    ).toString();
   }
 
   /// Builds the 고객 list filtered to a preset. Used by the dashboard

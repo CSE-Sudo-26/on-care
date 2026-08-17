@@ -138,6 +138,12 @@ class TrainerScheduleEntries extends Table {
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get programJson =>
       text().withDefault(const Constant('[]'))(); // [{name,sets,reps,weight}]
+
+  /// 완료한 세션의 프로그램을 회원에게 보냈는가. 데모에는 받을 회원 백엔드가
+  /// 없어 전송은 이 표시로 끝나지만, 화면이 '전송됨' 을 사실대로 말하고 같은
+  /// 세션을 두 번 보내지 않게 하려면 어딘가에 남아야 한다(#822).
+  BoolColumn get programSent =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
@@ -204,7 +210,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -259,6 +265,15 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(clientDailyMetrics);
       } else if (from < 8) {
         await m.addColumn(clientDailyMetrics, clientDailyMetrics.exercisesJson);
+      }
+      // v9: 완료한 세션의 프로그램을 보냈는지 표시한다(#822). 기본값이 false 라
+      // 기존 행은 모두 '보낸 적 없음' 으로 읽힌다 — 지금까지 보낼 방법 자체가
+      // 없었으니 사실과 같다.
+      if (from < 9) {
+        await m.addColumn(
+          trainerScheduleEntries,
+          trainerScheduleEntries.programSent,
+        );
       }
     },
   );

@@ -303,6 +303,33 @@ class RoutineAssignRequest(BaseModel):
     client_request_id: str | None = Field(default=None, max_length=64)
 
 
+class RoutineSuggestionCreateRequest(BaseModel):
+    """AI 개인운동 후보 등록. 검토 대기 상태로만 만들어진다.
+
+    승인 전에는 회원에게 닿지 않으므로 알림도 나가지 않는다.
+    """
+
+    name: str = Field(min_length=1, max_length=100)
+    minutes: int = Field(ge=0, le=600)
+    type: RoutineType
+    reason: str = Field(default="", max_length=200)
+    #: 재전송 중복 생성 방지용 멱등키. 배정(`AssignRoutineRequest`)과 같은 규약이다.
+    client_request_id: str | None = Field(default=None, max_length=64)
+
+
+class RoutineSuggestionApproveRequest(PartialUpdate):
+    """제안 승인. 필드를 주면 그것으로 고쳐서 승인한다(수정 후 추천).
+
+    아무 필드도 주지 않으면 그대로 승인이다. `RoutineUpdateRequest` 와 같은 이유로
+    명시적 null 은 422 다 — 이름·시간을 '지우는 것'은 기능이 아니다.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    minutes: int | None = Field(default=None, ge=0, le=600)
+    type: RoutineType | None = None
+    reason: str | None = Field(default=None, max_length=200)
+
+
 class RoutineUpdateRequest(PartialUpdate):
     """루틴 부분 수정. 보낸 필드만 반영한다. (#504)
 
@@ -591,6 +618,19 @@ class ScheduleSessionOut(BaseModel):
     status: str          # 예정|완료|공백
     note: str
     program: list[ProgramItem]
+    #: 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미
+    #: 보낸 세션은 화면에서 다른 것을 말해야 한다(#822).
+    program_sent: bool = False
+
+
+class ScheduleProgramSendRequest(BaseModel):
+    """완료한 세션의 프로그램을 회원에게 보내는 입력. (#822)
+
+    본문은 멱등키뿐이다 — 무엇을 보낼지는 세션 행이 이미 알고 있고, 클라이언트가
+    다시 실어 보내면 화면과 저장된 프로그램이 갈릴 수 있다. 재시도에 같은 키를
+    다시 보내면 배정이 두 번 만들어지지 않는다(단일·프로그램 배정과 같은 규약).
+    """
+    client_request_id: str | None = Field(default=None, max_length=48)
 
 
 class ScheduleCreateRequest(BaseModel):
