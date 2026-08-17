@@ -783,6 +783,16 @@ def delete_trainer_account(db: Session, trainer: User) -> None:
     db.commit()
 
 
+#: 배정 행의 검토 상태. AI 후보는 pending 으로 들어와 트레이너 판단을 기다린다.
+#:
+#: 기본이 approved 인 이유는 하위 호환이다 — 이 값이 생기기 전의 배정은 모두
+#: 트레이너가 보낸 것이므로 그대로 회원에게 보여야 한다.
+ROUTINE_APPROVED = "approved"
+ROUTINE_PENDING = "pending"
+ROUTINE_DISMISSED = "dismissed"
+ROUTINE_STATUSES = frozenset({ROUTINE_APPROVED, ROUTINE_PENDING, ROUTINE_DISMISSED})
+
+
 def build_routines(db: Session, member_id: str, trainer_id: str) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순).
 
@@ -791,7 +801,14 @@ def build_routines(db: Session, member_id: str, trainer_id: str) -> list[Routine
     """
     rows = db.scalars(
         select(TrainerRoutine)
-        .where(TrainerRoutine.trainer_id == trainer_id, TrainerRoutine.member_id == member_id)
+        .where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            # 검토를 기다리는 후보와 거절된 후보는 '배정된 루틴'이 아니다.
+            # 회원 화면은 물론 트레이너의 배정 목록에도 섞이면 안 된다 —
+            # 검토는 전용 목록(list_routine_suggestions)에서 한다(#790).
+            TrainerRoutine.status == ROUTINE_APPROVED,
+        )
         .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
     ).all()
     routine_ids = [row.id for row in rows]
@@ -908,6 +925,166 @@ _ROUTINE_EXERCISE_TYPES = {
 }
 
 
+
+# ─────────────────────────────────── AI 개인운동 제안 검토 ───────────────────
+
+class RoutineAlreadyReviewed(Exception):
+    """이미 승인/거절된 제안을 다시 검토하려 했다."""
+
+
+def create_routine_suggestion(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    *,
+    name: str,
+    minutes: int,
+    type_: str,
+    reason: str,
+    client_request_id: str | None = None,
+) -> RoutineOut:
+    """AI 개인운동 후보를 검토 대기(pending) 로 만든다.
+
+    [assign_routine] 과 나눠 둔 이유: 배정은 회원에게 곧바로 닿는 행동이고 알림도
+    나가지만, 후보는 아직 아무에게도 닿지 않는다. 알림은 승인 시점에 나간다 —
+    트레이너가 보지도 않은 운동으로 회원이 먼저 알림을 받으면 안 된다(#790).
+    """
+    if client_request_id:
+        existing = find_routine_by_client_request(
+            db, trainer_id, member_id, client_request_id
+        )
+        if existing is not None:
+            return _routine_out(existing)
+
+    max_order = db.scalar(
+        select(func.max(TrainerRoutine.sort_order)).where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    rt = TrainerRoutine(
+        id=f"rt-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        name=name,
+        minutes=minutes,
+        type=type_,
+        reason=reason,
+        source="ai",
+        status=ROUTINE_PENDING,
+        sort_order=(max_order or 0) + 1,
+        client_request_id=client_request_id,
+        created_at=clock.now(),
+    )
+    db.add(rt)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = find_routine_by_client_request(
+                db, trainer_id, member_id, client_request_id
+            )
+            if existing is not None:
+                return _routine_out(existing)
+        raise
+    db.commit()
+    db.refresh(rt)
+    return _routine_out(rt)
+
+
+def list_routine_suggestions(
+    db: Session, trainer_id: str, member_id: str
+) -> list[RoutineOut]:
+    """검토를 기다리는 AI 개인운동 제안. 승인·거절한 것은 빠진다."""
+    rows = db.scalars(
+        select(TrainerRoutine)
+        .where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+            TrainerRoutine.status == ROUTINE_PENDING,
+        )
+        .order_by(TrainerRoutine.sort_order, TrainerRoutine.created_at)
+    ).all()
+    return [_routine_out(row) for row in rows]
+
+
+def _pending_suggestion(
+    db: Session, trainer_id: str, suggestion_id: str
+) -> TrainerRoutine:
+    """검토할 수 있는 제안 하나. 남의 것·없는 것은 [RoutineNotFound].
+
+    이미 처리된 제안은 [RoutineAlreadyReviewed] 로 나눈다 — 없는 것과 같은 답을
+    주면, 두 번 눌렀을 때 트레이너가 "사라졌다" 로 읽는다. 실제로는 이미 반영됐다.
+    """
+    row = db.scalar(
+        select(TrainerRoutine).where(
+            TrainerRoutine.id == suggestion_id,
+            TrainerRoutine.trainer_id == trainer_id,
+        )
+    )
+    if row is None:
+        raise RoutineNotFound("제안을 찾을 수 없습니다.")
+    if row.status != ROUTINE_PENDING:
+        raise RoutineAlreadyReviewed("이미 검토한 제안입니다.")
+    return row
+
+
+def approve_routine_suggestion(
+    db: Session,
+    trainer_id: str,
+    suggestion_id: str,
+    *,
+    name: str | None = None,
+    minutes: int | None = None,
+    type_: str | None = None,
+    reason: str | None = None,
+) -> RoutineOut:
+    """제안을 승인해 회원에게 배정한다. 준 값이 있으면 그것으로 고쳐서 승인한다.
+
+    새 행을 만들지 않고 이 행의 상태를 바꾼다. 후보와 배정이 같은 행이라
+    회원 조회·완료 처리·프로그램 묶음이 지금 쓰는 경로를 그대로 지난다.
+    """
+    row = _pending_suggestion(db, trainer_id, suggestion_id)
+    if name is not None:
+        row.name = name
+    if minutes is not None:
+        row.minutes = minutes
+    if type_ is not None:
+        row.type = type_
+    if reason is not None:
+        row.reason = reason
+    row.status = ROUTINE_APPROVED
+    row.reviewed_at = clock.now()
+    row.reviewed_by = trainer_id
+
+    # 알림은 여기서 나간다 — 회원이 볼 수 있게 된 시점이 곧 알릴 시점이다.
+    notification_service.queue(
+        db,
+        member_id=row.member_id,
+        kind=notification_service.EXERCISE,
+        category=notification_service.MEMBER_ROUTINE,
+        title="새 운동 루틴이 배정되었어요",
+        body=f"{row.name} · {row.minutes}분",
+    )
+    db.commit()
+    db.refresh(row)
+    return _routine_out(row)
+
+
+def dismiss_routine_suggestion(
+    db: Session, trainer_id: str, suggestion_id: str
+) -> RoutineOut:
+    """제안을 추천하지 않기로 한다. 회원 배정도 알림도 만들지 않는다."""
+    row = _pending_suggestion(db, trainer_id, suggestion_id)
+    row.status = ROUTINE_DISMISSED
+    row.reviewed_at = clock.now()
+    row.reviewed_by = trainer_id
+    db.commit()
+    db.refresh(row)
+    return _routine_out(row)
+
+
 def complete_assigned_routine(
     db: Session,
     trainer_id: str,
@@ -924,6 +1101,10 @@ def complete_assigned_routine(
     모은다. 이름은 스냅샷이라 이후 배정 수정·철회에 흔들리지 않는다.
     """
     routine = _owned_routine(db, trainer_id, member_id, routine_id)
+    # 승인되지 않은 후보는 회원에게 보이지도 않는다. id 를 알아내 직접 호출해도
+    # 완료로 넘어가지 않게 여기서 막는다 — 조회만 거르면 경로가 하나 남는다(#790).
+    if routine.status != ROUTINE_APPROVED:
+        raise RoutineNotFound("루틴을 찾을 수 없습니다.")
     existing = db.scalar(
         select(ExerciseSession).where(
             ExerciseSession.assigned_routine_id == routine_id

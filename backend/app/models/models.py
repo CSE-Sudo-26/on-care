@@ -796,6 +796,20 @@ class TrainerRoutine(Base):
     type: Mapped[str] = mapped_column(String(20))  # 유산소|근력|스트레칭
     reason: Mapped[str] = mapped_column(String(200), default="")
     source: Mapped[str] = mapped_column(String(20), default="ai")  # ai|trainer
+    #: 검토 상태 — approved(회원에게 노출) | pending(트레이너 검토 대기) |
+    #: dismissed(추천하지 않기로 함).
+    #:
+    #: 기본이 approved 인 것이 하위 호환의 핵심이다. 지금까지의 배정은 모두
+    #: 트레이너가 보낸 것이므로 그대로 회원에게 보여야 한다. AI 가 만든 후보만
+    #: pending 으로 들어와 승인 전까지 회원 조회에서 빠진다.
+    status: Mapped[str] = mapped_column(String(20), default="approved", index=True)
+    #: 트레이너가 승인/거절한 시각. pending 인 동안은 비어 있다.
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: 검토한 트레이너 id. 배정 트레이너와 같지만, 나중에 대리 검토가 생겨도
+    #: 누가 판단했는지는 남아야 한다.
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     #: 여러 세션을 한 프로그램으로 묶는 이름. 단일 루틴 배정은 빈 문자열이다.
     program_name: Mapped[str] = mapped_column(String(100), default="")
     #: 이 루틴이 어느 세션인가. 세션이 하나뿐이면 비어 있다.
