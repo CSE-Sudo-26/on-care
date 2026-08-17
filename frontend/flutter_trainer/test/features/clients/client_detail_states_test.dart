@@ -114,17 +114,21 @@ void main() {
     expect(view.resolvedSection, AppRoutes.defaultClientSection);
   });
 
-  testWidgets('quick actions keep only health goals and memo', (tester) async {
+  testWidgets('빠른 동작이 이 회원의 메시지·프로그램까지 잇는다 (#823)', (tester) async {
     await pumpTrainerApp(
       tester,
       token: 'demo-trainer-token',
       at: AppRoutes.clientDetail('seed-client-3'),
     );
 
+    // 식단·운동을 읽다가 그 자리에서 이어지는 동작들. 예전에는 이 줄이
+    // 신체·목표와 메모 둘뿐이라, 말을 걸려면 메시지 탭에서 같은 사람을 다시
+    // 찾아야 했다(#823).
+    expect(find.text('메시지'), findsOneWidget);
+    expect(find.text('프로그램'), findsOneWidget);
     expect(find.text('고객 신체·목표 관리'), findsOneWidget);
     expect(find.text('메모'), findsOneWidget);
-    expect(find.text('메시지'), findsNothing);
-    expect(find.text('프로그램'), findsNothing);
+    // 일정 등록은 스케줄 라우트에 고객을 실을 자리가 없어 아직 넣지 않는다.
     expect(find.text('일정 등록'), findsNothing);
     expect(find.text('주간 리포트'), findsNothing);
 
@@ -132,9 +136,29 @@ void main() {
       const ValueKey<String>('client-detail-quick-actions'),
     );
     expect(actions, findsOneWidget);
+    // 메모가 줄의 오른쪽 끝을 지킨다 — 새 버튼은 왼쪽에 붙어 이 정렬을 깨지
+    // 않는다(#729).
     expect(
       tester.getRect(find.widgetWithText(ActionButton, '메모')).right,
       closeTo(tester.getRect(actions).right, 0.1),
     );
+  });
+
+  testWidgets('빠른 동작이 지금 보고 있는 회원을 물고 간다 (#823)', (tester) async {
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientDetail('seed-client-3'),
+    );
+    final router = GoRouter.of(tester.element(find.byType(ClientDetailView)));
+    String location() =>
+        router.routerDelegate.currentConfiguration.uri.toString();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('client-detail-open-program')),
+    );
+    await tester.pumpAndSettle();
+    expect(location(), contains('/coaching'));
+    expect(location(), contains('client=seed-client-3'));
   });
 }
