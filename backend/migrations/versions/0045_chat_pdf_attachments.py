@@ -1,7 +1,7 @@
 """Add optional weekly-report PDF metadata to chat messages.
 
-Revision ID: 0040_chat_pdf_attachments
-Revises: 0039_program_sessions
+Revision ID: 0045_chat_pdf_attachments
+Revises: 0044_routine_suggestion_evidence
 """
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0040_chat_pdf_attachments"
-down_revision: str | Sequence[str] | None = "0039_program_sessions"
+revision: str = "0045_chat_pdf_attachments"
+down_revision: str | Sequence[str] | None = "0044_routine_suggestion_evidence"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
