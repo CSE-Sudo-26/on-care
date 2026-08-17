@@ -6,8 +6,8 @@
 
 기존 행은 그대로다 — 값이 있던 행이 NULL 이 되지 않는다.
 
-Revision ID: 0041_routine_without_trainer
-Revises: 0040_routine_review_status
+Revision ID: 0043_routine_without_trainer
+Revises: 0042_routine_review_status
 """
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0041_routine_without_trainer"
-down_revision: str | Sequence[str] | None = "0040_routine_review_status"
+revision: str = "0043_routine_without_trainer"
+down_revision: str | Sequence[str] | None = "0042_routine_review_status"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
