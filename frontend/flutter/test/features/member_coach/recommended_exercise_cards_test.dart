@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +11,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -663,4 +667,45 @@ void main() {
     expect(find.text('2.0 KB'), findsOneWidget);
     expect(find.byIcon(Icons.open_in_new), findsOneWidget);
   });
+
+  // 카드를 눌렀을 때 정말 그 첨부의 경로로 내려받는지, 실패하면 회원이 이유를
+  // 보는지까지 확인한다. 성공 경로의 미리보기(PdfPreview)는 printing 플러그인의
+  // 플랫폼 채널을 타므로 위젯 테스트에서 띄우지 않는다 — 실패 경로가 탭→다운로드
+  // 호출과 안내 문구를 함께 덮는다.
+  testWidgets('PDF 카드를 누르면 그 첨부 경로로 내려받고, 실패하면 안내 문구를 띄운다', (tester) async {
+    final _FailingChatPdfRepository repository = _FailingChatPdfRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _PdfMemberCoachRepository(),
+          ),
+          chatPdfRepositoryProvider.overrideWithValue(repository),
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('coach-pdf-pdf-file')));
+    await tester.pumpAndSettle();
+
+    expect(repository.paths, <String>['/chat/attachments/pdf-file']);
+    expect(find.text('PDF를 열지 못했어요. 다시 시도해 주세요'), findsOneWidget);
+  });
+}
+
+/// 내려받기가 항상 실패하는 저장소. 요청된 경로를 기록해 둔다.
+class _FailingChatPdfRepository extends ChatPdfRepository {
+  _FailingChatPdfRepository() : super(Dio());
+
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Uint8List> download(String path) async {
+    paths.add(path);
+    throw Exception('download failed');
+  }
 }

@@ -53,7 +53,10 @@ void main() {
       () => const ReportPdfGenerator().generate(
         report: report,
         previousReport: previous,
-        feedback: List<String>.filled(80, '한글 피드백을 PDF에 정확히 반영합니다.').join(' '),
+        // 페이지 수는 TextPainter 가 잰 높이로 갈리고, 높이는 러너에 깔린 한글
+        // 폰트 폴백에 따라 달라진다. 두 번째 페이지 경계에 걸치지 않도록 넉넉히
+        // 넘긴다.
+        feedback: List<String>.filled(400, '한글 피드백을 PDF에 정확히 반영합니다.').join(' '),
       ),
     );
 
@@ -62,6 +65,7 @@ void main() {
     expect(
       RegExp(r'/Type\s*/Page\b').allMatches(source).length,
       greaterThan(1),
+      reason: 'A4 여러 장으로 나뉘어야 한다. 한 장만 나오면 폰트 폴백으로 글자 높이가 달라진 것이다.',
     );
   });
 }
