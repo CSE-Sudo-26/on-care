@@ -194,7 +194,7 @@ const List<_Client> _clients = <_Client>[
     diet: <_Meal>[
       _Meal('아침', '그릭요거트, 과일', 280, 200, carbsG: 40, proteinG: 15, fatG: 6),
       _Meal('점심', '현미밥, 불고기, 나물', 750, 980, carbsG: 90, proteinG: 35, fatG: 20),
-      _Meal('저녁', '연어 샐러드', 650, 620, carbsG: 20, proteinG: 40, fatG: 22),
+      _Meal('저녁', '연어 샐러드', 650, 620, carbsG: 25, proteinG: 45, fatG: 40),
     ],
     aiRoutine: <_Routine>[
       _Routine('인터벌 런닝', 25, '유산소', '체지방 연소 효율↑'),
@@ -325,9 +325,17 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[1250, 1670, 1410, 1340, 1440, 1600, 1520],
     sugarWeek: <double>[26.2, 35.2, 29.8, 28.2, 30.4, 33.6, 32.0],
     diet: <_Meal>[
-      _Meal('아침', '통밀토스트, 아보카도', 340, 290),
-      _Meal('점심', '닭가슴살 도시락', 520, 640),
-      _Meal('저녁', '채소 스프, 두부, 현미밥', 660, 720),
+      _Meal('아침', '통밀토스트, 아보카도', 340, 290, carbsG: 30, proteinG: 8, fatG: 20),
+      _Meal('점심', '닭가슴살 도시락', 520, 640, carbsG: 60, proteinG: 42, fatG: 12),
+      _Meal(
+        '저녁',
+        '채소 스프, 두부, 현미밥',
+        660,
+        720,
+        carbsG: 90,
+        proteinG: 28,
+        fatG: 21,
+      ),
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 25, '유산소', '회복기 심박 관리'),
@@ -387,10 +395,26 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[2480, 2610, 2540, 2660, 2720, 2390, 2600],
     sugarWeek: <double>[35.4, 32.5, 30.4, 33.9, 36.1, 29.0, 34.0],
     diet: <_Meal>[
-      _Meal('아침', '오트밀, 바나나, 견과', 520, 190),
-      _Meal('점심', '현미밥, 흰살생선, 나물', 780, 600),
-      _Meal('저녁', '닭가슴살, 고구마, 파스타', 900, 560),
-      _Meal('간식', '스포츠음료, 바나나', 400, 100),
+      _Meal('아침', '오트밀, 바나나, 견과', 520, 190, carbsG: 72, proteinG: 15, fatG: 19),
+      _Meal(
+        '점심',
+        '현미밥, 흰살생선, 나물',
+        780,
+        600,
+        carbsG: 105,
+        proteinG: 47,
+        fatG: 19,
+      ),
+      _Meal(
+        '저녁',
+        '닭가슴살, 고구마, 파스타',
+        900,
+        560,
+        carbsG: 122,
+        proteinG: 56,
+        fatG: 20,
+      ),
+      _Meal('간식', '스포츠음료, 바나나', 400, 100, carbsG: 95, proteinG: 3, fatG: 1),
     ],
     aiRoutine: <_Routine>[
       _Routine('LSD 러닝', 45, '유산소', '유산소 기반 다지기'),
@@ -444,8 +468,8 @@ const List<_Client> _clients = <_Client>[
     sugarWeek: <double>[63.2, 59.8, 64.6, 71.4, 55.8, 78.8, 74.0],
     diet: <_Meal>[
       _Meal('아침', '거름', 0, 0),
-      _Meal('점심', '마라탕', 980, 1850),
-      _Meal('저녁', '치킨, 맥주', 1280, 900),
+      _Meal('점심', '마라탕', 980, 1850, carbsG: 90, proteinG: 35, fatG: 52),
+      _Meal('저녁', '치킨, 맥주', 1280, 900, carbsG: 95, proteinG: 60, fatG: 72),
     ],
     aiRoutine: <_Routine>[
       _Routine('주말 회복 걷기', 30, '유산소', '주말 나트륨 배출'),
@@ -531,9 +555,9 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[2360, 2600, 2030, 2730, 2310, 2180, 2480],
     sugarWeek: <double>[58.9, 62.1, 51.2, 64.2, 56.3, 59.2, 61.0],
     diet: <_Meal>[
-      _Meal('아침', '편의점 삼각김밥 2개', 420, 780),
-      _Meal('점심', '부대찌개, 공기밥', 920, 1650),
-      _Meal('저녁', '족발, 소주', 1140, 820),
+      _Meal('아침', '편의점 삼각김밥 2개', 420, 780, carbsG: 80, proteinG: 10, fatG: 6),
+      _Meal('점심', '부대찌개, 공기밥', 920, 1650, carbsG: 110, proteinG: 40, fatG: 34),
+      _Meal('저녁', '족발, 소주', 1140, 820, carbsG: 62, proteinG: 66, fatG: 70),
     ],
     aiRoutine: <_Routine>[
       _Routine('저강도 걷기', 20, '유산소', '혈압 우선 안정'),
@@ -585,9 +609,17 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[2150, 1680, 2260, 1910, 1800, 1950, 2050],
     sugarWeek: <double>[49.4, 38.5, 51.7, 43.7, 41.4, 44.6, 47.0],
     diet: <_Meal>[
-      _Meal('아침', '커피만', 20, 10),
-      _Meal('점심', '김치찌개, 공기밥', 780, 1420),
-      _Meal('저녁', '야근 도시락, 편의점 야식', 1250, 850),
+      _Meal('아침', '커피만', 20, 10, carbsG: 3, proteinG: 1, fatG: 0.5),
+      _Meal('점심', '김치찌개, 공기밥', 780, 1420, carbsG: 103, proteinG: 31, fatG: 27),
+      _Meal(
+        '저녁',
+        '야근 도시락, 편의점 야식',
+        1250,
+        850,
+        carbsG: 150,
+        proteinG: 45,
+        fatG: 51,
+      ),
     ],
     aiRoutine: <_Routine>[
       _Routine('퇴근 후 걷기', 15, '유산소', '짧게라도 유지'),
@@ -639,9 +671,25 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[1300, 1750, 1480, 1400, 1510, 1670, 1590],
     sugarWeek: <double>[28.7, 38.5, 32.6, 30.8, 33.2, 36.8, 35.0],
     diet: <_Meal>[
-      _Meal('아침', '두유, 삶은 계란', 260, 240),
-      _Meal('점심', '비빔밥 (고추장 절반)', 680, 780),
-      _Meal('저녁', '샐러드, 닭가슴살, 현미밥', 650, 700),
+      _Meal('아침', '두유, 삶은 계란', 260, 240, carbsG: 14, proteinG: 18, fatG: 14),
+      _Meal(
+        '점심',
+        '비빔밥 (고추장 절반)',
+        680,
+        780,
+        carbsG: 100,
+        proteinG: 22,
+        fatG: 20,
+      ),
+      _Meal(
+        '저녁',
+        '샐러드, 닭가슴살, 현미밥',
+        650,
+        700,
+        carbsG: 70,
+        proteinG: 45,
+        fatG: 20,
+      ),
     ],
     aiRoutine: <_Routine>[
       _Routine('실내 자전거', 20, '유산소', '무릎 부담 없는 유산소'),
@@ -694,9 +742,9 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[2070, 1750, 1650, 1790, 1970, 1540, 1880],
     sugarWeek: <double>[55.0, 46.5, 44.0, 47.5, 52.5, 41.0, 50.0],
     diet: <_Meal>[
-      _Meal('아침', '시리얼, 우유', 380, 320),
-      _Meal('점심', '백반 정식', 720, 980),
-      _Meal('저녁', '된장찌개, 공기밥', 780, 710),
+      _Meal('아침', '시리얼, 우유', 380, 320, carbsG: 64, proteinG: 12, fatG: 8),
+      _Meal('점심', '백반 정식', 720, 980, carbsG: 100, proteinG: 30, fatG: 22),
+      _Meal('저녁', '된장찌개, 공기밥', 780, 710, carbsG: 105, proteinG: 30, fatG: 25),
     ],
     aiRoutine: <_Routine>[
       _Routine('트레드밀 경사 걷기', 25, '유산소', '정체 구간 자극 변화'),
@@ -740,8 +788,8 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[1350, 1420, 770],
     sugarWeek: <double>[23.8, 31.9, 29.0],
     diet: <_Meal>[
-      _Meal('아침', '토스트, 커피', 290, 310),
-      _Meal('점심', '샌드위치', 480, 720),
+      _Meal('아침', '토스트, 커피', 290, 310, carbsG: 40, proteinG: 8, fatG: 10),
+      _Meal('점심', '샌드위치', 480, 720, carbsG: 55, proteinG: 20, fatG: 20),
       _Meal('저녁', '기록 없음', 0, 0),
     ],
     aiRoutine: <_Routine>[
@@ -785,9 +833,25 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[2750, 2960, 3280, 2560, 3430, 2900, 3120],
     sugarWeek: <double>[48.1, 44.5, 46.5, 41.6, 49.1, 43.6, 42.0],
     diet: <_Meal>[
-      _Meal('아침', '계란 5개, 오트밀', 720, 480),
-      _Meal('점심', '소고기 덮밥, 현미밥 곱빼기', 1180, 720),
-      _Meal('저녁', '닭가슴살, 고구마, 프로틴', 1220, 750),
+      _Meal('아침', '계란 5개, 오트밀', 720, 480, carbsG: 60, proteinG: 45, fatG: 34),
+      _Meal(
+        '점심',
+        '소고기 덮밥, 현미밥 곱빼기',
+        1180,
+        720,
+        carbsG: 170,
+        proteinG: 55,
+        fatG: 32,
+      ),
+      _Meal(
+        '저녁',
+        '닭가슴살, 고구마, 프로틴',
+        1220,
+        750,
+        carbsG: 145,
+        proteinG: 108,
+        fatG: 22,
+      ),
     ],
     aiRoutine: <_Routine>[
       _Routine('스쿼트 5세트', 25, '근력', '하체 볼륨 확보'),
@@ -840,9 +904,9 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[1820, 2020, 1570, 2110, 1790, 1690, 1920],
     sugarWeek: <double>[41.8, 46.2, 36.1, 48.4, 40.9, 38.7, 44.0],
     diet: <_Meal>[
-      _Meal('아침', '북엇국, 공기밥', 520, 1120),
-      _Meal('점심', '칼국수', 880, 1260),
-      _Meal('저녁', '닭가슴살 샐러드', 520, 300),
+      _Meal('아침', '북엇국, 공기밥', 520, 1120, carbsG: 82, proteinG: 23, fatG: 10),
+      _Meal('점심', '칼국수', 880, 1260, carbsG: 133, proteinG: 31, fatG: 25),
+      _Meal('저녁', '닭가슴살 샐러드', 520, 300, carbsG: 30, proteinG: 50, fatG: 22),
     ],
     aiRoutine: <_Routine>[
       _Routine('러닝머신', 30, '유산소', '나트륨 배출 지원'),
@@ -887,9 +951,9 @@ const List<_Client> _clients = <_Client>[
     caloriesWeek: <int>[1280],
     sugarWeek: <double>[18.0],
     diet: <_Meal>[
-      _Meal('아침', '바나나, 우유', 220, 130),
-      _Meal('점심', '샐러드 볼', 430, 610),
-      _Meal('저녁', '두부 스테이크, 잡곡밥', 630, 710),
+      _Meal('아침', '바나나, 우유', 220, 130, carbsG: 35, proteinG: 8, fatG: 5),
+      _Meal('점심', '샐러드 볼', 430, 610, carbsG: 42, proteinG: 16, fatG: 22),
+      _Meal('저녁', '두부 스테이크, 잡곡밥', 630, 710, carbsG: 80, proteinG: 30, fatG: 20),
     ],
     aiRoutine: <_Routine>[
       _Routine('걷기', 20, '유산소', '습관 형성 우선'),

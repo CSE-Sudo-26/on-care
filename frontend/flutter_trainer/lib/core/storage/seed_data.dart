@@ -14,7 +14,7 @@ part 'seed_clients.dart';
 
 /// Idempotent seeder for the trainer app's local DB. Runs at bootstrap.
 ///
-/// **Flag.** `AppKeyValues['trainer_seeded_v15']` stores the date string
+/// **Flag.** `AppKeyValues['trainer_seeded_v17']` stores the date string
 /// (`YYYY-MM-DD`) the seed last ran with. Bump the version suffix
 /// whenever the seeded *content* changes — otherwise a browser that
 /// already seeded today keeps the old data until the date rolls over.
@@ -33,7 +33,10 @@ part 'seed_clients.dart';
 /// 달랐다(#757). 그의 식단·이행률·날짜별 이력은 공유 픽스처에서 오고, 나머지 고객은
 /// 아래 생성기(`_dailyMetrics`)가 그대로 만든다.
 ///
-/// The flag is `_v13` (was `_v12`): each weekday now gets its own routine
+/// The flag is `_v17` (was `_v16`): 끼니마다 탄단지가 채워졌다(#819) — 열량만
+/// 있고 영양소가 0 이면 식단 탭이 근거 없이 숫자만 보여 준다. 올리지 않으면
+/// 오늘 이미 접속한 브라우저는 날짜가 넘어갈 때까지 옛 값을 그대로 쓴다.
+/// `_v13` 은 요일마다 다른 루틴을 넣었다: each weekday now gets its own routine
 /// so a week no longer repeats one workout (#754). `_v12` first carried that day's
 /// exercise list for the report's 요일별 상세 (#754). `_v11` reached 12 weeks
 /// back so the '최근 4주' card stays full while moving into the past (#752).
@@ -80,7 +83,7 @@ Future<void> seedIfEmpty(
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
 
-  if (await db.readValue('trainer_seeded_v16') == today) return;
+  if (await db.readValue('trainer_seeded_v17') == today) return;
 
   // 김민수의 하루는 픽스처가 정한다 — 이 앱은 날짜에 붙여 저장하기만 한다(#757).
   final _FixtureClient fixtureClient = _FixtureClient(
@@ -308,7 +311,7 @@ Future<void> seedIfEmpty(
     });
 
     // ---- Mark seeded (inside the txn so it commits atomically) ----
-    await db.putValue('trainer_seeded_v16', today);
+    await db.putValue('trainer_seeded_v17', today);
   });
 }
 
