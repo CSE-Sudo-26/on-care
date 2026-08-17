@@ -11,7 +11,12 @@ import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 
-/// 담당 트레이너 정보와 트레이너가 직접 추천한 개인운동을 표시한다.
+/// 담당 트레이너 관계와 소통만 담는다 — 이름·전문 분야·프로필 이동·채팅.
+///
+/// 추천 개인운동은 여기 있지 않다. 트레이너 추천이든 AI 추천이든 회원에게는
+/// "지금 무엇을 하면 되는가" 라는 한 가지 질문이라, [AiCoachingCard] 의
+/// `추천 개인운동` 한 곳에 모았다(#782). 예전에는 이 카드와 AI 카드가 화면
+/// 두 곳에 나뉘어 있어 둘의 관계와 우선순위를 회원이 다시 해석해야 했다.
 class CoachCard extends ConsumerWidget {
   const CoachCard({super.key});
 
@@ -24,10 +29,6 @@ class CoachCard extends ConsumerWidget {
     // 여러 명이 있으므로 헬스장 id 로는 한 명을 특정할 수 없다.
     final assignedTrainer = ref.watch(myTrainerProvider).valueOrNull;
 
-    final List<CoachRoutine> trainerRoutines =
-        (ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[])
-            .where((CoachRoutine routine) => routine.isTrainerRecommended)
-            .toList();
     final unread = ref.watch(coachUnreadProvider).valueOrNull ?? 0;
 
     return Padding(
@@ -106,38 +107,6 @@ class CoachCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
-              '트레이너 추천 추가 개인운동',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: FigmaColors.ink,
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (trainerRoutines.isEmpty)
-              const Text(
-                '아직 트레이너가 추천한 개인운동이 없어요',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.mutedForeground,
-                ),
-              )
-            else
-              for (final (int index, CoachRoutine routine)
-                  in trainerRoutines.indexed) ...<Widget>[
-                // 여러 세션짜리 프로그램은 첫 세션 위에 프로그램 이름을 한 번
-                // 얹는다 — 세션 카드가 어디에 묶이는지 보이지 않으면 그냥
-                // 낱개 루틴 여러 개로 읽힌다(#709).
-                if (routine.programName.isNotEmpty &&
-                    (index == 0 ||
-                        trainerRoutines[index - 1].programName !=
-                            routine.programName))
-                  _ProgramHeading(name: routine.programName),
-                _RecommendedExerciseRow(routine: routine),
-                const SizedBox(height: 8),
-              ],
-            const SizedBox(height: 6),
             _ChatButton(
               unread: unread,
               onTap: () =>
@@ -150,18 +119,37 @@ class CoachCard extends ConsumerWidget {
   }
 }
 
-/// 건강 기록과 PT 피드백을 바탕으로 생성된 AI 추천 개인운동만 표시한다.
-class AiRecommendedExerciseCard extends ConsumerWidget {
-  const AiRecommendedExerciseCard({super.key});
+/// 운동 탭의 `AI 코칭` — 코칭 포인트와 추천 개인운동을 한 흐름으로 보여준다.
+///
+/// 예전에는 `AI 맞춤 조언`(텍스트)과 `AI 맞춤 운동`(카드)이 화면 위아래로 멀리
+/// 떨어져 있고 그 사이에 운동 현황·트레이너 카드가 끼어 있었다. 둘은 같은
+/// 기록에서 나온 같은 판단인데, 회원은 "왜 이 운동인지" 를 다시 이어 붙여야
+/// 했다(#782).
+///
+/// 추천 개인운동은 `추가 운동` 이 아니라 **PT 와 다음 PT 사이에 스스로 하는
+/// 운동**이다. 그래서 추천할 것이 없는 날은 빈 카드를 만들지 않고 코칭 포인트만
+/// 남긴다 — AI 가 매번 운동을 억지로 만들어 낼 이유가 없다.
+class AiCoachingCard extends ConsumerWidget {
+  const AiCoachingCard({required this.coachingPoint, super.key});
+
+  /// 이번 코칭 포인트. 운동 주간 데이터의 `aiCoachMessage` 가 그대로 들어온다.
+  final String coachingPoint;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<CoachRoutine> aiRoutines =
-        (ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[])
-            .where((CoachRoutine routine) => routine.isAiRecommended)
-            .toList();
+    // 트레이너 추천과 AI 추천을 한 목록으로 합친다. 회원에게는 "지금 무엇을
+    // 하면 되는가" 라는 한 가지 질문이고, 누가 정했는지는 각 줄의 출처가 말한다.
+    final List<CoachRoutine> routines =
+        ref.watch(coachRoutinesProvider).valueOrNull ?? const <CoachRoutine>[];
+    final MemberCoach? coach = ref.watch(memberCoachProvider).valueOrNull;
+    final String point = coachingPoint.trim();
+
+    // 코칭 포인트도 추천도 없으면 카드 자체를 그리지 않는다. 빈 카드는 자리만
+    // 차지하고 아무것도 알려 주지 않는다.
+    if (point.isEmpty && routines.isEmpty) return const SizedBox.shrink();
 
     return Container(
+      key: const Key('aiCoachingCard'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -178,7 +166,7 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
               // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
               Flexible(
                 child: Text(
-                  'AI 맞춤 운동',
+                  'AI 코칭',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -190,37 +178,90 @@ class AiRecommendedExerciseCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const Text(
-            '나의 건강 기록과 트레이너 PT 피드백을 바탕으로 AI가 추천한 개인운동이에요',
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.4,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (aiRoutines.isEmpty)
+          if (point.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
             const Text(
-              '현재 추천할 수 있는 AI 맞춤 운동이 없어요',
+              '이번 코칭 포인트',
               style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              point,
+              style: const TextStyle(
                 fontSize: 13.5,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+                color: FigmaColors.ink,
+              ),
+            ),
+          ],
+          if (routines.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            const Text(
+              '추천 개인운동',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: FigmaColors.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'PT 와 다음 PT 사이에 스스로 하는 운동이에요',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
                 color: AppColors.mutedForeground,
               ),
-            )
-          else
-            for (final CoachRoutine routine in aiRoutines) ...<Widget>[
-              _RecommendedExerciseRow(routine: routine),
+            ),
+            const SizedBox(height: 10),
+            for (final (int index, CoachRoutine routine)
+                in routines.indexed) ...<Widget>[
+              // 여러 세션짜리 프로그램은 첫 세션 위에 프로그램 이름을 한 번
+              // 얹는다 — 세션 카드가 어디에 묶이는지 보이지 않으면 그냥 낱개
+              // 루틴 여러 개로 읽힌다(#709).
+              if (routine.programName.isNotEmpty &&
+                  (index == 0 ||
+                      routines[index - 1].programName != routine.programName))
+                _ProgramHeading(name: routine.programName),
+              _RecommendedExerciseRow(
+                routine: routine,
+                sourceLabel: routineSourceLabel(routine, coach),
+              ),
               const SizedBox(height: 10),
             ],
+          ],
         ],
       ),
     );
   }
 }
 
+/// 회원이 읽을 수 있는 추천 출처 문구.
+///
+/// 내부 `source` 값을 그대로 보여 주지 않는다. 회원이 알아야 할 것은 "누가
+/// 확인했는가" 다 — 트레이너가 본 추천과 AI 가 혼자 낸 추천은 무게가 다르다.
+///
+/// 담당 트레이너가 있으면 AI 추천은 승인된 것만 내려온다(#790). 그래서 여기
+/// 도착한 AI 추천에 `트레이너 확인` 을 붙이는 것이 사실이다.
+String routineSourceLabel(CoachRoutine routine, MemberCoach? coach) {
+  if (routine.isTrainerRecommended) return '트레이너 직접 추천';
+  if (coach != null) return 'AI 추천 · ${coach.name} 확인';
+  return 'AI 자동 추천';
+}
+
 class _RecommendedExerciseRow extends ConsumerStatefulWidget {
-  const _RecommendedExerciseRow({required this.routine});
+  const _RecommendedExerciseRow({
+    required this.routine,
+    required this.sourceLabel,
+  });
+
+  /// 회원이 읽는 출처 한 줄 — `AI 추천 · 김트레이너 확인` 처럼.
+  final String sourceLabel;
 
   final CoachRoutine routine;
 
@@ -335,6 +376,19 @@ class _RecommendedExerciseRowState
                         ),
                       ),
                     ],
+                    // 누가 이 운동을 정했는지. 트레이너가 본 추천과 AI 가 혼자
+                    // 낸 추천은 회원에게 무게가 다르다(#782).
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.sourceLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: FigmaColors.textMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),

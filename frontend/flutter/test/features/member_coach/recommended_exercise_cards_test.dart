@@ -15,6 +15,9 @@ import 'package:oncare/features/member_coach/presentation/widgets/coach_card.dar
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
 
+/// 코칭 포인트 — 운동 주간 데이터의 `aiCoachMessage` 자리에 들어가는 값.
+const String _coachingPoint = '오른쪽 어깨가 들리는 경향이 있어 어깨 안정화에 집중해요.';
+
 const MemberCoach _trainer = MemberCoach(
   trainerId: 'trainer-1',
   name: '김트레이너',
@@ -115,11 +118,11 @@ void main() {
             body: SingleChildScrollView(
               child: Column(
                 children: <Widget>[
-                  CoachCard(),
                   Padding(
                     padding: EdgeInsets.all(24),
-                    child: AiRecommendedExerciseCard(),
+                    child: AiCoachingCard(coachingPoint: _coachingPoint),
                   ),
+                  CoachCard(),
                 ],
               ),
             ),
@@ -130,7 +133,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('source에 따라 트레이너와 AI 추천 운동을 각각 표시한다', (
+  testWidgets('코칭 포인트와 추천 개인운동이 한 영역에 함께 있다 (#782)', (
     WidgetTester tester,
   ) async {
     await pumpRecommendationCards(tester, const <CoachRoutine>[
@@ -138,34 +141,115 @@ void main() {
       _aiRoutine,
     ]);
 
-    final Finder trainerCard = find.byType(CoachCard);
-    final Finder aiCard = find.byType(AiRecommendedExerciseCard);
+    final Finder coaching = find.byType(AiCoachingCard);
 
-    expect(find.text('트레이너 추천 추가 개인운동'), findsOneWidget);
-    expect(find.text('트레이너와 채팅'), findsOneWidget);
+    // 예전에는 조언(맨 위)과 추천 운동(맨 아래)이 멀리 떨어져 있었다.
+    expect(find.text('AI 코칭'), findsOneWidget);
+    expect(
+      find.descendant(of: coaching, matching: find.text('이번 코칭 포인트')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: coaching, matching: find.text(_coachingPoint)),
+      findsOneWidget,
+    );
+    // 트레이너 추천과 AI 추천이 같은 목록에 있다 — 회원에게는 한 가지 질문이다.
+    expect(
+      find.descendant(of: coaching, matching: find.text(_trainerRoutine.name)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: coaching, matching: find.text(_aiRoutine.name)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('추천 운동이 같은 화면에 두 번 나오지 않는다 (#782)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _trainerRoutine,
+      _aiRoutine,
+    ]);
+
+    // 예전에는 트레이너 추천이 CoachCard 에, AI 추천이 별도 카드에 있었다.
+    // 한 곳으로 모았으므로 각 운동은 화면에 한 번만 나와야 한다.
+    expect(find.text(_trainerRoutine.name), findsOneWidget);
+    expect(find.text(_aiRoutine.name), findsOneWidget);
     expect(
       find.descendant(
-        of: trainerCard,
+        of: find.byType(CoachCard),
         matching: find.text(_trainerRoutine.name),
       ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: trainerCard, matching: find.text(_aiRoutine.name)),
       findsNothing,
     );
-    expect(
-      find.descendant(of: aiCard, matching: find.text(_aiRoutine.name)),
-      findsOneWidget,
+  });
+
+  testWidgets('담당 트레이너가 있으면 AI 추천에 확인한 사람을 밝힌다 (#782)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _trainerRoutine,
+      _aiRoutine,
+    ]);
+
+    // 담당 트레이너가 있으면 AI 추천은 승인된 것만 내려온다(#790).
+    expect(find.text('AI 추천 · 김트레이너 확인'), findsOneWidget);
+    expect(find.text('트레이너 직접 추천'), findsOneWidget);
+    expect(find.text('AI 자동 추천'), findsNothing);
+  });
+
+  testWidgets('담당 트레이너가 없으면 AI 자동 추천으로 표시한다 (#782)', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachProvider.overrideWith((ref) async => null),
+          coachRoutinesProvider.overrideWith(
+            (ref) async => const <CoachRoutine>[_aiRoutine],
+          ),
+          coachUnreadProvider.overrideWith((ref) async => 0),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AiCoachingCard(coachingPoint: _coachingPoint),
+            ),
+          ),
+        ),
+      ),
     );
-    expect(
-      find.descendant(of: aiCard, matching: find.text(_trainerRoutine.name)),
-      findsNothing,
-    );
-    expect(
-      find.text('나의 건강 기록과 트레이너 PT 피드백을 바탕으로 AI가 추천한 개인운동이에요'),
-      findsOneWidget,
-    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI 자동 추천'), findsOneWidget);
+    expect(find.textContaining('확인'), findsNothing);
+  });
+
+  testWidgets('추천 운동이 없으면 코칭 포인트만 보여 준다 (#782)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[]);
+
+    expect(find.text('이번 코칭 포인트'), findsOneWidget);
+    expect(find.text(_coachingPoint), findsOneWidget);
+    // 빈 추천 카드를 만들지 않는다 — AI 가 매번 운동을 지어낼 이유가 없다.
+    expect(find.text('추천 개인운동'), findsNothing);
+    expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsNothing);
+  });
+
+  testWidgets('담당 트레이너 카드는 관계와 소통만 남긴다 (#782)', (
+    WidgetTester tester,
+  ) async {
+    await pumpRecommendationCards(tester, const <CoachRoutine>[
+      _trainerRoutine,
+    ]);
+
+    // 프로필 이동과 채팅은 그대로 남는다.
+    expect(find.byKey(const Key('assignedTrainerProfile')), findsOneWidget);
+    expect(find.text('트레이너와 채팅'), findsOneWidget);
+    // 추천 운동 목록은 AI 코칭으로 옮겼다.
+    expect(find.text('트레이너 추천 추가 개인운동'), findsNothing);
   });
 
   testWidgets('여러 세션짜리 프로그램은 프로그램 이름과 세션 구분을 함께 보여 준다 (#709)', (
@@ -206,7 +290,7 @@ void main() {
       ),
     ]);
 
-    final Finder trainerCard = find.byType(CoachCard);
+    final Finder trainerCard = find.byType(AiCoachingCard);
     // 프로그램 이름은 묶음마다 한 번만 — 세션마다 반복하면 목록이 이름으로 찬다.
     expect(
       find.descendant(of: trainerCard, matching: find.text('주 2회 분할')),
@@ -244,13 +328,13 @@ void main() {
       _trainerRoutine,
     ]);
 
-    final Finder trainerCard = find.byType(CoachCard);
+    final Finder coaching = find.byType(AiCoachingCard);
     expect(
-      find.descendant(of: trainerCard, matching: find.byIcon(Icons.list_alt_outlined)),
+      find.descendant(of: coaching, matching: find.byIcon(Icons.list_alt_outlined)),
       findsNothing,
     );
     expect(
-      find.descendant(of: trainerCard, matching: find.text('허리 부담 완화')),
+      find.descendant(of: coaching, matching: find.text('허리 부담 완화')),
       findsOneWidget,
     );
   });
@@ -263,7 +347,9 @@ void main() {
           memberCoachRepositoryProvider.overrideWithValue(repository),
           myTrainerProvider.overrideWith((ref) async => _assignedTrainer),
         ],
-        child: const MaterialApp(home: Scaffold(body: CoachCard())),
+        child: const MaterialApp(
+          home: Scaffold(body: AiCoachingCard(coachingPoint: _coachingPoint)),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -303,13 +389,6 @@ void main() {
 
     expect(find.text('트레이너 피드백: 자세가 좋았어요'), findsOneWidget);
     expect(find.byKey(const Key('routineFeedback-done')), findsOneWidget);
-  });
-
-  testWidgets('각 출처의 추천 운동이 없으면 안내 문구를 표시한다', (WidgetTester tester) async {
-    await pumpRecommendationCards(tester, const <CoachRoutine>[]);
-
-    expect(find.text('아직 트레이너가 추천한 개인운동이 없어요'), findsOneWidget);
-    expect(find.text('현재 추천할 수 있는 AI 맞춤 운동이 없어요'), findsOneWidget);
   });
 
   testWidgets('담당 트레이너 프로필은 트레이너 상세 경로로 이동한다', (WidgetTester tester) async {
