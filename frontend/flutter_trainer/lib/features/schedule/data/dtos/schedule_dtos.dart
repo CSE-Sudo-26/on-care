@@ -18,6 +18,7 @@ ScheduleSession scheduleSessionFromJson(Map<String, dynamic> json) {
     status: _str(json['status']),
     note: _str(json['note']),
     program: _programFromJson(json['program']),
+    programSent: json['program_sent'] == true,
   );
 }
 

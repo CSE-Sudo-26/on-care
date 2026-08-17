@@ -50,7 +50,8 @@ from app.schemas.trainer_api import (
     RoutineSuggestionApproveRequest, RoutineSuggestionCreateRequest,
     ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
-    ScheduleCompleteRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
+    ScheduleCompleteRequest,
+    ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
     TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
@@ -1162,6 +1163,34 @@ def trainer_complete_session(
     """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
     try:
         out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post(
+    "/trainer/schedule/{session_id}/program/send",
+    response_model=ScheduleSessionOut,
+)
+def trainer_send_session_program(
+    session_id: str,
+    payload: ScheduleProgramSendRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """완료한 세션의 프로그램을 그 회원에게 보낸다. (#822)
+
+    수업을 마친 뒤 오늘 한 것을 회원 앱으로 넘기는 마지막 한 걸음이다. 배정
+    자체는 코칭 탭의 프로그램 배정과 같은 경로를 타므로, 회원은 출처와 무관하게
+    같은 모양의 루틴을 받는다. 같은 세션을 두 번 눌러도 배정은 한 번이다.
+    """
+    try:
+        out = trainer_service.send_session_program(
+            db, trainer.id, session_id,
+            client_request_id=payload.client_request_id,
+        )
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     if out is None:

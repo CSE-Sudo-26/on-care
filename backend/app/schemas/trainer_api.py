@@ -618,6 +618,19 @@ class ScheduleSessionOut(BaseModel):
     status: str          # 예정|완료|공백
     note: str
     program: list[ProgramItem]
+    #: 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미
+    #: 보낸 세션은 화면에서 다른 것을 말해야 한다(#822).
+    program_sent: bool = False
+
+
+class ScheduleProgramSendRequest(BaseModel):
+    """완료한 세션의 프로그램을 회원에게 보내는 입력. (#822)
+
+    본문은 멱등키뿐이다 — 무엇을 보낼지는 세션 행이 이미 알고 있고, 클라이언트가
+    다시 실어 보내면 화면과 저장된 프로그램이 갈릴 수 있다. 재시도에 같은 키를
+    다시 보내면 배정이 두 번 만들어지지 않는다(단일·프로그램 배정과 같은 규약).
+    """
+    client_request_id: str | None = Field(default=None, max_length=48)
 
 
 class ScheduleCreateRequest(BaseModel):

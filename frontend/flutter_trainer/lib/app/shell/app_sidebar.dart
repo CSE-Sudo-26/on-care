@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/app/shell/app_shell.dart';
 import 'package:oncare_trainer/app/shell/nav_destinations.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -61,11 +62,16 @@ class AppSidebar extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     // Badges are live counters, not decoration: they're the reason a
     // trainer looks at the sidebar between tasks.
-    final unread = ref
-        .watch(unreadCountsProvider)
-        .valueOrNull
-        ?.values
-        .fold<int>(0, (sum, n) => sum + n);
+    // 알림 설정이 이 배지를 끈다 — 설정 화면이 "사이드바 뱃지로 알려드려요"
+    // 라고 적어 두고 정작 아무 데서도 읽지 않아, 꺼도 배지가 그대로였다(#817).
+    final settings = ref.watch(trainerSettingsProvider);
+    final unread = settings.newMessageAlerts
+        ? ref
+              .watch(unreadCountsProvider)
+              .valueOrNull
+              ?.values
+              .fold<int>(0, (sum, n) => sum + n)
+        : null;
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
     final profile = ref.watch(sessionControllerProvider).profile;
     // 상담 요청 only exists against the real API — the demo has no member

@@ -98,10 +98,10 @@ void main() {
       expect(find.text('트레이너 추가'), findsWidgets);
     });
 
-    testWidgets('중복 전송 이력 대신 회원 요약을 한 번만 보여 준다', (tester) async {
+    testWidgets('회원 요약과 전송 이력을 각각 한 번만 보여 준다', (tester) async {
       await openCoaching(tester);
       expect(find.text('고객 요약'), findsOneWidget);
-      expect(find.text('전송 이력'), findsNothing);
+      expect(find.text('전송 이력'), findsOneWidget);
     });
   });
 }

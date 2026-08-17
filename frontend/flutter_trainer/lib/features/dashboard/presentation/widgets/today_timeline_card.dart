@@ -6,6 +6,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
@@ -26,6 +27,10 @@ class TodayTimelineCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
     final schedule = ref.watch(todayScheduleProvider);
+    // 설정의 '수업 시작 전 알림' 이 이 강조를 켜고 끈다. 켜져 있으면 시작이
+    // 알림 시점 안으로 들어온 세션을 눈에 띄게 그린다 — 설정 화면이 "대시보드에서
+    // 강조해요" 라고 적어 두고 실제로는 아무 일도 하지 않았다(#817).
+    final settings = ref.watch(trainerSettingsProvider);
     final clients =
         ref.watch(clientsProvider).valueOrNull ?? const <TrainerClient>[];
 
@@ -59,6 +64,9 @@ class TodayTimelineCard extends ConsumerWidget {
                     clientId: session.clientId,
                     clientName: session.clientName,
                   ),
+                  imminent:
+                      settings.sessionReminders &&
+                      startsWithin(session, settings.reminderLeadMinutes),
                   onTap: () => context.go(AppRoutes.scheduleView('day')),
                 ),
             ],
@@ -73,11 +81,16 @@ class _Row extends StatelessWidget {
   const _Row({
     required this.session,
     required this.client,
+    required this.imminent,
     required this.onTap,
   });
 
   final ScheduleSession session;
   final TrainerClient? client;
+
+  /// 시작이 알림 시점 안으로 들어온 세션인가. (#817)
+  final bool imminent;
+
   final VoidCallback onTap;
 
   Color get _statusColor {
@@ -93,7 +106,13 @@ class _Row extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: const BorderRadius.all(AppRadius.sm),
-      child: Padding(
+      child: Container(
+        decoration: imminent
+            ? const BoxDecoration(
+                color: AppColors.accentSurface,
+                borderRadius: BorderRadius.all(AppRadius.sm),
+              )
+            : null,
         padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
         child: Opacity(
           opacity: muted ? 0.55 : 1,

@@ -244,6 +244,16 @@ class DioScheduleRepository implements ScheduleRepository {
     );
   }
 
+  @override
+  Future<void> sendProgram(String id, {String? clientRequestId}) async {
+    await _mutate(
+      () => _dio.post<Map<String, dynamic>>(
+        '/trainer/schedule/${Uri.encodeComponent(id)}/program/send',
+        data: <String, Object?>{'client_request_id': ?clientRequestId},
+      ),
+    );
+  }
+
   Future<List<ScheduleSession>> _fetch(Map<String, String> query) async {
     try {
       final res = await _dio.get<List<dynamic>>(

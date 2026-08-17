@@ -63,8 +63,19 @@ part 'seed_clients.dart';
 /// the spread documented in `seed_clients.dart`. Note the schedule stays
 /// at six slots on purpose: fifteen clients on the books does not mean
 /// fifteen sessions in one day.
-Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
-  final now = DateTime.now();
+///
+/// [clock] is the moment this seeding is anchored to. Production leaves it
+/// out and gets the real one; tests pin it, because what lands in the week
+/// depends on the weekday — a series is placed relative to today and
+/// anything before Monday belongs to last week. Pinned dates are the only
+/// way to assert that rule in both directions instead of on whichever day
+/// the suite happens to run (#826).
+Future<void> seedIfEmpty(
+  AppDatabase db, {
+  DemoFixture? fixture,
+  DateTime? clock,
+}) async {
+  final DateTime now = clock ?? DateTime.now();
   final today = ymd(now);
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;

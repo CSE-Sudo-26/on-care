@@ -201,6 +201,53 @@ void main() {
     expect(find.textContaining('2,400', findRichText: true), findsWidgets);
   });
 
+  testWidgets('고른 정렬은 고객을 열어도 그대로다 (#816)', (tester) async {
+    await openWide(tester);
+
+    // 툴바의 정렬 메뉴에서 이름순을 고른다.
+    await tester.tap(find.text('정렬: 관리 우선'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('정렬: 이름순').last);
+    await tester.pumpAndSettle();
+    expect(find.text('정렬: 이름순'), findsOneWidget);
+
+    // 목록에서 고객을 연다 — 여기서 새 라우트가 만들어진다.
+    await scrollToCard(tester, '김민수');
+    await tester.tap(card('김민수'));
+    await tester.pumpAndSettle();
+
+    // 예전에는 상세가 자기 `ClientsPage` 를 새로 만들면서 정렬이 '관리 우선'
+    // 로 돌아갔다.
+    expect(find.text('정렬: 이름순'), findsOneWidget);
+    expect(find.text('정렬: 관리 우선'), findsNothing);
+  });
+
+  testWidgets('대시보드에서 걸어 준 필터는 고객을 열어도 유지된다 (#816)', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpTrainerApp(
+      tester,
+      token: 'demo-trainer-token',
+      at: AppRoutes.clientsFiltered('attention'),
+    );
+    await tester.pumpAndSettle();
+
+    final banner = find.textContaining('주의 고객');
+    expect(banner, findsWidgets);
+
+    final first = tester.widgetList<ClientCard>(find.byType(ClientCard)).first;
+    await tester.tap(card(first.client.name));
+    await tester.pumpAndSettle();
+
+    // 상세 경로가 `f` 를 물려받아야 배너와 좁힌 목록이 남는다.
+    final router = GoRouter.of(tester.element(find.byType(ClientsPage)));
+    final location = router.routerDelegate.currentConfiguration.uri.toString();
+    expect(location, contains('f=attention'));
+    expect(banner, findsWidgets);
+  });
+
   testWidgets('the list is ordered by priority: sodium-over first', (
     tester,
   ) async {

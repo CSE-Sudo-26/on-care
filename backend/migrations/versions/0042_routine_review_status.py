@@ -7,8 +7,8 @@ AI 가 만든 개인운동 후보가 곧바로 회원에게 배정되면, 트레
 기존 행은 모두 `approved` 로 채운다 — 지금까지 배정된 루틴은 이미 트레이너가
 보낸 것이므로, 이 마이그레이션 뒤에도 회원 화면이 달라지지 않는다.
 
-Revision ID: 0040_routine_review_status
-Revises: 0039_program_sessions
+Revision ID: 0042_routine_review_status
+Revises: 0041_schedule_program_sent
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0040_routine_review_status"
-down_revision: str | Sequence[str] | None = "0039_program_sessions"
+revision: str = "0042_routine_review_status"
+down_revision: str | Sequence[str] | None = "0041_schedule_program_sent"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
