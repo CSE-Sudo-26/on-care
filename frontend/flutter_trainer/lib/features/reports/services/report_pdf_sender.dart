@@ -14,11 +14,14 @@ class ReportPdfSender {
   final Dio _dio;
   final Map<String, String> _requestIds = <String, String>{};
 
+  /// 회원에게 함께 보이는 [message] 는 화면에서 현지화한 값을 받는다 — 서비스가
+  /// 문구를 들고 있으면 영어 로케일에서도 한국어가 전송된다.
   Future<void> send({
     required String clientId,
     required DateTime weekStart,
     required Uint8List bytes,
     required String fileName,
+    required String message,
   }) async {
     final key = '$clientId/${ymd(weekStart)}';
     final requestId = _requestIds.putIfAbsent(key, newClientRequestId);
@@ -26,7 +29,7 @@ class ReportPdfSender {
       '/trainer/clients/${Uri.encodeComponent(clientId)}/report/send-pdf',
       data: FormData.fromMap(<String, Object?>{
         'week_start': ymd(weekStart),
-        'message': '이번 주 리포트입니다.',
+        'message': message,
         'client_request_id': requestId,
         'pdf': MultipartFile.fromBytes(
           bytes,
@@ -34,6 +37,9 @@ class ReportPdfSender {
           contentType: MediaType('application', 'pdf'),
         ),
       }),
+      // 서버는 최대 8MiB PDF를 받는다. dioProvider 의 기본 sendTimeout(10초)로는
+      // 느린 회선에서 업로드가 끊겨, 저장은 안 됐는데 실패만 뜨는 상태가 된다.
+      options: Options(sendTimeout: const Duration(minutes: 2)),
     );
     if (_requestIds[key] == requestId) _requestIds.remove(key);
   }

@@ -1798,12 +1798,18 @@ class ReportPdfExportDialog extends ConsumerStatefulWidget {
 class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
   bool _sending = false;
 
-  String get _fileName {
-    final safeName = widget.report.client.name.replaceAll(
-      RegExp(r'[/\\:*?"<>|]'),
-      '_',
-    );
-    return '${safeName}_${ymd(widget.report.weekStart)}_주간리포트.pdf';
+  /// 파일명은 로컬 저장뿐 아니라 multipart 헤더의 `filename` 으로도 그대로
+  /// 나간다. 경로 구분자 외에 제어문자까지 지우는 이유다 — 고객 이름에 개행이
+  /// 섞이면 헤더가 깨진다. 지운 결과가 비면 날짜만 남은 이름이 되므로 대체어를
+  /// 쓴다.
+  String _fileNameFor(AppLocalizations l) {
+    final safeName = widget.report.client.name
+        .replaceAll(RegExp(r'[/\\:*?"<>|\x00-\x1f\x7f]'), '_')
+        .trim();
+    final name = safeName.replaceAll('_', '').trim().isEmpty
+        ? l.reportsPdfFallbackClient
+        : safeName;
+    return '${name}_${ymd(widget.report.weekStart)}_주간리포트.pdf';
   }
 
   Future<void> _run(Future<void> Function() action, String success) async {
@@ -1832,7 +1838,8 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
             clientId: widget.report.client.id,
             weekStart: widget.report.weekStart,
             bytes: widget.bytes,
-            fileName: _fileName,
+            fileName: _fileNameFor(l),
+            message: l.reportsPdfMessage,
           ),
       l.reportsPdfSent(widget.report.client.name),
     );
@@ -1858,7 +1865,7 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
         TextButton.icon(
           key: const ValueKey<String>('report-pdf-save'),
           onPressed: () => _run(
-            () => actions.save(widget.bytes, _fileName),
+            () => actions.save(widget.bytes, _fileNameFor(l)),
             l.reportsPdfSaveStarted,
           ),
           icon: const Icon(Icons.download_outlined),
@@ -1867,7 +1874,7 @@ class _ReportPdfExportDialogState extends ConsumerState<ReportPdfExportDialog> {
         TextButton.icon(
           key: const ValueKey<String>('report-pdf-print'),
           onPressed: () => _run(
-            () => actions.print(widget.bytes, _fileName),
+            () => actions.print(widget.bytes, _fileNameFor(l)),
             l.reportsPdfPrintOpened,
           ),
           icon: const Icon(Icons.print_outlined),

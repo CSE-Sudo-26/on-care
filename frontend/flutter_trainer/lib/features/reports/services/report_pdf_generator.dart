@@ -205,15 +205,19 @@ class ReportPdfGenerator {
     return values.map((value) => value == 0 ? '-' : '$value$unit').join(' / ');
   }
 
+  /// 코드 유닛이 아니라 코드 포인트(`runes`) 단위로 자른다. `substring` 은 UTF-16
+  /// 경계에서 자르므로, 트레이너가 피드백에 이모지를 쓰면 서로게이트 쌍 중간이
+  /// 끊겨 글자가 깨진다.
   static Iterable<String> _chunks(String text) sync* {
     for (final paragraph in text.split('\n')) {
       if (paragraph.isEmpty) {
         yield '';
         continue;
       }
-      for (var start = 0; start < paragraph.length; start += 180) {
-        final end = (start + 180).clamp(0, paragraph.length).toInt();
-        yield paragraph.substring(start, end);
+      final runes = paragraph.runes.toList(growable: false);
+      for (var start = 0; start < runes.length; start += 180) {
+        final end = start + 180 < runes.length ? start + 180 : runes.length;
+        yield String.fromCharCodes(runes.sublist(start, end));
       }
     }
   }
