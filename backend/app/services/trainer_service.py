@@ -39,6 +39,7 @@ from app.services import (
     diet_photo_service,
     exercise_service,
     notification_service,
+    routine_suggestion_service,
 )
 from app.services.coach import personal_ingest
 
@@ -799,12 +800,19 @@ ROUTINE_STATUSES = frozenset({ROUTINE_APPROVED, ROUTINE_PENDING, ROUTINE_DISMISS
 
 
 def build_routines(
-    db: Session, member_id: str, trainer_id: str | None
+    db: Session,
+    member_id: str,
+    trainer_id: str | None,
+    *,
+    for_member: bool = False,
 ) -> list[RoutineOut]:
     """이 트레이너가 회원에게 배정한 루틴(정렬순).
 
     [trainer_id] 가 None 이면 트레이너 없이 만들어진 자동 추천을 읽는다 —
     SQLAlchemy 가 `== None` 을 `IS NULL` 로 옮기므로 조건은 그대로 쓴다.
+
+    [for_member] 는 이 목록이 회원에게 가는지를 말한다. 회원용이면 제안의 근거를
+    싣지 않는다 — 트레이너의 판단 재료이기 때문이다(#790).
 
     한 프로그램의 세션들은 `sort_order` 를 연속으로 받으므로 이 정렬만으로
     세션 순서가 지켜진다 — 별도 그룹핑 없이 배열 순서가 곧 프로그램 순서다.
@@ -832,7 +840,12 @@ def build_routines(
                 )
             ).all()
         }
-    return [_routine_out(row, completed.get(row.id)) for row in rows]
+    return [
+        _routine_out(
+            row, completed.get(row.id), include_evidence=not for_member
+        )
+        for row in rows
+    ]
 
 
 class RoutineNotFound(Exception):
@@ -905,8 +918,18 @@ def delete_routine(
 
 
 def _routine_out(
-    rt: TrainerRoutine, completion: ExerciseSession | None = None
+    rt: TrainerRoutine,
+    completion: ExerciseSession | None = None,
+    *,
+    include_evidence: bool = True,
 ) -> RoutineOut:
+    """루틴 한 건의 응답.
+
+    [include_evidence] 를 끄면 근거를 싣지 않는다 — 회원에게 가는 응답이다.
+    근거(`최근 근력운동 비중 높음`)는 트레이너가 승인 여부를 판단하는 재료이지
+    회원이 읽을 문구가 아니다. 화면이 감추는 것과 응답에 담지 않는 것은 다르다
+    (#790).
+    """
     return RoutineOut(
         id=rt.id, name=rt.name, minutes=rt.minutes, type=rt.type,
         reason=rt.reason, source=rt.source,
@@ -914,6 +937,9 @@ def _routine_out(
         session_name=rt.session_name,
         session_order=rt.session_order,
         exercises=draft_exercises(rt.exercises_json),
+        evidence=(
+            suggestion_evidence(rt.evidence_json) if include_evidence else []
+        ),
         completed=completion is not None,
         completed_at=completion.completed_at if completion is not None else None,
         completed_minutes=completion.minutes if completion is not None else None,
@@ -951,6 +977,7 @@ def create_routine_suggestion(
     minutes: int,
     type_: str,
     reason: str,
+    evidence: Sequence[str] | None = None,
     client_request_id: str | None = None,
 ) -> RoutineOut:
     """AI 개인운동 후보를 검토 대기(pending) 로 만든다.
@@ -983,6 +1010,7 @@ def create_routine_suggestion(
         source="ai",
         status=ROUTINE_PENDING,
         sort_order=(max_order or 0) + 1,
+        evidence_json=json.dumps(list(evidence or []), ensure_ascii=False),
         client_request_id=client_request_id,
         created_at=clock.now(),
     )
@@ -1006,7 +1034,14 @@ def create_routine_suggestion(
 def list_routine_suggestions(
     db: Session, trainer_id: str, member_id: str
 ) -> list[RoutineOut]:
-    """검토를 기다리는 AI 개인운동 제안. 승인·거절한 것은 빠진다."""
+    """검토를 기다리는 AI 개인운동 제안. 승인·거절한 것은 빠진다.
+
+    조회 자리에서 그날 후보를 준비한다(`routine_suggestion_service`). 트레이너가
+    회원을 골라 생성을 요청해야만 후보가 생기면 관리 부담이 줄지 않는다 — AI 가
+    먼저 준비하고 트레이너는 판단만 하는 것이 이 기능의 요구다(#790). 회원 조회가
+    자동 추천을 준비하는 것(`build_member_routines`)과 같은 방식이다.
+    """
+    routine_suggestion_service.ensure_suggestions(db, trainer_id, member_id)
     rows = db.scalars(
         select(TrainerRoutine)
         .where(
@@ -1589,6 +1624,34 @@ def delete_memo(db: Session, trainer_id: str, member_id: str, memo_id: str) -> N
 
 class ProgramDraftNotFound(Exception):
     """그 트레이너에게 그 id 의 초안이 없다(라우터가 404 로 변환)."""
+
+
+#: 근거 문구 하나의 길이 상한. 스키마
+#: (`RoutineSuggestionCreateRequest.evidence`)와 같은 값이다 — 예전 행이나 손으로
+#: 고친 값이 화면 한 줄을 넘기지 않게 읽는 쪽에서도 자른다.
+_EVIDENCE_MAX_LEN = 40
+
+#: 한 제안이 들고 다니는 근거 수 상한. 스키마와 같은 값이다.
+_EVIDENCE_MAX_ITEMS = 4
+
+
+def suggestion_evidence(evidence_json: str) -> list[str]:
+    """제안의 근거 문구를 읽는다. 깨진 값이면 빈 목록이다. (#790)
+
+    `draft_exercises` 와 같은 이유로 관대하다 — 근거 하나가 이상해서 제안 카드
+    자체가 안 뜨면, 트레이너는 검토할 것이 있는지조차 알 수 없다.
+    """
+    try:
+        raw = json.loads(evidence_json) if evidence_json else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(raw, list):
+        return []
+    return [
+        item.strip()[:_EVIDENCE_MAX_LEN]
+        for item in raw[:_EVIDENCE_MAX_ITEMS]
+        if isinstance(item, str) and item.strip()
+    ]
 
 
 def draft_exercises(exercises_json: str) -> list[ProgramDraftExercise]:
@@ -2580,8 +2643,8 @@ def build_member_routines(db: Session, member_id: str) -> list[RoutineOut]:
     trainer_id = get_member_trainer_id(db, member_id)
     if trainer_id is None:
         auto_routine_service.ensure_auto_routines(db, member_id)
-        return build_routines(db, member_id, None)
-    return build_routines(db, member_id, trainer_id)
+        return build_routines(db, member_id, None, for_member=True)
+    return build_routines(db, member_id, trainer_id, for_member=True)
 
 
 #: 회원 세션 목록 상한 — 시간이 지나며 누적되는 PT 세션을 최근 것 위주로 잘라 응답 크기를 묶는다.

@@ -4172,6 +4172,102 @@ abstract class AppLocalizations {
   /// **'New program'**
   String get programSavedNew;
 
+  /// No description provided for @suggestionReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI personal exercises'**
+  String get suggestionReviewTitle;
+
+  /// No description provided for @suggestionReviewBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} to review'**
+  String suggestionReviewBadge(int count);
+
+  /// No description provided for @suggestionReviewIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepared for {name} from recent PT feedback and exercise records. The client sees only what you recommend.'**
+  String suggestionReviewIntro(String name);
+
+  /// No description provided for @suggestionReviewEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No AI personal exercises are waiting for review.'**
+  String get suggestionReviewEmpty;
+
+  /// No description provided for @suggestionReviewLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the AI suggestions.'**
+  String get suggestionReviewLoadFailed;
+
+  /// No description provided for @suggestionApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend to client'**
+  String get suggestionApprove;
+
+  /// No description provided for @suggestionDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t recommend'**
+  String get suggestionDismiss;
+
+  /// No description provided for @suggestionApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended {name} to {client}.'**
+  String suggestionApproved(String name, String client);
+
+  /// No description provided for @suggestionDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} won\'t be recommended.'**
+  String suggestionDismissed(String name);
+
+  /// No description provided for @suggestionActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t finish that. Please try again.'**
+  String get suggestionActionFailed;
+
+  /// No description provided for @suggestionAlreadyReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'This suggestion was already reviewed. The list has been refreshed.'**
+  String get suggestionAlreadyReviewed;
+
+  /// No description provided for @suggestionEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit personal exercise'**
+  String get suggestionEditTitle;
+
+  /// No description provided for @suggestionEditSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit and recommend'**
+  String get suggestionEditSubmit;
+
+  /// No description provided for @suggestionEditName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get suggestionEditName;
+
+  /// No description provided for @suggestionEditMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Note for the client'**
+  String get suggestionEditMemo;
+
+  /// No description provided for @suggestionEditMemoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop if your right shoulder hurts.'**
+  String get suggestionEditMemoHint;
+
   /// No description provided for @programDraftSaved.
   ///
   /// In en, this message translates to:

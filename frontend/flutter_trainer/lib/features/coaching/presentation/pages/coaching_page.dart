@@ -23,6 +23,7 @@ import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -441,6 +442,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                     // the templates would bury it.
                     ..._contextChildren(l, clients, selected),
                     const SizedBox(height: AppSpacing.lg),
+                    ..._suggestionChildren(selected),
                     ..._editorChildren(selected),
                     const SizedBox(height: AppSpacing.lg),
                     ..._libraryChildren(selected),
@@ -524,6 +526,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
                               ),
                               const SizedBox(height: AppSpacing.lg),
                             ],
+                            ..._suggestionChildren(selected),
                             ..._editorChildren(selected, showAssistant: false),
                             // 좁은 화면은 _libraryChildren 이 같은 카드들을 붙인다.
                             ...?_savedProgramsCard(),
@@ -710,6 +713,26 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
           ],
         ),
       ),
+    ];
+  }
+
+  /// AI 가 준비한 개인운동 제안 — 정규 프로그램 편집기 **위**에 둔다. (#790)
+  ///
+  /// 위치가 뜻이다. 개인운동은 PT 사이를 메우는 짧은 운동이고 정규 프로그램은
+  /// 기간 전체의 계획이라, 같은 프로그램 탭 안에 두더라도 편집기에 섞지 않는다 —
+  /// 여기서 하는 일은 편집이 아니라 판단(추천/수정 후 추천/추천 안 함)이다.
+  ///
+  /// A/B 후보 생성 흐름을 펼친 동안에는 감춘다. 그때 트레이너는 정규 프로그램을
+  /// 만들고 있고, 화면에 판단할 것이 둘이면 어느 쪽 작업인지 흐려진다.
+  List<Widget> _suggestionChildren(TrainerClient client) {
+    if (_showOptionsFlow) return const <Widget>[];
+    return <Widget>[
+      RoutineSuggestionReviewCard(
+        key: ValueKey<String>('routine-suggestions-${client.id}'),
+        clientId: client.id,
+        clientName: client.name,
+      ),
+      const SizedBox(height: AppSpacing.lg),
     ];
   }
 

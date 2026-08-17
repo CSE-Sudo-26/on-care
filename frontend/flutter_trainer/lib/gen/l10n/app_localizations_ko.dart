@@ -2287,6 +2287,62 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programSavedNew => '새 프로그램';
 
   @override
+  String get suggestionReviewTitle => 'AI 개인운동 제안';
+
+  @override
+  String suggestionReviewBadge(int count) {
+    return '검토 필요 $count';
+  }
+
+  @override
+  String suggestionReviewIntro(String name) {
+    return '최근 PT 피드백과 운동 기록을 바탕으로 $name님에게 도움이 될 개인운동을 준비했어요. 추천한 것만 회원에게 보여요.';
+  }
+
+  @override
+  String get suggestionReviewEmpty => '검토할 AI 개인운동 제안이 없어요';
+
+  @override
+  String get suggestionReviewLoadFailed => 'AI 개인운동 제안을 불러오지 못했어요';
+
+  @override
+  String get suggestionApprove => '회원에게 추천';
+
+  @override
+  String get suggestionDismiss => '추천 안 함';
+
+  @override
+  String suggestionApproved(String name, String client) {
+    return '$name을(를) $client님에게 추천했어요';
+  }
+
+  @override
+  String suggestionDismissed(String name) {
+    return '$name은(는) 추천하지 않아요';
+  }
+
+  @override
+  String get suggestionActionFailed => '처리하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get suggestionAlreadyReviewed => '이미 검토한 제안이에요. 목록을 새로 불러왔어요';
+
+  @override
+  String get suggestionEditTitle => '개인운동 수정';
+
+  @override
+  String get suggestionEditSubmit => '수정 후 추천';
+
+  @override
+  String get suggestionEditName => '운동';
+
+  @override
+  String get suggestionEditMemo => '회원에게 전달할 메모';
+
+  @override
+  String get suggestionEditMemoHint => '오른쪽 어깨에 통증이 생기면 중단하세요';
+
+  @override
   String get programDraftSaved => '프로그램을 저장했어요';
 
   @override

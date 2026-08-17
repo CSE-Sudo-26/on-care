@@ -7,7 +7,7 @@ GET /trainer/me 응답:
 from __future__ import annotations
 
 from datetime import date as _date, datetime as _datetime
-from typing import ClassVar, Literal
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -280,6 +280,9 @@ class RoutineOut(BaseModel):
     session_order: int = 0
     #: 그 세션의 운동 구성. 예전에는 이름만 `reason` 에 이어 붙였다.
     exercises: list[ProgramDraftExercise] = Field(default_factory=list)
+    #: 이 추천이 무엇을 보고 만들어졌나 — 트레이너 검토용 근거 문구(#790).
+    #: 트레이너가 직접 배정한 루틴은 비어 있다.
+    evidence: list[str] = Field(default_factory=list)
     completed: bool = False
     completed_at: _datetime | None = None
     completed_minutes: int | None = None
@@ -313,6 +316,13 @@ class RoutineSuggestionCreateRequest(BaseModel):
     minutes: int = Field(ge=0, le=600)
     type: RoutineType
     reason: str = Field(default="", max_length=200)
+    #: 이 후보의 근거 문구. 트레이너가 승인 판단에 쓰는 재료이고 회원에게는
+    #: 전달되지 않는다. 개수·길이를 묶는 이유는 카드 한 장이 읽히는 분량을
+    #: 넘기면 근거가 오히려 판단을 방해하기 때문이다 — AI 내부 분석을 길게
+    #: 노출하지 않는 것이 이 기능의 요구다(#790).
+    evidence: list[Annotated[str, Field(min_length=1, max_length=40)]] = Field(
+        default_factory=list, max_length=4
+    )
     #: 재전송 중복 생성 방지용 멱등키. 배정(`AssignRoutineRequest`)과 같은 규약이다.
     client_request_id: str | None = Field(default=None, max_length=64)
 

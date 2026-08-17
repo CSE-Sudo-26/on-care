@@ -1,0 +1,386 @@
+"""담당 트레이너가 있는 회원의 AI 개인운동 후보를 준비한다. (#790)
+
+승인 흐름(`trainer_service.approve_routine_suggestion`)만으로는 검토할 것이
+생기지 않는다. 트레이너가 매번 회원을 골라 직접 생성을 요청해야 후보가 나오면
+관리 부담이 줄지 않는다 — 이 이슈의 요구는 **AI 가 먼저 준비하고 트레이너는
+판단만 한다**는 것이다. 이 모듈이 그 '먼저 준비' 를 맡는다.
+
+세 가지를 의도적으로 좁혀 두었다.
+
+1. **LLM 을 부르지 않는다.** 정규 프로그램 A/B 후보는 LLM 을
+   쓰지만(`trainer_routine_options_service`), 그쪽은 트레이너가 버튼을 누르고
+   기다리는 화면이다. 여기는 프로그램 탭을 열 때마다 지나는 조회 경로라, 왕복
+   수 초에 분당 한도가 걸린 호출을 끼우면 탭이 그만큼 늦게 뜨고 한도가 차면
+   목록이 비어 보인다. 개인운동은 `8분 어깨 스트레칭` 같은 짧은 단위여서 규칙과
+   근거만으로도 판단 재료가 충분하다.
+2. **회복 범위만 제안한다.** 고강도·고위험 운동을 기록만 보고 새로 처방하지
+   않고, 질환을 근거로 치료 목적 운동을 만들지 않는다. 건강 정보는 강도를
+   내리는 쪽으로만 읽는다. 트레이너 검토가 붙어도 이 경계는 유지한다 — 승인
+   버튼이 있다는 것이 위험한 처방의 근거가 될 수는 없다
+   (`auto_routine_service` 와 같은 원칙).
+3. **트레이너 메모·PT 노트의 원문을 옮기지 않는다.** 그 글은 트레이너가 자신을
+   위해 쓴 것이고, 승인하면 `reason` 은 그대로 회원 화면에 뜬다. 그래서 원문
+   대신 `최근 PT 피드백 반영` 같은 근거 표시만 남긴다 — 트레이너는 자기가 쓴
+   메모가 무엇인지 알고, 회원에게는 내부 기록이 새지 않는다.
+
+신호가 하나도 없는 회원에게는 아무것도 만들지 않는다. 근거 없는 후보는
+트레이너에게 판단할 재료를 주지 못하면서 검토 목록만 채운다.
+"""
+from __future__ import annotations
+
+import json
+import uuid
+from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta
+
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core import clock
+from app.models.models import (
+    ExerciseSession,
+    HealthProfile,
+    TrainerRoutine,
+    TrainerSchedule,
+)
+
+#: 검토 대기 상태. 상수의 출처는 [app.services.trainer_service] 지만 그 모듈이 이
+#: 모듈을 불러오므로 값을 여기서 다시 적는다(순환 import 회피) —
+#: `auto_routine_service` 가 `approved` 를 다시 적는 것과 같은 이유다. 어긋나면
+#: 검토 목록이 곧바로 비어서 드러난다.
+ROUTINE_PENDING = "pending"
+
+#: 신호를 찾는 기간. 넓히면 이미 나은 통증이나 지난달 운동 편중이 계속 후보를
+#: 만들고, 좁히면 주 1~2회 오는 회원의 PT 가 기간 밖으로 밀린다.
+LOOKBACK_DAYS = 14
+
+#: `PT 직후` 로 볼 기간. 회복 목적 운동은 수업과 붙어 있어야 의미가 있다.
+RECENT_PT_DAYS = 3
+
+#: 근력 편중으로 볼 비율. 최근 운동 시간의 절반을 넘으면 회복 쪽을 제안한다.
+STRENGTH_HEAVY_RATIO = 0.5
+
+#: 한 번에 준비하는 후보 수 상한. 개인운동은 PT 사이를 메우는 것이지 할 일
+#: 목록이 아니다.
+MAX_NEW_SUGGESTIONS = 2
+
+#: 검토 대기가 이만큼 쌓이면 더 만들지 않는다. 트레이너가 며칠 들여다보지
+#: 않았을 때 밀린 후보가 계속 늘면, 돌아왔을 때 검토를 시작할 마음이 들지 않는
+#: 목록이 된다.
+MAX_PENDING_BACKLOG = 4
+
+#: 근거 문구. 스키마(`RoutineSuggestionCreateRequest.evidence`)의 길이 상한
+#: 안에서 한 줄로 읽히게 짧게 둔다.
+EV_RECENT_PT = "최근 PT 피드백 반영"
+EV_STRENGTH_HEAVY = "최근 근력운동 비중 높음"
+EV_BLOOD_PRESSURE = "혈압 관리 목표"
+EV_LOW_CARDIO = "최근 유산소 비중 낮음"
+EV_RECENT_RECORD = "최근 운동 기록 반영"
+
+#: 혈압 관리로 읽을 질환 표기. 회원이 적는 표기가 일정하지 않아 부분 문자열로
+#: 본다. 이 신호는 **강도를 내리는 쪽으로만** 쓴다.
+_BLOOD_PRESSURE_TERMS = ("고혈압", "혈압")
+
+#: 근력으로 집계할 운동 종류(`ExerciseSession.type`). 회원 앱이 남기는 값이다.
+_STRENGTH_TYPES = ("strength", "근력")
+
+#: 유산소로 집계할 운동 종류.
+_CARDIO_TYPES = ("cardio", "walking", "유산소", "걷기")
+
+
+@dataclass(frozen=True)
+class _Signals:
+    """후보를 만들 근거. 하나도 없으면 후보를 만들지 않는다."""
+
+    #: 최근 완료된 PT 가 [RECENT_PT_DAYS] 안에 있다.
+    pt_just_finished: bool = False
+    #: 최근 PT 노트나 배정 루틴 피드백이 남아 있다.
+    trainer_feedback: bool = False
+    #: 최근 운동 시간이 근력에 몰려 있다.
+    strength_heavy: bool = False
+    #: 최근 유산소 기록이 없다(운동 기록 자체는 있다).
+    low_cardio: bool = False
+    #: 혈압 관리가 필요한 회원이다.
+    blood_pressure: bool = False
+    #: 기간 안에 운동 기록이 하나라도 있다.
+    has_records: bool = False
+
+    @property
+    def empty(self) -> bool:
+        return not (
+            self.pt_just_finished
+            or self.trainer_feedback
+            or self.strength_heavy
+            or self.low_cardio
+            or self.blood_pressure
+            or self.has_records
+        )
+
+
+@dataclass(frozen=True)
+class _Candidate:
+    """준비할 후보 하나. 회원에게 갈 문구(`reason`)와 판단 재료(`evidence`)를 나눈다."""
+
+    name: str
+    minutes: int
+    type: str
+    reason: str
+    evidence: tuple[str, ...] = field(default=())
+
+
+def _key_for(day: date) -> str:
+    """그날 준비한 후보 묶음을 가리키는 키.
+
+    배정 멱등키(`client_request_id`)와 같은 컬럼을 쓴다. 유니크 제약이
+    `(trainer_id, member_id, client_request_id)` 라, 같은 날 프로그램 탭을 몇 번
+    열어도 후보가 늘지 않는다 — 트레이너가 하나를 승인하고 하나를 거절한 뒤
+    새로고침해도 그날 후보가 다시 생기지 않는다.
+    """
+    return f"sug-{day.isoformat()}"
+
+
+def ensure_suggestions(db: Session, trainer_id: str, member_id: str) -> None:
+    """이 회원의 오늘 후보를 준비한다. 이미 있으면 아무것도 하지 않는다.
+
+    부르는 쪽은 트레이너의 검토 목록 조회다. 스케줄러 없이 "트레이너가 프로그램
+    탭을 열면 준비돼 있다" 를 만족시키는 가장 단순한 방법이고, 회원 조회가
+    자동 추천을 준비하는 방식(`auto_routine_service`)과 같은 자리다.
+
+    **승인 전이므로 알림을 보내지 않는다.** 회원은 물론 트레이너에게도 보내지
+    않는다 — 트레이너는 지금 이 화면을 열어 목록을 보고 있다.
+    """
+    key = _key_for(clock.today())
+    if _prepared_today(db, trainer_id, member_id, key):
+        return
+    if _pending_count(db, trainer_id, member_id) >= MAX_PENDING_BACKLOG:
+        return
+
+    signals = _collect_signals(db, trainer_id, member_id)
+    candidates = _candidates_for(signals)
+    if not candidates:
+        return
+
+    max_order = db.scalar(
+        select(func.max(TrainerRoutine.sort_order)).where(
+            TrainerRoutine.trainer_id == trainer_id,
+            TrainerRoutine.member_id == member_id,
+        )
+    )
+    now = clock.now()
+    for offset, candidate in enumerate(candidates[:MAX_NEW_SUGGESTIONS]):
+        db.add(
+            TrainerRoutine(
+                id=f"sug-{uuid.uuid4().hex[:12]}",
+                trainer_id=trainer_id,
+                member_id=member_id,
+                name=candidate.name,
+                minutes=candidate.minutes,
+                type=candidate.type,
+                reason=candidate.reason,
+                source="ai",
+                status=ROUTINE_PENDING,
+                sort_order=(max_order or 0) + 1 + offset,
+                evidence_json=json.dumps(
+                    list(candidate.evidence), ensure_ascii=False
+                ),
+                # 묶음 전체가 한 키를 쓴다. 후보 하나만 들어가고 나머지가 빠지는
+                # 상태가 없어야 트레이너가 보는 목록이 매번 같다.
+                client_request_id=key if offset == 0 else f"{key}-{offset}",
+                created_at=now,
+            )
+        )
+    try:
+        db.commit()
+    except IntegrityError:
+        # 트레이너가 두 창에서 같은 회원을 동시에 열면 두 요청이 같은 키로
+        # 들어온다. 먼저 커밋한 쪽의 후보가 남으면 되므로 조용히 넘긴다.
+        db.rollback()
+
+
+def _prepared_today(
+    db: Session, trainer_id: str, member_id: str, key: str
+) -> bool:
+    """그날 후보를 이미 준비했나. 승인·거절한 것도 '준비했다'로 본다."""
+    return (
+        db.scalar(
+            select(TrainerRoutine.id)
+            .where(
+                TrainerRoutine.trainer_id == trainer_id,
+                TrainerRoutine.member_id == member_id,
+                TrainerRoutine.client_request_id.like(f"{key}%"),
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+
+def _pending_count(db: Session, trainer_id: str, member_id: str) -> int:
+    return (
+        db.scalar(
+            select(func.count(TrainerRoutine.id)).where(
+                TrainerRoutine.trainer_id == trainer_id,
+                TrainerRoutine.member_id == member_id,
+                TrainerRoutine.status == ROUTINE_PENDING,
+            )
+        )
+        or 0
+    )
+
+
+def _collect_signals(
+    db: Session, trainer_id: str, member_id: str
+) -> _Signals:
+    """회원의 최근 기록에서 후보의 근거가 될 신호를 모은다."""
+    today = clock.today()
+    since = today - timedelta(days=LOOKBACK_DAYS)
+
+    # 완료된 PT 는 날짜(문자열 YYYY-MM-DD)로 비교한다 — 컬럼이 그 표기라
+    # 사전순 비교가 곧 날짜 비교다(다른 조회들도 같은 방식이다).
+    pt_rows = db.execute(
+        select(TrainerSchedule.date, TrainerSchedule.note).where(
+            TrainerSchedule.trainer_id == trainer_id,
+            TrainerSchedule.member_id == member_id,
+            TrainerSchedule.status == "완료",
+            TrainerSchedule.date >= since.isoformat(),
+        )
+    ).all()
+
+    recent_cutoff = (today - timedelta(days=RECENT_PT_DAYS)).isoformat()
+    pt_just_finished = any(row.date >= recent_cutoff for row in pt_rows)
+    pt_note = any((row.note or "").strip() for row in pt_rows)
+
+    routine_feedback = (
+        db.scalar(
+            select(ExerciseSession.id)
+            .where(
+                ExerciseSession.user_id == member_id,
+                ExerciseSession.assigned_trainer_id == trainer_id,
+                ExerciseSession.trainer_feedback != "",
+                ExerciseSession.created_at >= _since_ts(since),
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+    minutes_by_type = {
+        row.type: int(row.total or 0)
+        for row in db.execute(
+            select(
+                ExerciseSession.type,
+                func.sum(ExerciseSession.minutes).label("total"),
+            )
+            .where(
+                ExerciseSession.user_id == member_id,
+                ExerciseSession.created_at >= _since_ts(since),
+            )
+            .group_by(ExerciseSession.type)
+        ).all()
+    }
+    total_minutes = sum(minutes_by_type.values())
+    strength_minutes = sum(
+        minutes for t, minutes in minutes_by_type.items() if t in _STRENGTH_TYPES
+    )
+    cardio_minutes = sum(
+        minutes for t, minutes in minutes_by_type.items() if t in _CARDIO_TYPES
+    )
+
+    conditions = db.scalar(
+        select(HealthProfile.conditions).where(
+            HealthProfile.user_id == member_id
+        )
+    )
+    blood_pressure = any(
+        term in (conditions or "") for term in _BLOOD_PRESSURE_TERMS
+    )
+
+    return _Signals(
+        pt_just_finished=pt_just_finished,
+        trainer_feedback=pt_note or routine_feedback,
+        strength_heavy=(
+            total_minutes > 0
+            and strength_minutes / total_minutes > STRENGTH_HEAVY_RATIO
+        ),
+        low_cardio=total_minutes > 0 and cardio_minutes == 0,
+        blood_pressure=blood_pressure,
+        has_records=total_minutes > 0 or bool(pt_rows),
+    )
+
+
+def _since_ts(since: date) -> datetime:
+    """`created_at` 비교용 시각. 날짜 경계면 충분해 KST 자정으로 맞춘다."""
+    return datetime.combine(since, time.min, tzinfo=clock.SEOUL)
+
+
+def _candidates_for(signals: _Signals) -> list[_Candidate]:
+    """신호를 회복 범위의 후보로 옮긴다. 신호가 없으면 빈 목록.
+
+    순서가 곧 우선순위다 — 상한([MAX_NEW_SUGGESTIONS])에 걸리면 뒤가 잘린다.
+    회복(PT 직후·근력 편중)을 먼저 두는 이유는 그쪽이 다음 수업까지의 컨디션에
+    직접 닿기 때문이다.
+    """
+    if signals.empty:
+        return []
+
+    out: list[_Candidate] = []
+
+    if signals.pt_just_finished or signals.strength_heavy:
+        evidence: list[str] = []
+        if signals.pt_just_finished and signals.trainer_feedback:
+            evidence.append(EV_RECENT_PT)
+        if signals.strength_heavy:
+            evidence.append(EV_STRENGTH_HEAVY)
+        if not evidence:
+            evidence.append(EV_RECENT_RECORD)
+        out.append(
+            _Candidate(
+                name="하체·전신 회복 스트레칭",
+                minutes=10,
+                type="스트레칭",
+                reason=(
+                    "최근 수업과 근력 운동 뒤 회복을 돕는 가벼운 스트레칭이에요. "
+                    "통증이 느껴지면 멈추세요."
+                ),
+                evidence=tuple(evidence),
+            )
+        )
+
+    if signals.blood_pressure or signals.low_cardio:
+        evidence = []
+        if signals.blood_pressure:
+            evidence.append(EV_BLOOD_PRESSURE)
+        if signals.low_cardio:
+            evidence.append(EV_LOW_CARDIO)
+        out.append(
+            _Candidate(
+                name="저강도 걷기",
+                minutes=20,
+                type="유산소",
+                reason=(
+                    "대화할 수 있는 속도로 걷는 회복 목적 유산소예요. "
+                    "숨이 차면 속도를 낮추세요."
+                ),
+                evidence=tuple(evidence),
+            )
+        )
+
+    if not out:
+        # 기록은 있지만 편중·질환 신호가 없는 회원. 굳이 새 운동을 처방하지
+        # 않고, 다음 수업을 준비하는 범위에서 가장 가벼운 것 하나만 둔다.
+        out.append(
+            _Candidate(
+                name="목·어깨 스트레칭",
+                minutes=8,
+                type="스트레칭",
+                reason=(
+                    "다음 수업을 준비하는 가벼운 스트레칭이에요. "
+                    "가동 범위 안에서만 움직이세요."
+                ),
+                evidence=(
+                    EV_RECENT_PT if signals.trainer_feedback else EV_RECENT_RECORD,
+                ),
+            )
+        )
+    return out

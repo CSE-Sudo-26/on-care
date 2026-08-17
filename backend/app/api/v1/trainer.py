@@ -593,6 +593,9 @@ def trainer_routine_suggestions(
     배정 목록(`GET .../routines`)과 나눠 둔다 — 배정은 이미 회원이 보는 것이고
     제안은 아직 아무에게도 닿지 않은 것이라, 한 목록에 섞이면 어느 쪽이 회원에게
     갔는지 알 수 없다.
+
+    이 조회가 그날 후보를 준비한다(멱등). 준비된 후보는 승인 전까지 회원 조회에
+    나타나지 않는다.
     """
     _require_client(db, trainer.id, member_id)
     return trainer_service.list_routine_suggestions(db, trainer.id, member_id)
@@ -621,6 +624,7 @@ def trainer_create_routine_suggestion(
         minutes=payload.minutes,
         type_=payload.type,
         reason=payload.reason,
+        evidence=payload.evidence,
         client_request_id=payload.client_request_id,
     )
 
