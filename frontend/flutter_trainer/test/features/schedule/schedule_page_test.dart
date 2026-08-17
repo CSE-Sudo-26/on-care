@@ -566,32 +566,42 @@ void main() {
       expect(find.text('열기'), findsOneWidget);
     });
 
-    testWidgets(
-      'completed session shows program and disables unsupported send',
-      (tester) async {
+    testWidgets('완료 세션의 프로그램을 회원에게 보내고 그 사실이 남는다 (#822)', (tester) async {
+      // 펼친 완료 카드와 그 아래 전송 버튼이 한 화면에 들어와야 탭이 닿는다.
+      await withWideSurface(tester, () async {
         await openSchedule(tester);
 
         // Expand 김민수 (완료).
         await tester.tap(find.text('김민수'));
         await tester.pump();
-        await tester.scrollUntilVisible(
-          find.textContaining('오늘 PT 프로그램 전송'),
-          150,
-        );
         expect(find.text('레그프레스'), findsOneWidget);
         expect(find.text('카프레이즈'), findsOneWidget);
         expect(find.text('트레이너 메모'), findsOneWidget);
         expect(find.text('무릎 컨디션 양호. 레그프레스 중량 소폭 증가 가능.'), findsOneWidget);
 
-        final sendLabel = find.textContaining('오늘 PT 프로그램 전송');
-        final tooltip = tester.widget<Tooltip>(
-          find.ancestor(of: sendLabel, matching: find.byType(Tooltip)),
-        );
-        expect(tooltip.message, '완료 프로그램 전송 API가 아직 없어 전송할 수 없어요.');
-        expect(find.text('고객 앱으로 전송 완료!'), findsNothing);
+        // 예전에는 이 자리가 눌리지 않는 안내였다("전송 API가 아직 없어…").
         expect(find.text('김민수님에게 전송됨'), findsNothing);
-      },
-    );
+        final send = find.byKey(
+          const ValueKey<String>('schedule-send-program'),
+        );
+        await tester.ensureVisible(send);
+        await tester.pumpAndSettle();
+        await tester.tap(send);
+        await tester.pumpAndSettle();
+
+        // 보낸 뒤에는 같은 자리가 그 사실을 말하고, 다시 누를 수 없다.
+        expect(find.text('김민수님에게 전송됨'), findsWidgets);
+        final button = tester.widget<InkWell>(
+          find
+              .ancestor(
+                of: find.text('김민수님에게 전송됨').first,
+                matching: find.byType(InkWell),
+              )
+              .first,
+        );
+        expect(button.onTap, isNull);
+      }, size: const Size(1100, 2000));
+    });
 
     testWidgets('예정 session expands to the plan preview with manage '
         'actions', (tester) async {

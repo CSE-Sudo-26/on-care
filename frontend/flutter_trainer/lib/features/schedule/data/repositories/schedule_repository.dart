@@ -93,6 +93,13 @@ abstract interface class ScheduleRepository {
 
   /// Marks an 예정 session 완료 with the trainer's [note].
   Future<void> completeSession(String id, {String note});
+
+  /// 완료한 세션의 프로그램을 그 회원에게 보낸다. (#822)
+  ///
+  /// [clientRequestId] 는 전송 시도의 멱등키다 — 실패해서 다시 눌러도 회원의
+  /// 루틴이 두 벌 생기지 않는다. 보낼 상대(회원)나 보낼 내용(프로그램)이 없거나
+  /// 아직 완료 전이면 예외다. 이미 보낸 세션에 다시 부르면 조용히 성공한다.
+  Future<void> sendProgram(String id, {String? clientRequestId});
 }
 
 /// Reads the trainer's daily timeline from the local drift DB.
@@ -349,6 +356,28 @@ class DriftScheduleRepository implements ScheduleRepository {
 
   /// Removes a session from the timeline.
   @override
+  /// 데모에는 받을 회원 백엔드가 없다. 전송은 이 표시로 끝나지만, 화면이
+  /// '전송됨' 을 사실대로 말하고 같은 세션을 두 번 보내지 않으려면 남아야 한다.
+  @override
+  Future<void> sendProgram(String id, {String? clientRequestId}) async {
+    final table = _db.trainerScheduleEntries;
+    final session = await (_db.select(
+      table,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (session == null) throw StateError('session not found: $id');
+    if (session.programSent) return; // 이미 보냈다 — 멱등.
+    if (session.status != ScheduleStatus.done) {
+      throw StateError('session not completed: $id');
+    }
+    if ((jsonDecode(session.programJson) as List<Object?>).isEmpty) {
+      throw StateError('session has no program: $id');
+    }
+    await (_db.update(table)..where((t) => t.id.equals(id))).write(
+      const TrainerScheduleEntriesCompanion(programSent: Value(true)),
+    );
+  }
+
+  @override
   Future<void> deleteSession(String id) async {
     await (_db.delete(
       _db.trainerScheduleEntries,
@@ -473,6 +502,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       status: row.status,
       note: row.note,
       program: program,
+      programSent: row.programSent,
     );
   }
 }

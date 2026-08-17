@@ -975,6 +975,11 @@ class TrainerSchedule(Base):
     status: Mapped[str] = mapped_column(String(10), default="예정")  # 예정|완료|공백
     note: Mapped[str] = mapped_column(Text, default="")
     program_json: Mapped[str] = mapped_column(Text, default="[]")
+    # 완료한 세션의 프로그램을 회원에게 보낸 시각. NULL 은 아직 보내지 않은
+    # 것이다 — 화면의 '전송됨' 표시와 재전송 방지가 이 값을 읽는다(#822).
+    program_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     # 트레이너의 예약 생성 시도 단위 멱등키. 다른 create operation 과는 테이블이
     # 달라 같은 문자열을 써도 충돌하지 않는다. NULL 은 구버전 요청 호환용이다.

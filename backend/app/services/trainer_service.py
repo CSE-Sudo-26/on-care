@@ -1805,6 +1805,7 @@ def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
         id=s.id, date=s.date, time=s.time, client_name=s.client_name,
         type=s.type, duration_minutes=s.duration_minutes, status=s.status,
         note=s.note, program=_program_items(s.program_json),
+        program_sent=s.program_sent_at is not None,
     )
 
 
@@ -2297,6 +2298,67 @@ def _add_member_exercise_log(
     )
     db.add(row)
     return row
+
+
+def send_session_program(
+    db: Session,
+    trainer_id: str,
+    session_id: str,
+    *,
+    client_request_id: str | None = None,
+) -> ScheduleSessionOut | None:
+    """완료한 세션의 프로그램을 그 회원에게 배정한다. (#822)
+
+    수업을 마친 뒤 "오늘 이걸 했습니다" 를 회원 앱으로 넘기는 자리다. 새 배정
+    경로를 만들지 않고 [assign_program] 을 그대로 쓴다 — 회원이 받는 모양이
+    트레이너가 코칭 탭에서 보내던 것과 같아야, 회원 화면에 출처마다 다른 루틴이
+    생기지 않는다.
+
+    - 소유 슬롯 아님 → None(404).
+    - 회원이 없는 슬롯(상담·공백) → ScheduleError(400): 보낼 상대가 없다.
+    - 완료 전 → ScheduleError(400): 아직 한 것이 아니라 할 것이다.
+    - 프로그램이 비었으면 → ScheduleError(400): 빈 루틴만 간다.
+    - 이미 보냈으면 그대로 반환(멱등). 두 번 눌러도 회원 루틴이 겹치지 않는다.
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if not s.member_id:
+        raise ScheduleError("회원이 연결되지 않은 일정입니다.")
+    if s.status != "완료":
+        raise ScheduleError("완료한 일정만 보낼 수 있습니다.")
+    items = _program_items(s.program_json)
+    if not items:
+        raise ScheduleError("보낼 프로그램이 없습니다.")
+    if s.program_sent_at is not None:
+        return _schedule_out(s)  # 멱등 no-op
+
+    # 일정의 프로그램 항목({name,sets,reps,weight})을 배정 계약의 운동으로 옮긴다.
+    # 세션은 하나다 — 회원 화면에 없던 세션 라벨이 생기지 않는다.
+    exercises = [
+        ProgramDraftExercise(
+            id=f"{s.id}#{index}",
+            name=item.name,
+            sets=str(item.sets) if item.sets else "",
+            reps=item.reps,
+            weight=item.weight,
+        )
+        for index, item in enumerate(items)
+    ]
+    assign_program(
+        db,
+        trainer_id,
+        s.member_id,
+        name=f"{s.date} {s.type}".strip() or s.date,
+        sessions=[ProgramDraftSession(id=s.id, name="", exercises=exercises)],
+        client_request_id=client_request_id,
+    )
+    # 배정이 커밋된 뒤에만 보낸 것으로 남긴다. 반대 순서면 배정에 실패한 세션이
+    # 화면에서 '전송됨' 이 되어 다시 보낼 수 없다.
+    s.program_sent_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
 
 
 def complete_session(

@@ -22,6 +22,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/client_exercise_
 import 'package:oncare_trainer/features/clients/domain/entities/member_health_profile.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -338,6 +339,24 @@ Future<void> _selectExerciseAction(
   await tester.pump();
 }
 
+void _expectNutritionStatusCardsInBounds(WidgetTester tester) {
+  final nutrition = find.byKey(const Key('client-nutrition-summary-card'));
+  expect(nutrition, findsOneWidget);
+  final nutritionRect = tester.getRect(nutrition);
+  final viewportWidth = tester.view.physicalSize.width;
+  for (final status in <Finder>[
+    find.byKey(const Key('client-nutrition-sodium-status')),
+    find.byKey(const Key('client-nutrition-sugar-status')),
+  ]) {
+    expect(status, findsOneWidget);
+    final statusRect = tester.getRect(status);
+    expect(statusRect.left, greaterThanOrEqualTo(nutritionRect.left));
+    expect(statusRect.right, lessThanOrEqualTo(nutritionRect.right));
+    expect(statusRect.left, greaterThanOrEqualTo(0));
+    expect(statusRect.right, lessThanOrEqualTo(viewportWidth));
+  }
+}
+
 void main() {
   test('real API mode never exposes bundled drift recommendations', () async {
     final container = ProviderContainer(
@@ -450,11 +469,14 @@ void main() {
   });
 
   group('CoachingPage', () {
-    Future<void> openTab(WidgetTester tester) async {
+    Future<void> openTab(
+      WidgetTester tester, {
+      Size size = const Size(1600, 1200),
+    }) async {
       // Desktop surface: the workspace splits into overview | editor,
       // so both columns are on screen the way a trainer sees them.
       tester.view.devicePixelRatio = 1.0;
-      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.physicalSize = size;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await pumpTrainerApp(
@@ -502,6 +524,214 @@ void main() {
         expect(avatar.size, 32);
       },
     );
+
+    testWidgets(
+      'full workspace keeps AI centered and client data in the right rail',
+      (tester) async {
+        await openTab(tester, size: const Size(1600, 900));
+
+        final mainColumn = find.byKey(
+          const ValueKey<String>('coaching-wide-main-column'),
+        );
+        final assistant = find.byKey(
+          const ValueKey<String>('coaching-wide-ai-prompt'),
+        );
+        final overview = find.byKey(
+          const ValueKey<String>('coaching-wide-client-overview'),
+        );
+        final summary = find.byKey(
+          const ValueKey<String>('program-client-summary'),
+        );
+        final nutrition = find.byKey(
+          const Key('client-nutrition-summary-card'),
+        );
+        final sodium = find.byKey(const Key('client-nutrition-sodium-status'));
+        final sugar = find.byKey(const Key('client-nutrition-sugar-status'));
+
+        expect(mainColumn, findsOneWidget);
+        expect(assistant, findsOneWidget);
+        expect(overview, findsOneWidget);
+        expect(
+          tester.getTopLeft(assistant).dy,
+          closeTo(tester.getTopLeft(overview).dy, 1),
+        );
+        expect(
+          tester.getCenter(assistant).dx,
+          closeTo(tester.getCenter(mainColumn).dx, 1),
+        );
+        expect(
+          tester.getCenter(overview).dx,
+          greaterThan(tester.getCenter(mainColumn).dx),
+        );
+        expect(summary, findsOneWidget);
+        expect(
+          find.descendant(of: summary, matching: find.text('주의 고객')),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: summary, matching: find.text('운동')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: summary, matching: find.text('운동 시간')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: summary, matching: find.text('나트륨 초과')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey<String>('program-member-completion-chart')),
+          findsNothing,
+        );
+        expect(tester.getSize(nutrition).width, greaterThan(310));
+        expect(
+          tester.getBottomRight(nutrition).dy,
+          lessThanOrEqualTo(tester.view.physicalSize.height),
+        );
+        expect(
+          tester.getTopLeft(sodium).dx,
+          lessThan(tester.getTopLeft(sugar).dx),
+        );
+        _expectNutritionStatusCardsInBounds(tester);
+        expect(find.text('전송 이력'), findsOneWidget);
+        expect(
+          tester.getBottomRight(sugar).dy,
+          lessThanOrEqualTo(tester.view.physicalSize.height),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('three-column boundary preserves a usable editor width', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(1552, 900));
+
+      final mainColumn = find.byKey(
+        const ValueKey<String>('coaching-wide-main-column'),
+      );
+      final rightRail = find.byKey(
+        const ValueKey<String>('coaching-wide-client-overview'),
+      );
+      expect(mainColumn, findsOneWidget);
+      expect(rightRail, findsOneWidget);
+      expect(tester.getSize(mainColumn).width, greaterThanOrEqualTo(600));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('full workspace moves templates below the client list', (
+      tester,
+    ) async {
+      await openTab(tester);
+
+      final list = find.byKey(
+        const ValueKey<String>('program-client-list-scroll'),
+      );
+      final templates = find.byKey(
+        const ValueKey<String>('program-template-sidebar'),
+      );
+      expect(list, findsOneWidget);
+      expect(templates, findsOneWidget);
+      expect(
+        tester.getTopLeft(templates).dy,
+        greaterThan(tester.getBottomLeft(list).dy),
+      );
+      expect(
+        tester.getCenter(templates).dx,
+        closeTo(tester.getCenter(list).dx, 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('client data buttons switch the diet summary to workout data', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      final tabs = find.byKey(
+        const ValueKey<String>('program-client-data-tabs'),
+      );
+      expect(tabs, findsOneWidget);
+      expect(find.byType(NutritionSummaryCard), findsOneWidget);
+
+      await tester.tap(find.descendant(of: tabs, matching: find.text('운동')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NutritionSummaryCard), findsNothing);
+      expect(find.byType(WeeklyExerciseTrendCard), findsOneWidget);
+      final workout = find.byKey(
+        const ValueKey<String>('program-workout-seed-client-1'),
+      );
+      expect(workout, findsOneWidget);
+      expect(
+        tester.getBottomRight(workout).dy,
+        lessThanOrEqualTo(tester.view.physicalSize.height),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('wide breakpoint keeps nutrition status cards in bounds', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(900, 1200));
+
+      _expectNutritionStatusCardsInBounds(tester);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('short desktop keeps the complete diet status above the fold', (
+      tester,
+    ) async {
+      await openTab(tester, size: const Size(1366, 768));
+
+      final sugar = find.byKey(const Key('client-nutrition-sugar-status'));
+      expect(sugar, findsOneWidget);
+      expect(
+        tester.getBottomRight(sugar).dy,
+        lessThanOrEqualTo(tester.view.physicalSize.height),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('wide client list shows five rows and scrolls the rest', (
+      tester,
+    ) async {
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      final listFinder = find.byKey(
+        const ValueKey<String>('program-client-list-scroll'),
+      );
+      expect(listFinder, findsOneWidget);
+      expect(tester.getSize(listFinder).height, 84 * 5);
+      final list = tester.widget<ListView>(listFinder);
+      expect(list.controller, isNotNull);
+      expect(list.controller!.position.maxScrollExtent, greaterThan(0));
+
+      await tester.drag(listFinder, const Offset(0, -240));
+      await tester.pumpAndSettle();
+
+      expect(list.controller!.offset, greaterThan(0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('client list keeps five rows usable with enlarged text', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await openTab(tester);
+      await tester.pumpAndSettle();
+
+      final listFinder = find.byKey(
+        const ValueKey<String>('program-client-list-scroll'),
+      );
+      expect(listFinder, findsOneWidget);
+      expect(tester.getSize(listFinder).height, greaterThan(84 * 5));
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('compact client picker stacks demographics below the name', (
       tester,
