@@ -933,12 +933,10 @@ void main() {
 
     // 일↔주를 오가도 날짜 정보가 같은 자리에서 시작해야 한다(#859).
     testWidgets('일 보기 날짜 헤더가 주 보기와 같은 왼쪽 자리에 놓인다', (tester) async {
-      final today = DateTime.now();
-      final anchor = DateTime(
-        today.year,
-        today.month,
-        today.day,
-      ).subtract(const Duration(days: 3));
+      // 화면이 nowKst() 로 창을 잡으므로 기준 날짜도 KST 여야 한다. 기기가
+      // UTC 면 DateTime.now() 와 KST 의 날짜가 갈려 라벨이 어긋난다(#850).
+      final today = todayKst();
+      final anchor = today.subtract(const Duration(days: 3));
       final end = anchor.add(const Duration(days: 6));
       // 두 보기가 같은 창(window)을 가리키므로 라벨 문구도 같다.
       final label =
@@ -965,12 +963,8 @@ void main() {
 
       await openSchedule(tester);
 
-      final today = DateTime.now();
-      final anchor = DateTime(
-        today.year,
-        today.month,
-        today.day,
-      ).subtract(const Duration(days: 3));
+      // schedule-day-* 키도 nowKst() 로 만들어진다 — 같은 기준을 쓴다.
+      final anchor = todayKst().subtract(const Duration(days: 3));
       final first = find.byKey(ValueKey<String>('schedule-day-${ymd(anchor)}'));
       final last = find.byKey(
         ValueKey<String>(
