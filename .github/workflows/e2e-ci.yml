@@ -74,12 +74,9 @@ jobs:
       API_BASE_URL: http://localhost:8000/v1
       # 아직 통과하지 못하는 스위트. **돌리기는 하되** 실패해도 잡을 막지 않는다.
       # 건너뛰지 않는 이유는 두 가지다 — 상태가 계속 보이고, 고쳐져서 통과하기
-      # 시작하면 바로 알 수 있다.
-      #
-      #   run_consultation_e2e.sh — POST /consultations 가 422 (#837)
-      #
-      # 격리를 풀 때는 여기서 이름만 지운다.
-      E2E_QUARANTINE: "run_consultation_e2e.sh"
+      # 시작하면 바로 알 수 있다. 지금은 비어 있다(#837 이 #872 로 닫혔다).
+      # 격리할 때는 러너 파일명을 공백으로 구분해 적고, 풀 때는 이름만 지운다.
+      E2E_QUARANTINE: ""
       # 스위트 하나당 상한. 실패가 아니라 **매달림**을 끊는 장치다 — 격리한 스위트가
       # 27분을 붙잡고 있다가 잡 타임아웃에 걸리면, 격리해 둔 의미가 없어진다.
       # 정상 실행은 채팅 기준 90초 남짓이라 15분이면 충분히 여유롭다.
@@ -166,9 +163,14 @@ jobs:
           for r in "${runners[@]}"; do
             name=$(basename "$r")
             quarantined=false
-            case " $E2E_QUARANTINE " in *" $name "*) quarantined=true ;; esac
+            # 라벨을 따로 둔다. `${quarantined:+...}` 는 값이 **비었는지**만 보므로
+            # 문자열 `false` 에도 확장돼, 격리하지 않은 스위트까지 (격리) 로 찍힌다.
+            label=""
+            case " $E2E_QUARANTINE " in
+              *" $name "*) quarantined=true; label=" (격리)" ;;
+            esac
 
-            echo "::group::$r${quarantined:+ (격리)}"
+            echo "::group::$r$label"
             # 하나가 실패해도 나머지를 마저 돌린다. 첫 실패에서 멈추면 한 번의 CI 로
             # 얻을 수 있는 정보가 스위트 하나로 줄어든다.
             #
