@@ -1,5 +1,5 @@
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Formats [d] as the `YYYY-MM-DD` string used by every date-keyed
 /// drift column (seeding, schedule filters, reservation counts). Single

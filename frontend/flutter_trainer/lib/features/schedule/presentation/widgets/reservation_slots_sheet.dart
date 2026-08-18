@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -9,7 +9,6 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
   const ReservationSlotsSheet({super.key, required this.selectedDay});
@@ -165,7 +164,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               l.actionClose,
-              style: TextStyle(color: AppColors.destructive),
+              style: const TextStyle(color: AppColors.destructive),
             ),
           ),
         ],
@@ -235,7 +234,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                   Expanded(
                     child: Text(
                       l.slotManageTitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -325,7 +324,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
                       return Center(
                         child: Text(
                           l.slotEmpty,
-                          style: TextStyle(color: AppColors.mutedForeground),
+                          style: const TextStyle(color: AppColors.mutedForeground),
                         ),
                       );
                     }

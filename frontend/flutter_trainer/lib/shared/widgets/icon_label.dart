@@ -47,7 +47,6 @@ class IconLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         Icon(icon, size: iconSize ?? fontSize + 2, color: color),
         const SizedBox(width: AppSpacing.xs),

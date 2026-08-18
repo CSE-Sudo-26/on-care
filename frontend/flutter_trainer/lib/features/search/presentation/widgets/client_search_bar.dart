@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -16,13 +16,12 @@ import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repo
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/search/domain/client_search.dart';
 import 'package:oncare_trainer/features/search/domain/client_search_facts.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Width cap that keeps the full search scope readable without letting the
 /// field compete with the page title.
@@ -349,7 +348,6 @@ class _ClientSearchBarState extends ConsumerState<ClientSearchBar> {
     return CompositedTransformFollower(
       link: _link,
       targetAnchor: Alignment.bottomLeft,
-      followerAnchor: Alignment.topLeft,
       offset: const Offset(0, AppSpacing.xs),
       child: Align(
         alignment: Alignment.topLeft,

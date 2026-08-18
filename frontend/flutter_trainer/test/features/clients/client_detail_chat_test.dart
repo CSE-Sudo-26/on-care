@@ -1,23 +1,23 @@
 import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
-import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 대화 목록을 [finder] 가 나올 때까지 [step] 만큼씩 끈다.
 ///
@@ -282,7 +282,7 @@ void main() {
         // A fresh client with no seeded messages, so the count is only
         // what this test inserts.
         const cid = 'rowid-test-client';
-        final sameSecond = DateTime(2026, 1, 1, 9, 0, 0);
+        final sameSecond = DateTime(2026, 1, 1, 9);
 
         // First client message, then mark the thread read.
         await db
@@ -400,11 +400,11 @@ void main() {
               const _NoMemoRepository(),
             ),
           ],
-          child: MaterialApp(
-            locale: const Locale('ko'),
+          child: const MaterialApp(
+            locale: Locale('ko'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
+            home: Scaffold(
               body: ChatView(
                 clientId: 'user-demo',
                 clientAvatar: '김',

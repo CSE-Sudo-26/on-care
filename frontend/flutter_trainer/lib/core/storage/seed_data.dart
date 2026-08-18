@@ -2,11 +2,10 @@ import 'dart:convert';
 
 import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
-
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 // The roster itself is bulky enough to drown the seeding logic, so it
 // lives next door. `part` keeps the `_Client` family private to this
@@ -98,7 +97,7 @@ Future<void> seedIfEmpty(
   // added at runtime — including after a later-day re-seed, where a fresh
   // `now()` base would otherwise sort new seed rows *after* a preserved
   // runtime reply.
-  final chatEpoch = DateTime.utc(2000, 1, 1);
+  final chatEpoch = DateTime.utc(2000);
 
   // First boot, or the date rolled over. Wipe + re-insert + flag all run
   // in ONE transaction: if any insert fails, the whole thing rolls back

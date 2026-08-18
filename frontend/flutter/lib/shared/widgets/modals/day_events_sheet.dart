@@ -9,6 +9,7 @@ import 'package:oncare/features/dashboard/presentation/controllers/dashboard_con
 import 'package:oncare/features/schedule/domain/entities/schedule_event.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
 import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/modals/add_event_dialog.dart';
 
 /// 하루치 일정을 펼쳐 수정·삭제할 수 있게 한다.
@@ -87,18 +88,19 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
   Future<void> _delete(ScheduleEvent event) async {
     if (_deleting != null) return;
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     // 되돌릴 수 없으므로 확인을 한 번 받는다.
     final bool ok =
         await showDialog<bool>(
           context: context,
           builder: (BuildContext ctx) => AlertDialog(
-            title: const Text('일정 삭제'),
-            content: Text('‘${event.title}’ 일정을 삭제할까요? 되돌릴 수 없어요.'),
+            title: Text(l.eventDeleteTitle),
+            content: Text(l.eventDeleteConfirm(event.title)),
             actions: <Widget>[
               TextButton(
                 key: const Key('deleteEventCancel'),
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('취소'),
+                child: Text(l.actionCancel),
               ),
               TextButton(
                 key: const Key('deleteEventConfirm'),
@@ -106,7 +108,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.destructive,
                 ),
-                child: const Text('삭제'),
+                child: Text(l.actionDelete),
               ),
             ],
           ),
@@ -121,7 +123,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
       if (!mounted) return;
       setState(() => _deleting = null);
       messenger.showSnackBar(
-        const SnackBar(content: Text('일정 삭제에 실패했어요. 잠시 후 다시 시도해 주세요')),
+        SnackBar(content: Text(l.eventDeleteFailed)),
       );
       return;
     }
@@ -131,7 +133,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
       _deleting = null;
       _events.removeWhere((ScheduleEvent e) => e.id == event.id);
     });
-    messenger.showSnackBar(const SnackBar(content: Text('일정을 삭제했어요')));
+    messenger.showSnackBar(SnackBar(content: Text(l.eventDeleted)));
   }
 
   Future<void> _add() async {
@@ -146,6 +148,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final MaterialLocalizations m = MaterialLocalizations.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     return SafeArea(
       top: false,
       child: Padding(
@@ -189,7 +192,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                 child: Text(
-                  '이 날에는 일정이 없어요',
+                  l.eventsEmptyForDay,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.mutedForeground,
@@ -218,7 +221,7 @@ class _DayEventsBodyState extends ConsumerState<_DayEventsBody> {
               key: const Key('dayEventsAdd'),
               onPressed: _deleting != null ? null : _add,
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('이 날에 일정 추가'),
+              label: Text(l.eventAddForDay),
             ),
           ],
         ),
@@ -245,6 +248,7 @@ class _EventRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -277,8 +281,8 @@ class _EventRow extends StatelessWidget {
                 Text(
                   // 시간이 없는 일정도 있다 — 그 사실을 그대로 적는다.
                   <String>[
-                    scheduleCategoryLabel(event.category),
-                    if (event.time.isNotEmpty) event.time else '시간 미정',
+                    scheduleCategoryLabel(l, event.category),
+                    if (event.time.isNotEmpty) event.time else l.eventTimeUnset,
                   ].join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.mutedForeground,
@@ -299,13 +303,13 @@ class _EventRow extends StatelessWidget {
           else ...<Widget>[
             IconButton(
               key: Key('editEvent-${event.id}'),
-              tooltip: '수정',
+              tooltip: l.actionEdit,
               onPressed: disabled ? null : onEdit,
               icon: const Icon(Icons.edit_outlined, size: 20),
             ),
             IconButton(
               key: Key('deleteEvent-${event.id}'),
-              tooltip: '삭제',
+              tooltip: l.actionDelete,
               onPressed: disabled ? null : onDelete,
               icon: const Icon(Icons.delete_outline, size: 20),
               color: AppColors.destructive,

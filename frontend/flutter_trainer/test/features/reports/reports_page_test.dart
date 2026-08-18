@@ -6,25 +6,24 @@ import 'package:demo_fixture/demo_fixture.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
+import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
-import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 요약 생성만 실패한다 — 리포트 본문은 정상이라 카드 하나만 폴백으로 간다.
 class _SummaryFailsRepository implements ReportRepository {

@@ -4,14 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/app/app.dart';
 import 'package:oncare_trainer/app/router/app_router.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Mock-mode config so widget tests resolve the in-memory repositories
 /// (no real backend). Individual tests can override with [extraOverrides].

@@ -1,10 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
-import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 
 abstract interface class ReservationSlotRepository {
   Future<List<ReservationSlot>> list();

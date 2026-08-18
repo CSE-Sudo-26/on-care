@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -10,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
@@ -20,7 +20,6 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 enum _ConversationFilter {
   all('all'),
@@ -70,12 +69,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       subtitle: l.messagesSubtitle,
       headerCenter: const ClientSearchBar(),
       scrollable: false,
-      contentPadding: const EdgeInsets.fromLTRB(
-        AppLayout.pagePadding,
-        AppLayout.pagePadding,
-        AppLayout.pagePadding,
-        AppLayout.pagePadding,
-      ),
       child: clientsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => EmptyHint(
@@ -482,7 +475,6 @@ class _ThreadPanel extends StatelessWidget {
             ),
             color: AppColors.accentSurface.withValues(alpha: 0.55),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 Expanded(
                   child: SingleChildScrollView(

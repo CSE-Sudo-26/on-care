@@ -1,5 +1,5 @@
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Weekly completion below this (%) counts as a client who needs the
 /// trainer to step in.

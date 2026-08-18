@@ -2,18 +2,13 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -24,6 +19,11 @@ import 'package:oncare_trainer/features/clients/domain/entities/member_health_pr
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -36,7 +36,6 @@ import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 
 import '../../helpers/pump_app.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// A chat repository whose sends always fail.
 class _FailingChatRepository extends DriftChatRepository {
@@ -1414,7 +1413,7 @@ void main() {
         extraOverrides: <Override>[
           appConfigProvider.overrideWithValue(realConfig),
           clientRepositoryProvider.overrideWithValue(
-            _FixedClientRepository(<TrainerClient>[realClient]),
+            const _FixedClientRepository(<TrainerClient>[realClient]),
           ),
           trainerAuthRepositoryProvider.overrideWithValue(
             const _FakeTrainerAuthRepository(),

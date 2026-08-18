@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
     show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
@@ -15,7 +15,6 @@ import 'package:oncare_trainer/features/clients/domain/entities/member_health_pr
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
 ///

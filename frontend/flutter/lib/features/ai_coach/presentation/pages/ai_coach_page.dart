@@ -123,7 +123,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                       ),
                       const SizedBox(height: 20),
                       for (final ChatMessage m in chat.messages) ...<Widget>[
-                        _bubble(m),
+                        _bubble(context, m),
                         const SizedBox(height: 16),
                       ],
                       if (showQuickReplies) _quickReplySection(),
@@ -228,7 +228,15 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
     );
   }
 
-  Widget _bubble(ChatMessage m) {
+  Widget _bubble(BuildContext context, ChatMessage m) {
+    // 앱이 스스로 띄운 말풍선(인사·실패 안내)은 문구가 비어 있다. 로케일에 맞춰
+    // 여기서 그린다 — 컨트롤러는 어떤 말풍선인지만 정한다(#847).
+    final AppLocalizations l = AppLocalizations.of(context);
+    final String text = switch (m.notice) {
+      ChatNotice.welcome => l.aiCoachWelcome,
+      ChatNotice.failure => l.aiCoachFailure,
+      null => m.content,
+    };
     if (m.isUser) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -247,7 +255,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                 ),
               ),
               child: Text(
-                m.content,
+                text,
                 style: const TextStyle(
                   fontSize: 15,
                   height: 1.4,
@@ -289,7 +297,7 @@ class _AICoachPageState extends ConsumerState<AICoachPage> {
                 child: m.pending
                     ? const _TypingDots()
                     : Text(
-                        m.content,
+                        text,
                         style: const TextStyle(
                           fontSize: 15,
                           height: 1.5,

@@ -1,12 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 import '../../helpers/client_factory.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations_ko.dart';
 
 /// 문구 기대값은 로케일을 명시해 읽는다.
 final AppLocalizationsKo _ko = AppLocalizationsKo();

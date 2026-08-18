@@ -1,5 +1,5 @@
-import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
 class ProgramItem {
