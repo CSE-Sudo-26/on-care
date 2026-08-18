@@ -1036,14 +1036,24 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Text(
-                                  recordedCompletionMean(client) == null
-                                      ? l.reportsDataInsufficient
-                                      : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                                // 행 높이는 `_rowHeight` 로 고정이라 이 줄이 두
+                                // 줄로 접히면 그대로 넘친다. 영어의
+                                // `Workout completion 72%` 는 배율 1.3 에서
+                                // 접혔다(#849). 잘라내지 않고 줄여서 그린다 —
+                                // 말줄임하면 정작 필요한 이행률 숫자가 사라진다.
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    recordedCompletionMean(client) == null
+                                        ? l.reportsDataInsufficient
+                                        : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ],
