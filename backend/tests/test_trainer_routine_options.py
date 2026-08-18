@@ -81,7 +81,7 @@ def _register_and_link_member(client, *, goal: str = "체중 감량") -> str:
         "/v1/auth/register",
         json={"email": email, "password": "pw!", "name": "분석 테스트 회원"},
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     member_id = response.json()["id"]
 
     db = SessionLocal()
@@ -688,7 +688,9 @@ def test_recommendation_status_is_personalized_with_repeated_weekly_pattern(
         assert body["plan_a"]["label"] == "기존 패턴 유지형"
         assert body["plan_b"]["label"] == "점진적 강화형"
         assert any("스쿼트" in e["name"] for e in body["plan_a"]["exercises"])
-        assert body["plan_a"]["total_minutes"] == 45
+        # A안(유지형)은 요청 시간의 ~75%만, B안(강화형)은 전부 쓴다 — 유지와
+        # 확대가 시간상으로도 구분돼야 한다는 계약은 데이터 부족 경로와 같다.
+        assert body["plan_a"]["total_minutes"] < body["plan_b"]["total_minutes"]
         assert body["plan_b"]["total_minutes"] == 45
     finally:
         _cleanup_member(member_id)

@@ -155,7 +155,10 @@ def _pattern_based_plans(
     core_label = ", ".join(core)
     intensity_label = _B_LABEL.get(intensity_preference, "보통")
 
-    total_a = available_minutes
+    # A안은 요청 시간의 ~75%만 쓴다 — 기존 패턴 그대로이되, "유지"와 "확대"가
+    # 시간상으로도 구분돼야 한다(전체 A/B 계약이 기대하는 a < b, #776).
+    # B안은 요청 시간 전부를 쓴다.
+    total_a = min(available_minutes, max(len(core_parts), round(available_minutes * 0.75)))
     plan_a = {
         "key": "A",
         "label": "기존 패턴 유지형",
