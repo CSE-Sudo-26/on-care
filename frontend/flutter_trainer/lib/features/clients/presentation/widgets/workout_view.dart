@@ -24,6 +24,7 @@ import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 운동 — the whole prescription→execution loop for one client, in the
 /// order the trainer reasons about it.
@@ -244,7 +245,7 @@ class _SessionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
     return SectionCard(
       title: l.ptProgramHistory,
       icon: Icons.event_note_outlined,

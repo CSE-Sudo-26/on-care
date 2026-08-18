@@ -9,6 +9,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 class ReservationSlotsSheet extends ConsumerStatefulWidget {
   const ReservationSlotsSheet({super.key, required this.selectedDay});
@@ -54,7 +55,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       return;
     }
     final startsAt = _startsAt(_time);
-    if (!startsAt.isAfter(DateTime.now())) {
+    if (!startsAt.isAfter(nowKst())) {
       _showMessage(l.slotPastTime);
       return;
     }

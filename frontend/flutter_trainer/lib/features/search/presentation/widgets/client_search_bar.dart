@@ -22,6 +22,7 @@ import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Width cap that keeps the full search scope readable without letting the
 /// field compete with the page title.
@@ -97,7 +98,7 @@ ClientSearchFacts watchClientSearchFacts(
   if (results.isEmpty) return ClientSearchFacts.none;
   final unread =
       ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
-  final today = DateTime.now();
+  final today = nowKst();
   final range = (
     from: ymd(today),
     to: ymd(today.add(const Duration(days: clientSearchUpcomingDays - 1))),

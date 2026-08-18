@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 typedef _ScheduleCreatePayload = ({
   String date,
@@ -64,7 +65,7 @@ class DioScheduleRepository implements ScheduleRepository {
   void dispose() => unawaited(_revisions.close());
 
   @override
-  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(DateTime.now()));
+  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(nowKst()));
 
   @override
   Stream<List<ScheduleSession>> watchDate(String date) =>

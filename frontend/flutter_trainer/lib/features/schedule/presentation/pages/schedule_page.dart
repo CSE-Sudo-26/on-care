@@ -24,6 +24,7 @@ import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 스케줄 tab — the trainer's calendar, in two views.
 ///
@@ -80,7 +81,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   /// than an error page.
   static DateTime _resolveDay(String? raw) {
     final parsed = raw == null ? null : DateTime.tryParse(raw);
-    return _dateOnly(parsed ?? DateTime.now());
+    return _dateOnly(parsed ?? nowKst());
   }
 
   @override
@@ -303,7 +304,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // Keep the client stream live so the booking sheet and the chat
     // shortcut have data even when this tab is the first one opened.
     ref.watch(clientsProvider);
-    final today = _dateOnly(DateTime.now());
+    final today = _dateOnly(nowKst());
     final defaultAnchor = today.subtract(const Duration(days: 3));
     final showToday = _selectedDay != today || _weekAnchor != defaultAnchor;
     final consultationInbox = ref.watch(consultationInboxEnabledProvider);
@@ -485,7 +486,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     }
 
     final day = DateTime.tryParse(session.date) ?? _selectedDay;
-    final today = _dateOnly(DateTime.now());
+    final today = _dateOnly(nowKst());
     final isFuture = day.isAfter(today);
     final dateText = day == today
         ? l.labelToday
@@ -612,9 +613,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     // 완료 is offered only for 예정 sessions that aren't dated in the
     // future — you can't complete a class that hasn't happened yet. The
     // repository enforces the same rule (review PR 245).
-    final isFuture = _selectedDay.isAfter(_dateOnly(DateTime.now()));
+    final isFuture = _selectedDay.isAfter(_dateOnly(nowKst()));
     final clients = ref.read(clientsProvider).valueOrNull ?? const [];
-    final today = _dateOnly(DateTime.now());
+    final today = _dateOnly(nowKst());
     final dateLabel = _selectedDay == today
         ? l.labelToday
         : l.dateMonthDay(_selectedDay.month, _selectedDay.day);
@@ -1492,7 +1493,7 @@ class _WeekGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
     final byDate = <String, List<ScheduleSession>>{};
     for (final s in sessions) {
       if (s.isGap) continue;
@@ -1731,7 +1732,7 @@ class _ScheduleWeekStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final today = DateTime.now();
+    final today = nowKst();
     final week = <DateTime>[
       for (var i = 0; i < 7; i++) weekAnchor.add(Duration(days: i)),
     ];

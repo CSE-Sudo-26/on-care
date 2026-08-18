@@ -20,6 +20,7 @@ import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/shared/widgets/stat_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 대시보드 — the console's home: what needs doing today.
 ///
@@ -37,7 +38,7 @@ class DashboardPage extends ConsumerWidget {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final coachingSummary = ref.watch(dashboardAiCoachingSummaryProvider);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
-    final today = DateTime.now();
+    final today = nowKst();
 
     return PageScaffold(
       title: l.dashTitle,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -573,7 +573,7 @@ class _MetricPill extends StatelessWidget {
 /// 오늘이 이 범위의 몇 번째 칸인가. 범위 밖이면 마지막 칸 — 지난 주를 보고
 /// 있을 때 선이 중간에서 끊기지 않게 한다.
 int _todayIndexIn(List<DateTime> dates) {
-  final DateTime today = DateUtils.dateOnly(DateTime.now());
+  final DateTime today = DateUtils.dateOnly(nowKst());
   for (int i = 0; i < dates.length; i++) {
     if (DateUtils.dateOnly(dates[i]) == today) return i;
   }

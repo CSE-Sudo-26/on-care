@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_chat_repository.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Reads and sends messages in a trainer↔member chat thread.
 ///
@@ -57,7 +58,7 @@ class DriftChatRepository implements ChatRepository {
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    final now = DateTime.now();
+    final now = nowKst();
     await _db.transaction(() async {
       await _db
           .into(_db.clientChatMessages)

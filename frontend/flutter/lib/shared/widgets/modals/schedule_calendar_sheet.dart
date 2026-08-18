@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/design_system/tokens/radius.dart';
@@ -42,7 +42,7 @@ Future<void> showScheduleCalendarSheet(
       constraints: const BoxConstraints(
         maxWidth: AppBreakpoints.contentMaxWidth,
       ),
-      child: _CalendarBody(initialDate: initialDate ?? DateTime.now()),
+      child: _CalendarBody(initialDate: initialDate ?? nowKst()),
     ),
   );
 }
@@ -103,7 +103,7 @@ class _CalendarBodyState extends ConsumerState<_CalendarBody> {
     final theme = Theme.of(context);
     final monthKey = _monthKey(_month);
     final async = ref.watch(scheduleMonthProvider(monthKey));
-    final today = DateTime.now();
+    final today = nowKst();
     final days = _daysInGrid(_month);
 
     return FractionallySizedBox(

@@ -14,6 +14,7 @@ import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Builds and delivers a client's weekly report.
 ///
@@ -208,7 +209,7 @@ class LocalReportRepository implements ReportRepository {
             clientId: clientId,
             weekStart: ymd(weekStartOf(weekStart)),
             body: Value<String>(body),
-            updatedAt: DateTime.now(),
+            updatedAt: nowKst(),
           ),
         );
     return ReportFeedbackDraft(body: body, saved: true);
@@ -361,11 +362,11 @@ WeeklyReport weeklyReportFromJson(
           .toList(growable: false);
   final weekStart =
       DateTime.tryParse(json['week_start'] as String? ?? '') ??
-      weekStartOf(DateTime.now());
+      weekStartOf(nowKst());
   return WeeklyReport(
     client: client,
     weekStart: weekStart,
-    isCurrentWeek: weekStartOf(weekStart) == weekStartOf(DateTime.now()),
+    isCurrentWeek: weekStartOf(weekStart) == weekStartOf(nowKst()),
     sessionsBooked: optInt('sessions_booked') ?? 0,
     sessionsDone: optInt('sessions_done') ?? 0,
     completionAvg: optInt('completion_avg'),

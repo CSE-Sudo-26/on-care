@@ -40,6 +40,7 @@ import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// AI 코칭 — the workspace where a client's data becomes a routine.
 ///
@@ -332,8 +333,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     final registeredFor = client.id;
-    final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
-    final now = DateTime.now();
+    final date = ymd(nowKst().add(Duration(days: _registerOffset)));
+    final now = nowKst();
     final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
     final time = '${hour.toString().padLeft(2, '0')}:00';
     final messenger = ScaffoldMessenger.of(context);
@@ -1501,7 +1502,7 @@ class _AiAssistantPrompt extends StatelessWidget {
 String _dateChipLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
-  final d = DateTime.now().add(Duration(days: offset));
+  final d = nowKst().add(Duration(days: offset));
   return '${d.month}/${d.day}';
 }
 
@@ -1614,7 +1615,7 @@ class _SendHistoryCard extends ConsumerWidget {
     // so the trainer could send the same routine again believing nothing
     // had gone out.
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
 
     return SectionCard(
       title: l.coachSentHistory,

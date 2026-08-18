@@ -1,3 +1,4 @@
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/gym.dart';
 import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
@@ -322,7 +323,7 @@ class MockGymRepository implements GymRepository {
   }
 
   static List<TrainerSlot> _seedSlots() {
-    final DateTime today = DateTime.now();
+    final DateTime today = nowKst();
     return <TrainerSlot>[
       // 오늘 자리는 데모에서 "가까운 시간"을 보여주려고 둔다. 저녁에 앱을 켜면
       // 이미 지나 목록에서 빠지므로, 트레이너마다 내일 이후 자리를 함께 둬서
@@ -417,7 +418,7 @@ class MockGymRepository implements GymRepository {
     await Future<void>.delayed(const Duration(milliseconds: 60));
     // 이미 지난 시간은 보여주지 않는다 — 저녁에 앱을 켰을 때 오늘 아침 자리가
     // "예약 가능"으로 뜨면 안 된다.
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final List<TrainerSlot> mine =
         _slots
             .where(
@@ -442,7 +443,7 @@ class MockGymRepository implements GymRepository {
       throw StateError('slot already full: $slotId');
     }
     // 목록에서 이미 빠진 시간을 오래된 화면이 그대로 잡는 것도 막는다.
-    if (!_slots[i].startsAt.isAfter(DateTime.now())) {
+    if (!_slots[i].startsAt.isAfter(nowKst())) {
       throw StateError('slot already started: $slotId');
     }
     _slots[i] = _slots[i].copyWith(remaining: _slots[i].remaining - 1);
@@ -478,7 +479,7 @@ class MockGymRepository implements GymRepository {
       throw StateError('reservation not found: $reservationId');
     }
     final MyReservation reservation = _reservations[i];
-    if (!reservation.startsAt.isAfter(DateTime.now())) {
+    if (!reservation.startsAt.isAfter(nowKst())) {
       throw StateError('reservation no longer cancellable: $reservationId');
     }
     // 좌석을 되돌린다 — 실서버와 같은 결과가 화면에 보여야 한다.

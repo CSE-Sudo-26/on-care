@@ -6,6 +6,7 @@ import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/features/dashboard/domain/ai_coaching_summary.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart'
     show sodiumTargetMg;
 
@@ -46,7 +47,7 @@ class DemoAiCoachingSummaryRepository implements AiCoachingSummaryRepository {
         headline: '',
         clients: const <AiCoachingClientInsight>[],
         generatedBy: 'rule',
-        dataAsOf: DateTime.now(),
+        dataAsOf: nowKst(),
         kind: CoachingSummaryKind.noClients,
       );
     }
@@ -56,7 +57,7 @@ class DemoAiCoachingSummaryRepository implements AiCoachingSummaryRepository {
       headline: '',
       clients: insights,
       generatedBy: 'rule',
-      dataAsOf: DateTime.now(),
+      dataAsOf: nowKst(),
       kind: insights.isEmpty
           ? CoachingSummaryKind.allOnTrack
           : CoachingSummaryKind.attention,

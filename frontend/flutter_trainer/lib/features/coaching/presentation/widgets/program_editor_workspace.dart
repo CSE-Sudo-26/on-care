@@ -10,6 +10,7 @@ import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Rich local draft editor matching the Figma program workspace.
 ///
@@ -461,7 +462,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
 String _dayLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
-  final date = DateTime.now().add(Duration(days: offset));
+  final date = nowKst().add(Duration(days: offset));
   return '${date.month}/${date.day}';
 }
 

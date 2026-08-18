@@ -9,6 +9,7 @@ import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_trainer_memo_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Reads and writes the memos a trainer keeps about one member.
 ///
@@ -108,7 +109,7 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
       final existing = memos.where((memo) => memo.insightId == insightId);
       if (existing.isNotEmpty) return existing.first;
     }
-    final now = DateTime.now();
+    final now = nowKst();
     final memo = TrainerMemo(
       id: 'memo-local-${now.microsecondsSinceEpoch}',
       body: body,
@@ -136,7 +137,7 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
     if (index < 0) throw const NotFoundError();
     final updated = memos[index].copyWith(
       body: body,
-      updatedAt: DateTime.now(),
+      updatedAt: nowKst(),
     );
     memos[index] = updated;
     await _write(clientId, memos);

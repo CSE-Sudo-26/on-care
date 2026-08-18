@@ -31,6 +31,7 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 리포트 — the week, from two angles.
 ///
@@ -58,7 +59,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   late String? _clientId = widget.clientId;
 
   /// Monday of the week being reported. Starts on this week.
-  DateTime _weekStart = weekStartOf(DateTime.now());
+  DateTime _weekStart = weekStartOf(nowKst());
 
   /// Clients whose report was sent this session — keeps the button from
   /// being pressed twice in a row by accident.
@@ -191,7 +192,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   void _goToCurrentWeek() {
-    final currentWeek = weekStartOf(DateTime.now());
+    final currentWeek = weekStartOf(nowKst());
     if (_weekStart == currentWeek) return;
     setState(() {
       _weekStart = currentWeek;
@@ -359,7 +360,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
-        if (_weekStart != weekStartOf(DateTime.now()))
+        if (_weekStart != weekStartOf(nowKst()))
           ActionButton(
             label: l.reportsGoThisWeek,
             icon: Icons.today_outlined,
@@ -736,7 +737,7 @@ class _ClientReport extends StatelessWidget {
     final client = report.client;
     // 지난 날인데 기록이 없는 요일. 아직 오지 않은 날과 구분해서 그린다.
     final elapsed = report.isCurrentWeek
-        ? elapsedWeekdays(DateTime.now())
+        ? elapsedWeekdays(nowKst())
         : weekdayCount;
     final unlogged = <int>{
       for (var i = 0; i < elapsed && i < report.weekCompletion.length; i++)
@@ -829,7 +830,7 @@ class _ClientReport extends StatelessWidget {
                   valueSuffix: '%',
                   // 아직 오지 않은 요일은 이번 주에만 있다.
                   pendingFromIndex: report.isCurrentWeek
-                      ? elapsedWeekdays(DateTime.now())
+                      ? elapsedWeekdays(nowKst())
                       : null,
                   // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
                   // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
@@ -966,7 +967,7 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
             // 지난 주는 이미 다 지났으니 선을 일요일까지 잇되, 그 자리에
             // '오늘' 표시를 붙이지는 않는다.
             todayIndex: widget.report.isCurrentWeek
-                ? elapsedWeekdays(DateTime.now()) - 1
+                ? elapsedWeekdays(nowKst()) - 1
                 : weekdayCount - 1,
             markToday: widget.report.isCurrentWeek,
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로

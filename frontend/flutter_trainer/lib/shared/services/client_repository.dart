@@ -15,6 +15,7 @@ import 'package:oncare_trainer/features/clients/domain/entities/member_health_pr
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Reads a trainer's clients + their diet/history for the 고객 관리 tab.
 ///
@@ -175,7 +176,7 @@ class DriftClientRepository implements ClientRepository {
     if (trimmedName.isEmpty) return false;
     return _db.transaction(() async {
       if (await _nameTaken(trimmedName.toLowerCase())) return false;
-      final now = DateTime.now();
+      final now = nowKst();
       await _db
           .into(_db.trainerClients)
           .insert(

@@ -14,6 +14,7 @@ import 'package:oncare_trainer/features/consultations/domain/entities/consultati
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Schedule-tab inbox for member consultation requests.
 ///
@@ -350,7 +351,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   @override
   void initState() {
     super.initState();
-    final today = DateUtils.dateOnly(DateTime.now());
+    final today = DateUtils.dateOnly(nowKst());
     final lastDate = today.add(const Duration(days: 365));
     _date = _clampDate(
       DateUtils.dateOnly(widget.request.preferredDate),
@@ -384,7 +385,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             icon: const Icon(Icons.calendar_today_outlined),
             label: Text(dateLabel(l, _date)),
             onPressed: () async {
-              final today = DateUtils.dateOnly(DateTime.now());
+              final today = DateUtils.dateOnly(nowKst());
               final lastDate = today.add(const Duration(days: 365));
               final picked = await showDatePicker(
                 context: context,
