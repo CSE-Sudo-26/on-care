@@ -1,6 +1,6 @@
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
-import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 
 /// 로그인·가입 실패의 **원인 코드**. 문구가 아니다.
 ///

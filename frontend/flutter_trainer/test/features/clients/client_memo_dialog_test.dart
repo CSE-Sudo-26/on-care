@@ -84,11 +84,11 @@ Future<void> _pumpDialog(
       overrides: <Override>[
         trainerMemoRepositoryProvider.overrideWithValue(repository),
       ],
-      child: MaterialApp(
-        locale: const Locale('ko'),
+      child: const MaterialApp(
+        locale: Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(
+        home: Scaffold(
           body: ClientMemoDialog(clientId: 'm1', clientName: '이지수'),
         ),
       ),

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 
 /// 상담 요청 — the inbox where a member becomes a client.
 ///
@@ -268,7 +267,7 @@ class _RejectDialogState extends State<_RejectDialog> {
         children: <Widget>[
           Text(
             l.consultRejectNotice,
-            style: TextStyle(fontSize: 13.5, color: AppColors.mutedForeground),
+            style: const TextStyle(fontSize: 13.5, color: AppColors.mutedForeground),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(

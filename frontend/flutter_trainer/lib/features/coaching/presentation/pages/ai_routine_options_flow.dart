@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
@@ -9,15 +8,15 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_options_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_form_fields.dart';
-import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
-import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/widgets/labeled_field.dart';
 
 /// Conversation-style AI routine builder.
 ///
@@ -424,7 +423,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             l.aiNotePlaceholderHint,
-            style: TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
+            style: const TextStyle(fontSize: 10.5, color: AppColors.mutedForeground),
           ),
         ],
       ),
@@ -646,7 +645,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditBlurb,
-          style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
         for (int index = 0; index < _edited.length; index++) ...<Widget>[
@@ -838,7 +837,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
         const SizedBox(height: 3),
         Text(
           l.aiEditsApplied,
-          style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+          style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
         ),
         const SizedBox(height: AppSpacing.md),
         for (final exercise in _edited) ...<Widget>[
@@ -905,7 +904,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
                     children: <Widget>[
                       Text(
                         l.schedNote,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: AppColors.brandOrange,
@@ -993,7 +992,7 @@ class _AiRoutineOptionsFlowState extends ConsumerState<AiRoutineOptionsFlow> {
           Text(
             l.aiGoToChatHint,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+            style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
           ),
         ],
       ),

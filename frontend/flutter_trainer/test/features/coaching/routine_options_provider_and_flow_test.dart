@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -11,8 +10,8 @@ import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routi
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 const _mockConfig = AppConfig(
   environment: Environment.dev,
@@ -166,7 +165,7 @@ void main() {
     });
 
     test('mock generator produces a shorter A and a stronger B', () async {
-      final repo = const MockTrainerRoutineOptionsRepository();
+      const repo = MockTrainerRoutineOptionsRepository();
       final o = await repo.generate(
         'm1',
         availableMinutes: 40,
@@ -181,7 +180,7 @@ void main() {
     });
 
     test('mock generator respects the requested time at both limits', () async {
-      final repo = const MockTrainerRoutineOptionsRepository();
+      const repo = MockTrainerRoutineOptionsRepository();
 
       for (final minutes in <int>[10, 180]) {
         final options = await repo.generate(
@@ -227,7 +226,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
             client: _client,
-            recommendedExercises: <RoutineExercise>[
+            recommendedExercises: const <RoutineExercise>[
               RoutineExercise(name: '실내 자전거', minutes: 20, type: '유산소'),
             ],
             recommendedReason: '기존 고객 데이터 기반 추천',
@@ -400,8 +399,8 @@ void main() {
             appConfigProvider.overrideWithValue(_mockConfig),
             trainerRoutineRepositoryProvider.overrideWithValue(repository),
           ],
-          child: MaterialApp(
-          locale: const Locale('ko'),
+          child: const MaterialApp(
+          locale: Locale('ko'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
             home: AiRoutineOptionsFlow(
@@ -453,8 +452,8 @@ void main() {
             _ThrowingRoutineRepository(const ServerError()),
           ),
         ],
-        child: MaterialApp(
-          locale: const Locale('ko'),
+        child: const MaterialApp(
+          locale: Locale('ko'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: AiRoutineOptionsFlow(
@@ -514,8 +513,8 @@ Future<void> _pumpFlowWithOptionsError(WidgetTester tester, Object error) async 
           _ThrowingOptionsRepository(error),
         ),
       ],
-      child: MaterialApp(
-        locale: const Locale('ko'),
+      child: const MaterialApp(
+        locale: Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: AiRoutineOptionsFlow(
