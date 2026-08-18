@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -18,8 +18,9 @@ import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
 import 'package:oncare_trainer/features/reports/services/report_pdf_sender.dart';
-import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
@@ -30,7 +31,6 @@ import 'package:oncare_trainer/shared/widgets/metric_trend_chart.dart';
 import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 리포트 — the week, from two angles.
 ///
@@ -58,7 +58,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   late String? _clientId = widget.clientId;
 
   /// Monday of the week being reported. Starts on this week.
-  DateTime _weekStart = weekStartOf(DateTime.now());
+  DateTime _weekStart = weekStartOf(nowKst());
 
   /// Clients whose report was sent this session — keeps the button from
   /// being pressed twice in a row by accident.
@@ -191,7 +191,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   void _goToCurrentWeek() {
-    final currentWeek = weekStartOf(DateTime.now());
+    final currentWeek = weekStartOf(nowKst());
     if (_weekStart == currentWeek) return;
     setState(() {
       _weekStart = currentWeek;
@@ -359,7 +359,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           icon: Icons.chevron_left,
           onPressed: () => _shiftWeek(-1),
         ),
-        if (_weekStart != weekStartOf(DateTime.now()))
+        if (_weekStart != weekStartOf(nowKst()))
           ActionButton(
             label: l.reportsGoThisWeek,
             icon: Icons.today_outlined,
@@ -382,7 +382,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           child: Center(child: CircularProgressIndicator()),
         ),
         error: (e, _) => Padding(
-          padding: EdgeInsets.only(top: AppSpacing.xxxl),
+          padding: const EdgeInsets.only(top: AppSpacing.xxxl),
           child: EmptyHint(
             message: l.reportsLoadFailed,
             icon: Icons.error_outline,
@@ -398,7 +398,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         data: (clients) {
           if (clients.isEmpty) {
             return Padding(
-              padding: EdgeInsets.only(top: AppSpacing.xxxl),
+              padding: const EdgeInsets.only(top: AppSpacing.xxxl),
               child: EmptyHint(
                 message: l.reportsNoClients,
                 icon: Icons.insights_outlined,
@@ -453,7 +453,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       loading: () => SectionCard(
                         title: l.reportsWeekly,
                         icon: Icons.description_outlined,
-                        child: Padding(
+                        child: const Padding(
                           padding: EdgeInsets.symmetric(
                             vertical: AppSpacing.xl,
                           ),
@@ -572,10 +572,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               ),
               if (weekSessions.hasError)
                 Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.md),
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
                   child: Text(
                     l.reportsScheduleWarning,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.warning,
                       fontWeight: FontWeight.w600,
@@ -736,7 +736,7 @@ class _ClientReport extends StatelessWidget {
     final client = report.client;
     // 지난 날인데 기록이 없는 요일. 아직 오지 않은 날과 구분해서 그린다.
     final elapsed = report.isCurrentWeek
-        ? elapsedWeekdays(DateTime.now())
+        ? elapsedWeekdays(nowKst())
         : weekdayCount;
     final unlogged = <int>{
       for (var i = 0; i < elapsed && i < report.weekCompletion.length; i++)
@@ -829,7 +829,7 @@ class _ClientReport extends StatelessWidget {
                   valueSuffix: '%',
                   // 아직 오지 않은 요일은 이번 주에만 있다.
                   pendingFromIndex: report.isCurrentWeek
-                      ? elapsedWeekdays(DateTime.now())
+                      ? elapsedWeekdays(nowKst())
                       : null,
                   // 기록이 없는 날을 0% 로 그리면 '0% 수행'이라는 다른 뜻이
                   // 되고, 평균에서 빠진 이유도 화면에서 사라진다.
@@ -966,7 +966,7 @@ class _MetricTrendSectionState extends State<_MetricTrendSection> {
             // 지난 주는 이미 다 지났으니 선을 일요일까지 잇되, 그 자리에
             // '오늘' 표시를 붙이지는 않는다.
             todayIndex: widget.report.isCurrentWeek
-                ? elapsedWeekdays(DateTime.now()) - 1
+                ? elapsedWeekdays(nowKst()) - 1
                 : weekdayCount - 1,
             markToday: widget.report.isCurrentWeek,
             // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을 눈으로
@@ -1290,7 +1290,6 @@ class _ComparisonMetric extends StatelessWidget {
             values: <int>[previous ?? 0, current ?? 0],
             labels: <String>[previousLabel, currentLabel],
             maxValue: maxValue,
-            height: 96,
             showValues: true,
             valueSuffix: valueSuffix,
             highlightIndex: 1,
@@ -1822,19 +1821,19 @@ class _ShareMenu extends ConsumerWidget {
       child: MenuAnchor(
         // 메뉴는 앱의 다른 메뉴와 같은 면으로 그린다 — Material 기본 표면은 이
         // 콘솔의 카드보다 밝고 모서리도 달라 혼자 떠 보였다.
-        style: MenuStyle(
-          backgroundColor: const WidgetStatePropertyAll(AppColors.card),
-          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-          shape: const WidgetStatePropertyAll(
+        style: const MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(AppColors.card),
+          surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.all(AppRadius.md),
               side: BorderSide(color: AppColors.borderStrong),
             ),
           ),
-          padding: const WidgetStatePropertyAll(
+          padding: WidgetStatePropertyAll(
             EdgeInsets.symmetric(vertical: AppSpacing.xs),
           ),
-          minimumSize: const WidgetStatePropertyAll(Size(_menuMinWidth, 0)),
+          minimumSize: WidgetStatePropertyAll(Size(_menuMinWidth, 0)),
         ),
         // 헤더와 한 칸 띄운다. 가로 위치는 아래 Directionality 가 맞춘다.
         alignmentOffset: const Offset(0, AppSpacing.xs),

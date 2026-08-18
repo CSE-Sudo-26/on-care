@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/shared/widgets/icon_label.dart';
-import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/client_diet_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_meal_photo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart' show EmptyHint;
 
 /// The 식단 sub-tab: today's nutrition summary,

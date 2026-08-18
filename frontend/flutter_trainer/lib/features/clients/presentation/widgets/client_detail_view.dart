@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/workout_view.dart';
-import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
-import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
-import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
+import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 
 /// Labels for [AppRoutes.clientTabSections], in the same order.
 ///
@@ -198,12 +197,10 @@ class _ClientDetailViewState extends ConsumerState<ClientDetailView>
         final diet = DietView(
           key: ValueKey<String>('diet-${widget.clientId}'),
           client: client,
-          embedded: false,
         );
         final workout = WorkoutView(
           key: ValueKey<String>('workout-${widget.clientId}'),
           client: client,
-          embedded: false,
         );
 
         return Column(

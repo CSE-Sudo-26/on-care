@@ -116,20 +116,20 @@ class _CompactBar extends StatelessWidget implements PreferredSizeWidget {
       iconTheme: const IconThemeData(color: AppColors.mutedForeground),
       shape: const Border(bottom: BorderSide(color: AppColors.borderStrong)),
       title: Padding(
-        padding: EdgeInsets.only(left: AppSpacing.xs),
+        padding: const EdgeInsets.only(left: AppSpacing.xs),
         child: Text.rich(
           TextSpan(
             children: <InlineSpan>[
-              TextSpan(
+              const TextSpan(
                 text: 'On-Care ',
                 style: TextStyle(color: AppColors.foreground),
               ),
               TextSpan(
                 text: l.appWordmarkTrainer,
-                style: TextStyle(color: AppColors.primary),
+                style: const TextStyle(color: AppColors.primary),
               ),
             ],
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
         ),
       ),

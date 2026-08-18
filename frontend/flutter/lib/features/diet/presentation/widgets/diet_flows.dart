@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -87,7 +87,7 @@ String mealBadge(AppLocalizations l, MealType t) => switch (t) {
 
 /// Best-guess meal type for a new entry, based on the current time of day.
 String _currentMealType() {
-  final int h = DateTime.now().hour;
+  final int h = nowKst().hour;
   if (h < 11) return 'breakfast';
   if (h < 15) return 'lunch';
   if (h < 21) return 'dinner';
@@ -568,7 +568,7 @@ class _ResultSheetState extends ConsumerState<_ResultSheet> {
       ref.invalidate(dietTodayProvider);
       // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
-      ref.invalidate(dietByDateProvider(DateTime.now()));
+      ref.invalidate(dietByDateProvider(nowKst()));
       setState(() {
         _result = result;
         _loading = false;
@@ -1071,7 +1071,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       ref.invalidate(dietTodayProvider);
       // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
-      ref.invalidate(dietByDateProvider(DateTime.now()));
+      ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text(l.dietSaved)));
     } catch (_) {
@@ -1121,7 +1121,7 @@ class _MealEditSheetState extends ConsumerState<_MealEditSheet> {
       ref.invalidate(dietTodayProvider);
       // 기간 뷰(이번 주·이번 달)는 오늘을 dietByDateProvider 로 읽는다.
       // 같이 비우지 않으면 끼니를 바꿔도 기간 막대만 옛 값에 머문다.
-      ref.invalidate(dietByDateProvider(DateTime.now()));
+      ref.invalidate(dietByDateProvider(nowKst()));
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text(l.dietDeleted)));
     } catch (_) {

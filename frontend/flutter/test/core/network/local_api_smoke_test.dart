@@ -5,11 +5,11 @@ import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
-
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/dashboard/domain/entities/dashboard_summary.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -71,7 +71,7 @@ void main() {
     expect(week.dayLabels, <String>['월', '화', '수', '목', '금', '토', '일']);
     // 합계는 픽스처가 정한다(#757). 여기 숫자를 적어 두면 요일마다 달라지는 값을
     // 고정하게 되고(이번 주는 오늘까지만 시드된다), 픽스처를 고칠 때마다 깨진다.
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final String monday = _dateString(
       DateTime(now.year, now.month, now.day - (now.weekday - 1)),
     );
@@ -124,7 +124,7 @@ void main() {
     expect(summary.macros.fatG, todayDiet.macros.fatG);
     expect(summary.macros.carbsPct, todayDiet.macros.carbsPct);
     expect(summary.nutritionWeek, hasLength(7));
-    final todayTrend = summary.nutritionWeek[DateTime.now().weekday - 1];
+    final todayTrend = summary.nutritionWeek[nowKst().weekday - 1];
     expect(todayTrend.calories, todayDiet.totalCalories);
     expect(todayTrend.sodiumMg, todayDiet.totalSodiumMg);
     expect(todayTrend.sugarG, todayDiet.totalSugarG);
@@ -144,7 +144,7 @@ void main() {
 }
 
 String _daysAgoString(int days) =>
-    _dateString(DateTime.now().subtract(Duration(days: days)));
+    _dateString(nowKst().subtract(Duration(days: days)));
 
 String _dateString(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-'

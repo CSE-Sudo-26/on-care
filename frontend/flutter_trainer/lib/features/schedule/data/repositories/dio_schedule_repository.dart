@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/active_polling_stream.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
@@ -64,7 +64,7 @@ class DioScheduleRepository implements ScheduleRepository {
   void dispose() => unawaited(_revisions.close());
 
   @override
-  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(DateTime.now()));
+  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(nowKst()));
 
   @override
   Stream<List<ScheduleSession>> watchDate(String date) =>

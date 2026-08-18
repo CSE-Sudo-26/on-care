@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -40,7 +40,7 @@ class _FakeMemoRepository implements TrainerMemoRepository {
       final existing = list.where((memo) => memo.insightId == insightId);
       if (existing.isNotEmpty) return existing.first;
     }
-    final now = DateTime.now().add(Duration(milliseconds: list.length));
+    final now = nowKst().add(Duration(milliseconds: list.length));
     final memo = TrainerMemo(
       id: 'memo-${list.length + 1}',
       body: body,
@@ -63,7 +63,7 @@ class _FakeMemoRepository implements TrainerMemoRepository {
     if (failWrites) throw const NetworkError();
     final list = _byClient[clientId]!;
     final index = list.indexWhere((memo) => memo.id == memoId);
-    final updated = list[index].copyWith(body: body, updatedAt: DateTime.now());
+    final updated = list[index].copyWith(body: body, updatedAt: nowKst());
     list[index] = updated;
     return updated;
   }
@@ -84,11 +84,11 @@ Future<void> _pumpDialog(
       overrides: <Override>[
         trainerMemoRepositoryProvider.overrideWithValue(repository),
       ],
-      child: MaterialApp(
-        locale: const Locale('ko'),
+      child: const MaterialApp(
+        locale: Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(
+        home: Scaffold(
           body: ClientMemoDialog(clientId: 'm1', clientName: '이지수'),
         ),
       ),

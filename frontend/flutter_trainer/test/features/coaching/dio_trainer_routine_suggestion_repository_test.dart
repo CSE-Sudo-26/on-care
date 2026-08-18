@@ -136,7 +136,7 @@ void main() {
 
   test('dismiss posts to the dismiss path', () async {
     when(
-      () => dio.post<Map<String, Object?>>(dismissPath, data: null),
+      () => dio.post<Map<String, Object?>>(dismissPath),
     ).thenAnswer(
       (_) async => _ok<Map<String, Object?>>(<String, Object?>{
         'id': 's1',
@@ -146,7 +146,7 @@ void main() {
     await repo.dismiss('s1');
 
     verify(
-      () => dio.post<Map<String, Object?>>(dismissPath, data: null),
+      () => dio.post<Map<String, Object?>>(dismissPath),
     ).called(1);
   });
 
