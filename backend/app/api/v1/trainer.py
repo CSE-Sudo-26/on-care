@@ -46,6 +46,8 @@ from app.schemas.trainer_api import (
     ClientCoachRequest, ClientDietEntryOut,
     DashboardCoachingSummaryOut,
     MemberHealthProfileOut, MemberHealthProfileUpdate,
+    ReportFeedbackOut,
+    ReportFeedbackSaveRequest,
     ReportSendRequest, ReportSummaryOut,
     RoutineAssignRequest, RoutineOut, RoutineHistoryOut,
     RoutineFeedbackRequest,
@@ -1322,6 +1324,51 @@ def trainer_client_report_summary(
         )
     return trainer_report_summary_service.generate_summary(
         db, trainer.id, member_id, _report_week(week_start or trainer_service.today_iso())
+    )
+
+
+@router.get(
+    "/trainer/clients/{member_id}/report/feedback",
+    response_model=ReportFeedbackOut,
+)
+def trainer_client_report_feedback(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    week_start: str | None = Query(None, description="YYYY-MM-DD (기본: 이번 주)"),
+) -> ReportFeedbackOut:
+    """그 주 리포트에 저장해 둔 피드백 초안. (#821)
+
+    저장한 적이 없으면 빈 본문으로 답한다 — 초안이 없는 것은 오류가 아니라
+    아직 쓰지 않은 상태이고, 화면은 그때 자동 생성 문구를 쓴다.
+    """
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.get_report_feedback(
+        db, trainer.id, member_id,
+        _report_week(week_start or trainer_service.today_iso()),
+    )
+
+
+@router.put(
+    "/trainer/clients/{member_id}/report/feedback",
+    response_model=ReportFeedbackOut,
+)
+def trainer_save_client_report_feedback(
+    member_id: str,
+    payload: ReportFeedbackSaveRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ReportFeedbackOut:
+    """피드백 초안을 저장한다. 같은 주에 다시 저장하면 덮어쓴다. (#821)
+
+    PUT 인 까닭: 입력창의 현재 문구로 그 주의 초안을 통째로 바꾸는 동작이라
+    여러 번 눌러도 결과가 같다. 전송(`/report/send`)과는 별개다 — 저장은
+    회원에게 아무것도 보내지 않는다.
+    """
+    _require_client(db, trainer.id, member_id)
+    week = _report_week(payload.week_start or trainer_service.today_iso())
+    return trainer_service.save_report_feedback(
+        db, trainer.id, member_id, week, payload.body
     )
 
 

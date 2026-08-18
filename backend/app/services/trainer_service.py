@@ -22,13 +22,14 @@ from app.core import clock
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
     TrainerClient, TrainerClientMemo, TrainerProfile, TrainerProgramDraft,
+    TrainerReportFeedback,
     TrainerReservation, TrainerReservationSlot, TrainerRoutine, TrainerSchedule,
     User,
 )
 from app.schemas.trainer_api import (
     ChatAttachmentOut, ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramDraftExercise,
     ProgramDraftSession,
-    ProgramItem, RoutineHistoryOut,
+    ProgramItem, ReportFeedbackOut, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
     TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
     TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportDayOut,
@@ -3014,6 +3015,72 @@ def _skipped_names(report: WeeklyReportOut) -> list[str]:
             if name and name not in names:
                 names.append(name)
     return names[:3]
+
+
+# ---- 리포트 피드백 초안 (#821) ----
+
+def get_report_feedback(
+    db: Session, trainer_id: str, member_id: str, week: date
+) -> ReportFeedbackOut:
+    """그 주에 저장해 둔 피드백 초안. 없으면 빈 본문으로 답한다.
+
+    404 를 쓰지 않는 이유: 초안이 없는 것은 오류가 아니라 아직 쓰지 않은
+    정상 상태다. 화면은 빈 본문을 받으면 자동 생성 문구를 그대로 쓴다.
+    """
+    row = _report_feedback_row(db, trainer_id, member_id, week)
+    return ReportFeedbackOut(
+        member_id=member_id,
+        week_start=week.isoformat(),
+        body=row.body if row else "",
+        updated_at=row.updated_at if row else None,
+    )
+
+
+def save_report_feedback(
+    db: Session, trainer_id: str, member_id: str, week: date, body: str
+) -> ReportFeedbackOut:
+    """그 주의 피드백 초안을 저장한다. 같은 주에 다시 저장하면 덮어쓴다.
+
+    편집기가 항목 단위 diff 가 아니라 입력창의 현재 전체 문구를 들고 있으므로
+    통째로 교체한다. 빈 문자열도 유효한 저장이다 — 트레이너가 지운 것을
+    "저장한 적 없음" 으로 되돌리면 다음에 열 때 지운 문구가 되살아난다.
+    """
+    row = _report_feedback_row(db, trainer_id, member_id, week)
+    now = datetime.now(timezone.utc)
+    if row is None:
+        row = TrainerReportFeedback(
+            id=f"rfb-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            week_start=week.isoformat(),
+            body=body,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(row)
+    else:
+        row.body = body
+        row.updated_at = now
+    db.commit()
+    db.refresh(row)
+    return ReportFeedbackOut(
+        member_id=member_id,
+        week_start=week.isoformat(),
+        body=row.body,
+        updated_at=row.updated_at,
+    )
+
+
+def _report_feedback_row(
+    db: Session, trainer_id: str, member_id: str, week: date
+) -> TrainerReportFeedback | None:
+    return db.scalar(
+        select(TrainerReportFeedback).where(
+            TrainerReportFeedback.trainer_id == trainer_id,
+            TrainerReportFeedback.member_id == member_id,
+            TrainerReportFeedback.week_start == week.isoformat(),
+        )
+    )
 
 
 # ---- 알림 수신 설정 ----
