@@ -10,7 +10,7 @@
 #   2. (회원)     reserve                그 자리를 보고 예약 · 재로그인 후에도 유지
 #   3. (트레이너) verify-schedule        예약이 만든 일정이 트레이너 화면에 보인다
 #   4. (회원)     cancel                 취소 · 좌석 복구 · 재예약 가능
-#   5. (트레이너) verify-schedule-removed 일정이 사라지고 좌석이 정원까지 복구
+#   5. (트레이너) verify-schedule-cancelled 일정이 취소 기록으로 남고 좌석 복구
 #   6. (회원)     edge-cases             중복·권한·정원 경쟁이 초과 예약을 못 만든다
 #   7. (트레이너) cleanup                이번 실행이 연 슬롯을 닫는다
 #
@@ -68,7 +68,7 @@ report_failure() {
 }
 trap report_failure EXIT
 
-for phase in create-slot reserve verify-schedule cancel verify-schedule-removed; do
+for phase in create-slot reserve verify-schedule cancel verify-schedule-cancelled; do
   failed_phase="$phase"
   case "$phase" in
     reserve | cancel) member "$phase" ;;

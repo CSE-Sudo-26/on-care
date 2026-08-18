@@ -284,7 +284,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await pumpApp(tester, locale: const Locale('ko'));
-    await tester.tap(find.byKey(const Key('coachingFab')));
+    // 플로팅 버튼을 감춘 뒤(#862) 같은 시트를 여는 자리는 홈의 AI 조언 배너다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('home-coaching-banner')),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -304,7 +307,10 @@ void main() {
     addTearDown(tester.view.resetPadding);
 
     await pumpApp(tester, locale: const Locale('ko'));
-    await tester.tap(find.byKey(const Key('coachingFab')));
+    // 플로팅 버튼을 감춘 뒤(#862) 같은 시트를 여는 자리는 홈의 AI 조언 배너다.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('home-coaching-banner')),
+    );
     await tester.pumpAndSettle();
 
     expect(

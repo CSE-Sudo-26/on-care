@@ -7,7 +7,7 @@
 ///  2. (회원) `reserve`
 ///  3. `verify-schedule`        — 그 예약이 만든 일정이 트레이너 일정에 보인다.
 ///  4. (회원) `cancel`
-///  5. `verify-schedule-removed`— 취소하면 그 일정이 사라진다.
+///  5. `verify-schedule-cancelled` — 취소하면 그 일정이 `취소` 기록으로 남는다.
 ///  6. `cleanup`                — 이번 실행이 연 슬롯을 닫는다.
 library;
 
@@ -176,32 +176,56 @@ void main() {
 
         E2eState.merge(<String, Object?>{'scheduleId': session['id']});
 
-      case 'verify-schedule-removed':
+      case 'verify-schedule-cancelled':
         final E2eState state = E2eState.read();
         final DateTime startsAt = state.slotStartsAt;
         final String scheduleId = state.require('scheduleId');
 
-        // 이번 실행이 만든 그 일정이 사라졌는가. "그 시각에 아무 일정도 없다" 가
-        // 아니라 **우리 것이 없다** 를 본다 — 앞선 실행의 잔여가 있어도 판정이 흔들리지
-        // 않아야 한다.
+        // 회원이 취소해도 트레이너 일정은 **지워지지 않고 취소 기록으로 남는다**
+        // (#871). 조용히 사라지면 "그 시간에 무슨 일이 있었나" 가 남지 않는다.
+        // 이번 실행이 만든 그 일정을 id 로 집어서 본다 — 앞선 실행의 잔여가 있어도
+        // 판정이 흔들리지 않아야 한다.
+        final List<Map<String, dynamic>> mine = <Map<String, dynamic>>[
+          for (final Map<String, dynamic> row
+              in await api.reservationSessionsAt(startsAt))
+            if (row['id'] == scheduleId) row,
+        ];
         expect(
-          <String>[
-            for (final Map<String, dynamic> row
-                in await api.reservationSessionsAt(startsAt))
-              row['id'] as String,
-          ],
-          isNot(contains(scheduleId)),
-          reason: '취소했는데 파생 일정이 서버에 남아 있습니다.',
+          mine,
+          hasLength(1),
+          reason: '취소 뒤에도 파생 일정이 기록으로 남아 있어야 합니다.',
+        );
+        expect(
+          mine.single['status'],
+          '취소',
+          reason: '회원이 취소한 일정의 상태가 `취소` 가 아닙니다.',
+        );
+        // 트레이너 사정의 취소와 고객 취소를 구분하지 못하면 나중에 "고객 취소가
+        // 몇 건이었나" 를 읽을 때 그대로 거짓이 된다.
+        expect(
+          mine.single['cancellation_source'],
+          'member',
+          reason: '취소 주체가 회원으로 기록되지 않았습니다.',
         );
 
         await bootSignedOut(tester);
         await loginAsTrainer(tester);
         await _openSchedule(tester, startsAt);
 
-        await pumpUntilAbsent(
+        // 줄은 그대로 있다. 사라지지 않는 것이 #871 의 핵심이다.
+        final Finder card = find.byKey(
+          ValueKey<String>('schedule-session-$scheduleId'),
+        );
+        await pumpUntil(tester, card, step: '취소된 일정 줄');
+
+        // 결말 기록은 카드를 펼쳐야 나온다. 상태 칩은 접힌 줄에도 있지만 라벨이
+        // 로케일에 따라 달라져, 키로 잡을 수 있는 쪽을 본다.
+        await tester.ensureVisible(card);
+        await tester.tap(card);
+        await pumpUntil(
           tester,
-          find.byKey(ValueKey<String>('schedule-session-$scheduleId')),
-          step: '취소된 일정 사라짐',
+          find.byKey(ValueKey<String>('session-ended-$scheduleId')),
+          step: '취소 기록 표시',
         );
 
         // 좌석도 함께 돌아왔는지. 예약 전 정원과 같아야 한다.

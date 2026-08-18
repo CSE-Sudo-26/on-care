@@ -17,6 +17,18 @@ import 'package:oncare/shared/widgets/oni_fab.dart';
 /// Persistent `Scaffold` hosting the bottom navigation bar. Icons and
 /// labels mirror the original React `BottomNav.tsx` (Home / 식단 /
 /// 운동 / My).
+/// AI 조언 플로팅 버튼을 회원 화면에 띄울지. (#862)
+///
+/// **기능을 지우지 않고 노출만 끈 상태다.** AI 조언 화면·라우트(`/ai-coach`)·
+/// 시트(`showCoachingSheet`)·배지(`coachingBadgeCountProvider`)는 모두 그대로고,
+/// 홈의 `AI 조언` 배너가 같은 시트를 여는 진입점으로 남아 있다.
+///
+/// 이 기능의 최종 위치와 역할이 정해지면 값을 `true` 로 되돌리는 것으로 복원된다.
+/// 지우지 않고 상수 하나로 둔 까닭이 그것이다 — 방향이 바뀌었을 때 다시 만드는
+/// 비용을 치르지 않기 위해서다. 설정 화면이나 feature flag 체계를 새로 들이지도
+/// 않는다: 지금 필요한 것은 "잠시 감춘다" 하나뿐이다.
+const bool kShowCoachingFab = false;
+
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, super.key});
 
@@ -104,12 +116,18 @@ class _MainShellState extends ConsumerState<MainShell>
       // showing a separate white strip above the navigation bar.
       extendBody: true,
       body: navigationShell,
-      floatingActionButton: OniFab(
-        key: const Key('coachingFab'),
-        // 배지는 시트가 실제로 보여 줄 카드 수를 따른다. 열어서 확인하면 내려간다.
-        badgeCount: ref.watch(coachingBadgeCountProvider),
-        onTap: () => showCoachingSheet(context, ref: ref),
-      ),
+      // AI 조언 진입점이 이 자리에 있을지가 아직 정해지지 않아 **노출만** 끈다
+      // (#862). 기능·라우트·provider 는 그대로라, 자리가 정해지면 이 상수를
+      // 되돌리는 것으로 복원된다 — 아래 [kShowCoachingFab] 주석 참고.
+      floatingActionButton: kShowCoachingFab
+          ? OniFab(
+              key: const Key('coachingFab'),
+              // 배지는 시트가 실제로 보여 줄 카드 수를 따른다. 열어서 확인하면
+              // 내려간다.
+              badgeCount: ref.watch(coachingBadgeCountProvider),
+              onTap: () => showCoachingSheet(context, ref: ref),
+            )
+          : null,
       bottomNavigationBar: SizedBox(
         height: barHeight + lift + effectiveBottomPadding,
         child: Center(
