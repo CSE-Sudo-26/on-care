@@ -1,3 +1,4 @@
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 
 abstract class AccountRepository {
@@ -9,16 +10,19 @@ abstract class AccountRepository {
   Future<void> deleteAccount();
 
   /// PUT /users/me/health-goals — 건강 목표(식단 일일 6종 + 주간 운동 3종).
+  ///
+  /// 인자를 주지 않으면 그 목표는 손대지 않는다. [GoalUpdate.clear] 를 주면
+  /// 목표를 해제한다 — 서버가 그 둘을 구분하므로 여기서도 구분해 보낸다.
   Future<UserProfile> updateHealthGoals({
-    int? dailyCalories,
-    int? dailySodiumMg,
-    int? dailySugarG,
-    int? dailyCarbsG,
-    int? dailyProteinG,
-    int? dailyFatG,
-    int? weeklyWorkoutGoal,
-    int? weeklyExerciseMinutesGoal,
-    int? weeklyBurnGoal,
+    GoalUpdate? dailyCalories,
+    GoalUpdate? dailySodiumMg,
+    GoalUpdate? dailySugarG,
+    GoalUpdate? dailyCarbsG,
+    GoalUpdate? dailyProteinG,
+    GoalUpdate? dailyFatG,
+    GoalUpdate? weeklyWorkoutGoal,
+    GoalUpdate? weeklyExerciseMinutesGoal,
+    GoalUpdate? weeklyBurnGoal,
   });
 
   /// POST /users/me/onboarding — first-run setup. All fields optional

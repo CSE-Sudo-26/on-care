@@ -8,6 +8,7 @@ import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
+import 'package:oncare/features/account/domain/entities/goal_update.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
@@ -565,42 +566,21 @@ class _GoalsForm extends ConsumerStatefulWidget {
 }
 
 class _GoalsFormState extends ConsumerState<_GoalsForm> {
-  late final TextEditingController _kcal = _ctl(
-    widget.initial.dailyCalories,
-    UserProfile.defaultDailyCalories,
-  );
-  late final TextEditingController _sodium = _ctl(
-    widget.initial.dailySodiumMg,
-    UserProfile.defaultDailySodiumMg,
-  );
-  late final TextEditingController _sugar = _ctl(
-    widget.initial.dailySugarG,
-    UserProfile.defaultDailySugarG,
-  );
-  late final TextEditingController _carbs = _ctl(
-    widget.initial.dailyCarbsG,
-    UserProfile.defaultDailyCarbsG,
-  );
+  late final TextEditingController _kcal = _ctl(widget.initial.dailyCalories);
+  late final TextEditingController _sodium = _ctl(widget.initial.dailySodiumMg);
+  late final TextEditingController _sugar = _ctl(widget.initial.dailySugarG);
+  late final TextEditingController _carbs = _ctl(widget.initial.dailyCarbsG);
   late final TextEditingController _protein = _ctl(
     widget.initial.dailyProteinG,
-    UserProfile.defaultDailyProteinG,
   );
-  late final TextEditingController _fat = _ctl(
-    widget.initial.dailyFatG,
-    UserProfile.defaultDailyFatG,
-  );
+  late final TextEditingController _fat = _ctl(widget.initial.dailyFatG);
   late final TextEditingController _workouts = _ctl(
     widget.initial.weeklyWorkoutGoal,
-    UserProfile.defaultWeeklyWorkoutGoal,
   );
   late final TextEditingController _minutes = _ctl(
     widget.initial.weeklyExerciseMinutesGoal,
-    UserProfile.defaultWeeklyExerciseMinutesGoal,
   );
-  late final TextEditingController _burn = _ctl(
-    widget.initial.weeklyBurnGoal,
-    UserProfile.defaultWeeklyBurnGoal,
-  );
+  late final TextEditingController _burn = _ctl(widget.initial.weeklyBurnGoal);
   bool _saving = false;
 
   /// 칼로리 칸이 탄단지에서 계산돼 채워졌는가. 그 칸 아래 안내를 켜는 값이라,
@@ -610,8 +590,14 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   /// 들어온 것만으로 값이 달라지면 안 된다.
   bool _kcalFromMacros = false;
 
-  static TextEditingController _ctl(int? value, int fallback) =>
-      TextEditingController(text: '${value ?? fallback}');
+  /// 저장된 값을 그대로 담는다. **없으면 빈 칸으로 둔다.**
+  ///
+  /// 예전에는 기본값을 채웠다. 그러면 목표를 세운 적 없는 회원이 화면을 열고
+  /// 저장만 해도 기본값이 진짜 목표로 굳는다 — `null` 은 *미설정 또는 목표
+  /// 해제*라는 계약이 화면 한 번 열었다는 이유로 깨진다(PR #900 리뷰).
+  /// 기본값은 이제 [_SheetField.hintText] 로만 비친다.
+  static TextEditingController _ctl(int? value) =>
+      TextEditingController(text: value == null ? '' : '$value');
 
   /// 탄·단·지 1g 의 열량(kcal). 식품 영양표시가 쓰는 Atwater 계수다.
   static const int _kcalPerCarbG = 4;
@@ -717,16 +703,19 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
     try {
       final UserProfile updatedProfile = await ref
           .read(accountRepositoryProvider)
+          // 아홉 칸 모두 이 화면이 들고 있으므로 아홉 개를 다 보낸다. 빈 칸은
+          // `GoalUpdate(null)` 로 나가 서버에서 목표 해제가 된다 — 회원이 지운
+          // 목표는 지워져야 한다.
           .updateHealthGoals(
-            dailyCalories: _val(_kcal),
-            dailySodiumMg: _val(_sodium),
-            dailySugarG: _val(_sugar),
-            dailyCarbsG: _val(_carbs),
-            dailyProteinG: _val(_protein),
-            dailyFatG: _val(_fat),
-            weeklyWorkoutGoal: _val(_workouts),
-            weeklyExerciseMinutesGoal: _val(_minutes),
-            weeklyBurnGoal: _val(_burn),
+            dailyCalories: GoalUpdate(_val(_kcal)),
+            dailySodiumMg: GoalUpdate(_val(_sodium)),
+            dailySugarG: GoalUpdate(_val(_sugar)),
+            dailyCarbsG: GoalUpdate(_val(_carbs)),
+            dailyProteinG: GoalUpdate(_val(_protein)),
+            dailyFatG: GoalUpdate(_val(_fat)),
+            weeklyWorkoutGoal: GoalUpdate(_val(_workouts)),
+            weeklyExerciseMinutesGoal: GoalUpdate(_val(_minutes)),
+            weeklyBurnGoal: GoalUpdate(_val(_burn)),
           );
       if (!mounted) return;
       ref.read(profileProvider.notifier).applyUpdatedProfile(updatedProfile);
@@ -769,6 +758,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _kcal,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultDailyCalories}',
           helperText: _kcalFromMacros ? l.myGoalCaloriesFromMacros : null,
           // 회원이 직접 고친 순간부터는 계산된 값이 아니다.
           onChanged: (_) => setState(() => _kcalFromMacros = false),
@@ -779,6 +769,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _sodium,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultDailySodiumMg}',
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -786,6 +777,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _sugar,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultDailySugarG}',
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -794,7 +786,9 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _carbs,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
-          hintText: split == null ? null : '${split.carbs}',
+          hintText: split == null
+              ? '${UserProfile.defaultDailyCarbsG}'
+              : '${split.carbs}',
           onChanged: (_) => _syncCaloriesFromMacros(),
         ),
         const SizedBox(height: 12),
@@ -804,7 +798,9 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _protein,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
-          hintText: split == null ? null : '${split.protein}',
+          hintText: split == null
+              ? '${UserProfile.defaultDailyProteinG}'
+              : '${split.protein}',
           onChanged: (_) => _syncCaloriesFromMacros(),
         ),
         const SizedBox(height: 12),
@@ -814,7 +810,9 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _fat,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
-          hintText: split == null ? null : '${split.fat}',
+          hintText: split == null
+              ? '${UserProfile.defaultDailyFatG}'
+              : '${split.fat}',
           onChanged: (_) => _syncCaloriesFromMacros(),
         ),
         if (split != null && !_macrosMatchSuggestion) ...<Widget>[
@@ -835,6 +833,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _workouts,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultWeeklyWorkoutGoal}',
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -842,6 +841,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _minutes,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultWeeklyExerciseMinutesGoal}',
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -849,6 +849,7 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _burn,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: '${UserProfile.defaultWeeklyBurnGoal}',
         ),
       ]),
       const SizedBox(height: 16),
