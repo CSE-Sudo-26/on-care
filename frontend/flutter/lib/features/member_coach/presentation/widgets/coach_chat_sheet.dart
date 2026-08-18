@@ -174,6 +174,8 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                       children: <Widget>[
                         Text(
                           widget.trainerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -191,12 +193,18 @@ class _TrainerChatPageState extends ConsumerState<TrainerChatPage> {
                               child: SizedBox(width: 7, height: 7),
                             ),
                             const SizedBox(width: 5),
-                            Text(
-                              l.coachChatSubtitle,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.mutedForeground,
+                            // 부제는 로케일마다 길이가 다르다 — 영어가 한국어보다
+                            // 훨씬 길어 고정 폭으로 두면 그대로 넘친다(#840).
+                            Flexible(
+                              child: Text(
+                                l.coachChatSubtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.mutedForeground,
+                                ),
                               ),
                             ),
                           ],
