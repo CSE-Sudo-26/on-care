@@ -352,10 +352,9 @@ class _Header extends ConsumerWidget {
             alignment: WrapAlignment.end,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표.
-            // 같은 무게로만 서면 어느 것이 이 화면의 주된 동작인지 읽히지 않는다.
-            // 끝의 후속 관리 · 메모는 둘 다 내가 남기는 기록이라 한 쌍으로 묶어
-            // 하양을 잇는다.
+            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표 · 후속 관리 ·
+            // 메모. 같은 무게로만 서면 어느 것이 이 화면의 주된 동작인지 읽히지
+            // 않는다.
             children: <Widget>[
               // 이 회원을 보다가 바로 이어지는 두 자리. 예전에는 식단·운동을
               // 다 읽고도 메시지 탭·프로그램 탭으로 건너가 같은 사람을 목록에서
@@ -399,6 +398,7 @@ class _Header extends ConsumerWidget {
               ActionButton(
                 label: l.clientTrainerMemo,
                 icon: Icons.edit_note_outlined,
+                primary: true,
                 onPressed: () => showClientMemoDialog(
                   context,
                   clientId: client.id,
