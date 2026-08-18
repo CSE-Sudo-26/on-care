@@ -6,8 +6,11 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
+import 'package:oncare/features/dashboard/presentation/widgets/dashboard_content.dart';
+import 'package:oncare/features/diet/presentation/pages/diet_record_page.dart';
 import 'package:oncare/features/diet/presentation/widgets/diet_flows.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
 import 'package:oncare/features/exercise/presentation/widgets/exercise_flows.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/gen/l10n/app_localizations.dart';
@@ -51,7 +54,9 @@ class _MainShellState extends ConsumerState<MainShell>
     if (_lastIndex == nextIndex) return;
     _lastIndex = nextIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _refreshBranch(nextIndex);
+      if (!mounted) return;
+      _refreshBranch(nextIndex);
+      _resetTransientUiState(nextIndex);
     });
   }
 
@@ -78,6 +83,26 @@ class _MainShellState extends ConsumerState<MainShell>
         ref.invalidate(exerciseWeekProvider);
         ref.invalidate(coachRoutinesProvider);
         ref.invalidate(coachSessionsProvider);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /// 하단 탭을 다시 들어올 때 임시 UI 상태만 기본값으로 되돌린다(#861). 실제
+  /// 기록·서버 데이터·설정·트레이너 프로그램은 각 탭의 provider 가 따로 들고
+  /// 있어 여기서 건드리지 않는다 — 탭마다 무엇을 되돌릴지는 그 탭의 페이지가
+  /// 정의한 `resetXxxTransientUiState` 가 안다.
+  void _resetTransientUiState(int index) {
+    switch (index) {
+      case 0:
+        resetDashboardTransientUiState(ref);
+        break;
+      case 1:
+        resetDietTransientUiState(ref);
+        break;
+      case 2:
+        resetExerciseTransientUiState(ref);
         break;
       default:
         break;
@@ -187,8 +212,12 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 
   void _onTap(int index) {
+    // 다른 탭에서 넘어올 때만 "재진입"이다 — 이미 보고 있는 탭을 다시 누른
+    // 것뿐이면 사용자가 탭을 떠난 적이 없으므로 임시 UI 상태를 그대로 둔다.
+    final bool isReentry = index != navigationShell.currentIndex;
     _lastIndex = index;
     _refreshBranch(index);
+    if (isReentry) _resetTransientUiState(index);
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,

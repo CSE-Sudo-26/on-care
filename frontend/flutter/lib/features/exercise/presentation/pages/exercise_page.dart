@@ -25,21 +25,37 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/services/exercise_burn_goal_provider.dart';
 import 'package:oncare/shared/widgets/modals/schedule_calendar_sheet.dart';
 
+/// 헬스장 서브탭에서 고른 예약 카드 — 탭을 벗어났다가 운동 탭에 다시 들어오면
+/// 선택이 풀려야 하는 임시 UI 상태라 Riverpod 에 둔다(#861). 실제 예약
+/// 데이터(`myReservationsProvider` 등)와는 분리된 값이다.
+final exerciseSelectedReservationSlotProvider = StateProvider<String?>(
+  (ref) => null,
+  name: 'exerciseSelectedReservationSlot',
+);
+
+/// 운동 탭 재진입 시 초기화할 임시 UI 상태. 날짜 선택·주차 이동은 그대로
+/// 두고(현재 UX 상 유지가 자연스럽다), 선택된 예약 카드와 `운동 현황` 기간
+/// 토글만 기본값으로 되돌린다(#861).
+void resetExerciseTransientUiState(WidgetRef ref) {
+  ref.read(exerciseSelectedReservationSlotProvider.notifier).state = null;
+  ref.read(exerciseActivityPeriodProvider.notifier).state =
+      kExerciseActivityPeriodDefault;
+}
+
 /// 운동 tab, rebuilt to the On-Care Figma redesign — a 운동 기록 / 헬스장
 /// sub-tab switcher over a weekly summary, stacked activity chart, AI routine,
 /// today's logs, and the gym card.
-class ExercisePage extends StatefulWidget {
+class ExercisePage extends ConsumerStatefulWidget {
   const ExercisePage({this.initialSubTab = 0, super.key});
 
   final int initialSubTab;
 
   @override
-  State<ExercisePage> createState() => _ExercisePageState();
+  ConsumerState<ExercisePage> createState() => _ExercisePageState();
 }
 
-class _ExercisePageState extends State<ExercisePage> {
+class _ExercisePageState extends ConsumerState<ExercisePage> {
   late int _subTab = widget.initialSubTab; // 0 = 운동 기록, 1 = 헬스장
-  String? _slot;
 
   @override
   void didUpdateWidget(covariant ExercisePage oldWidget) {
@@ -88,9 +104,15 @@ class _ExercisePageState extends State<ExercisePage> {
                   const _RecordTab()
                 else
                   GymTab(
-                    selectedSlot: _slot,
-                    onSlot: (String s) =>
-                        setState(() => _slot = _slot == s ? null : s),
+                    selectedSlot: ref.watch(
+                      exerciseSelectedReservationSlotProvider,
+                    ),
+                    onSlot: (String s) {
+                      final StateController<String?> notifier = ref.read(
+                        exerciseSelectedReservationSlotProvider.notifier,
+                      );
+                      notifier.state = notifier.state == s ? null : s;
+                    },
                     onFind: () => showGymLocatorSheet(context),
                   ),
               ],
@@ -884,10 +906,22 @@ class _ChartPeriod {
   final int todayIndex;
 }
 
+/// `_ActivityStatus` 의 기본 기간 — 0 = 오늘, 1 = 이번 주, 2 = 이번 달.
+/// 운동 탭 재진입 시 이 값으로 되돌아간다(#861).
+const int kExerciseActivityPeriodDefault = 1;
+
+/// "운동 현황" 의 오늘/이번 주/이번 달 토글 — 탭을 벗어났다가 운동 탭에 다시
+/// 들어오면 기본값으로 되돌아가야 하는 임시 UI 상태라 Riverpod 에 둔다(#861).
+/// 실제 운동 기록(`exerciseWeekProvider` 등)과는 분리된 값이다.
+final exerciseActivityPeriodProvider = StateProvider<int>(
+  (ref) => kExerciseActivityPeriodDefault,
+  name: 'exerciseActivityPeriod',
+);
+
 /// "운동 현황" with an 오늘 / 이번 주 / 이번 달 segmented switcher over the same
 /// stacked-bar chart. All three views share the chart's legend and styling so
 /// the section stays visually consistent with the rest of the tab.
-class _ActivityStatus extends StatefulWidget {
+class _ActivityStatus extends ConsumerStatefulWidget {
   const _ActivityStatus({required this.week});
 
   /// Weekly data with today's checked AI routines already folded in
@@ -896,12 +930,10 @@ class _ActivityStatus extends StatefulWidget {
   final ExerciseWeek week;
 
   @override
-  State<_ActivityStatus> createState() => _ActivityStatusState();
+  ConsumerState<_ActivityStatus> createState() => _ActivityStatusState();
 }
 
-class _ActivityStatusState extends State<_ActivityStatus> {
-  int _period = 1; // 0 = 오늘, 1 = 이번 주, 2 = 이번 달
-
+class _ActivityStatusState extends ConsumerState<_ActivityStatus> {
   /// 오늘 요일 인덱스(0=월 … 6=일)를 이번 주 범위로 클램프. 홈 주간추이와 같은
   /// 실제 오늘을 가리키도록 해, '오늘=일 고정' 문제를 없앤다.
   int _weekTodayIndex(int n) =>
@@ -1007,6 +1039,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    final int period = ref.watch(exerciseActivityPeriodProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1033,16 +1066,17 @@ class _ActivityStatusState extends State<_ActivityStatus> {
             ),
             Flexible(
               child: _PeriodToggle(
-                active: _period,
+                active: period,
                 labels: <String>[l.exToday, l.exThisWeek, l.exThisMonth],
-                onChanged: (int i) => setState(() => _period = i),
+                onChanged: (int i) =>
+                    ref.read(exerciseActivityPeriodProvider.notifier).state = i,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         // 오늘 = 도넛(카테고리 비중), 이번 주/이번 달 = 막대차트.
-        if (_period == 0)
+        if (period == 0)
           _TodayDonut(
             segs: <_DonutSeg>[
               _DonutSeg(
@@ -1069,14 +1103,14 @@ class _ActivityStatusState extends State<_ActivityStatus> {
         else
           Builder(
             builder: (BuildContext context) {
-              final _ChartPeriod data = _dataFor(_period);
+              final _ChartPeriod data = _dataFor(period);
               return _ActivityChart(
                 bars: data.bars,
                 dayLabels: data.labels,
                 todayIndex: data.todayIndex,
                 // 주 ↔ 월 전환은 같은 위젯이 데이터만 갈아끼우므로,
                 // 기간을 재생 키로 넘겨 막대를 다시 자라게 한다.
-                replayKey: _period,
+                replayKey: period,
               );
             },
           ),

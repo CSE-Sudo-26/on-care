@@ -15,6 +15,7 @@ import 'package:oncare/features/dashboard/domain/repositories/dashboard_reposito
 import 'package:oncare/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare/features/diet/domain/repositories/diet_repository.dart';
 import 'package:oncare/features/diet/presentation/controllers/diet_controller.dart';
+import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
@@ -596,5 +597,171 @@ void main() {
     ]) {
       expect(hangul.hasMatch(s), isFalse, reason: s);
     }
+  });
+
+  // ───────────────────────────── 하단 탭 재진입 임시 UI 상태 초기화 (#861) ──
+
+  testWidgets('식단 탭 재진입 시 영양 요약이 오늘 기본값으로 복원된다 (#861)', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+
+    // 이번 주로 바꾸면 하루 요약 대신 기간 뷰가 보인다.
+    await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DietPeriodView), findsOneWidget);
+    expect(find.byKey(const Key('nutrition-summary-card')), findsNothing);
+
+    // 다른 탭으로 이동했다가 식단 탭에 다시 들어온다.
+    await tester.tap(find.text('MY').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+
+    // 오늘 기본값으로 복원 — 기간 뷰 대신 하루 요약 카드가 다시 보인다.
+    expect(find.byType(DietPeriodView), findsNothing);
+    expect(find.byKey(const Key('nutrition-summary-card')), findsOneWidget);
+  });
+
+  testWidgets('식단 탭 재진입 후에도 실제 식단 기록은 유지된다 (#861)', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mealCard-mock-breakfast')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('MY').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+
+    // 임시 UI 상태(기간 토글)는 초기화돼도 실제 식단 기록은 그대로 남는다.
+    expect(find.byKey(const Key('mealCard-mock-breakfast')), findsOneWidget);
+  });
+
+  testWidgets('운동 탭 재진입 시 운동 현황 기간 토글이 기본값으로 복원된다 (#861)', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    final exerciseDestination = find.ancestor(
+      of: find.byIcon(Icons.fitness_center_outlined),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(exerciseDestination);
+    await tester.pumpAndSettle();
+
+    // 이번 달로 바꾼다 — 이번 달 뷰에만 붙는 키로 전환 여부를 확인한다.
+    final monthlyToggle = find.text('이번 달');
+    await tester.ensureVisible(monthlyToggle);
+    await tester.tap(monthlyToggle);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsOneWidget);
+
+    await tester.tap(find.text('MY').first);
+    await tester.pumpAndSettle();
+    await tester.tap(exerciseDestination);
+    await tester.pumpAndSettle();
+
+    // 기본값(이번 주)으로 복원 — 이번 달 전용 차트가 더 이상 보이지 않는다.
+    expect(find.byKey(const Key('exerciseMonthlyDailyChart')), findsNothing);
+  });
+
+  testWidgets('운동 탭 재진입 후에도 저장된 운동 기록·트레이너 프로그램은 유지된다 (#861)', (tester) async {
+    final repository = _CountingMemberCoachRepository();
+    await pumpApp(
+      tester,
+      locale: const Locale('ko'),
+      memberCoachRepository: repository,
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(OncareApp)),
+    );
+
+    final exerciseDestination = find.ancestor(
+      of: find.byIcon(Icons.fitness_center_outlined),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(exerciseDestination);
+    await tester.pumpAndSettle();
+
+    final beforeWeek = await container.read(exerciseWeekProvider.future);
+    final beforeRoutines = await container.read(coachRoutinesProvider.future);
+
+    await tester.tap(find.text('MY').first);
+    await tester.pumpAndSettle();
+    await tester.tap(exerciseDestination);
+    await tester.pumpAndSettle();
+
+    final afterWeek = await container.read(exerciseWeekProvider.future);
+    final afterRoutines = await container.read(coachRoutinesProvider.future);
+
+    // 탭 재진입으로 임시 UI 상태만 초기화될 뿐, 저장된 운동 기록과 트레이너
+    // 프로그램(AI 추천 루틴) 데이터는 그대로다.
+    expect(afterWeek.sessions.length, beforeWeek.sessions.length);
+    expect(
+      afterRoutines.map((CoachRoutine r) => r.id),
+      beforeRoutines.map((CoachRoutine r) => r.id),
+    );
+  });
+
+  testWidgets('홈 탭 재진입 시 식단·영양 카드 선택 지표가 기본값(칼로리)으로 복원된다 (#861)', (
+    tester,
+  ) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+    final AppLocalizations ko = lookupAppLocalizations(const Locale('ko'));
+
+    // 홈이 첫 화면이다 — 나트륨 카드를 선택한다.
+    await tester.tap(find.text(ko.dietSodium).first);
+    await tester.pumpAndSettle();
+    expect(find.text(ko.homeWeeklyMetricTrend(ko.dietSodium)), findsOneWidget);
+
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('홈').first);
+    await tester.pumpAndSettle();
+
+    // 기본값(칼로리)으로 복원된다.
+    expect(
+      find.text(ko.homeWeeklyMetricTrend(ko.dashboardMetricCalories)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('여러 번 탭을 오가도 식단 탭 재진입 정책이 일관되게 동작한다 (#861)', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    for (int i = 0; i < 3; i++) {
+      await tester.tap(find.text('식단').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DietPeriodView), findsOneWidget);
+
+      await tester.tap(find.text('MY').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('식단').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(DietPeriodView), findsNothing);
+    }
+  });
+
+  testWidgets('이미 보고 있는 탭을 다시 눌러도 임시 UI 상태는 초기화되지 않는다 (#861)', (tester) async {
+    await pumpApp(tester, locale: const Locale('ko'));
+
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('diet-period-tab-week')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DietPeriodView), findsOneWidget);
+
+    // 다른 탭으로 이동하지 않고 이미 보고 있는 식단 탭을 다시 누른다.
+    await tester.tap(find.text('식단').first);
+    await tester.pumpAndSettle();
+
+    // 탭을 떠난 적이 없으므로 선택해 둔 '이번 주' 가 그대로 남는다.
+    expect(find.byType(DietPeriodView), findsOneWidget);
   });
 }
