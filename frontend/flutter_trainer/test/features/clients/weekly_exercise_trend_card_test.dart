@@ -33,6 +33,9 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        // 카드 문구가 l10n 에서 오므로 로케일을 고정한다 — 비워 두면 실행
+        // 환경의 시스템 로케일에 따라 영어로 그려진다.
+        locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(

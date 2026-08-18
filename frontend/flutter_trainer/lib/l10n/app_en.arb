@@ -111,49 +111,9 @@
   "dashAttentionClients": "Needs attention",
   "dashNoIssues": "No issues",
   "dashCheckSodiumCompletion": "Check diet & completion",
-  "dashWeeklyCompletion": "Weekly session completion",
-  "dashAveragePercent": "Avg {percent}%",
-  "@dashAveragePercent": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "dashNoRecordsThisWeek": "No records this week yet",
   "dashAiSummaryTitle": "AI coaching summary",
   "dashToday": "Today",
   "dashAiNoClients": "No clients yet. Once you add one, I'll gather their diet and workout data and point out what to coach.",
-  "dashAiUnread": "{count} clients are waiting for a reply. Check their chats first, then adjust today's routines.",
-  "@dashAiUnread": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dashAiSodium": "{over} of your {total} clients went over their sodium target this week. Suggest a low-sodium diet and cardio-led routines.",
-  "@dashAiSodium": {
-    "placeholders": {
-      "total": {
-        "type": "int"
-      },
-      "over": {
-        "type": "int"
-      }
-    }
-  },
-  "dashAiLowCompletion": "{count} clients are below {threshold}% weekly completion. Ease the intensity and rebuild the habit.",
-  "@dashAiLowCompletion": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "threshold": {
-        "type": "int"
-      }
-    }
-  },
   "dashAiAllOnTrack": "All {total} clients are within target. Hold this intensity and raise next week's goal.",
   "dashAiLoading": "Reviewing diet, workouts, and recent conversations…",
   "dashAiLoadFailed": "Couldn't load the detailed coaching summary.",
@@ -274,6 +234,23 @@
   "clientsAddFailed": "Couldn't add the client. Please try again",
   "memberHealthLoadFailed": "Couldn't load the member profile. Please try again",
   "memberHealthSaveFailed": "Couldn't save the member profile. Please try again",
+  "memberHealthTitle": "Body and goals",
+  "memberHealthSaving": "Saving…",
+  "memberHealthGender": "Gender",
+  "memberHealthGenderUnset": "Not set",
+  "memberHealthGenderMale": "Male",
+  "memberHealthGenderFemale": "Female",
+  "memberHealthGenderOther": "Other",
+  "memberHealthHeight": "Height (cm)",
+  "memberHealthWeight": "Weight (kg)",
+  "memberHealthConditions": "Conditions and cautions",
+  "memberHealthGoals": "Member goals",
+  "memberHealthWeeklyGoal": "Weekly exercise goal",
+  "memberHealthWeeklyCount": "Sessions",
+  "memberHealthWeeklyMinutes": "Minutes",
+  "memberHealthWeeklyBurn": "Calories burned",
+  "memberHealthRange": "Enter a value between {min} and {max}.",
+  "@memberHealthRange": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}},
   "clientsDuplicateName": "A client with that name already exists",
   "clientsAddTitle": "Add a client",
   "clientsNameLabel": "Client name",
@@ -290,32 +267,11 @@
   "metricCarbs": "Carbs",
   "metricProtein": "Protein",
   "metricFat": "Fat",
-  "clientWeeklyReport": "Weekly report",
-  "clientAskAi": "Ask AI",
   "clientActive": "Active",
   "clientDormant": "Dormant",
   "clientStatusChangeFailed": "Couldn't change the status. Please try again.",
   "clientClosePanel": "Close panel",
   "clientChat": "Chat",
-  "clientChatWithUnread": "Chat with {name}, {count} unread",
-  "@clientChatWithUnread": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "clientChatWith": "Chat with {name}",
-  "@clientChatWith": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "chatTooLong": "Message is too long (2000 characters max)",
   "chatSendFailed": "Couldn't send the message. Please try again",
   "chatPdfOpenFailed": "Couldn't open the PDF. Please try again",
@@ -454,34 +410,6 @@
       }
     }
   },
-  "dietSodiumTrend": "Sodium over the last 7 days",
-  "dietAverageMg": "Avg {value}mg",
-  "@dietAverageMg": {
-    "placeholders": {
-      "value": {
-        "type": "int"
-      }
-    }
-  },
-  "dietSodiumOverDays": "Over the {target}mg target on {days} of the last 7 days.",
-  "@dietSodiumOverDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      },
-      "target": {
-        "type": "int"
-      }
-    }
-  },
-  "dietSodiumAllWithin": "Under the {target}mg target every day this week. Nice!",
-  "@dietSodiumAllWithin": {
-    "placeholders": {
-      "target": {
-        "type": "int"
-      }
-    }
-  },
   "dietSodiumValue": "Sodium {value}mg",
   "@dietSodiumValue": {
     "placeholders": {
@@ -575,19 +503,15 @@
     }
   },
   "reportsScheduleWarning": "This week's schedule didn't load, so session counts may be missing",
-  "reportsSessionsThisWeek": "Sessions this week",
   "unitTimes": "",
-  "reportsCompletionRate": "{rate}% completed",
-  "@reportsCompletionRate": {
-    "placeholders": {
-      "rate": {
-        "type": "int"
-      }
-    }
-  },
-  "reportsProgramReady": "Programs ready",
-  "reportsSessionsWithRoutine": "Sessions with a routine",
-  "reportsActiveClients": "Active clients",
+  "unitMinutes": "min",
+  "unitKcal": "kcal",
+  "clientTrendTitle": "This week's exercise trend",
+  "clientTrendLoadFailed": "Couldn't load the weekly exercise trend. Please try again",
+  "clientTrendWorkoutCount": "Workouts",
+  "clientTrendWorkoutMinutes": "Exercise time",
+  "clientTrendCaloriesBurned": "Calories burned",
+  "clientTrendSegmentTime": "Time",
   "reportsPickClient": "Pick a client",
   "reportsClientWeekly": "{name}'s weekly report",
   "@reportsClientWeekly": {
@@ -609,8 +533,6 @@
   "reportsDietTrend": "Weekly diet trend",
   "reportsSodiumOverInline": "{days} days over sodium",
   "@reportsSodiumOverInline": {"placeholders": {"days": {"type": "int"}}},
-  "reportsMoreExercises": "+{count} more",
-  "@reportsMoreExercises": {"placeholders": {"count": {"type": "int"}}},
   "workoutDoneOfTotal": "{done} of {total} done",
   "@workoutDoneOfTotal": {"placeholders": {"total": {"type": "int"}, "done": {"type": "int"}}},
   "chartNoRecord": "Not logged",
@@ -647,7 +569,6 @@
   "reportBodyEncourage": "Let's focus on just that one thing next week. I'll adjust your routine and send it over.",
   "reportBodyNoRecords": "There's nothing logged this week, so nothing to sum up. Let's plan next week's start together.",
   "schedTitle": "Schedule",
-  "schedSent": "Sent",
   "schedDeleteTitle": "Delete session",
   "schedDeleteConfirm": "Delete the {time} session with {name}?",
   "@schedDeleteConfirm": {
@@ -722,7 +643,6 @@
   "progEmpty": "No program planned yet",
   "progEmptyHint": "Build one in the AI routine tab, or agree on it over chat first.",
   "schedEmptySlotShort": "Empty",
-  "schedSentToClient": "Sent to the client app",
   "schedSentTo": "Sent to {name}",
   "@schedSentTo": {
     "placeholders": {
@@ -742,7 +662,6 @@
       }
     }
   },
-  "schedSendUnsupported": "Completed program delivery is not supported by the API yet.",
   "slotCapacityInvalid": "Capacity must be between 1 and 100.",
   "slotPastTime": "Booking slots can only be opened for future times.",
   "slotOpened": "Booking slot opened.",
@@ -907,16 +826,11 @@
   "coachSubtitle": "Create, assign, and manage exercise programs for each member",
   "coachMemberPrograms": "Programs by member",
   "coachMemberSummary": "Member summary",
-  "reportsFeedbackComplete": "Feedback complete",
-  "reportsFeedbackPending": "Feedback pending",
   "reportsDataInsufficient": "Insufficient data",
   "reportsThisWeek": "This week",
   "coachSendFailed": "Couldn't send. Please try again",
-  "coachCustomRoutine": "AI custom routine",
-  "coachNeedOneExercise": "Add at least one exercise",
   "coachScheduleFailed": "Couldn't add it to the schedule. Please try again",
   "coachNoClients": "No clients yet",
-  "coachTodayDiet": "Today's meals",
   "coachRecommended": "AI suggestions",
   "coachBackToList": "Back to suggestions",
   "coachReviewed": "AI-generated, reviewed by you",
@@ -947,8 +861,6 @@
       }
     }
   },
-  "coachVerdictSodium": "AI: sodium over target → favour more cardio",
-  "coachVerdictBalanced": "AI: meals well balanced → keep a strength-led routine",
   "coachRequestCustom": "Ask AI for a custom routine",
   "coachRequestBlurb": "We'll analyse {name}'s data, draft a recovery and a push option, and let you compare and edit them here.",
   "@coachRequestBlurb": {
@@ -958,19 +870,8 @@
       }
     }
   },
-  "coachTapToEdit": "Tap to edit",
-  "coachAddExerciseManually": "+ Add an exercise",
-  "coachExerciseNameHint": "Exercise (e.g. leg press, 3 sets)",
   "coachSentToClient": "Sent to {name}",
   "@coachSentToClient": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "coachReviewAndSend": "Reviewed · send to {name}",
-  "@coachReviewAndSend": {
     "placeholders": {
       "name": {
         "type": "String"
@@ -1305,7 +1206,6 @@
   "searchGoSchedule": "Picking one jumps to their next booked day",
   "searchGoCoaching": "Picking one loads them into AI coaching",
   "searchGoReport": "Picking one opens their weekly report",
-  "searchDetailNoIssues": "Nothing to act on today",
   "searchDetailUnread": "{count} awaiting a reply",
   "@searchDetailUnread": {
     "placeholders": {
@@ -1345,7 +1245,6 @@
       }
     }
   },
-  "searchDetailNoRoutine": "No routine sent yet",
   "searchDetailCompletion": "{percent}% completion this week",
   "@searchDetailCompletion": {
     "placeholders": {
@@ -1354,7 +1253,6 @@
       }
     }
   },
-  "searchDetailNoRecord": "Nothing recorded this week",
   "routineFeedbackTitle": "Workout feedback",
   "routineFeedbackHint": "Write coaching feedback for the member",
   "routineFeedbackWrite": "Write feedback",
@@ -1383,8 +1281,6 @@
   "messagesFilterUnreadCount": "Unread {count}",
   "@messagesFilterUnreadCount": {"placeholders": {"count": {"type": "int"}}},
   "messagesBackToList": "Conversation list",
-  "messagesProgram": "Program",
-  "messagesSchedule": "Schedule",
   "messagesRecentWorkout": "Recent workout {value}",
   "@messagesRecentWorkout": {"placeholders": {"value": {"type": "String"}}},
   "messagesNoCompletion": "No completion record this week",
@@ -1394,7 +1290,6 @@
   "messagesSelectPrompt": "Select a client from the list to start a conversation.",
   "clientQuickMessages": "Messages",
   "clientQuickProgram": "Program",
-  "clientQuickSchedule": "Add schedule",
   "clientHealthGoals": "Body profile & goals",
   "clientTrainerMemo": "Memo",
   "clientTrainerMemoTitle": "Memos on {name}",
@@ -1419,7 +1314,6 @@
   "programEditorSaveUnsupported": "Give the program a name first.",
   "programEditorSaveEdit": "Save changes",
   "programSavedTitle": "Saved programs",
-  "programSavedOpen": "Open",
   "programSavedExerciseCount": "{count} exercises",
   "@programSavedExerciseCount": {"placeholders": {"count": {"type": "int"}}},
   "programSavedNew": "New program",
@@ -1466,7 +1360,6 @@
   "@programEditorSessionName": {"placeholders": {"letter": {"type": "String"}}},
   "programEditorSessionUp": "Move session up",
   "programEditorSessionDown": "Move session down",
-  "programEditorSessionDelete": "Delete session",
   "programEditorSessionEmpty": "Add exercises to build this session.",
   "programEditorExerciseSearch": "Search exercises or enter one",
   "programEditorAdd": "Add",
@@ -1474,7 +1367,6 @@
   "programEditorExercise": "Exercise",
   "programEditorExerciseUp": "Move exercise up",
   "programEditorExerciseDown": "Move exercise down",
-  "programEditorExerciseDelete": "Delete exercise",
   "programEditorSets": "Sets",
   "programEditorReps": "Reps",
   "programEditorWeight": "Weight kg",
@@ -1490,8 +1382,6 @@
   "reportsBackToList": "Client list",
   "reportsPreviousLoadFailed": "Couldn't load last week's data.",
   "reportsAverageSodium": "Average sodium",
-  "reportsPreviousValue": "Last week {value}",
-  "@reportsPreviousValue": {"placeholders": {"value": {"type": "String"}}},
   "reportsFeedbackTitle": "Trainer feedback",
   "reportsFeedbackDraftNote": "A draft filled in from this week's figures. Check it over before sending.",
   "reportsFeedbackRestore": "Restore draft",
