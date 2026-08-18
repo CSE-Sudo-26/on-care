@@ -578,6 +578,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSendFailed => 'Couldn\'t send the message. Please try again';
 
   @override
+  String get chatPdfOpenFailed => 'Couldn\'t open the PDF. Please try again';
+
+  @override
   String get chatLoadFailed => 'Couldn\'t load the conversation';
 
   @override
@@ -2632,15 +2635,53 @@ class AppLocalizationsEn extends AppLocalizations {
       'Available after the report summary API is connected. No summary is generated now.';
 
   @override
-  String get reportsPdfUnsupported => 'PDF generation isn\'t supported yet.';
-
-  @override
   String get reportsPdfLabel => 'Export PDF';
 
   @override
-  String get reportsPrintUnsupported =>
-      'Available after PDF/print report snapshots are supported.';
+  String get reportsPdfGenerating => 'Generating PDF…';
 
   @override
-  String get reportsPrintLabel => 'Print';
+  String get reportsPdfGenerationFailed =>
+      'Couldn\'t generate the PDF. Please try again.';
+
+  @override
+  String reportsPdfReady(String name) {
+    return '$name\'s weekly report is ready.';
+  }
+
+  @override
+  String get reportsPdfSending => 'Sending…';
+
+  @override
+  String get reportsPdfSendToClient => 'Send to client';
+
+  @override
+  String get reportsPdfSave => 'Save PDF';
+
+  @override
+  String get reportsPdfPrint => 'Print';
+
+  @override
+  String get reportsPdfClose => 'Close';
+
+  @override
+  String get reportsPdfActionFailed =>
+      'Couldn\'t complete the action. Please try again.';
+
+  @override
+  String reportsPdfSent(String name) {
+    return 'Sent the PDF to $name.';
+  }
+
+  @override
+  String get reportsPdfSaveStarted => 'Started saving the PDF.';
+
+  @override
+  String get reportsPdfPrintOpened => 'Opened the print dialog.';
+
+  @override
+  String get reportsPdfMessage => 'Here\'s your weekly report.';
+
+  @override
+  String get reportsPdfFallbackClient => 'client';
 }

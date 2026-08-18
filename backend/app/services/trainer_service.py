@@ -26,7 +26,7 @@ from app.models.models import (
     User,
 )
 from app.schemas.trainer_api import (
-    ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramDraftExercise,
+    ChatAttachmentOut, ChatMessageOut, ClientDietEntryOut, MemberCoachOut, ProgramDraftExercise,
     ProgramDraftSession,
     ProgramItem, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
@@ -522,21 +522,28 @@ def build_chat_thread(
     ).all())
     rows.reverse()  # 최신 limit건을 오래된→최신 순으로
     return [
-        ChatMessageOut(
-            id=r.id, sender=_sender_out(r.sender, viewer), body=r.body,
-            time_label=_hhmm(r.created_at), created_at=_iso(r.created_at),
-        )
+        chat_message_out(r, viewer)
         for r in rows
     ]
 
 
-def _chat_out(msg: ChatMessage, viewer: str) -> ChatMessageOut:
+def chat_message_out(msg: ChatMessage, viewer: str) -> ChatMessageOut:
+    attachment = None
+    if msg.attachment_type == "pdf" and msg.attachment_file_id:
+        attachment = ChatAttachmentOut(
+            type="pdf",
+            file_name=msg.attachment_file_name or "weekly-report.pdf",
+            file_id=msg.attachment_file_id,
+            file_size=msg.attachment_file_size or 0,
+            download_path=f"/chat/attachments/{msg.attachment_file_id}",
+        )
     return ChatMessageOut(
         id=msg.id,
         sender=_sender_out(msg.sender, viewer),
         body=msg.body,
         time_label=_hhmm(msg.created_at),
         created_at=_iso(msg.created_at),
+        attachment=attachment,
     )
 
 
@@ -564,13 +571,16 @@ def _existing_message_out(
         raise IdempotencyConflict(
             "같은 client_request_id에 다른 메시지를 보낼 수 없습니다."
         )
-    return _chat_out(message, viewer)
+    return chat_message_out(message, viewer)
 
 
 def send_message(
     db: Session, trainer_id: str, member_id: str, sender: str, text: str,
     viewer: str = "trainer", notify: str | None = None,
     client_request_id: str | None = None,
+    attachment_file_name: str | None = None,
+    attachment_file_id: str | None = None,
+    attachment_file_size: int | None = None,
 ) -> ChatMessageOut:
     """스레드에 메시지 추가(sender: 'trainer'|'member'). 로스터 last_message 는
     build_roster 가 최신 메시지를 읽어 자동 반영하므로 별도 비정규화가 없다.
@@ -596,6 +606,10 @@ def send_message(
         sender=sender,
         body=text,
         client_request_id=client_request_id,
+        attachment_type="pdf" if attachment_file_id else None,
+        attachment_file_name=attachment_file_name,
+        attachment_file_id=attachment_file_id,
+        attachment_file_size=attachment_file_size,
         created_at=datetime.now(timezone.utc),
     )
     db.add(msg)
@@ -639,7 +653,7 @@ def send_message(
         )
     db.commit()
     db.refresh(msg)
-    out = _chat_out(msg, viewer)
+    out = chat_message_out(msg, viewer)
     # 적재는 응답을 다 만든 뒤에 한다(#580). 실패하면 personal_ingest 가 세션을
     # 롤백하는데, 그때 msg 가 만료돼 응답을 못 만들게 되면 적재 실패가 메시지
     # 발신 실패로 번진다. 커밋은 이미 끝났으니 롤백해도 메시지 자체는 남는다.

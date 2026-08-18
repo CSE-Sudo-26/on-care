@@ -1094,6 +1094,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send the message. Please try again'**
   String get chatSendFailed;
 
+  /// No description provided for @chatPdfOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the PDF. Please try again'**
+  String get chatPdfOpenFailed;
+
   /// No description provided for @chatLoadFailed.
   ///
   /// In en, this message translates to:
@@ -4634,29 +4640,95 @@ abstract class AppLocalizations {
   /// **'Available after the report summary API is connected. No summary is generated now.'**
   String get reportsAiUnavailable;
 
-  /// No description provided for @reportsPdfUnsupported.
-  ///
-  /// In en, this message translates to:
-  /// **'PDF generation isn\'t supported yet.'**
-  String get reportsPdfUnsupported;
-
   /// No description provided for @reportsPdfLabel.
   ///
   /// In en, this message translates to:
   /// **'Export PDF'**
   String get reportsPdfLabel;
 
-  /// No description provided for @reportsPrintUnsupported.
+  /// No description provided for @reportsPdfGenerating.
   ///
   /// In en, this message translates to:
-  /// **'Available after PDF/print report snapshots are supported.'**
-  String get reportsPrintUnsupported;
+  /// **'Generating PDF…'**
+  String get reportsPdfGenerating;
 
-  /// No description provided for @reportsPrintLabel.
+  /// No description provided for @reportsPdfGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t generate the PDF. Please try again.'**
+  String get reportsPdfGenerationFailed;
+
+  /// No description provided for @reportsPdfReady.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s weekly report is ready.'**
+  String reportsPdfReady(String name);
+
+  /// No description provided for @reportsPdfSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get reportsPdfSending;
+
+  /// No description provided for @reportsPdfSendToClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to client'**
+  String get reportsPdfSendToClient;
+
+  /// No description provided for @reportsPdfSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save PDF'**
+  String get reportsPdfSave;
+
+  /// No description provided for @reportsPdfPrint.
   ///
   /// In en, this message translates to:
   /// **'Print'**
-  String get reportsPrintLabel;
+  String get reportsPdfPrint;
+
+  /// No description provided for @reportsPdfClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get reportsPdfClose;
+
+  /// No description provided for @reportsPdfActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete the action. Please try again.'**
+  String get reportsPdfActionFailed;
+
+  /// No description provided for @reportsPdfSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent the PDF to {name}.'**
+  String reportsPdfSent(String name);
+
+  /// No description provided for @reportsPdfSaveStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Started saving the PDF.'**
+  String get reportsPdfSaveStarted;
+
+  /// No description provided for @reportsPdfPrintOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened the print dialog.'**
+  String get reportsPdfPrintOpened;
+
+  /// No description provided for @reportsPdfMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Here\'s your weekly report.'**
+  String get reportsPdfMessage;
+
+  /// No description provided for @reportsPdfFallbackClient.
+  ///
+  /// In en, this message translates to:
+  /// **'client'**
+  String get reportsPdfFallbackClient;
 }
 
 class _AppLocalizationsDelegate

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +11,7 @@ import 'package:oncare/core/config/app_config.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/member_coach/data/repositories/chat_pdf_repository.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
@@ -83,6 +87,30 @@ class _ReadTrackingMemberCoachRepository extends MockMemberCoachRepository {
     markReadCalls += 1;
     _read = true;
   }
+}
+
+class _PdfMemberCoachRepository extends MockMemberCoachRepository {
+  static final List<CoachMessage> _messages = <CoachMessage>[
+    CoachMessage(
+      id: 'pdf-message',
+      sender: CoachSender.trainer,
+      body: '이번 주 리포트입니다.',
+      timeLabel: '18:20',
+      createdAt: DateTime(2026, 8, 16, 18, 20),
+      attachment: const CoachPdfAttachment(
+        fileName: '김고객_2026-08-10_주간리포트.pdf',
+        fileId: 'pdf-file',
+        fileSize: 2048,
+        downloadPath: '/chat/attachments/pdf-file',
+      ),
+    ),
+  ];
+
+  @override
+  Future<List<CoachMessage>> fetchChat() async => _messages;
+
+  @override
+  Stream<List<CoachMessage>> watchChat() => Stream.value(_messages);
 }
 
 /// 데모(목업) 설정 — 채팅 화면이 `appConfigProvider` 를 읽어 안내 배너 노출을
@@ -619,4 +647,65 @@ void main() {
     expect(input.controller?.text, '다시 보낼 메시지');
     expect(find.text('메시지 전송에 실패했어요. 다시 시도해 주세요'), findsOneWidget);
   });
+
+  testWidgets('PDF attachment를 파일명과 크기가 있는 카드로 표시한다', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _PdfMemberCoachRepository(),
+          ),
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('coach-pdf-pdf-file')), findsOneWidget);
+    expect(find.text('김고객_2026-08-10_주간리포트.pdf'), findsOneWidget);
+    expect(find.text('2.0 KB'), findsOneWidget);
+    expect(find.byIcon(Icons.open_in_new), findsOneWidget);
+  });
+
+  // 카드를 눌렀을 때 정말 그 첨부의 경로로 내려받는지, 실패하면 회원이 이유를
+  // 보는지까지 확인한다. 성공 경로의 미리보기(PdfPreview)는 printing 플러그인의
+  // 플랫폼 채널을 타므로 위젯 테스트에서 띄우지 않는다 — 실패 경로가 탭→다운로드
+  // 호출과 안내 문구를 함께 덮는다.
+  testWidgets('PDF 카드를 누르면 그 첨부 경로로 내려받고, 실패하면 안내 문구를 띄운다', (tester) async {
+    final _FailingChatPdfRepository repository = _FailingChatPdfRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          memberCoachRepositoryProvider.overrideWithValue(
+            _PdfMemberCoachRepository(),
+          ),
+          chatPdfRepositoryProvider.overrideWithValue(repository),
+          appConfigProvider.overrideWithValue(_demoConfig),
+        ],
+        child: _chatApp(const TrainerChatPage(trainerName: '김트레이너')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('coach-pdf-pdf-file')));
+    await tester.pumpAndSettle();
+
+    expect(repository.paths, <String>['/chat/attachments/pdf-file']);
+    expect(find.text('PDF를 열지 못했어요. 다시 시도해 주세요'), findsOneWidget);
+  });
+}
+
+/// 내려받기가 항상 실패하는 저장소. 요청된 경로를 기록해 둔다.
+class _FailingChatPdfRepository extends ChatPdfRepository {
+  _FailingChatPdfRepository() : super(Dio());
+
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Uint8List> download(String path) async {
+    paths.add(path);
+    throw Exception('download failed');
+  }
 }

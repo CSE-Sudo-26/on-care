@@ -1397,6 +1397,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachChatSendFailed => '메시지 전송에 실패했어요. 다시 시도해 주세요';
 
   @override
+  String get coachChatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get coachChatInputHint => '트레이너에게 메시지 보내기...';
 
   @override

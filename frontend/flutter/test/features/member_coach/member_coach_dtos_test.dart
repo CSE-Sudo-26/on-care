@@ -57,6 +57,26 @@ void main() {
       expect(m.sender, CoachSender.trainer);
       expect(m.fromMe, isFalse);
       expect(m.createdAt, DateTime.utc(2026, 8, 7, 13, 20));
+      expect(m.attachment, isNull);
+    });
+
+    test('maps a PDF attachment', () {
+      final m = coachMessageFromJson(<String, Object?>{
+        'id': 'm-pdf',
+        'sender': 'trainer',
+        'body': '이번 주 리포트입니다.',
+        'time_label': '13:20',
+        'created_at': '2026-08-07T13:20:00Z',
+        'attachment': <String, Object?>{
+          'type': 'pdf',
+          'file_name': '이지수_주간리포트.pdf',
+          'file_id': 'file123',
+          'file_size': 4096,
+          'download_path': '/chat/attachments/file123',
+        },
+      });
+      expect(m.attachment?.fileName, '이지수_주간리포트.pdf');
+      expect(m.attachment?.fileSize, 4096);
     });
 
     test('maps my own message', () {

@@ -206,6 +206,15 @@ class RoutineHistoryOut(BaseModel):
 ChatSender = Literal["trainer", "client", "me"]
 
 
+class ChatAttachmentOut(BaseModel):
+    """#778 전용 PDF attachment. 다른 파일 형식은 계약에 포함하지 않는다."""
+    type: Literal["pdf"]
+    file_name: str
+    file_id: str
+    file_size: int
+    download_path: str
+
+
 class ChatMessageOut(BaseModel):
     """채팅 메시지 — 프론트 ClientChatMessage 계약 정렬.
 
@@ -218,6 +227,7 @@ class ChatMessageOut(BaseModel):
     body: str
     time_label: str    # "18:10"
     created_at: str    # ISO datetime — 커서/정렬용
+    attachment: ChatAttachmentOut | None = None
 
 
 class ChatSendRequest(BaseModel):

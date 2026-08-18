@@ -940,6 +940,14 @@ class ChatMessage(Base):
     # 유니크 제약 밖에 남는다. sender 까지 scope 에 넣어 양방향이 같은 문자열 키를
     # 우연히 만들어도 서로 충돌하지 않게 한다.
     client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # #778: 주간 리포트 PDF 1종만 지원한다. 기존 텍스트 메시지는
+    # 모두 NULL이므로 기존 응답과 조회 흐름을 그대로 유지한다.
+    attachment_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    attachment_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    attachment_file_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    attachment_file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

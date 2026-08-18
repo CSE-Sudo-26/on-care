@@ -558,6 +558,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatSendFailed => '메시지 전송에 실패했어요. 다시 시도해 주세요';
 
   @override
+  String get chatPdfOpenFailed => 'PDF를 열지 못했어요. 다시 시도해 주세요';
+
+  @override
   String get chatLoadFailed => '대화를 불러오지 못했어요';
 
   @override
@@ -2542,15 +2545,51 @@ class AppLocalizationsKo extends AppLocalizations {
       '실제 리포트 요약 API 연결 후 사용할 수 있어요. 현재 문구는 자동 생성하지 않습니다.';
 
   @override
-  String get reportsPdfUnsupported => 'PDF 생성 API가 아직 없어요.';
-
-  @override
   String get reportsPdfLabel => 'PDF 내보내기';
 
   @override
-  String get reportsPrintUnsupported =>
-      'PDF/인쇄용 report snapshot 지원 후 사용할 수 있어요.';
+  String get reportsPdfGenerating => 'PDF 생성 중…';
 
   @override
-  String get reportsPrintLabel => '인쇄';
+  String get reportsPdfGenerationFailed => 'PDF를 생성하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String reportsPdfReady(String name) {
+    return '$name님의 주간 리포트가 준비됐어요.';
+  }
+
+  @override
+  String get reportsPdfSending => '전송 중…';
+
+  @override
+  String get reportsPdfSendToClient => '고객에게 전송';
+
+  @override
+  String get reportsPdfSave => 'PDF 저장';
+
+  @override
+  String get reportsPdfPrint => '인쇄';
+
+  @override
+  String get reportsPdfClose => '닫기';
+
+  @override
+  String get reportsPdfActionFailed => '작업을 완료하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String reportsPdfSent(String name) {
+    return '$name님에게 PDF를 전송했어요.';
+  }
+
+  @override
+  String get reportsPdfSaveStarted => 'PDF 저장을 시작했어요.';
+
+  @override
+  String get reportsPdfPrintOpened => '인쇄 창을 열었어요.';
+
+  @override
+  String get reportsPdfMessage => '이번 주 리포트를 보내드려요.';
+
+  @override
+  String get reportsPdfFallbackClient => '고객';
 }

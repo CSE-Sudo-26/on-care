@@ -180,6 +180,7 @@ class CoachMessage {
     required this.body,
     required this.timeLabel,
     required this.createdAt,
+    this.attachment,
   });
 
   final String id;
@@ -187,8 +188,23 @@ class CoachMessage {
   final String body;
   final String timeLabel;
   final DateTime createdAt;
+  final CoachPdfAttachment? attachment;
 
   bool get fromMe => sender == CoachSender.me;
+}
+
+class CoachPdfAttachment {
+  const CoachPdfAttachment({
+    required this.fileName,
+    required this.fileId,
+    required this.fileSize,
+    required this.downloadPath,
+  });
+
+  final String fileName;
+  final String fileId;
+  final int fileSize;
+  final String downloadPath;
 }
 
 /// 배정된 세션 안의 운동 한 항목 — 트레이너 편집기가 적어 준 값 그대로다.

@@ -13,9 +13,10 @@ import json
 import re
 from datetime import date as _date
 from datetime import datetime
+from pathlib import PurePath
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -25,6 +26,7 @@ from app.core.rate_limit import limiter, rate_limit
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
 from app.models.models import (
+    ChatMessage,
     ExerciseSession,
     HealthProfile,
     Notification,
@@ -67,6 +69,7 @@ from app.services import (
     notification_service,
     trainer_dashboard_coaching_service,
     trainer_report_summary_service,
+    report_pdf_storage,
     trainer_routine_options_service,
     trainer_service,
 )
@@ -1349,6 +1352,95 @@ def trainer_send_report(
         db, trainer.id, member_id, "trainer", text,
         notify=notification_service.WEEKLY_REPORT,
     )
+
+
+@router.post(
+    "/trainer/clients/{member_id}/report/send-pdf",
+    response_model=ChatMessageOut,
+    status_code=201,
+)
+async def trainer_send_report_pdf(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    pdf: UploadFile = File(...),
+    week_start: str = Form(...),
+    message: str = Form("이번 주 리포트입니다."),
+    client_request_id: str | None = Form(None, min_length=1, max_length=64),
+) -> ChatMessageOut:
+    """현재 리포트에서 생성한 PDF만 담당 고객 채팅으로 전송한다."""
+    link = _require_client(db, trainer.id, member_id)
+    if not link.active:
+        raise HTTPException(status_code=404, detail="담당 고객을 찾을 수 없습니다.")
+    _report_week(week_start)
+    text = message.strip() or "이번 주 리포트입니다."
+
+    # 재시도는 기존 메시지를 바로 돌려줘 파일을 다시 쓰지 않는다.
+    if client_request_id:
+        existing = trainer_service.find_message_by_client_request(
+            db, trainer.id, member_id, "trainer", client_request_id
+        )
+        if existing is not None:
+            if existing.body != text or existing.attachment_type != "pdf":
+                raise HTTPException(
+                    status_code=409,
+                    detail="같은 client_request_id에 다른 메시지를 보낼 수 없습니다.",
+                )
+            return trainer_service.chat_message_out(existing, "trainer")
+
+    if pdf.content_type != "application/pdf":
+        raise HTTPException(status_code=415, detail="PDF 파일만 전송할 수 있습니다.")
+    settings = get_settings()
+    data = await pdf.read(settings.max_report_pdf_bytes + 1)
+    if len(data) > settings.max_report_pdf_bytes:
+        raise HTTPException(status_code=413, detail="PDF 파일 용량이 너무 큽니다.")
+    if not data.startswith(b"%PDF-") or b"%%EOF" not in data[-1024:]:
+        raise HTTPException(status_code=415, detail="유효한 PDF 파일이 아닙니다.")
+
+    display_name = re.sub(
+        r"[\x00-\x1f]", "_", PurePath(pdf.filename or "weekly-report.pdf").name
+    )
+    if not display_name.lower().endswith(".pdf"):
+        display_name = "weekly-report.pdf"
+    # DB 컬럼 길이를 넘는 사용자 filename이 메시지 저장을 깨지 않게 한다.
+    if len(display_name) > 255:
+        display_name = f"{display_name[:-4][:251]}.pdf"
+    file_id: str | None = None
+    try:
+        file_id = report_pdf_storage.save(data)
+        sent = trainer_service.send_message(
+            db,
+            trainer.id,
+            member_id,
+            "trainer",
+            text,
+            notify=notification_service.WEEKLY_REPORT,
+            client_request_id=client_request_id,
+            attachment_file_name=display_name,
+            attachment_file_id=file_id,
+            attachment_file_size=len(data),
+        )
+        # 동시 재시도 두 건이 모두 사전 조회를 통과할 수 있다. DB 멱등키에서
+        # 진 요청이 기존 메시지를 반환했다면, 그 요청이 쓴 여분 파일을 지운다.
+        if sent.attachment is None or sent.attachment.file_id != file_id:
+            report_pdf_storage.delete(file_id)
+        return sent
+    except trainer_service.IdempotencyConflict as exc:
+        if file_id:
+            report_pdf_storage.delete(file_id)
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except report_pdf_storage.PdfStorageError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        # DB/notification 저장이 완료되지 않았다면 고립 파일을 남기지 않는다.
+        if file_id:
+            db.rollback()
+            persisted = db.scalar(
+                select(ChatMessage.id).where(ChatMessage.attachment_file_id == file_id)
+            )
+            if persisted is None:
+                report_pdf_storage.delete(file_id)
+        raise
 
 
 # ---------------------------------------------------------------------------

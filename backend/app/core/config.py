@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     # 경계·필드까지 포함한 '요청 본문' 크기라, 8MiB 로 맞추면 정확히 8MiB 인 사진이
     # 프레이밍 오버헤드 때문에 억울하게 413 을 맞는다.
     max_upload_bytes: int = 10 * 1024 * 1024
+    # 주간 리포트 PDF는 일반 파일 첨부가 아니라 전용 endpoint만 사용한다.
+    # DB에는 metadata만 두고 실제 파일은 이 디렉터리에 보관한다.
+    report_pdf_storage_dir: str = "data/report-pdfs"
+    max_report_pdf_bytes: int = 8 * 1024 * 1024
 
     # --- AI 엔진 ---
     recognizer: str = "gemini"        # gemini | claude(litellm) | yolo

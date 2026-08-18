@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:demo_fixture/demo_fixture.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,9 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/features/reports/data/repositories/report_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
+import 'package:oncare_trainer/features/reports/presentation/pages/reports_page.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_actions.dart';
+import 'package:oncare_trainer/features/reports/services/report_pdf_generator.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
@@ -180,7 +185,71 @@ void main() {
     await openShareMenu(tester);
     expect(find.text('김민수님에게 전송'), findsOneWidget);
     expect(find.text('PDF 내보내기'), findsOneWidget);
-    // PDF 는 아직 경로가 없어 눌리지 않는다.
+    // PDF 는 현재 리포트로 실제 binary를 만드는 경로와 연결된다.
+    expect(
+      tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey<String>('reports-share-pdf')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('PDF 대화상자의 저장과 인쇄는 각각 플랫폼 경계를 호출한다', (tester) async {
+    final actions = _RecordingPdfActions();
+    final container = await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportPdfActionsProvider.overrideWithValue(actions),
+      ],
+    );
+    final client = (await container.read(clientsProvider.future)).first;
+    final report = buildWeeklyReport(
+      client: client,
+      sessions: const [],
+      weekStart: DateTime(2026, 8, 10),
+    );
+    final bytes = Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]);
+
+    showDialog<void>(
+      context: tester.element(find.byType(Scaffold).last),
+      builder: (_) => ReportPdfExportDialog(report: report, bytes: bytes),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey<String>('report-pdf-save')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('report-pdf-print')));
+    await tester.pump();
+
+    expect(actions.savedBytes, same(bytes));
+    expect(actions.printedBytes, same(bytes));
+    expect(actions.savedName, '${client.name}_2026-08-10_주간리포트.pdf');
+    expect(actions.printedName, actions.savedName);
+  });
+
+  testWidgets('PDF 생성 중에는 중복을 막고 실패 후 재시도한다', (tester) async {
+    final first = Completer<Uint8List>();
+    final generator = _QueuedPdfGenerator(<Future<Uint8List>>[
+      first.future,
+      Future<Uint8List>.value(
+        Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+      ),
+    ]);
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportPdfGeneratorProvider.overrideWithValue(generator),
+      ],
+    );
+
+    await openShareMenu(tester);
+    await tester.tap(find.byKey(const ValueKey<String>('reports-share-pdf')));
+    await settle(tester);
+    expect(generator.calls, 1);
+
+    await openShareMenu(tester);
     expect(
       tester
           .widget<MenuItemButton>(
@@ -188,6 +257,28 @@ void main() {
           )
           .onPressed,
       isNull,
+    );
+    await openShareMenu(tester); // 열려 있는 메뉴를 닫는다. 재시도는 아래에서 연다.
+    first.completeError(StateError('render failed'));
+    await settle(tester);
+    expect(find.text('PDF를 생성하지 못했어요. 다시 시도해 주세요.'), findsOneWidget);
+
+    // 실패가 현재 리포트를 없애지 않고, 재시도는 액션 대화상자로 이어진다.
+    await openShareMenu(tester);
+    await tester.tap(find.byKey(const ValueKey<String>('reports-share-pdf')));
+    await settle(tester);
+    expect(generator.calls, 2);
+    expect(
+      find.byKey(const ValueKey<String>('report-pdf-send')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('report-pdf-save')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('report-pdf-print')),
+      findsOneWidget,
     );
   });
 
@@ -658,6 +749,43 @@ void main() {
       findsOneWidget,
     );
   });
+}
+
+class _RecordingPdfActions implements ReportPdfActions {
+  Uint8List? savedBytes;
+  Uint8List? printedBytes;
+  String? savedName;
+  String? printedName;
+
+  @override
+  Future<void> save(Uint8List bytes, String fileName) async {
+    savedBytes = bytes;
+    savedName = fileName;
+  }
+
+  @override
+  Future<void> print(Uint8List bytes, String fileName) async {
+    printedBytes = bytes;
+    printedName = fileName;
+  }
+}
+
+class _QueuedPdfGenerator extends ReportPdfGenerator {
+  _QueuedPdfGenerator(this._results);
+
+  final List<Future<Uint8List>> _results;
+  int calls = 0;
+
+  @override
+  Future<Uint8List> generate({
+    required WeeklyReport report,
+    required String feedback,
+    WeeklyReport? previousReport,
+  }) {
+    final result = _results[calls];
+    calls++;
+    return result;
+  }
 }
 
 /// Chat repository whose sends always fail.
