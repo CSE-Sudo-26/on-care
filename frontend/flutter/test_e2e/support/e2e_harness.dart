@@ -460,6 +460,74 @@ void useMobileViewport(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+/// 이번 테스트에서 모인 렌더링 넘침의 설명. 시나리오가 끝날 때 비워진다.
+///
+/// `FlutterErrorDetails` 를 그대로 들고 있다가 끝에서 문자열로 만들면, 그때는 위젯
+/// 트리가 이미 해체돼 위치가 `DEFUNCT` 로만 남는다. 그래서 **터진 그 순간에** 설명을
+/// 만들어 둔다.
+List<String> _renderOverflows = <String>[];
+
+/// 넘침 단언을 이번 테스트에 이미 걸어 뒀는가.
+bool _overflowTearDownRegistered = false;
+
+/// 넘침(overflow)으로 보고된 렌더링 오류인가.
+///
+/// 라이브러리 이름 대신 문구로 가른다 — 넘침은 `RenderFlex` 말고도 여러 렌더
+/// 오브젝트가 같은 문장으로 보고한다.
+bool _isRenderOverflow(FlutterErrorDetails details) =>
+    details.exceptionAsString().contains('overflowed');
+
+/// 실패 메시지에 넣을 한 건의 설명.
+///
+/// 렌더 오브젝트 덤프만으로는 **어느 화면인지** 알기 어렵다. 위젯 사슬은
+/// `informationCollector` 가 들고 있으므로 함께 붙인다.
+String _describeOverflow(FlutterErrorDetails details) {
+  const int limit = 1200;
+  final StringBuffer out = StringBuffer(details.exceptionAsString());
+  final Iterable<DiagnosticsNode>? extra = details.informationCollector?.call();
+  if (extra != null) {
+    for (final DiagnosticsNode node in extra) {
+      final String line = node.toStringDeep().trimRight();
+      if (line.isNotEmpty) out.writeln('\n$line');
+    }
+  }
+  final String text = out.toString();
+  return text.length <= limit ? text : '${text.substring(0, limit)}…(생략)';
+}
+
+/// `bootstrap()` 이 덮어쓴 오류 핸들러 위에 넘침 감시를 다시 얹는다. (#844)
+///
+/// `lib/app/bootstrap.dart` 는 `FlutterError.onError` 를 **로깅 전용**으로 바꾼다.
+/// 그래서 부팅 뒤에 나는 넘침은 테스트 실패가 아니라 로그 한 줄로 끝나고, 스위트는
+/// 초록인데 화면은 잘려 있는 상태가 된다 — #840 이 정확히 그렇게 새어 나갔다.
+///
+/// 로깅은 그대로 두고(기존 출력이 달라지지 않는다) 넘침만 따로 모아, 시나리오가
+/// 끝날 때 하나라도 있으면 실패시킨다.
+///
+/// **부팅할 때마다 다시 얹어야 한다.** 재시작 검증은 [bootSignedOut] 을 다시 부르고,
+/// 그 안의 `bootstrap()` 이 핸들러를 새 것으로 갈아 끼워 앞서 얹은 감시를 지운다.
+void _watchForOverflow() {
+  final void Function(FlutterErrorDetails)? logging = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (_isRenderOverflow(details)) _renderOverflows.add(_describeOverflow(details));
+    logging?.call(details);
+  };
+
+  if (_overflowTearDownRegistered) return;
+  _overflowTearDownRegistered = true;
+  addTearDown(() {
+    FlutterError.onError = logging;
+    final List<String> found = List<String>.of(_renderOverflows);
+    _renderOverflows = <String>[];
+    _overflowTearDownRegistered = false;
+    if (found.isEmpty) return;
+    fail(
+      '화면이 넘쳤습니다 — ${found.length}건. E2E 가 지나는 화면은 잘린 곳 없이 그려져야 합니다.\n\n'
+      '${found.join('\n\n──────────\n\n')}',
+    );
+  });
+}
+
 /// 로그아웃 상태에서 앱을 새로 띄운다. 재시작·재로그인 검증도 이것을 다시 부른다.
 Future<void> bootSignedOut(WidgetTester tester) async {
   useMobileViewport(tester);
@@ -471,6 +539,9 @@ Future<void> bootSignedOut(WidgetTester tester) async {
   await tester.pump();
   await const FlutterSecureStorage().deleteAll();
   await bootstrap();
+  // 감시는 `bootstrap()` **뒤에** 얹는다 — 그 안에서 핸들러가 교체되므로 앞에
+  // 얹으면 그대로 지워진다.
+  _watchForOverflow();
   await pumpUntil(tester, find.byType(SignInPage), step: '로그인 화면');
 }
 
