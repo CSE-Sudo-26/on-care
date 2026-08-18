@@ -70,7 +70,15 @@ void main() {
     tester,
   ) async {
     await withWideSurface(tester, () async {
-      await pumpTrainerApp(tester, token: 'demo-trainer-token-existing');
+      // 박성호의 배지는 요일에 따라 뒤집힌다. 시드가 주간 계열을 오늘까지만
+      // 채우므로, 화요일에는 그 주에 기록된 날이 33% 하루뿐이라 이행률 저조가
+      // 나트륨 초과보다 급한 신호가 된다. 주가 끝난 일요일로 고정해 어느 날
+      // 돌려도 같은 상태를 본다.
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token-existing',
+        seedClock: DateTime(2026, 8, 16), // 일요일
+      );
       await goTo(tester, AppRoutes.messages);
 
       final conversation = find.byKey(
