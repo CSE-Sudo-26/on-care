@@ -12,13 +12,17 @@ import 'package:oncare/features/notification/presentation/controllers/notificati
 import 'package:oncare/gen/l10n/app_localizations.dart';
 import 'package:oncare/shared/widgets/empty_state.dart';
 
-({String label, AppBadgeTone tone}) _categoryDisplay(AlertCategory c) =>
-    switch (c) {
-      AlertCategory.reminder => (label: '리마인더', tone: AppBadgeTone.info),
-      AlertCategory.healthCheck => (label: '건강', tone: AppBadgeTone.warning),
-      AlertCategory.achievement => (label: '달성', tone: AppBadgeTone.success),
-      AlertCategory.system => (label: '시스템', tone: AppBadgeTone.neutral),
-    };
+/// 알림 갈래 → 배지에 그릴 이름과 색. 갈래 자체는 서버가 주는 계약값이라 그대로
+/// 두고, 사람이 읽는 이름만 로케일을 따른다(#847).
+({String label, AppBadgeTone tone}) _categoryDisplay(
+  AppLocalizations l,
+  AlertCategory c,
+) => switch (c) {
+  AlertCategory.reminder => (label: l.alertCategoryReminder, tone: AppBadgeTone.info),
+  AlertCategory.healthCheck => (label: l.alertCategoryHealth, tone: AppBadgeTone.warning),
+  AlertCategory.achievement => (label: l.alertCategoryAchievement, tone: AppBadgeTone.success),
+  AlertCategory.system => (label: l.alertCategorySystem, tone: AppBadgeTone.neutral),
+};
 
 class NotificationPage extends ConsumerStatefulWidget {
   const NotificationPage({super.key});
@@ -73,7 +77,7 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
         actions: <Widget>[
           TextButton(
             onPressed: state.unreadCount == 0 ? null : notifier.markAllRead,
-            child: const Text('모두 읽음'),
+            child: Text(l.alertMarkAllRead),
           ),
         ],
       ),
@@ -95,11 +99,11 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
               return _RetryBanner(onRetry: _refresh);
             }
             if (state.items.isEmpty) {
-              return const SizedBox(
+              return SizedBox(
                 height: 320,
                 child: EmptyState(
                   icon: Icons.notifications_off_outlined,
-                  title: '알림이 없습니다',
+                  title: l.alertEmpty,
                 ),
               );
             }
@@ -122,7 +126,11 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
           ? FloatingActionButton.extended(
               icon: const Icon(Icons.notification_add_outlined),
               label: const Text('Simulate push'),
-              onPressed: notifier.simulatePush,
+              onPressed: () => notifier.simulatePush(
+                title: l.alertSimulatedTitle,
+                body: l.alertSimulatedBody,
+                timeAgo: l.alertJustNow,
+              ),
             )
           : null,
     );
@@ -140,7 +148,7 @@ class _AlertTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final display = _categoryDisplay(item.category);
+    final display = _categoryDisplay(AppLocalizations.of(context), item.category);
     return AppCard(
       onTap: onTap,
       child: Row(
@@ -188,16 +196,17 @@ class _RetryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AppCard(
       key: const Key('notificationRetryBanner'),
       child: Row(
         children: <Widget>[
           const Icon(Icons.cloud_off_rounded, size: 20),
           const SizedBox(width: AppSpacing.sm),
-          const Expanded(child: Text('최신 알림을 불러오지 못했어요')),
+          Expanded(child: Text(l.alertLoadFailed)),
           TextButton(
             onPressed: () => onRetry(),
-            child: const Text('다시 시도'),
+            child: Text(l.actionRetry),
           ),
         ],
       ),

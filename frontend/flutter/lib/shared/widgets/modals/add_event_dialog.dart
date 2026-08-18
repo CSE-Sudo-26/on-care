@@ -11,14 +11,20 @@ import 'package:oncare/features/schedule/domain/entities/schedule_event.dart';
 import 'package:oncare/features/schedule/domain/repositories/schedule_repository.dart';
 import 'package:oncare/features/schedule/domain/schedule_format.dart';
 import 'package:oncare/features/schedule/presentation/controllers/schedule_controller.dart';
+import 'package:oncare/features/schedule/presentation/schedule_category_color.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
-const Map<String, ScheduleCategory> _categoryMap = <String, ScheduleCategory>{
-  '병원': ScheduleCategory.hospital,
-  '운동': ScheduleCategory.exercise,
-  '식사': ScheduleCategory.meal,
-  '약 복용': ScheduleCategory.medication,
-  '기타': ScheduleCategory.other,
-};
+/// 드롭다운에 놓는 순서. 값은 서버로 나가는 계약(`ScheduleCategory`)이고, 사람이
+/// 읽는 이름은 `scheduleCategoryLabel` 이 로케일에 맞춰 그린다(#847). 예전에는
+/// 한국어 문구 자체를 선택 상태로 들고 있어 영어 로케일에서 목록이 한국어로
+/// 남았다.
+const List<ScheduleCategory> _categories = <ScheduleCategory>[
+  ScheduleCategory.hospital,
+  ScheduleCategory.exercise,
+  ScheduleCategory.meal,
+  ScheduleCategory.medication,
+  ScheduleCategory.other,
+];
 
 /// 새 일정을 만든다. [initialDate] 를 주면 그 날짜로 열린다 — 캘린더에서 날짜를
 /// 눌러 들어오는 흐름이 쓴다.
@@ -92,7 +98,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
       ? null
       : parseWireTime(widget.existing!.time);
 
-  late String _category = _initialCategory();
+  late ScheduleCategory _category = _initialCategory();
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -105,14 +111,8 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     return widget.initialDate ?? DateTime.now();
   }
 
-  String _initialCategory() {
-    final ScheduleCategory? category = widget.existing?.category;
-    if (category == null) return _categoryMap.keys.first;
-    for (final MapEntry<String, ScheduleCategory> e in _categoryMap.entries) {
-      if (e.value == category) return e.key;
-    }
-    return _categoryMap.keys.first;
-  }
+  ScheduleCategory _initialCategory() =>
+      widget.existing?.category ?? _categories.first;
 
   @override
   void dispose() {
@@ -143,16 +143,16 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
   Future<void> _submit() async {
     if (_saving) return;
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     final title = _title.text.trim();
     // 날짜는 피커가 늘 채우므로 제목만 확인하면 된다.
     if (title.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('일정 제목을 입력해 주세요')));
+      messenger.showSnackBar(SnackBar(content: Text(l.eventTitleRequired)));
       return;
     }
     setState(() => _saving = true);
     final ScheduleRepository repo = ref.read(scheduleRepositoryProvider);
-    final ScheduleCategory category =
-        _categoryMap[_category] ?? ScheduleCategory.other;
+    final ScheduleCategory category = _category;
     final String date = wireDate(_date);
     final String time = _time == null ? '' : wireTime(_time!);
     try {
@@ -183,9 +183,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            _isEdit
-                ? '일정 수정에 실패했어요. 잠시 후 다시 시도해 주세요'
-                : '일정 추가에 실패했어요. 잠시 후 다시 시도해 주세요',
+            _isEdit ? l.eventEditFailed : l.eventAddFailed,
           ),
         ),
       );
@@ -194,6 +192,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Dialog(
       backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
@@ -215,7 +214,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      _isEdit ? '일정 수정' : '일정 추가',
+                      _isEdit ? l.eventEditTitle : l.eventAddTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -237,14 +236,18 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              AppInput(controller: _title, label: '일정 제목', hint: '예: 병원 정기검진'),
+              AppInput(
+                controller: _title,
+                label: l.eventTitleLabel,
+                hint: l.eventTitleHint,
+              ),
               const SizedBox(height: AppSpacing.sm),
               // 날짜·시간은 직접 칠 수 없다. 예전에는 자유 입력이라 `2026/05/14`
               // 처럼 계약을 벗어난 값이 저장되고, 조회는 `YYYY-MM-DD` 를 전제해
               // 걸러 내서 넣은 일정이 어디에도 보이지 않았다(#785).
               _PickerField(
                 key: const Key('addEventDate'),
-                label: '날짜',
+                label: l.eventDateLabel,
                 value: MaterialLocalizations.of(context).formatMediumDate(_date),
                 icon: Icons.calendar_today_outlined,
                 onTap: _saving ? null : _pickDate,
@@ -252,11 +255,11 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
               const SizedBox(height: AppSpacing.sm),
               _PickerField(
                 key: const Key('addEventTime'),
-                label: '시간',
+                label: l.eventTimeLabel,
                 // 시간은 선택이라 비워 둘 수 있다. 비었다는 것을 값 자리에서
                 // 그대로 말해 준다.
                 value: _time == null
-                    ? '시간 없음'
+                    ? l.eventTimeNone
                     : MaterialLocalizations.of(
                         context,
                       ).formatTimeOfDay(_time!),
@@ -279,15 +282,18 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
+                  child: DropdownButton<ScheduleCategory>(
                     value: _category,
                     isExpanded: true,
-                    onChanged: (String? value) {
+                    onChanged: (ScheduleCategory? value) {
                       if (value != null) setState(() => _category = value);
                     },
-                    items: <DropdownMenuItem<String>>[
-                      for (final String c in _categoryMap.keys)
-                        DropdownMenuItem<String>(value: c, child: Text(c)),
+                    items: <DropdownMenuItem<ScheduleCategory>>[
+                      for (final ScheduleCategory c in _categories)
+                        DropdownMenuItem<ScheduleCategory>(
+                          value: c,
+                          child: Text(scheduleCategoryLabel(l, c)),
+                        ),
                     ],
                   ),
                 ),
@@ -295,8 +301,8 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
               const SizedBox(height: AppSpacing.lg),
               AppButton(
                 label: _saving
-                    ? (_isEdit ? '저장 중...' : '추가 중...')
-                    : (_isEdit ? '저장하기' : '추가하기'),
+                    ? (_isEdit ? l.eventSaving : l.eventAdding)
+                    : (_isEdit ? l.eventSave : l.eventAdd),
                 fullWidth: true,
                 onPressed: _saving ? null : _submit,
               ),
@@ -337,6 +343,7 @@ class _PickerField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: const BorderRadius.all(AppRadius.md),
@@ -367,7 +374,7 @@ class _PickerField extends StatelessWidget {
               // 시각적 아이콘은 16 이지만 탭 영역은 접근성 최소치를 지킨다.
               Semantics(
                 button: true,
-                label: '$label 지우기',
+                label: l.eventClearField(label),
                 child: InkWell(
                   onTap: onClear,
                   customBorder: const CircleBorder(),
