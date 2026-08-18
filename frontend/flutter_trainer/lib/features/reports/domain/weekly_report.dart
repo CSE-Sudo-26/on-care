@@ -1,6 +1,7 @@
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 
 /// Monday of the week containing [day], stripped to a date.
 DateTime weekStartOf(DateTime day) {
@@ -121,7 +122,7 @@ WeeklyReport buildWeeklyReport({
   // 과거 주에 붙이면 지난 주 날짜 아래 이번 주 수치가 실리고, 트레이너는 그
   // 리포트를 회원에게 그대로 보낼 수 있다. 과거 주의 계열은 호출자가
   // [week] 로 넘겨 준다(데모는 drift 이력에서, 실서버는 리포트 응답에서).
-  final isThisWeek = start == weekStartOf(today ?? DateTime.now());
+  final isThisWeek = start == weekStartOf(today ?? nowKst());
   final series = week ?? (isThisWeek ? WeekSeries.of(client) : null);
   // Same "recorded days only" rule the 주의 badge and 고객 검색 use.
   final mean = series == null

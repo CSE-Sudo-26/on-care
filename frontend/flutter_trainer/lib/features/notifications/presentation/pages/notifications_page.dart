@@ -119,7 +119,7 @@ class NotificationsPage extends ConsumerWidget {
         data: (rows) {
           if (rows.isEmpty) {
             return Padding(
-              padding: EdgeInsets.only(top: AppSpacing.xxl),
+              padding: const EdgeInsets.only(top: AppSpacing.xxl),
               child: EmptyHint(
                 message: l.notifEmpty,
                 icon: Icons.notifications_none,

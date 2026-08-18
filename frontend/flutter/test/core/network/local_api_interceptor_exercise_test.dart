@@ -5,9 +5,10 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 String _currentMonday() {
-  final now = DateTime.now();
+  final now = nowKst();
   final m = DateTime(now.year, now.month, now.day - (now.weekday - 1));
   return '${m.year.toString().padLeft(4, '0')}-'
       '${m.month.toString().padLeft(2, '0')}-'

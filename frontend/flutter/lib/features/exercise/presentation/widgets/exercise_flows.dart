@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/breakpoints.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -187,7 +187,7 @@ class _ExerciseAddSheetState extends ConsumerState<_ExerciseAddSheet> {
               minutes: minutes,
               calories: calories,
               intensity: intensity,
-              dayLabel: _weekdayLabels[DateTime.now().weekday - 1],
+              dayLabel: _weekdayLabels[nowKst().weekday - 1],
             );
       }
       // Sheet dismissed mid-save → don't pop the page below.

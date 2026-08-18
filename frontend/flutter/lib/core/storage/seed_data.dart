@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 /// 하루 단위 코치 문구(날짜 → 문장)를 담는 키-값 키.
 ///
@@ -49,7 +50,7 @@ const String kDietDayMessagesKey = 'diet_day_messages';
 /// `WeeklyActivity` stacked-bar chart renders the 유산소 / 근력 /
 /// 스트레칭 breakdown the prototype shows.
 Future<void> seedIfEmpty(AppDatabase db, {DemoFixture? fixture}) async {
-  final now = DateTime.now();
+  final now = nowKst();
   final today = _fmtDate(now);
 
   final seedDate = await db.readValue('seeded_v17');

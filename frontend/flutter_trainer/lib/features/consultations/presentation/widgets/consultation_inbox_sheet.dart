@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
@@ -350,7 +350,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   @override
   void initState() {
     super.initState();
-    final today = DateUtils.dateOnly(DateTime.now());
+    final today = DateUtils.dateOnly(nowKst());
     final lastDate = today.add(const Duration(days: 365));
     _date = _clampDate(
       DateUtils.dateOnly(widget.request.preferredDate),
@@ -384,7 +384,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             icon: const Icon(Icons.calendar_today_outlined),
             label: Text(dateLabel(l, _date)),
             onPressed: () async {
-              final today = DateUtils.dateOnly(DateTime.now());
+              final today = DateUtils.dateOnly(nowKst());
               final lastDate = today.add(const Duration(days: 365));
               final picked = await showDatePicker(
                 context: context,

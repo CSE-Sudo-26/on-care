@@ -28,7 +28,7 @@ DateTime get _slotDay => DateTime.now().add(const Duration(days: 1));
 const int _capacity = 2;
 
 Future<void> _openSchedule(WidgetTester tester, DateTime day) async {
-  await tester.tap(find.byKey(ValueKey<String>('sidebar-${AppRoutes.schedule}')));
+  await tester.tap(find.byKey(const ValueKey<String>('sidebar-${AppRoutes.schedule}')));
   await pumpUntil(tester, find.byType(SchedulePage), step: '스케줄 화면');
   await tester.tap(find.byKey(ValueKey<String>('schedule-day-${ymd(day)}')));
   await tester.pump();

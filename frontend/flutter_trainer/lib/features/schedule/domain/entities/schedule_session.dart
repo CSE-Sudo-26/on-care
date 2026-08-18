@@ -1,3 +1,4 @@
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
 /// One exercise in a PT session's program (e.g. 레그프레스 3세트 × 12회 · 80kg).
@@ -113,7 +114,7 @@ bool startsWithin(ScheduleSession session, int leadMinutes, {DateTime? now}) {
   final hour = int.tryParse(parts[0]);
   final minute = int.tryParse(parts[1]);
   if (hour == null || minute == null) return false;
-  final current = now ?? DateTime.now();
+  final current = now ?? nowKst();
   final startsAt = DateTime(
     current.year,
     current.month,

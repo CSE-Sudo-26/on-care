@@ -23,6 +23,7 @@ import 'package:logger/logger.dart';
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 String _dateString(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-'
@@ -78,7 +79,7 @@ void main() {
     });
 
     test('지난 날짜도 그 날짜의 문장을 쓴다', () async {
-      final DateTime now = DateTime.now();
+      final DateTime now = nowKst();
       final yesterday = _dateString(now.subtract(const Duration(days: 1)));
       final res = await dio.get<Map<String, Object?>>(
         '/diet/days/$yesterday',

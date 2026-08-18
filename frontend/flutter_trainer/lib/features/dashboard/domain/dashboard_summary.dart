@@ -1,6 +1,6 @@
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 export 'package:oncare_trainer/shared/models/client_alerts.dart'
     show AttentionClient, ClientAlert, alertSeverity, lowCompletionThreshold;

@@ -339,11 +339,21 @@ class _SocialButton extends StatelessWidget {
             children: <Widget>[
               Icon(icon, color: foreground, size: iconSize),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                label,
-                style: TextStyle(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
+              // 버튼 폭은 400 으로 고정인데 라벨은 로케일·글자 배율을 따라
+              // 길어진다. `Continue with Google` 은 배율 1.3 에서 그대로 넘쳤다
+              // (#849). 잘라내지 않고 줄여서 그린다 — `Continue with Goo…` 가
+              // 되면 어느 계정으로 들어가는지가 사라진다.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],

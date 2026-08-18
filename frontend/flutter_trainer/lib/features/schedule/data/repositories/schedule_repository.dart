@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
@@ -111,11 +111,11 @@ class DriftScheduleRepository implements ScheduleRepository {
 
   /// Today's slots in timeline order (including 공백 gaps).
   ///
-  /// NOTE: `ymd(DateTime.now())`는 스트림 구독 시점에 고정된다 — 앱을
+  /// NOTE: `ymd(nowKst())`는 스트림 구독 시점에 고정된다 — 앱을
   /// 자정 넘겨 켜두면 '오늘'이 갱신되지 않음(예약 카운트와 동일 패턴,
   /// 로컬 mock 데모 범위에선 허용). 실 백엔드 전환 시 서버가 판단한다.
   @override
-  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(DateTime.now()));
+  Stream<List<ScheduleSession>> watchToday() => watchDate(ymd(nowKst()));
 
   /// The timeline for one calendar [date] (`YYYY-MM-DD`).
   @override
@@ -334,7 +334,7 @@ class DriftScheduleRepository implements ScheduleRepository {
         return true;
       }
 
-      final now = DateTime.now();
+      final now = nowKst();
       await _db
           .into(table)
           .insert(
@@ -400,7 +400,7 @@ class DriftScheduleRepository implements ScheduleRepository {
   @override
   Future<void> completeSession(String id, {String note = ''}) async {
     final table = _db.trainerScheduleEntries;
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
 
     await _db.transaction(() async {
       final session = await (_db.select(
@@ -445,7 +445,7 @@ class DriftScheduleRepository implements ScheduleRepository {
       final program = (jsonDecode(session.programJson) as List<Object?>)
           .map((e) => e! as Map<String, Object?>)
           .toList();
-      final now = DateTime.now();
+      final now = nowKst();
       // Label with the SESSION's calendar day — completing a session
       // browsed on another date must not claim '오늘'.
       final day = DateTime.tryParse(session.date) ?? now;

@@ -11,7 +11,7 @@
 - **버전**: `/version` 이 `api_version: "v1"` 반환 → 실제 서버는 **`/v1` prefix** 사용 가정.
   (프론트 base URL 에 `/v1` 을 포함시키거나 서버가 `/v1` 라우터를 둠. 본 백엔드는 **`/v1` prefix** 채택.)
 - **JSON 표기**: **snake_case** (Pydantic alias 규약). 프론트의 case_mapper 가 camelCase 로 변환.
-- **인증**: `Authorization: Bearer <token>` (JWT). auth_interceptor 가 Stage 4에서 부착 예정.
+- **인증**: `Authorization: Bearer <token>` (JWT). `auth_interceptor` 가 붙인다. 자세한 것은 아래 "인증" 절.
 - **에러**: `{ "code": "...", "message": "..." }` 형태. 4xx/5xx 는 DioException 으로 처리됨.
 - **사용자 id**: **문자열** (`"user-demo"`). 정수 아님.
 
@@ -192,13 +192,54 @@ category: medical|fitness|healthy_food|pharmacy (생략 가능)
 
 ---
 
-## 인증 관련 메모
+## 인증
 
-- 프론트는 `Authorization: Bearer` 를 쓰지만, 로그인 UI/토큰 저장은 **Stage 4 예정**(아직 미구현).
-- 따라서 이번 백엔드는 로그인 엔드포인트(`/auth/login` 등)를 **제공은 하되**,
-  프론트 계약상의 데이터 엔드포인트(`/users/me` 등)는 **토큰이 있으면 그 사용자, 없으면 데모 사용자**로
-  동작하도록 설계(프론트가 mock→실서버 전환 시 점진 연동 가능).
-- test user 시드는 유지하되 **id 를 문자열**로 운용(`user-demo` 호환).
+두 앱 모두 로그인과 토큰 저장이 붙어 있다(`session_controller.dart`, `secure_token_store.dart`,
+`auth_interceptor.dart`). 발급은 `POST /auth/login`·`POST /auth/refresh`·`POST /auth/social/{provider}`
+이고, 이후 요청은 `Authorization: Bearer <access>` 를 단다.
+
+### 의존성 네 갈래
+
+엔드포인트가 어떤 의존성을 쓰느냐로 동작이 갈린다 (`app/api/deps.py`).
+
+| 의존성 | 토큰 없을 때 | 역할 제한 |
+|---|---|---|
+| `CurrentUser` | 환경에 따라 데모 사용자 폴백 또는 401 (아래) | 트레이너 계정이면 **403** |
+| `RequireUser` | 401 | 없음 |
+| `RequireMember` | 401 | 회원만. 트레이너면 403 |
+| `RequireTrainer` | 401 | 트레이너만. 회원이면 403 |
+| `RequireAdmin` | 401 | `is_admin` 아니면 403 |
+
+읽기 화면은 `CurrentUser`, 쓰기·삭제는 `RequireMember`, 트레이너 앱(`/v1/trainer/*`)은
+`RequireTrainer` 를 쓴다. **데모 폴백이 있는 것은 `CurrentUser` 하나뿐**이고 나머지는 모두
+유효 토큰을 요구한다 — 회원 데모 사용자가 트레이너 엔드포인트나 쓰기 경로로 새어 들어가지
+않게 하기 위해서다.
+
+### 데모 폴백은 환경으로 갈린다
+
+`CurrentUser` 에 유효한 토큰이 없을 때의 동작은 설정이 정한다 (`app/core/config.py`).
+
+```python
+demo_fallback_enabled = allow_demo_fallback and not is_prod
+```
+
+- **dev / staging** — 데모 사용자(`user-demo`)로 응답한다. 프론트가 `USE_MOCK_API=false` 로
+  전환할 때 로그인 없이도 화면이 뜨게 하려는 것이다.
+- **prod** — `ALLOW_DEMO_FALLBACK` 값과 무관하게 **항상 비활성**이고 401 을 낸다.
+
+운영은 이 외에도 기동 시점에 막는 것이 있다(`_guard_prod_secrets`): 기본 `JWT_SECRET`,
+CORS 와일드카드, 기본·짧은 `DEMO_LOGIN_PASSWORD` 로 켠 데모 시드, `AUTO_CREATE_TABLES=true`
+는 모두 기동을 거부한다.
+
+### 역할 분리
+
+`users.role` 이 `member | trainer` 다. 두 앱은 **완전히 별개의 계정**을 쓴다 — 한 사람이 회원과
+트레이너를 겸하지 않는다. 그래서 회원 API 는 트레이너 토큰을 403 으로 막고, 그 반대도 같다.
+자세한 것은 [`docs/TRAINER_DOMAIN.md`](docs/TRAINER_DOMAIN.md).
+
+### 사용자 id
+
+**문자열**이다(`user-demo`). 정수가 아니다. 데모 시드도 같은 규약을 따른다.
 
 ## 도메인 핵심 (놓치면 안 되는 차별점)
 

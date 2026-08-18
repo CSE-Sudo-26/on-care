@@ -1,5 +1,18 @@
 enum ChatRole { user, coach }
 
+/// 서버가 준 답이 아니라 **앱이 스스로 띄우는** 말풍선.
+///
+/// 인사와 실패 안내가 그렇다. 문구를 [ChatMessage.content] 에 담아 두면 로케일을
+/// 따라가지 못하므로(#847), 어떤 말풍선인지만 표시하고 문구는 화면이
+/// `AppLocalizations` 에서 가져와 그린다.
+enum ChatNotice {
+  /// 대화를 처음 열었을 때의 인사.
+  welcome,
+
+  /// 답을 받지 못했을 때의 안내.
+  failure,
+}
+
 /// One message in the coach conversation. [pending] marks the transient
 /// "typing…" placeholder shown while awaiting the coach's reply.
 class ChatMessage {
@@ -8,12 +21,17 @@ class ChatMessage {
     required this.content,
     this.sources = const <String>[],
     this.pending = false,
+    this.notice,
   });
 
   final ChatRole role;
   final String content;
   final List<String> sources; // 근거 공공 가이드라인 제목(코치 메시지에만)
   final bool pending;
+
+  /// 앱이 스스로 띄운 말풍선이면 어떤 것인지. 서버 응답이면 null 이다.
+  /// null 이 아니면 [content] 는 비어 있고 문구는 화면이 그린다.
+  final ChatNotice? notice;
 
   bool get isUser => role == ChatRole.user;
 
