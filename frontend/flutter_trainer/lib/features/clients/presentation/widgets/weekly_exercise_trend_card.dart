@@ -29,88 +29,94 @@ class _WeeklyExerciseTrendCardState extends State<WeeklyExerciseTrendCard> {
   bool _showCalories = false;
 
   @override
-  Widget build(BuildContext context) => SectionCard(
-    title: '이번 주 운동 추이',
-    icon: Icons.monitor_heart_outlined,
-    dense: true,
-    child: widget.week.when(
-      loading: () => const SizedBox(
-        height: 160,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      error: (_, _) => EmptyHint(
-        message: '주간 운동 추이를 불러오지 못했습니다.',
-        action: ActionButton(
-          key: const ValueKey<String>('weekly-exercise-retry'),
-          label: AppLocalizations.of(context).actionRetry,
-          onPressed: widget.onRetry,
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return SectionCard(
+      title: l.clientTrendTitle,
+      icon: Icons.monitor_heart_outlined,
+      dense: true,
+      child: widget.week.when(
+        loading: () => const SizedBox(
+          height: 160,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
-      ),
-      data: (week) => Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _SummaryMetric(
-                  label: '운동 횟수',
-                  value: '${week.workoutCount}',
-                  unit: '회',
-                ),
-              ),
-              Expanded(
-                child: _SummaryMetric(
-                  label: '운동 시간',
-                  value: '${week.totalMinutes}',
-                  unit: '분',
-                ),
-              ),
-              Expanded(
-                child: _SummaryMetric(
-                  label: '소모 칼로리',
-                  value: '${week.totalCalories}',
-                  unit: 'kcal',
-                ),
-              ),
-            ],
+        error: (_, _) => EmptyHint(
+          message: l.clientTrendLoadFailed,
+          action: ActionButton(
+            key: const ValueKey<String>('weekly-exercise-retry'),
+            label: l.actionRetry,
+            onPressed: widget.onRetry,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  label: Text('시간'),
-                  icon: Icon(Icons.schedule, size: 14),
+        ),
+        data: (week) => Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _SummaryMetric(
+                    label: l.clientTrendWorkoutCount,
+                    value: '${week.workoutCount}',
+                    unit: l.unitTimes,
+                  ),
                 ),
-                ButtonSegment(
-                  value: true,
-                  label: Text('칼로리'),
-                  icon: Icon(Icons.local_fire_department_outlined, size: 14),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: l.clientTrendWorkoutMinutes,
+                    value: '${week.totalMinutes}',
+                    unit: l.unitMinutes,
+                  ),
+                ),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: l.clientTrendCaloriesBurned,
+                    value: '${week.totalCalories}',
+                    unit: l.unitKcal,
+                  ),
                 ),
               ],
-              selected: {_showCalories},
-              onSelectionChanged: (selected) =>
-                  setState(() => _showCalories = selected.first),
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                textStyle: WidgetStatePropertyAll(
-                  TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                    value: false,
+                    label: Text(l.clientTrendSegmentTime),
+                    icon: const Icon(Icons.schedule, size: 14),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: Text(l.metricCalories),
+                    icon: const Icon(
+                      Icons.local_fire_department_outlined,
+                      size: 14,
+                    ),
+                  ),
+                ],
+                selected: {_showCalories},
+                onSelectionChanged: (selected) =>
+                    setState(() => _showCalories = selected.first),
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  textStyle: WidgetStatePropertyAll(
+                    TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _DailyBars(
-            labels: week.dayLabels,
-            values: _showCalories ? week.dailyCalories : week.dailyMinutes,
-            unit: _showCalories ? 'kcal' : '분',
-            color: _showCalories ? AppColors.brandOrange : AppColors.primary,
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            _DailyBars(
+              labels: week.dayLabels,
+              values: _showCalories ? week.dailyCalories : week.dailyMinutes,
+              unit: _showCalories ? l.unitKcal : l.unitMinutes,
+              color: _showCalories ? AppColors.brandOrange : AppColors.primary,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SummaryMetric extends StatelessWidget {

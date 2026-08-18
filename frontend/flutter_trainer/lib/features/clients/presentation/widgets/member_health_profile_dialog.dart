@@ -99,6 +99,7 @@ class _MemberHealthProfileDialogState
   }
 
   String? _validate(
+    AppLocalizations l,
     String? value, {
     required double min,
     required double max,
@@ -109,7 +110,7 @@ class _MemberHealthProfileDialogState
         ? int.tryParse(value.trim())
         : double.tryParse(value.trim());
     if (parsed == null || parsed < min || parsed > max) {
-      return '$min~$max 범위로 입력해 주세요.';
+      return l.memberHealthRange('$min', '$max');
     }
     return null;
   }
@@ -161,7 +162,7 @@ class _MemberHealthProfileDialogState
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('고객 신체·목표 관리'),
+      title: Text(l.memberHealthTitle),
       content: SizedBox(
         width: 520,
         child: FutureBuilder<MemberHealthProfile>(
@@ -199,12 +200,24 @@ class _MemberHealthProfileDialogState
                           ['', 'male', 'female', 'other'].contains(_gender)
                           ? _gender
                           : '',
-                      decoration: _decoration('성별'),
-                      items: const [
-                        DropdownMenuItem(value: '', child: Text('미설정')),
-                        DropdownMenuItem(value: 'male', child: Text('남성')),
-                        DropdownMenuItem(value: 'female', child: Text('여성')),
-                        DropdownMenuItem(value: 'other', child: Text('기타')),
+                      decoration: _decoration(l.memberHealthGender),
+                      items: [
+                        DropdownMenuItem(
+                          value: '',
+                          child: Text(l.memberHealthGenderUnset),
+                        ),
+                        DropdownMenuItem(
+                          value: 'male',
+                          child: Text(l.memberHealthGenderMale),
+                        ),
+                        DropdownMenuItem(
+                          value: 'female',
+                          child: Text(l.memberHealthGenderFemale),
+                        ),
+                        DropdownMenuItem(
+                          value: 'other',
+                          child: Text(l.memberHealthGenderOther),
+                        ),
                       ],
                       onChanged: (value) => _gender = value ?? '',
                     ),
@@ -214,20 +227,20 @@ class _MemberHealthProfileDialogState
                         Expanded(
                           child: TextFormField(
                             controller: _height,
-                            decoration: _decoration('키 (cm)'),
+                            decoration: _decoration(l.memberHealthHeight),
                             keyboardType: TextInputType.number,
                             validator: (value) =>
-                                _validate(value, min: 50, max: 300),
+                                _validate(l, value, min: 50, max: 300),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: _weight,
-                            decoration: _decoration('체중 (kg)'),
+                            decoration: _decoration(l.memberHealthWeight),
                             keyboardType: TextInputType.number,
                             validator: (value) =>
-                                _validate(value, min: 20, max: 500),
+                                _validate(l, value, min: 20, max: 500),
                           ),
                         ),
                       ],
@@ -235,19 +248,19 @@ class _MemberHealthProfileDialogState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _conditions,
-                      decoration: _decoration('건강상태·주의사항'),
+                      decoration: _decoration(l.memberHealthConditions),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _goals,
-                      decoration: _decoration('고객 목표'),
+                      decoration: _decoration(l.memberHealthGoals),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      '주간 운동 목표',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Text(
+                      l.memberHealthWeeklyGoal,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -255,9 +268,10 @@ class _MemberHealthProfileDialogState
                         Expanded(
                           child: TextFormField(
                             controller: _weeklyCount,
-                            decoration: _decoration('횟수'),
+                            decoration: _decoration(l.memberHealthWeeklyCount),
                             keyboardType: TextInputType.number,
                             validator: (value) => _validate(
+                              l,
                               value,
                               min: 0,
                               max: 14,
@@ -269,9 +283,12 @@ class _MemberHealthProfileDialogState
                         Expanded(
                           child: TextFormField(
                             controller: _weeklyMinutes,
-                            decoration: _decoration('시간(분)'),
+                            decoration: _decoration(
+                              l.memberHealthWeeklyMinutes,
+                            ),
                             keyboardType: TextInputType.number,
                             validator: (value) => _validate(
+                              l,
                               value,
                               min: 0,
                               max: 10080,
@@ -283,9 +300,10 @@ class _MemberHealthProfileDialogState
                         Expanded(
                           child: TextFormField(
                             controller: _weeklyBurn,
-                            decoration: _decoration('소모 kcal'),
+                            decoration: _decoration(l.memberHealthWeeklyBurn),
                             keyboardType: TextInputType.number,
                             validator: (value) => _validate(
+                              l,
                               value,
                               min: 0,
                               max: 100000,
@@ -305,11 +323,11 @@ class _MemberHealthProfileDialogState
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text(l.actionCancel),
         ),
         FilledButton(
           onPressed: _saving || !_profileLoaded ? null : _save,
-          child: Text(_saving ? '저장 중…' : '저장'),
+          child: Text(_saving ? l.memberHealthSaving : l.actionSave),
         ),
       ],
     );

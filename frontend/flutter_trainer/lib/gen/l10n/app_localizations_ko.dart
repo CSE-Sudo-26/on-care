@@ -210,17 +210,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dashCheckSodiumCompletion => '식단·이행률 확인';
 
   @override
-  String get dashWeeklyCompletion => '주간 세션 이행률';
-
-  @override
-  String dashAveragePercent(int percent) {
-    return '평균 $percent%';
-  }
-
-  @override
-  String get dashNoRecordsThisWeek => '아직 이번 주 기록이 없어요';
-
-  @override
   String get dashAiSummaryTitle => 'AI 코칭 요약';
 
   @override
@@ -229,21 +218,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get dashAiNoClients =>
       '아직 담당 고객이 없어요. 고객을 등록하면 식단·운동 데이터를 모아 코칭 포인트를 짚어 드릴게요.';
-
-  @override
-  String dashAiUnread(int count) {
-    return '고객 $count명이 답장을 기다리고 있어요. 먼저 대화를 확인하고 오늘 루틴을 조정해 보세요.';
-  }
-
-  @override
-  String dashAiSodium(int total, int over) {
-    return '이번 주 담당 고객 $total명 중 $over명이 나트륨 목표를 넘겼어요. 저염 식단과 유산소 중심 루틴을 제안해 보세요.';
-  }
-
-  @override
-  String dashAiLowCompletion(int count, int threshold) {
-    return '$count명의 주간 이행률이 $threshold% 아래예요. 강도를 낮춘 루틴으로 다시 습관을 잡아 주세요.';
-  }
 
   @override
   String dashAiAllOnTrack(int total) {
@@ -473,6 +447,56 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberHealthSaveFailed => '고객 정보를 저장하지 못했어요. 다시 시도해 주세요';
 
   @override
+  String get memberHealthTitle => '고객 신체·목표 관리';
+
+  @override
+  String get memberHealthSaving => '저장 중…';
+
+  @override
+  String get memberHealthGender => '성별';
+
+  @override
+  String get memberHealthGenderUnset => '미설정';
+
+  @override
+  String get memberHealthGenderMale => '남성';
+
+  @override
+  String get memberHealthGenderFemale => '여성';
+
+  @override
+  String get memberHealthGenderOther => '기타';
+
+  @override
+  String get memberHealthHeight => '키 (cm)';
+
+  @override
+  String get memberHealthWeight => '체중 (kg)';
+
+  @override
+  String get memberHealthConditions => '건강상태·주의사항';
+
+  @override
+  String get memberHealthGoals => '고객 목표';
+
+  @override
+  String get memberHealthWeeklyGoal => '주간 운동 목표';
+
+  @override
+  String get memberHealthWeeklyCount => '횟수';
+
+  @override
+  String get memberHealthWeeklyMinutes => '시간(분)';
+
+  @override
+  String get memberHealthWeeklyBurn => '소모 kcal';
+
+  @override
+  String memberHealthRange(String min, String max) {
+    return '$min~$max 범위로 입력해 주세요.';
+  }
+
+  @override
   String get clientsDuplicateName => '이미 같은 이름의 고객이 있어요';
 
   @override
@@ -521,12 +545,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metricFat => '지방';
 
   @override
-  String get clientWeeklyReport => '주간 리포트';
-
-  @override
-  String get clientAskAi => 'AI에게 묻기';
-
-  @override
   String get clientActive => '활성';
 
   @override
@@ -540,16 +558,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientChat => '채팅';
-
-  @override
-  String clientChatWithUnread(String name, int count) {
-    return '$name님과 채팅, 안 읽은 메시지 $count개';
-  }
-
-  @override
-  String clientChatWith(String name) {
-    return '$name님과 채팅';
-  }
 
   @override
   String get chatTooLong => '메시지가 너무 길어요 (최대 2000자)';
@@ -787,24 +795,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dietSodiumTrend => '최근 7일 나트륨 추이';
-
-  @override
-  String dietAverageMg(int value) {
-    return '평균 ${value}mg';
-  }
-
-  @override
-  String dietSodiumOverDays(int days, int target) {
-    return '지난 7일 중 $days일 목표(${target}mg)를 초과했어요.';
-  }
-
-  @override
-  String dietSodiumAllWithin(int target) {
-    return '지난 7일 모두 목표(${target}mg) 이내예요. 좋아요!';
-  }
-
-  @override
   String dietSodiumValue(int value) {
     return '나트륨 ${value}mg';
   }
@@ -887,24 +877,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsScheduleWarning => '이번 주 일정을 불러오지 못해 세션 수가 비어 있을 수 있어요';
 
   @override
-  String get reportsSessionsThisWeek => '이번 주 세션';
-
-  @override
   String get unitTimes => '회';
 
   @override
-  String reportsCompletionRate(int rate) {
-    return '완료율 $rate%';
-  }
+  String get unitMinutes => '분';
 
   @override
-  String get reportsProgramReady => '프로그램 준비';
+  String get unitKcal => 'kcal';
 
   @override
-  String get reportsSessionsWithRoutine => '루틴이 붙은 세션';
+  String get clientTrendTitle => '이번 주 운동 추이';
 
   @override
-  String get reportsActiveClients => '활성 고객';
+  String get clientTrendLoadFailed => '주간 운동 추이를 불러오지 못했어요. 다시 시도해 주세요';
+
+  @override
+  String get clientTrendWorkoutCount => '운동 횟수';
+
+  @override
+  String get clientTrendWorkoutMinutes => '운동 시간';
+
+  @override
+  String get clientTrendCaloriesBurned => '소모 칼로리';
+
+  @override
+  String get clientTrendSegmentTime => '시간';
 
   @override
   String get reportsPickClient => '고객 선택';
@@ -944,11 +941,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String reportsSodiumOverInline(int days) {
     return '나트륨 초과 $days일';
-  }
-
-  @override
-  String reportsMoreExercises(int count) {
-    return '외 $count';
   }
 
   @override
@@ -1032,9 +1024,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedTitle => '스케줄';
-
-  @override
-  String get schedSent => '전송됨';
 
   @override
   String get schedDeleteTitle => '일정 삭제';
@@ -1175,9 +1164,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedEmptySlotShort => '비어 있음';
 
   @override
-  String get schedSentToClient => '고객 앱으로 전송 완료!';
-
-  @override
   String schedSentTo(String name) {
     return '$name님에게 전송됨';
   }
@@ -1186,9 +1172,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String schedSentProgramTo(String name, String date) {
     return '$name님에게 $date PT 프로그램 전송';
   }
-
-  @override
-  String get schedSendUnsupported => '완료 프로그램 전송 API가 아직 없어 전송할 수 없어요.';
 
   @override
   String get slotCapacityInvalid => '정원은 1명 이상 100명 이하로 입력해 주세요.';
@@ -1494,12 +1477,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachMemberSummary => '고객 요약';
 
   @override
-  String get reportsFeedbackComplete => '피드백 완료';
-
-  @override
-  String get reportsFeedbackPending => '피드백 미작성';
-
-  @override
   String get reportsDataInsufficient => '데이터 부족';
 
   @override
@@ -1509,19 +1486,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachSendFailed => '전송에 실패했어요. 다시 시도해 주세요';
 
   @override
-  String get coachCustomRoutine => 'AI 맞춤 루틴';
-
-  @override
-  String get coachNeedOneExercise => '운동을 하나 이상 추가해 주세요';
-
-  @override
   String get coachScheduleFailed => '스케줄 등록에 실패했어요. 다시 시도해 주세요';
 
   @override
   String get coachNoClients => '등록된 고객이 없어요';
-
-  @override
-  String get coachTodayDiet => '오늘 식단 요약';
 
   @override
   String get coachRecommended => 'AI 추천 루틴';
@@ -1557,12 +1525,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachVerdictSodium => 'AI 판단: 나트륨 초과 → 유산소 강화 권장';
-
-  @override
-  String get coachVerdictBalanced => 'AI 판단: 식단 균형 양호 → 근력 중심 루틴 유지';
-
-  @override
   String get coachRequestCustom => 'AI에게 맞춤 루틴 요청하기';
 
   @override
@@ -1571,22 +1533,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get coachTapToEdit => '탭하여 수정';
-
-  @override
-  String get coachAddExerciseManually => '＋ 운동 직접 추가';
-
-  @override
-  String get coachExerciseNameHint => '운동 이름 (예: 레그프레스 3세트)';
-
-  @override
   String coachSentToClient(String name) {
     return '$name님에게 전송 완료!';
-  }
-
-  @override
-  String coachReviewAndSend(String name) {
-    return '검토 완료 · $name님에게 전송';
   }
 
   @override
@@ -2069,9 +2017,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchGoReport => '선택하면 주간 리포트를 열어요';
 
   @override
-  String get searchDetailNoIssues => '오늘 이상 없음';
-
-  @override
   String searchDetailUnread(int count) {
     return '답장 대기 $count건';
   }
@@ -2095,15 +2040,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get searchDetailNoRoutine => '보낸 루틴 없음';
-
-  @override
   String searchDetailCompletion(int percent) {
     return '이번 주 이행률 $percent%';
   }
-
-  @override
-  String get searchDetailNoRecord => '이번 주 기록 없음';
 
   @override
   String get routineFeedbackTitle => '수행 피드백';
@@ -2176,12 +2115,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesBackToList => '대화 목록';
 
   @override
-  String get messagesProgram => '프로그램';
-
-  @override
-  String get messagesSchedule => '일정';
-
-  @override
   String messagesRecentWorkout(String value) {
     return '최근 운동 $value';
   }
@@ -2205,9 +2138,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientQuickProgram => '프로그램';
-
-  @override
-  String get clientQuickSchedule => '일정 등록';
 
   @override
   String get clientHealthGoals => '고객 신체·목표 관리';
@@ -2277,9 +2207,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programSavedTitle => '저장한 프로그램';
-
-  @override
-  String get programSavedOpen => '불러오기';
 
   @override
   String programSavedExerciseCount(int count) {
@@ -2413,9 +2340,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get programEditorSessionDown => '세션 아래로 이동';
 
   @override
-  String get programEditorSessionDelete => '세션 삭제';
-
-  @override
   String get programEditorSessionEmpty => '운동을 추가해 세션을 구성하세요.';
 
   @override
@@ -2435,9 +2359,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get programEditorExerciseDown => '운동 아래로 이동';
-
-  @override
-  String get programEditorExerciseDelete => '운동 삭제';
 
   @override
   String get programEditorSets => '세트';
@@ -2482,11 +2403,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsAverageSodium => '평균 나트륨';
-
-  @override
-  String reportsPreviousValue(String value) {
-    return '지난주 $value';
-  }
 
   @override
   String get reportsFeedbackTitle => '트레이너 피드백';

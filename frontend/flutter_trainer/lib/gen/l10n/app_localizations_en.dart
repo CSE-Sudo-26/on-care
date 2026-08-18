@@ -217,17 +217,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCheckSodiumCompletion => 'Check diet & completion';
 
   @override
-  String get dashWeeklyCompletion => 'Weekly session completion';
-
-  @override
-  String dashAveragePercent(int percent) {
-    return 'Avg $percent%';
-  }
-
-  @override
-  String get dashNoRecordsThisWeek => 'No records this week yet';
-
-  @override
   String get dashAiSummaryTitle => 'AI coaching summary';
 
   @override
@@ -236,21 +225,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dashAiNoClients =>
       'No clients yet. Once you add one, I\'ll gather their diet and workout data and point out what to coach.';
-
-  @override
-  String dashAiUnread(int count) {
-    return '$count clients are waiting for a reply. Check their chats first, then adjust today\'s routines.';
-  }
-
-  @override
-  String dashAiSodium(int total, int over) {
-    return '$over of your $total clients went over their sodium target this week. Suggest a low-sodium diet and cardio-led routines.';
-  }
-
-  @override
-  String dashAiLowCompletion(int count, int threshold) {
-    return '$count clients are below $threshold% weekly completion. Ease the intensity and rebuild the habit.';
-  }
 
   @override
   String dashAiAllOnTrack(int total) {
@@ -492,6 +466,56 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the member profile. Please try again';
 
   @override
+  String get memberHealthTitle => 'Body and goals';
+
+  @override
+  String get memberHealthSaving => 'Saving…';
+
+  @override
+  String get memberHealthGender => 'Gender';
+
+  @override
+  String get memberHealthGenderUnset => 'Not set';
+
+  @override
+  String get memberHealthGenderMale => 'Male';
+
+  @override
+  String get memberHealthGenderFemale => 'Female';
+
+  @override
+  String get memberHealthGenderOther => 'Other';
+
+  @override
+  String get memberHealthHeight => 'Height (cm)';
+
+  @override
+  String get memberHealthWeight => 'Weight (kg)';
+
+  @override
+  String get memberHealthConditions => 'Conditions and cautions';
+
+  @override
+  String get memberHealthGoals => 'Member goals';
+
+  @override
+  String get memberHealthWeeklyGoal => 'Weekly exercise goal';
+
+  @override
+  String get memberHealthWeeklyCount => 'Sessions';
+
+  @override
+  String get memberHealthWeeklyMinutes => 'Minutes';
+
+  @override
+  String get memberHealthWeeklyBurn => 'Calories burned';
+
+  @override
+  String memberHealthRange(String min, String max) {
+    return 'Enter a value between $min and $max.';
+  }
+
+  @override
   String get clientsDuplicateName => 'A client with that name already exists';
 
   @override
@@ -540,12 +564,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricFat => 'Fat';
 
   @override
-  String get clientWeeklyReport => 'Weekly report';
-
-  @override
-  String get clientAskAi => 'Ask AI';
-
-  @override
   String get clientActive => 'Active';
 
   @override
@@ -560,16 +578,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientChat => 'Chat';
-
-  @override
-  String clientChatWithUnread(String name, int count) {
-    return 'Chat with $name, $count unread';
-  }
-
-  @override
-  String clientChatWith(String name) {
-    return 'Chat with $name';
-  }
 
   @override
   String get chatTooLong => 'Message is too long (2000 characters max)';
@@ -813,24 +821,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dietSodiumTrend => 'Sodium over the last 7 days';
-
-  @override
-  String dietAverageMg(int value) {
-    return 'Avg ${value}mg';
-  }
-
-  @override
-  String dietSodiumOverDays(int days, int target) {
-    return 'Over the ${target}mg target on $days of the last 7 days.';
-  }
-
-  @override
-  String dietSodiumAllWithin(int target) {
-    return 'Under the ${target}mg target every day this week. Nice!';
-  }
-
-  @override
   String dietSodiumValue(int value) {
     return 'Sodium ${value}mg';
   }
@@ -917,24 +907,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'This week\'s schedule didn\'t load, so session counts may be missing';
 
   @override
-  String get reportsSessionsThisWeek => 'Sessions this week';
-
-  @override
   String get unitTimes => '';
 
   @override
-  String reportsCompletionRate(int rate) {
-    return '$rate% completed';
-  }
+  String get unitMinutes => 'min';
 
   @override
-  String get reportsProgramReady => 'Programs ready';
+  String get unitKcal => 'kcal';
 
   @override
-  String get reportsSessionsWithRoutine => 'Sessions with a routine';
+  String get clientTrendTitle => 'This week\'s exercise trend';
 
   @override
-  String get reportsActiveClients => 'Active clients';
+  String get clientTrendLoadFailed =>
+      'Couldn\'t load the weekly exercise trend. Please try again';
+
+  @override
+  String get clientTrendWorkoutCount => 'Workouts';
+
+  @override
+  String get clientTrendWorkoutMinutes => 'Exercise time';
+
+  @override
+  String get clientTrendCaloriesBurned => 'Calories burned';
+
+  @override
+  String get clientTrendSegmentTime => 'Time';
 
   @override
   String get reportsPickClient => 'Pick a client';
@@ -974,11 +972,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String reportsSodiumOverInline(int days) {
     return '$days days over sodium';
-  }
-
-  @override
-  String reportsMoreExercises(int count) {
-    return '+$count more';
   }
 
   @override
@@ -1063,9 +1056,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedTitle => 'Schedule';
-
-  @override
-  String get schedSent => 'Sent';
 
   @override
   String get schedDeleteTitle => 'Delete session';
@@ -1210,9 +1200,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedEmptySlotShort => 'Empty';
 
   @override
-  String get schedSentToClient => 'Sent to the client app';
-
-  @override
   String schedSentTo(String name) {
     return 'Sent to $name';
   }
@@ -1221,10 +1208,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String schedSentProgramTo(String name, String date) {
     return 'Sent $name the PT program for $date';
   }
-
-  @override
-  String get schedSendUnsupported =>
-      'Completed program delivery is not supported by the API yet.';
 
   @override
   String get slotCapacityInvalid => 'Capacity must be between 1 and 100.';
@@ -1540,12 +1523,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachMemberSummary => 'Member summary';
 
   @override
-  String get reportsFeedbackComplete => 'Feedback complete';
-
-  @override
-  String get reportsFeedbackPending => 'Feedback pending';
-
-  @override
   String get reportsDataInsufficient => 'Insufficient data';
 
   @override
@@ -1555,20 +1532,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachSendFailed => 'Couldn\'t send. Please try again';
 
   @override
-  String get coachCustomRoutine => 'AI custom routine';
-
-  @override
-  String get coachNeedOneExercise => 'Add at least one exercise';
-
-  @override
   String get coachScheduleFailed =>
       'Couldn\'t add it to the schedule. Please try again';
 
   @override
   String get coachNoClients => 'No clients yet';
-
-  @override
-  String get coachTodayDiet => 'Today\'s meals';
 
   @override
   String get coachRecommended => 'AI suggestions';
@@ -1604,14 +1572,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachVerdictSodium =>
-      'AI: sodium over target → favour more cardio';
-
-  @override
-  String get coachVerdictBalanced =>
-      'AI: meals well balanced → keep a strength-led routine';
-
-  @override
   String get coachRequestCustom => 'Ask AI for a custom routine';
 
   @override
@@ -1620,22 +1580,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get coachTapToEdit => 'Tap to edit';
-
-  @override
-  String get coachAddExerciseManually => '+ Add an exercise';
-
-  @override
-  String get coachExerciseNameHint => 'Exercise (e.g. leg press, 3 sets)';
-
-  @override
   String coachSentToClient(String name) {
     return 'Sent to $name';
-  }
-
-  @override
-  String coachReviewAndSend(String name) {
-    return 'Reviewed · send to $name';
   }
 
   @override
@@ -2140,9 +2086,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchGoReport => 'Picking one opens their weekly report';
 
   @override
-  String get searchDetailNoIssues => 'Nothing to act on today';
-
-  @override
   String searchDetailUnread(int count) {
     return '$count awaiting a reply';
   }
@@ -2166,15 +2109,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchDetailNoRoutine => 'No routine sent yet';
-
-  @override
   String searchDetailCompletion(int percent) {
     return '$percent% completion this week';
   }
-
-  @override
-  String get searchDetailNoRecord => 'Nothing recorded this week';
 
   @override
   String get routineFeedbackTitle => 'Workout feedback';
@@ -2249,12 +2186,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesBackToList => 'Conversation list';
 
   @override
-  String get messagesProgram => 'Program';
-
-  @override
-  String get messagesSchedule => 'Schedule';
-
-  @override
   String messagesRecentWorkout(String value) {
     return 'Recent workout $value';
   }
@@ -2279,9 +2210,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clientQuickProgram => 'Program';
-
-  @override
-  String get clientQuickSchedule => 'Add schedule';
 
   @override
   String get clientHealthGoals => 'Body profile & goals';
@@ -2356,9 +2284,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programSavedTitle => 'Saved programs';
-
-  @override
-  String get programSavedOpen => 'Open';
 
   @override
   String programSavedExerciseCount(int count) {
@@ -2501,9 +2426,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get programEditorSessionDown => 'Move session down';
 
   @override
-  String get programEditorSessionDelete => 'Delete session';
-
-  @override
   String get programEditorSessionEmpty =>
       'Add exercises to build this session.';
 
@@ -2524,9 +2446,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get programEditorExerciseDown => 'Move exercise down';
-
-  @override
-  String get programEditorExerciseDelete => 'Delete exercise';
 
   @override
   String get programEditorSets => 'Sets';
@@ -2571,11 +2490,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsAverageSodium => 'Average sodium';
-
-  @override
-  String reportsPreviousValue(String value) {
-    return 'Last week $value';
-  }
 
   @override
   String get reportsFeedbackTitle => 'Trainer feedback';

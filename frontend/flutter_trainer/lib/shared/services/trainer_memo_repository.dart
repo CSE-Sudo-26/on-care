@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:oncare_trainer/core/config/app_config.dart';
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/dio_trainer_memo_repository.dart';
@@ -129,8 +130,14 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
   ) async {
     final memos = _read(clientId);
     final index = memos.indexWhere((memo) => memo.id == memoId);
-    if (index < 0) throw StateError('메모를 찾을 수 없습니다.');
-    final updated = memos[index].copyWith(body: body, updatedAt: DateTime.now());
+    // 실서버 구현과 같은 도메인 오류로 던진다 — 리포지토리는 로케일을 모르므로
+    // 사람이 읽을 문구는 화면이 붙인다(#501). 문구 없는 [NotFoundError] 는
+    // 화면의 지역화된 기본 안내로 떨어진다.
+    if (index < 0) throw const NotFoundError();
+    final updated = memos[index].copyWith(
+      body: body,
+      updatedAt: DateTime.now(),
+    );
     memos[index] = updated;
     await _write(clientId, memos);
     return updated;
@@ -138,8 +145,7 @@ class LocalTrainerMemoRepository implements TrainerMemoRepository {
 
   @override
   Future<void> delete(String clientId, String memoId) async {
-    final memos = _read(clientId)
-      ..removeWhere((memo) => memo.id == memoId);
+    final memos = _read(clientId)..removeWhere((memo) => memo.id == memoId);
     await _write(clientId, memos);
   }
 }
