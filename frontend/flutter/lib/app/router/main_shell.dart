@@ -116,6 +116,11 @@ class _MainShellState extends ConsumerState<MainShell>
       case 2:
         resetExerciseTransientUiState(ref);
         break;
+      // 3(MY)은 일부러 아무 것도 하지 않는다 — MY 탭은 펼침/접힘·임시 선택·
+      // 일회성 필터 같은 화면 전용 위젯 상태(`StatefulWidget`/`setState`)를
+      // 두지 않는다(`my_health_page.dart` 점검 결과, #861). 보이는 값은 전부
+      // `myHealthStateProvider` 가 들고 있는 실제 저장 데이터라 초기화 대상이
+      // 아니다.
       default:
         break;
     }

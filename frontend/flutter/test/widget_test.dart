@@ -19,6 +19,7 @@ import 'package:oncare/features/diet/presentation/widgets/diet_period_view.dart'
 import 'package:oncare/features/exercise/data/repositories/mock_exercise_repository.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 import 'package:oncare/features/exercise/presentation/controllers/exercise_controller.dart';
+import 'package:oncare/features/exercise/presentation/pages/exercise_page.dart';
 import 'package:oncare/features/member_coach/data/repositories/mock_member_coach_repository.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
@@ -769,5 +770,37 @@ void main() {
 
     // 탭을 떠난 적이 없으므로 선택해 둔 '이번 주' 가 그대로 남는다.
     expect(find.byType(DietPeriodView), findsOneWidget);
+  });
+
+  testWidgets('resetExerciseTransientUiState 는 헬스장 예약 카드 선택도 함께 해제한다 (#861)', (
+    tester,
+  ) async {
+    // 예약 카드는 실제 트레이너·슬롯 데이터 없이 provider 값만으로 검증한다 —
+    // MainShell 이 탭 재진입 시 이 함수를 호출한다는 것은 다른 테스트가 이미
+    // 증명했고(운동 현황 기간 토글 복원 테스트), 여기서는 그 함수가 예약 카드
+    // 선택까지 정말로 지우는지만 좁혀서 본다.
+    late WidgetRef capturedRef;
+    await tester.pumpWidget(
+      ProviderScope(
+        child: Consumer(
+          builder: (BuildContext context, WidgetRef ref, Widget? _) {
+            capturedRef = ref;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    capturedRef.read(exerciseSelectedReservationSlotProvider.notifier).state =
+        'slot-1';
+    capturedRef.read(exerciseActivityPeriodProvider.notifier).state = 2;
+
+    resetExerciseTransientUiState(capturedRef);
+
+    expect(capturedRef.read(exerciseSelectedReservationSlotProvider), isNull);
+    expect(
+      capturedRef.read(exerciseActivityPeriodProvider),
+      kExerciseActivityPeriodDefault,
+    );
   });
 }
