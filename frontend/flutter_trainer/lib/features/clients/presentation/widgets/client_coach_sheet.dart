@@ -6,8 +6,8 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/data/repositories/client_coach_repository.dart';
-import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/action_button.dart';
 
 /// 담당 회원에 대해 AI 에게 묻는 시트를 연다. (#497)
 Future<void> showClientCoachSheet(
@@ -141,7 +141,7 @@ class _ClientCoachSheetState extends ConsumerState<_ClientCoachSheet> {
             children: <Widget>[
               Text(
                 l.coachSheetSubtitle,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13.5,
                   color: AppColors.mutedForeground,
                 ),

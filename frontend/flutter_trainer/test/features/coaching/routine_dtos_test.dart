@@ -75,7 +75,7 @@ void main() {
     test('an all-custom routine (every AI suggestion removed) is type + '
         "source from the custom exercises, not '근력'/'ai' by default "
         '(review: this used to silently drop custom types, defaulting to '
-        "근력/ai even when every exercise was a trainer-added 스트레칭)", () {
+        '근력/ai even when every exercise was a trainer-added 스트레칭)', () {
       final result = summaryTypeAndSource(
         aiItemTypes: const <String>[], // every AI suggestion was removed
         customItemTypes: const <String>['스트레칭', '스트레칭', '스트레칭'],

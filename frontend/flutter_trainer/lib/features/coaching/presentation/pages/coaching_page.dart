@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
@@ -11,35 +10,35 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
-import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
-import 'package:oncare_trainer/shared/widgets/icon_label.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// AI 코칭 — the workspace where a client's data becomes a routine.
 ///
@@ -406,7 +405,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         error: (e, _) => Center(
           child: Text(
             l.clientsLoadFailed,
-            style: TextStyle(color: AppColors.mutedForeground),
+            style: const TextStyle(color: AppColors.mutedForeground),
           ),
         ),
         data: (clients) {
@@ -414,7 +413,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             return Center(
               child: Text(
                 l.coachNoClients,
-                style: TextStyle(color: AppColors.mutedForeground),
+                style: const TextStyle(color: AppColors.mutedForeground),
               ),
             );
           }
@@ -768,7 +767,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         ),
         error: (e, _) => Text(
           l.routinesLoadFailed,
-          style: TextStyle(color: AppColors.mutedForeground),
+          style: const TextStyle(color: AppColors.mutedForeground),
         ),
         data: (items) => _showOptionsFlow
             ? AiRoutineOptionsFlow(
@@ -1479,7 +1478,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       l.coachRequestCustom,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
@@ -1659,7 +1658,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         width: 46,
                         child: Text(
                           l.coachHomework,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.brandOrange,
@@ -1688,7 +1687,7 @@ class _SendHistoryCard extends ConsumerWidget {
                             )
                           : Text(
                               l.coachTrainer,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.primary,
