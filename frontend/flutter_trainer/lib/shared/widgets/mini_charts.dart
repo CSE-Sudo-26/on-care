@@ -138,6 +138,105 @@ class BarSeriesChart extends StatelessWidget {
   }
 }
 
+/// 값 하나를 한 줄짜리 가로 막대로 — 목록 행처럼 세로 자리가 없는 곳에서 쓴다.
+///
+/// 숫자만 적혀 있으면 목록을 훑으며 누가 처지는지 견주려고 다섯 개를 눈으로
+/// 비교해야 한다. 길이가 있으면 훑는 것만으로 드러난다(#899).
+///
+/// 값이 없으면([fraction] 이 null) 막대를 그리지 않는다 — 빈 트랙에 0 을
+/// 채우면 `기록 없음` 이 `0% 수행` 으로 읽힌다.
+class InlineBarValue extends StatelessWidget {
+  /// Creates an inline bar with [text] to its right.
+  const InlineBarValue({
+    super.key,
+    required this.fraction,
+    required this.text,
+    this.label,
+    this.labelWidth = 56,
+    this.warn = false,
+    this.valueWidth = 40,
+  });
+
+  /// 막대가 무엇을 재는 값인지. 자리가 좁아 [labelWidth] 안에서 줄여 그린다 —
+  /// 말줄임하면 정작 무슨 값인지가 사라진다.
+  final String? label;
+
+  /// 라벨 칸 너비.
+  final double labelWidth;
+
+  /// 막대 길이(0~1). 값이 없으면 null.
+  final double? fraction;
+
+  /// 막대 오른쪽에 찍을 값. 값이 없으면 부르는 쪽이 안내 문구를 준다.
+  final String text;
+
+  /// 기준을 벗어난 값. 색으로 드러낸다.
+  final bool warn;
+
+  /// 값 칸 너비. 단위가 붙으면 넓혀 준다.
+  final double valueWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tone = fraction == null
+        ? AppColors.borderStrong
+        : warn
+        ? AppColors.overTarget
+        : AppColors.primary;
+    return Row(
+      children: <Widget>[
+        if (label != null) ...<Widget>[
+          SizedBox(
+            width: labelWidth,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label!,
+                maxLines: 1,
+                style: const TextStyle(
+                  color: AppColors.subtleForeground,
+                  fontSize: 10.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Expanded(
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(AppRadius.pill),
+            child: Stack(
+              children: <Widget>[
+                Container(height: 6, color: AppColors.inputBackground),
+                FractionallySizedBox(
+                  widthFactor: (fraction ?? 0).clamp(0.0, 1.0),
+                  child: Container(height: 6, color: tone),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        SizedBox(
+          width: valueWidth,
+          child: Text(
+            text,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: fraction == null ? AppColors.mutedForeground : tone,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _Bar extends StatelessWidget {
   const _Bar({
     required this.value,
