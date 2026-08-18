@@ -20,7 +20,7 @@ from app.schemas.reservation_api import (
     ReservationOut,
     TrainerSlotOut,
 )
-from app.services import notification_service
+from app.services import notification_service, trainer_service
 
 
 class SlotNotFound(Exception):
@@ -173,15 +173,25 @@ class ReservationTooLate(Exception):
     pass
 
 
-def _release(db: Session, reservations: list[TrainerReservation]) -> None:
+def _release(
+    db: Session,
+    reservations: list[TrainerReservation],
+    *,
+    cancelled_by: str | None = None,
+) -> None:
     """예약을 지우고 좌석과 생성된 일정을 되돌린다. **커밋하지 않는다.**
 
     회원 탈퇴와 개별 취소가 같은 일을 한다 — 좌석 복구, 예약 삭제, 그 예약이
-    만든 트레이너 일정 제거. 두 곳에 따로 쓰면 한쪽만 고쳐지는 사고가 난다
+    만든 트레이너 일정 정리. 두 곳에 따로 쓰면 한쪽만 고쳐지는 사고가 난다
     (실제로 취소 기능이 없던 동안 이 로직은 탈퇴 경로에만 있었다). (#502)
 
+    [cancelled_by] 를 주면 트레이너 일정을 **지우지 않고 취소 기록으로 남긴다**
+    (#871). 회원이 스스로 취소한 경우가 그렇다 — 트레이너 화면에서 한 줄이 조용히
+    사라지면 "그 시간에 무슨 일이 있었나" 가 남지 않는다. 탈퇴 경로는 계정 자체가
+    사라지므로 지금처럼 일정을 지운다: 남길 상대가 없는 기록이다.
+
     잠금·flush 순서는 그대로다: 예약과 슬롯을 id 순으로 잠가 데드락을 피하고,
-    restrictive FK 때문에 예약 행을 먼저 flush 한 뒤 일정을 지운다.
+    restrictive FK 때문에 예약 행을 먼저 flush 한 뒤 일정을 정리한다.
     """
     if not reservations:
         return
@@ -214,8 +224,18 @@ def _release(db: Session, reservations: list[TrainerReservation]) -> None:
     db.flush()
     for schedule_id in schedule_ids:
         schedule = db.get(TrainerSchedule, schedule_id)
-        if schedule is not None:
+        if schedule is None:
+            continue
+        if cancelled_by is None:
             db.delete(schedule)
+            continue
+        # 이미 마무리된 세션(완료·취소·노쇼)은 그대로 둔다 — 지난 수업의 결말을
+        # 예약 정리가 덮어쓰면 안 된다.
+        if schedule.status != trainer_service.SCHEDULE_UPCOMING:
+            continue
+        schedule.status = trainer_service.SCHEDULE_CANCELLED
+        schedule.cancelled_at = datetime.now(timezone.utc)
+        schedule.cancellation_source = cancelled_by
     db.flush()
 
 
@@ -388,7 +408,9 @@ def cancel(
     member_name = db.scalar(select(User.name).where(User.id == member_id)) or ""
     trainer_id = slot.trainer_id if slot is not None else None
 
-    _release(db, [reservation])
+    # 회원이 스스로 취소한 예약이다 — 트레이너 일정은 지우지 않고 `취소` 기록으로
+    # 남긴다(#871). 좌석 복구·예약 삭제 등 나머지 규칙은 그대로다.
+    _release(db, [reservation], cancelled_by="member")
 
     # 트레이너는 이 취소를 앱에서 다시 보지 않으면 알 수 없다 — 자기 일정에서
     # 한 줄이 조용히 사라질 뿐이다. (#502, 인박스는 #503)

@@ -54,7 +54,7 @@ from app.schemas.trainer_api import (
     RoutineSuggestionApproveRequest, RoutineSuggestionCreateRequest,
     ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
-    ScheduleCompleteRequest,
+    ScheduleCancelRequest, ScheduleCompleteRequest,
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
@@ -1284,11 +1284,69 @@ def trainer_complete_session(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> ScheduleSessionOut:
-    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
+    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재.
+
+    취소·노쇼로 이미 마무리된 세션은 409 다 — 하지 않은 PT 를 완료로 되돌리면
+    회원 운동 기록으로 적재된다(#871).
+    """
     try:
         out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/cancel", response_model=ScheduleSessionOut)
+def trainer_cancel_session(
+    session_id: str,
+    payload: ScheduleCancelRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 취소(예정→취소). 일정을 지우지 않고 기록으로 남긴다. (#871)
+
+    삭제(`DELETE`)와 다른 동작이다 — 삭제는 잘못 만든 일정을 없애는 일이고,
+    이 경로는 실제로 있었던 약속이 진행되지 않았다는 사실을 남긴다. 같은 요청을
+    반복해도 200 이고 취소 시각·주체는 처음 값을 지킨다.
+    """
+    try:
+        out = trainer_service.cancel_session(
+            db,
+            trainer.id,
+            session_id,
+            source=payload.source,
+            reason=payload.reason.strip(),
+        )
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/no-show", response_model=ScheduleSessionOut)
+def trainer_mark_session_no_show(
+    session_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 노쇼(예정→노쇼). 예약된 시간에 회원이 오지 않았다는 기록. (#871)
+
+    취소와 나누는 까닭은 두 일이 다르기 때문이다 — 취소는 진행 전에 약속이
+    거두어진 것이고, 노쇼는 약속이 그대로 있는데 회원이 오지 않은 것이다.
+    """
+    try:
+        out = trainer_service.mark_session_no_show(db, trainer.id, session_id)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     if out is None:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return out
