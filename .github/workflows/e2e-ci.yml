@@ -55,6 +55,15 @@ jobs:
     env:
       ENV: dev
       DATABASE_URL: postgresql+psycopg://oncare:oncare@localhost:5432/oncare
+      # 러너 시간대를 KST 로 고정한다. `backend/docker-compose.yml` 이 앱에 걸어 둔
+      # `TZ: Asia/Seoul` 과 같은 이유다 — 서버는 트레이너 일정의 날짜·시각을 **항상**
+      # 서울 기준으로 찍는데(`reservation_service.reserve`), 러너가 UTC 면 스위트가
+      # 보는 벽시계와 9시간 어긋난다. 화면에 보이는 '오늘/어제' 라벨도 마찬가지다.
+      TZ: Asia/Seoul
+      # CI 에는 Gemini 키가 없다. 켜 두면 기동할 때마다 임베딩이 터져 백엔드 로그가
+      # `GEMINI_API_KEY 가 설정되지 않았습니다` 로 뒤덮이고, 진짜 실패 원인이 묻힌다.
+      # 어느 스위트도 AI 코치 근거를 단언하지 않는다.
+      SEED_RAG_INGEST: "false"
       # 데모 계정(트레이너·회원)이 있어야 스위트가 로그인할 수 있다.
       SEED_DEMO_DATA: "true"
       # 스위트는 한 번 돌 때 로그인을 여러 번 한다 — 단계마다 로그아웃 상태에서

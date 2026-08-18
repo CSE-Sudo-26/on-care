@@ -231,11 +231,16 @@ class E2eApi {
   Future<List<Map<String, dynamic>>> reservationSessionsAt(
     DateTime startsAt,
   ) async {
+    // 서버는 일정의 날짜·시각을 **항상** 서울 기준으로 찍는다
+    // (`reservation_service.reserve` 의 `astimezone(SEOUL)`). 그러니 비교할 벽시계도
+    // 서울 것이어야 한다 — 러너 지역 시간으로 재면 KST 밖에서는 통째로 어긋나
+    // '일정이 0건' 으로만 보인다(CI 는 UTC 라 9시간 차이가 났다).
+    final DateTime local = _seoul(startsAt);
     final String hhmm =
-        '${startsAt.hour.toString().padLeft(2, '0')}:'
-        '${startsAt.minute.toString().padLeft(2, '0')}';
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
     return <Map<String, dynamic>>[
-      for (final Map<String, dynamic> session in await sessionsOn(startsAt))
+      for (final Map<String, dynamic> session in await sessionsOn(local))
         if (session['time'] == hhmm &&
             session['note'] == '회원 앱 예약' &&
             session['client_name'] == memberName)
@@ -430,6 +435,12 @@ Future<void> loginAsTrainer(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey<String>('trainer-login-submit')));
   await pumpUntil(tester, find.byType(DashboardPage), step: '트레이너 로그인');
 }
+
+/// 그 순간의 서울 벽시계. 한국은 1988년 이후 서머타임이 없어 고정 +9 로 충분하고,
+/// 서버가 쓰는 `app.core.clock.SEOUL` 과 같은 값이 된다. 돌려주는 값은 UTC 플래그가
+/// 붙어 있으니 **필드만** 읽어야 한다.
+DateTime _seoul(DateTime value) =>
+    value.toUtc().add(const Duration(hours: 9));
 
 String ymd(DateTime value) =>
     '${value.year.toString().padLeft(4, '0')}-'
