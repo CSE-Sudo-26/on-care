@@ -361,17 +361,17 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (consultationInbox)
-            ListTile(
-              key: const Key('consult-inbox-entry'),
-              dense: true,
-              leading: Badge(
-                isLabelVisible: (pendingConsultations ?? 0) > 0,
-                label: Text('${pendingConsultations ?? 0}'),
-                child: const Icon(Icons.mark_email_unread_outlined),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppLayout.pagePadding,
+                AppLayout.pagePadding,
+                AppLayout.pagePadding,
+                0,
               ),
-              title: Text(l.consultTitle),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: _openConsultationInbox,
+              child: _ConsultationInboxButton(
+                pending: pendingConsultations,
+                onTap: _openConsultationInbox,
+              ),
             ),
           Expanded(
             child: _weekView ? _buildWeekGrid() : _buildDayView(schedule),
@@ -1424,6 +1424,153 @@ class _ProgramDraftFields extends StatelessWidget {
 }
 
 /// Week range label with the prev/next chevrons, above the week grid.
+/// 상담 요청 인박스로 가는 카드형 진입점. (#858)
+///
+/// 예전에는 기본 [ListTile] 이었다. 배경도 테두리도 그림자도 없어, 바로 아래
+/// 주간 스트립·세션 카드가 모두 [kCardShadow] 를 두른 화면에서 **가장 먼저
+/// 눌러야 할 진입점이 가장 눈에 안 띄었다.**
+///
+/// 대기 건이 있을 때만 남색 그라디언트로 올라오고, 없으면 흰 카드로 가라앉는다
+/// — 강조는 처리할 것이 있을 때만 뜻이 있다. 건수도 아이콘 위 배지가 아니라
+/// 문구로 읽힌다(`대기 중 3건`). 아직 못 읽었으면([pending] 이 null) 숫자를
+/// 말하지 않고 가라앉은 모습으로 둔다.
+class _ConsultationInboxButton extends StatelessWidget {
+  const _ConsultationInboxButton({required this.pending, required this.onTap});
+
+  /// 대기 중인 상담 요청 수. 아직 불러오지 못했으면 null.
+  final int? pending;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final int count = pending ?? 0;
+    final bool waiting = count > 0;
+
+    final Color titleColor = waiting
+        ? AppColors.primaryForeground
+        : AppColors.foreground;
+    final Color subtitleColor = waiting
+        ? AppColors.primaryForeground.withValues(alpha: 0.85)
+        : AppColors.subtleForeground;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: const BorderRadius.all(AppRadius.card),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: waiting ? null : AppColors.card,
+          gradient: waiting
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[AppColors.primary, AppColors.secondary],
+                )
+              : null,
+          borderRadius: const BorderRadius.all(AppRadius.card),
+          border: waiting ? null : Border.all(color: AppColors.borderStrong),
+          boxShadow: kCardShadow,
+        ),
+        child: InkWell(
+          key: const Key('consult-inbox-entry'),
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(AppRadius.card),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: waiting
+                        ? AppColors.primaryForeground.withValues(alpha: 0.18)
+                        : AppColors.accentSurface,
+                    borderRadius: const BorderRadius.all(AppRadius.md),
+                  ),
+                  child: Icon(
+                    Icons.mark_email_unread_outlined,
+                    size: 20,
+                    color: waiting
+                        ? AppColors.primaryForeground
+                        : AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                // 좁은 폭에서 문구가 넘치지 않도록 남는 폭을 글자가 갖는다.
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        l.consultTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: titleColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        waiting
+                            ? l.consultPendingCount(count)
+                            : l.consultNoPending,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (waiting) ...<Widget>[
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 3,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryForeground,
+                      borderRadius: BorderRadius.all(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: waiting
+                      ? AppColors.primaryForeground.withValues(alpha: 0.9)
+                      : AppColors.subtleForeground,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _WeekNav extends StatelessWidget {
   const _WeekNav({
     required this.start,
@@ -1698,6 +1845,12 @@ class _WeekChip extends ConsumerWidget {
 /// strip: chevrons shift the window a week at a time, the selected day
 /// fills primary, today reads primary. A dot marks days with booked
 /// sessions. Cells are flexible so the row never overflows.
+/// 일 보기 상단의 날짜 스트립 — 왼쪽 정렬 날짜 내비게이션 + 7일 셀. (#859)
+///
+/// 주 보기의 [_WeekNav] 와 같은 모양·같은 자리에서 시작한다. 예전에는 셰브런이
+/// 화면 양 끝으로 밀리고 셀이 폭 전체에 퍼져 있었고, 지금 보고 있는 주가
+/// 며칠~며칠인지 알려 주는 문구가 아예 없었다. 일↔주를 오갈 때마다 날짜
+/// 정보가 자리를 옮기니 눈이 매번 다시 찾아야 했다.
 class _ScheduleWeekStrip extends StatelessWidget {
   const _ScheduleWeekStrip({
     required this.weekAnchor,
@@ -1735,25 +1888,71 @@ class _ScheduleWeekStrip extends StatelessWidget {
     final week = <DateTime>[
       for (var i = 0; i < 7; i++) weekAnchor.add(Duration(days: i)),
     ];
+    final end = weekAnchor.add(const Duration(days: 6));
 
-    return Row(
-      children: <Widget>[
-        _ChevronButton(icon: Icons.chevron_left, onTap: () => onShiftWeek(-1)),
-        // Flexible cells share the middle space evenly — no fixed widths
-        // that could overflow a narrow column.
-        for (final d in week)
-          Expanded(
-            child: _DayCell(
-              date: d,
-              label: _weekdayShort(l)[d.weekday - 1],
-              selected: _isSameDay(d, selectedDay),
-              isToday: _isSameDay(d, today),
-              hasDot: bookedDates.contains(ymd(d)),
-              onTap: () => onSelect(d),
+    // 왼쪽 정렬 + 폭 상한. 주 보기의 [_WeekNav] 가 날짜를 화면 왼쪽 끝에
+    // 두는데 일 보기만 화면 폭 전체에 퍼져, 보기를 바꿀 때마다 날짜 정보가
+    // 자리를 옮겼다(#859).
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: AppLayout.calendarStripMaxWidth,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // 주 보기의 날짜 내비게이션과 같은 모양·같은 자리. 셰브런도
+            // 여기로 올라온다 — 스트립에 한 쌍 더 두면 화면에 같은 일을
+            // 하는 버튼이 둘이 된다.
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _ChevronButton(
+                  icon: Icons.chevron_left,
+                  onTap: () => onShiftWeek(-1),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  l.dateRange(
+                    l.dateMonthDay(weekAnchor.month, weekAnchor.day),
+                    l.dateMonthDay(end.month, end.day),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _ChevronButton(
+                  icon: Icons.chevron_right,
+                  onTap: () => onShiftWeek(1),
+                ),
+              ],
             ),
-          ),
-        _ChevronButton(icon: Icons.chevron_right, onTap: () => onShiftWeek(1)),
-      ],
+            const SizedBox(height: AppSpacing.xs),
+            // Flexible cells share the row evenly — no fixed widths that
+            // could overflow a narrow column.
+            Row(
+              children: <Widget>[
+                for (final d in week)
+                  Expanded(
+                    child: _DayCell(
+                      date: d,
+                      label: _weekdayShort(l)[d.weekday - 1],
+                      selected: _isSameDay(d, selectedDay),
+                      isToday: _isSameDay(d, today),
+                      hasDot: bookedDates.contains(ymd(d)),
+                      onTap: () => onSelect(d),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -450,12 +451,53 @@ void main() {
       expect(find.text('김민수'), findsOneWidget);
     });
 
+    // 진입점은 카드형 버튼이다 — 대기 건이 있을 때만 강조되고, 건수를
+    // 아이콘 배지가 아니라 문구로 말한다(#858).
+    testWidgets('상담 요청 진입점은 대기 건수를 문구로 보여 준다', (tester) async {
+      await openSchedule(tester);
+
+      final Finder entry = find.byKey(const Key('consult-inbox-entry'));
+      expect(entry, findsOneWidget);
+      // 시드에 대기 1건 — '대기 중 1건' 이 그 자리에서 읽혀야 한다.
+      expect(find.text('대기 중 1건'), findsOneWidget);
+      expect(find.text('대기 중인 요청이 없어요'), findsNothing);
+    });
+
+    testWidgets('대기 건이 없으면 강조 대신 없음을 말한다', (tester) async {
+      await pumpTrainerApp(
+        tester,
+        token: 'demo-trainer-token',
+        at: AppRoutes.schedule,
+        extraOverrides: <Override>[
+          consultationRepositoryProvider.overrideWithValue(
+            DemoConsultationRepository(requests: <ConsultationRequest>[]),
+          ),
+        ],
+      );
+
+      expect(find.byKey(const Key('consult-inbox-entry')), findsOneWidget);
+      expect(find.text('대기 중인 요청이 없어요'), findsOneWidget);
+      expect(find.text('대기 중 0건'), findsNothing);
+    });
+
+    testWidgets('상담 요청 진입점이 좁은 폭에서 넘치지 않는다', (tester) async {
+      tester.view.physicalSize = const Size(360, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await openSchedule(tester);
+
+      expect(find.byKey(const Key('consult-inbox-entry')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('consultation inbox opens from the schedule tab', (
       tester,
     ) async {
       await openSchedule(tester);
 
-      await tester.tap(find.text('상담 요청'));
+      await tester.tap(find.byKey(const Key('consult-inbox-entry')));
       await settle(tester);
 
       expect(find.text('김하늘'), findsOneWidget);
@@ -928,6 +970,52 @@ void main() {
       await settle(tester);
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('오늘'), findsNothing);
+    });
+
+    // 일↔주를 오가도 날짜 정보가 같은 자리에서 시작해야 한다(#859).
+    testWidgets('일 보기 날짜 헤더가 주 보기와 같은 왼쪽 자리에 놓인다', (tester) async {
+      // 화면이 nowKst() 로 창을 잡으므로 기준 날짜도 KST 여야 한다. 기기가
+      // UTC 면 DateTime.now() 와 KST 의 날짜가 갈려 라벨이 어긋난다(#850).
+      final today = todayKst();
+      final anchor = today.subtract(const Duration(days: 3));
+      final end = anchor.add(const Duration(days: 6));
+      // 두 보기가 같은 창(window)을 가리키므로 라벨 문구도 같다.
+      final label =
+          '${anchor.month}월 ${anchor.day}일 – ${end.month}월 ${end.day}일';
+
+      await openSchedule(tester);
+      expect(find.text(label), findsOneWidget);
+      final dayLeft = tester.getTopLeft(find.text(label)).dx;
+
+      await goTo(tester, AppRoutes.scheduleView('week', date: ymd(today)));
+      expect(find.text(label), findsOneWidget);
+      final weekLeft = tester.getTopLeft(find.text(label)).dx;
+
+      expect(dayLeft, weekLeft);
+    });
+
+    testWidgets('일 보기 스트립은 화면 폭 전체로 퍼지지 않는다', (tester) async {
+      // 1440px 콘솔에서 요일 7칸이 균등 분산되면 칸 간격이 200px씩 벌어져
+      // 한 주가 한 덩어리로 읽히지 않는다.
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await openSchedule(tester);
+
+      // schedule-day-* 키도 nowKst() 로 만들어진다 — 같은 기준을 쓴다.
+      final anchor = todayKst().subtract(const Duration(days: 3));
+      final first = find.byKey(ValueKey<String>('schedule-day-${ymd(anchor)}'));
+      final last = find.byKey(
+        ValueKey<String>(
+          'schedule-day-${ymd(anchor.add(const Duration(days: 6)))}',
+        ),
+      );
+
+      final spanned =
+          tester.getBottomRight(last).dx - tester.getTopLeft(first).dx;
+      expect(spanned, lessThanOrEqualTo(AppLayout.calendarStripMaxWidth));
     });
 
     testWidgets('the week strip fits a narrow column without overflowing', (

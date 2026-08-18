@@ -14,4 +14,13 @@ void main() {
     expect(clients.badge, NavBadge.none);
     expect(messages.badge, NavBadge.unreadMessages);
   });
+
+  // 배지가 '오늘 예약 수' 가 아니라 '남은 일감' 을 가리킨다는 계약(#860).
+  test('스케줄 메뉴 배지는 남은 예정 세션을 가리킨다', () {
+    final schedule = navDestinations.singleWhere(
+      (destination) => destination.label == NavLabel.schedule,
+    );
+
+    expect(schedule.badge, NavBadge.todayPendingSessions);
+  });
 }

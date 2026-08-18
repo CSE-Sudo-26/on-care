@@ -107,7 +107,9 @@ void main() {
         final Map<String, dynamic>? saved = await _waitForPending(acceptApi);
         expect(saved, isNotNull, reason: 'UI 제출이 서버에 상담을 남기지 않았습니다.');
         expect(saved!['trainer_id'], trainerId);
-        expect(saved['target_type'], 'trainer');
+        // `target_type` 은 단언하지 않는다. #727 이 헬스장 대상 갈래를 없애면서 응답
+        // 필드에서 뺐다 — 값이 `trainer` 하나뿐이라 실어 보낼 이유가 없어졌다.
+        // 대상이 트레이너라는 것은 위의 `trainer_id` 가 이미 증명한다.
         expect(saved['exercise_goal'], 'strength');
         expect(saved['health_purpose_type'], 'rehab');
         expect(saved['preferred_time_slot'], 'evening');
