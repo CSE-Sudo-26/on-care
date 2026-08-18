@@ -172,6 +172,49 @@ void main() {
       expect(container.read(todayReservationCountProvider).value, 4);
     });
 
+    // 배지는 '남은 일감' 을 말한다. 시드의 오늘은 완료 2 · 공백 2 · 예정 2 라
+    // 예약 수(4)와 배지 수(2)는 서로 달라야 맞다(#860).
+    test('사이드바 배지는 완료한 세션을 세지 않는다', () async {
+      final container = ProviderContainer(
+        overrides: <Override>[
+          scheduleRepositoryProvider.overrideWithValue(
+            DriftScheduleRepository(db),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sessions = await container.read(todayScheduleProvider.future);
+      expect(sessions.where((s) => s.isDone).length, 2, reason: '시드 전제');
+
+      expect(container.read(todayPendingSessionCountProvider).value, 2);
+      expect(container.read(todayReservationCountProvider).value, 4);
+    });
+
+    test('스케줄을 못 읽으면 배지도 값 없음으로 남는다', () async {
+      // 예약 수와 같은 규약 — 0 을 내보내면 "남은 일정 없음" 이라는 틀린
+      // 사실이 되고, 화면은 배지를 감추는 대신 0 을 그린다.
+      final container = ProviderContainer(
+        overrides: <Override>[
+          todayScheduleProvider.overrideWith(
+            (ref) => Stream<List<ScheduleSession>>.error(
+              StateError('schedule unavailable'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(todayScheduleProvider.future),
+        throwsStateError,
+      );
+      expect(
+        container.read(todayPendingSessionCountProvider).valueOrNull,
+        isNull,
+      );
+    });
+
     test('스케줄을 못 읽으면 0 이 아니라 값 없음으로 남는다', () async {
       // 0 을 내보내면 "오늘 예약 0건" 이라는 틀린 사실이 된다 — 배지를 숨겨야 한다.
       final container = ProviderContainer(

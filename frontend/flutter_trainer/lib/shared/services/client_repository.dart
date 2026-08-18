@@ -443,12 +443,14 @@ final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
   return ref.watch(clientRepositoryProvider).watchLastChatAt();
 });
 
-/// Today's booked-session count for the sidebar badge and dashboard KPI.
+/// Today's booked-session count for the dashboard KPI ('오늘 예약').
 ///
 /// Derived from [todayScheduleProvider] rather than the roster: the count is
 /// a property of the schedule, and the dashboard already subscribes to that
 /// stream, so composing here avoids a second request for the same data.
-/// 공백 slots are placeholders, not bookings, so they don't count.
+/// 공백 slots are placeholders, not bookings, so they don't count. 완료한
+/// 세션은 **센다** — 오늘 잡혀 있던 일정이라는 사실은 끝나도 변하지 않는다.
+/// 남은 일감을 세는 자리는 [todayPendingSessionCountProvider] 다(#860).
 ///
 /// Stays an [AsyncValue] on purpose. When the schedule is loading or failed
 /// there is no honest number to show, and `valueOrNull` is null — the UI
@@ -457,6 +459,25 @@ final todayReservationCountProvider = Provider<AsyncValue<int>>((ref) {
   return ref
       .watch(todayScheduleProvider)
       .whenData((sessions) => sessions.where((s) => !s.isGap).length);
+});
+
+/// 사이드바 스케줄 배지가 읽는 **아직 처리하지 않은** 오늘 세션 수. (#860)
+///
+/// [todayReservationCountProvider] 와 나뉘어 있는 이유: 두 자리가 서로 다른
+/// 질문에 답한다. 대시보드 KPI '오늘 예약' 은 "오늘 몇 건이 잡혀 있나" 이므로
+/// 끝난 수업도 세는 것이 맞다. 배지는 "여기 처리할 게 남았다" 는 신호라, 이미
+/// 완료한 세션까지 세면 트레이너가 탭에 들어가 확인하고 나서야 남은 건이 더
+/// 적다는 것을 알게 된다 — 그런 배지는 몇 번 겪고 나면 안 보게 된다.
+///
+/// 공백 슬롯은 예약이 아니고, 완료 세션은 할 일이 아니다. 따라서 예정만 센다.
+/// 대시보드의 임박 강조(`startsWithin`)가 이미 쓰는 규칙과 같다(#817).
+///
+/// [todayReservationCountProvider] 와 같은 이유로 [AsyncValue] 로 남는다 —
+/// 스케줄을 못 읽으면 0 이 아니라 값 없음이고, 화면은 배지를 감춘다.
+final todayPendingSessionCountProvider = Provider<AsyncValue<int>>((ref) {
+  return ref
+      .watch(todayScheduleProvider)
+      .whenData((sessions) => sessions.where((s) => s.isUpcoming).length);
 });
 
 /// Streams a client's meals for the 식단 sub-tab.

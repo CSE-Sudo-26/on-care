@@ -72,7 +72,11 @@ class AppSidebar extends ConsumerWidget {
               ?.values
               .fold<int>(0, (sum, n) => sum + n)
         : null;
-    final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
+    // 완료한 수업은 빠진 '남은 일감' 수. 대시보드 KPI 의 '오늘 예약' 과는
+    // 다른 숫자이고, 달라야 한다(#860).
+    final pendingSessions = ref
+        .watch(todayPendingSessionCountProvider)
+        .valueOrNull;
     final profile = ref.watch(sessionControllerProvider).profile;
     // 상담 요청 only exists against the real API — the demo has no member
     // backend to receive requests from, so the row is not built at all
@@ -116,7 +120,7 @@ class AppSidebar extends ConsumerWidget {
                       expanded: expanded,
                       badgeCount: switch (navDestinations[i].badge) {
                         NavBadge.unreadMessages => unread,
-                        NavBadge.todayReservations => reservations,
+                        NavBadge.todayPendingSessions => pendingSessions,
                         // Not reachable from this loop — 상담 요청 is not in
                         // navDestinations and is rendered below with its
                         // count passed in directly.
