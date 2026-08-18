@@ -821,11 +821,17 @@ class _NutritionSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color macroProgressColor = FigmaColors.primaryA(0.65);
+    // 넘긴 항목은 빨강. 바는 목표 지점에서 멈추므로(`gaugeValue` 가 1.0 으로
+    // 잘린다) 색까지 그대로면 꽉 찬 것과 넘긴 것이 같은 그림이 된다. 같은
+    // 카드의 칼로리와 아래의 나트륨·당류는 이미 이렇게 갈린다 — 탄단지 바만
+    // 예외였다(#890). 세 항목이 각자 판단하므로 지방만 넘긴 날은 지방 바만
+    // 빨개진다.
+    Color macroColor(_NutritionSummaryItem item) =>
+        item.isOverGoal ? FigmaColors.dangerRed : FigmaColors.primaryA(0.65);
     final List<_MacroProgressData> macros = <_MacroProgressData>[
-      _MacroProgressData(item: carbs, color: macroProgressColor),
-      _MacroProgressData(item: protein, color: macroProgressColor),
-      _MacroProgressData(item: fat, color: macroProgressColor),
+      _MacroProgressData(item: carbs, color: macroColor(carbs)),
+      _MacroProgressData(item: protein, color: macroColor(protein)),
+      _MacroProgressData(item: fat, color: macroColor(fat)),
     ];
     final AppLocalizations l = AppLocalizations.of(context);
     final Color calorieColor = calories.isOverGoal

@@ -12,6 +12,15 @@ import 'package:oncare/gen/l10n/app_localizations.dart';
 
 enum _GymSort { recommended, distance, rating }
 
+/// 검색 결과 패널이 차지하는 화면 비율. (#865)
+///
+/// 최소값은 **완전히 접히지 않는 높이**다 — 결과가 있다는 사실과 첫 카드가 언제나
+/// 보여야 한다. 최대값은 검색창과 시스템 영역을 침범하지 않는 선이고, 중간값은
+/// 지도를 조금 남긴 채 여러 곳을 견주는 자리다.
+const double _kPanelMin = 0.42;
+const double _kPanelMid = 0.65;
+const double _kPanelMax = 0.9;
+
 class GymListPage extends ConsumerStatefulWidget {
   const GymListPage({super.key});
 
@@ -42,6 +51,63 @@ class _GymListPageState extends ConsumerState<GymListPage> {
       _GymSort.rating =>
         visible.toList()..sort((Gym a, Gym b) => b.rating.compareTo(a.rating)),
     };
+  }
+
+  /// 지도 위를 덮는 결과 패널. 로딩·오류·빈 상태도 이 패널 안에서 보여 준다 —
+  /// 결과 영역이 통째로 사라지면 패널을 끌 자리가 없어진다.
+  Widget _resultsPanel(
+    BuildContext context,
+    ScrollController controller,
+    AsyncValue<List<Gym>> gymsAsync,
+  ) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _ResultsPanel(
+      controller: controller,
+      header: gymsAsync.maybeWhen(
+        data: (List<Gym> gyms) => _ResultControls(
+          countLabel: l.exResultCount(_visibleGyms(gyms).length),
+          sort: _sort,
+          onSort: (_GymSort value) => setState(() => _sort = value),
+        ),
+        orElse: () => null,
+      ),
+      child: gymsAsync.when(
+        loading: () => const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
+          ),
+        ),
+        error: (Object _, StackTrace _) => SliverToBoxAdapter(
+          child: _LoadError(
+            message: l.exGymsLoadError,
+            onRetry: () => ref.invalidate(gymFinderResultsProvider),
+          ),
+        ),
+        data: (List<Gym> gyms) => _resultSliver(context, _visibleGyms(gyms)),
+      ),
+    );
+  }
+
+  /// 검색 결과 목록. 비어 있으면 같은 자리에 기존 빈 상태를 둔다.
+  Widget _resultSliver(BuildContext context, List<Gym> visible) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    if (visible.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: _EmptyResults(message: l.exNoSearchResults),
+        ),
+      );
+    }
+    return SliverList.separated(
+      itemCount: visible.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (BuildContext context, int index) => _GymListCard(
+        gym: visible[index],
+        onTap: () => context.push(AppRoutes.gymDetailPath(visible[index].id)),
+      ),
+    );
   }
 
   @override
@@ -80,53 +146,37 @@ class _GymListPageState extends ConsumerState<GymListPage> {
                     onChanged: (String value) => setState(() => _query = value),
                   ),
                   const SizedBox(height: 16),
-                  _GymMap(
-                    gyms: _visibleGyms(gymsAsync.valueOrNull ?? const <Gym>[]),
-                  ),
-                  const SizedBox(height: 16),
+                  // 지도는 남는 높이를 전부 쓰고, 검색 결과 패널이 그 위를 덮는다.
+                  // 예전에는 지도(225) 아래 좁은 목록이 붙어 있어, 결과가 여러
+                  // 개면 그 좁은 칸 안에서 계속 스크롤해야 했다(#865).
                   Expanded(
-                    child: gymsAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 3),
-                      ),
-                      error: (Object _, StackTrace _) => _LoadError(
-                        message: l.exGymsLoadError,
-                        onRetry: () => ref.invalidate(gymFinderResultsProvider),
-                      ),
-                      data: (List<Gym> gyms) {
-                        final List<Gym> visible = _visibleGyms(gyms);
-                        return Column(
-                          children: <Widget>[
-                            _ResultControls(
-                              countLabel: l.exResultCount(visible.length),
-                              sort: _sort,
-                              onSort: (_GymSort value) =>
-                                  setState(() => _sort = value),
+                    child: Stack(
+                      children: <Widget>[
+                        Positioned.fill(
+                          child: _GymMap(
+                            gyms: _visibleGyms(
+                              gymsAsync.valueOrNull ?? const <Gym>[],
                             ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: visible.isEmpty
-                                  ? _EmptyResults(message: l.exNoSearchResults)
-                                  : ListView.separated(
-                                      itemCount: visible.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(height: 10),
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                            return _GymListCard(
-                                              gym: visible[index],
-                                              onTap: () => context.push(
-                                                AppRoutes.gymDetailPath(
-                                                  visible[index].id,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                    ),
-                            ),
-                          ],
-                        );
-                      },
+                          ),
+                        ),
+                        DraggableScrollableSheet(
+                          // 처음 보이는 높이는 예전 목록 영역과 비슷하다 — 지도와
+                          // 결과를 함께 보는 지금의 균형을 그대로 둔다.
+                          initialChildSize: _kPanelMin,
+                          // **완전히 접히지 않는다.** 결과가 있다는 사실과 첫
+                          // 카드는 언제나 보여야 한다.
+                          minChildSize: _kPanelMin,
+                          maxChildSize: _kPanelMax,
+                          snap: true,
+                          snapSizes: const <double>[_kPanelMid],
+                          builder:
+                              (
+                                BuildContext context,
+                                ScrollController controller,
+                              ) =>
+                                  _resultsPanel(context, controller, gymsAsync),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -134,6 +184,81 @@ class _GymListPageState extends ConsumerState<GymListPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 지도를 덮는 검색 결과 패널. (#865)
+///
+/// 위로 끌면 결과가 화면 대부분을 쓰고, 아래로 내려도 [_kPanelMin] 아래로는
+/// 내려가지 않는다. 목록이 시트의 [controller] 를 그대로 쓰기 때문에 손가락
+/// 하나로 "패널이 먼저 커지고, 다 커진 뒤에는 목록이 스크롤되는" 흐름이
+/// 이어진다 — 두 개의 스크롤이 서로 잡아채지 않는다.
+class _ResultsPanel extends StatelessWidget {
+  const _ResultsPanel({
+    required this.controller,
+    required this.child,
+    this.header,
+  });
+
+  final ScrollController controller;
+
+  /// 결과 목록(또는 로딩·오류·빈 상태) sliver.
+  final Widget child;
+
+  /// 결과 개수와 정렬 — 최소 상태에서도 보여야 하는 줄이다.
+  final Widget? header;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 16,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: CustomScrollView(
+        controller: controller,
+        slivers: <Widget>[
+          SliverToBoxAdapter(
+            child: Column(
+              children: <Widget>[
+                // 끌 수 있다는 표시. 손잡이가 없으면 패널이 고정된 칸으로 읽힌다.
+                const Padding(
+                  padding: EdgeInsets.only(top: 10, bottom: 12),
+                  child: SizedBox(
+                    width: 40,
+                    height: 4,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Color(0xFFD9DEE5),
+                        borderRadius: BorderRadius.all(Radius.circular(2)),
+                      ),
+                    ),
+                  ),
+                ),
+                if (header != null) ...<Widget>[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: header!,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            sliver: child,
+          ),
+        ],
       ),
     );
   }
@@ -467,9 +592,7 @@ class _GymMap extends StatelessWidget {
             for (final Gym g in located)
               KakaoMapMarker(lat: g.lat!, lng: g.lng!, title: g.name),
           ],
-          fallback: _GymMiniMap(
-            pinCount: located.isEmpty ? 3 : located.length,
-          ),
+          fallback: _GymMiniMap(pinCount: located.isEmpty ? 3 : located.length),
         ),
       ),
     );

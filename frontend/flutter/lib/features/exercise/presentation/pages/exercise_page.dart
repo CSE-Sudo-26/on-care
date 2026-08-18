@@ -907,8 +907,11 @@ class _ChartPeriod {
 }
 
 /// `_ActivityStatus` 의 기본 기간 — 0 = 오늘, 1 = 이번 주, 2 = 이번 달.
-/// 운동 탭 재진입 시 이 값으로 되돌아간다(#861).
-const int kExerciseActivityPeriodDefault = 1;
+///
+/// 기본은 **오늘**이다(#863). 식단 탭이 `오늘` 로 열리는데 운동 기록만 `이번 주`
+/// 로 열려, 같은 회원 기록 화면인데도 탭마다 첫 화면의 기준이 달랐다. 운동 탭
+/// 재진입 시에도 이 값으로 되돌아간다(#861).
+const int kExerciseActivityPeriodDefault = 0;
 
 /// "운동 현황" 의 오늘/이번 주/이번 달 토글 — 탭을 벗어났다가 운동 탭에 다시
 /// 들어오면 기본값으로 되돌아가야 하는 임시 UI 상태라 Riverpod 에 둔다(#861).
@@ -1243,9 +1246,15 @@ class _DonutLegendRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        // 범례 열은 폭이 160 으로 고정이라, 큰 글자 배율에서 라벨과 분 수가
+        // 나란히 서면 그 폭을 넘긴다(#863 이 `오늘` 을 기본으로 만들면서 드러난
+        // 자리 — 폭 320 · en · 배율 2.0 에서 28px 넘쳤다). 둘 다 줄어들 수 있게
+        // 두고 한 줄로 자른다.
         Expanded(
           child: Text(
             seg.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w500,
@@ -1253,12 +1262,17 @@ class _DonutLegendRow extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          l.unitMinutesValue(seg.minutes),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: FigmaColors.ink,
+        Flexible(
+          child: Text(
+            l.unitMinutesValue(seg.minutes),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: FigmaColors.ink,
+            ),
           ),
         ),
       ],

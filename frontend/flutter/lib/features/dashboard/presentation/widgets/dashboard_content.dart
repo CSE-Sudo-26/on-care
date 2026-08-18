@@ -212,6 +212,8 @@ class _CoachingBanner extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
+        // 플로팅 버튼을 감춘 동안(#862) AI 조언으로 들어가는 자리는 여기 하나다.
+        key: const ValueKey<String>('home-coaching-banner'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
