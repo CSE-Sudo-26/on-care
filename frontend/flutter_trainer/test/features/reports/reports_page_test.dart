@@ -47,6 +47,19 @@ class _SummaryFailsRepository implements ReportRepository {
     required DateTime weekStart,
     required String message,
   }) async {}
+
+  @override
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async => const ReportFeedbackDraft.none();
+
+  @override
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  }) async => ReportFeedbackDraft(body: body, saved: true);
 }
 
 /// 이번 주 리포트의 요일 칸에 실제로 뜨는 김민수의 운동 이름 하나.
@@ -105,6 +118,19 @@ class _ReportFailsOncePerKeyRepository implements ReportRepository {
     required DateTime weekStart,
     required String message,
   }) async {}
+
+  @override
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async => const ReportFeedbackDraft.none();
+
+  @override
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  }) async => ReportFeedbackDraft(body: body, saved: true);
 }
 
 /// 리포트 against the seeded roster — the trainer's own week plus one
@@ -749,6 +775,149 @@ void main() {
       findsOneWidget,
     );
   });
+
+  // ---- 피드백 초안 저장 (#821) ----
+
+  final Finder saveFeedback = find.byKey(
+    const ValueKey<String>('report-feedback-save'),
+  );
+
+  testWidgets('피드백 저장 버튼이 켜져 있고 입력창의 현재 문구를 저장한다 (#821)', (tester) async {
+    final drafts = _DraftStore();
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(drafts),
+      ],
+    );
+
+    expect(tester.widget<ActionButton>(saveFeedback).onPressed, isNotNull);
+
+    await tester.enterText(feedbackField, '어깨 안정화 위주로 한 주 더 갑니다.');
+    await settle(tester);
+    await tester.tap(saveFeedback);
+    await settle(tester);
+
+    expect(drafts.saved, <String>['어깨 안정화 위주로 한 주 더 갑니다.']);
+    expect(find.text('피드백 초안을 저장했어요.'), findsOneWidget);
+  });
+
+  testWidgets('저장에 실패해도 쓰던 문구는 입력창에 남는다 (#821)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(_DraftStore(failSave: true)),
+      ],
+    );
+
+    await tester.enterText(feedbackField, '저장은 실패해도 이 문구는 남아야 한다');
+    await settle(tester);
+    await tester.tap(saveFeedback);
+    await settle(tester);
+
+    expect(find.text('초안을 저장하지 못했어요. 다시 시도해 주세요.'), findsOneWidget);
+    // 저장하려다 잃는 것이 이 기능이 없애려던 문제다.
+    expect(
+      tester.widget<TextField>(feedbackField).controller!.text,
+      '저장은 실패해도 이 문구는 남아야 한다',
+    );
+  });
+
+  testWidgets('저장해 둔 초안이 있으면 입력창이 그 문구로 열린다 (#821)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(
+          _DraftStore(stored: '지난번에 쓰다 만 문구'),
+        ),
+      ],
+    );
+
+    expect(
+      tester.widget<TextField>(feedbackField).controller!.text,
+      '지난번에 쓰다 만 문구',
+    );
+  });
+
+  testWidgets('되돌리기는 자동 생성본이 아니라 저장된 초안으로 돌아간다 (#821)', (tester) async {
+    await openReports(
+      tester,
+      extraOverrides: <Override>[
+        reportRepositoryProvider.overrideWithValue(
+          _DraftStore(stored: '저장해 둔 초안'),
+        ),
+      ],
+    );
+
+    await tester.enterText(feedbackField, '고치는 중인 문구');
+    await settle(tester);
+
+    await tester.ensureVisible(find.text('초안으로 되돌리기'));
+    await tester.pump();
+    await tester.tap(find.text('초안으로 되돌리기'));
+    await settle(tester);
+
+    expect(
+      tester.widget<TextField>(feedbackField).controller!.text,
+      '저장해 둔 초안',
+    );
+  });
+}
+
+/// 저장한 초안을 기억하는 리포트 저장소. 리포트 본문·요약은 데모 계산을 그대로
+/// 쓰고, 초안만 이 double 이 들고 있다.
+class _DraftStore implements ReportRepository {
+  _DraftStore({this.stored, this.failSave = false});
+
+  /// 화면을 열 때 이미 저장돼 있는 초안. null 이면 저장한 적 없는 주다.
+  final String? stored;
+  final bool failSave;
+  final List<String> saved = <String>[];
+
+  @override
+  Stream<WeeklyReport> watch({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) => Stream<WeeklyReport>.value(
+    buildWeeklyReport(client: client, sessions: const [], weekStart: weekStart),
+  );
+
+  @override
+  Future<ReportSummary> summary({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async => ruleReportSummary(
+    buildWeeklyReport(client: client, sessions: const [], weekStart: weekStart),
+    client,
+  );
+
+  @override
+  Future<void> send({
+    required String clientId,
+    required DateTime weekStart,
+    required String message,
+  }) async {}
+
+  @override
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async {
+    final String? body = saved.isNotEmpty ? saved.last : stored;
+    if (body == null) return const ReportFeedbackDraft.none();
+    return ReportFeedbackDraft(body: body, saved: true);
+  }
+
+  @override
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  }) async {
+    if (failSave) throw StateError('draft save failed');
+    saved.add(body);
+    return ReportFeedbackDraft(body: body, saved: true);
+  }
 }
 
 class _RecordingPdfActions implements ReportPdfActions {
