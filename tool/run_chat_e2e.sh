@@ -62,10 +62,21 @@ cleanup() {
   echo "── [정리] 채팅 메시지와 파생 개인 RAG 문서 삭제"
   # 스크립트를 stdin 으로 흘려 넣는다. `python -m scripts.clean_e2e_chat` 로 부르면 이
   # 파일이 이미지에 들어간 뒤에만 동작해서, 고칠 때마다 이미지를 다시 만들어야 한다.
-  if ! (cd "$ROOT/backend" && docker compose exec -T app \
-      python - --marker "$MARKER" <scripts/clean_e2e_chat.py); then
+  #
+  # 백엔드가 어디에 떠 있는지는 환경마다 다르다. 로컬은 compose 서비스라 컨테이너
+  # 안에서 돌려야 하고, CI 는 러너에서 uvicorn 을 직접 띄우므로 컨테이너가 없다.
+  # 컨테이너가 있으면 그 안에서, 없으면 러너의 python 으로 돌린다.
+  if ! (
+    cd "$ROOT/backend"
+    if [ -n "$(docker compose ps -q app 2>/dev/null)" ]; then
+      docker compose exec -T app python - --marker "$MARKER" <scripts/clean_e2e_chat.py
+    else
+      python - --marker "$MARKER" <scripts/clean_e2e_chat.py
+    fi
+  ); then
     echo "::error::정리에 실패했습니다. 남은 데이터: marker=$MARKER" >&2
-    echo "  cd backend && docker compose exec -T app python - --marker $MARKER <scripts/clean_e2e_chat.py" >&2
+    echo "  cd backend && python - --marker $MARKER <scripts/clean_e2e_chat.py" >&2
+    echo "  (컨테이너로 띄웠다면 docker compose exec -T app 를 앞에 붙입니다)" >&2
     status=1
   fi
   if [ -n "${failed_phase:-}" ]; then

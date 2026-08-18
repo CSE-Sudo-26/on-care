@@ -212,6 +212,10 @@ String _ymd(DateTime value) =>
 /// 픽스처 전용 클라이언트. 앱이 쓰는 Dio 와 별개다.
 final Dio _fixtureApi = Dio(
   BaseOptions(
+    // 분석 시점에는 dart-define 이 없어 이 상수가 '' 로 보인다. 기본값과 같다고
+    // 잡히지만, 실행 시에는 러너가 넘긴 주소가 들어온다.
+    // ignore: avoid_redundant_argument_values
+    baseUrl: _apiBaseUrl,
     connectTimeout: _fixtureApiTimeout,
     sendTimeout: _fixtureApiTimeout,
     receiveTimeout: _fixtureApiTimeout,
