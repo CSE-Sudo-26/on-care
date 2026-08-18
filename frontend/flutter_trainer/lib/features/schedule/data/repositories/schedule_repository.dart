@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/dio_schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
@@ -93,6 +94,34 @@ abstract interface class ScheduleRepository {
 
   /// Marks an 예정 session 완료 with the trainer's [note].
   Future<void> completeSession(String id, {String note});
+
+  /// 저장 전에 보여 줄 회차와 충돌. (#870)
+  ///
+  /// 반복은 한 번에 여러 건을 만든다 — 요일이나 종료일을 잘못 골랐을 때 되돌리는
+  /// 비용이 한 건씩 지우는 일이라, 그 전에 보여 주는 편이 싸다.
+  Future<RecurrencePreview> previewRecurring({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+  });
+
+  /// 반복 규칙대로 회차를 한 번에 만든다. (#870)
+  ///
+  /// **전부 만들거나 하나도 만들지 않는다** — 겹치는 회차가 있으면
+  /// [ScheduleSeriesConflictError] 로 멈춘다. 겹친 것만 빼고 나머지를 만들면
+  /// 트레이너는 몇 회차가 생겼는지 화면을 세어 봐야 알고, 빠진 주는 나중에
+  /// 발견된다.
+  Future<void> addRecurringSessions({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+    required String clientName,
+    String? clientId,
+    required String type,
+    required int durationMinutes,
+    String note,
+    String? clientRequestId,
+  });
 
   /// 예정 세션을 `취소` 로 남긴다. **삭제와 다른 동작이다** — 삭제는 잘못 만든
   /// 일정을 없애고, 이쪽은 실제로 있었던 약속이 진행되지 않았다는 기록을
@@ -512,6 +541,76 @@ class DriftScheduleRepository implements ScheduleRepository {
           (t) => t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming),
         ))
         .write(TrainerScheduleEntriesCompanion(status: Value(status)));
+  }
+
+  @override
+  Future<RecurrencePreview> previewRecurring({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+  }) async {
+    final dates = seriesOccurrences(start, rule);
+    final wanted = dates.map(ymd).toSet();
+    // 취소·노쇼 자리는 겹침이 아니다 — 그 시간은 비어 있다(#871).
+    final rows =
+        await (_db.select(_db.trainerScheduleEntries)..where(
+              (t) =>
+                  t.date.isIn(wanted) &
+                  t.time.equals(time) &
+                  t.status.isIn(<String>[
+                    ScheduleStatus.upcoming,
+                    ScheduleStatus.done,
+                  ]),
+            ))
+            .get();
+    return (
+      dates: dates,
+      conflicts: rows.map(_toEntity).toList(growable: false),
+    );
+  }
+
+  @override
+  Future<void> addRecurringSessions({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+    required String clientName,
+    String? clientId,
+    required String type,
+    required int durationMinutes,
+    String note = '',
+    String? clientRequestId,
+  }) async {
+    final preview = await previewRecurring(
+      start: start,
+      time: time,
+      rule: rule,
+    );
+    if (preview.conflicts.isNotEmpty) {
+      throw ScheduleSeriesConflictError(preview.conflicts);
+    }
+    if (preview.dates.isEmpty) return;
+    // 한 트랜잭션에 넣는다 — 중간에 실패해 몇 주만 남는 상태가 실서버의
+    // '전부 아니면 전무' 와 어긋나면, 데모에서 확인한 동작이 거짓이 된다.
+    await _db.transaction(() async {
+      for (final day in preview.dates) {
+        await _db
+            .into(_db.trainerScheduleEntries)
+            .insert(
+              TrainerScheduleEntriesCompanion.insert(
+                id: 'sched-${day.millisecondsSinceEpoch}-${time.hashCode}',
+                date: ymd(day),
+                time: time,
+                clientId: Value(clientId),
+                clientName: Value(clientName),
+                type: Value(type),
+                durationMinutes: Value(durationMinutes),
+                status: ScheduleStatus.upcoming,
+                note: Value(note),
+              ),
+            );
+      }
+    });
   }
 
   ScheduleSession _toEntity(TrainerScheduleRow row) {

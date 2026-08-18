@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -2373,6 +2374,223 @@ def create_session(
     db.commit()
     db.refresh(s)
     return _schedule_out(s)
+
+
+#: 한 번의 반복 설정으로 만들 수 있는 최대 회차. 주 2회면 반년, 주 1회면 1년치다.
+#: 상한을 두는 까닭은 오입력 때문이다 — 종료일에 연도를 잘못 적으면 수백 건이
+#: 조용히 생기고, 그것을 되돌리는 일은 한 건씩 지우는 것뿐이다(#870).
+MAX_SERIES_OCCURRENCES = 52
+
+
+class ScheduleSeriesConflict(Exception):
+    """반복 생성이 기존 일정과 겹친다. 겹치는 회차 목록을 들고 다닌다. (#870)
+
+    라우터가 409 로 바꾸고, 화면은 이 목록을 그대로 보여 준다 — "총 8회 중 1개가
+    겹칩니다" 는 겹치는 회차를 짚어 줄 수 있어야 트레이너가 판단한다.
+    """
+
+    def __init__(self, conflicts: list[ScheduleSessionOut]) -> None:
+        super().__init__("겹치는 일정이 있습니다.")
+        self.conflicts = conflicts
+
+
+def _series_id_for(trainer_id: str, client_request_id: str) -> str:
+    """생성 시도 하나에 대응하는 결정론적 시리즈 id.
+
+    회차마다 멱등키를 따로 두지 않는 까닭은 유니크 제약이 (trainer, key) 한 쌍
+    이기 때문이다. 대신 키에서 시리즈 id 를 만들어, 재시도가 **이미 만든 시리즈를
+    다시 찾아** 같은 결과를 돌려주게 한다.
+    """
+    digest = hashlib.sha256(f"{trainer_id}:{client_request_id}".encode()).hexdigest()
+    return f"series-{digest[:20]}"
+
+
+def series_occurrences(
+    start: date, weekdays: Sequence[int], *, count: int | None, until: date | None
+) -> list[date]:
+    """반복 규칙이 만드는 날짜들.
+
+    [weekdays] 는 ISO 요일(월=1 … 일=7)이다. 시작일이 고른 요일 중 하나면 그 날도
+    첫 회차가 된다 — 트레이너가 오늘 잡으며 "매주 화요일" 을 고르면 오늘(화요일)이
+    빠지는 편이 더 놀랍다.
+
+    종료는 횟수(`count`) 또는 종료일(`until`) 중 하나다. 둘 다 없으면 빈 목록이라
+    호출부가 검증을 건너뛴 채 무한히 만들 수 없다. 어느 쪽이든 [MAX_SERIES_OCCURRENCES]
+    를 넘지 않는다.
+    """
+    picked = {day for day in weekdays if 1 <= day <= 7}
+    if not picked or (count is None and until is None):
+        return []
+    limit = min(count or MAX_SERIES_OCCURRENCES, MAX_SERIES_OCCURRENCES)
+    out: list[date] = []
+    day = start
+    # 종료일이 없으면 회차 수가 멈춰 세운다. 종료일이 있어도 상한을 함께 두어,
+    # 먼 미래 날짜 하나가 수백 건을 만들지 않게 한다.
+    horizon = until or (start + timedelta(days=7 * MAX_SERIES_OCCURRENCES))
+    while day <= horizon and len(out) < limit:
+        if day.isoweekday() in picked:
+            out.append(day)
+        day += timedelta(days=1)
+    return out
+
+
+def _conflicting_sessions(
+    db: Session, trainer_id: str, slots: Sequence[tuple[str, str]]
+) -> list[ScheduleSessionOut]:
+    """[slots]((date, time) 쌍)과 같은 자리에 이미 있는 세션.
+
+    취소·노쇼는 겹침이 아니다 — 그 시간은 비어 있다(#871). 공백 슬롯도 마찬가지로
+    "빈 시간" 이라는 표시일 뿐이라 자리를 차지하지 않는다.
+    """
+    if not slots:
+        return []
+    rows = db.scalars(
+        select(TrainerSchedule)
+        .where(
+            TrainerSchedule.trainer_id == trainer_id,
+            tuple_(TrainerSchedule.date, TrainerSchedule.time).in_(list(slots)),
+            TrainerSchedule.status.in_((SCHEDULE_UPCOMING, SCHEDULE_DONE)),
+        )
+        .order_by(TrainerSchedule.date, TrainerSchedule.time)
+    ).all()
+    return [_schedule_out(row) for row in rows]
+
+
+def preview_recurring_sessions(
+    db: Session,
+    trainer_id: str,
+    *,
+    start: str,
+    time: str,
+    weekdays: Sequence[int],
+    count: int | None = None,
+    until: str | None = None,
+) -> tuple[list[str], list[ScheduleSessionOut]]:
+    """저장 전에 보여 줄 (생성될 날짜들, 겹치는 기존 세션들).
+
+    만들기 전에 확인시키는 까닭은 반복이 **한 번에 여러 건**을 만들기 때문이다.
+    요일이나 종료일을 잘못 골랐을 때 되돌리는 비용이 한 건씩 지우는 일이라,
+    그 전에 보여 주는 편이 싸다.
+    """
+    dates = series_occurrences(
+        date.fromisoformat(start),
+        weekdays,
+        count=count,
+        until=None if until is None else date.fromisoformat(until),
+    )
+    iso = [day.isoformat() for day in dates]
+    return iso, _conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
+
+
+def create_recurring_sessions(
+    db: Session,
+    trainer_id: str,
+    *,
+    start: str,
+    time: str,
+    weekdays: Sequence[int],
+    client_name: str,
+    member_id: str | None,
+    type_: str,
+    duration_minutes: int,
+    note: str = "",
+    count: int | None = None,
+    until: str | None = None,
+    client_request_id: str | None = None,
+) -> list[ScheduleSessionOut]:
+    """반복 규칙대로 PT 회차를 한 번에 만든다. (#870)
+
+    **전부 만들거나 하나도 만들지 않는다.** 겹치는 회차가 있으면
+    [ScheduleSeriesConflict] 로 멈춘다 — 겹친 것만 빼고 조용히 나머지를 만들면
+    트레이너는 몇 회차가 생겼는지 화면을 세어 봐야 알 수 있고, 빠진 주는 나중에
+    발견된다.
+
+    [client_request_id] 를 주면 그 시도에 대해 멱등하다. 응답을 못 받고 재시도한
+    등록이 같은 회차를 두 벌 만들면 회원 일정이 두 배가 된다.
+    """
+    series_id = (
+        _series_id_for(trainer_id, client_request_id) if client_request_id else None
+    )
+    if series_id is not None:
+        existing = db.scalars(
+            select(TrainerSchedule)
+            .where(
+                TrainerSchedule.trainer_id == trainer_id,
+                TrainerSchedule.series_id == series_id,
+            )
+            .order_by(TrainerSchedule.date, TrainerSchedule.time)
+        ).all()
+        if existing:
+            return [_schedule_out(row) for row in existing]
+
+    dates = series_occurrences(
+        date.fromisoformat(start),
+        weekdays,
+        count=count,
+        until=None if until is None else date.fromisoformat(until),
+    )
+    if not dates:
+        raise ScheduleError("반복할 요일과 종료 기준을 지정해 주세요.")
+
+    iso = [day.isoformat() for day in dates]
+    conflicts = _conflicting_sessions(db, trainer_id, [(day, time) for day in iso])
+    if conflicts:
+        raise ScheduleSeriesConflict(conflicts)
+
+    program_json = _dump_program([])
+    created: list[TrainerSchedule] = []
+    for day in iso:
+        row = TrainerSchedule(
+            id=f"sched-{uuid.uuid4().hex[:12]}",
+            trainer_id=trainer_id,
+            member_id=member_id,
+            date=day,
+            time=time,
+            client_name=client_name,
+            type=type_,
+            duration_minutes=duration_minutes,
+            status=SCHEDULE_UPCOMING,
+            note=note,
+            program_json=program_json,
+            sort_order=0,
+            series_id=series_id,
+        )
+        db.add(row)
+        created.append(row)
+    try:
+        db.flush()
+    except IntegrityError:
+        # 같은 키의 동시 요청 중 하나만 통과한다. 패배한 쪽은 승자가 만든 회차를
+        # 읽어 같은 결과를 돌려준다(단건 생성과 같은 규약).
+        db.rollback()
+        if series_id is not None:
+            existing = db.scalars(
+                select(TrainerSchedule)
+                .where(
+                    TrainerSchedule.trainer_id == trainer_id,
+                    TrainerSchedule.series_id == series_id,
+                )
+                .order_by(TrainerSchedule.date, TrainerSchedule.time)
+            ).all()
+            if existing:
+                return [_schedule_out(row) for row in existing]
+        raise
+
+    # 회원에게는 회차마다 알리지 않는다. 8주치를 한 번에 잡으면 알림함이 같은
+    # 문구 여덟 줄로 덮이고, 그 뒤의 다른 알림이 밀려난다 — 한 줄로 묶어 보낸다.
+    if member_id is not None:
+        notification_service.queue(
+            db,
+            member_id=member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="반복 일정이 등록되었어요",
+            body=f"{iso[0]} ~ {iso[-1]} · {time} · {len(iso)}회",
+        )
+    db.commit()
+    for row in created:
+        db.refresh(row)
+    return [_schedule_out(row) for row in created]
 
 
 def register_program(

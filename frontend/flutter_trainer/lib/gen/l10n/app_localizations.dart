@@ -2150,6 +2150,84 @@ abstract class AppLocalizations {
   /// **'Duration'**
   String get schedFieldDuration;
 
+  /// No description provided for @schedRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get schedRepeat;
+
+  /// No description provided for @schedRepeatNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Does not repeat'**
+  String get schedRepeatNone;
+
+  /// No description provided for @schedRepeatWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get schedRepeatWeekly;
+
+  /// No description provided for @schedRepeatDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat on'**
+  String get schedRepeatDays;
+
+  /// No description provided for @schedRepeatEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get schedRepeatEnd;
+
+  /// No description provided for @schedRepeatEndByCount.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get schedRepeatEndByCount;
+
+  /// No description provided for @schedRepeatEndByDate.
+  ///
+  /// In en, this message translates to:
+  /// **'On date'**
+  String get schedRepeatEndByDate;
+
+  /// No description provided for @schedRepeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} times'**
+  String schedRepeatCount(int count);
+
+  /// No description provided for @schedRepeatPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions · {first} – {last}'**
+  String schedRepeatPreview(int count, String first, String last);
+
+  /// No description provided for @schedRepeatNeedsDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least one weekday.'**
+  String get schedRepeatNeedsDays;
+
+  /// No description provided for @schedRepeatConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total} sessions clash'**
+  String schedRepeatConflictTitle(int total, int count);
+
+  /// No description provided for @schedRepeatConflictRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} {time} · already booked: {name}'**
+  String schedRepeatConflictRow(String date, String time, String name);
+
+  /// No description provided for @schedRepeatConflictHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was created. Change the time, or clear the sessions that clash.'**
+  String get schedRepeatConflictHint;
+
   /// No description provided for @schedNote.
   ///
   /// In en, this message translates to:
