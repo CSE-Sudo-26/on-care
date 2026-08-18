@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -93,12 +92,10 @@ class _MainShellState extends ConsumerState<MainShell>
     final double navBottomPadding = bottomInset > maxNavBottomPadding
         ? maxNavBottomPadding
         : bottomInset;
-    // Mobile safe areas already leave enough room for the destination labels.
-    // Flutter web usually reports a zero bottom inset, so the 4dp paint
-    // translation below can put the web font's descenders beyond the viewport
-    // edge. Reserve web-only paint room without changing the mobile layout.
-    const double webClipGuard = kIsWeb ? 12 : 0;
-    final double effectiveBottomPadding = navBottomPadding + webClipGuard;
+    // 예전에는 라벨을 4dp 아래로 '그려서' 미는 바람에 바닥 여백이 0 인 웹에서
+    // 글자 아래가 잘렸고, 그만큼을 웹에서만 따로 확보하고 있었다. 이제
+    // 목적지 열이 바 높이 안에서 가운데 정렬되므로 그 보정은 필요 없다(#840).
+    final double effectiveBottomPadding = navBottomPadding;
     // The larger navigation labels need a little more vertical room.
     const double barHeight = 58;
     const double lift = 24; // headroom so the + button floats above the bar
@@ -221,28 +218,32 @@ class _Destination extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          // Keep the original space above the icon while using less space
-          // below the label, so the whole destination sits slightly lower.
-          padding: const EdgeInsets.only(top: 8),
-          child: Transform.translate(
-            offset: const Offset(0, 4),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(selected ? activeIcon : icon, size: 24, color: color),
-                const SizedBox(height: 4),
-                Text(
+        // 아이콘+라벨을 바 높이 안에서 가운데 정렬한다. 예전에는 위쪽 여백
+        // 8dp 로 아래로 민 뒤 `Transform.translate` 로 4dp 더 밀었는데, 앞의
+        // 여백이 열이 쓸 높이를 줄여 배율을 조금만 올려도 넘쳤고(#840), 뒤의
+        // 밀기는 그리기 단계라 라벨 아래가 잘렸다.
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(selected ? activeIcon : icon, size: 24, color: color),
+            const SizedBox(height: 4),
+            // 접근성 배율에서 라벨이 커져도 열이 넘치지 않게 줄여서 그린다 —
+            // 잘라내면 '대시보드' 가 '대시…' 로 읽힌다.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
                   label,
+                  maxLines: 1,
                   style: TextStyle(
                     fontSize: 13.5,
                     color: color,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
