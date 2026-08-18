@@ -13,6 +13,7 @@ import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/presentation/widgets/consultation_inbox_sheet.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/schedule/presentation/widgets/reservation_slots_sheet.dart';
@@ -886,6 +887,106 @@ class _CompleteDialogState extends State<_CompleteDialog> {
   }
 }
 
+/// 저장하면 만들어질 회차 요약 — "총 8회 · 8/24 ~ 10/12". (#870)
+///
+/// 반복은 한 번에 여러 건을 만든다. 요일이나 종료일을 잘못 골랐을 때 되돌리는
+/// 비용이 한 건씩 지우는 일이라, 만들기 전에 몇 회차인지 말해 준다.
+class _RepeatPreview extends StatelessWidget {
+  const _RepeatPreview({required this.dates});
+
+  final List<DateTime> dates;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const ValueKey<String>('repeat-preview'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: const BoxDecoration(
+        color: AppColors.accentSurface,
+        borderRadius: BorderRadius.all(AppRadius.md),
+      ),
+      child: Text(
+        dates.isEmpty
+            ? l.schedRepeatNeedsDays
+            : l.schedRepeatPreview(
+                dates.length,
+                ymd(dates.first),
+                ymd(dates.last),
+              ),
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.accent,
+        ),
+      ),
+    );
+  }
+}
+
+/// 겹치는 회차 — 어느 주가 문제인지 짚어 준다. (#870)
+///
+/// 목록을 보여 주는 까닭은 "겹칩니다" 만으로는 트레이너가 무엇을 고쳐야 할지
+/// 모르기 때문이다. 이 상태에서는 **아무 일정도 만들어지지 않았다.**
+class _RepeatConflicts extends StatelessWidget {
+  const _RepeatConflicts({required this.total, required this.conflicts});
+
+  final int total;
+  final List<ScheduleSession> conflicts;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    return Container(
+      key: const ValueKey<String>('repeat-conflicts'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.schedRepeatConflictTitle(conflicts.length, total),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final conflict in conflicts.take(5))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                l.schedRepeatConflictRow(
+                  conflict.date,
+                  conflict.time,
+                  conflict.clientName,
+                ),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.foreground,
+                ),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l.schedRepeatConflictHint,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.subtleForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 취소 확인 — 주체를 고르고 (선택) 사유를 남긴다. (#871)
 ///
 /// 주체에 기본값을 두지 않는다. 무엇이든 기본으로 저장되면 그 값이 사실인지 알
@@ -1003,10 +1104,9 @@ class _CancelDialogState extends State<_CancelDialog> {
           // 사실인지 알 수 없다.
           onPressed: _source == null
               ? null
-              : () => Navigator.of(context).pop((
-                  source: _source!,
-                  reason: _reason.text.trim(),
-                )),
+              : () => Navigator.of(
+                  context,
+                ).pop((source: _source!, reason: _reason.text.trim())),
         ),
       ],
     );
@@ -1051,6 +1151,20 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
   late int _duration;
   bool _saving = false;
   late final TextEditingController _note;
+
+  // ---- 반복(#870) — 새 일정에서만 쓴다. 수정은 그 회차 하나의 일이다. ----
+
+  /// 반복 요일(ISO: 월=1 … 일=7). 비어 있으면 `반복 없음`이다.
+  final Set<int> _repeatDays = <int>{};
+
+  /// 종료 기준을 횟수로 잡는가(아니면 종료일). 둘을 동시에 두지 않는 까닭은
+  /// 어느 쪽이 이겼는지 화면과 서버의 해석이 갈리기 때문이다.
+  bool _endsByCount = true;
+  int _repeatCount = 8;
+  DateTime? _repeatUntil;
+
+  /// 저장 시도가 찾아낸 겹치는 회차. 비어 있지 않으면 아무것도 만들어지지 않았다.
+  List<ScheduleSession> _conflicts = const <ScheduleSession>[];
 
   // Option lists always CONTAIN the edited session's own values. Falling
   // back to a default instead would silently rewrite the session on an
@@ -1106,6 +1220,22 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
       '${_hour.toString().padLeft(2, '0')}:'
       '${_minute.toString().padLeft(2, '0')}';
 
+  /// 지금 화면이 나타내는 반복 규칙.
+  WeeklyRecurrence get _rule => WeeklyRecurrence(
+    weekdays: _repeatDays,
+    count: _endsByCount ? _repeatCount : null,
+    until: _endsByCount ? null : _repeatUntil,
+  );
+
+  /// 저장하면 만들어질 날짜들. 서버와 같은 규칙을 쓰므로(`seriesOccurrences`)
+  /// 화면이 보여 준 회차 수와 실제로 만들어지는 수가 어긋나지 않는다.
+  List<DateTime> get _occurrences =>
+      seriesOccurrences(DateTime.parse(widget.date), _rule);
+
+  /// 반복 등록 시도 하나의 멱등키. 재시도에 같은 값을 다시 보내야 회차가 두 벌
+  /// 생기지 않는다 — 시트를 여는 동안 고정한다.
+  late final String _requestId = newClientRequestId();
+
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -1115,7 +1245,36 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     final AppLocalizations l = AppLocalizations.of(context);
     try {
       final e = widget.existing;
-      if (e == null) {
+      if (e == null && _repeatDays.isNotEmpty) {
+        final start = DateTime.parse(widget.date);
+        final rule = _rule;
+        // 만들기 전에 충돌을 먼저 본다. 서버도 같은 검사로 409 를 주지만, 화면이
+        // 겹친 회차를 짚어 주려면 목록이 필요하다(#870).
+        final preview = await repo.previewRecurring(
+          start: start,
+          time: _time,
+          rule: rule,
+        );
+        if (preview.conflicts.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _saving = false;
+              _conflicts = preview.conflicts;
+            });
+          }
+          return;
+        }
+        await repo.addRecurringSessions(
+          start: start,
+          time: _time,
+          rule: rule,
+          clientName: _client,
+          type: _type,
+          durationMinutes: _duration,
+          note: _note.text.trim(),
+          clientRequestId: _requestId,
+        );
+      } else if (e == null) {
         await repo.addSession(
           date: widget.date,
           clientName: _client,
@@ -1134,6 +1293,16 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
           note: _note.text.trim(),
         );
       }
+    } on ScheduleSeriesConflictError catch (error) {
+      // 서버가 막은 경우(미리보기 뒤에 다른 일정이 생겼을 때)도 같은 자리에
+      // 같은 목록을 보여 준다.
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _conflicts = error.conflicts;
+        });
+      }
+      return;
     } catch (_) {
       // Surface the failure and keep the sheet open so the input isn't
       // lost (review PR 218).
@@ -1148,6 +1317,21 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
     } else {
       navigator.pop();
     }
+  }
+
+  Future<void> _pickUntil() async {
+    final start = DateTime.parse(widget.date);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _repeatUntil ?? start.add(const Duration(days: 56)),
+      // 시작일 이전으로는 갈 수 없다 — 그러면 회차가 하나도 없다.
+      firstDate: start,
+      lastDate: start.add(const Duration(days: 7 * maxSeriesOccurrences)),
+    );
+    if (picked == null || !mounted) return;
+    setState(
+      () => _repeatUntil = DateTime(picked.year, picked.month, picked.day),
+    );
   }
 
   @override
@@ -1169,162 +1353,318 @@ class _SessionSheetState extends ConsumerState<_SessionSheet> {
           AppSpacing.xl,
           AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              widget.existing == null ? l.schedAddTitle : l.schedEditTitle,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.foreground,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            _sheetField(
-              label: l.schedFieldClient,
-              child: DropdownButton<String>(
-                value: _client,
-                isExpanded: true,
-                underline: const SizedBox.shrink(),
-                items: <DropdownMenuItem<String>>[
-                  for (final name in _clientOptions)
-                    DropdownMenuItem<String>(value: name, child: Text(name)),
-                ],
-                onChanged: (v) => setState(() => _client = v ?? _client),
-              ),
-            ),
-            _sheetField(
-              label: l.schedFieldType,
-              child: DropdownButton<String>(
-                value: _type,
-                isExpanded: true,
-                underline: const SizedBox.shrink(),
-                items: <DropdownMenuItem<String>>[
-                  for (final t in _typeOptions)
-                    // 값은 계약값 그대로, 보이는 문구만 로케일에서 가져온다.
-                    DropdownMenuItem<String>(
-                      value: t,
-                      child: Text(sessionTypeLabel(l, t)),
-                    ),
-                ],
-                onChanged: (v) => setState(() => _type = v ?? _type),
-              ),
-            ),
-            _sheetField(
-              label: l.schedFieldTime,
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: DropdownButton<int>(
-                      value: _hour,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      items: <DropdownMenuItem<int>>[
-                        for (final h in _hourOptions)
-                          DropdownMenuItem<int>(
-                            value: h,
-                            child: Text(
-                              l.schedHourLabel(h.toString().padLeft(2, '0')),
-                            ),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _hour = v ?? _hour),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: DropdownButton<int>(
-                      value: _minute,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      items: <DropdownMenuItem<int>>[
-                        for (final m in _minuteOptions)
-                          DropdownMenuItem<int>(
-                            value: m,
-                            child: Text(
-                              l.schedMinuteLabel(m.toString().padLeft(2, '0')),
-                            ),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _minute = v ?? _minute),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _sheetField(
-              label: l.schedFieldDuration,
-              child: DropdownButton<int>(
-                value: _duration,
-                isExpanded: true,
-                underline: const SizedBox.shrink(),
-                items: <DropdownMenuItem<int>>[
-                  for (final d in _durationOptions)
-                    DropdownMenuItem<int>(
-                      value: d,
-                      child: Text(l.minutesShort(d)),
-                    ),
-                ],
-                onChanged: (v) => setState(() => _duration = v ?? _duration),
-              ),
-            ),
-            if (widget.existing == null)
-              _sheetField(
-                label: l.schedNote,
-                stacked: true,
-                child: TextField(
-                  key: const ValueKey<String>('schedule-trainer-note'),
-                  controller: _note,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    hintText: l.schedNoteHint,
-                    hintStyle: const TextStyle(color: AppColors.mutedForeground),
-                    isDense: true,
-                  ),
+        // 반복 옵션이 붙으면서 시트가 낮은 창에서 넘쳤다(#870). 세로로 흐르게
+        // 두어, 화면 높이가 얼마든 아래의 저장 버튼까지 닿을 수 있게 한다 —
+        // 넘침은 이 저장소에서 실패로 잡는 회귀다(#849).
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                widget.existing == null ? l.schedAddTitle : l.schedEditTitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.foreground,
                 ),
               ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: <Widget>[
-                if (widget.inline) ...<Widget>[
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _saving ? null : widget.onCancel,
-                      child: Text(l.actionCancel),
+              const SizedBox(height: AppSpacing.lg),
+              _sheetField(
+                label: l.schedFieldClient,
+                child: DropdownButton<String>(
+                  value: _client,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  items: <DropdownMenuItem<String>>[
+                    for (final name in _clientOptions)
+                      DropdownMenuItem<String>(value: name, child: Text(name)),
+                  ],
+                  onChanged: (v) => setState(() => _client = v ?? _client),
+                ),
+              ),
+              _sheetField(
+                label: l.schedFieldType,
+                child: DropdownButton<String>(
+                  value: _type,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  items: <DropdownMenuItem<String>>[
+                    for (final t in _typeOptions)
+                      // 값은 계약값 그대로, 보이는 문구만 로케일에서 가져온다.
+                      DropdownMenuItem<String>(
+                        value: t,
+                        child: Text(sessionTypeLabel(l, t)),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _type = v ?? _type),
+                ),
+              ),
+              _sheetField(
+                label: l.schedFieldTime,
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: DropdownButton<int>(
+                        value: _hour,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<int>>[
+                          for (final h in _hourOptions)
+                            DropdownMenuItem<int>(
+                              value: h,
+                              child: Text(
+                                l.schedHourLabel(h.toString().padLeft(2, '0')),
+                              ),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _hour = v ?? _hour),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: DropdownButton<int>(
+                        value: _minute,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: <DropdownMenuItem<int>>[
+                          for (final m in _minuteOptions)
+                            DropdownMenuItem<int>(
+                              value: m,
+                              child: Text(
+                                l.schedMinuteLabel(
+                                  m.toString().padLeft(2, '0'),
+                                ),
+                              ),
+                            ),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _minute = v ?? _minute),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _sheetField(
+                label: l.schedFieldDuration,
+                child: DropdownButton<int>(
+                  value: _duration,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  items: <DropdownMenuItem<int>>[
+                    for (final d in _durationOptions)
+                      DropdownMenuItem<int>(
+                        value: d,
+                        child: Text(l.minutesShort(d)),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _duration = v ?? _duration),
+                ),
+              ),
+              // 반복은 새 일정에만 있다(#870). 이미 잡힌 회차를 고치는 일은 그
+              // 회차 하나의 일이고, 여기서 규칙을 다시 받으면 나머지 회차까지
+              // 건드리는 것처럼 읽힌다.
+              if (widget.existing == null) ...<Widget>[
+                _sheetField(
+                  label: l.schedRepeat,
+                  stacked: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: <Widget>[
+                          ChoiceChip(
+                            key: const ValueKey<String>('repeat-none'),
+                            label: Text(l.schedRepeatNone),
+                            selected: _repeatDays.isEmpty,
+                            onSelected: (_) =>
+                                setState(() => _repeatDays.clear()),
+                          ),
+                          ChoiceChip(
+                            key: const ValueKey<String>('repeat-weekly'),
+                            label: Text(l.schedRepeatWeekly),
+                            selected: _repeatDays.isNotEmpty,
+                            onSelected: (_) => setState(() {
+                              if (_repeatDays.isEmpty) {
+                                // 켜는 순간의 기본값은 **시작일의 요일**이다. 빈
+                                // 상태로 켜면 "매주" 를 골랐는데 아무 회차도 없는
+                                // 화면이 된다.
+                                _repeatDays.add(
+                                  DateTime.parse(widget.date).weekday,
+                                );
+                              }
+                            }),
+                          ),
+                        ],
+                      ),
+                      if (_repeatDays.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l.schedRepeatDays,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.subtleForeground,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: <Widget>[
+                            for (var day = 1; day <= 7; day++)
+                              FilterChip(
+                                key: ValueKey<String>('repeat-day-$day'),
+                                label: Text(weekdayNames(l)[day - 1]),
+                                selected: _repeatDays.contains(day),
+                                onSelected: (on) => setState(() {
+                                  if (on) {
+                                    _repeatDays.add(day);
+                                  } else if (_repeatDays.length > 1) {
+                                    // 마지막 요일까지 끄면 `매주` 인데 회차가 없는
+                                    // 상태가 된다 — 끄려면 `반복 없음` 을 고른다.
+                                    _repeatDays.remove(day);
+                                  }
+                                }),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l.schedRepeatEnd,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.subtleForeground,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: <Widget>[
+                            ChoiceChip(
+                              key: const ValueKey<String>('repeat-end-count'),
+                              label: Text(l.schedRepeatEndByCount),
+                              selected: _endsByCount,
+                              onSelected: (_) =>
+                                  setState(() => _endsByCount = true),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            ChoiceChip(
+                              key: const ValueKey<String>('repeat-end-date'),
+                              label: Text(l.schedRepeatEndByDate),
+                              selected: !_endsByCount,
+                              onSelected: (_) => setState(() {
+                                _endsByCount = false;
+                                _repeatUntil ??= DateTime.parse(
+                                  widget.date,
+                                ).add(const Duration(days: 56));
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        if (_endsByCount)
+                          DropdownButton<int>(
+                            key: const ValueKey<String>('repeat-count'),
+                            value: _repeatCount,
+                            isExpanded: true,
+                            underline: const SizedBox.shrink(),
+                            items: <DropdownMenuItem<int>>[
+                              for (final n in const <int>[4, 8, 12, 16, 24])
+                                DropdownMenuItem<int>(
+                                  value: n,
+                                  child: Text(l.schedRepeatCount(n)),
+                                ),
+                            ],
+                            onChanged: (v) => setState(
+                              () => _repeatCount = v ?? _repeatCount,
+                            ),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            key: const ValueKey<String>('repeat-until'),
+                            onPressed: _pickUntil,
+                            icon: const Icon(Icons.event_outlined, size: 18),
+                            label: Text(
+                              _repeatUntil == null ? '-' : ymd(_repeatUntil!),
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.sm),
+                        // 저장 전에 회차를 보여 준다 — 잘못 고른 요일을 되돌리는
+                        // 비용은 한 건씩 지우는 일이다.
+                        _RepeatPreview(dates: _occurrences),
+                        if (_conflicts.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: AppSpacing.sm),
+                          _RepeatConflicts(
+                            total: _occurrences.length,
+                            conflicts: _conflicts,
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+              if (widget.existing == null)
+                _sheetField(
+                  label: l.schedNote,
+                  stacked: true,
+                  child: TextField(
+                    key: const ValueKey<String>('schedule-trainer-note'),
+                    controller: _note,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: l.schedNoteHint,
+                      hintStyle: const TextStyle(
+                        color: AppColors.mutedForeground,
+                      ),
+                      isDense: true,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                ],
-                Expanded(
-                  child: Material(
-                    color: AppColors.primary,
-                    borderRadius: const BorderRadius.all(AppRadius.lg),
-                    child: InkWell(
-                      onTap: _saving ? null : _save,
+                ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: <Widget>[
+                  if (widget.inline) ...<Widget>[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _saving ? null : widget.onCancel,
+                        child: Text(l.actionCancel),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  Expanded(
+                    child: Material(
+                      color: AppColors.primary,
                       borderRadius: const BorderRadius.all(AppRadius.lg),
-                      child: Container(
-                        height: 44,
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.existing == null
-                              ? l.schedAddAction
-                              : l.schedSaveAction,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryForeground,
+                      child: InkWell(
+                        onTap: _saving ? null : _save,
+                        borderRadius: const BorderRadius.all(AppRadius.lg),
+                        child: Container(
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: Text(
+                            widget.existing == null
+                                ? l.schedAddAction
+                                : l.schedSaveAction,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryForeground,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2586,8 +2926,8 @@ class _SessionCard extends ConsumerWidget {
                       onEditSchedule: onEditSchedule,
                       onEditProgram: onEditProgram,
                       onDelete: onDelete,
-                  onCancel: onCancel,
-                  onNoShow: onNoShow,
+                      onCancel: onCancel,
+                      onNoShow: onNoShow,
                       onChat: onChat,
                       onComplete: onComplete,
                     ),
@@ -2628,7 +2968,8 @@ class _EndedBox extends StatelessWidget {
         ? session.cancelledAt
         : session.noShowAt;
     final String head = scheduleStatusLabel(l, session.status);
-    final String detail = session.isCancelled && session.cancellationSource.isNotEmpty
+    final String detail =
+        session.isCancelled && session.cancellationSource.isNotEmpty
         ? l.schedCancelledBy(
             cancellationSourceLabel(l, session.cancellationSource),
             at == null ? '' : ymd(at.toLocal()),
@@ -2686,8 +3027,8 @@ class _StatusChip extends StatelessWidget {
     };
     final Color bg = switch (status) {
       ScheduleStatus.done => AppColors.inputBackground,
-      ScheduleStatus.cancelled || ScheduleStatus.noShow =>
-        AppColors.warning.withValues(alpha: 0.12),
+      ScheduleStatus.cancelled ||
+      ScheduleStatus.noShow => AppColors.warning.withValues(alpha: 0.12),
       _ => AppColors.accentSurface,
     };
     return Container(

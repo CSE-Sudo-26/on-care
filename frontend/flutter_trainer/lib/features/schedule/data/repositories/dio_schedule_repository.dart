@@ -8,6 +8,7 @@ import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/features/schedule/data/dtos/schedule_dtos.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
+import 'package:oncare_trainer/features/schedule/domain/entities/schedule_recurrence.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 
 typedef _ScheduleCreatePayload = ({
@@ -242,6 +243,116 @@ class DioScheduleRepository implements ScheduleRepository {
         data: <String, Object?>{'note': note},
       ),
     );
+  }
+
+  @override
+  Future<RecurrencePreview> previewRecurring({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/trainer/schedule/recurring/preview',
+        data: _recurringBody(
+          start: start,
+          time: time,
+          rule: rule,
+          clientName: '',
+          type: '',
+          durationMinutes: 0,
+        ),
+      );
+      final data = res.data ?? const <String, dynamic>{};
+      return (
+        dates: <DateTime>[
+          for (final raw in (data['dates'] as List<dynamic>? ?? const []))
+            if (raw is String) DateTime.parse(raw),
+        ],
+        conflicts: <ScheduleSession>[
+          for (final row in (data['conflicts'] as List<dynamic>? ?? const []))
+            if (row is Map<String, dynamic>) scheduleSessionFromJson(row),
+        ],
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
+  Future<void> addRecurringSessions({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+    required String clientName,
+    String? clientId,
+    required String type,
+    required int durationMinutes,
+    String note = '',
+    String? clientRequestId,
+  }) async {
+    try {
+      await _dio.post<List<dynamic>>(
+        '/trainer/schedule/recurring',
+        data: _recurringBody(
+          start: start,
+          time: time,
+          rule: rule,
+          clientName: clientName,
+          clientId: clientId,
+          type: type,
+          durationMinutes: durationMinutes,
+          note: note,
+          clientRequestId: clientRequestId,
+        ),
+      );
+    } on DioException catch (e) {
+      // 겹치는 회차는 서버가 409 와 함께 목록으로 알려 준다 — 화면이 어느 주가
+      // 문제인지 짚어 줄 수 있도록 타입 있는 오류로 올린다(#870).
+      final conflicts = _conflictsFrom(e);
+      if (conflicts != null) throw ScheduleSeriesConflictError(conflicts);
+      throw AppError.fromDio(e);
+    }
+    _bump();
+  }
+
+  Map<String, Object?> _recurringBody({
+    required DateTime start,
+    required String time,
+    required WeeklyRecurrence rule,
+    required String clientName,
+    String? clientId,
+    required String type,
+    required int durationMinutes,
+    String note = '',
+    String? clientRequestId,
+  }) => <String, Object?>{
+    'date': ymd(start),
+    'time': time,
+    'client_name': clientName,
+    'member_id': ?clientId,
+    'type': type,
+    'duration_minutes': durationMinutes,
+    'note': note,
+    'weekdays': rule.weekdays.toList()..sort(),
+    'count': ?rule.count,
+    if (rule.until != null) 'until': ymd(rule.until!),
+    'client_request_id': ?clientRequestId,
+  };
+
+  /// 409 응답에 실려 온 겹친 세션들. 다른 오류면 null.
+  List<ScheduleSession>? _conflictsFrom(DioException error) {
+    if (error.response?.statusCode != 409) return null;
+    final detail = error.response?.data;
+    if (detail is! Map) return null;
+    final body = detail['detail'];
+    if (body is! Map) return null;
+    final rows = body['conflicts'];
+    if (rows is! List) return null;
+    return <ScheduleSession>[
+      for (final row in rows)
+        if (row is Map<String, dynamic>) scheduleSessionFromJson(row),
+    ];
   }
 
   @override
