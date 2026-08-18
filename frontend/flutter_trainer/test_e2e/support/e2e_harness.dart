@@ -273,7 +273,14 @@ class E2eApi {
   /// 메시지를 도착시켜야 polling 을 검증할 수 있는데, 두 앱을 한 프로세스에 띄울 수
   /// 없으므로 이 자리에서는 API 가 회원 역할을 대신한다.
   Future<void> sendAsMember(String text) async {
-    final Dio dio = Dio(BaseOptions());
+    final Dio dio = Dio(
+      BaseOptions(
+        // 분석 시점에는 dart-define 이 없어 이 상수가 '' 로 보인다. 기본값과 같다고
+        // 잡히지만, 실행 시에는 러너가 넘긴 주소가 들어온다.
+        // ignore: avoid_redundant_argument_values
+        baseUrl: apiBaseUrl,
+      ),
+    );
     final Response<Map<String, dynamic>> login = await dio
         .post<Map<String, dynamic>>(
           '/auth/login',
