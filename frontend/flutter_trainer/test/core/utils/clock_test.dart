@@ -65,10 +65,15 @@ void main() {
       ...Directory('test').listSync(recursive: true),
     ]) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      // 구분자를 `/` 로 맞춘다. Windows 의 `entity.path` 는 백슬래시라
+      // (`test\core\utils\clock_test.dart`) 아래 제외 조건이 하나도 걸리지
+      // 않았고, 이 검사가 **자기 자신을** 위반으로 잡아 로컬 스위트가 늘
+      // 빨간불이었다. 리눅스 CI 에서는 통과해 CI 로는 드러나지 않는다.
+      final String path = entity.path.replaceAll(r'\', '/');
       // 생성물과 시각 계층 자신은 대상이 아니다.
-      if (entity.path.contains('/gen/')) continue;
-      if (entity.path.endsWith('core/utils/clock.dart')) continue;
-      if (entity.path.endsWith('core/utils/clock_test.dart')) continue;
+      if (path.contains('/gen/')) continue;
+      if (path.endsWith('core/utils/clock.dart')) continue;
+      if (path.endsWith('core/utils/clock_test.dart')) continue;
 
       final List<String> lines = entity.readAsStringSync().split('\n');
       for (int i = 0; i < lines.length; i++) {
@@ -78,7 +83,7 @@ void main() {
         if (line.contains('SinceEpoch')) continue;
         // 주석 안의 언급은 설명이다.
         if (line.trimLeft().startsWith('//')) continue;
-        leftovers.add('${entity.path}:${i + 1}: ${line.trim()}');
+        leftovers.add('$path:${i + 1}: ${line.trim()}');
       }
     }
 

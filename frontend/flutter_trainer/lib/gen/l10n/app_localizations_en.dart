@@ -1194,6 +1194,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedFieldDuration => 'Duration';
 
   @override
+  String get schedRepeat => 'Repeat';
+
+  @override
+  String get schedRepeatNone => 'Does not repeat';
+
+  @override
+  String get schedRepeatWeekly => 'Weekly';
+
+  @override
+  String get schedRepeatDays => 'Repeat on';
+
+  @override
+  String get schedRepeatEnd => 'Ends';
+
+  @override
+  String get schedRepeatEndByCount => 'After';
+
+  @override
+  String get schedRepeatEndByDate => 'On date';
+
+  @override
+  String schedRepeatCount(int count) {
+    return '$count times';
+  }
+
+  @override
+  String schedRepeatPreview(int count, String first, String last) {
+    return '$count sessions · $first – $last';
+  }
+
+  @override
+  String get schedRepeatNeedsDays => 'Pick at least one weekday.';
+
+  @override
+  String schedRepeatConflictTitle(int total, int count) {
+    return '$count of $total sessions clash';
+  }
+
+  @override
+  String schedRepeatConflictRow(String date, String time, String name) {
+    return '$date $time · already booked: $name';
+  }
+
+  @override
+  String get schedRepeatConflictHint =>
+      'Nothing was created. Change the time, or clear the sessions that clash.';
+
+  @override
   String get schedNote => 'Trainer\'s note';
 
   @override
