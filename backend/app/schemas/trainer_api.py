@@ -745,6 +745,62 @@ class ScheduleCreateRequest(BaseModel):
     _v_time = field_validator("time")(_validate_hhmm)
 
 
+class ScheduleRecurringRequest(BaseModel):
+    """주간 반복으로 PT 회차를 한 번에 잡는 입력. (#870)
+
+    이번 범위는 **주간 반복**뿐이다 — PT 운영에서 실제로 쓰이는 형태이고, 월 N번째
+    요일 같은 규칙까지 받으면 화면과 검증이 함께 커진다.
+
+    종료 기준은 `count` 또는 `until` **중 하나**다. 둘 다 없으면 끝이 없고, 둘 다
+    있으면 어느 쪽이 이겼는지 화면과 서버의 해석이 갈린다.
+    """
+
+    date: str = Field(max_length=10)
+    time: str = Field(max_length=10)
+    client_name: str = Field(default="", max_length=100)
+    member_id: str | None = Field(default=None, max_length=64)
+    type: str = Field(default="", max_length=30)
+    duration_minutes: int = Field(default=0, ge=0, le=600)
+    note: str = Field(default="", max_length=500)
+    #: 반복할 요일(ISO: 월=1 … 일=7).
+    weekdays: list[int] = Field(min_length=1, max_length=7)
+    #: 반복 횟수로 끝내기.
+    count: int | None = Field(default=None, ge=1, le=52)
+    #: 종료일로 끝내기(포함).
+    until: str | None = Field(default=None, max_length=10)
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+    _v_date = field_validator("date")(_validate_ymd)
+    _v_time = field_validator("time")(_validate_hhmm)
+
+    @field_validator("weekdays")
+    @classmethod
+    def _check_weekdays(cls, value: list[int]) -> list[int]:
+        if any(day < 1 or day > 7 for day in value):
+            raise ValueError("요일은 1(월)~7(일) 사이여야 합니다.")
+        # 같은 요일을 두 번 보내도 회차가 두 배가 되지 않게 여기서 눕힌다.
+        return sorted(set(value))
+
+    @model_validator(mode="after")
+    def _check_end(self) -> ScheduleRecurringRequest:
+        if (self.count is None) == (self.until is None):
+            raise ValueError("반복 횟수 또는 종료일 중 하나만 지정해 주세요.")
+        if self.until is not None:
+            _validate_ymd(self.until)
+            if self.until < self.date:
+                raise ValueError("종료일은 시작일 이후여야 합니다.")
+        return self
+
+
+class ScheduleRecurringPreviewOut(BaseModel):
+    """저장 전에 보여 줄 회차와 충돌. (#870)"""
+
+    #: 생성될 날짜들(`YYYY-MM-DD`, 오름차순).
+    dates: list[str]
+    #: 그 자리에 이미 있는 세션. 비어 있지 않으면 생성은 409 로 막힌다.
+    conflicts: list[ScheduleSessionOut]
+
+
 class ScheduleProgramRegisterRequest(BaseModel):
     """AI coaching command to attach a program or create its PT session."""
 
