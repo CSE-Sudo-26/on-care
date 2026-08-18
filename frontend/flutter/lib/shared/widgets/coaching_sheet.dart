@@ -99,12 +99,15 @@ List<_CoachCard> _cardsOf(AppLocalizations l) => <_CoachCard>[
   ),
 ];
 
-String _suggestionTagLabel(AiSuggestionTag tag) => switch (tag) {
-  AiSuggestionTag.diet => '식단',
-  AiSuggestionTag.exercise => '운동',
-  AiSuggestionTag.sleep => '수면',
-  AiSuggestionTag.hydration => '수분',
-};
+/// 제안 태그 → 화면에 그릴 이름. 태그 자체는 서버가 주는 계약값이라 그대로
+/// 두고, 사람이 읽는 이름만 로케일을 따른다(#847).
+String _suggestionTagLabel(AppLocalizations l, AiSuggestionTag tag) =>
+    switch (tag) {
+      AiSuggestionTag.diet => l.coachCardDietTag,
+      AiSuggestionTag.exercise => l.coachCardExerciseTag,
+      AiSuggestionTag.sleep => l.coachCardSleepTag,
+      AiSuggestionTag.hydration => l.coachCardWaterTag,
+    };
 
 Color _suggestionTagColor(AiSuggestionTag tag) => switch (tag) {
   AiSuggestionTag.diet => FigmaColors.orange,
@@ -113,8 +116,8 @@ Color _suggestionTagColor(AiSuggestionTag tag) => switch (tag) {
   AiSuggestionTag.hydration => FigmaColors.primary,
 };
 
-_CoachCard _cardFromSuggestion(AiSuggestion s) => _CoachCard(
-  tag: _suggestionTagLabel(s.tag),
+_CoachCard _cardFromSuggestion(AppLocalizations l, AiSuggestion s) => _CoachCard(
+  tag: _suggestionTagLabel(l, s.tag),
   tagColor: _suggestionTagColor(s.tag),
   title: s.title,
   body: s.body,
@@ -140,7 +143,7 @@ class _CoachingSheet extends ConsumerWidget {
           .suggestions;
       cards = (live == null || live.isEmpty)
           ? _cardsOf(l)
-          : live.map(_cardFromSuggestion).toList();
+          : live.map((AiSuggestion s) => _cardFromSuggestion(l, s)).toList();
     }
 
     return ConstrainedBox(

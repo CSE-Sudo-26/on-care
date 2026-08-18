@@ -29,6 +29,9 @@ Future<void> _pumpNotificationPage(
       child: MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
+        // 이 파일은 한국어 문구로 화면을 찾는다. 로케일을 고정하지 않으면
+        // 테스트 환경의 기본값(en)으로 떠서 찾지 못한다(#847).
+        locale: const Locale('ko'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const NotificationPage(),
