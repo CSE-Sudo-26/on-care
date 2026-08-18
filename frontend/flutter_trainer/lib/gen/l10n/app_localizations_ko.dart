@@ -1156,6 +1156,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedFieldDuration => '소요 시간';
 
   @override
+  String get schedRepeat => '반복';
+
+  @override
+  String get schedRepeatNone => '반복 없음';
+
+  @override
+  String get schedRepeatWeekly => '매주';
+
+  @override
+  String get schedRepeatDays => '반복 요일';
+
+  @override
+  String get schedRepeatEnd => '종료';
+
+  @override
+  String get schedRepeatEndByCount => '횟수';
+
+  @override
+  String get schedRepeatEndByDate => '종료일';
+
+  @override
+  String schedRepeatCount(int count) {
+    return '$count회';
+  }
+
+  @override
+  String schedRepeatPreview(int count, String first, String last) {
+    return '총 $count회 · $first ~ $last';
+  }
+
+  @override
+  String get schedRepeatNeedsDays => '반복할 요일을 골라 주세요.';
+
+  @override
+  String schedRepeatConflictTitle(int total, int count) {
+    return '총 $total회 중 $count개의 일정이 겹칩니다';
+  }
+
+  @override
+  String schedRepeatConflictRow(String date, String time, String name) {
+    return '$date $time · 기존 일정: $name';
+  }
+
+  @override
+  String get schedRepeatConflictHint =>
+      '겹치는 회차가 있어 아무 일정도 만들지 않았어요. 시간을 바꾸거나 겹치는 일정을 정리해 주세요.';
+
+  @override
   String get schedNote => '트레이너 메모';
 
   @override
