@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_options_dtos.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
 
 void main() {
   test('routineOptionsFromJson maps analysis + A/B plans', () {
@@ -47,6 +48,13 @@ void main() {
     expect(o.planA.exercises.first.name, '저강도 걷기');
     expect(o.planB.totalMinutes, 30);
     expect(o.generatedBy, 'rule');
+    // #776 — absent on this payload, same as an older server: never reads
+    // as personalized when there's no analysis to back that up.
+    expect(o.analysis.recommendationStatus, RecommendationStatus.template);
+    expect(o.analysis.historySessionCount, 0);
+    expect(o.analysis.frequentExercises, isEmpty);
+    expect(o.analysis.suggestedAvailableMinutes, isNull);
+    expect(o.analysis.suggestedIntensity, isNull);
   });
 
   test('rejects missing fields and invalid A/B keys', () {
@@ -155,6 +163,88 @@ void main() {
       final o = routineOptionsFromJson(payload('not-a-list'));
 
       expect(o.analysis.recentMessages, isEmpty);
+    });
+  });
+
+  group('recommendation status + history analysis (#776)', () {
+    Map<String, Object?> payload(Map<String, Object?> analysisExtra) =>
+        <String, Object?>{
+          'analysis': <String, Object?>{
+            'goal': '체중 감량',
+            'sodium_today_mg': 1800,
+            'sodium_over_target': false,
+            'avg_completion_rate': 70,
+            'latest_routine': '스쿼트',
+            'note': '',
+            ...analysisExtra,
+          },
+          'plan_a': <String, Object?>{
+            'key': 'A',
+            'label': '기존 패턴 유지형',
+            'total_minutes': 45,
+            'intensity': '높음',
+            'exercises': <Object?>[
+              <String, Object?>{'name': '스쿼트', 'minutes': 45, 'type': '근력'},
+            ],
+            'reason': 'r',
+            'rationale': 'r',
+          },
+          'plan_b': <String, Object?>{
+            'key': 'B',
+            'label': '점진적 강화형',
+            'total_minutes': 45,
+            'intensity': '높음',
+            'exercises': <Object?>[
+              <String, Object?>{'name': '스쿼트', 'minutes': 45, 'type': '근력'},
+            ],
+            'reason': 'r',
+            'rationale': 'r',
+          },
+          'generated_by': 'rule',
+        };
+
+    test('parses a fully personalized analysis', () {
+      final o = routineOptionsFromJson(
+        payload(<String, Object?>{
+          'recommendation_status': 'personalized',
+          'history_session_count': 6,
+          'analysis_period_days': 42,
+          'frequent_exercises': <Object?>['스쿼트'],
+          'suggested_available_minutes': 45,
+          'suggested_intensity': 'high',
+        }),
+      );
+
+      expect(
+        o.analysis.recommendationStatus,
+        RecommendationStatus.personalized,
+      );
+      expect(o.analysis.historySessionCount, 6);
+      expect(o.analysis.analysisPeriodDays, 42);
+      expect(o.analysis.frequentExercises, <String>['스쿼트']);
+      expect(o.analysis.suggestedAvailableMinutes, 45);
+      expect(o.analysis.suggestedIntensity, 'high');
+    });
+
+    test('parses the learning status with no suggested conditions yet', () {
+      final o = routineOptionsFromJson(
+        payload(<String, Object?>{
+          'recommendation_status': 'learning',
+          'history_session_count': 3,
+        }),
+      );
+
+      expect(o.analysis.recommendationStatus, RecommendationStatus.learning);
+      expect(o.analysis.suggestedAvailableMinutes, isNull);
+      expect(o.analysis.suggestedIntensity, isNull);
+    });
+
+    test('an unrecognized status string degrades to template, not a throw', () {
+      final o = routineOptionsFromJson(
+        payload(<String, Object?>{'recommendation_status': 'not-a-real-status'}),
+      );
+
+      expect(o.analysis.recommendationStatus, RecommendationStatus.template);
     });
   });
 }

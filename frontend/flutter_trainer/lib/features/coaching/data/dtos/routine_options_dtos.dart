@@ -28,6 +28,20 @@ MemberAnalysis _analysis(Object? v) {
     latestRoutine: _requiredString(m, 'latest_routine'),
     note: _requiredString(m, 'note'),
     recentMessages: _stringList(m, 'recent_messages'),
+    // #776 — absent on an older server means "no analysis yet", so these all
+    // default to the thin-history shape rather than throwing.
+    recommendationStatus: RecommendationStatus.fromWire(
+      m['recommendation_status'] is String
+          ? m['recommendation_status']! as String
+          : '',
+    ),
+    historySessionCount: _optionalInt(m, 'history_session_count') ?? 0,
+    analysisPeriodDays: _optionalInt(m, 'analysis_period_days') ?? 0,
+    frequentExercises: _stringList(m, 'frequent_exercises'),
+    suggestedAvailableMinutes: _optionalInt(m, 'suggested_available_minutes'),
+    suggestedIntensity: m['suggested_intensity'] is String
+        ? m['suggested_intensity']! as String
+        : null,
   );
 }
 
@@ -84,6 +98,12 @@ int _requiredInt(Map<String, Object?> json, String field) {
   final value = json[field];
   if (value is num) return value.toInt();
   throw FormatException('Invalid routine-options $field.');
+}
+
+/// Absent/null → not enough history to suggest a value, not a parse error.
+int? _optionalInt(Map<String, Object?> json, String field) {
+  final value = json[field];
+  return value is num ? value.toInt() : null;
 }
 
 bool _requiredBool(Map<String, Object?> json, String field) {
