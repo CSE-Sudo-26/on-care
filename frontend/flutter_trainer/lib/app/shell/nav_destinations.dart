@@ -11,8 +11,9 @@ enum NavBadge {
   /// Total unread client messages (답장 필요).
   unreadMessages,
 
-  /// Today's booked session count.
-  todayReservations,
+  /// 오늘 아직 처리하지 않은(예정) 세션 수. 완료한 수업과 공백 슬롯은
+  /// 빠진다 — 배지는 "여기 처리할 게 남았다" 는 신호다. (#860)
+  todayPendingSessions,
 
   /// Undecided consultation requests. Supplied by the sidebar directly
   /// rather than looked up from [navDestinations] — this destination is
@@ -109,7 +110,7 @@ const List<NavDestination> navDestinations = <NavDestination>[
     icon: Icons.calendar_today_outlined,
     activeIcon: Icons.calendar_today,
     route: AppRoutes.schedule,
-    badge: NavBadge.todayReservations,
+    badge: NavBadge.todayPendingSessions,
   ),
   NavDestination(
     label: NavLabel.coaching,
