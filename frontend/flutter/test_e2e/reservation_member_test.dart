@@ -7,7 +7,7 @@
 ///  2. `reserve`     — 회원이 그 자리를 보고 예약한다. 재시작·재로그인 뒤에도 유지.
 ///  3. (트레이너) `verify-schedule`
 ///  4. `cancel`      — 회원이 취소한다. 좌석이 돌아오고 다시 고를 수 있다.
-///  5. (트레이너) `verify-schedule-removed`
+///  5. (트레이너) `verify-schedule-cancelled`
 ///  6. `edge-cases`  — 중복·마감·과거·정원 경쟁이 초과 예약을 만들지 않는지.
 library;
 
