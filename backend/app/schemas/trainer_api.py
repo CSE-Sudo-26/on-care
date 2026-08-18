@@ -526,6 +526,73 @@ class TrainerMemoUpdateRequest(PartialUpdate):
     body: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
+#: 후속 관리 할 일이 가리키는 업무 갈래. 할 일에서 어느 화면으로 갈지를 고르는
+#: 값이라 열어 두지 않는다 — 앱이 모르는 값이 오면 이동할 곳이 없다. 새 갈래는
+#: 앱의 route 매핑과 **함께** 늘린다.
+FollowUpTaskContext = Literal[
+    "general", "diet", "exercise", "message", "program", "schedule"
+]
+
+#: 할 일 상태. 완료는 되돌리지 않으므로 두 값이면 충분하다.
+FollowUpTaskStatus = Literal["pending", "completed"]
+
+
+#: 대시보드/목록이 고르는 조회 범위. `due` 는 오늘까지 처리해야 할 미완료(지난
+#: 항목 포함), `open` 은 예정일과 무관한 미완료 전체.
+FollowUpScope = Literal["due", "open"]
+
+
+class TrainerFollowUpTaskOut(BaseModel):
+    """고객별 후속 관리 할 일. (#869)"""
+    id: str
+    member_id: str
+    #: 대시보드가 "누구의 할 일인가"를 함께 보여 준다. 트레이너 웹이 할 일마다
+    #: 회원을 다시 조회하지 않도록 서버가 채워 준다.
+    member_name: str = ""
+    title: str
+    #: 확인 예정일 `YYYY-MM-DD`(KST).
+    due_date: str
+    status: FollowUpTaskStatus
+    context_type: FollowUpTaskContext
+    created_at: _datetime
+    updated_at: _datetime
+    #: 완료 처리 시각. 미완료는 None.
+    completed_at: _datetime | None = None
+
+
+class TrainerFollowUpTaskCreateRequest(BaseModel):
+    """후속 관리 할 일 등록 입력.
+
+    고객은 경로(`/trainer/clients/{member_id}/follow-ups`)가 정하므로 본문에
+    두지 않는다 — 두 곳에서 오면 어긋난 조합을 검증할 자리가 생긴다.
+
+    `client_request_id` 를 보내면 그 시도에 대해 멱등하다. 저장 응답을 못 받고
+    재시도한 등록이 같은 할 일을 두 번 만들면 대시보드에 같은 줄이 겹쳐 뜬다.
+    """
+    title: str = Field(min_length=1, max_length=200)
+    due_date: str = Field(max_length=10)
+    context_type: FollowUpTaskContext = "general"
+    client_request_id: str | None = Field(default=None, max_length=64)
+
+    _check_due_date = field_validator("due_date")(_validate_ymd)
+
+
+class TrainerFollowUpTaskUpdateRequest(PartialUpdate):
+    """할 일 부분 수정. 내용과 예정일만 고칠 수 있다.
+
+    상태는 여기서 받지 않는다 — 완료는 완료 시각까지 함께 남기는 상태 전이라
+    전용 경로(`POST .../complete`)를 지난다. 고객(`member_id`)도 고치지 않는다:
+    다른 고객의 할 일로 옮기는 것은 수정이 아니라 새 할 일이다.
+    """
+
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    due_date: str | None = Field(default=None, max_length=10)
+
+    _check_due_date = field_validator("due_date")(
+        lambda v: v if v is None else _validate_ymd(v)
+    )
+
+
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 

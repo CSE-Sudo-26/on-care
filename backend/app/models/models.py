@@ -929,6 +929,86 @@ class TrainerReportFeedback(Base):
     )
 
 
+class TrainerFollowUpTask(Base):
+    """트레이너가 고객별로 남기는 후속 관리 할 일. (#869)
+
+    회원 상세에서 상태를 확인하다 "며칠 뒤 다시 볼 것"을 남겨 두는 자리다.
+    메모(`TrainerClientMemo`)와 나누는 까닭은 묻는 질문이 다르기 때문이다 —
+    메모는 "이 고객에 대해 무엇을 알아 두었나"이고, 여기 있는 행은 "언제까지
+    무엇을 해야 하나"다. 그래서 예정일과 완료 상태를 갖고, 대시보드가 오늘
+    처리할 목록으로 읽는다.
+
+    범용 업무 관리가 아니다. 우선순위·담당자 배정·태그는 두지 않고, 트레이너
+    본인이 담당 고객에 대해 남기는 최소 업무 큐만 표현한다.
+
+    `context_type` 은 할 일에서 어느 화면으로 갈지의 힌트다. 새 deep-link 체계를
+    만들지 않고 기존 route 를 고르는 값이라 열어 두지 않고 못 박는다 — 앱이 모르는
+    값이 오면 이동할 곳이 없다.
+
+    `client_request_id` 는 생성 시도 단위 멱등키다. 네트워크가 끊겨 재시도한
+    등록이 같은 할 일을 두 번 만들면 대시보드에 같은 줄이 겹쳐 뜬다.
+    """
+
+    __tablename__ = "trainer_follow_up_tasks"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        # 단독 인덱스를 두지 않는다 — 아래 (trainer_id, status, due_date) 인덱스가
+        # 선행 컬럼으로 커버한다(`TrainerClientMemo.trainer_id` 와 같은 규약).
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    member_id: Mapped[str] = mapped_column(
+        # 회원 삭제 CASCADE 가 이 컬럼으로 행을 찾으므로 단독 인덱스가 필요하다.
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    #: 확인 예정일 `YYYY-MM-DD`(KST). `TrainerSchedule.date` 와 같은 표기라
+    #: 문자열 비교로 오늘/지난 항목을 가른다.
+    due_date: Mapped[str] = mapped_column(String(10))
+    #: 'pending' | 'completed'
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    #: 'general' | 'diet' | 'exercise' | 'message' | 'program' | 'schedule'
+    context_type: Mapped[str] = mapped_column(String(16), default="general")
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    #: 완료 처리 시각. 미완료는 NULL 이라 상태와 시각이 어긋날 수 없다.
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id",
+            "client_request_id",
+            name="uq_trainer_follow_up_task_client_request",
+        ),
+        # 응답 스키마가 두 값만 받는다. 다른 값이 한 행이라도 들어가면 그 트레이너의
+        # 할 일 **목록 전체**가 검증 실패로 500 이 된다(`ck_trainer_client_memo_source`
+        # 와 같은 이유).
+        CheckConstraint(
+            "status IN ('pending', 'completed')",
+            name="ck_trainer_follow_up_task_status",
+        ),
+        CheckConstraint(
+            "context_type IN "
+            "('general', 'diet', 'exercise', 'message', 'program', 'schedule')",
+            name="ck_trainer_follow_up_task_context",
+        ),
+        # 대시보드가 읽는 질의 그대로다 — 내 미완료 할 일을 예정일 순으로.
+        Index(
+            "ix_trainer_follow_up_tasks_queue",
+            "trainer_id",
+            "status",
+            "due_date",
+        ),
+    )
+
+
 class RoutineHistory(Base):
     """회원의 운동 완료 기록 — 프론트 ClientRoutineHistory 대응.
 
