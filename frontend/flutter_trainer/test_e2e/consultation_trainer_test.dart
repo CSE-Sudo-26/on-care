@@ -39,8 +39,14 @@ Future<Finder> _requestCard(WidgetTester tester, String consultationId) async {
   final Finder card = find.byKey(
     ValueKey<String>('consult-request-$consultationId'),
   );
-  await pumpUntil(tester, find.byKey(const Key('consult-accept')).first,
-      step: '인박스 카드');
+  // `pumpUntil` 은 `finder.evaluate()` 로 기다린다. 여기에 `.first` 를 넘기면 대상이
+  // 아직 없을 때 빈 목록에서 `first` 를 불러 `Bad state: No element` 로 즉사한다 —
+  // 타임아웃 메시지도 못 보고 원인이 가려진다. 기다릴 때는 맨 파인더를 쓴다.
+  await pumpUntil(
+    tester,
+    find.byKey(const Key('consult-accept')),
+    step: '인박스 카드',
+  );
   if (card.evaluate().isEmpty) {
     await tester.scrollUntilVisible(card, 200, maxScrolls: 40);
   }

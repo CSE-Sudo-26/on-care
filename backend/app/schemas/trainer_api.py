@@ -526,6 +526,73 @@ class TrainerMemoUpdateRequest(PartialUpdate):
     body: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
+#: 후속 관리 할 일이 가리키는 업무 갈래. 할 일에서 어느 화면으로 갈지를 고르는
+#: 값이라 열어 두지 않는다 — 앱이 모르는 값이 오면 이동할 곳이 없다. 새 갈래는
+#: 앱의 route 매핑과 **함께** 늘린다.
+FollowUpTaskContext = Literal[
+    "general", "diet", "exercise", "message", "program", "schedule"
+]
+
+#: 할 일 상태. 완료는 되돌리지 않으므로 두 값이면 충분하다.
+FollowUpTaskStatus = Literal["pending", "completed"]
+
+
+#: 대시보드/목록이 고르는 조회 범위. `due` 는 오늘까지 처리해야 할 미완료(지난
+#: 항목 포함), `open` 은 예정일과 무관한 미완료 전체.
+FollowUpScope = Literal["due", "open"]
+
+
+class TrainerFollowUpTaskOut(BaseModel):
+    """고객별 후속 관리 할 일. (#869)"""
+    id: str
+    member_id: str
+    #: 대시보드가 "누구의 할 일인가"를 함께 보여 준다. 트레이너 웹이 할 일마다
+    #: 회원을 다시 조회하지 않도록 서버가 채워 준다.
+    member_name: str = ""
+    title: str
+    #: 확인 예정일 `YYYY-MM-DD`(KST).
+    due_date: str
+    status: FollowUpTaskStatus
+    context_type: FollowUpTaskContext
+    created_at: _datetime
+    updated_at: _datetime
+    #: 완료 처리 시각. 미완료는 None.
+    completed_at: _datetime | None = None
+
+
+class TrainerFollowUpTaskCreateRequest(BaseModel):
+    """후속 관리 할 일 등록 입력.
+
+    고객은 경로(`/trainer/clients/{member_id}/follow-ups`)가 정하므로 본문에
+    두지 않는다 — 두 곳에서 오면 어긋난 조합을 검증할 자리가 생긴다.
+
+    `client_request_id` 를 보내면 그 시도에 대해 멱등하다. 저장 응답을 못 받고
+    재시도한 등록이 같은 할 일을 두 번 만들면 대시보드에 같은 줄이 겹쳐 뜬다.
+    """
+    title: str = Field(min_length=1, max_length=200)
+    due_date: str = Field(max_length=10)
+    context_type: FollowUpTaskContext = "general"
+    client_request_id: str | None = Field(default=None, max_length=64)
+
+    _check_due_date = field_validator("due_date")(_validate_ymd)
+
+
+class TrainerFollowUpTaskUpdateRequest(PartialUpdate):
+    """할 일 부분 수정. 내용과 예정일만 고칠 수 있다.
+
+    상태는 여기서 받지 않는다 — 완료는 완료 시각까지 함께 남기는 상태 전이라
+    전용 경로(`POST .../complete`)를 지난다. 고객(`member_id`)도 고치지 않는다:
+    다른 고객의 할 일로 옮기는 것은 수정이 아니라 새 할 일이다.
+    """
+
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    due_date: str | None = Field(default=None, max_length=10)
+
+    _check_due_date = field_validator("due_date")(
+        lambda v: v if v is None else _validate_ymd(v)
+    )
+
+
 RoutineIntensityPreference = Literal["low", "moderate", "high"]
 RoutineOptionGenerator = Literal["ai", "rule"]
 
@@ -536,10 +603,15 @@ RoutineIntensityLabel = Literal["낮음", "보통", "높음"]
 
 
 class RoutineOptionsRequest(BaseModel):
-    """회원 데이터 기반 맞춤 루틴 후보 생성 조건."""
+    """회원 데이터 기반 맞춤 루틴 후보 생성 조건.
 
-    available_minutes: int = Field(ge=10, le=180)
-    intensity_preference: RoutineIntensityPreference = "moderate"
+    두 필드 모두 비워 둘 수 있다(#776) — 운동 기록이 쌓인 회원은 서버가 최근
+    패턴에서 값을 채우고, 기록이 없으면 기본값을 쓴다. 트레이너가 값을 보내면
+    그 값이 항상 우선한다.
+    """
+
+    available_minutes: int | None = Field(default=None, ge=10, le=180)
+    intensity_preference: RoutineIntensityPreference | None = None
     trainer_note: str = Field(default="", max_length=500)
 
 
@@ -547,6 +619,14 @@ class RoutineOptionsRequest(BaseModel):
 #: 따로 두면 서비스 쪽만 올렸을 때 여기서 ValidationError 가 나는데, 그 생성은
 #: LLM 폴백 try 블록 밖이라 500 이 된다.
 ROUTINE_CHAT_MAX_MESSAGES = 10
+
+
+#: 고객의 운동 데이터 축적도에 따른 추천 방식(#776).
+#:
+#: * template — 개인 패턴을 판단하기엔 기록이 부족해 목표 기반 기본값을 씀.
+#: * learning — 최근 운동은 있지만 반복 패턴이라 부르기엔 아직 이르다.
+#: * personalized — 여러 주에 걸쳐 반복된 운동·세션 패턴이 확인된다.
+RecommendationStatus = Literal["template", "learning", "personalized"]
 
 
 class RoutineOptionAnalysisOut(BaseModel):
@@ -570,6 +650,19 @@ class RoutineOptionAnalysisOut(BaseModel):
     recent_messages: list[str] = Field(
         default_factory=list, max_length=ROUTINE_CHAT_MAX_MESSAGES
     )
+    #: 이 분석이 어느 추천 단계에 해당하는지(#776). 프론트가 화면 문구를
+    #: 정하는 유일한 기준이다 — 프론트가 자체 기준으로 다시 판단하지 않는다.
+    recommendation_status: RecommendationStatus = "template"
+    #: 분석에 사용한 기간 안의 완료 기록 수.
+    history_session_count: int = Field(default=0, ge=0)
+    #: 분석에 사용한 최근 기간(일).
+    analysis_period_days: int = Field(default=0, ge=0)
+    #: 최근 기록에서 반복 확인된 운동 이름(최대 3개, 빈도 높은 순).
+    frequent_exercises: list[str] = Field(default_factory=list, max_length=3)
+    #: 최근 기록 기반으로 제안하는 운동 가능 시간. 기록이 부족하면 비운다.
+    suggested_available_minutes: int | None = Field(default=None, ge=10, le=180)
+    #: 최근 기록 기반으로 제안하는 강도. 기록이 부족하면 비운다.
+    suggested_intensity: RoutineIntensityPreference | None = None
 
 
 class RoutineOptionExerciseOut(BaseModel):
@@ -627,6 +720,11 @@ class ProgramItem(BaseModel):
     session: str = Field(default="", max_length=100)
 
 
+#: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야
+#: 한다. 빈 문자열은 "취소가 아님"(예정·완료·노쇼)이다. (#871)
+CancellationSource = Literal["", "member", "trainer", "other"]
+
+
 class ScheduleSessionOut(BaseModel):
     """스케줄 슬롯 — 프론트 ScheduleSession 계약 정렬."""
     id: str
@@ -635,12 +733,17 @@ class ScheduleSessionOut(BaseModel):
     client_name: str
     type: str
     duration_minutes: int
-    status: str          # 예정|완료|공백
+    status: str          # 예정|완료|취소|노쇼|공백
     note: str
     program: list[ProgramItem]
     #: 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미
     #: 보낸 세션은 화면에서 다른 것을 말해야 한다(#822).
     program_sent: bool = False
+    #: 취소·노쇼로 마무리된 세션의 기록. 예정·완료는 전부 비어 있다(#871).
+    cancelled_at: _datetime | None = None
+    cancellation_source: CancellationSource = ""
+    cancellation_reason: str = ""
+    no_show_at: _datetime | None = None
 
 
 class ScheduleProgramSendRequest(BaseModel):
@@ -707,6 +810,20 @@ class ScheduleUpdateRequest(PartialUpdate):
 
 class ScheduleCompleteRequest(BaseModel):
     note: str = Field(default="", max_length=500)
+
+
+class ScheduleCancelRequest(BaseModel):
+    """일정 취소 입력. (#871)
+
+    `source` 를 받는 까닭은 지표 때문이다 — 트레이너 사정의 취소와 고객 취소를
+    구분하지 않으면 나중에 회원의 낮은 완료율을 잘못 읽는다. 기본값을 두지 않고
+    화면이 고르게 한다: 무엇이든 기본으로 저장되면 그 값이 사실인지 알 수 없다.
+
+    `reason` 은 트레이너가 보는 내부 기록이라 선택이다. 회원에게 나가는 알림에는
+    싣지 않는다.
+    """
+    source: Literal["member", "trainer", "other"]
+    reason: str = Field(default="", max_length=200)
 
 
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅) ----

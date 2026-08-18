@@ -54,10 +54,13 @@ from app.schemas.trainer_api import (
     RoutineSuggestionApproveRequest, RoutineSuggestionCreateRequest,
     ProgramAssignRequest,
     RoutineOptionsOut, RoutineOptionsRequest, RoutineUpdateRequest,
-    ScheduleCompleteRequest,
+    ScheduleCancelRequest, ScheduleCompleteRequest,
     ScheduleProgramSendRequest, ScheduleCreateRequest, ScheduleProgramRegisterOut,
     ScheduleProgramRegisterRequest, ScheduleSessionOut, ScheduleUpdateRequest,
     TrainerClientOut, TrainerClientStatusOut, TrainerClientStatusUpdate,
+    FollowUpScope,
+    TrainerFollowUpTaskCreateRequest, TrainerFollowUpTaskOut,
+    TrainerFollowUpTaskUpdateRequest,
     TrainerGymAffiliation, TrainerMe, TrainerMeUpdate,
     TrainerMemoCreateRequest, TrainerMemoOut, TrainerMemoUpdateRequest,
     TrainerProgramDraftCreate, TrainerProgramDraftOut,
@@ -858,6 +861,118 @@ def trainer_delete_memo(
     return {"status": "deleted"}
 
 
+# ---- 고객 후속 관리 할 일 (#869) ----
+#
+# 고객별 등록·조회는 `_require_client` 를 지나므로 담당 관계가 없는 트레이너는
+# 남의 고객에게 할 일을 남길 수 없다(없는 회원과 똑같이 404). 등록 뒤의 조회·수정·
+# 완료는 트레이너 소유권만 보면 된다 — 담당이 해제돼도 이미 남긴 업무는 내 것이고,
+# 여기서 담당을 다시 요구하면 해제된 고객의 할 일이 목록에 남은 채 지울 수 없게 된다.
+
+@router.get(
+    "/trainer/clients/{member_id}/follow-ups",
+    response_model=list[TrainerFollowUpTaskOut],
+)
+def trainer_client_follow_ups(
+    member_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    include_completed: Annotated[bool, Query()] = False,
+) -> list[TrainerFollowUpTaskOut]:
+    """담당 고객에 대해 내가 남긴 후속 관리 할 일(예정일 순).
+
+    기본은 미완료만이다. 완료 이력까지 보려면 `include_completed=true`.
+    """
+    _require_client(db, trainer.id, member_id)
+    return trainer_service.build_client_follow_ups(
+        db, trainer.id, member_id, include_completed=include_completed
+    )
+
+
+@router.post(
+    "/trainer/clients/{member_id}/follow-ups",
+    response_model=TrainerFollowUpTaskOut,
+    status_code=201,
+)
+def trainer_create_follow_up(
+    member_id: str,
+    payload: TrainerFollowUpTaskCreateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerFollowUpTaskOut:
+    """담당 고객에 대한 후속 관리 할 일 등록.
+
+    `client_request_id` 를 보내면 그 시도에 대해 멱등이라, 응답을 못 받고 재시도해도
+    같은 할 일이 두 번 생기지 않는다(201 로 먼저 저장된 할 일이 돌아온다).
+    """
+    _require_client(db, trainer.id, member_id)
+    title = payload.title.strip()
+    if not title:
+        # 공백만 있는 할 일을 성공으로 처리하면 대시보드에 빈 줄이 쌓인다.
+        raise HTTPException(status_code=400, detail="할 일 내용이 필요합니다.")
+    return trainer_service.create_follow_up(
+        db,
+        trainer.id,
+        member_id,
+        title=title,
+        due_date=payload.due_date,
+        context_type=payload.context_type,
+        client_request_id=payload.client_request_id,
+    )
+
+
+@router.get("/trainer/follow-ups", response_model=list[TrainerFollowUpTaskOut])
+def trainer_follow_ups(
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+    scope: Annotated[FollowUpScope, Query()] = "due",
+) -> list[TrainerFollowUpTaskOut]:
+    """내 후속 관리 할 일(예정일 순, 지난 항목이 앞).
+
+    `scope=due` 는 대시보드가 읽는 범위다 — 오늘 예정과 기한이 지난 미완료.
+    `scope=open` 은 예정일과 무관한 미완료 전체.
+    """
+    if scope == "open":
+        return trainer_service.build_open_follow_ups(db, trainer.id)
+    return trainer_service.build_due_follow_ups(db, trainer.id)
+
+
+@router.put("/trainer/follow-ups/{task_id}", response_model=TrainerFollowUpTaskOut)
+def trainer_update_follow_up(
+    task_id: str,
+    payload: TrainerFollowUpTaskUpdateRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerFollowUpTaskOut:
+    """할 일 수정(부분). 내용과 예정일만 바뀐다."""
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
+    if "title" in fields:
+        fields["title"] = fields["title"].strip()
+        if not fields["title"]:
+            raise HTTPException(status_code=400, detail="할 일 내용이 필요합니다.")
+    try:
+        return trainer_service.update_follow_up(db, trainer.id, task_id, fields)
+    except trainer_service.FollowUpTaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/trainer/follow-ups/{task_id}/complete",
+    response_model=TrainerFollowUpTaskOut,
+)
+def trainer_complete_follow_up(
+    task_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> TrainerFollowUpTaskOut:
+    """할 일 완료 처리. 같은 요청을 반복해도 성공하고 완료 시각은 유지된다."""
+    try:
+        return trainer_service.complete_follow_up(db, trainer.id, task_id)
+    except trainer_service.FollowUpTaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 # ---- 프로그램 초안 (#708) ----
 #
 # 초안은 트레이너의 것이라 회원 경로 아래가 아니다. 소유권 경계는 trainer_id 이고,
@@ -1169,11 +1284,69 @@ def trainer_complete_session(
     trainer: RequireTrainer,
     db: Annotated[Session, Depends(get_db)],
 ) -> ScheduleSessionOut:
-    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재."""
+    """세션 완료(예정→완료). 매칭된 회원이 있으면 운동기록으로 적재.
+
+    취소·노쇼로 이미 마무리된 세션은 409 다 — 하지 않은 PT 를 완료로 되돌리면
+    회원 운동 기록으로 적재된다(#871).
+    """
     try:
         out = trainer_service.complete_session(db, trainer.id, session_id, payload.note)
     except trainer_service.ScheduleError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/cancel", response_model=ScheduleSessionOut)
+def trainer_cancel_session(
+    session_id: str,
+    payload: ScheduleCancelRequest,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 취소(예정→취소). 일정을 지우지 않고 기록으로 남긴다. (#871)
+
+    삭제(`DELETE`)와 다른 동작이다 — 삭제는 잘못 만든 일정을 없애는 일이고,
+    이 경로는 실제로 있었던 약속이 진행되지 않았다는 사실을 남긴다. 같은 요청을
+    반복해도 200 이고 취소 시각·주체는 처음 값을 지킨다.
+    """
+    try:
+        out = trainer_service.cancel_session(
+            db,
+            trainer.id,
+            session_id,
+            source=payload.source,
+            reason=payload.reason.strip(),
+        )
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    if out is None:
+        raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
+    return out
+
+
+@router.post("/trainer/schedule/{session_id}/no-show", response_model=ScheduleSessionOut)
+def trainer_mark_session_no_show(
+    session_id: str,
+    trainer: RequireTrainer,
+    db: Annotated[Session, Depends(get_db)],
+) -> ScheduleSessionOut:
+    """세션 노쇼(예정→노쇼). 예약된 시간에 회원이 오지 않았다는 기록. (#871)
+
+    취소와 나누는 까닭은 두 일이 다르기 때문이다 — 취소는 진행 전에 약속이
+    거두어진 것이고, 노쇼는 약속이 그대로 있는데 회원이 오지 않은 것이다.
+    """
+    try:
+        out = trainer_service.mark_session_no_show(db, trainer.id, session_id)
+    except trainer_service.ScheduleError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except trainer_service.ScheduleConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     if out is None:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return out

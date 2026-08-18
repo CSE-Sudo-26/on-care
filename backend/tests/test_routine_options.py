@@ -65,6 +65,43 @@ def test_rule_based_plans_never_exceed_requested_time(minutes):
     assert sum(e["minutes"] for e in b["exercises"]) == b["total_minutes"]
 
 
+def test_rule_based_plans_reuse_frequent_exercises_when_a_pattern_exists():
+    """#776 — 반복 운동이 있으면 고정 라이브러리 대신 그 운동으로 A/B를 구성한다."""
+    a, b = routine_ai.rule_based_plans(
+        goal="체중 감량",
+        sodium_today_mg=1800,
+        avg_completion_rate=70,
+        available_minutes=40,
+        intensity_preference="high",
+        trainer_note="무릎 부담 낮게",
+        frequent_exercises=["스쿼트", "레그프레스"],
+    )
+    assert a["label"] == "기존 패턴 유지형"
+    assert b["label"] == "점진적 강화형"
+    # A안은 반복 운동만으로, B안은 그 위에 하나만 더한다.
+    assert {e["name"] for e in a["exercises"]} == {"스쿼트", "레그프레스"}
+    assert {e["name"] for e in b["exercises"]} >= {"스쿼트", "레그프레스"}
+    assert len(b["exercises"]) == len(a["exercises"]) + 1
+    for plan in (a, b):
+        assert sum(e["minutes"] for e in plan["exercises"]) == plan["total_minutes"]
+        assert plan["total_minutes"] <= 40
+        assert "무릎 부담 낮게" in plan["rationale"]
+
+
+def test_rule_based_plans_ignore_frequent_exercises_when_empty():
+    """빈 목록이면 기존(데이터 부족) 동작을 그대로 유지한다 — 하위 호환."""
+    a, _b = routine_ai.rule_based_plans(
+        goal="체중 감량",
+        sodium_today_mg=1800,
+        avg_completion_rate=70,
+        available_minutes=40,
+        intensity_preference="moderate",
+        trainer_note="",
+        frequent_exercises=[],
+    )
+    assert a["label"] == "회복·지속 중심"
+
+
 def test_options_schema_rejects_a_total_that_does_not_match_exercises():
     plan = {
         "key": "A",

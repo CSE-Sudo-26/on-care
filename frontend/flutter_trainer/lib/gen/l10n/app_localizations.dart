@@ -116,6 +116,108 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get scheduleStatusDone;
 
+  /// No description provided for @scheduleStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get scheduleStatusCancelled;
+
+  /// No description provided for @scheduleStatusNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No-show'**
+  String get scheduleStatusNoShow;
+
+  /// No description provided for @schedCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel session'**
+  String get schedCancel;
+
+  /// No description provided for @schedNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark no-show'**
+  String get schedNoShow;
+
+  /// No description provided for @schedCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this PT?'**
+  String get schedCancelTitle;
+
+  /// No description provided for @schedCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The {time} session with {name} will be recorded as cancelled. The entry stays.'**
+  String schedCancelConfirm(String time, String name);
+
+  /// No description provided for @schedCancelSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled by'**
+  String get schedCancelSource;
+
+  /// No description provided for @schedCancelByMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get schedCancelByMember;
+
+  /// No description provided for @schedCancelByTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer'**
+  String get schedCancelByTrainer;
+
+  /// No description provided for @schedCancelByOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get schedCancelByOther;
+
+  /// No description provided for @schedCancelReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional, only you see it)'**
+  String get schedCancelReasonHint;
+
+  /// No description provided for @schedCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t cancel the session. Please try again.'**
+  String get schedCancelFailed;
+
+  /// No description provided for @schedNoShowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record as a no-show?'**
+  String get schedNoShowTitle;
+
+  /// No description provided for @schedNoShowConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The {time} session with {name} will be recorded as a no-show.'**
+  String schedNoShowConfirm(String time, String name);
+
+  /// No description provided for @schedNoShowFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record the no-show. Please try again.'**
+  String get schedNoShowFailed;
+
+  /// No description provided for @schedCancelledBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} · {date}'**
+  String schedCancelledBy(String source, String date);
+
+  /// No description provided for @schedDeleteMeansRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.'**
+  String get schedDeleteMeansRemove;
+
   /// Display label for an empty slot in the trainer's day.
   ///
   /// In en, this message translates to:
@@ -3200,6 +3302,66 @@ abstract class AppLocalizations {
   /// **'Compare the candidates'**
   String get aiCompareCandidates;
 
+  /// No description provided for @aiConditionsAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to auto-fill from recent history or goals.'**
+  String get aiConditionsAutoHint;
+
+  /// No description provided for @aiConditionsEditToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit recommended conditions'**
+  String get aiConditionsEditToggle;
+
+  /// No description provided for @aiGenerateGoalBased.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate goal-based routine'**
+  String get aiGenerateGoalBased;
+
+  /// No description provided for @aiStatusTemplateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal-based starter routine'**
+  String get aiStatusTemplateTitle;
+
+  /// No description provided for @aiStatusTemplateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough workout history yet to personalize — this starts from a goal-based default.'**
+  String get aiStatusTemplateBody;
+
+  /// No description provided for @aiStatusLearningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalizing (learning)'**
+  String get aiStatusLearningTitle;
+
+  /// No description provided for @aiStatusLearningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent workouts were used, but there isn\'t a clear repeated pattern yet.'**
+  String get aiStatusLearningBody;
+
+  /// No description provided for @aiStatusPersonalizedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalized from recent patterns'**
+  String get aiStatusPersonalizedTitle;
+
+  /// No description provided for @aiStatusPersonalizedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on {count} sessions over the last {days} days.'**
+  String aiStatusPersonalizedBody(int count, int days);
+
+  /// No description provided for @aiFrequentExercisesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently done'**
+  String get aiFrequentExercisesLabel;
+
   /// No description provided for @goalWeightLoss.
   ///
   /// In en, this message translates to:
@@ -4009,6 +4171,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A deleted memo can\'t be restored.'**
   String get clientTrainerMemoDeleteBody;
+
+  /// No description provided for @followUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get followUp;
+
+  /// No description provided for @followUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups on {name}'**
+  String followUpTitle(String name);
+
+  /// No description provided for @followUpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note what you want to check again'**
+  String get followUpHint;
+
+  /// No description provided for @followUpAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add follow-up'**
+  String get followUpAdd;
+
+  /// No description provided for @followUpDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Check on'**
+  String get followUpDue;
+
+  /// No description provided for @followUpDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check on {date}'**
+  String followUpDueOn(String date);
+
+  /// No description provided for @followUpOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get followUpOverdue;
+
+  /// No description provided for @followUpContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens'**
+  String get followUpContext;
+
+  /// No description provided for @followUpContextGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Client detail'**
+  String get followUpContextGeneral;
+
+  /// No description provided for @followUpContextDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get followUpContextDiet;
+
+  /// No description provided for @followUpContextExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get followUpContextExercise;
+
+  /// No description provided for @followUpContextMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get followUpContextMessage;
+
+  /// No description provided for @followUpContextProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get followUpContextProgram;
+
+  /// No description provided for @followUpContextSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get followUpContextSchedule;
+
+  /// No description provided for @followUpComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get followUpComplete;
+
+  /// No description provided for @followUpCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String followUpCount(int count);
+
+  /// No description provided for @followUpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-ups left.'**
+  String get followUpEmpty;
+
+  /// No description provided for @followUpDashboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to follow up on today.'**
+  String get followUpDashboardEmpty;
+
+  /// No description provided for @followUpLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load follow-ups. Please try again.'**
+  String get followUpLoadFailed;
+
+  /// No description provided for @followUpSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the follow-up. Please try again.'**
+  String get followUpSaveFailed;
+
+  /// No description provided for @followUpCompleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark it done. Please try again.'**
+  String get followUpCompleteFailed;
 
   /// No description provided for @dashTaskReply.
   ///

@@ -18,6 +18,63 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scheduleStatusDone => '완료';
 
   @override
+  String get scheduleStatusCancelled => '취소';
+
+  @override
+  String get scheduleStatusNoShow => '노쇼';
+
+  @override
+  String get schedCancel => '취소 처리';
+
+  @override
+  String get schedNoShow => '노쇼 처리';
+
+  @override
+  String get schedCancelTitle => '이 PT를 취소할까요?';
+
+  @override
+  String schedCancelConfirm(String time, String name) {
+    return '$time $name 님 PT가 취소로 기록됩니다. 일정은 지워지지 않아요.';
+  }
+
+  @override
+  String get schedCancelSource => '취소한 쪽';
+
+  @override
+  String get schedCancelByMember => '고객 취소';
+
+  @override
+  String get schedCancelByTrainer => '트레이너 취소';
+
+  @override
+  String get schedCancelByOther => '기타';
+
+  @override
+  String get schedCancelReasonHint => '사유 (선택, 트레이너만 봅니다)';
+
+  @override
+  String get schedCancelFailed => '취소 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get schedNoShowTitle => '노쇼로 기록할까요?';
+
+  @override
+  String schedNoShowConfirm(String time, String name) {
+    return '$time $name 님이 오지 않은 것으로 기록됩니다.';
+  }
+
+  @override
+  String get schedNoShowFailed => '노쇼 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String schedCancelledBy(String source, String date) {
+    return '$source · $date';
+  }
+
+  @override
+  String get schedDeleteMeansRemove => '기록까지 지웁니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+
+  @override
   String get scheduleStatusGap => '공백';
 
   @override
@@ -1732,6 +1789,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiCompareCandidates => '맞춤 루틴 후보를 비교해 보세요';
 
   @override
+  String get aiConditionsAutoHint => '비워두면 최근 기록이나 목표를 기준으로 자동 설정돼요.';
+
+  @override
+  String get aiConditionsEditToggle => '추천 조건 수정';
+
+  @override
+  String get aiGenerateGoalBased => '목표 기반 루틴 생성';
+
+  @override
+  String get aiStatusTemplateTitle => '목표 기반 기본 추천';
+
+  @override
+  String get aiStatusTemplateBody => '아직 개인화하기엔 운동 기록이 부족해 목표를 기준으로 추천했어요.';
+
+  @override
+  String get aiStatusLearningTitle => '개인화 학습 중';
+
+  @override
+  String get aiStatusLearningBody => '최근 운동을 참고했지만 아직 반복 패턴이라 부르기엔 일러요.';
+
+  @override
+  String get aiStatusPersonalizedTitle => '최근 패턴 분석 완료';
+
+  @override
+  String aiStatusPersonalizedBody(int count, int days) {
+    return '최근 $days일 · $count회 기록을 기준으로 분석했어요.';
+  }
+
+  @override
+  String get aiFrequentExercisesLabel => '자주 한 운동';
+
+  @override
   String get goalWeightLoss => '체중 감량';
 
   @override
@@ -2176,6 +2265,75 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clientTrainerMemoDeleteBody => '지운 메모는 되돌릴 수 없어요.';
+
+  @override
+  String get followUp => '후속 관리';
+
+  @override
+  String followUpTitle(String name) {
+    return '$name님 후속 관리';
+  }
+
+  @override
+  String get followUpHint => '다시 확인할 내용을 적어 주세요';
+
+  @override
+  String get followUpAdd => '후속 관리 추가';
+
+  @override
+  String get followUpDue => '확인 예정일';
+
+  @override
+  String followUpDueOn(String date) {
+    return '$date 확인';
+  }
+
+  @override
+  String get followUpOverdue => '기한 지남';
+
+  @override
+  String get followUpContext => '관련 화면';
+
+  @override
+  String get followUpContextGeneral => '고객 상세';
+
+  @override
+  String get followUpContextDiet => '식단';
+
+  @override
+  String get followUpContextExercise => '운동';
+
+  @override
+  String get followUpContextMessage => '메시지';
+
+  @override
+  String get followUpContextProgram => '프로그램';
+
+  @override
+  String get followUpContextSchedule => '일정';
+
+  @override
+  String get followUpComplete => '완료';
+
+  @override
+  String followUpCount(int count) {
+    return '$count건';
+  }
+
+  @override
+  String get followUpEmpty => '남은 후속 관리가 없어요.';
+
+  @override
+  String get followUpDashboardEmpty => '오늘 처리할 후속 관리가 없어요.';
+
+  @override
+  String get followUpLoadFailed => '후속 관리를 불러오지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get followUpSaveFailed => '후속 관리를 저장하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get followUpCompleteFailed => '완료 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
 
   @override
   String get dashTaskReply => '답장';

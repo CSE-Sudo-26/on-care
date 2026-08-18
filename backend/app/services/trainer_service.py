@@ -22,7 +22,7 @@ from app.core import clock
 from app.models.models import (
     ChatMessage, DietEntry, ExerciseSession, GymProfile, Place, RoutineHistory,
     TrainerClient, TrainerClientMemo, TrainerProfile, TrainerProgramDraft,
-    TrainerReportFeedback,
+    TrainerFollowUpTask, TrainerReportFeedback,
     TrainerReservation, TrainerReservationSlot, TrainerRoutine, TrainerSchedule,
     User,
 )
@@ -31,6 +31,7 @@ from app.schemas.trainer_api import (
     ProgramDraftSession,
     ProgramItem, ReportFeedbackOut, RoutineHistoryOut,
     RoutineOut, ScheduleSessionOut, TrainerClientOut, TrainerClientStatusOut,
+    TrainerFollowUpTaskOut,
     TrainerGymOut, TrainerMe, TrainerMemoOut, TrainerNotificationSettings,
     TrainerProgramDraftOut, TrainerProgramDraftSummary, WeeklyReportDayOut,
     WeeklyReportOut,
@@ -1635,6 +1636,232 @@ def delete_memo(db: Session, trainer_id: str, member_id: str, memo_id: str) -> N
     db.commit()
 
 
+# ---- 고객 후속 관리 할 일 (#869) ----
+#
+# 트레이너가 고객 상태를 보다 "며칠 뒤 다시 확인할 것"을 남겨 두는 최소 업무 큐다.
+# 대시보드는 오늘 처리할 목록으로, 고객 상세는 그 고객의 미완료 목록으로 읽는다.
+
+class FollowUpTaskNotFound(Exception):
+    """그 트레이너에게 그 id 의 할 일이 없다(라우터가 404 로 변환)."""
+
+
+#: 할 일 목록이 한 번에 내려주는 최대 건수. 완료한 항목까지 쌓이는 데이터라
+#: 오래 쓴 계정에서 응답이 무한정 커지지 않게 자른다(메모 목록과 같은 이유).
+_FOLLOW_UP_LIMIT = 100
+
+
+def _follow_up_out(
+    task: TrainerFollowUpTask, member_name: str = ""
+) -> TrainerFollowUpTaskOut:
+    return TrainerFollowUpTaskOut(
+        id=task.id,
+        member_id=task.member_id,
+        member_name=member_name,
+        title=task.title,
+        due_date=task.due_date,
+        status=task.status,
+        context_type=task.context_type,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at,
+    )
+
+
+def _follow_up_rows(
+    db: Session,
+    trainer_id: str,
+    *,
+    member_id: str | None = None,
+    status: str | None = None,
+    due_on_or_before: str | None = None,
+) -> list[tuple[TrainerFollowUpTask, str]]:
+    """할 일 행과 회원 이름을 함께 읽는다.
+
+    이름을 붙여 내려주는 까닭은 대시보드가 "누구의 할 일인가"를 함께 보여 주기
+    때문이다 — 화면이 할 일마다 회원을 다시 조회하면 목록 하나에 요청이 N 번 는다.
+
+    정렬은 예정일 오름차순이다(지난 항목이 먼저 온다). 같은 날짜 안에서는 만든
+    순서를 지키고, 같은 시각에 만들어진 둘은 id 로 tie-break 해 순서가 흔들리지
+    않게 한다.
+    """
+    stmt = (
+        select(TrainerFollowUpTask, User.name)
+        .join(User, User.id == TrainerFollowUpTask.member_id)
+        .where(TrainerFollowUpTask.trainer_id == trainer_id)
+    )
+    if member_id is not None:
+        stmt = stmt.where(TrainerFollowUpTask.member_id == member_id)
+    if status is not None:
+        stmt = stmt.where(TrainerFollowUpTask.status == status)
+    if due_on_or_before is not None:
+        stmt = stmt.where(TrainerFollowUpTask.due_date <= due_on_or_before)
+    stmt = stmt.order_by(
+        TrainerFollowUpTask.due_date.asc(),
+        TrainerFollowUpTask.created_at.asc(),
+        TrainerFollowUpTask.id.asc(),
+    ).limit(_FOLLOW_UP_LIMIT)
+    return [(task, name or "") for task, name in db.execute(stmt).all()]
+
+
+def build_client_follow_ups(
+    db: Session, trainer_id: str, member_id: str, *, include_completed: bool = False
+) -> list[TrainerFollowUpTaskOut]:
+    """그 고객에 대해 내가 남긴 후속 관리 할 일(예정일 순).
+
+    기본은 미완료만이다 — 고객 상세가 묻는 것은 "이 고객에게 남은 일이 무엇인가"
+    이고, 완료 이력까지 섞으면 남은 일이 묻힌다.
+    """
+    rows = _follow_up_rows(
+        db,
+        trainer_id,
+        member_id=member_id,
+        status=None if include_completed else "pending",
+    )
+    return [_follow_up_out(task, name) for task, name in rows]
+
+
+def build_due_follow_ups(db: Session, trainer_id: str) -> list[TrainerFollowUpTaskOut]:
+    """오늘까지 처리해야 할 내 미완료 할 일.
+
+    오늘 예정과 **기한이 지난** 미완료를 함께 돌려준다 — 지난 항목을 빼면 하루만
+    지나도 화면에서 사라져, 놓치지 않으려고 만든 기능이 놓치는 경로가 된다.
+    지난 항목이 예정일 오름차순의 앞에 오므로 화면이 따로 가르지 않아도 위에 쌓인다.
+    """
+    return [
+        _follow_up_out(task, name)
+        for task, name in _follow_up_rows(
+            db, trainer_id, status="pending", due_on_or_before=clock.today_iso()
+        )
+    ]
+
+
+def build_open_follow_ups(db: Session, trainer_id: str) -> list[TrainerFollowUpTaskOut]:
+    """예정일과 무관하게 내 미완료 할 일 전체(예정일 순)."""
+    return [
+        _follow_up_out(task, name)
+        for task, name in _follow_up_rows(db, trainer_id, status="pending")
+    ]
+
+
+def _find_follow_up_by_request(
+    db: Session, trainer_id: str, client_request_id: str
+) -> TrainerFollowUpTask | None:
+    return db.scalar(
+        select(TrainerFollowUpTask).where(
+            TrainerFollowUpTask.trainer_id == trainer_id,
+            TrainerFollowUpTask.client_request_id == client_request_id,
+        )
+    )
+
+
+def create_follow_up(
+    db: Session,
+    trainer_id: str,
+    member_id: str,
+    *,
+    title: str,
+    due_date: str,
+    context_type: str = "general",
+    client_request_id: str | None = None,
+) -> TrainerFollowUpTaskOut:
+    """담당 고객에 대한 후속 관리 할 일을 등록한다.
+
+    [client_request_id] 가 오면 그 시도에 대해 멱등하다 — 응답을 못 받고 재시도한
+    등록이 같은 할 일을 두 번 만들지 않는다(스케줄 생성과 같은 규약).
+    """
+    if client_request_id:
+        existing = _find_follow_up_by_request(db, trainer_id, client_request_id)
+        if existing is not None:
+            return _follow_up_out(existing, _member_name(db, existing.member_id))
+
+    now = datetime.now(timezone.utc)
+    task = TrainerFollowUpTask(
+        id=f"followup-{uuid.uuid4().hex[:12]}",
+        trainer_id=trainer_id,
+        member_id=member_id,
+        title=title,
+        due_date=due_date,
+        status="pending",
+        context_type=context_type,
+        client_request_id=client_request_id,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(task)
+    # 같은 멱등키로 동시에 들어온 두 요청이 나란히 위 조회를 통과하면 유니크 제약이
+    # 한쪽을 막는다. 그 충돌을 여기서 잡아 먼저 저장된 쪽을 돌려준다.
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        if client_request_id:
+            existing = _find_follow_up_by_request(db, trainer_id, client_request_id)
+            if existing is not None:
+                return _follow_up_out(existing, _member_name(db, existing.member_id))
+        raise
+    db.commit()
+    db.refresh(task)
+    return _follow_up_out(task, _member_name(db, member_id))
+
+
+def _member_name(db: Session, member_id: str) -> str:
+    return db.scalar(select(User.name).where(User.id == member_id)) or ""
+
+
+def _owned_follow_up(
+    db: Session, trainer_id: str, task_id: str
+) -> TrainerFollowUpTask:
+    """내가 만든 할 일만 집는다.
+
+    남의 할 일과 없는 할 일을 똑같이 다룬다 — 존재 여부를 드러내면 id 를 훑는
+    것만으로 다른 트레이너의 업무가 있다는 사실을 알 수 있다(메모와 같은 규약).
+    """
+    task = db.scalar(
+        select(TrainerFollowUpTask).where(
+            TrainerFollowUpTask.id == task_id,
+            TrainerFollowUpTask.trainer_id == trainer_id,
+        )
+    )
+    if task is None:
+        raise FollowUpTaskNotFound("할 일을 찾을 수 없습니다.")
+    return task
+
+
+def update_follow_up(
+    db: Session, trainer_id: str, task_id: str, fields: dict
+) -> TrainerFollowUpTaskOut:
+    """할 일의 내용·예정일을 고친다. 상태는 완료 경로에서만 바뀐다."""
+    task = _owned_follow_up(db, trainer_id, task_id)
+    if "title" in fields:
+        task.title = fields["title"]
+    if "due_date" in fields:
+        task.due_date = fields["due_date"]
+    task.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(task)
+    return _follow_up_out(task, _member_name(db, task.member_id))
+
+
+def complete_follow_up(
+    db: Session, trainer_id: str, task_id: str
+) -> TrainerFollowUpTaskOut:
+    """할 일을 완료로 넘긴다.
+
+    이미 완료된 할 일에 같은 요청이 다시 와도 성공으로 돌려준다 — 대시보드에서
+    두 번 눌렀거나 응답을 못 받고 재시도한 경우이고, 그때 409 를 주면 화면은
+    이미 사라진 항목에 대해 오류를 띄운다. 완료 시각은 처음 한 번만 찍는다.
+    """
+    task = _owned_follow_up(db, trainer_id, task_id)
+    if task.status != "completed":
+        now = datetime.now(timezone.utc)
+        task.status = "completed"
+        task.completed_at = now
+        task.updated_at = now
+        db.commit()
+        db.refresh(task)
+    return _follow_up_out(task, _member_name(db, task.member_id))
+
+
 # ---- 프로그램 초안 (#708) ----
 
 class ProgramDraftNotFound(Exception):
@@ -1860,6 +2087,26 @@ def delete_program_draft(db: Session, trainer_id: str, draft_id: str) -> None:
 
 # ---- 스케줄 (트레이너 타임라인 + 예약→수업→기록 완료 루프) ----
 
+#: `TrainerSchedule.status` 에 저장되는 계약값. 화면 문구처럼 보이지만 DB 에 그대로
+#: 들어가고 앱(`ScheduleStatus`)도 이 문자열로 거른다 — 번역하거나 표기 체계를
+#: 갈아 끼우면 기존 행이 어느 질의에도 걸리지 않는다.
+SCHEDULE_UPCOMING = "예정"
+SCHEDULE_DONE = "완료"
+SCHEDULE_CANCELLED = "취소"
+SCHEDULE_NO_SHOW = "노쇼"
+SCHEDULE_GAP = "공백"
+
+#: 더 이상 진행 상태가 바뀌지 않는 상태들. 여기 들어간 세션은 수정·완료·재취소가
+#: 막힌다 — 완료된 PT 를 나중에 취소로 바꾸거나 취소한 PT 를 완료로 되돌리면
+#: 이미 파생된 기록(운동 기록·이행률)과 어긋난다. (#871)
+SCHEDULE_TERMINAL = frozenset(
+    {SCHEDULE_DONE, SCHEDULE_CANCELLED, SCHEDULE_NO_SHOW}
+)
+
+#: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아야 한다.
+CANCELLATION_SOURCES = frozenset({"member", "trainer", "other"})
+
+
 class ScheduleError(ValueError):
     """스케줄 도메인 오류(라우터가 400 으로 변환)."""
 
@@ -1894,6 +2141,10 @@ def _schedule_out(s: TrainerSchedule) -> ScheduleSessionOut:
         type=s.type, duration_minutes=s.duration_minutes, status=s.status,
         note=s.note, program=_program_items(s.program_json),
         program_sent=s.program_sent_at is not None,
+        cancelled_at=s.cancelled_at,
+        cancellation_source=s.cancellation_source,
+        cancellation_reason=s.cancellation_reason,
+        no_show_at=s.no_show_at,
     )
 
 
@@ -2273,8 +2524,12 @@ def update_session(
         raise ScheduleConflict(
             "예약으로 생성된 일정은 일반 일정 화면에서 수정할 수 없습니다."
         )
-    if s.status == "완료":
-        raise ScheduleConflict("완료된 세션은 수정할 수 없습니다.")
+    if s.status in SCHEDULE_TERMINAL:
+        # 취소·노쇼도 "그때 무슨 일이 있었나" 를 남긴 기록이라 나중에 시간·회원을
+        # 고쳐 쓰면 그 기록이 가리키는 약속이 달라진다(완료 세션과 같은 이유).
+        raise ScheduleConflict(
+            "완료·취소·노쇼로 마무리된 세션은 수정할 수 없습니다."
+        )
     if "time" in fields:
         s.time = fields["time"]
     if "client_name" in fields:
@@ -2322,7 +2577,7 @@ def delete_session(db: Session, trainer_id: str, session_id: str) -> bool:
             db.delete(derived)
     # 아직 오지 않은 약속만 알린다. 이미 끝난 PT 의 기록 정리까지 알리면 회원은
     # 지난 일을 취소 통보로 받는다. (#664)
-    if s.member_id is not None and s.status != "완료":
+    if s.member_id is not None and s.status == SCHEDULE_UPCOMING:
         notification_service.queue(
             db,
             member_id=s.member_id,
@@ -2467,8 +2722,14 @@ def complete_session(
         raise ScheduleError("빈 슬롯은 완료할 수 없습니다.")
     if s.date > _today().isoformat():
         raise ScheduleError("미래 일정은 완료할 수 없습니다.")
-    if s.status == "완료":
+    if s.status == SCHEDULE_DONE:
         return _schedule_out(s)  # 멱등 no-op
+    if s.status in SCHEDULE_TERMINAL:
+        # 진행되지 않은 것으로 마무리한 세션을 완료로 되돌리면 하지 않은 PT 가
+        # 회원 운동 기록으로 적재된다.
+        raise ScheduleConflict(
+            "취소·노쇼로 마무리된 세션은 완료할 수 없습니다."
+        )
 
     # 조건부 전환(예정 → 완료). rowcount==1 인 호출만 '방금 전환한' 것이므로 그 호출만
     # 운동기록을 쓴다 — 동시 완료 요청이 둘 다 예정을 보고 중복 기록하는 것을 막는다.
@@ -2516,6 +2777,120 @@ def complete_session(
             db, exercise_log.user_id, session_id=exercise_log.id
         )
     return out
+
+
+def cancel_session(
+    db: Session,
+    trainer_id: str,
+    session_id: str,
+    *,
+    source: str = "trainer",
+    reason: str = "",
+) -> ScheduleSessionOut | None:
+    """예정 → 취소. 일정을 지우지 않고 **진행되지 않았다는 기록**으로 남긴다. (#871)
+
+    삭제와 나누는 까닭이 이 함수의 전부다 — 삭제는 잘못 만든 데이터를 없애는 일이고,
+    취소는 실제로 있었던 약속이 진행되지 않았다는 사실이다. 지워 버리면 나중에 회원의
+    낮은 완료율이 본인의 미이행 때문인지 트레이너 사정 때문인지 구분할 수 없다.
+
+    - 소유 슬롯 아님 → None(404).
+    - 공백 슬롯 → ScheduleError(400): 취소할 약속이 없다.
+    - 이미 취소 → 그대로 반환(멱등). 중복 클릭·재시도에 409 를 주면 화면은 이미
+      취소한 일정에 대해 오류를 띄운다. 취소 시각과 주체는 처음 값을 지킨다.
+    - 완료·노쇼 → ScheduleConflict(409): 다른 결말로 이미 마무리된 세션이다.
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if s.status == SCHEDULE_GAP:
+        raise ScheduleError("빈 슬롯은 취소할 수 없습니다.")
+    if s.status == SCHEDULE_CANCELLED:
+        return _schedule_out(s)  # 멱등 no-op
+    if s.status in SCHEDULE_TERMINAL:
+        raise ScheduleConflict(
+            "완료·노쇼로 마무리된 세션은 취소할 수 없습니다."
+        )
+    if source not in CANCELLATION_SOURCES:
+        raise ScheduleError("취소 주체가 올바르지 않습니다.")
+
+    # 조건부 전환(예정 → 취소). 동시에 들어온 취소·완료 요청 중 하나만 이긴다 —
+    # rowcount 가 0 이면 그 사이에 다른 전이가 끝난 것이라 현재 상태를 그대로 준다.
+    changed = db.execute(
+        update(TrainerSchedule)
+        .where(
+            TrainerSchedule.id == session_id,
+            TrainerSchedule.status == SCHEDULE_UPCOMING,
+        )
+        .values(
+            status=SCHEDULE_CANCELLED,
+            cancelled_at=datetime.now(timezone.utc),
+            cancellation_source=source,
+            cancellation_reason=reason[:200],
+        )
+    ).rowcount
+    if changed != 1:
+        db.commit()
+        db.refresh(s)
+        return _schedule_out(s)
+
+    # 회원에게는 취소 사실만 간다 — 내부 사유는 트레이너가 보는 기록이다.
+    # 삭제 경로와 같은 알림을 쓴다: 회원 입장에서 달라진 것은 "그 시간의 PT 가
+    # 없어졌다" 하나뿐이고, 새 알림 종류를 만들 이유가 없다.
+    if s.member_id is not None:
+        notification_service.queue(
+            db,
+            member_id=s.member_id,
+            kind=notification_service.EXERCISE,
+            category=notification_service.MEMBER_SCHEDULE,
+            title="일정이 취소되었어요",
+            body=_slot_body(_member_visible_slot(s)),
+        )
+    db.commit()
+    db.refresh(s)
+    return _schedule_out(s)
+
+
+def mark_session_no_show(
+    db: Session, trainer_id: str, session_id: str
+) -> ScheduleSessionOut | None:
+    """예정 → 노쇼. 예약된 시간에 회원이 오지 않았다는 기록. (#871)
+
+    취소와 따로 두는 까닭은 두 일이 다르기 때문이다 — 취소는 진행 전에 약속이
+    거두어진 것이고, 노쇼는 약속이 그대로 있는데 회원이 오지 않은 것이다.
+
+    회원 알림은 만들지 않는다. 오지 않은 사실을 앱 알림으로 통보하는 것은 이번
+    범위의 결정이 아니고, 필요하면 정책을 따로 세운다.
+
+    - 미래 일정 → ScheduleError(400): 아직 오지 않은 약속에 불참을 적을 수 없다.
+    - 이미 노쇼 → 그대로 반환(멱등). 완료·취소 → ScheduleConflict(409).
+    """
+    s = _get_owned_session(db, trainer_id, session_id)
+    if s is None:
+        return None
+    if s.status == SCHEDULE_GAP:
+        raise ScheduleError("빈 슬롯은 노쇼 처리할 수 없습니다.")
+    if s.date > _today().isoformat():
+        raise ScheduleError("미래 일정은 노쇼 처리할 수 없습니다.")
+    if s.status == SCHEDULE_NO_SHOW:
+        return _schedule_out(s)  # 멱등 no-op
+    if s.status in SCHEDULE_TERMINAL:
+        raise ScheduleConflict(
+            "완료·취소로 마무리된 세션은 노쇼 처리할 수 없습니다."
+        )
+
+    changed = db.execute(
+        update(TrainerSchedule)
+        .where(
+            TrainerSchedule.id == session_id,
+            TrainerSchedule.status == SCHEDULE_UPCOMING,
+        )
+        .values(status=SCHEDULE_NO_SHOW, no_show_at=datetime.now(timezone.utc))
+    ).rowcount
+    db.commit()
+    db.refresh(s)
+    if changed != 1:
+        return _schedule_out(s)  # 동시 호출이 먼저 전이를 끝냄
+    return _schedule_out(s)
 
 
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅 / 내 세션) ----
@@ -2851,17 +3226,21 @@ def build_weekly_report(
     member = db.get(User, member_id)
     member_name = member.name if member else "고객"
 
+    # 취소·노쇼는 세지 않는다(#871). `sessions_booked` 는 "이번 주에 잡혀 있던
+    # 수업" 이고 리포트는 그 분모로 이행을 읽는다 — 진행되지 않은 약속을 분모에
+    # 넣으면 트레이너 사정의 취소가 회원의 낮은 이행률로 보인다. 취소·노쇼
+    # 자체에 패널티를 주는 지표는 이번 범위가 아니라 별도 정책이다.
     sessions = db.scalars(
         select(TrainerSchedule).where(
             TrainerSchedule.trainer_id == trainer_id,
             TrainerSchedule.member_id == member_id,
             TrainerSchedule.date >= monday_str,
             TrainerSchedule.date <= sunday_str,
-            TrainerSchedule.status != "공백",
+            TrainerSchedule.status.in_((SCHEDULE_UPCOMING, SCHEDULE_DONE)),
         )
     ).all()
     booked = len(sessions)
-    done = sum(1 for s in sessions if s.status == "완료")
+    done = sum(1 for s in sessions if s.status == SCHEDULE_DONE)
 
     hist = db.scalars(
         select(RoutineHistory).where(

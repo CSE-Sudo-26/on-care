@@ -18,6 +18,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduleStatusDone => 'Done';
 
   @override
+  String get scheduleStatusCancelled => 'Cancelled';
+
+  @override
+  String get scheduleStatusNoShow => 'No-show';
+
+  @override
+  String get schedCancel => 'Cancel session';
+
+  @override
+  String get schedNoShow => 'Mark no-show';
+
+  @override
+  String get schedCancelTitle => 'Cancel this PT?';
+
+  @override
+  String schedCancelConfirm(String time, String name) {
+    return 'The $time session with $name will be recorded as cancelled. The entry stays.';
+  }
+
+  @override
+  String get schedCancelSource => 'Cancelled by';
+
+  @override
+  String get schedCancelByMember => 'Client';
+
+  @override
+  String get schedCancelByTrainer => 'Trainer';
+
+  @override
+  String get schedCancelByOther => 'Other';
+
+  @override
+  String get schedCancelReasonHint => 'Reason (optional, only you see it)';
+
+  @override
+  String get schedCancelFailed =>
+      'Couldn\'t cancel the session. Please try again.';
+
+  @override
+  String get schedNoShowTitle => 'Record as a no-show?';
+
+  @override
+  String schedNoShowConfirm(String time, String name) {
+    return 'The $time session with $name will be recorded as a no-show.';
+  }
+
+  @override
+  String get schedNoShowFailed =>
+      'Couldn\'t record the no-show. Please try again.';
+
+  @override
+  String schedCancelledBy(String source, String date) {
+    return '$source · $date';
+  }
+
+  @override
+  String get schedDeleteMeansRemove =>
+      'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.';
+
+  @override
   String get scheduleStatusGap => 'Open';
 
   @override
@@ -1787,6 +1847,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiCompareCandidates => 'Compare the candidates';
 
   @override
+  String get aiConditionsAutoHint =>
+      'Leave blank to auto-fill from recent history or goals.';
+
+  @override
+  String get aiConditionsEditToggle => 'Edit recommended conditions';
+
+  @override
+  String get aiGenerateGoalBased => 'Generate goal-based routine';
+
+  @override
+  String get aiStatusTemplateTitle => 'Goal-based starter routine';
+
+  @override
+  String get aiStatusTemplateBody =>
+      'Not enough workout history yet to personalize — this starts from a goal-based default.';
+
+  @override
+  String get aiStatusLearningTitle => 'Personalizing (learning)';
+
+  @override
+  String get aiStatusLearningBody =>
+      'Recent workouts were used, but there isn\'t a clear repeated pattern yet.';
+
+  @override
+  String get aiStatusPersonalizedTitle => 'Personalized from recent patterns';
+
+  @override
+  String aiStatusPersonalizedBody(int count, int days) {
+    return 'Based on $count sessions over the last $days days.';
+  }
+
+  @override
+  String get aiFrequentExercisesLabel => 'Frequently done';
+
+  @override
   String get goalWeightLoss => 'Weight loss';
 
   @override
@@ -2253,6 +2348,78 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clientTrainerMemoDeleteBody =>
       'A deleted memo can\'t be restored.';
+
+  @override
+  String get followUp => 'Follow-ups';
+
+  @override
+  String followUpTitle(String name) {
+    return 'Follow-ups on $name';
+  }
+
+  @override
+  String get followUpHint => 'Note what you want to check again';
+
+  @override
+  String get followUpAdd => 'Add follow-up';
+
+  @override
+  String get followUpDue => 'Check on';
+
+  @override
+  String followUpDueOn(String date) {
+    return 'Check on $date';
+  }
+
+  @override
+  String get followUpOverdue => 'Overdue';
+
+  @override
+  String get followUpContext => 'Opens';
+
+  @override
+  String get followUpContextGeneral => 'Client detail';
+
+  @override
+  String get followUpContextDiet => 'Diet';
+
+  @override
+  String get followUpContextExercise => 'Workout';
+
+  @override
+  String get followUpContextMessage => 'Messages';
+
+  @override
+  String get followUpContextProgram => 'Program';
+
+  @override
+  String get followUpContextSchedule => 'Schedule';
+
+  @override
+  String get followUpComplete => 'Done';
+
+  @override
+  String followUpCount(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get followUpEmpty => 'No follow-ups left.';
+
+  @override
+  String get followUpDashboardEmpty => 'Nothing to follow up on today.';
+
+  @override
+  String get followUpLoadFailed =>
+      'Couldn\'t load follow-ups. Please try again.';
+
+  @override
+  String get followUpSaveFailed =>
+      'Couldn\'t save the follow-up. Please try again.';
+
+  @override
+  String get followUpCompleteFailed =>
+      'Couldn\'t mark it done. Please try again.';
 
   @override
   String get dashTaskReply => 'Reply';

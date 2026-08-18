@@ -20,7 +20,29 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 abstract final class ScheduleStatus {
   static const String upcoming = '예정';
   static const String done = '완료';
+
+  /// 진행 전에 거두어진 약속. **삭제와 다르다** — 삭제는 잘못 만든 일정을 없애는
+  /// 일이고, 취소는 실제로 있었던 약속이 진행되지 않았다는 기록이다(#871).
+  static const String cancelled = '취소';
+
+  /// 예약된 시간에 회원이 오지 않은 상태. 취소와 따로 센다.
+  static const String noShow = '노쇼';
+
   static const String gap = '공백';
+
+  /// 더 이상 결말이 바뀌지 않는 상태들. 백엔드의 `SCHEDULE_TERMINAL` 과 같은
+  /// 집합이라, 화면이 서버가 409 로 막을 동작을 아예 내놓지 않는다.
+  static const Set<String> finished = <String>{done, cancelled, noShow};
+}
+
+/// 취소 주체 계약값(`cancellation_source`). 빈 문자열은 "취소가 아님"이다.
+abstract final class CancellationSource {
+  static const String member = 'member';
+  static const String trainer = 'trainer';
+  static const String other = 'other';
+
+  /// 취소 다이얼로그의 선택지 순서.
+  static const List<String> all = <String>[member, trainer, other];
 }
 
 /// `TrainerSchedule.type` 에 저장되는 값. **번역하지 않는다.**
@@ -37,6 +59,8 @@ String scheduleStatusLabel(AppLocalizations l, String status) =>
     switch (status) {
       ScheduleStatus.upcoming => l.scheduleStatusUpcoming,
       ScheduleStatus.done => l.scheduleStatusDone,
+      ScheduleStatus.cancelled => l.scheduleStatusCancelled,
+      ScheduleStatus.noShow => l.scheduleStatusNoShow,
       ScheduleStatus.gap => l.scheduleStatusGap,
       // 서버가 새 상태를 추가했는데 앱이 모르는 경우. 빈칸을 보여 주느니 원문을 그대로
       // 내보낸다 — 무엇이 들어왔는지 화면에서 확인할 수 있다.
@@ -49,3 +73,12 @@ String sessionTypeLabel(AppLocalizations l, String type) => switch (type) {
   SessionType.consultation => l.sessionTypeConsultation,
   _ => type,
 };
+
+/// 저장된 취소 주체값 → 화면 문구. 상태값과 같은 이유로 계약값은 번역하지 않는다.
+String cancellationSourceLabel(AppLocalizations l, String source) =>
+    switch (source) {
+      CancellationSource.member => l.schedCancelByMember,
+      CancellationSource.trainer => l.schedCancelByTrainer,
+      CancellationSource.other => l.schedCancelByOther,
+      _ => source,
+    };

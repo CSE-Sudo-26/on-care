@@ -200,9 +200,25 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             Text(l.schedDeleteTitle, style: const TextStyle(fontSize: 17)),
           ],
         ),
-        content: Text(
-          l.schedDeleteConfirm(s.time, s.clientName),
-          style: const TextStyle(fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              l.schedDeleteConfirm(s.time, s.clientName),
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // 삭제와 취소를 가르는 문장이다(#871). 실제 PT 가 진행되지 않은
+            // 경우까지 삭제로 처리하면 그 사실이 어디에도 남지 않는다.
+            Text(
+              l.schedDeleteMeansRemove,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.subtleForeground,
+              ),
+            ),
+          ],
         ),
         actions: <Widget>[
           ActionButton(
@@ -248,6 +264,70 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // the session stays 예정 and the trainer is told (review PR 237).
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l.schedCompleteFailed)));
+    }
+  }
+
+  /// 취소 처리 — 취소 주체와 (선택) 사유를 받고 세션을 `취소` 로 남긴다. (#871)
+  ///
+  /// 삭제와 달리 일정 행이 남는다. 다이얼로그가 주체를 **고르게** 하는 까닭은
+  /// 지표 때문이다 — 트레이너 사정의 취소와 고객 취소를 구분하지 않으면 나중에
+  /// 회원의 낮은 이행률을 잘못 읽는다.
+  Future<void> _confirmCancel(ScheduleSession s) async {
+    final result = await showDialog<({String source, String reason})>(
+      context: context,
+      builder: (context) => _CancelDialog(session: s),
+    );
+    if (result == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(scheduleRepositoryProvider)
+          .cancelSession(s.id, source: result.source, reason: result.reason);
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l.schedCancelFailed)));
+    }
+  }
+
+  /// 노쇼 처리 — 예약된 시간에 회원이 오지 않았다는 기록. (#871)
+  Future<void> _confirmNoShow(ScheduleSession s) async {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(AppRadius.card),
+        ),
+        title: Text(l.schedNoShowTitle, style: const TextStyle(fontSize: 17)),
+        content: Text(
+          l.schedNoShowConfirm(s.time, s.clientName),
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: <Widget>[
+          ActionButton(
+            label: l.actionCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ActionButton(
+            key: const ValueKey<String>('session-no-show-confirm'),
+            label: l.schedNoShow,
+            primary: true,
+            tone: AppColors.warning,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(scheduleRepositoryProvider).markNoShow(s.id);
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l.schedNoShowFailed)));
     }
   }
 
@@ -517,6 +597,12 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           onComplete: (session.isUpcoming && !isFuture)
               ? () => _confirmComplete(session)
               : null,
+          // 취소는 앞으로의 약속에도 열려 있다 — 거두는 것이 취소다. 노쇼는
+          // 지나간 약속에만: 오지 않았다는 사실은 그 시간이 지나야 안다(#871).
+          onCancel: session.isUpcoming ? () => _confirmCancel(session) : null,
+          onNoShow: (session.isUpcoming && !isFuture)
+              ? () => _confirmNoShow(session)
+              : null,
           programDateLabel: dateText,
           sendingProgram: _sendingProgramId == session.id,
           onSendProgram: () => _sendProgram(session),
@@ -661,6 +747,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           onComplete: (s.isUpcoming && !isFuture)
               ? () => _confirmComplete(s)
               : null,
+          onCancel: s.isUpcoming ? () => _confirmCancel(s) : null,
+          onNoShow: (s.isUpcoming && !isFuture)
+              ? () => _confirmNoShow(s)
+              : null,
           programDateLabel: dateLabel,
           sendingProgram: _sendingProgramId == s.id,
           onSendProgram: () => _sendProgram(s),
@@ -769,6 +859,133 @@ class _CompleteDialogState extends State<_CompleteDialog> {
           label: l.schedCompleteAction,
           primary: true,
           onPressed: () => Navigator.of(context).pop(_memo.text.trim()),
+        ),
+      ],
+    );
+  }
+}
+
+/// 취소 확인 — 주체를 고르고 (선택) 사유를 남긴다. (#871)
+///
+/// 주체에 기본값을 두지 않는다. 무엇이든 기본으로 저장되면 그 값이 사실인지 알
+/// 수 없고, 나중에 "고객 취소가 몇 건이었나" 를 읽을 때 그대로 거짓이 된다.
+class _CancelDialog extends StatefulWidget {
+  const _CancelDialog({required this.session});
+
+  final ScheduleSession session;
+
+  @override
+  State<_CancelDialog> createState() => _CancelDialogState();
+}
+
+class _CancelDialogState extends State<_CancelDialog> {
+  final TextEditingController _reason = TextEditingController();
+  String? _source;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final s = widget.session;
+    return AlertDialog(
+      backgroundColor: AppColors.card,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(AppRadius.card),
+      ),
+      title: Row(
+        children: <Widget>[
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.all(AppRadius.md),
+            ),
+            child: const Icon(
+              Icons.event_busy_outlined,
+              color: AppColors.warning,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              l.schedCancelTitle,
+              style: const TextStyle(fontSize: 17),
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              l.schedCancelConfirm(s.time, s.clientName),
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l.schedCancelSource,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.subtleForeground,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final source in CancellationSource.all)
+                  ChoiceChip(
+                    key: ValueKey<String>('cancel-source-$source'),
+                    label: Text(cancellationSourceLabel(l, source)),
+                    selected: _source == source,
+                    onSelected: (_) => setState(() => _source = source),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              key: const ValueKey<String>('cancel-reason-input'),
+              controller: _reason,
+              maxLength: 200,
+              decoration: InputDecoration(
+                hintText: l.schedCancelReasonHint,
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        ActionButton(
+          label: l.actionCancel,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        ActionButton(
+          key: const ValueKey<String>('session-cancel-confirm'),
+          label: l.schedCancel,
+          primary: true,
+          tone: AppColors.warning,
+          // 주체를 고르기 전에는 저장할 수 없다 — 기본값으로 채우면 그 값이
+          // 사실인지 알 수 없다.
+          onPressed: _source == null
+              ? null
+              : () => Navigator.of(context).pop((
+                  source: _source!,
+                  reason: _reason.text.trim(),
+                )),
         ),
       ],
     );
@@ -1845,6 +2062,12 @@ class _WeekChip extends ConsumerWidget {
 /// strip: chevrons shift the window a week at a time, the selected day
 /// fills primary, today reads primary. A dot marks days with booked
 /// sessions. Cells are flexible so the row never overflows.
+/// 일 보기 상단의 날짜 스트립 — 왼쪽 정렬 날짜 내비게이션 + 7일 셀. (#859)
+///
+/// 주 보기의 [_WeekNav] 와 같은 모양·같은 자리에서 시작한다. 예전에는 셰브런이
+/// 화면 양 끝으로 밀리고 셀이 폭 전체에 퍼져 있었고, 지금 보고 있는 주가
+/// 며칠~며칠인지 알려 주는 문구가 아예 없었다. 일↔주를 오갈 때마다 날짜
+/// 정보가 자리를 옮기니 눈이 매번 다시 찾아야 했다.
 class _ScheduleWeekStrip extends StatelessWidget {
   const _ScheduleWeekStrip({
     required this.weekAnchor,
@@ -1882,25 +2105,71 @@ class _ScheduleWeekStrip extends StatelessWidget {
     final week = <DateTime>[
       for (var i = 0; i < 7; i++) weekAnchor.add(Duration(days: i)),
     ];
+    final end = weekAnchor.add(const Duration(days: 6));
 
-    return Row(
-      children: <Widget>[
-        _ChevronButton(icon: Icons.chevron_left, onTap: () => onShiftWeek(-1)),
-        // Flexible cells share the middle space evenly — no fixed widths
-        // that could overflow a narrow column.
-        for (final d in week)
-          Expanded(
-            child: _DayCell(
-              date: d,
-              label: _weekdayShort(l)[d.weekday - 1],
-              selected: _isSameDay(d, selectedDay),
-              isToday: _isSameDay(d, today),
-              hasDot: bookedDates.contains(ymd(d)),
-              onTap: () => onSelect(d),
+    // 왼쪽 정렬 + 폭 상한. 주 보기의 [_WeekNav] 가 날짜를 화면 왼쪽 끝에
+    // 두는데 일 보기만 화면 폭 전체에 퍼져, 보기를 바꿀 때마다 날짜 정보가
+    // 자리를 옮겼다(#859).
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: AppLayout.calendarStripMaxWidth,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // 주 보기의 날짜 내비게이션과 같은 모양·같은 자리. 셰브런도
+            // 여기로 올라온다 — 스트립에 한 쌍 더 두면 화면에 같은 일을
+            // 하는 버튼이 둘이 된다.
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _ChevronButton(
+                  icon: Icons.chevron_left,
+                  onTap: () => onShiftWeek(-1),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  l.dateRange(
+                    l.dateMonthDay(weekAnchor.month, weekAnchor.day),
+                    l.dateMonthDay(end.month, end.day),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _ChevronButton(
+                  icon: Icons.chevron_right,
+                  onTap: () => onShiftWeek(1),
+                ),
+              ],
             ),
-          ),
-        _ChevronButton(icon: Icons.chevron_right, onTap: () => onShiftWeek(1)),
-      ],
+            const SizedBox(height: AppSpacing.xs),
+            // Flexible cells share the row evenly — no fixed widths that
+            // could overflow a narrow column.
+            Row(
+              children: <Widget>[
+                for (final d in week)
+                  Expanded(
+                    child: _DayCell(
+                      date: d,
+                      label: _weekdayShort(l)[d.weekday - 1],
+                      selected: _isSameDay(d, selectedDay),
+                      isToday: _isSameDay(d, today),
+                      hasDot: bookedDates.contains(ymd(d)),
+                      onTap: () => onSelect(d),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2015,6 +2284,8 @@ class _TimelineRow extends StatelessWidget {
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
+    this.onCancel,
+    this.onNoShow,
     required this.programDateLabel,
     required this.sendingProgram,
     required this.onSendProgram,
@@ -2028,6 +2299,11 @@ class _TimelineRow extends StatelessWidget {
   final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
+
+  /// 예정 세션의 `취소`·`노쇼` 기록 처리. 대상이 아니면 null 이라 화면에 나오지
+  /// 않는다 — 서버가 409 로 막을 동작을 아예 내놓지 않는다(#871).
+  final VoidCallback? onCancel;
+  final VoidCallback? onNoShow;
   final String programDateLabel;
 
   /// 이 세션의 프로그램 전송이 진행 중인가. (#822)
@@ -2073,6 +2349,8 @@ class _TimelineRow extends StatelessWidget {
                   onEditSchedule: onEditSchedule,
                   onEditProgram: onEditProgram,
                   onDelete: onDelete,
+                  onCancel: onCancel,
+                  onNoShow: onNoShow,
                   onChat: onChat,
                   onComplete: onComplete,
                   programDateLabel: programDateLabel,
@@ -2122,6 +2400,8 @@ class _SessionCard extends ConsumerWidget {
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
+    this.onCancel,
+    this.onNoShow,
     required this.programDateLabel,
     required this.sendingProgram,
     required this.onSendProgram,
@@ -2135,6 +2415,11 @@ class _SessionCard extends ConsumerWidget {
   final VoidCallback onEditProgram;
   final VoidCallback onDelete;
   final VoidCallback onChat;
+
+  /// 예정 세션의 `취소`·`노쇼` 기록 처리. 대상이 아니면 null 이라 화면에 나오지
+  /// 않는다 — 서버가 409 로 막을 동작을 아예 내놓지 않는다(#871).
+  final VoidCallback? onCancel;
+  final VoidCallback? onNoShow;
   final String programDateLabel;
   final Widget? inlineEditor;
 
@@ -2270,10 +2555,18 @@ class _SessionCard extends ConsumerWidget {
                       _NoteBox(note: s.note),
                       const SizedBox(height: AppSpacing.md),
                     ],
+                    // 취소는 삭제와 달리 기록이라, 그 기록을 볼 수 있어야
+                    // 만든 의미가 있다(#871).
+                    if (s.isCancelled || s.isNoShow) ...<Widget>[
+                      _EndedBox(session: s),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     _ManageRow(
                       onEditSchedule: onEditSchedule,
                       onEditProgram: onEditProgram,
                       onDelete: onDelete,
+                  onCancel: onCancel,
+                  onNoShow: onNoShow,
                       onChat: onChat,
                       onComplete: onComplete,
                     ),
@@ -2299,6 +2592,62 @@ class _SessionCard extends ConsumerWidget {
   }
 }
 
+/// 취소·노쇼로 마무리된 세션의 기록 — 언제, 누가, (있으면) 왜. (#871)
+///
+/// 데모(`USE_MOCK_API=true`)에는 주체·시각을 둘 칸이 없어 상태 문구만 남는다.
+class _EndedBox extends StatelessWidget {
+  const _EndedBox({required this.session});
+
+  final ScheduleSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
+    final DateTime? at = session.isCancelled
+        ? session.cancelledAt
+        : session.noShowAt;
+    final String head = scheduleStatusLabel(l, session.status);
+    final String detail = session.isCancelled && session.cancellationSource.isNotEmpty
+        ? l.schedCancelledBy(
+            cancellationSourceLabel(l, session.cancellationSource),
+            at == null ? '' : ymd(at.toLocal()),
+          )
+        : (at == null ? '' : ymd(at.toLocal()));
+    return Container(
+      key: ValueKey<String>('session-ended-${session.id}'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: const BorderRadius.all(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            detail.isEmpty ? head : '$head · $detail',
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.warning,
+            ),
+          ),
+          if (session.cancellationReason.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              session.cancellationReason,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.subtleForeground,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status});
 
@@ -2306,9 +2655,20 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final done = status == ScheduleStatus.done;
-    final Color fg = done ? AppColors.disabledForeground : AppColors.accent;
-    final Color bg = done ? AppColors.inputBackground : AppColors.accentSurface;
+    // 예정(파랑) · 완료(회색) · 취소/노쇼(빨강)로 갈라 둔다. 진행되지 않은
+    // 세션이 완료와 같은 회색이면 "끝난 수업" 으로 읽히고, 예정과 같은 파랑이면
+    // 아직 할 일로 읽힌다 — 둘 다 사실이 아니다(#871).
+    final Color fg = switch (status) {
+      ScheduleStatus.done => AppColors.disabledForeground,
+      ScheduleStatus.cancelled || ScheduleStatus.noShow => AppColors.warning,
+      _ => AppColors.accent,
+    };
+    final Color bg = switch (status) {
+      ScheduleStatus.done => AppColors.inputBackground,
+      ScheduleStatus.cancelled || ScheduleStatus.noShow =>
+        AppColors.warning.withValues(alpha: 0.12),
+      _ => AppColors.accentSurface,
+    };
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -2451,6 +2811,8 @@ class _ManageRow extends StatelessWidget {
     required this.onDelete,
     required this.onChat,
     required this.onComplete,
+    this.onCancel,
+    this.onNoShow,
   });
 
   final VoidCallback onEditSchedule;
@@ -2458,6 +2820,12 @@ class _ManageRow extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onChat;
   final VoidCallback? onComplete;
+
+  /// 예정 세션만 — 진행되지 않은 약속을 `취소` 기록으로 남긴다(#871).
+  final VoidCallback? onCancel;
+
+  /// 예정이면서 지나간 세션만 — 회원이 오지 않았다는 기록.
+  final VoidCallback? onNoShow;
 
   @override
   Widget build(BuildContext context) {
@@ -2475,6 +2843,24 @@ class _ManageRow extends StatelessWidget {
             label: l.legendDone,
             color: AppColors.success,
             onTap: onComplete!,
+          ),
+        // 취소·노쇼는 완료 옆이다 — 셋 다 "이 약속이 어떻게 끝났나" 를 적는
+        // 동작이고, 수정·삭제는 일정 자체를 손보는 다른 갈래다(#871).
+        if (onCancel != null)
+          _ActionChip(
+            key: const ValueKey<String>('session-cancel-chip'),
+            icon: Icons.event_busy_outlined,
+            label: l.schedCancel,
+            color: AppColors.warning,
+            onTap: onCancel!,
+          ),
+        if (onNoShow != null)
+          _ActionChip(
+            key: const ValueKey<String>('session-no-show-chip'),
+            icon: Icons.person_off_outlined,
+            label: l.schedNoShow,
+            color: AppColors.warning,
+            onTap: onNoShow!,
           ),
         _ActionChip(
           label: l.schedEditTitle,

@@ -182,7 +182,9 @@ void main() {
     test('mock generator respects the requested time at both limits', () async {
       const repo = MockTrainerRoutineOptionsRepository();
 
-      for (final minutes in <int>[10, 180]) {
+      // 5 는 RoutineMinutesSlider 의 실제 최소값이다 — 예전엔 A안 하한이 10 이라
+      // `clamp(10, 5)`로 죽었다.
+      for (final minutes in <int>[5, 10, 180]) {
         final options = await repo.generate(
           'm1',
           availableMinutes: minutes,
@@ -200,6 +202,186 @@ void main() {
         );
       }
     });
+
+    test(
+      '#776 — demo member has no real history, so the mock reports '
+      'template (never claims to be personalized)',
+      () async {
+        const repo = MockTrainerRoutineOptionsRepository();
+        final options = await repo.generate(
+          'm1',
+          availableMinutes: 40,
+          intensityPreference: 'moderate',
+          trainerNote: '',
+        );
+        expect(
+          options.analysis.recommendationStatus,
+          RecommendationStatus.template,
+        );
+        expect(options.analysis.frequentExercises, isEmpty);
+      },
+    );
+
+    test(
+      '#776 — null conditions fall back to the same default as the backend '
+      '(30 minutes / moderate)',
+      () async {
+        const repo = MockTrainerRoutineOptionsRepository();
+        final options = await repo.generate(
+          'm1',
+          availableMinutes: null,
+          intensityPreference: null,
+          trainerNote: '',
+        );
+        expect(options.planB.totalMinutes, 30);
+      },
+    );
+  });
+
+  group('#776 recommendation status', () {
+    testWidgets(
+      'first generation sends no explicit conditions, and the personalized '
+      'banner + pattern-based labels show once the server responds',
+      (tester) async {
+        tester.view.physicalSize = const Size(1000, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final repo = _CapturingOptionsRepository(_personalizedOptions());
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: <Override>[
+              appConfigProvider.overrideWithValue(_mockConfig),
+              trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AiRoutineOptionsFlow(client: _client),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+
+        // 트레이너가 조건을 건드리지 않았으니 서버가 알아서 채우도록 둘 다
+        // 비워 보낸다 — 슬라이더 기본값(30/moderate)을 그대로 보냈다면
+        // 서버의 자동 설정 분기가 아예 실행되지 않는다.
+        expect(repo.lastAvailableMinutes, isNull);
+        expect(repo.lastIntensityPreference, isNull);
+
+        // 개인화 분석 배너와, 반복 패턴 기반 A/B 라벨이 그대로 보인다.
+        expect(find.text('최근 패턴 분석 완료'), findsOneWidget);
+        expect(find.textContaining('스쿼트'), findsWidgets);
+        expect(find.textContaining('기존 패턴 유지형'), findsOneWidget);
+        expect(find.textContaining('점진적 강화형'), findsOneWidget);
+
+        // 서버가 실제로 쓴 조건(45분/높음)이 화면에도 반영돼, 되돌아가면
+        // 그 값에서 바로 수정할 수 있다.
+        await tester.tap(find.byKey(const ValueKey<String>('routine-stage-0')));
+        await tester.pumpAndSettle();
+        expect(find.text('45분'), findsWidgets);
+        final highIntensityLabel = tester.widget<Text>(find.text('높음'));
+        expect(highIntensityLabel.style?.color, AppColors.accent);
+      },
+    );
+
+    testWidgets(
+      'once the trainer edits a condition, that explicit value is sent '
+      'instead of letting the server auto-fill',
+      (tester) async {
+        tester.view.physicalSize = const Size(1000, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final repo = _CapturingOptionsRepository(_personalizedOptions());
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: <Override>[
+              appConfigProvider.overrideWithValue(_mockConfig),
+              trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AiRoutineOptionsFlow(client: _client),
+            ),
+          ),
+        );
+
+        final minutesSlider = find.descendant(
+          of: find.byKey(const ValueKey<String>('generation-minutes')),
+          matching: find.byType(Slider),
+        );
+        tester.widget<Slider>(minutesSlider).onChanged?.call(60);
+        await tester.pump();
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+
+        expect(repo.lastAvailableMinutes, 60);
+        // 시간만 건드렸다 — 강도는 여전히 서버가 이력에서 계산하도록 비워
+        // 보낸다. 한쪽을 고쳤다고 다른 쪽까지 트레이너 입력값으로 굳으면 안
+        // 된다.
+        expect(repo.lastIntensityPreference, isNull);
+      },
+    );
+
+    testWidgets(
+      'touching only intensity leaves minutes for the server to derive',
+      (tester) async {
+        tester.view.physicalSize = const Size(1000, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final repo = _CapturingOptionsRepository(_personalizedOptions());
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: <Override>[
+              appConfigProvider.overrideWithValue(_mockConfig),
+              trainerRoutineOptionsRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              locale: Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AiRoutineOptionsFlow(client: _client),
+            ),
+          ),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('routine-intensity-high')),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('generate-routine-options')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+
+        // 강도만 건드렸다 — 시간은 여전히 서버가 이력에서 계산하도록 비워
+        // 보낸다.
+        expect(repo.lastAvailableMinutes, isNull);
+        expect(repo.lastIntensityPreference, 'high');
+      },
+    );
   });
 
   testWidgets('inline flow: analyse → horizontal options → edit/send', (
@@ -481,6 +663,77 @@ void main() {
   });
 }
 
+/// Records what conditions the flow actually sent, and returns a fixed
+/// [RoutineOptions] regardless — used to check the "leave it blank, let the
+/// server decide" contract (#776) without a real backend.
+class _CapturingOptionsRepository implements TrainerRoutineOptionsRepository {
+  _CapturingOptionsRepository(this._response);
+
+  final RoutineOptions _response;
+  int? lastAvailableMinutes;
+  String? lastIntensityPreference;
+
+  @override
+  Future<RoutineOptions> generate(
+    String memberId, {
+    required int? availableMinutes,
+    required String? intensityPreference,
+    required String trainerNote,
+  }) async {
+    lastAvailableMinutes = availableMinutes;
+    lastIntensityPreference = intensityPreference;
+    return _response;
+  }
+}
+
+/// A settled-history response: repeated squats over several weeks, so the
+/// candidates read as "keep the pattern" / "grow it a little" (#776).
+RoutineOptions _personalizedOptions() {
+  const analysis = MemberAnalysis(
+    goal: '체중 감량',
+    sodiumTodayMg: 1800,
+    sodiumOverTarget: false,
+    avgCompletionRate: 70,
+    latestRoutine: '스쿼트',
+    note: '',
+    recommendationStatus: RecommendationStatus.personalized,
+    historySessionCount: 6,
+    analysisPeriodDays: 42,
+    frequentExercises: <String>['스쿼트'],
+    suggestedAvailableMinutes: 45,
+    suggestedIntensity: 'high',
+  );
+  const planA = RoutinePlan(
+    key: 'A',
+    label: '기존 패턴 유지형',
+    totalMinutes: 45,
+    intensity: '높음',
+    exercises: <RoutineExercise>[
+      RoutineExercise(name: '스쿼트', minutes: 45, type: '근력'),
+    ],
+    reason: '최근 자주 수행한 운동을 그대로 유지',
+    rationale: '최근 기록에서 반복 확인된 운동(스쿼트)을 유지',
+  );
+  const planB = RoutinePlan(
+    key: 'B',
+    label: '점진적 강화형',
+    totalMinutes: 45,
+    intensity: '높음',
+    exercises: <RoutineExercise>[
+      RoutineExercise(name: '스쿼트', minutes: 30, type: '근력'),
+      RoutineExercise(name: '인터벌 러닝', minutes: 15, type: '유산소'),
+    ],
+    reason: '기존 핵심 운동을 유지하며 운동량을 소폭 확대',
+    rationale: '기존 핵심 운동(스쿼트)은 유지하고 인터벌 러닝을 더함',
+  );
+  return const RoutineOptions(
+    analysis: analysis,
+    planA: planA,
+    planB: planB,
+    generatedBy: 'rule',
+  );
+}
+
 /// Always throws [error] from `generate`, to exercise the generate button's
 /// failure-message branching (한도 초과 vs. 그 외).
 class _ThrowingOptionsRepository implements TrainerRoutineOptionsRepository {
@@ -491,8 +744,8 @@ class _ThrowingOptionsRepository implements TrainerRoutineOptionsRepository {
   @override
   Future<RoutineOptions> generate(
     String memberId, {
-    required int availableMinutes,
-    required String intensityPreference,
+    required int? availableMinutes,
+    required String? intensityPreference,
     required String trainerNote,
   }) async {
     throw error;

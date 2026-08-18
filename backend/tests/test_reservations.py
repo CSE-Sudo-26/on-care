@@ -486,7 +486,7 @@ def _register_member(client) -> str:
 
 
 def test_member_cancels_and_the_seat_comes_back(client, db_session, created_slots):
-    """취소하면 좌석이 돌아오고 트레이너 일정에서도 사라진다."""
+    """취소하면 좌석이 돌아오고 트레이너 일정은 `취소` 기록으로 남는다. (#871)"""
     trainer_token = _login(client, "trainer@oncare.com")
     member_token = _login(client, "jisu@oncare.com")
     slot = _create_slot(client, trainer_token, created_slots)
@@ -517,9 +517,15 @@ def test_member_cancels_and_the_seat_comes_back(client, db_session, created_slot
 
     db_session.expire_all()
     assert db_session.get(TrainerReservation, reservation_id) is None
-    # 예약이 만든 트레이너 일정도 함께 사라진다 — 남으면 트레이너 하루에
-    # 오지 않을 회원이 계속 잡혀 있다.
-    assert db_session.get(TrainerSchedule, schedule_id) is None
+    # 예약이 만든 트레이너 일정은 지워지지 않고 `취소` 로 남는다(#871). 예전에는
+    # 지웠지만, 그러면 트레이너 화면에서 한 줄이 조용히 사라져 "그 시간에 무슨
+    # 일이 있었나" 가 남지 않았다. 오지 않을 회원이 계속 잡혀 있는 문제는 상태가
+    # `예정` 이 아니라는 사실이 막는다 — 오늘 처리할 일정으로 세지 않는다.
+    schedule = db_session.get(TrainerSchedule, schedule_id)
+    assert schedule is not None
+    assert schedule.status == "취소"
+    assert schedule.cancellation_source == "member"
+    assert schedule.cancelled_at is not None
 
 
 def test_cancelling_frees_the_slot_for_a_new_booking(client, created_slots):
