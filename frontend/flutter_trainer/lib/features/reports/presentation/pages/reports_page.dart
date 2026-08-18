@@ -606,8 +606,9 @@ class _ClientPicker extends StatefulWidget {
 }
 
 class _ClientPickerState extends State<_ClientPicker> {
-  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이다.
-  static const double _rowHeight = 56;
+  /// 한 줄 높이. 아바타(38)에 위아래 숨 쉴 자리를 더한 값이었고, 목표 한 줄이
+  /// 붙으면서(#898) 그만큼 높아졌다.
+  static const double _rowHeight = 70;
 
   /// 한 번에 보여 줄 줄 수. 나머지는 스크롤한다.
   static const int _visibleRows = 5;
@@ -665,15 +666,24 @@ class _ClientPickerState extends State<_ClientPicker> {
                           ClientAvatar(label: client.avatar, size: 38),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
-                            child: ClientIdentity(
-                              client: client,
-                              nameStyle: TextStyle(
-                                fontSize: 15,
-                                fontWeight: selected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                                color: AppColors.foreground,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                ClientIdentity(
+                                  client: client,
+                                  nameStyle: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: selected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: AppColors.foreground,
+                                  ),
+                                ),
+                                // 어느 고객의 리포트를 열지 고르는 자리다 —
+                                // 이름만으로는 고를 근거가 되지 않는다(#898).
+                                ClientGoalLabel(client: client, fontSize: 11),
+                              ],
                             ),
                           ),
                         ],

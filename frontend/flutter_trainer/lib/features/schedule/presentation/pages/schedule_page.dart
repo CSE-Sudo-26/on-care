@@ -2790,7 +2790,7 @@ class _SessionCard extends ConsumerWidget {
                               color: AppColors.foreground,
                             ),
                           )
-                        else
+                        else ...<Widget>[
                           ClientIdentity(
                             client: client,
                             nameStyle: const TextStyle(
@@ -2799,6 +2799,10 @@ class _SessionCard extends ConsumerWidget {
                               color: AppColors.foreground,
                             ),
                           ),
+                          // 오늘 만날 회원이 무엇을 목표로 하는 사람인지는
+                          // 세션 종류·소요 시간만큼 자리에서 필요하다(#898).
+                          ClientGoalLabel(client: client),
+                        ],
                         Text(
                           l.sessionTypeAndDuration(
                             sessionTypeLabel(l, s.type),

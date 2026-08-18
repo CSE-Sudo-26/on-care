@@ -706,7 +706,9 @@ void main() {
         const ValueKey<String>('program-client-list-scroll'),
       );
       expect(listFinder, findsOneWidget);
-      expect(tester.getSize(listFinder).height, 84 * 5);
+      // 한 줄에 이름 · 목표 · 마지막 루틴 · 이행률 네 줄이 들어간다 —
+      // 목표가 늘 보이게 되면서 84 에서 100 으로 올랐다(#898).
+      expect(tester.getSize(listFinder).height, 100 * 5);
       final list = tester.widget<ListView>(listFinder);
       expect(list.controller, isNotNull);
       expect(list.controller!.position.maxScrollExtent, greaterThan(0));

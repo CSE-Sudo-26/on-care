@@ -35,6 +35,47 @@ TrainerClient? findClientIdentity(
   return sameName.length == 1 ? sameName.single : null;
 }
 
+/// 고객 목록 행에 붙는 목표 한 줄. (#898)
+///
+/// 트레이너가 고객을 고르는 기준은 이름이 아니라 **무엇을 목표로 하는
+/// 사람인가**다. 이름이 비슷한 고객이 섞여 있을 때 특히 그렇다. 전에는
+/// `고객 관리` 탭 카드에만 있어서, 메시지·스케줄·프로그램·리포트에서
+/// 목표를 보려면 탭을 나갔다 와야 했다.
+///
+/// 목표가 비면 아무것도 그리지 않는다 — 빈 [Text] 는 행 높이만 먹는다.
+/// 이름보다 한 단계 작고 흐리게, 한 줄 말줄임으로 기존 정보 위계를
+/// 흔들지 않는다.
+class ClientGoalLabel extends StatelessWidget {
+  /// Creates the goal line for [client].
+  const ClientGoalLabel({
+    super.key,
+    required this.client,
+    this.fontSize = 11.5,
+    this.color = AppColors.subtleForeground,
+  });
+
+  final TrainerClient client;
+
+  /// 부르는 쪽 행의 이름 글씨보다 한 단계 작게 준다.
+  final double fontSize;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (client.goal.trim().isEmpty) return const SizedBox.shrink();
+    return Text(
+      client.goal,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
 /// The shared client-name treatment used across trainer tabs.
 class ClientIdentity extends StatelessWidget {
   const ClientIdentity({
