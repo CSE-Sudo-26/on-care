@@ -397,10 +397,25 @@ class _CardTitle extends StatelessWidget {
   }
 }
 
+/// 홈 식단·영양 카드에서 고른 지표(칼로리/나트륨/당류) — 탭을 벗어났다가 홈에
+/// 다시 들어오면 기본값으로 되돌아가야 하는 임시 UI 상태라 Riverpod 에
+/// 둔다(#861). 실제 요약 데이터(`dashboardSummaryProvider`)와는 분리된 값이다.
+final _dashboardNutritionTabProvider = StateProvider<_NutTabKind>(
+  (ref) => _NutTabKind.calories,
+  name: 'dashboardNutritionTab',
+);
+
+/// 홈 탭 재진입 시 초기화할 임시 UI 상태 — 식단·영양 카드가 보여 주는 지표를
+/// 기본값(칼로리)으로 되돌린다(#861).
+void resetDashboardTransientUiState(WidgetRef ref) {
+  ref.read(_dashboardNutritionTabProvider.notifier).state =
+      _NutTabKind.calories;
+}
+
 // ───────────────────────────────────────────── diet + nutrition card ──
 /// The merged 식단·영양 card: calorie ring + achievement, macro grams/goals,
 /// and the weekly nutrition trend chart (legend + Y axis + point labels).
-class _DietNutritionCard extends StatefulWidget {
+class _DietNutritionCard extends ConsumerWidget {
   const _DietNutritionCard({
     required this.summary,
     required this.showCharts,
@@ -411,20 +426,11 @@ class _DietNutritionCard extends StatefulWidget {
   final VoidCallback onOpen;
 
   @override
-  State<_DietNutritionCard> createState() => _DietNutritionCardState();
-}
-
-class _DietNutritionCardState extends State<_DietNutritionCard> {
-  /// 상단 지표 카드에서 고른 항목. 아래 그래프가 이 항목의 주간 추이를 그린다.
-  _NutTabKind _tab = _NutTabKind.calories;
-
-  @override
-  Widget build(BuildContext context) {
-    final DashboardSummary summary = widget.summary;
-    final bool showCharts = widget.showCharts;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final _NutTabKind tab = ref.watch(_dashboardNutritionTabProvider);
     final AppLocalizations l = AppLocalizations.of(context);
     final Map<_NutTabKind, _NutData> nutrition = _nutritionFor(summary);
-    final _NutData cfg = nutrition[_tab]!;
+    final _NutData cfg = nutrition[tab]!;
     final List<String> days = weekDayLabels(l);
     final int todayIdx = _todayIndex();
     final NumberFormat nf = NumberFormat('#,###');
@@ -436,7 +442,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
           _CardHeader(
             icon: Icons.restaurant_rounded,
             label: l.homeDietNutritionTitle,
-            onOpen: widget.onOpen,
+            onOpen: onOpen,
           ),
           const SizedBox(height: 14),
           // 상단: 칼로리·나트륨·당류를 큰 숫자 카드로 나란히. 탭하면 아래
@@ -449,8 +455,12 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                   child: _MetricStatCard(
                     label: _nutLabel(l, kind),
                     indicator: _indicatorFor(summary, kind),
-                    selected: _tab == kind,
-                    onTap: () => setState(() => _tab = kind),
+                    selected: tab == kind,
+                    onTap: () =>
+                        ref
+                                .read(_dashboardNutritionTabProvider.notifier)
+                                .state =
+                            kind,
                   ),
                 ),
               ],
@@ -500,7 +510,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                       // 목표는 그래프의 목표선 라벨이 말한다 — 카드 위에 또
                       // 적으면 한 화면에서 같은 말이 두 번 나온다(#756).
                       _ChartLegend(
-                        title: l.homeWeeklyMetricTrend(_nutLabel(l, _tab)),
+                        title: l.homeWeeklyMetricTrend(_nutLabel(l, tab)),
                       ),
                       const SizedBox(height: 6),
                       MetricTrendChart(
@@ -511,7 +521,7 @@ class _DietNutritionCardState extends State<_DietNutritionCard> {
                         todayIndex: todayIdx,
                         // 지표를 바꾸면 선을 처음부터 다시 그려 값이 바뀐 것을
                         // 눈으로 따라가게 한다.
-                        replayKey: _tab,
+                        replayKey: tab,
                         goalLabel: '${l.homeGoal}\n${nf.format(cfg.goal)}',
                         formatTick: nf.format,
                       ),
