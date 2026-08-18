@@ -1644,6 +1644,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myGoalFat => '일일 지방 제한 (g)';
 
   @override
+  String get myGoalCaloriesFromMacros => '탄·단·지 목표로 계산한 값이에요';
+
+  @override
+  String myGoalMacroSuggestionNote(int kcal) {
+    return '${kcal}kcal 기준 권장 배분: 탄수화물 50% · 단백질 30% · 지방 20%';
+  }
+
+  @override
+  String get myGoalMacroApplySuggestion => '권장 비율로 채우기';
+
+  @override
   String get myGoalWorkoutCount => '주간 운동 횟수 목표 (회)';
 
   @override

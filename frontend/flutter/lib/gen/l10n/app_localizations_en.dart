@@ -1698,6 +1698,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myGoalFat => 'Daily fat limit (g)';
 
   @override
+  String get myGoalCaloriesFromMacros =>
+      'Calculated from your carb, protein and fat goals';
+
+  @override
+  String myGoalMacroSuggestionNote(int kcal) {
+    return 'Suggested split for $kcal kcal: 50% carbs · 30% protein · 20% fat';
+  }
+
+  @override
+  String get myGoalMacroApplySuggestion => 'Use suggested split';
+
+  @override
   String get myGoalWorkoutCount => 'Weekly workout count goal';
 
   @override

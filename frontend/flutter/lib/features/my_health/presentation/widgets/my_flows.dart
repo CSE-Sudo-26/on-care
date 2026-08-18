@@ -112,18 +112,28 @@ Widget _card(List<Widget> children) => Container(
 /// White fill on the `statBg` card, brand-blue focus ring.
 class _SheetField extends StatelessWidget {
   const _SheetField({
+    super.key,
     required this.label,
     required this.controller,
     this.keyboardType,
     this.hintText,
+    this.helperText,
     this.inputFormatters,
+    this.onChanged,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final String? hintText;
+
+  /// 칸 아래 한 줄 안내. 값이 어디서 왔는지 말해야 할 때만 준다.
+  final String? helperText;
   final List<TextInputFormatter>? inputFormatters;
+
+  /// 사람이 친 글자만 올라온다 — 컨트롤러에 프로그램이 써 넣은 값은
+  /// `onChanged` 를 부르지 않으므로, 서로 맞물린 칸끼리 되먹임이 생기지 않는다.
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +153,7 @@ class _SheetField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          onChanged: onChanged,
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
@@ -155,6 +166,13 @@ class _SheetField extends StatelessWidget {
             hintText: hintText,
             hintStyle: const TextStyle(
               fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.mutedForeground,
+            ),
+            helperText: helperText,
+            helperMaxLines: 2,
+            helperStyle: const TextStyle(
+              fontSize: 11.5,
               fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
@@ -585,8 +603,90 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   );
   bool _saving = false;
 
+  /// 칼로리 칸이 탄단지에서 계산돼 채워졌는가. 그 칸 아래 안내를 켜는 값이라,
+  /// 회원이 칼로리를 직접 고치면 다시 꺼진다.
+  ///
+  /// 화면을 열자마자는 `false` 다 — 저장된 목표를 그대로 보여 줘야 하고,
+  /// 들어온 것만으로 값이 달라지면 안 된다.
+  bool _kcalFromMacros = false;
+
   static TextEditingController _ctl(int? value, int fallback) =>
       TextEditingController(text: '${value ?? fallback}');
+
+  /// 탄·단·지 1g 의 열량(kcal). 식품 영양표시가 쓰는 Atwater 계수다.
+  static const int _kcalPerCarbG = 4;
+  static const int _kcalPerProteinG = 4;
+  static const int _kcalPerFatG = 9;
+
+  /// 칼로리만 아는 회원에게 권하는 배분. 한국인 영양섭취기준의 에너지 적정
+  /// 비율(탄 55~65 · 단 7~20 · 지 15~30) 안쪽에서 고른 값이다.
+  static const double _carbShare = 0.5;
+  static const double _proteinShare = 0.3;
+  static const double _fatShare = 0.2;
+
+  /// 지금 칼로리 칸의 값. 숫자가 아니거나 0 이하면 null.
+  int? get _kcalValue {
+    final kcal = int.tryParse(_kcal.text.trim());
+    return kcal == null || kcal <= 0 ? null : kcal;
+  }
+
+  /// 칼로리 칸 기준 권장 배분(g). 칼로리가 비어 있으면 null 이다.
+  ///
+  /// 상태로 들고 있지 않고 그때그때 센다 — 칼로리 칸이 바뀌면 배분도 반드시
+  /// 함께 바뀌어야 하는데, 따로 저장해 두면 둘이 어긋날 자리가 생긴다.
+  ({int carbs, int protein, int fat})? get _suggestedSplit {
+    final kcal = _kcalValue;
+    if (kcal == null) return null;
+    return (
+      carbs: (kcal * _carbShare / _kcalPerCarbG).round(),
+      protein: (kcal * _proteinShare / _kcalPerProteinG).round(),
+      fat: (kcal * _fatShare / _kcalPerFatG).round(),
+    );
+  }
+
+  /// 세 칸이 이미 권장 배분과 같은가. 같으면 `권장 비율로 채우기` 를 띄우지
+  /// 않는다 — 눌러도 달라질 것이 없는 버튼이다.
+  bool get _macrosMatchSuggestion {
+    final split = _suggestedSplit;
+    if (split == null) return true;
+    return _val(_carbs) == split.carbs &&
+        _val(_protein) == split.protein &&
+        _val(_fat) == split.fat;
+  }
+
+  /// 탄단지 → 칼로리. 세 칸이 모두 채워졌을 때만 칼로리를 다시 쓴다.
+  ///
+  /// 한 칸이라도 비어 있으면 손대지 않는다 — 지우는 도중의 빈 칸을 0g 으로
+  /// 읽으면 칼로리가 잠깐 엉뚱한 값으로 튄다.
+  void _syncCaloriesFromMacros() {
+    final carbs = _val(_carbs);
+    final protein = _val(_protein);
+    final fat = _val(_fat);
+    if (carbs == null || protein == null || fat == null) {
+      setState(() => _kcalFromMacros = false);
+      return;
+    }
+    final kcal =
+        carbs * _kcalPerCarbG + protein * _kcalPerProteinG + fat * _kcalPerFatG;
+    setState(() {
+      _kcal.text = '$kcal';
+      _kcalFromMacros = true;
+    });
+  }
+
+  /// 권장 배분을 세 칸에 채운다.
+  ///
+  /// 채운 뒤 칼로리를 다시 계산한다 — 반올림 때문에 배분의 합이 입력한
+  /// 칼로리와 몇 kcal 어긋나는데, 화면에 남은 두 값이 서로 맞지 않으면
+  /// 어느 쪽이 참인지 알 수 없다.
+  void _applySuggestedSplit() {
+    final split = _suggestedSplit;
+    if (split == null) return;
+    _carbs.text = '${split.carbs}';
+    _protein.text = '${split.protein}';
+    _fat.text = '${split.fat}';
+    _syncCaloriesFromMacros();
+  }
 
   @override
   void dispose() {
@@ -654,6 +754,12 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
+    // 칼로리와 탄단지는 서로 다른 값이 아니다 — 탄·단은 4kcal/g, 지방은
+    // 9kcal/g 이라 셋이 정해지면 칼로리도 정해진다. 두 방향을 세기를 달리해
+    // 잇는다: 탄단지를 고치면 칼로리를 **바꾸고**, 칼로리를 고치면 탄단지에는
+    // **권해만 준다**. 뒤쪽까지 자동으로 덮으면 회원이 적어 둔 배분이 칼로리를
+    // 만질 때마다 사라진다.
+    final split = _suggestedSplit;
     return _shell(context, l.myHealthGoalsTitle, <Widget>[
       _GoalsSectionLabel(l.myGoalsDietSection),
       const SizedBox(height: 8),
@@ -663,6 +769,9 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
           controller: _kcal,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          helperText: _kcalFromMacros ? l.myGoalCaloriesFromMacros : null,
+          // 회원이 직접 고친 순간부터는 계산된 값이 아니다.
+          onChanged: (_) => setState(() => _kcalFromMacros = false),
         ),
         const SizedBox(height: 12),
         _SheetField(
@@ -680,25 +789,42 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
         ),
         const SizedBox(height: 12),
         _SheetField(
+          key: const Key('goalCarbsField'),
           label: l.myGoalCarbs,
           controller: _carbs,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: split == null ? null : '${split.carbs}',
+          onChanged: (_) => _syncCaloriesFromMacros(),
         ),
         const SizedBox(height: 12),
         _SheetField(
+          key: const Key('goalProteinField'),
           label: l.myGoalProtein,
           controller: _protein,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: split == null ? null : '${split.protein}',
+          onChanged: (_) => _syncCaloriesFromMacros(),
         ),
         const SizedBox(height: 12),
         _SheetField(
+          key: const Key('goalFatField'),
           label: l.myGoalFat,
           controller: _fat,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
+          hintText: split == null ? null : '${split.fat}',
+          onChanged: (_) => _syncCaloriesFromMacros(),
         ),
+        if (split != null && !_macrosMatchSuggestion) ...<Widget>[
+          const SizedBox(height: 10),
+          _MacroSuggestionRow(
+            note: l.myGoalMacroSuggestionNote(_kcalValue!),
+            actionLabel: l.myGoalMacroApplySuggestion,
+            onApply: _applySuggestedSplit,
+          ),
+        ],
       ]),
       const SizedBox(height: 20),
       _GoalsSectionLabel(l.myGoalsExerciseSection),
@@ -728,6 +854,55 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       const SizedBox(height: 16),
       _saveRow(context: context, saving: _saving, onSave: _save),
     ], saving: _saving);
+  }
+}
+
+/// 칼로리에서 뽑은 탄단지 권장 배분 안내와, 그대로 채우는 버튼.
+///
+/// 세 칸의 placeholder 만으로는 그 숫자가 어디서 왔는지 알 수 없어 한 줄
+/// 적어 준다. 버튼은 배분이 이미 세 칸과 같으면 부르는 쪽이 감춘다.
+class _MacroSuggestionRow extends StatelessWidget {
+  const _MacroSuggestionRow({
+    required this.note,
+    required this.actionLabel,
+    required this.onApply,
+  });
+
+  final String note;
+  final String actionLabel;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            note,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          key: const Key('goalApplyMacroSplit'),
+          onPressed: onApply,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: FigmaColors.primary,
+          ),
+          child: Text(
+            actionLabel,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
   }
 }
 
