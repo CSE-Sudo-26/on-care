@@ -3,10 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-
-import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
 
 /// WeeklyReport를 화면 측정값과 분리된 A4 문서로 만든다.
 ///
@@ -50,7 +49,7 @@ class ReportPdfGenerator {
     }
     pageImages.add(await _finishPage(recorder));
 
-    final document = pw.Document(compress: true);
+    final document = pw.Document();
     for (final image in pageImages) {
       document.addPage(
         pw.Page(
@@ -95,7 +94,7 @@ class ReportPdfGenerator {
     )..layout(maxWidth: _pageWidth - (_margin * 2));
     titlePainter.paint(canvas, const Offset(_margin, 72));
     canvas.drawRect(
-      Rect.fromLTWH(_margin, 132, _pageWidth - _margin * 2, 4),
+      const Rect.fromLTWH(_margin, 132, _pageWidth - _margin * 2, 4),
       Paint()..color = const Color(0xff2f776d),
     );
     return 166;

@@ -8,6 +8,7 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 void main() {
   late AppDatabase db;
@@ -172,7 +173,7 @@ void main() {
         .insert(
           DietEntriesCompanion.insert(
             id: 'diet-edit',
-            date: DateTime.now().toIso8601String().substring(0, 10),
+            date: nowKst().toIso8601String().substring(0, 10),
             mealType: 'lunch',
             timeLabel: '12:00',
             foodsJson: jsonEncode(<Map<String, Object?>>[
@@ -261,7 +262,7 @@ void main() {
         .insert(
           DietEntriesCompanion.insert(
             id: 'diet-invalid-foods',
-            date: DateTime.now().toIso8601String().substring(0, 10),
+            date: nowKst().toIso8601String().substring(0, 10),
             mealType: 'lunch',
             timeLabel: '12:00',
             foodsJson: jsonEncode(<Map<String, Object?>>[

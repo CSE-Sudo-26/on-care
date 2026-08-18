@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -11,35 +11,35 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/routine_options.dart';
-import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/trainer_program_draft.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
 import 'package:oncare_trainer/features/coaching/presentation/pages/ai_routine_options_flow.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/coaching/presentation/widgets/routine_suggestion_review_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
-import 'package:oncare_trainer/shared/widgets/icon_label.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
+import 'package:oncare_trainer/shared/widgets/icon_label.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// AI 코칭 — the workspace where a client's data becomes a routine.
 ///
@@ -332,8 +332,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     final registeredFor = client.id;
-    final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
-    final now = DateTime.now();
+    final date = ymd(nowKst().add(Duration(days: _registerOffset)));
+    final now = nowKst();
     final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
     final time = '${hour.toString().padLeft(2, '0')}:00';
     final messenger = ScaffoldMessenger.of(context);
@@ -406,7 +406,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         error: (e, _) => Center(
           child: Text(
             l.clientsLoadFailed,
-            style: TextStyle(color: AppColors.mutedForeground),
+            style: const TextStyle(color: AppColors.mutedForeground),
           ),
         ),
         data: (clients) {
@@ -414,7 +414,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
             return Center(
               child: Text(
                 l.coachNoClients,
-                style: TextStyle(color: AppColors.mutedForeground),
+                style: const TextStyle(color: AppColors.mutedForeground),
               ),
             );
           }
@@ -768,7 +768,7 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
         ),
         error: (e, _) => Text(
           l.routinesLoadFailed,
-          style: TextStyle(color: AppColors.mutedForeground),
+          style: const TextStyle(color: AppColors.mutedForeground),
         ),
         data: (items) => _showOptionsFlow
             ? AiRoutineOptionsFlow(
@@ -1036,14 +1036,24 @@ class _MemberProgramListState extends State<_MemberProgramList> {
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Text(
-                                  recordedCompletionMean(client) == null
-                                      ? l.reportsDataInsufficient
-                                      : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                                // 행 높이는 `_rowHeight` 로 고정이라 이 줄이 두
+                                // 줄로 접히면 그대로 넘친다. 영어의
+                                // `Workout completion 72%` 는 배율 1.3 에서
+                                // 접혔다(#849). 잘라내지 않고 줄여서 그린다 —
+                                // 말줄임하면 정작 필요한 이행률 숫자가 사라진다.
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    recordedCompletionMean(client) == null
+                                        ? l.reportsDataInsufficient
+                                        : '${l.reportsCompletionAvg} ${recordedCompletionMean(client)!.round()}%',
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1469,7 +1479,7 @@ class _AiAssistantPrompt extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       l.coachRequestCustom,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.foreground,
@@ -1501,7 +1511,7 @@ class _AiAssistantPrompt extends StatelessWidget {
 String _dateChipLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
-  final d = DateTime.now().add(Duration(days: offset));
+  final d = nowKst().add(Duration(days: offset));
   return '${d.month}/${d.day}';
 }
 
@@ -1614,7 +1624,7 @@ class _SendHistoryCard extends ConsumerWidget {
     // so the trainer could send the same routine again believing nothing
     // had gone out.
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
 
     return SectionCard(
       title: l.coachSentHistory,
@@ -1649,7 +1659,7 @@ class _SendHistoryCard extends ConsumerWidget {
                         width: 46,
                         child: Text(
                           l.coachHomework,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.brandOrange,
@@ -1678,7 +1688,7 @@ class _SendHistoryCard extends ConsumerWidget {
                             )
                           : Text(
                               l.coachTrainer,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.primary,

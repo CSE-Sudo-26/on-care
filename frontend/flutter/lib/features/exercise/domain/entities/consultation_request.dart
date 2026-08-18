@@ -1,3 +1,4 @@
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/consultation_draft.dart';
 
 enum ConsultationStatus { pending, accepted, rejected }
@@ -86,7 +87,7 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
     healthPurposeDetail: j['health_purpose_detail'] as String?,
     preferredDate:
         DateTime.tryParse((j['preferred_date'] as String?) ?? '') ??
-        DateTime.now(),
+        nowKst(),
     preferredTimeSlot: preferredTimeSlotFromWire(
       j['preferred_time_slot'] as String?,
     ),
@@ -97,7 +98,7 @@ ConsultationRequest consultationFromJson(Map<String, Object?> j) {
       _ => ConsultationStatus.pending,
     },
     createdAt:
-        DateTime.tryParse((j['created_at'] as String?) ?? '') ?? DateTime.now(),
+        DateTime.tryParse((j['created_at'] as String?) ?? '') ?? nowKst(),
     // 공백만 남은 사유는 null 로 접는다 — 빈 안내 줄이 그려지지 않도록.
     decisionNote: switch (j['decision_note']) {
       final String note when note.trim().isNotEmpty => note.trim(),

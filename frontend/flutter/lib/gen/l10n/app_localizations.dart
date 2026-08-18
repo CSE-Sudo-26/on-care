@@ -128,12 +128,6 @@ abstract class AppLocalizations {
   /// **'MY'**
   String get navMyHealth;
 
-  /// No description provided for @pageDashboardTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Home'**
-  String get pageDashboardTitle;
-
   /// No description provided for @pageDietTitle.
   ///
   /// In en, this message translates to:
@@ -145,12 +139,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exercise'**
   String get pageExerciseTitle;
-
-  /// No description provided for @pageMyHealthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'My'**
-  String get pageMyHealthTitle;
 
   /// No description provided for @pageAiCoachTitle.
   ///
@@ -164,89 +152,11 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get pageNotificationTitle;
 
-  /// No description provided for @pagePlaceTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Place'**
-  String get pagePlaceTitle;
-
-  /// No description provided for @pageSignInTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in'**
-  String get pageSignInTitle;
-
-  /// No description provided for @actionOpenAiCoach.
-  ///
-  /// In en, this message translates to:
-  /// **'Open AI Coach'**
-  String get actionOpenAiCoach;
-
-  /// No description provided for @actionFindPlace.
-  ///
-  /// In en, this message translates to:
-  /// **'Find a place'**
-  String get actionFindPlace;
-
-  /// No description provided for @actionSignInPlaceholder.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in (placeholder)'**
-  String get actionSignInPlaceholder;
-
   /// No description provided for @actionRetry.
   ///
   /// In en, this message translates to:
   /// **'Retry'**
   String get actionRetry;
-
-  /// No description provided for @placeholderDashboard.
-  ///
-  /// In en, this message translates to:
-  /// **'Dashboard (placeholder)'**
-  String get placeholderDashboard;
-
-  /// No description provided for @placeholderDiet.
-  ///
-  /// In en, this message translates to:
-  /// **'Diet Record (placeholder)'**
-  String get placeholderDiet;
-
-  /// No description provided for @placeholderExercise.
-  ///
-  /// In en, this message translates to:
-  /// **'Exercise (placeholder)'**
-  String get placeholderExercise;
-
-  /// No description provided for @placeholderMyHealth.
-  ///
-  /// In en, this message translates to:
-  /// **'My Health (placeholder)'**
-  String get placeholderMyHealth;
-
-  /// No description provided for @placeholderAiCoach.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Coach (placeholder, mock responses)'**
-  String get placeholderAiCoach;
-
-  /// No description provided for @placeholderNotification.
-  ///
-  /// In en, this message translates to:
-  /// **'Notifications (placeholder)'**
-  String get placeholderNotification;
-
-  /// No description provided for @placeholderPlace.
-  ///
-  /// In en, this message translates to:
-  /// **'Place (placeholder, Google Maps in Stage 4)'**
-  String get placeholderPlace;
-
-  /// No description provided for @placeholderSignIn.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in (placeholder, social SDKs in Stage 4)'**
-  String get placeholderSignIn;
 
   /// No description provided for @errorNetwork.
   ///
@@ -284,12 +194,6 @@ abstract class AppLocalizations {
   /// **'Something went wrong'**
   String get errorUnknown;
 
-  /// No description provided for @dashboardSectionToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get dashboardSectionToday;
-
   /// No description provided for @dashboardMetricCalories.
   ///
   /// In en, this message translates to:
@@ -301,42 +205,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly exercise'**
   String get dashboardMetricExercise;
-
-  /// No description provided for @dashboardMetricWeight.
-  ///
-  /// In en, this message translates to:
-  /// **'Weight'**
-  String get dashboardMetricWeight;
-
-  /// No description provided for @dashboardChartWeightWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'Weekly weight'**
-  String get dashboardChartWeightWeek;
-
-  /// No description provided for @dashboardCaloriesProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'{pct}% of {goal}'**
-  String dashboardCaloriesProgress(int pct, int goal);
-
-  /// No description provided for @dashboardWeightDelta.
-  ///
-  /// In en, this message translates to:
-  /// **'{sign}{delta} vs last week'**
-  String dashboardWeightDelta(String sign, String delta);
-
-  /// No description provided for @homeGreeting.
-  ///
-  /// In en, this message translates to:
-  /// **'{name}, let\'s ease into the day 👋'**
-  String homeGreeting(String name);
-
-  /// No description provided for @homeGreetingGeneric.
-  ///
-  /// In en, this message translates to:
-  /// **'Let\'s ease into the day 👋'**
-  String get homeGreetingGeneric;
 
   /// No description provided for @homeDashboardLoadError.
   ///
@@ -350,47 +218,11 @@ abstract class AppLocalizations {
   /// **'No records yet today. Add a meal or workout to get started.'**
   String get homeDashboardEmpty;
 
-  /// No description provided for @homeDietRecordCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} diet records today'**
-  String homeDietRecordCount(int count);
-
   /// No description provided for @homeScheduleEmpty.
   ///
   /// In en, this message translates to:
   /// **'No events scheduled for today.'**
   String get homeScheduleEmpty;
-
-  /// No description provided for @homeCoachingPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI Coaching'**
-  String get homeCoachingPill;
-
-  /// No description provided for @homeCoachingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s tailored advice'**
-  String get homeCoachingTitle;
-
-  /// No description provided for @homeCoachingBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Cut back on sodium at dinner and\ntake about a 20-minute walk'**
-  String get homeCoachingBody;
-
-  /// No description provided for @homeCoachingReady.
-  ///
-  /// In en, this message translates to:
-  /// **'AI prepared 3 tailored tips for you today'**
-  String get homeCoachingReady;
-
-  /// No description provided for @homeDietSodiumAlert.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium over limit detected'**
-  String get homeDietSodiumAlert;
 
   /// No description provided for @homeAiAdviceTitle.
   ///
@@ -428,95 +260,11 @@ abstract class AppLocalizations {
   /// **'Fat'**
   String get homeMacroFat;
 
-  /// No description provided for @homeDietRecBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI dinner recommendation'**
-  String get homeDietRecBadge;
-
   /// No description provided for @homeMealChickenSalad.
   ///
   /// In en, this message translates to:
   /// **'Chicken breast salad'**
   String get homeMealChickenSalad;
-
-  /// No description provided for @homeDietRecRice.
-  ///
-  /// In en, this message translates to:
-  /// **'Half bowl of brown rice'**
-  String get homeDietRecRice;
-
-  /// No description provided for @homeDietLogButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Log diet →'**
-  String get homeDietLogButton;
-
-  /// No description provided for @homeExerciseRoutineProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'AI routine 1/3 done'**
-  String get homeExerciseRoutineProgress;
-
-  /// No description provided for @homeExerciseBurnGoal.
-  ///
-  /// In en, this message translates to:
-  /// **'{unit} burned · Goal {goal}'**
-  String homeExerciseBurnGoal(String unit, int goal);
-
-  /// No description provided for @homeExerciseBrisk.
-  ///
-  /// In en, this message translates to:
-  /// **'Brisk walking'**
-  String get homeExerciseBrisk;
-
-  /// No description provided for @homeExerciseLegStretch.
-  ///
-  /// In en, this message translates to:
-  /// **'Lower-body stretch'**
-  String get homeExerciseLegStretch;
-
-  /// No description provided for @homeExerciseRecBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI remaining routine'**
-  String get homeExerciseRecBadge;
-
-  /// No description provided for @homeExerciseRecStretch.
-  ///
-  /// In en, this message translates to:
-  /// **'Lower-body stretch 10 min'**
-  String get homeExerciseRecStretch;
-
-  /// No description provided for @homeExerciseRecStrength.
-  ///
-  /// In en, this message translates to:
-  /// **'Low-intensity strength 15 min'**
-  String get homeExerciseRecStrength;
-
-  /// No description provided for @homeExerciseLogButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Log exercise →'**
-  String get homeExerciseLogButton;
-
-  /// No description provided for @homeSummaryToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today total'**
-  String get homeSummaryToday;
-
-  /// No description provided for @homeVsGoal.
-  ///
-  /// In en, this message translates to:
-  /// **'vs goal'**
-  String get homeVsGoal;
-
-  /// No description provided for @homeNutritionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Nutrition status'**
-  String get homeNutritionTitle;
 
   /// No description provided for @homeAiAnalysisPill.
   ///
@@ -524,29 +272,11 @@ abstract class AppLocalizations {
   /// **'✦ AI analysis'**
   String get homeAiAnalysisPill;
 
-  /// No description provided for @homeNutritionSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Weekly trend · vs last week'**
-  String get homeNutritionSubtitle;
-
   /// No description provided for @homeDetails.
   ///
   /// In en, this message translates to:
   /// **'Details'**
   String get homeDetails;
-
-  /// No description provided for @homeThisWeekAvg.
-  ///
-  /// In en, this message translates to:
-  /// **'This week avg'**
-  String get homeThisWeekAvg;
-
-  /// No description provided for @homeLastWeekAvg.
-  ///
-  /// In en, this message translates to:
-  /// **'Last week avg'**
-  String get homeLastWeekAvg;
 
   /// No description provided for @homeGoal.
   ///
@@ -571,12 +301,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Progress'**
   String get homeAchieveRate;
-
-  /// No description provided for @homeWeeklyTrend.
-  ///
-  /// In en, this message translates to:
-  /// **'Weekly trend'**
-  String get homeWeeklyTrend;
 
   /// No description provided for @homeWeeklyMetricTrend.
   ///
@@ -626,77 +350,11 @@ abstract class AppLocalizations {
   /// **'Calories'**
   String get homeExerciseBurned;
 
-  /// No description provided for @homeExerciseCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Weekly workouts'**
-  String get homeExerciseCount;
-
   /// No description provided for @homeExerciseDays.
   ///
   /// In en, this message translates to:
   /// **'Workout days'**
   String get homeExerciseDays;
-
-  /// No description provided for @homeExerciseBurnProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'Weekly burn goal'**
-  String get homeExerciseBurnProgress;
-
-  /// No description provided for @unitTimes.
-  ///
-  /// In en, this message translates to:
-  /// **'×'**
-  String get unitTimes;
-
-  /// No description provided for @homeVsLastWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'vs last week'**
-  String get homeVsLastWeek;
-
-  /// No description provided for @homeSodiumInsight.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium intake has been {trend}. Cut back on salt and turn on {alert}?'**
-  String homeSodiumInsight(String trend, String alert);
-
-  /// No description provided for @homeSodiumInsightTrend.
-  ///
-  /// In en, this message translates to:
-  /// **'rising for 2 weeks'**
-  String get homeSodiumInsightTrend;
-
-  /// No description provided for @homeSodiumInsightAlert.
-  ///
-  /// In en, this message translates to:
-  /// **'high-sodium meal alerts'**
-  String get homeSodiumInsightAlert;
-
-  /// No description provided for @homeAiPill.
-  ///
-  /// In en, this message translates to:
-  /// **'✦ AI'**
-  String get homeAiPill;
-
-  /// No description provided for @homeLegendThisWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'This week'**
-  String get homeLegendThisWeek;
-
-  /// No description provided for @homeLegendLastWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'Last week'**
-  String get homeLegendLastWeek;
-
-  /// No description provided for @homeLegendToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get homeLegendToday;
 
   /// No description provided for @homeMealReasonSodium.
   ///
@@ -818,18 +476,6 @@ abstract class AppLocalizations {
   /// **'Today\'s schedule'**
   String get homeScheduleTitle;
 
-  /// No description provided for @homeScheduleEveningWalk.
-  ///
-  /// In en, this message translates to:
-  /// **'Evening walk'**
-  String get homeScheduleEveningWalk;
-
-  /// No description provided for @homeScheduleWalkDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Around home · 20 min'**
-  String get homeScheduleWalkDetail;
-
   /// No description provided for @unitKcal.
   ///
   /// In en, this message translates to:
@@ -859,12 +505,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} min'**
   String unitMinutesValue(int count);
-
-  /// No description provided for @unitKg.
-  ///
-  /// In en, this message translates to:
-  /// **'kg'**
-  String get unitKg;
 
   /// No description provided for @dietTitle.
   ///
@@ -986,12 +626,6 @@ abstract class AppLocalizations {
   /// **'No meals logged.\nAdd a meal with a photo!'**
   String get dietEmptyLog;
 
-  /// No description provided for @dietPhotoAnalysis.
-  ///
-  /// In en, this message translates to:
-  /// **'Photo Analysis'**
-  String get dietPhotoAnalysis;
-
   /// No description provided for @dietLoadError.
   ///
   /// In en, this message translates to:
@@ -1033,18 +667,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No {section} records for the selected date.'**
   String otherDateEmpty(Object section);
-
-  /// No description provided for @dietTagSodium.
-  ///
-  /// In en, this message translates to:
-  /// **'Sodium {mg}mg'**
-  String dietTagSodium(int mg);
-
-  /// No description provided for @dietTagSugar.
-  ///
-  /// In en, this message translates to:
-  /// **'Sugar {g}g'**
-  String dietTagSugar(int g);
 
   /// No description provided for @dietMealBreakfast.
   ///
@@ -1430,23 +1052,11 @@ abstract class AppLocalizations {
   /// **'Stretching'**
   String get exTypeStretching;
 
-  /// No description provided for @exTypeOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Exercise'**
-  String get exTypeOther;
-
   /// No description provided for @exTypeOtherChip.
   ///
   /// In en, this message translates to:
   /// **'Other'**
   String get exTypeOtherChip;
-
-  /// Badge on an exercise record the trainer created by completing a PT session. Read-only for the member.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer PT'**
-  String get exSourceTrainerPt;
 
   /// No description provided for @exLevelLight.
   ///
@@ -1640,18 +1250,6 @@ abstract class AppLocalizations {
   /// **'AI recommended exercise'**
   String get exAiRecommendedExercise;
 
-  /// No description provided for @exAiRoutineToday.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Routine · Today'**
-  String get exAiRoutineToday;
-
-  /// No description provided for @exStatDays.
-  ///
-  /// In en, this message translates to:
-  /// **'Days'**
-  String get exStatDays;
-
   /// No description provided for @exStatTime.
   ///
   /// In en, this message translates to:
@@ -1669,12 +1267,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Streak'**
   String get exStatStreak;
-
-  /// No description provided for @exUnitCount.
-  ///
-  /// In en, this message translates to:
-  /// **'times'**
-  String get exUnitCount;
 
   /// No description provided for @exUnitStreakDays.
   ///
@@ -1724,71 +1316,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 set} other{{count} sets}}'**
   String exProgramSets(int count);
 
-  /// No description provided for @exEmptyLog.
-  ///
-  /// In en, this message translates to:
-  /// **'No workouts logged this week.\nAdd one to start your log!'**
-  String get exEmptyLog;
-
-  /// No description provided for @exAiFeedback.
-  ///
-  /// In en, this message translates to:
-  /// **'AI advice'**
-  String get exAiFeedback;
-
   /// No description provided for @exAddExercise.
   ///
   /// In en, this message translates to:
   /// **'Add Exercise'**
   String get exAddExercise;
-
-  /// No description provided for @exRoutineBriskTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Brisk walking 30 min'**
-  String get exRoutineBriskTitle;
-
-  /// No description provided for @exRoutineBriskSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Cardio · Blood pressure'**
-  String get exRoutineBriskSub;
-
-  /// No description provided for @exRoutineStretchTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Lower-body stretch'**
-  String get exRoutineStretchTitle;
-
-  /// No description provided for @exRoutineStretchSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Stretching · Flexibility'**
-  String get exRoutineStretchSub;
-
-  /// No description provided for @exRoutineStrengthTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Low-intensity strength'**
-  String get exRoutineStrengthTitle;
-
-  /// No description provided for @exRoutineStrengthSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Strength · Endurance'**
-  String get exRoutineStrengthSub;
-
-  /// No description provided for @exMissionComplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Mission complete!'**
-  String get exMissionComplete;
-
-  /// No description provided for @exMinutesExercise.
-  ///
-  /// In en, this message translates to:
-  /// **'{minutes} min exercise'**
-  String exMinutesExercise(int minutes);
 
   /// No description provided for @exDurationMinutes.
   ///
@@ -2042,18 +1574,6 @@ abstract class AppLocalizations {
   /// **'Weekends {hours}'**
   String exGymWeekendHours(String hours);
 
-  /// No description provided for @exTrainer.
-  ///
-  /// In en, this message translates to:
-  /// **'Trainer'**
-  String get exTrainer;
-
-  /// No description provided for @exMyGym.
-  ///
-  /// In en, this message translates to:
-  /// **'My Gym'**
-  String get exMyGym;
-
   /// No description provided for @exTrainerDedicated.
   ///
   /// In en, this message translates to:
@@ -2138,24 +1658,6 @@ abstract class AppLocalizations {
   /// **'💬 1:1 Consult'**
   String get exConsultButton;
 
-  /// No description provided for @exGymLoadError.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t load the gym.'**
-  String get exGymLoadError;
-
-  /// No description provided for @exNoGymTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No gym registered'**
-  String get exNoGymTitle;
-
-  /// No description provided for @exNoGymSub.
-  ///
-  /// In en, this message translates to:
-  /// **'Register a nearby gym with Find a Gym'**
-  String get exNoGymSub;
-
   /// No description provided for @exAddress.
   ///
   /// In en, this message translates to:
@@ -2197,12 +1699,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User'**
   String get myDefaultUserName;
-
-  /// No description provided for @myRank.
-  ///
-  /// In en, this message translates to:
-  /// **'Rank {rank}'**
-  String myRank(int rank);
 
   /// No description provided for @mySettingsTitle.
   ///
@@ -2534,12 +2030,6 @@ abstract class AppLocalizations {
   /// **'On-Care · Version 1.0.0'**
   String get myAppVersion;
 
-  /// No description provided for @myComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'{label} is coming soon'**
-  String myComingSoon(String label);
-
   /// No description provided for @coachHeaderPill.
   ///
   /// In en, this message translates to:
@@ -2593,30 +2083,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hydration'**
   String get coachCardWaterTag;
-
-  /// No description provided for @coachCardWaterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Drink one more glass of water.'**
-  String get coachCardWaterTitle;
-
-  /// No description provided for @coachCardWaterBody.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve been quite active today.'**
-  String get coachCardWaterBody;
-
-  /// No description provided for @coachProgressLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s recommendation progress'**
-  String get coachProgressLabel;
-
-  /// No description provided for @coachProgressDone.
-  ///
-  /// In en, this message translates to:
-  /// **'{done}/{total} done'**
-  String coachProgressDone(int done, int total);
 
   /// No description provided for @coachChatSubtitle.
   ///
@@ -3421,6 +2887,588 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Obesity'**
   String get onboardConditionObesity;
+
+  /// Greeting bubble the app shows when the coach conversation opens.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, I\'m Oni, your AI health coach 🙂\nAsk me anything about diet, exercise, blood pressure, or blood sugar.'**
+  String get aiCoachWelcome;
+
+  /// Bubble shown when the coach reply could not be fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again in a moment.'**
+  String get aiCoachFailure;
+
+  /// Generic cancel button in shared dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get actionCancel;
+
+  /// Generic delete button in shared dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get actionDelete;
+
+  /// Generic edit action in shared sheets.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get actionEdit;
+
+  /// Generic acknowledge button in shared dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get actionConfirm;
+
+  /// Schedule category label.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital'**
+  String get scheduleCategoryHospital;
+
+  /// Schedule category label.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercise'**
+  String get scheduleCategoryExercise;
+
+  /// Schedule category label.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal'**
+  String get scheduleCategoryMeal;
+
+  /// Schedule category label.
+  ///
+  /// In en, this message translates to:
+  /// **'Medication'**
+  String get scheduleCategoryMedication;
+
+  /// Schedule category label.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get scheduleCategoryOther;
+
+  /// Title of the add-event dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add event'**
+  String get eventAddTitle;
+
+  /// Title of the edit-event dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit event'**
+  String get eventEditTitle;
+
+  /// Label of the event title field.
+  ///
+  /// In en, this message translates to:
+  /// **'Event title'**
+  String get eventTitleLabel;
+
+  /// Hint of the event title field.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Regular checkup'**
+  String get eventTitleHint;
+
+  /// Label of the event date picker field.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get eventDateLabel;
+
+  /// Label of the event time picker field.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get eventTimeLabel;
+
+  /// Shown in the time field when no time is set.
+  ///
+  /// In en, this message translates to:
+  /// **'No time'**
+  String get eventTimeNone;
+
+  /// Validation message when the event title is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter an event title'**
+  String get eventTitleRequired;
+
+  /// Shown when creating an event fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add the event. Please try again in a moment'**
+  String get eventAddFailed;
+
+  /// Shown when updating an event fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the event. Please try again in a moment'**
+  String get eventEditFailed;
+
+  /// Submit button label while an edit is saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get eventSaving;
+
+  /// Submit button label while a new event is saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get eventAdding;
+
+  /// Submit button label of the edit-event dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get eventSave;
+
+  /// Submit button label of the add-event dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get eventAdd;
+
+  /// Tooltip of the clear button on a picker field.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {label}'**
+  String eventClearField(String label);
+
+  /// Title of the delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete event'**
+  String get eventDeleteTitle;
+
+  /// Body of the delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{title}”? This can\'t be undone.'**
+  String eventDeleteConfirm(String title);
+
+  /// Shown when deleting an event fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete the event. Please try again in a moment'**
+  String get eventDeleteFailed;
+
+  /// Shown after an event is deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Event deleted'**
+  String get eventDeleted;
+
+  /// Empty state of the day events sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'No events on this day'**
+  String get eventsEmptyForDay;
+
+  /// Button that opens the add-event dialog for the selected day.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an event on this day'**
+  String get eventAddForDay;
+
+  /// Shown for an event saved without a time.
+  ///
+  /// In en, this message translates to:
+  /// **'Time TBD'**
+  String get eventTimeUnset;
+
+  /// Title of the schedule calendar sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get scheduleSheetTitle;
+
+  /// Shown when the calendar fails to load its events.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load events'**
+  String get eventsLoadFailed;
+
+  /// Tag of a sleep-related AI suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep'**
+  String get coachCardSleepTag;
+
+  /// Title of the health goals sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Health goals'**
+  String get myHealthGoalsTitle;
+
+  /// Section label in the health goals sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily diet goals'**
+  String get myGoalsDietSection;
+
+  /// Section label in the health goals sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly exercise goals'**
+  String get myGoalsExerciseSection;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily calorie limit (kcal)'**
+  String get myGoalCalories;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sodium limit (mg)'**
+  String get myGoalSodium;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily sugar limit (g)'**
+  String get myGoalSugar;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily carbohydrate limit (g)'**
+  String get myGoalCarbs;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily protein limit (g)'**
+  String get myGoalProtein;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily fat limit (g)'**
+  String get myGoalFat;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly workout count goal'**
+  String get myGoalWorkoutCount;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly workout minutes goal'**
+  String get myGoalWorkoutMinutes;
+
+  /// Health goal field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly calories burned goal (kcal)'**
+  String get myGoalWorkoutCalories;
+
+  /// Shown after health goals are saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Health goals saved'**
+  String get myGoalsSaved;
+
+  /// Title of the banner shown when settings fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your settings'**
+  String get mySettingsLoadFailed;
+
+  /// Body of the banner shown when settings fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing is locked because saving now could wipe your existing settings.'**
+  String get mySettingsLoadFailedBody;
+
+  /// Shown when saving notification settings fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save notification settings'**
+  String get myNotificationSaveFailed;
+
+  /// Title of the points guide dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'How to earn points'**
+  String get myPointsGuideTitle;
+
+  /// Point-earning action in the points guide.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a meal'**
+  String get myPointsDietAdd;
+
+  /// Point-earning action in the points guide.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete an AI-recommended workout'**
+  String get myPointsAiExercise;
+
+  /// Point-earning action in the points guide.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a workout yourself'**
+  String get myPointsExerciseAdd;
+
+  /// Header of the assigned trainer card.
+  ///
+  /// In en, this message translates to:
+  /// **'My trainer'**
+  String get coachAssignedTrainer;
+
+  /// Header of the AI coaching card.
+  ///
+  /// In en, this message translates to:
+  /// **'AI coaching'**
+  String get coachAiCoaching;
+
+  /// Section title in the coaching card.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s coaching points'**
+  String get coachPointsTitle;
+
+  /// Section title in the coaching card.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended solo workouts'**
+  String get coachRoutineTitle;
+
+  /// Explains what a solo routine is.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts to do on your own between PT sessions'**
+  String get coachRoutineSubtitle;
+
+  /// Origin of a routine.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended by your trainer'**
+  String get coachRoutineByTrainer;
+
+  /// Origin of a routine an AI proposed and the trainer approved.
+  ///
+  /// In en, this message translates to:
+  /// **'AI suggestion · reviewed by {name}'**
+  String coachRoutineAiChecked(String name);
+
+  /// Origin of a routine proposed automatically.
+  ///
+  /// In en, this message translates to:
+  /// **'AI suggestion'**
+  String get coachRoutineAiAuto;
+
+  /// Shown after a routine is marked done.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your workout log'**
+  String get coachRoutineLogged;
+
+  /// Shown when the routine is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'This routine no longer exists. Please refresh the list'**
+  String get coachRoutineGone;
+
+  /// Shown when the network is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again'**
+  String get coachRoutineNetworkError;
+
+  /// Shown when marking a routine done fails for an unexpected reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record it as done.'**
+  String get coachRoutineLogFailed;
+
+  /// Marks a routine as completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get coachRoutineDone;
+
+  /// The member's own note on a completed routine.
+  ///
+  /// In en, this message translates to:
+  /// **'My note: {note}'**
+  String coachRoutineMyNote(String note);
+
+  /// The trainer's feedback on a completed routine.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainer feedback: {feedback}'**
+  String coachRoutineTrainerFeedback(String feedback);
+
+  /// Title of the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark routine done'**
+  String get coachRoutineCompleteTitle;
+
+  /// Field label in the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual minutes'**
+  String get coachRoutineMinutesLabel;
+
+  /// Validation message for the minutes field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value between 1 and 600 minutes'**
+  String get coachRoutineMinutesError;
+
+  /// Field label in the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Intensity'**
+  String get coachRoutineIntensity;
+
+  /// Intensity option.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get coachIntensityLight;
+
+  /// Intensity option.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get coachIntensityModerate;
+
+  /// Intensity option.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get coachIntensityHigh;
+
+  /// Field label in the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get coachRoutineNoteLabel;
+
+  /// Hint of the note field in the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Share how it felt or how your body is doing'**
+  String get coachRoutineNoteHint;
+
+  /// Submit button of the completion dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get coachRoutineSubmit;
+
+  /// Opens the chat with the assigned trainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with trainer'**
+  String get coachChatWithTrainer;
+
+  /// Tooltip while the assigned trainer is being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your trainer…'**
+  String get coachTrainerLoading;
+
+  /// Tooltip when no trainer is assigned yet.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have a trainer yet. Connect a gym and trainer from the Exercise tab'**
+  String get coachTrainerNone;
+
+  /// Notification category badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder'**
+  String get alertCategoryReminder;
+
+  /// Notification category badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get alertCategoryHealth;
+
+  /// Notification category badge.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement'**
+  String get alertCategoryAchievement;
+
+  /// Notification category badge.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get alertCategorySystem;
+
+  /// Marks every notification as read.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get alertMarkAllRead;
+
+  /// Empty state of the notification list.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications'**
+  String get alertEmpty;
+
+  /// Shown when the notification list fails to refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the latest notifications'**
+  String get alertLoadFailed;
+
+  /// Title of the demo push the mock build can trigger.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulated notification'**
+  String get alertSimulatedTitle;
+
+  /// Body of the demo push the mock build can trigger.
+  ///
+  /// In en, this message translates to:
+  /// **'A test push just arrived.'**
+  String get alertSimulatedBody;
+
+  /// Relative time for something that just happened.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get alertJustNow;
+
+  /// Title of the completed PT session card.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s completed PT'**
+  String get exPtLogTitle;
+
+  /// Label above the trainer's feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s feedback'**
+  String get exPtFeedbackTitle;
+
+  /// Screen title carrying the selected date.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} · {month}/{day}'**
+  String exDatedTitle(int month, int day, String title);
 }
 
 class _AppLocalizationsDelegate

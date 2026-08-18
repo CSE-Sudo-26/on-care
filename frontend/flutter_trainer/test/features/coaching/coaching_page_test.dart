@@ -2,18 +2,13 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
-import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/auth/data/repositories/dio_trainer_auth_repository.dart'
     show trainerAuthRepositoryProvider;
 import 'package:oncare_trainer/features/auth/domain/entities/auth_tokens.dart';
@@ -24,6 +19,11 @@ import 'package:oncare_trainer/features/clients/domain/entities/member_health_pr
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/nutrition_summary_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/weekly_exercise_trend_card.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/ai_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
+import 'package:oncare_trainer/features/coaching/presentation/widgets/program_editor_workspace.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_session.dart';
 import 'package:oncare_trainer/shared/models/client_chat_message.dart';
@@ -426,7 +426,7 @@ void main() {
         final repo = DriftScheduleRepository(db);
         // 박성호 has a seeded 15:00 예정 session.
         final attached = await repo.registerProgram(
-          date: ymd(DateTime.now()),
+          date: ymd(nowKst()),
           clientId: 'seed-client-3',
           clientName: '박성호',
           time: '10:00',
@@ -449,7 +449,7 @@ void main() {
         final repo = DriftScheduleRepository(db);
         // 김민수's only session today is 완료 — a new slot gets booked.
         final attached = await repo.registerProgram(
-          date: ymd(DateTime.now()),
+          date: ymd(nowKst()),
           clientId: 'seed-client-1',
           clientName: '김민수',
           time: '10:00',
@@ -1046,7 +1046,7 @@ void main() {
       // Booked under tomorrow's date, not today's. Reading a drift stream
       // must run outside the fake-async zone (`runAsync`), otherwise the
       // subscription never flushes and the test hangs.
-      final tomorrow = ymd(DateTime.now().add(const Duration(days: 1)));
+      final tomorrow = ymd(nowKst().add(const Duration(days: 1)));
       final rows = await tester.runAsync(
         () => container
             .read(scheduleRepositoryProvider)
@@ -1413,7 +1413,7 @@ void main() {
         extraOverrides: <Override>[
           appConfigProvider.overrideWithValue(realConfig),
           clientRepositoryProvider.overrideWithValue(
-            _FixedClientRepository(<TrainerClient>[realClient]),
+            const _FixedClientRepository(<TrainerClient>[realClient]),
           ),
           trainerAuthRepositoryProvider.overrideWithValue(
             const _FakeTrainerAuthRepository(),

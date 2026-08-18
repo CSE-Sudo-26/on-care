@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The demo build's memo store. Its reads used to hand back a `const` list,
 /// which every mutating caller then tried to sort or edit in place — so a

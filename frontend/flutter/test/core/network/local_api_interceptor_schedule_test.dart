@@ -5,9 +5,10 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 String _todayDateString() {
-  final now = DateTime.now();
+  final now = nowKst();
   return '${now.year.toString().padLeft(4, '0')}-'
       '${now.month.toString().padLeft(2, '0')}-'
       '${now.day.toString().padLeft(2, '0')}';

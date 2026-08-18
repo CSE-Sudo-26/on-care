@@ -7,9 +7,9 @@ import '../../helpers/client_factory.dart';
 
 void main() {
   final List<TrainerClient> roster = <TrainerClient>[
-    makeClient(id: 'c1', name: '김민수', goal: '혈압 관리 · 체중 감량'),
+    makeClient(name: '김민수', goal: '혈압 관리 · 체중 감량'),
     makeClient(id: 'c2', name: '이지수', goal: '근력 향상'),
-    makeClient(id: 'c3', name: '박민재', goal: '체중 감량'),
+    makeClient(id: 'c3', name: '박민재'),
     makeClient(id: 'c4', name: 'Alex Kim', goal: 'Marathon'),
     makeClient(id: 'c5', name: '민서연', goal: '자세 교정'),
   ];

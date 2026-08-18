@@ -1,5 +1,5 @@
 import 'package:demo_fixture/demo_fixture.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
 import 'package:oncare/features/exercise/domain/repositories/exercise_repository.dart';
 
@@ -21,8 +21,8 @@ class MockExerciseRepository implements ExerciseRepository {
   /// date-relative fixture stays deterministic. [fixture] defaults to the
   /// bundled 김민수 픽스처.
   MockExerciseRepository({DateTime? today, DemoFixture? fixture})
-    : _today = _dateOnly(today ?? DateTime.now()),
-      _todayIdx = (today ?? DateTime.now()).weekday - 1,
+    : _today = _dateOnly(today ?? nowKst()),
+      _todayIdx = (today ?? nowKst()).weekday - 1,
       _fixture = fixture ?? DemoFixture.load() {
     _sessions.addAll(_sessionsForWeek(0));
     _totalCalories = _sessions.fold<int>(

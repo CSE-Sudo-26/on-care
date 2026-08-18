@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/reservation_slot.dart';
 
 abstract interface class ReservationSlotRepository {
@@ -96,14 +96,14 @@ class MockReservationSlotRepository implements ReservationSlotRepository {
   }
 
   void _validateFuture(DateTime startsAt) {
-    if (!startsAt.isAfter(DateTime.now())) {
+    if (!startsAt.isAfter(nowKst())) {
       throw StateError('future_only');
     }
   }
 
   @override
   Future<List<ReservationSlot>> list() async {
-    final now = DateTime.now();
+    final now = nowKst();
     return _slots.where((slot) => slot.startsAt.isAfter(now)).toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
   }
