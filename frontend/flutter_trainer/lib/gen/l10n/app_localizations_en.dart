@@ -18,6 +18,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scheduleStatusDone => 'Done';
 
   @override
+  String get scheduleStatusCancelled => 'Cancelled';
+
+  @override
+  String get scheduleStatusNoShow => 'No-show';
+
+  @override
+  String get schedCancel => 'Cancel session';
+
+  @override
+  String get schedNoShow => 'Mark no-show';
+
+  @override
+  String get schedCancelTitle => 'Cancel this PT?';
+
+  @override
+  String schedCancelConfirm(String time, String name) {
+    return 'The $time session with $name will be recorded as cancelled. The entry stays.';
+  }
+
+  @override
+  String get schedCancelSource => 'Cancelled by';
+
+  @override
+  String get schedCancelByMember => 'Client';
+
+  @override
+  String get schedCancelByTrainer => 'Trainer';
+
+  @override
+  String get schedCancelByOther => 'Other';
+
+  @override
+  String get schedCancelReasonHint => 'Reason (optional, only you see it)';
+
+  @override
+  String get schedCancelFailed =>
+      'Couldn\'t cancel the session. Please try again.';
+
+  @override
+  String get schedNoShowTitle => 'Record as a no-show?';
+
+  @override
+  String schedNoShowConfirm(String time, String name) {
+    return 'The $time session with $name will be recorded as a no-show.';
+  }
+
+  @override
+  String get schedNoShowFailed =>
+      'Couldn\'t record the no-show. Please try again.';
+
+  @override
+  String schedCancelledBy(String source, String date) {
+    return '$source · $date';
+  }
+
+  @override
+  String get schedDeleteMeansRemove =>
+      'Deleting erases the record. Use cancel or no-show for a PT that didn\'t happen.';
+
+  @override
   String get scheduleStatusGap => 'Open';
 
   @override

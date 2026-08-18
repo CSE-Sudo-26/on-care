@@ -18,6 +18,63 @@ class AppLocalizationsKo extends AppLocalizations {
   String get scheduleStatusDone => '완료';
 
   @override
+  String get scheduleStatusCancelled => '취소';
+
+  @override
+  String get scheduleStatusNoShow => '노쇼';
+
+  @override
+  String get schedCancel => '취소 처리';
+
+  @override
+  String get schedNoShow => '노쇼 처리';
+
+  @override
+  String get schedCancelTitle => '이 PT를 취소할까요?';
+
+  @override
+  String schedCancelConfirm(String time, String name) {
+    return '$time $name 님 PT가 취소로 기록됩니다. 일정은 지워지지 않아요.';
+  }
+
+  @override
+  String get schedCancelSource => '취소한 쪽';
+
+  @override
+  String get schedCancelByMember => '고객 취소';
+
+  @override
+  String get schedCancelByTrainer => '트레이너 취소';
+
+  @override
+  String get schedCancelByOther => '기타';
+
+  @override
+  String get schedCancelReasonHint => '사유 (선택, 트레이너만 봅니다)';
+
+  @override
+  String get schedCancelFailed => '취소 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get schedNoShowTitle => '노쇼로 기록할까요?';
+
+  @override
+  String schedNoShowConfirm(String time, String name) {
+    return '$time $name 님이 오지 않은 것으로 기록됩니다.';
+  }
+
+  @override
+  String get schedNoShowFailed => '노쇼 처리하지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String schedCancelledBy(String source, String date) {
+    return '$source · $date';
+  }
+
+  @override
+  String get schedDeleteMeansRemove => '기록까지 지웁니다. 진행되지 않은 PT는 취소·노쇼로 남기세요.';
+
+  @override
   String get scheduleStatusGap => '공백';
 
   @override

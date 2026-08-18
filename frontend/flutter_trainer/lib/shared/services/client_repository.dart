@@ -456,9 +456,12 @@ final lastChatAtProvider = StreamProvider<Map<String, DateTime>>((ref) {
 /// there is no honest number to show, and `valueOrNull` is null — the UI
 /// hides the badge instead of claiming "0명 예약", which would be wrong.
 final todayReservationCountProvider = Provider<AsyncValue<int>>((ref) {
-  return ref
-      .watch(todayScheduleProvider)
-      .whenData((sessions) => sessions.where((s) => !s.isGap).length);
+  return ref.watch(todayScheduleProvider).whenData(
+    // 취소된 약속은 빠진다(#871) — 이 숫자는 "오늘 몇 건이 잡혀 있나" 이고,
+    // 취소는 그 예약이 거두어졌다는 뜻이다. 노쇼는 센다: 자리는 그대로 잡혀
+    // 있었고 회원이 오지 않았을 뿐이다.
+    (sessions) => sessions.where((s) => !s.isGap && !s.isCancelled).length,
+  );
 });
 
 /// 사이드바 스케줄 배지가 읽는 **아직 처리하지 않은** 오늘 세션 수. (#860)

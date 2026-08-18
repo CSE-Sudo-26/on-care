@@ -720,6 +720,11 @@ class ProgramItem(BaseModel):
     session: str = Field(default="", max_length=100)
 
 
+#: 취소 주체. 트레이너 사정의 취소를 회원의 미이행으로 읽지 않으려면 남아 있어야
+#: 한다. 빈 문자열은 "취소가 아님"(예정·완료·노쇼)이다. (#871)
+CancellationSource = Literal["", "member", "trainer", "other"]
+
+
 class ScheduleSessionOut(BaseModel):
     """스케줄 슬롯 — 프론트 ScheduleSession 계약 정렬."""
     id: str
@@ -728,12 +733,17 @@ class ScheduleSessionOut(BaseModel):
     client_name: str
     type: str
     duration_minutes: int
-    status: str          # 예정|완료|공백
+    status: str          # 예정|완료|취소|노쇼|공백
     note: str
     program: list[ProgramItem]
     #: 완료한 세션의 프로그램을 회원에게 보냈는가. 보낸 적 없는 세션과 이미
     #: 보낸 세션은 화면에서 다른 것을 말해야 한다(#822).
     program_sent: bool = False
+    #: 취소·노쇼로 마무리된 세션의 기록. 예정·완료는 전부 비어 있다(#871).
+    cancelled_at: _datetime | None = None
+    cancellation_source: CancellationSource = ""
+    cancellation_reason: str = ""
+    no_show_at: _datetime | None = None
 
 
 class ScheduleProgramSendRequest(BaseModel):
@@ -800,6 +810,20 @@ class ScheduleUpdateRequest(PartialUpdate):
 
 class ScheduleCompleteRequest(BaseModel):
     note: str = Field(default="", max_length=500)
+
+
+class ScheduleCancelRequest(BaseModel):
+    """일정 취소 입력. (#871)
+
+    `source` 를 받는 까닭은 지표 때문이다 — 트레이너 사정의 취소와 고객 취소를
+    구분하지 않으면 나중에 회원의 낮은 완료율을 잘못 읽는다. 기본값을 두지 않고
+    화면이 고르게 한다: 무엇이든 기본으로 저장되면 그 값이 사실인지 알 수 없다.
+
+    `reason` 은 트레이너가 보는 내부 기록이라 선택이다. 회원에게 나가는 알림에는
+    싣지 않는다.
+    """
+    source: Literal["member", "trainer", "other"]
+    reason: str = Field(default="", max_length=200)
 
 
 # ---- 회원측 미러 (내 담당 코치 / 받은 루틴 / 채팅) ----
