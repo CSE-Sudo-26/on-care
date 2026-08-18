@@ -158,7 +158,7 @@ VM에는 구현이 없는 플러그인 세 개(`shared_preferences`, `flutter_se
 | 2 | `reserve` | 회원 앱 | 슬롯 노출 · 예약 · 좌석 감소 · 재시작·재로그인 후 유지 |
 | 3 | `verify-schedule` | 트레이너 웹 | 그 예약이 만든 일정이 트레이너 화면에 표시 |
 | 4 | `cancel` | 회원 앱 | 취소 · 좌석 복구 · 재예약 가능 |
-| 5 | `verify-schedule-removed` | 트레이너 웹 | 일정 제거 · 좌석이 정원까지 복구 |
+| 5 | `verify-schedule-cancelled` | 트레이너 웹 | 일정이 `취소` 기록으로 남음 · 좌석이 정원까지 복구 |
 | 6 | `edge-cases` | 회원 앱 | 중복·권한 없는 회원·동시 요청이 초과 예약을 못 만듦 |
 | 7 | `cleanup` | 트레이너 웹 | 이번 실행이 연 슬롯을 닫음 |
 
