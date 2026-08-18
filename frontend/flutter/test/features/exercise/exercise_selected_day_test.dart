@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/exercise/domain/entities/exercise_week.dart';
@@ -129,7 +129,7 @@ Widget _app(ExerciseRepository repo) {
 
 /// 오늘이 아니면서 **이번 주 안에** 있고 주간 스트립(오늘 ±3일)에 보이는 날짜.
 DateTime _otherDayThisWeek() {
-  final DateTime now = DateTime.now();
+  final DateTime now = nowKst();
   final DateTime today = DateTime(now.year, now.month, now.day);
   // 월요일이면 어제가 지난 주로 넘어가므로 내일을 고른다. 그 밖에는 어제.
   return today.weekday == DateTime.monday
@@ -215,7 +215,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 지난 주로 옮긴 스트립의 가운데 날짜(= 오늘 -7일)를 고른다.
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime target = DateTime(
       now.year,
       now.month,
@@ -256,7 +256,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.chevron_left).first);
     await tester.pumpAndSettle();
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime target = DateTime(
       now.year,
       now.month,

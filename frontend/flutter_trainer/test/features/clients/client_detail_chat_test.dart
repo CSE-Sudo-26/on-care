@@ -9,6 +9,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/trainer_memo.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/chat_view.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -221,7 +222,7 @@ void main() {
                 sender: 'client',
                 body: '네 감사합니다!',
                 timeLabel: '09:00',
-                createdAt: DateTime.now().add(const Duration(seconds: 2)),
+                createdAt: nowKst().add(const Duration(seconds: 2)),
               ),
             );
         counts = await repo.watchUnreadCounts().first;
@@ -264,7 +265,7 @@ void main() {
               sender: 'client',
               body: '넵!',
               timeLabel: '09:00',
-              createdAt: DateTime.now().add(const Duration(seconds: 5)),
+              createdAt: nowKst().add(const Duration(seconds: 5)),
             ),
           );
       await repo.markThreadRead('seed-client-2');

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/core/utils/request_id.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
@@ -331,8 +332,8 @@ class _CoachingPageState extends ConsumerState<CoachingPage> {
       return;
     }
     final registeredFor = client.id;
-    final date = ymd(DateTime.now().add(Duration(days: _registerOffset)));
-    final now = DateTime.now();
+    final date = ymd(nowKst().add(Duration(days: _registerOffset)));
+    final now = nowKst();
     final hour = date == ymd(now) ? (now.hour + 1).clamp(6, 23) : 10;
     final time = '${hour.toString().padLeft(2, '0')}:00';
     final messenger = ScaffoldMessenger.of(context);
@@ -1510,7 +1511,7 @@ class _AiAssistantPrompt extends StatelessWidget {
 String _dateChipLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
-  final d = DateTime.now().add(Duration(days: offset));
+  final d = nowKst().add(Duration(days: offset));
   return '${d.month}/${d.day}';
 }
 
@@ -1623,7 +1624,7 @@ class _SendHistoryCard extends ConsumerWidget {
     // so the trainer could send the same routine again believing nothing
     // had gone out.
     final assigned = ref.watch(assignedRoutinesProvider(client.id));
-    final today = ymd(DateTime.now());
+    final today = ymd(nowKst());
 
     return SectionCard(
       title: l.coachSentHistory,

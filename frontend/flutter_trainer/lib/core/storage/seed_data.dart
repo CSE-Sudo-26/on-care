@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:demo_fixture/demo_fixture.dart';
 import 'package:drift/drift.dart';
-
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status.dart';
 
@@ -79,7 +79,7 @@ Future<void> seedIfEmpty(
   DemoFixture? fixture,
   DateTime? clock,
 }) async {
-  final DateTime now = clock ?? DateTime.now();
+  final DateTime now = clock ?? nowKst();
   final today = ymd(now);
   // 주간 계열을 요일 자리에 놓기 위한 오늘의 인덱스(월=0).
   final todayIndex = now.weekday - 1;
@@ -93,7 +93,7 @@ Future<void> seedIfEmpty(
   );
 
   // A fixed, ancient anchor for seed chat timestamps. Using a constant
-  // (not DateTime.now()) keeps seed messages ordered before ANY reply
+  // (not nowKst()) keeps seed messages ordered before ANY reply
   // added at runtime — including after a later-day re-seed, where a fresh
   // `now()` base would otherwise sort new seed rows *after* a preserved
   // runtime reply.

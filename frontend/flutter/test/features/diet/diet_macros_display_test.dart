@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -64,7 +64,7 @@ class _PastDateDietRepository extends FakeDietRepository {
 }
 
 Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
-  final selectedDate = DateTime.now().subtract(Duration(days: days));
+  final selectedDate = nowKst().subtract(Duration(days: days));
   await tester.tap(find.text('${selectedDate.day}'));
   await tester.pumpAndSettle();
 }

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 테스트에서는 에셋 번들 대신 파일로 읽는다 — 번들이
 /// 준비됐는지에 기대지 않고 시드 자체만 본다.
@@ -19,14 +20,14 @@ final DemoFixture _fixture = DemoFixture.parse(
 final int _beyondFixture = _fixture.historyWeeks * 7 + 5;
 
 String _todayString() {
-  final now = DateTime.now();
+  final now = nowKst();
   return '${now.year.toString().padLeft(4, '0')}-'
       '${now.month.toString().padLeft(2, '0')}-'
       '${now.day.toString().padLeft(2, '0')}';
 }
 
 String _daysAgoString(int days) {
-  final date = DateTime.now().subtract(Duration(days: days));
+  final date = nowKst().subtract(Duration(days: days));
   return '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
@@ -182,7 +183,7 @@ void main() {
       final diet = await db.select(db.dietEntries).get();
       final exercise = await db.select(db.exerciseSessions).get();
 
-      for (final FixtureDay day in _fixture.daysFor(DateTime.now())) {
+      for (final FixtureDay day in _fixture.daysFor(nowKst())) {
         final rows = diet.where((r) => r.date == day.date);
         expect(
           rows.fold<int>(0, (int sum, r) => sum + r.totalCalories),
@@ -220,7 +221,7 @@ void main() {
       await seedIfEmpty(db, fixture: _fixture);
       final exercise = await db.select(db.exerciseSessions).get();
 
-      final DateTime now = DateTime.now();
+      final DateTime now = nowKst();
       final DateTime thisMonday = DateTime(
         now.year,
         now.month,

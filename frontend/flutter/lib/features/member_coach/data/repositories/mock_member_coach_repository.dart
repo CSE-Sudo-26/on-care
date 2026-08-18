@@ -1,3 +1,4 @@
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/domain/repositories/member_coach_repository.dart';
 
@@ -198,7 +199,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
     if (current.completed) return current;
     final CoachRoutine completed = current.copyWith(
       completed: true,
-      completedAt: DateTime.now(),
+      completedAt: nowKst(),
       completedMinutes: minutes,
       completedIntensity: intensity,
       memberNote: memberNote.trim(),
@@ -226,7 +227,7 @@ class MockMemberCoachRepository implements MemberCoachRepository {
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    final now = DateTime.now();
+    final now = nowKst();
     _chat.add(
       CoachMessage(
         id: 'me-${now.microsecondsSinceEpoch}',

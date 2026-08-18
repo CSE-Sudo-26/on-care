@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -768,7 +768,7 @@ class _ExerciseCard extends ConsumerWidget {
     final ExerciseGoals goals = ref.watch(exerciseGoalsProvider);
     // 오늘 요일(0=월 … 6=일). 오늘 이후(미래) 요일은 아직 운동 전이므로 0 으로
     // 두고, '오늘' 강조도 실제 오늘 요일에 붙인다.
-    final int todayIdx = DateTime.now().weekday - 1;
+    final int todayIdx = nowKst().weekday - 1;
     // 데모 상수는 주간 데이터가 아직 로드되지 않았을 때만 쓴다. 실제 데이터가
     // 있으면 그 일별 칼로리를 그대로 그린다(값이 없는 주는 빈 차트가 정답).
     final List<double> baseCal = (wk != null && wk.dailyCalories.isNotEmpty)
@@ -1143,7 +1143,7 @@ const List<double> _demoExerciseWeekCalories = <double>[
 /// 주간 차트의 '오늘' 배지·라이브 값을 실제 요일 칸에 배치하고, 오늘 이후(미래)
 /// 요일의 0값이 급락처럼 보이지 않도록 렌더 범위를 오늘까지로 제한한다.
 /// 홈 카드 전체가 이 하나만 쓴다(지표 카드·차트 기준이 어긋나지 않도록).
-int _todayIndex() => DateTime.now().weekday - 1;
+int _todayIndex() => nowKst().weekday - 1;
 
 /// 지표 키 → 화면 라벨(칼로리/나트륨/당류).
 String _nutLabel(AppLocalizations l, _NutTabKind key) => switch (key) {
@@ -1593,7 +1593,7 @@ class _ScheduleCard extends ConsumerWidget {
   /// 데모는 담당 일정이 없어(`MockMemberCoachRepository.fetchSessions`) 빈
   /// 목록이 오므로 카드가 지금과 똑같이 그려진다.
   static List<ScheduleItem> _todaysSessions(List<CoachSession> sessions) {
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime today = DateTime(now.year, now.month, now.day);
     return <ScheduleItem>[
       for (final CoachSession session in sessions)
@@ -1611,7 +1611,7 @@ class _ScheduleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final String weekday = weekDayLabels(l)[now.weekday - 1];
     final String todayLabel = l.homeScheduleDate(weekday, now.month, now.day);
     // 트레이너 일정과 내가 만든 일정을 한 목록으로 보여 준다. 시간순으로 섞어야

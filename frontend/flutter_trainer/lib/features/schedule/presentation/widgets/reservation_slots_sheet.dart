@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
@@ -54,7 +54,7 @@ class _ReservationSlotsSheetState extends ConsumerState<ReservationSlotsSheet> {
       return;
     }
     final startsAt = _startsAt(_time);
-    if (!startsAt.isAfter(DateTime.now())) {
+    if (!startsAt.isAfter(nowKst())) {
       _showMessage(l.slotPastTime);
       return;
     }

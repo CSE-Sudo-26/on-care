@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
 import 'package:oncare/features/diet/domain/entities/meal_photo.dart';
 
@@ -17,7 +17,7 @@ void main() {
       'fetchByDate returns seeded history and keeps an older date empty',
       () async {
         final repo = FakeDietRepository();
-        final now = DateTime.now();
+        final now = nowKst();
 
         final today = await repo.fetchByDate(now);
         // 오늘 저녁은 데모 시연(사진으로 저녁 기록)을 위해 비워 둔다 (#548).
@@ -368,7 +368,7 @@ void main() {
     'historical photo analysis keeps food and meal totals aligned',
     () async {
       final repo = FakeDietRepository();
-      final now = DateTime.now();
+      final now = nowKst();
       for (final daysAgo in <int>[1, 2]) {
         final day = await repo.fetchByDate(
           now.subtract(Duration(days: daysAgo)),

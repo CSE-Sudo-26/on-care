@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
@@ -36,7 +37,7 @@ class DashboardPage extends ConsumerWidget {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final coachingSummary = ref.watch(dashboardAiCoachingSummaryProvider);
     final reservations = ref.watch(todayReservationCountProvider).valueOrNull;
-    final today = DateTime.now();
+    final today = nowKst();
 
     return PageScaffold(
       title: l.dashTitle,

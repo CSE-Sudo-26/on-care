@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // NumberFormat 만 가져온다 — intl 의 TextDirection 이 dart:ui 것과 충돌한다.
 import 'package:intl/intl.dart' show NumberFormat;
-
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -192,7 +192,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
   int _weekShift = 0;
 
   DateTime get _today {
-    final DateTime n = DateTime.now();
+    final DateTime n = nowKst();
     return DateTime(n.year, n.month, n.day);
   }
 
@@ -515,7 +515,7 @@ class _ExerciseSelectedDay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final DateTime weekStart = mondayOfWeek(date);
-    final DateTime thisMonday = mondayOfWeek(DateTime.now());
+    final DateTime thisMonday = mondayOfWeek(nowKst());
     if (weekStart == thisMonday) {
       return _ExerciseDayDetail(week: thisWeek, date: date);
     }
@@ -905,7 +905,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
   /// 오늘 요일 인덱스(0=월 … 6=일)를 이번 주 범위로 클램프. 홈 주간추이와 같은
   /// 실제 오늘을 가리키도록 해, '오늘=일 고정' 문제를 없앤다.
   int _weekTodayIndex(int n) =>
-      n <= 0 ? -1 : (DateTime.now().weekday - 1).clamp(0, n - 1);
+      n <= 0 ? -1 : (nowKst().weekday - 1).clamp(0, n - 1);
 
   bool get _hasBreakdown {
     final ExerciseWeek w = widget.week;
@@ -1766,7 +1766,7 @@ class _PtLogCard extends ConsumerWidget {
       return const _DemoPtLogCard();
     }
 
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final List<CoachSession> completedToday =
         (ref.watch(coachSessionsProvider).valueOrNull ?? const <CoachSession>[])
             .where((CoachSession session) {

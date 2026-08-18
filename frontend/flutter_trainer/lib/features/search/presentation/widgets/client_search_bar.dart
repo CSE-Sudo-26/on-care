@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:oncare_trainer/app/router/routes.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
@@ -96,7 +97,7 @@ ClientSearchFacts watchClientSearchFacts(
   if (results.isEmpty) return ClientSearchFacts.none;
   final unread =
       ref.watch(unreadCountsProvider).valueOrNull ?? const <String, int>{};
-  final today = DateTime.now();
+  final today = nowKst();
   final range = (
     from: ymd(today),
     to: ymd(today.add(const Duration(days: clientSearchUpcomingDays - 1))),

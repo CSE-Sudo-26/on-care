@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/atoms/app_button.dart';
 import 'package:oncare/design_system/atoms/app_input.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -108,7 +108,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
     if (existing != null && isScheduleDate(existing.date)) {
       return DateTime.parse(existing.date);
     }
-    return widget.initialDate ?? DateTime.now();
+    return widget.initialDate ?? nowKst();
   }
 
   ScheduleCategory _initialCategory() =>
@@ -121,7 +121,7 @@ class _EventDialogState extends ConsumerState<_EventDialog> {
   }
 
   Future<void> _pickDate() async {
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _date,
