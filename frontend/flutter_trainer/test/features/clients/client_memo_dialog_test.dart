@@ -10,6 +10,7 @@ import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/services/trainer_memo_repository.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// An in-memory stand-in for the server. [failWrites] flips it into the
 /// failure mode the retry test needs, without touching the stored memos —
@@ -40,7 +41,7 @@ class _FakeMemoRepository implements TrainerMemoRepository {
       final existing = list.where((memo) => memo.insightId == insightId);
       if (existing.isNotEmpty) return existing.first;
     }
-    final now = DateTime.now().add(Duration(milliseconds: list.length));
+    final now = nowKst().add(Duration(milliseconds: list.length));
     final memo = TrainerMemo(
       id: 'memo-${list.length + 1}',
       body: body,
@@ -63,7 +64,7 @@ class _FakeMemoRepository implements TrainerMemoRepository {
     if (failWrites) throw const NetworkError();
     final list = _byClient[clientId]!;
     final index = list.indexWhere((memo) => memo.id == memoId);
-    final updated = list[index].copyWith(body: body, updatedAt: DateTime.now());
+    final updated = list[index].copyWith(body: body, updatedAt: nowKst());
     list[index] = updated;
     return updated;
   }

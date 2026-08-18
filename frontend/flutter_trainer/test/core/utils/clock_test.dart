@@ -5,7 +5,7 @@
 /// **UTC 와의 차이**를 본다 — 기기가 어느 타임존이든 UTC+9 여야 한다.
 library;
 
-import 'dart:io' show File, Directory;
+import 'dart:io' show Directory, File, FileSystemEntity;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,15 +54,21 @@ void main() {
   // 전보다 나쁜 상태가 된다. 백엔드가 `clock.py` 우회 호출 0건을 유지하는 것과
   // 같은 규율을 소스 검사로 지킨다.
 
-  test('lib 에 남은 DateTime.now() 는 epoch 스탬프뿐이다', () {
-    final Directory lib = Directory('lib');
+  test('lib·test 에 남은 DateTime.now() 는 epoch 스탬프뿐이다', () {
     final leftovers = <String>[];
 
-    for (final entity in lib.listSync(recursive: true)) {
+    // 테스트도 함께 본다. 시드를 `DateTime.now()` 로 만들고 화면·인터셉터가
+    // `nowKst()` 로 읽으면 두 값이 9시간 어긋나, 기기가 KST 인 곳에서는 통과하고
+    // CI(UTC)에서만 깨진다 — 실제로 그렇게 한 번 깨졌다.
+    for (final entity in <FileSystemEntity>[
+      ...Directory('lib').listSync(recursive: true),
+      ...Directory('test').listSync(recursive: true),
+    ]) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       // 생성물과 시각 계층 자신은 대상이 아니다.
       if (entity.path.contains('/gen/')) continue;
       if (entity.path.endsWith('core/utils/clock.dart')) continue;
+      if (entity.path.endsWith('core/utils/clock_test.dart')) continue;
 
       final List<String> lines = entity.readAsStringSync().split('\n');
       for (int i = 0; i < lines.length; i++) {

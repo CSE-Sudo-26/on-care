@@ -17,6 +17,7 @@ import 'package:oncare_trainer/shared/models/client_chat_message.dart';
 
 import '../../helpers/pump_app.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 대화 목록을 [finder] 가 나올 때까지 [step] 만큼씩 끈다.
 ///
@@ -221,7 +222,7 @@ void main() {
                 sender: 'client',
                 body: '네 감사합니다!',
                 timeLabel: '09:00',
-                createdAt: DateTime.now().add(const Duration(seconds: 2)),
+                createdAt: nowKst().add(const Duration(seconds: 2)),
               ),
             );
         counts = await repo.watchUnreadCounts().first;
@@ -264,7 +265,7 @@ void main() {
               sender: 'client',
               body: '넵!',
               timeLabel: '09:00',
-              createdAt: DateTime.now().add(const Duration(seconds: 5)),
+              createdAt: nowKst().add(const Duration(seconds: 5)),
             ),
           );
       await repo.markThreadRead('seed-client-2');

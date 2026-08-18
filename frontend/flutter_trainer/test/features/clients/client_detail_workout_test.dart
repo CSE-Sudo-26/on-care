@@ -18,6 +18,7 @@ import 'package:oncare_trainer/features/schedule/domain/entities/schedule_status
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// Seeded client ids by display name — the detail is addressed by id.
 const Map<String, String> seedClientIds = <String, String>{
@@ -34,7 +35,7 @@ final DemoFixture _fixture = DemoFixture.parse(
 
 /// 운동 이력 맨 위 줄의 날짜 라벨. 오늘을 따라 움직인다.
 String _todayHistoryLabel() {
-  final DateTime now = DateTime.now();
+  final DateTime now = nowKst();
   return '${now.month}/${now.day} (오늘)';
 }
 
@@ -42,7 +43,7 @@ String _todayHistoryLabel() {
 /// 취소선으로 보여 주므로 이름만 남는다.
 String _minsuSkippedExercise() {
   final List<FixtureDay> recent = _fixture
-      .daysFor(DateTime.now())
+      .daysFor(nowKst())
       .reversed
       .where((FixtureDay d) => d.exercises.isNotEmpty)
       .take(3)
@@ -185,7 +186,7 @@ void main() {
       expect(history.length, 3);
       // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
       // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
-      final DateTime now = DateTime.now();
+      final DateTime now = nowKst();
       expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
       expect(history.first.completionRate, 100);
       expect(history.first.exercises, contains('레그프레스 3세트 ✓'));

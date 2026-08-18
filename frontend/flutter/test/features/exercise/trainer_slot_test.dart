@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 
@@ -30,7 +30,7 @@ void main() {
   });
 
   test('지난 시간은 목록에 나오지 않는다', () async {
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final MockGymRepository repo = MockGymRepository();
 
     for (final String id in <String>[
@@ -122,7 +122,7 @@ void main() {
 
   test('목록에서 빠진 지난 자리는 오래된 화면에서도 예약되지 않는다', () async {
     final MockGymRepository repo = MockGymRepository();
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     // 오늘 06:00 자리는 아침에 돌리면 살아 있고 저녁이면 이미 빠져 있다.
     // 빠져 있을 때만 "지난 자리 예약 거부"를 검증한다.
     final List<TrainerSlot> live = await repo.fetchSlots('trainer-kang');

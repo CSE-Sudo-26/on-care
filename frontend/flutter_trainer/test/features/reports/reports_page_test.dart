@@ -24,6 +24,7 @@ import 'package:oncare_trainer/shared/widgets/mini_charts.dart';
 
 import '../../helpers/client_factory.dart';
 import '../../helpers/pump_app.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 요약 생성만 실패한다 — 리포트 본문은 정상이라 카드 하나만 폴백으로 간다.
 class _SummaryFailsRepository implements ReportRepository {
@@ -69,7 +70,7 @@ String _minsuExerciseThisWeek() {
   final DemoFixture fixture = DemoFixture.parse(
     File('../../shared/demo_fixture/assets/kim_minsu.json').readAsStringSync(),
   );
-  final List<FixtureDay> days = fixture.daysFor(DateTime.now());
+  final List<FixtureDay> days = fixture.daysFor(nowKst());
   final String monday = days.last.weekStart;
   for (final FixtureDay day in days.reversed) {
     if (day.weekStart != monday) break;
@@ -421,7 +422,7 @@ void main() {
     await settle(tester);
 
     final selectedWeek = weekStartOf(
-      DateTime.now(),
+      nowKst(),
     ).subtract(const Duration(days: 7));
     final selectedCalls = repository.calls
         .where(
@@ -566,7 +567,7 @@ void main() {
     // 어제는 약속이 있던 날이라 로스터의 평상시 배열 대신 그날 값이 그려진다.
     // 어제가 주 안에서 몇 번째 칸인지는 데모를 여는 날마다 달라지므로 계산해서
     // 덮는다 — 숫자를 박아 두면 하루만 지나도 깨진다.
-    final int feastSlot = DateTime.now().weekday - 2;
+    final int feastSlot = nowKst().weekday - 2;
     List<double> expected(List<num> series, double feast) {
       final values = series.map((v) => v.toDouble()).toList();
       if (feastSlot >= 0) values[feastSlot] = feast;

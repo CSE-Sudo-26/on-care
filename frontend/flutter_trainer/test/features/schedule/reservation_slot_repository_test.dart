@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:oncare_trainer/features/schedule/data/repositories/reservation_slot_repository.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -119,11 +120,11 @@ void main() {
   group('MockReservationSlotRepository validation', () {
     test('create rejects past times and capacities outside 1 to 100', () async {
       final mockRepository = MockReservationSlotRepository();
-      final future = DateTime.now().add(const Duration(days: 1));
+      final future = nowKst().add(const Duration(days: 1));
 
       await expectLater(
         mockRepository.create(
-          startsAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          startsAt: nowKst().subtract(const Duration(minutes: 1)),
           capacity: 1,
         ),
         throwsStateError,
@@ -142,7 +143,7 @@ void main() {
     test('update rejects past times and capacities outside 1 to 100', () async {
       final mockRepository = MockReservationSlotRepository();
       final slot = await mockRepository.create(
-        startsAt: DateTime.now().add(const Duration(days: 1)),
+        startsAt: nowKst().add(const Duration(days: 1)),
         capacity: 2,
       );
 
@@ -157,7 +158,7 @@ void main() {
       await expectLater(
         mockRepository.update(
           slot.id,
-          startsAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          startsAt: nowKst().subtract(const Duration(minutes: 1)),
         ),
         throwsStateError,
       );

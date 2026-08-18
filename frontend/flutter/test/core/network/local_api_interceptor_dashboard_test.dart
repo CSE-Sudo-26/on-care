@@ -8,18 +8,19 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 const _weekdayLabels = <String>['월', '화', '수', '목', '금', '토', '일'];
 
 String _todayDateString() {
-  final now = DateTime.now();
+  final now = nowKst();
   return '${now.year.toString().padLeft(4, '0')}-'
       '${now.month.toString().padLeft(2, '0')}-'
       '${now.day.toString().padLeft(2, '0')}';
 }
 
 String _currentMonday() {
-  final now = DateTime.now();
+  final now = nowKst();
   final m = DateTime(now.year, now.month, now.day - (now.weekday - 1));
   return '${m.year.toString().padLeft(4, '0')}-'
       '${m.month.toString().padLeft(2, '0')}-'
@@ -37,7 +38,7 @@ void main() {
 
     final today = _todayDateString();
     final ws = _currentMonday();
-    final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+    final todayLabel = _weekdayLabels[nowKst().weekday - 1];
 
     // Diet rows that mirror the React mock totals.
     await db.batch((b) {
@@ -186,7 +187,7 @@ void main() {
       final nutritionWeek = (body['nutrition_week']! as List<Object?>)
           .cast<Map<String, Object?>>();
       expect(nutritionWeek, hasLength(7));
-      final todayTrend = nutritionWeek[DateTime.now().weekday - 1];
+      final todayTrend = nutritionWeek[nowKst().weekday - 1];
       expect(todayTrend['calories'], 1420);
       expect(todayTrend['sodium_mg'], 2100);
       expect(todayTrend['sugar_g'], 45.0);
@@ -347,7 +348,7 @@ void main() {
             ExerciseSessionsCompanion.insert(
               id: 'ex-another-day',
               weekStart: _currentMonday(),
-              dayLabel: _weekdayLabels[DateTime.now().weekday % 7],
+              dayLabel: _weekdayLabels[nowKst().weekday % 7],
               type: 'strength',
               minutes: 15,
               calories: 100,
@@ -392,7 +393,7 @@ void main() {
       // 각각 기록해도 운동 횟수는 1(하루)로 센다.
       await (db.delete(db.exerciseSessions)).go();
       final ws = _currentMonday();
-      final todayLabel = _weekdayLabels[DateTime.now().weekday - 1];
+      final todayLabel = _weekdayLabels[nowKst().weekday - 1];
       await db.batch((b) {
         b.insertAll(db.exerciseSessions, <ExerciseSessionsCompanion>[
           ExerciseSessionsCompanion.insert(
