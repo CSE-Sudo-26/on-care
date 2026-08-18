@@ -40,11 +40,10 @@ void main() {
         tuesday,
         WeeklyRecurrence(weekdays: const <int>{2}, until: DateTime(2026, 9, 8)),
       );
+      // 주 단위로 더한 값과 같아야 한다 — 달을 넘어가도 요일이 유지된다.
       expect(dates, <DateTime>[
-        tuesday,
-        DateTime(2026, 8, 25),
-        DateTime(2026, 9, 1),
-        DateTime(2026, 9, 8),
+        for (var week = 0; week < 4; week++)
+          tuesday.add(Duration(days: 7 * week)),
       ]);
     });
 
