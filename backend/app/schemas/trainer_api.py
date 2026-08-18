@@ -850,6 +850,29 @@ class ReportSendRequest(BaseModel):
     message: str | None = Field(default=None, max_length=2000)
 
 
+class ReportFeedbackOut(BaseModel):
+    """그 주 리포트에 저장돼 있는 트레이너 피드백 초안. (#821)
+
+    저장한 적이 없으면 `body` 가 빈 문자열이고 `updated_at` 이 null 이다 —
+    404 로 답하지 않는 이유는, 초안이 없는 것이 오류가 아니라 정상 상태이고
+    화면은 그때 자동 생성 문구를 쓰기 때문이다.
+    """
+    member_id: str
+    week_start: str              # YYYY-MM-DD (월요일)
+    body: str
+    updated_at: _datetime | None = None
+
+
+class ReportFeedbackSaveRequest(BaseModel):
+    """피드백 초안 저장. 보낸 본문으로 그 주의 초안을 통째로 바꾼다.
+
+    `max_length` 는 전송 본문(`ReportSendRequest.message`)과 같은 2000 자다 —
+    저장은 됐는데 보낼 수 없는 길이가 생기면 안 된다.
+    """
+    week_start: str | None = Field(default=None, description="YYYY-MM-DD (기본: 이번 주)")
+    body: str = Field(default="", max_length=2000)
+
+
 class TrainerPasswordChange(BaseModel):
     """비밀번호 변경 — 현재 비밀번호 확인 후 교체.
 

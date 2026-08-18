@@ -4550,12 +4550,6 @@ abstract class AppLocalizations {
   /// **'Trainer feedback'**
   String get reportsFeedbackTitle;
 
-  /// No description provided for @reportsFeedbackSaveUnsupported.
-  ///
-  /// In en, this message translates to:
-  /// **'Feedback draft storage isn\'t supported yet.'**
-  String get reportsFeedbackSaveUnsupported;
-
   /// No description provided for @reportsFeedbackDraftNote.
   ///
   /// In en, this message translates to:
@@ -4573,6 +4567,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save feedback'**
   String get reportsFeedbackSave;
+
+  /// No description provided for @reportsFeedbackSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get reportsFeedbackSaving;
+
+  /// No description provided for @reportsFeedbackSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved the feedback draft.'**
+  String get reportsFeedbackSaved;
+
+  /// No description provided for @reportsFeedbackSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the draft. Please try again.'**
+  String get reportsFeedbackSaveFailed;
 
   /// No description provided for @reportsFeedbackHint.
   ///

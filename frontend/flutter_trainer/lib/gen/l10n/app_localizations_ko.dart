@@ -2492,9 +2492,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reportsFeedbackTitle => '트레이너 피드백';
 
   @override
-  String get reportsFeedbackSaveUnsupported => '피드백 초안 저장 API가 아직 없어요.';
-
-  @override
   String get reportsFeedbackDraftNote =>
       '수치에서 자동으로 채운 초안이에요. 보내기 전에 확인하고 고쳐 주세요.';
 
@@ -2503,6 +2500,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportsFeedbackSave => '피드백 저장';
+
+  @override
+  String get reportsFeedbackSaving => '저장 중…';
+
+  @override
+  String get reportsFeedbackSaved => '피드백 초안을 저장했어요.';
+
+  @override
+  String get reportsFeedbackSaveFailed => '초안을 저장하지 못했어요. 다시 시도해 주세요.';
 
   @override
   String get reportsFeedbackHint => '고객에게 전달할 코칭 피드백을 작성하세요.';

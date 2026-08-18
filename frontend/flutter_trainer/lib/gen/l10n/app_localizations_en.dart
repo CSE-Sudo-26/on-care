@@ -2581,10 +2581,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportsFeedbackTitle => 'Trainer feedback';
 
   @override
-  String get reportsFeedbackSaveUnsupported =>
-      'Feedback draft storage isn\'t supported yet.';
-
-  @override
   String get reportsFeedbackDraftNote =>
       'A draft filled in from this week\'s figures. Check it over before sending.';
 
@@ -2593,6 +2589,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportsFeedbackSave => 'Save feedback';
+
+  @override
+  String get reportsFeedbackSaving => 'Saving…';
+
+  @override
+  String get reportsFeedbackSaved => 'Saved the feedback draft.';
+
+  @override
+  String get reportsFeedbackSaveFailed =>
+      'Couldn\'t save the draft. Please try again.';
 
   @override
   String get reportsFeedbackHint => 'Write coaching feedback for the client.';

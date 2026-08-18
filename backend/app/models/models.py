@@ -885,6 +885,50 @@ class TrainerProgramDraft(Base):
     )
 
 
+class TrainerReportFeedback(Base):
+    """주간 리포트에 트레이너가 **작성 중인** 피드백 초안. (#821)
+
+    회원에게 나간 문구가 아니다 — 전송된 리포트는 채팅 스레드에 `ChatMessage`
+    로 남는다. 여기 있는 값은 트레이너가 다음에 이어서 쓸 자리를 잡아 주는
+    작업물이라, 전송해도 지우지 않는다. 전송 이력과 작성 중인 초안은 서로
+    다른 질문에 답한다("무엇을 보냈나" / "무엇을 쓰다 말았나").
+
+    (trainer, member, week_start) 하나당 한 행이다. 주차를 키에 넣어야 지난
+    주 리포트를 다시 열었을 때 그때 쓰던 문구가 그대로 나온다 — 고객당 하나만
+    두면 주를 옮기는 순간 남의 주 문구가 따라온다.
+
+    `week_start` 는 그 주 월요일 `YYYY-MM-DD`. `ExerciseSession.week_start` 와
+    같은 방식이라 주차 정규화 규칙(`week_start_of`)을 그대로 쓴다.
+    """
+
+    __tablename__ = "trainer_report_feedback"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trainer_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    member_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    week_start: Mapped[str] = mapped_column(String(10), index=True)  # 월요일 YYYY-MM-DD
+    body: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "trainer_id",
+            "member_id",
+            "week_start",
+            name="uq_trainer_report_feedback_week",
+        ),
+    )
+
+
 class RoutineHistory(Base):
     """회원의 운동 완료 기록 — 프론트 ClientRoutineHistory 대응.
 

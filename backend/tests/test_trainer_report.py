@@ -130,6 +130,162 @@ def test_send_report_uses_the_trainers_own_edit_when_given(client):
     assert r.json()["body"] == "이번 주 컨디션 어땠어요? 다음 주 계획 같이 봐요."
 
 
+# ---- 피드백 초안 (#821) ----
+
+def test_feedback_draft_is_empty_before_anything_is_saved(client):
+    """저장한 적 없는 주는 404 가 아니라 빈 본문이다 — 아직 안 쓴 것은 오류가 아니다."""
+    token = _trainer_token(client)
+    r = client.get(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        params={"week_start": "2026-08-05"},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["body"] == ""
+    assert body["updated_at"] is None
+    assert body["week_start"] == "2026-08-03"
+
+
+def test_feedback_draft_survives_leaving_and_coming_back(client):
+    token = _trainer_token(client)
+    saved = client.put(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        json={"week_start": "2026-08-05", "body": "어깨 안정화 위주로 한 주 더 갑니다."},
+        headers=_auth(token),
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["updated_at"] is not None
+
+    again = client.get(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        params={"week_start": "2026-08-07"},  # 같은 주의 다른 요일
+        headers=_auth(token),
+    )
+    assert again.json()["body"] == "어깨 안정화 위주로 한 주 더 갑니다."
+
+
+def test_saving_again_replaces_the_same_week_instead_of_stacking(client):
+    token = _trainer_token(client)
+    for text in ("처음 쓴 초안", "고쳐 쓴 초안"):
+        r = client.put(
+            "/v1/trainer/clients/user-jisu/report/feedback",
+            json={"week_start": "2026-07-27", "body": text},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+    assert (
+        client.get(
+            "/v1/trainer/clients/user-jisu/report/feedback",
+            params={"week_start": "2026-07-27"},
+            headers=_auth(token),
+        ).json()["body"]
+        == "고쳐 쓴 초안"
+    )
+
+
+def test_each_week_keeps_its_own_draft(client):
+    """주차가 키에 들어가야 지난 주를 열었을 때 그때 문구가 나온다."""
+    token = _trainer_token(client)
+    for week, text in (("2026-06-01", "6월 첫 주"), ("2026-06-08", "6월 둘째 주")):
+        client.put(
+            "/v1/trainer/clients/user-jisu/report/feedback",
+            json={"week_start": week, "body": text},
+            headers=_auth(token),
+        )
+    for week, text in (("2026-06-01", "6월 첫 주"), ("2026-06-08", "6월 둘째 주")):
+        assert (
+            client.get(
+                "/v1/trainer/clients/user-jisu/report/feedback",
+                params={"week_start": week},
+                headers=_auth(token),
+            ).json()["body"]
+            == text
+        )
+
+
+def test_saving_an_empty_draft_is_a_real_save(client):
+    """지운 것을 '저장한 적 없음' 으로 되돌리면 다음에 열 때 지운 문구가 되살아난다."""
+    token = _trainer_token(client)
+    client.put(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        json={"week_start": "2026-05-04", "body": "지울 문구"},
+        headers=_auth(token),
+    )
+    client.put(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        json={"week_start": "2026-05-04", "body": ""},
+        headers=_auth(token),
+    )
+    body = client.get(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        params={"week_start": "2026-05-04"},
+        headers=_auth(token),
+    ).json()
+    assert body["body"] == ""
+    # 저장한 적 없는 상태와 구분된다 — 시각이 남는다.
+    assert body["updated_at"] is not None
+
+
+def test_feedback_draft_does_not_reach_the_member_chat(client):
+    """저장은 회원에게 아무것도 보내지 않는다 — 전송과 별개의 동작이다."""
+    token = _trainer_token(client)
+    before = client.get(
+        "/v1/trainer/clients/user-jisu/chat", headers=_auth(token)
+    ).json()
+    client.put(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        json={"week_start": "2026-08-05", "body": "아직 보내지 않은 문구"},
+        headers=_auth(token),
+    )
+    after = client.get(
+        "/v1/trainer/clients/user-jisu/chat", headers=_auth(token)
+    ).json()
+    assert len(after) == len(before)
+    assert not any("아직 보내지 않은 문구" in m["body"] for m in after)
+
+
+def test_feedback_draft_of_someone_elses_client_is_404(client):
+    token = _trainer_token(client)
+    assert (
+        client.get(
+            "/v1/trainer/clients/user-nobody/report/feedback", headers=_auth(token)
+        ).status_code
+        == 404
+    )
+    assert (
+        client.put(
+            "/v1/trainer/clients/user-nobody/report/feedback",
+            json={"body": "남의 고객"},
+            headers=_auth(token),
+        ).status_code
+        == 404
+    )
+
+
+def test_feedback_draft_rejects_a_body_longer_than_a_report_message(client):
+    """저장은 됐는데 보낼 수 없는 길이가 생기면 안 된다 — 전송과 같은 2000자."""
+    token = _trainer_token(client)
+    r = client.put(
+        "/v1/trainer/clients/user-jisu/report/feedback",
+        json={"week_start": "2026-08-05", "body": "가" * 2001},
+        headers=_auth(token),
+    )
+    assert r.status_code == 422
+
+
+def test_feedback_draft_rejects_a_malformed_week_start(client):
+    token = _trainer_token(client)
+    assert (
+        client.get(
+            "/v1/trainer/clients/user-jisu/report/feedback",
+            params={"week_start": "2026-08"},
+            headers=_auth(token),
+        ).status_code
+        == 422
+    )
+
+
 # ---- 프로필 수정 ----
 
 def test_put_me_updates_only_the_sent_fields(client):

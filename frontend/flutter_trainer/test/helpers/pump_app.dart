@@ -35,6 +35,12 @@ const AppConfig kTestAppConfig = AppConfig(
 /// the widget-test stand-in for opening the console on a deep link (a
 /// browser refresh or a shared URL). It differs from [at], which
 /// navigates *after* the app is up and so never exercises the boot path.
+/// [seedClock] 을 주면 데모 시딩이 그 날짜를 '오늘' 로 삼는다.
+///
+/// 시드는 주간 계열을 **오늘까지만** 채운다(`_upToToday`). 그래서 요일에 따라
+/// 그 주에 기록된 날의 수가 달라지고, 이행률 평균이 달라지고, 배지의 우선순위가
+/// 뒤집힌다. 특정 배지를 검증하는 테스트는 요일을 고정해야 어느 날 돌려도 같은
+/// 값을 본다.
 Future<ProviderContainer> pumpTrainerApp(
   WidgetTester tester, {
   String? token,
@@ -43,6 +49,7 @@ Future<ProviderContainer> pumpTrainerApp(
   String? bootAt,
   List<Override> extraOverrides = const <Override>[],
   Locale locale = const Locale('ko'),
+  DateTime? seedClock,
 }) async {
   // A persisted session lives in secure storage now (access + refresh).
   // Reset the in-memory mock per test so state never leaks between them.
@@ -55,7 +62,7 @@ Future<ProviderContainer> pumpTrainerApp(
   final prefs = await SharedPreferences.getInstance();
 
   final db = AppDatabase.forTesting(NativeDatabase.memory());
-  if (seed) await seedIfEmpty(db);
+  if (seed) await seedIfEmpty(db, clock: seedClock);
   addTearDown(() async => db.close());
 
   final container = ProviderContainer(
