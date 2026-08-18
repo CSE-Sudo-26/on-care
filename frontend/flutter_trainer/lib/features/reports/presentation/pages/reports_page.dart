@@ -92,15 +92,78 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   /// 바뀔 때만 다시 그린다 — 글자마다 화면 전체를 다시 그리지 않는다.
   bool _feedbackBlank = false;
 
+  /// 피드백 초안을 서버에 저장하는 중이다. (#821)
+  bool _savingFeedback = false;
+
+  /// 입력창이 출발점([_baseFor])과 달라졌는가. 되돌리기 버튼을 켜는 유일한
+  /// 이유라, [_feedbackBlank] 와 같은 방식으로 이 값이 **바뀔 때만** 다시
+  /// 그린다 — 글자마다 리포트 화면 전체를 다시 그리지 않는다. (#821)
+  bool _feedbackDiffers = false;
+
+  /// 입력창의 출발점 — 저장해 둔 초안이 있으면 그것, 없으면 수치에서 만든
+  /// 자동 문구다. (#821)
+  ///
+  /// 빈 본문을 저장한 주는 빈 문자열이 출발점이다. 트레이너가 일부러 지운
+  /// 것이라, "저장한 적 없음" 으로 보고 자동 문구를 되살리면 지운 일이
+  /// 무의미해진다.
+  String _baseFor(
+    AppLocalizations l,
+    WeeklyReport report,
+    ReportFeedbackDraft? saved,
+  ) => saved != null && saved.saved ? saved.body : reportMessage(l, report);
+
   /// 이 리포트에 대해 실제로 보낼 문구 — 트레이너가 고친 게 있으면 그것,
   /// 없으면 화면에 채워져 있는 기본 문구다.
-  String _messageFor(AppLocalizations l, WeeklyReport report) =>
-      _feedbackFor == _feedbackKey(report)
-      ? (_feedbackDraft ?? reportMessage(l, report))
-      : reportMessage(l, report);
+  String _messageFor(
+    AppLocalizations l,
+    WeeklyReport report,
+    ReportFeedbackDraft? saved,
+  ) => _feedbackFor == _feedbackKey(report)
+      ? (_feedbackDraft ?? _baseFor(l, report, saved))
+      : _baseFor(l, report, saved);
 
   static String _feedbackKey(WeeklyReport report) =>
       '${report.client.id}|${report.weekStart.toIso8601String()}';
+
+  static String _feedbackKeyOf(String clientId, DateTime weekStart) =>
+      '$clientId|${weekStart.toIso8601String()}';
+
+  /// 입력창의 현재 문구를 그 주의 초안으로 저장한다. (#821)
+  ///
+  /// 실패해도 입력 내용을 건드리지 않는다 — 저장하려다 잃는 것이 이 기능이
+  /// 없애려던 바로 그 문제다.
+  Future<void> _saveFeedback(WeeklyReport report, String body) async {
+    if (_savingFeedback) return;
+    final AppLocalizations l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _savingFeedback = true);
+    try {
+      await ref
+          .read(reportRepositoryProvider)
+          .saveFeedbackDraft(
+            clientId: report.client.id,
+            weekStart: report.weekStart,
+            body: body,
+          );
+      ref.invalidate(
+        reportFeedbackDraftProvider((
+          client: report.client,
+          weekStart: report.weekStart,
+        )),
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.reportsFeedbackSaved)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.reportsFeedbackSaveFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _savingFeedback = false);
+    }
+  }
 
   @override
   void didUpdateWidget(ReportsPage oldWidget) {
@@ -123,6 +186,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _feedbackDraft = null;
       _feedbackFor = null;
       _feedbackBlank = false;
+      _feedbackDiffers = false;
     });
   }
 
@@ -135,13 +199,32 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       _feedbackDraft = null;
       _feedbackFor = null;
       _feedbackBlank = false;
+      _feedbackDiffers = false;
     });
   }
+
+  /// 그 주에 저장된 초안. 아직 안 읽혔으면 null 이다 — 전송·PDF 처럼 지금
+  /// 당장 값이 필요한 자리에서 쓴다. (#821)
+  ReportFeedbackDraft? _savedDraftOf(WeeklyReport report) => ref
+      .read(
+        reportFeedbackDraftProvider((
+          client: report.client,
+          weekStart: report.weekStart,
+        )),
+      )
+      .valueOrNull;
 
   /// 헤더 공유 메뉴의 전송. 화면에 떠 있는 리포트와 입력창의 현재 문구를 함께
   /// 보낸다 — 입력창과 전송 버튼이 서로 다른 위젯이 되면서 필요해진 연결이다.
   Future<void> _sendSelected(WeeklyReport report) {
-    return _send(report, _messageFor(AppLocalizations.of(context), report));
+    return _send(
+      report,
+      _messageFor(
+        AppLocalizations.of(context),
+        report,
+        _savedDraftOf(report),
+      ),
+    );
   }
 
   Future<void> _send(WeeklyReport report, String message) async {
@@ -174,7 +257,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Future<void> _openPdfExport(WeeklyReport report) async {
     if (_generatingPdf) return;
     final messenger = ScaffoldMessenger.of(context);
-    final feedback = _messageFor(AppLocalizations.of(context), report);
+    final feedback = _messageFor(
+      AppLocalizations.of(context),
+      report,
+      _savedDraftOf(report),
+    );
     setState(() => _generatingPdf = true);
     try {
       WeeklyReport? previous;
@@ -234,6 +321,28 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             (c) => c.id == _clientId,
             orElse: () => roster.first,
           );
+    // 저장해 둔 초안이 도착하면 입력창을 그 문구로 다시 만든다. 이미 이 리포트를
+    // 고치고 있었다면 건드리지 않는다 — 읽어 온 값이 트레이너가 방금 친 글을
+    // 덮으면 안 된다. (#821)
+    //
+    // `ref.listen` 은 build 안에서만 부를 수 있어 본문(LayoutBuilder 콜백은
+    // layout 단계에 돈다)이 아니라 여기에 둔다. 고객을 고르는 규칙은 본문과
+    // 같은 [shareTarget] 이다.
+    if (shareTarget != null) {
+      ref.listen<AsyncValue<ReportFeedbackDraft>>(
+        reportFeedbackDraftProvider((
+          client: shareTarget,
+          weekStart: _weekStart,
+        )),
+        (previous, next) {
+          if (next.valueOrNull == null) return;
+          if (_feedbackFor == _feedbackKeyOf(shareTarget.id, _weekStart)) {
+            return;
+          }
+          setState(() => _draftEpoch++);
+        },
+      );
+    }
 
     return PageScaffold(
       key: ValueKey<String>('reports-${_clientId ?? 'list'}'),
@@ -335,6 +444,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     final reportAsync = ref.watch(
                       weeklyReportProvider(reportKey),
                     );
+                    // 저장해 둔 초안. 리포트와 따로 읽는다 — 초안은 트레이너가
+                    // 쓰던 글이고, 리포트가 다시 계산돼도 사라지면 안 된다.
+                    final savedDraft = ref
+                        .watch(reportFeedbackDraftProvider(reportKey))
+                        .valueOrNull;
                     final report = reportAsync.when(
                       loading: () => SectionCard(
                         title: l.reportsWeekly,
@@ -366,31 +480,49 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       data: (data) => _ClientReport(
                         report: data,
                         draftEpoch: _draftEpoch,
-                        initialFeedback: _messageFor(l, data),
+                        initialFeedback: _messageFor(l, data, savedDraft),
+                        savingFeedback: _savingFeedback,
+                        onSaveFeedback: () => _saveFeedback(
+                          data,
+                          _messageFor(l, data, savedDraft),
+                        ),
                         // 트레이너가 손댄 흔적이 있을 때만 켠다 — 누를 게
-                        // 없는 버튼을 띄워 두지 않는다.
+                        // 없는 버튼을 띄워 두지 않는다. 되돌릴 자리는 저장해
+                        // 둔 초안이고, 저장한 적이 없으면 자동 생성 문구다.
                         canRestoreDraft:
-                            _messageFor(l, data) != reportMessage(l, data),
+                            _messageFor(l, data, savedDraft) !=
+                            _baseFor(l, data, savedDraft),
                         onRestoreDraft: () => setState(() {
                           _feedbackDraft = null;
                           _feedbackFor = null;
                           _feedbackBlank = false;
+                          _feedbackDiffers = false;
                           _draftEpoch++;
                         }),
                         onUseSummaryAsDraft: (draft) => setState(() {
                           _feedbackDraft = draft;
                           _feedbackFor = _feedbackKey(data);
                           _feedbackBlank = draft.trim().isEmpty;
+                          _feedbackDiffers =
+                              draft != _baseFor(l, data, savedDraft);
                           _draftEpoch++;
                         }),
                         onFeedbackChanged: (text) {
                           _feedbackDraft = text;
                           _feedbackFor = _feedbackKey(data);
-                          // 비었는지 여부가 바뀔 때만 다시 그린다 — 그 외에는
-                          // 화면이 달라질 것이 없다.
+                          // 비었는지, 출발점과 달라졌는지가 바뀔 때만 다시
+                          // 그린다 — 앞은 전송 항목을, 뒤는 되돌리기 버튼을
+                          // 가르는 값이다. 그 외에는 화면이 달라질 것이 없어
+                          // 글자마다 다시 그리지 않는다.
                           final blank = text.trim().isEmpty;
-                          if (blank != _feedbackBlank) {
-                            setState(() => _feedbackBlank = blank);
+                          final differs =
+                              text != _baseFor(l, data, savedDraft);
+                          if (blank != _feedbackBlank ||
+                              differs != _feedbackDiffers) {
+                            setState(() {
+                              _feedbackBlank = blank;
+                              _feedbackDiffers = differs;
+                            });
                           }
                         },
                       ),
@@ -568,6 +700,8 @@ class _ClientReport extends StatelessWidget {
     required this.initialFeedback,
     required this.onUseSummaryAsDraft,
     required this.onFeedbackChanged,
+    required this.savingFeedback,
+    required this.onSaveFeedback,
   });
 
   final WeeklyReport report;
@@ -589,6 +723,12 @@ class _ClientReport extends StatelessWidget {
 
   /// 입력창이 바뀔 때마다 현재 문구를 올려 준다 — 전송은 헤더 공유 메뉴가 한다.
   final ValueChanged<String> onFeedbackChanged;
+
+  /// 초안을 서버에 저장하는 중이다. (#821)
+  final bool savingFeedback;
+
+  /// 입력창의 현재 문구를 그 주의 초안으로 저장한다. (#821)
+  final VoidCallback onSaveFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -650,12 +790,13 @@ class _ClientReport extends StatelessWidget {
                 onPressed: canRestoreDraft ? onRestoreDraft : null,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Tooltip(
-                message: l.reportsFeedbackSaveUnsupported,
-                child: ActionButton(
-                  label: l.reportsFeedbackSave,
-                  onPressed: null,
-                ),
+              ActionButton(
+                key: const ValueKey<String>('report-feedback-save'),
+                label: savingFeedback
+                    ? l.reportsFeedbackSaving
+                    : l.reportsFeedbackSave,
+                icon: Icons.save_outlined,
+                onPressed: savingFeedback ? null : onSaveFeedback,
               ),
             ],
           ),

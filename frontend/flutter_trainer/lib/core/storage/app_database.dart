@@ -180,6 +180,24 @@ class ClientDailyMetrics extends Table {
   Set<Column<Object>> get primaryKey => <Column<Object>>{clientId, date};
 }
 
+/// 주간 리포트에 트레이너가 쓰다 만 피드백 초안 — 실서버의
+/// `trainer_report_feedback` 대응(#821).
+///
+/// 데모도 서버와 같은 약속을 지켜야 한다: 고객·주를 옮겼다 돌아와도 쓰던
+/// 문구가 남아 있어야 하고, 그 판단 기준이 데모에서만 다르면 화면 동작이
+/// 갈라진다. 전송된 리포트는 [ClientChatMessages] 에 남고, 이 표는 아직
+/// 보내지 않은 작업물만 담는다.
+@DataClassName('ReportFeedbackDraftRow')
+class ReportFeedbackDrafts extends Table {
+  TextColumn get clientId => text()();
+  TextColumn get weekStart => text()(); // 월요일 YYYY-MM-DD
+  TextColumn get body => text().withDefault(const Constant(''))();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{clientId, weekStart};
+}
+
 /// Trainer-app local database (drift-backed). Holds mock client /
 /// schedule data until the FastAPI backend lands. Designed fresh for
 /// the trainer app — the user app's database is not reused.
@@ -193,6 +211,7 @@ class ClientDailyMetrics extends Table {
     ClientChatMessages,
     TrainerScheduleEntries,
     ClientDailyMetrics,
+    ReportFeedbackDrafts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -216,7 +235,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -285,6 +304,11 @@ class AppDatabase extends _$AppDatabase {
       // 그대로 읽히고, 다음 재시딩이 값을 채운다.
       if (from < 10) {
         await m.addColumn(clientDietEntries, clientDietEntries.photoAsset);
+      }
+      // v11: 리포트 피드백 초안(#821). 새 테이블이라 기존 행은 건드리지 않고,
+      // 초안이 없는 고객·주는 그대로 자동 생성 문구를 쓴다.
+      if (from < 11) {
+        await m.createTable(reportFeedbackDrafts);
       }
     },
   );

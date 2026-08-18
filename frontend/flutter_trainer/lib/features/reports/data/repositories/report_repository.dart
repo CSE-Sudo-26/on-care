@@ -53,6 +53,36 @@ abstract interface class ReportRepository {
     required DateTime weekStart,
     required String message,
   });
+
+  /// [client] 의 [weekStart] 주에 저장해 둔 피드백 초안. (#821)
+  ///
+  /// 저장한 적이 없으면 [ReportFeedbackDraft.saved] 가 false 다 — 화면은 그때
+  /// 자동 생성 문구를 쓴다. "저장한 적 없음" 과 "빈 문자열을 저장함" 은 서로
+  /// 다르다: 뒤엣것은 트레이너가 일부러 지운 것이라 되살리면 안 된다.
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  });
+
+  /// 그 주의 피드백 초안을 [body] 로 통째로 바꾼다. (#821)
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  });
+}
+
+/// 한 주에 저장돼 있는 피드백 초안.
+class ReportFeedbackDraft {
+  const ReportFeedbackDraft({required this.body, required this.saved});
+
+  /// 저장된 적 없는 주. 화면은 자동 생성 문구로 시작한다.
+  const ReportFeedbackDraft.none() : body = '', saved = false;
+
+  final String body;
+
+  /// 이 주에 저장 기록이 있는가. 빈 본문을 저장한 경우에도 true 다.
+  final bool saved;
 }
 
 /// Computes the report locally from the drift-backed streams.
@@ -148,6 +178,41 @@ class LocalReportRepository implements ReportRepository {
   }) {
     return _chat.sendTrainerMessage(clientId: clientId, text: message);
   }
+
+  @override
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async {
+    final row =
+        await (_db.select(_db.reportFeedbackDrafts)..where(
+              (t) =>
+                  t.clientId.equals(client.id) &
+                  t.weekStart.equals(ymd(weekStartOf(weekStart))),
+            ))
+            .getSingleOrNull();
+    if (row == null) return const ReportFeedbackDraft.none();
+    return ReportFeedbackDraft(body: row.body, saved: true);
+  }
+
+  @override
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  }) async {
+    await _db
+        .into(_db.reportFeedbackDrafts)
+        .insertOnConflictUpdate(
+          ReportFeedbackDraftsCompanion.insert(
+            clientId: clientId,
+            weekStart: ymd(weekStartOf(weekStart)),
+            body: Value<String>(body),
+            updatedAt: DateTime.now(),
+          ),
+        );
+    return ReportFeedbackDraft(body: body, saved: true);
+  }
 }
 
 /// Reads the report the backend aggregated, and posts the send there so
@@ -230,6 +295,52 @@ class DioReportRepository implements ReportRepository {
       throw AppError.fromDio(e);
     }
   }
+
+  @override
+  Future<ReportFeedbackDraft> feedbackDraft({
+    required TrainerClient client,
+    required DateTime weekStart,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/trainer/clients/${Uri.encodeComponent(client.id)}/report/feedback',
+        queryParameters: <String, String>{'week_start': ymd(weekStart)},
+      );
+      final json = res.data;
+      if (json == null) throw const ServerError();
+      return _draftFromJson(json);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  @override
+  Future<ReportFeedbackDraft> saveFeedbackDraft({
+    required String clientId,
+    required DateTime weekStart,
+    required String body,
+  }) async {
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(
+        '/trainer/clients/${Uri.encodeComponent(clientId)}/report/feedback',
+        data: <String, String>{'week_start': ymd(weekStart), 'body': body},
+      );
+      final json = res.data;
+      if (json == null) throw const ServerError();
+      return _draftFromJson(json);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    }
+  }
+
+  /// `updated_at` 이 있으면 저장된 적이 있는 주다 — 빈 본문을 저장한 경우와
+  /// 한 번도 쓰지 않은 경우를 이 값으로 가른다.
+  static ReportFeedbackDraft _draftFromJson(Map<String, dynamic> json) {
+    return ReportFeedbackDraft(
+      body: json['body'] as String? ?? '',
+      saved: json['updated_at'] != null,
+    );
+  }
 }
 
 /// Decodes `WeeklyReportOut`. 계열도 함께 온다 — 로스터의 것은 이번 주 것이라
@@ -302,6 +413,24 @@ final weeklyReportProvider = StreamProvider.family<WeeklyReport, ReportKey>((
       .watch(reportRepositoryProvider)
       .watch(client: key.client, weekStart: key.weekStart);
 });
+
+/// 그 주에 저장돼 있는 피드백 초안. (#821)
+///
+/// 리포트 본문·요약과 따로 부른다 — 초안은 트레이너가 쓰던 글이고, 리포트가
+/// 다시 계산돼도 그 글이 사라지면 안 된다.
+///
+/// `autoDispose` 인 이유는 요약과 같다 — 고객·주를 옮겨 다니는 화면이라
+/// 남겨 두면 본 적 있는 모든 주의 초안이 메모리에 쌓인다. 저장 뒤에는 이
+/// provider 를 무효화해 다음 조회가 새 값을 읽게 한다.
+final reportFeedbackDraftProvider =
+    FutureProvider.autoDispose.family<ReportFeedbackDraft, ReportKey>((
+      ref,
+      key,
+    ) {
+      return ref
+          .watch(reportRepositoryProvider)
+          .feedbackDraft(client: key.client, weekStart: key.weekStart);
+    });
 
 /// 한 주의 리포트 요약. 리포트 본문과 따로 부른다(#755).
 ///

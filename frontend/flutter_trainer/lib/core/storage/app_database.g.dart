@@ -4532,6 +4532,319 @@ class ClientDailyMetricsCompanion
   }
 }
 
+class $ReportFeedbackDraftsTable extends ReportFeedbackDrafts
+    with TableInfo<$ReportFeedbackDraftsTable, ReportFeedbackDraftRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportFeedbackDraftsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientIdMeta = const VerificationMeta(
+    'clientId',
+  );
+  @override
+  late final GeneratedColumn<String> clientId = GeneratedColumn<String>(
+    'client_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weekStartMeta = const VerificationMeta(
+    'weekStart',
+  );
+  @override
+  late final GeneratedColumn<String> weekStart = GeneratedColumn<String>(
+    'week_start',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [clientId, weekStart, body, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'report_feedback_drafts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReportFeedbackDraftRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(
+        _clientIdMeta,
+        clientId.isAcceptableOrUnknown(data['client_id']!, _clientIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('week_start')) {
+      context.handle(
+        _weekStartMeta,
+        weekStart.isAcceptableOrUnknown(data['week_start']!, _weekStartMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_weekStartMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientId, weekStart};
+  @override
+  ReportFeedbackDraftRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReportFeedbackDraftRow(
+      clientId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_id'],
+      )!,
+      weekStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}week_start'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReportFeedbackDraftsTable createAlias(String alias) {
+    return $ReportFeedbackDraftsTable(attachedDatabase, alias);
+  }
+}
+
+class ReportFeedbackDraftRow extends DataClass
+    implements Insertable<ReportFeedbackDraftRow> {
+  final String clientId;
+  final String weekStart;
+  final String body;
+  final DateTime updatedAt;
+  const ReportFeedbackDraftRow({
+    required this.clientId,
+    required this.weekStart,
+    required this.body,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_id'] = Variable<String>(clientId);
+    map['week_start'] = Variable<String>(weekStart);
+    map['body'] = Variable<String>(body);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReportFeedbackDraftsCompanion toCompanion(bool nullToAbsent) {
+    return ReportFeedbackDraftsCompanion(
+      clientId: Value(clientId),
+      weekStart: Value(weekStart),
+      body: Value(body),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReportFeedbackDraftRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReportFeedbackDraftRow(
+      clientId: serializer.fromJson<String>(json['clientId']),
+      weekStart: serializer.fromJson<String>(json['weekStart']),
+      body: serializer.fromJson<String>(json['body']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientId': serializer.toJson<String>(clientId),
+      'weekStart': serializer.toJson<String>(weekStart),
+      'body': serializer.toJson<String>(body),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReportFeedbackDraftRow copyWith({
+    String? clientId,
+    String? weekStart,
+    String? body,
+    DateTime? updatedAt,
+  }) => ReportFeedbackDraftRow(
+    clientId: clientId ?? this.clientId,
+    weekStart: weekStart ?? this.weekStart,
+    body: body ?? this.body,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReportFeedbackDraftRow copyWithCompanion(ReportFeedbackDraftsCompanion data) {
+    return ReportFeedbackDraftRow(
+      clientId: data.clientId.present ? data.clientId.value : this.clientId,
+      weekStart: data.weekStart.present ? data.weekStart.value : this.weekStart,
+      body: data.body.present ? data.body.value : this.body,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportFeedbackDraftRow(')
+          ..write('clientId: $clientId, ')
+          ..write('weekStart: $weekStart, ')
+          ..write('body: $body, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(clientId, weekStart, body, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReportFeedbackDraftRow &&
+          other.clientId == this.clientId &&
+          other.weekStart == this.weekStart &&
+          other.body == this.body &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReportFeedbackDraftsCompanion
+    extends UpdateCompanion<ReportFeedbackDraftRow> {
+  final Value<String> clientId;
+  final Value<String> weekStart;
+  final Value<String> body;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReportFeedbackDraftsCompanion({
+    this.clientId = const Value.absent(),
+    this.weekStart = const Value.absent(),
+    this.body = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReportFeedbackDraftsCompanion.insert({
+    required String clientId,
+    required String weekStart,
+    this.body = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : clientId = Value(clientId),
+       weekStart = Value(weekStart),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReportFeedbackDraftRow> custom({
+    Expression<String>? clientId,
+    Expression<String>? weekStart,
+    Expression<String>? body,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (weekStart != null) 'week_start': weekStart,
+      if (body != null) 'body': body,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReportFeedbackDraftsCompanion copyWith({
+    Value<String>? clientId,
+    Value<String>? weekStart,
+    Value<String>? body,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReportFeedbackDraftsCompanion(
+      clientId: clientId ?? this.clientId,
+      weekStart: weekStart ?? this.weekStart,
+      body: body ?? this.body,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<String>(clientId.value);
+    }
+    if (weekStart.present) {
+      map['week_start'] = Variable<String>(weekStart.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportFeedbackDraftsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('weekStart: $weekStart, ')
+          ..write('body: $body, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4550,6 +4863,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $TrainerScheduleEntriesTable(this);
   late final $ClientDailyMetricsTable clientDailyMetrics =
       $ClientDailyMetricsTable(this);
+  late final $ReportFeedbackDraftsTable reportFeedbackDrafts =
+      $ReportFeedbackDraftsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4563,6 +4878,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clientChatMessages,
     trainerScheduleEntries,
     clientDailyMetrics,
+    reportFeedbackDrafts,
   ];
 }
 
@@ -6915,6 +7231,203 @@ typedef $$ClientDailyMetricsTableProcessedTableManager =
       ClientDailyMetricRow,
       PrefetchHooks Function()
     >;
+typedef $$ReportFeedbackDraftsTableCreateCompanionBuilder =
+    ReportFeedbackDraftsCompanion Function({
+      required String clientId,
+      required String weekStart,
+      Value<String> body,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReportFeedbackDraftsTableUpdateCompanionBuilder =
+    ReportFeedbackDraftsCompanion Function({
+      Value<String> clientId,
+      Value<String> weekStart,
+      Value<String> body,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$ReportFeedbackDraftsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReportFeedbackDraftsTable> {
+  $$ReportFeedbackDraftsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get weekStart => $composableBuilder(
+    column: $table.weekStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReportFeedbackDraftsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReportFeedbackDraftsTable> {
+  $$ReportFeedbackDraftsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get weekStart => $composableBuilder(
+    column: $table.weekStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReportFeedbackDraftsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReportFeedbackDraftsTable> {
+  $$ReportFeedbackDraftsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientId =>
+      $composableBuilder(column: $table.clientId, builder: (column) => column);
+
+  GeneratedColumn<String> get weekStart =>
+      $composableBuilder(column: $table.weekStart, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ReportFeedbackDraftsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReportFeedbackDraftsTable,
+          ReportFeedbackDraftRow,
+          $$ReportFeedbackDraftsTableFilterComposer,
+          $$ReportFeedbackDraftsTableOrderingComposer,
+          $$ReportFeedbackDraftsTableAnnotationComposer,
+          $$ReportFeedbackDraftsTableCreateCompanionBuilder,
+          $$ReportFeedbackDraftsTableUpdateCompanionBuilder,
+          (
+            ReportFeedbackDraftRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ReportFeedbackDraftsTable,
+              ReportFeedbackDraftRow
+            >,
+          ),
+          ReportFeedbackDraftRow,
+          PrefetchHooks Function()
+        > {
+  $$ReportFeedbackDraftsTableTableManager(
+    _$AppDatabase db,
+    $ReportFeedbackDraftsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportFeedbackDraftsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportFeedbackDraftsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReportFeedbackDraftsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> clientId = const Value.absent(),
+                Value<String> weekStart = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportFeedbackDraftsCompanion(
+                clientId: clientId,
+                weekStart: weekStart,
+                body: body,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientId,
+                required String weekStart,
+                Value<String> body = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReportFeedbackDraftsCompanion.insert(
+                clientId: clientId,
+                weekStart: weekStart,
+                body: body,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReportFeedbackDraftsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReportFeedbackDraftsTable,
+      ReportFeedbackDraftRow,
+      $$ReportFeedbackDraftsTableFilterComposer,
+      $$ReportFeedbackDraftsTableOrderingComposer,
+      $$ReportFeedbackDraftsTableAnnotationComposer,
+      $$ReportFeedbackDraftsTableCreateCompanionBuilder,
+      $$ReportFeedbackDraftsTableUpdateCompanionBuilder,
+      (
+        ReportFeedbackDraftRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ReportFeedbackDraftsTable,
+          ReportFeedbackDraftRow
+        >,
+      ),
+      ReportFeedbackDraftRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6938,4 +7451,6 @@ class $AppDatabaseManager {
       );
   $$ClientDailyMetricsTableTableManager get clientDailyMetrics =>
       $$ClientDailyMetricsTableTableManager(_db, _db.clientDailyMetrics);
+  $$ReportFeedbackDraftsTableTableManager get reportFeedbackDrafts =>
+      $$ReportFeedbackDraftsTableTableManager(_db, _db.reportFeedbackDrafts);
 }
