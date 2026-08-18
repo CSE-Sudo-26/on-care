@@ -6,7 +6,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/exercise/data/repositories/mock_gym_repository.dart';
 import 'package:oncare/features/exercise/domain/entities/my_reservation.dart';
 import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
@@ -16,7 +16,7 @@ import 'package:oncare/features/exercise/domain/entities/trainer_slot.dart';
 Future<TrainerSlot> _bookableSlot(MockGymRepository repo) async {
   final List<TrainerSlot> slots = await repo.fetchSlots('trainer-kim');
   return slots.firstWhere(
-    (TrainerSlot s) => !s.isFull && s.startsAt.isAfter(DateTime.now()),
+    (TrainerSlot s) => !s.isFull && s.startsAt.isAfter(nowKst()),
   );
 }
 

@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
-import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/client_filter.dart';
-import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/presentation/controllers/roster_view.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_card.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_detail_view.dart';
-import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/models/client_alerts.dart';
 import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/services/chat_repository.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// 고객 — the roster and, beside it, the selected client's detail.
 ///
@@ -84,7 +83,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     final activeFilter = clientFilterFrom(widget.filter);
 
     final Widget page = clientsAsync.when(
-      loading: () => _Frame(
+      loading: () => const _Frame(
         subtitle: null,
         child: Center(child: CircularProgressIndicator()),
       ),
@@ -96,7 +95,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
             children: <Widget>[
               Text(
                 l.clientsLoadFailed,
-                style: TextStyle(color: AppColors.mutedForeground),
+                style: const TextStyle(color: AppColors.mutedForeground),
               ),
               const SizedBox(height: AppSpacing.md),
               // A failed roster with no way to retry leaves the trainer
@@ -174,7 +173,6 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 body = ClientDetailView(
                   clientId: selected,
                   section: widget.section,
-                  showBack: true,
                   onSectionChange: (next) => context.go(
                     AppRoutes.clientDetail(
                       selected,
@@ -474,16 +472,16 @@ class _NoSelection extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
+          const Icon(
             Icons.person_search_outlined,
             size: 34,
             color: AppColors.disabledForeground,
           ),
-          SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.md),
           Text(
             l.clientsPickHint,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13.5,
               height: 1.6,
               fontWeight: FontWeight.w500,
@@ -610,10 +608,10 @@ class _FilterBanner extends StatelessWidget {
             onTap: onClear,
             borderRadius: const BorderRadius.all(AppRadius.sm),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Text(
                 l.clientsSeeAll,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.mutedForeground,
@@ -712,7 +710,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
         children: <Widget>[
           Text(
             l.clientsAddTitle,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,
@@ -745,11 +743,11 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
             controller: _goal,
             decoration: InputDecoration(
               hintText: l.clientsGoalLabel,
-              hintStyle: TextStyle(color: AppColors.subtleForeground),
+              hintStyle: const TextStyle(color: AppColors.subtleForeground),
               isDense: true,
               filled: true,
               fillColor: AppColors.inputBackground,
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.md,
               ),
@@ -770,7 +768,7 @@ class _AddClientSheetState extends ConsumerState<_AddClientSheet> {
                 alignment: Alignment.center,
                 child: Text(
                   l.clientsAddAction,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primaryForeground,

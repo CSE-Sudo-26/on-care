@@ -268,7 +268,7 @@ class E2eApi {
   /// 메시지를 도착시켜야 polling 을 검증할 수 있는데, 두 앱을 한 프로세스에 띄울 수
   /// 없으므로 이 자리에서는 API 가 회원 역할을 대신한다.
   Future<void> sendAsMember(String text) async {
-    final Dio dio = Dio(BaseOptions(baseUrl: apiBaseUrl));
+    final Dio dio = Dio(BaseOptions());
     final Response<Map<String, dynamic>> login = await dio
         .post<Map<String, dynamic>>(
           '/auth/login',

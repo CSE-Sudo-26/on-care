@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/alert_badge.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// Clients who need the trainer today, with the reason spelled out.
 ///

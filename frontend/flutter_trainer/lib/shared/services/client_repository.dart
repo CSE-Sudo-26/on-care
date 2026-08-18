@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/data/dtos/client_dtos.dart'
     show prioritizeClients;
 import 'package:oncare_trainer/features/clients/data/repositories/dio_client_repository.dart';
@@ -175,7 +175,7 @@ class DriftClientRepository implements ClientRepository {
     if (trimmedName.isEmpty) return false;
     return _db.transaction(() async {
       if (await _nameTaken(trimmedName.toLowerCase())) return false;
-      final now = DateTime.now();
+      final now = nowKst();
       await _db
           .into(_db.trainerClients)
           .insert(

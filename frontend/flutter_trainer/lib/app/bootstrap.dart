@@ -1,12 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/app/app.dart';
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/prefs_provider.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Single entry point used by `main.dart`. Initializes the binding,
 /// resolves the async services the widget tree needs synchronously

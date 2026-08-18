@@ -5,10 +5,10 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/clients/domain/entities/routine_history_entry.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
@@ -34,7 +34,7 @@ final DemoFixture _fixture = DemoFixture.parse(
 
 /// 운동 이력 맨 위 줄의 날짜 라벨. 오늘을 따라 움직인다.
 String _todayHistoryLabel() {
-  final DateTime now = DateTime.now();
+  final DateTime now = nowKst();
   return '${now.month}/${now.day} (오늘)';
 }
 
@@ -42,7 +42,7 @@ String _todayHistoryLabel() {
 /// 취소선으로 보여 주므로 이름만 남는다.
 String _minsuSkippedExercise() {
   final List<FixtureDay> recent = _fixture
-      .daysFor(DateTime.now())
+      .daysFor(nowKst())
       .reversed
       .where((FixtureDay d) => d.exercises.isNotEmpty)
       .take(3)
@@ -185,7 +185,7 @@ void main() {
       expect(history.length, 3);
       // 날짜 라벨은 오늘을 따라 움직인다. 예전에는 `'7/12 (오늘)'` 로 박혀 있어
       // 데모를 언제 열든 7월 12일이 "오늘"이었다(#757).
-      final DateTime now = DateTime.now();
+      final DateTime now = nowKst();
       expect(history.first.dateLabel, '${now.month}/${now.day} (오늘)');
       expect(history.first.completionRate, 100);
       expect(history.first.exercises, contains('레그프레스 3세트 ✓'));

@@ -340,7 +340,16 @@ class _SuggestionCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Row(
+          // 세 동작의 라벨은 로케일을 크게 탄다 — 한국어 `추천 안 함`·`회원에게
+          // 추천` 은 한 줄에 들어가지만 영어 `Don't recommend`·`Recommend to
+          // client` 는 배율 1.3 에서 카드를 크게 넘겼다(#849). `Row` + `Spacer`
+          // 대신 `OverflowBar` 를 쓰면 넓을 때는 지금과 같은 좌우 배치를 그대로
+          // 두고, 좁아지면 세로로 흘려 준다.
+          OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.end,
+            spacing: AppSpacing.sm,
+            overflowSpacing: AppSpacing.xs,
             children: <Widget>[
               TextButton(
                 key: ValueKey<String>(
@@ -355,29 +364,35 @@ class _SuggestionCard extends StatelessWidget {
                 ),
                 child: Text(l.suggestionDismiss),
               ),
-              const Spacer(),
-              if (busy) ...<Widget>[
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              OutlinedButton(
-                key: ValueKey<String>(
-                  'routine-suggestion-edit-${suggestion.id}',
-                ),
-                onPressed: busy ? null : onEdit,
-                child: Text(l.actionEdit),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              FilledButton(
-                key: ValueKey<String>(
-                  'routine-suggestion-approve-${suggestion.id}',
-                ),
-                onPressed: busy ? null : onApprove,
-                child: Text(l.suggestionApprove),
+              // 진행 표시와 두 동작은 한 덩어리다 — 흘러넘쳐도 서로 떨어지지
+              // 않아야 "무엇이 도는 중인지" 가 읽힌다.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (busy) ...<Widget>[
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  OutlinedButton(
+                    key: ValueKey<String>(
+                      'routine-suggestion-edit-${suggestion.id}',
+                    ),
+                    onPressed: busy ? null : onEdit,
+                    child: Text(l.actionEdit),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton(
+                    key: ValueKey<String>(
+                      'routine-suggestion-approve-${suggestion.id}',
+                    ),
+                    onPressed: busy ? null : onApprove,
+                    child: Text(l.suggestionApprove),
+                  ),
+                ],
               ),
             ],
           ),

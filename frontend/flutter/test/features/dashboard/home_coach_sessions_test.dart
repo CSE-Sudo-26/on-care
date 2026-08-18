@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
@@ -46,7 +47,7 @@ CoachSession _session({
   DateTime? date,
 }) => CoachSession(
   id: 'sched-$time',
-  date: date ?? DateTime.now(),
+  date: date ?? nowKst(),
   time: time,
   type: type,
   durationMinutes: 50,
@@ -122,7 +123,7 @@ void main() {
     await _pump(
       tester,
       sessions: <CoachSession>[
-        _session(date: DateTime.now().add(const Duration(days: 3))),
+        _session(date: nowKst().add(const Duration(days: 3))),
       ],
     );
 

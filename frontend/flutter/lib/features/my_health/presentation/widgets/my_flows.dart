@@ -26,6 +26,7 @@ void _showTopNotification(
   ScaffoldMessengerState messenger,
   String message, {
   required bool isError,
+  required String closeLabel,
 }) {
   messenger.hideCurrentMaterialBanner();
   late final ScaffoldFeatureController<
@@ -44,7 +45,7 @@ void _showTopNotification(
       content: Text(message),
       actions: <Widget>[
         IconButton(
-          tooltip: '닫기',
+          tooltip: closeLabel,
           onPressed: () => controller.close(),
           icon: const Icon(Icons.close),
         ),
@@ -235,20 +236,20 @@ class _LoadFailed extends StatelessWidget {
             color: FigmaColors.textMuted,
           ),
           const SizedBox(height: 12),
-          const Text(
-            '설정을 불러오지 못했어요',
+          Text(
+            l.mySettingsLoadFailed,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FigmaColors.ink,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '지금 저장하면 기존 설정이 지워질 수 있어 편집을 잠갔어요.',
+          Text(
+            l.mySettingsLoadFailedBody,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13.5,
               height: 1.4,
               color: AppColors.mutedForeground,
@@ -524,11 +525,13 @@ class HealthGoalsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<UserProfile> profile = ref.watch(profileProvider);
     return profile.when(
       data: (UserProfile p) => _GoalsForm(initial: p),
-      loading: () => _shell(context, '건강 목표', const <Widget>[_SheetLoader()]),
-      error: (_, _) => _shell(context, '건강 목표', <Widget>[
+      loading: () =>
+          _shell(context, l.myHealthGoalsTitle, const <Widget>[_SheetLoader()]),
+      error: (_, _) => _shell(context, l.myHealthGoalsTitle, <Widget>[
         _LoadFailed(onRetry: () => ref.invalidate(profileProvider)),
       ]),
     );
@@ -631,81 +634,92 @@ class _GoalsFormState extends ConsumerState<_GoalsForm> {
       navigator.pop();
       await Future<void>.delayed(const Duration(milliseconds: 400));
       if (!messenger.mounted) return;
-      _showTopNotification(messenger, '건강 목표가 저장되었어요', isError: false);
+      _showTopNotification(
+        messenger,
+        l.myGoalsSaved,
+        isError: false,
+        closeLabel: l.actionClose,
+      );
     } catch (_) {
       if (mounted) setState(() => _saving = false);
-      _showTopNotification(messenger, l.mySaveFailed, isError: true);
+      _showTopNotification(
+        messenger,
+        l.mySaveFailed,
+        isError: true,
+        closeLabel: l.actionClose,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return _shell(context, '건강 목표', <Widget>[
-      const _GoalsSectionLabel('식단 일일 목표'),
+    final AppLocalizations l = AppLocalizations.of(context);
+    return _shell(context, l.myHealthGoalsTitle, <Widget>[
+      _GoalsSectionLabel(l.myGoalsDietSection),
       const SizedBox(height: 8),
       _card(<Widget>[
         _SheetField(
-          label: '일일 칼로리 제한 (kcal)',
+          label: l.myGoalCalories,
           controller: _kcal,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '일일 나트륨 제한 (mg)',
+          label: l.myGoalSodium,
           controller: _sodium,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '일일 당류 제한 (g)',
+          label: l.myGoalSugar,
           controller: _sugar,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '일일 탄수화물 제한 (g)',
+          label: l.myGoalCarbs,
           controller: _carbs,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '일일 단백질 제한 (g)',
+          label: l.myGoalProtein,
           controller: _protein,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '일일 지방 제한 (g)',
+          label: l.myGoalFat,
           controller: _fat,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
       ]),
       const SizedBox(height: 20),
-      const _GoalsSectionLabel('주간 운동 목표'),
+      _GoalsSectionLabel(l.myGoalsExerciseSection),
       const SizedBox(height: 8),
       _card(<Widget>[
         _SheetField(
-          label: '주간 운동 횟수 목표 (회)',
+          label: l.myGoalWorkoutCount,
           controller: _workouts,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '주간 운동 시간 목표 (분)',
+          label: l.myGoalWorkoutMinutes,
           controller: _minutes,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
         ),
         const SizedBox(height: 12),
         _SheetField(
-          label: '주간 소모 칼로리 목표 (kcal)',
+          label: l.myGoalWorkoutCalories,
           controller: _burn,
           keyboardType: TextInputType.number,
           inputFormatters: _digitsOnly,
@@ -797,6 +811,7 @@ class _NotificationSettingsPageState
     _requestSeq[key] = seq;
     setState(() => _local[key] = value);
     final messenger = ScaffoldMessenger.of(context);
+    final AppLocalizations l = AppLocalizations.of(context);
     try {
       await ref
           .read(notificationSettingsRepositoryProvider)
@@ -809,7 +824,9 @@ class _NotificationSettingsPageState
       // 되돌릴 곳은 **직전 값**이지 최초 조회값이 아니다. 한 번 저장에 성공한 뒤
       // 다음 저장이 실패하면 최초값으로 돌아가 서버와 어긋난다(리뷰).
       setState(() => _local[key] = previous);
-      messenger.showSnackBar(const SnackBar(content: Text('알림 설정을 저장하지 못했어요')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l.myNotificationSaveFailed)),
+      );
     }
   }
 

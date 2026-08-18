@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/presentation/controllers/account_controller.dart';
 import 'package:oncare/features/diet/domain/entities/diet_day.dart';
@@ -220,7 +220,7 @@ void main() {
         matching: find.text(m.formatMediumDate(day)),
       );
 
-      final DateTime now = DateTime.now();
+      final DateTime now = nowKst();
       final DateTime today = DateTime(now.year, now.month, now.day);
       expect(dateInHeader(today), findsOneWidget);
 
@@ -275,7 +275,7 @@ void main() {
 
         final Element context = tester.element(find.byType(DietRecordPage));
         final AppLocalizations l = AppLocalizations.of(context);
-        final DateTime now = DateTime.now();
+        final DateTime now = nowKst();
         final String todayLabel = MaterialLocalizations.of(
           context,
         ).formatMediumDate(DateTime(now.year, now.month, now.day));
@@ -460,7 +460,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('diet-period-card')), findsOneWidget);
 
-      final DateTime yesterday = DateTime.now().subtract(
+      final DateTime yesterday = nowKst().subtract(
         const Duration(days: 1),
       );
       await tester.tap(find.text('${yesterday.day}').first);
@@ -498,7 +498,7 @@ void main() {
       await tester.tap(find.byKey(const Key('diet-period-tab-week')));
       await tester.pumpAndSettle();
 
-      final DateTime yesterday = DateTime.now().subtract(
+      final DateTime yesterday = nowKst().subtract(
         const Duration(days: 1),
       );
       await tester.tap(find.text('${yesterday.day}').first);
@@ -549,7 +549,7 @@ class _DayTotalsOnlyRepository extends FakeDietRepository {
 class _EmptyYesterdayRepository extends FakeDietRepository {
   @override
   Future<DietDay> fetchByDate(DateTime date) async {
-    final DateTime y = DateTime.now().subtract(const Duration(days: 1));
+    final DateTime y = nowKst().subtract(const Duration(days: 1));
     if (date.year == y.year && date.month == y.month && date.day == y.day) {
       return const DietDay(
         entries: <DietEntry>[],
@@ -568,7 +568,7 @@ class _EmptyYesterdayRepository extends FakeDietRepository {
 class _FailPastRepository extends FakeDietRepository {
   @override
   Future<DietDay> fetchByDate(DateTime date) async {
-    if (date.day != DateTime.now().day) throw StateError('boom');
+    if (date.day != nowKst().day) throw StateError('boom');
     return super.fetchByDate(date);
   }
 }

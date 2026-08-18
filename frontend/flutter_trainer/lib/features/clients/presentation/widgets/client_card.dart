@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-import 'package:oncare_trainer/shared/models/trainer_client.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/client_alerts.dart';
+import 'package:oncare_trainer/shared/models/trainer_client.dart';
 import 'package:oncare_trainer/shared/widgets/client_avatar.dart';
 import 'package:oncare_trainer/shared/widgets/client_identity.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A client row on the 고객 관리 list: avatar + active dot, identity,
 /// goal, and a quick-metric footer (칼로리 / 나트륨 / 마지막 루틴).

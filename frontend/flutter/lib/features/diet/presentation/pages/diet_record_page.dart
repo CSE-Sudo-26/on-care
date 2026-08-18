@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -142,7 +142,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   DietPeriodTab _period = DietPeriodTab.day;
 
   DateTime get _today {
-    final DateTime n = DateTime.now();
+    final DateTime n = nowKst();
     return DateTime(n.year, n.month, n.day);
   }
 

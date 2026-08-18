@@ -5,6 +5,7 @@ import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 모든 메인 탭 헤더에서 동일한 담당 트레이너 채팅으로 진입하는 버튼이다.
 ///
@@ -16,6 +17,7 @@ class TrainerChatHeaderButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final AsyncValue<MemberCoach?> coachAsync = ref.watch(memberCoachProvider);
     final MemberCoach? coach = coachAsync.valueOrNull;
     final int unread = ref.watch(coachUnreadProvider).valueOrNull ?? 0;
@@ -24,13 +26,13 @@ class TrainerChatHeaderButton extends ConsumerWidget {
     // 아직 받아 오는 중인지, 받아 봤더니 없는지는 다른 사정이다. 안내 문구도 달라야
     // 한다 — 로딩 중에 "트레이너가 없다" 고 말하면 거짓이 된다.
     final String unavailableReason = coachAsync.isLoading
-        ? '담당 트레이너를 불러오는 중이에요'
-        : '담당 트레이너가 아직 없어요. 운동 탭에서 헬스장·트레이너를 연결해 보세요';
+        ? l.coachTrainerLoading
+        : l.coachTrainerNone;
 
     return Semantics(
       button: true,
       enabled: ready,
-      label: '트레이너와 채팅',
+      label: l.coachChatWithTrainer,
       child: FigmaCircleButton(
         key: const Key('trainerChatHeaderButton'),
         icon: Icons.chat_bubble_outline_rounded,

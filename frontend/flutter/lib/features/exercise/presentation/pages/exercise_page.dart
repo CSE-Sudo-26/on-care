@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // NumberFormat 만 가져온다 — intl 의 TextDirection 이 dart:ui 것과 충돌한다.
 import 'package:intl/intl.dart' show NumberFormat;
-
 import 'package:oncare/app/router/routes.dart';
 import 'package:oncare/core/config/app_config.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -192,7 +192,7 @@ class _RecordTabState extends ConsumerState<_RecordTab> {
   int _weekShift = 0;
 
   DateTime get _today {
-    final DateTime n = DateTime.now();
+    final DateTime n = nowKst();
     return DateTime(n.year, n.month, n.day);
   }
 
@@ -515,7 +515,7 @@ class _ExerciseSelectedDay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final DateTime weekStart = mondayOfWeek(date);
-    final DateTime thisMonday = mondayOfWeek(DateTime.now());
+    final DateTime thisMonday = mondayOfWeek(nowKst());
     if (weekStart == thisMonday) {
       return _ExerciseDayDetail(week: thisWeek, date: date);
     }
@@ -587,7 +587,7 @@ class _ExerciseDayDetail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            '${date.month}월 ${date.day}일 ${l.pageExerciseTitle}',
+            l.exDatedTitle(date.month, date.day, l.pageExerciseTitle),
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -905,7 +905,7 @@ class _ActivityStatusState extends State<_ActivityStatus> {
   /// 오늘 요일 인덱스(0=월 … 6=일)를 이번 주 범위로 클램프. 홈 주간추이와 같은
   /// 실제 오늘을 가리키도록 해, '오늘=일 고정' 문제를 없앤다.
   int _weekTodayIndex(int n) =>
-      n <= 0 ? -1 : (DateTime.now().weekday - 1).clamp(0, n - 1);
+      n <= 0 ? -1 : (nowKst().weekday - 1).clamp(0, n - 1);
 
   bool get _hasBreakdown {
     final ExerciseWeek w = widget.week;
@@ -1766,7 +1766,7 @@ class _PtLogCard extends ConsumerWidget {
       return const _DemoPtLogCard();
     }
 
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
     final List<CoachSession> completedToday =
         (ref.watch(coachSessionsProvider).valueOrNull ?? const <CoachSession>[])
             .where((CoachSession session) {
@@ -1939,6 +1939,11 @@ class _CompletedPtSessionCard extends StatelessWidget {
   }
 }
 
+/// 목업 모드에서만 그리는 "오늘 완료한 PT" 카드.
+///
+/// 카드의 **제목·라벨**은 앱이 쓴 문구라 로케일을 따르고, 세션 내용(트레이너
+/// 이름·운동 목록·피드백)은 서버가 줬을 값을 흉내 낸 **가상의 데이터**라 그대로
+/// 둔다 — 실모드에서는 이 자리에 실제 회원의 기록이 들어온다(#847).
 class _DemoPtLogCard extends StatelessWidget {
   const _DemoPtLogCard();
 
@@ -1951,6 +1956,7 @@ class _DemoPtLogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1961,21 +1967,21 @@ class _DemoPtLogCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(
+              const Icon(
                 Icons.fitness_center_rounded,
                 size: 16,
                 color: FigmaColors.primary,
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
               Flexible(
                 child: Text(
-                  '오늘 완료한 PT',
+                  l.exPtLogTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
@@ -2067,26 +2073,38 @@ class _DemoPtLogCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          '김트레이너',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: FigmaColors.ink,
+                    // 이름·라벨 묶음이 고정 폭이라 문구가 길어지면 줄이 그대로
+                    // 넘쳤다. 한국어에서는 짧아 드러나지 않았고, 라벨을 번역
+                    // 대상으로 옮기면서 영어(`Today's feedback`)에서 나타났다
+                    // (#847, #766 과 같은 계열).
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          // 가상의 트레이너 이름 — 실모드에서는 담당 트레이너의
+                          // 실제 이름이 들어온다.
+                          const Text(
+                            '김트레이너',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: FigmaColors.ink,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '오늘의 피드백',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.mutedForeground,
+                          Text(
+                            l.exPtFeedbackTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.mutedForeground,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

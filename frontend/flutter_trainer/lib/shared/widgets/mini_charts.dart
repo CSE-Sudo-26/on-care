@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 
 /// A compact labelled bar series (주간 이행률, 세션 수 …).
 ///

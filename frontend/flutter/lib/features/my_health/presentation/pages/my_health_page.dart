@@ -473,38 +473,39 @@ class _PointsInfoButton extends StatelessWidget {
   const _PointsInfoButton();
 
   void _show(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '포인트 적립 안내',
-          style: TextStyle(
+        title: Text(
+          l.myPointsGuideTitle,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
             color: FigmaColors.ink,
           ),
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _PointRule(
               icon: Icons.restaurant_rounded,
-              text: '식단 추가',
+              text: l.myPointsDietAdd,
               points: '+50P',
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             _PointRule(
               icon: Icons.auto_awesome,
-              text: 'AI 추천 운동 완료',
+              text: l.myPointsAiExercise,
               points: '+50P',
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             _PointRule(
               icon: Icons.fitness_center_rounded,
-              text: '운동 직접 추가',
+              text: l.myPointsExerciseAdd,
               points: '+20P',
             ),
           ],
@@ -513,7 +514,7 @@ class _PointsInfoButton extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             style: TextButton.styleFrom(foregroundColor: FigmaColors.primary),
-            child: const Text('확인'),
+            child: Text(l.actionConfirm),
           ),
         ],
       ),
@@ -611,7 +612,7 @@ class _Settings extends StatelessWidget {
       case _MySetting.profile:
         return l.myProfileTitle;
       case _MySetting.goals:
-        return '건강 목표';
+        return l.myHealthGoalsTitle;
       case _MySetting.notif:
         return l.myNotifTitle;
       case _MySetting.support:
