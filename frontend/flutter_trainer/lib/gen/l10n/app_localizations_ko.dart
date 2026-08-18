@@ -1837,6 +1837,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiCompareCandidates => '맞춤 루틴 후보를 비교해 보세요';
 
   @override
+  String get aiConditionsAutoHint => '비워두면 최근 기록이나 목표를 기준으로 자동 설정돼요.';
+
+  @override
+  String get aiConditionsEditToggle => '추천 조건 수정';
+
+  @override
+  String get aiGenerateGoalBased => '목표 기반 루틴 생성';
+
+  @override
+  String get aiStatusTemplateTitle => '목표 기반 기본 추천';
+
+  @override
+  String get aiStatusTemplateBody => '아직 개인화하기엔 운동 기록이 부족해 목표를 기준으로 추천했어요.';
+
+  @override
+  String get aiStatusLearningTitle => '개인화 학습 중';
+
+  @override
+  String get aiStatusLearningBody => '최근 운동을 참고했지만 아직 반복 패턴이라 부르기엔 일러요.';
+
+  @override
+  String get aiStatusPersonalizedTitle => '최근 패턴 분석 완료';
+
+  @override
+  String aiStatusPersonalizedBody(int count, int days) {
+    return '최근 $days일 · $count회 기록을 기준으로 분석했어요.';
+  }
+
+  @override
+  String get aiFrequentExercisesLabel => '자주 한 운동';
+
+  @override
   String get goalWeightLoss => '체중 감량';
 
   @override

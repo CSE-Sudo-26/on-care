@@ -23,6 +23,19 @@ _STRETCH2 = ("목·어깨 스트레칭", "스트레칭")
 
 _B_LABEL = {"low": "낮음", "moderate": "보통", "high": "높음"}
 
+#: 반복 운동 이름으로 타입을 대략 짐작한다. 완료 기록엔 이름만 있고 타입이
+#: 없어서, 화면에 보여줄 타입 하나는 정해야 한다(#776).
+_STRETCH_KEYWORDS = ("스트레칭", "요가", "폼롤러")
+_CARDIO_KEYWORDS = ("걷기", "러닝", "자전거", "유산소", "인터벌", "달리기")
+
+
+def _guess_type(name: str) -> str:
+    if any(keyword in name for keyword in _STRETCH_KEYWORDS):
+        return "스트레칭"
+    if any(keyword in name for keyword in _CARDIO_KEYWORDS):
+        return "유산소"
+    return "근력"
+
 
 def _compose(total: int, parts: list[tuple[str, str, int]]) -> list[dict]:
     """[(name, type, weight)] 를 total 분으로 가중 분배(각 ≥1, 반올림 오차는 마지막에)."""
@@ -53,8 +66,23 @@ def rule_based_plans(
     available_minutes: int,
     intensity_preference: str,
     trainer_note: str,
+    frequent_exercises: list[str] | tuple[str, ...] = (),
 ) -> tuple[dict, dict]:
-    """결정적 규칙형 A/B. 회원 수치를 근거 문구에 인용한다."""
+    """결정적 규칙형 A/B. 회원 수치를 근거 문구에 인용한다.
+
+    `frequent_exercises` 가 있으면(#776, 개인화 가능한 회원) 고정 라이브러리
+    대신 그 운동들로 A/B 를 구성한다 — 데이터가 없는 회원과 같은 함수를 쓰되
+    인자 하나로 갈리므로, 개인화 여부에 따라 별도 함수를 유지·동기화할 필요가
+    없다.
+    """
+    if frequent_exercises:
+        return _pattern_based_plans(
+            frequent_exercises=list(frequent_exercises),
+            available_minutes=available_minutes,
+            intensity_preference=intensity_preference,
+            trainer_note=trainer_note,
+        )
+
     over = sodium_today_mg > SODIUM_TARGET_MG
     low_adherence = avg_completion_rate < 50
     goal_label = goal.strip() or "설정된 목표"
@@ -104,6 +132,65 @@ def rule_based_plans(
             f"{'상향 여력이 있어' if avg_completion_rate >= 60 else '점진적으로'} "
             f"근력·유산소를 더해 운동량을 높임."
             + _note_suffix(trainer_note)
+        ),
+    }
+    return plan_a, plan_b
+
+
+def _pattern_based_plans(
+    *,
+    frequent_exercises: list[str],
+    available_minutes: int,
+    intensity_preference: str,
+    trainer_note: str,
+) -> tuple[dict, dict]:
+    """반복 패턴이 확인된 회원용 A/B(#776).
+
+    A안 — 기존 패턴 유지형: 반복 확인된 운동을 그대로 구성한다.
+    B안 — 점진적 강화형: 같은 핵심 운동에 하나만 더해 운동량을 소폭 늘린다.
+    두 안 모두 완전히 새로운 루틴을 만들지 않는다는 이슈의 요구를 반영한다.
+    """
+    core = frequent_exercises[:3]
+    core_parts = [(name, _guess_type(name), 2) for name in core]
+    core_label = ", ".join(core)
+    intensity_label = _B_LABEL.get(intensity_preference, "보통")
+
+    # A안은 요청 시간의 ~75%만 쓴다 — 기존 패턴 그대로이되, "유지"와 "확대"가
+    # 시간상으로도 구분돼야 한다(전체 A/B 계약이 기대하는 a < b, #776).
+    # B안은 요청 시간 전부를 쓴다.
+    total_a = min(available_minutes, max(len(core_parts), round(available_minutes * 0.75)))
+    plan_a = {
+        "key": "A",
+        "label": "기존 패턴 유지형",
+        "total_minutes": total_a,
+        "intensity": intensity_label,
+        "exercises": _compose(total_a, core_parts),
+        "reason": "최근 자주 수행한 운동을 그대로 유지",
+        "rationale": (
+            f"최근 기록에서 반복 확인된 운동({core_label})을 유지하고 "
+            "부족한 부분만 보완." + _note_suffix(trainer_note)
+        ),
+    }
+
+    # 이미 핵심으로 쓴 운동은 제외하고 라이브러리에서 하나만 더한다 — 셋 다
+    # 겹치는 것은 사실상 없지만(반복 기록은 자유 텍스트, 라이브러리는 고정
+    # 한국어 이름), 겹쳐도 첫 후보로 안전하게 넘어가게 기본값을 둔다.
+    extra_pool = (_STRENGTH, _CARDIO_HARD, _STRENGTH2)
+    extra_name, extra_type = next(
+        ((name, type_) for name, type_ in extra_pool if name not in core),
+        extra_pool[0],
+    )
+    total_b = available_minutes
+    plan_b = {
+        "key": "B",
+        "label": "점진적 강화형",
+        "total_minutes": total_b,
+        "intensity": _B_LABEL.get(intensity_preference, "높음"),
+        "exercises": _compose(total_b, [*core_parts, (extra_name, extra_type, 1)]),
+        "reason": "기존 핵심 운동을 유지하며 운동량을 소폭 확대",
+        "rationale": (
+            f"기존 핵심 운동({core_label})은 유지하고 '{extra_name}'을(를) 더해 "
+            "운동량을 점진적으로 늘림." + _note_suffix(trainer_note)
         ),
     }
     return plan_a, plan_b

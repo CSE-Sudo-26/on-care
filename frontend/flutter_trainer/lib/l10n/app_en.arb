@@ -1067,6 +1067,26 @@
   "aiNotePlaceholderHint": "The grey suggestion is only a prompt — only what you type is saved and sent.",
   "aiGenerateConditions": "Conditions",
   "aiCompareCandidates": "Compare the candidates",
+  "aiConditionsAutoHint": "Leave blank to auto-fill from recent history or goals.",
+  "aiConditionsEditToggle": "Edit recommended conditions",
+  "aiGenerateGoalBased": "Generate goal-based routine",
+  "aiStatusTemplateTitle": "Goal-based starter routine",
+  "aiStatusTemplateBody": "Not enough workout history yet to personalize — this starts from a goal-based default.",
+  "aiStatusLearningTitle": "Personalizing (learning)",
+  "aiStatusLearningBody": "Recent workouts were used, but there isn't a clear repeated pattern yet.",
+  "aiStatusPersonalizedTitle": "Personalized from recent patterns",
+  "aiStatusPersonalizedBody": "Based on {count} sessions over the last {days} days.",
+  "@aiStatusPersonalizedBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "aiFrequentExercisesLabel": "Frequently done",
   "goalWeightLoss": "Weight loss",
   "goalStrength": "Strength",
   "goalFitness": "Fitness",

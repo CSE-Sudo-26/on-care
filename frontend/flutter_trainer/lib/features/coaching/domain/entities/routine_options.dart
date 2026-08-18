@@ -14,6 +14,12 @@ class MemberAnalysis {
     required this.latestRoutine,
     required this.note,
     this.recentMessages = const <String>[],
+    this.recommendationStatus = RecommendationStatus.template,
+    this.historySessionCount = 0,
+    this.analysisPeriodDays = 0,
+    this.frequentExercises = const <String>[],
+    this.suggestedAvailableMinutes,
+    this.suggestedIntensity,
   });
 
   final String goal;
@@ -30,6 +36,46 @@ class MemberAnalysis {
   /// a routine that silently drops a knee-pain complaint is worse than one
   /// that never saw it. Empty when the thread has no recent messages.
   final List<String> recentMessages;
+
+  /// How much of this generation is grounded in the member's own history
+  /// (#776) — the server decides this with an explicit rule, not the UI.
+  final RecommendationStatus recommendationStatus;
+
+  /// Completed sessions found within [analysisPeriodDays].
+  final int historySessionCount;
+
+  /// The lookback window (days) [historySessionCount] and
+  /// [frequentExercises] were computed over.
+  final int analysisPeriodDays;
+
+  /// Exercise names repeated across recent sessions, most frequent first.
+  /// Empty when there isn't enough history to call anything "frequent".
+  final List<String> frequentExercises;
+
+  /// Conditions the server derived from recent history — shown pre-filled
+  /// in step 1 so the trainer edits rather than starts from scratch. Null
+  /// when history is too thin to suggest anything.
+  final int? suggestedAvailableMinutes;
+  final String? suggestedIntensity;
+}
+
+/// How much of a [MemberAnalysis] reflects the member's own recorded
+/// history, from a fresh member (no signal) to a settled pattern (#776).
+enum RecommendationStatus {
+  /// Not enough history to analyze — falls back to a goal-based default.
+  template,
+
+  /// Some recent activity, but not yet a pattern worth trusting fully.
+  learning,
+
+  /// A repeated pattern was found across several weeks of history.
+  personalized;
+
+  static RecommendationStatus fromWire(String value) => switch (value) {
+    'learning' => RecommendationStatus.learning,
+    'personalized' => RecommendationStatus.personalized,
+    _ => RecommendationStatus.template,
+  };
 }
 
 /// One exercise line in a plan.
