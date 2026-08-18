@@ -8,6 +8,7 @@ import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
 import 'package:oncare_trainer/features/clients/domain/repositories/client_data_refresher.dart';
+import 'package:oncare_trainer/features/clients/presentation/widgets/client_follow_up_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/client_memo_dialog.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/diet_view.dart';
 import 'package:oncare_trainer/features/clients/presentation/widgets/member_health_profile_dialog.dart';
@@ -351,9 +352,10 @@ class _Header extends ConsumerWidget {
             alignment: WrapAlignment.end,
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표 · 메모.
-            // 넷이 같은 무게로 보이면 어느 것이 이 화면의 주된 동작인지 읽히지
-            // 않는다.
+            // 파랑·하양이 번갈아 선다 — 메시지 · 프로그램 · 신체·목표.
+            // 같은 무게로만 서면 어느 것이 이 화면의 주된 동작인지 읽히지 않는다.
+            // 끝의 후속 관리 · 메모는 둘 다 내가 남기는 기록이라 한 쌍으로 묶어
+            // 하양을 잇는다.
             children: <Widget>[
               // 이 회원을 보다가 바로 이어지는 두 자리. 예전에는 식단·운동을
               // 다 읽고도 메시지 탭·프로그램 탭으로 건너가 같은 사람을 목록에서
@@ -379,6 +381,19 @@ class _Header extends ConsumerWidget {
                   context,
                   memberId: client.id,
                   repository: ref.read(clientRepositoryProvider),
+                ),
+              ),
+              // 메모 바로 앞이다 — 끝의 두 자리는 둘 다 내가 이 고객에 대해 남기는
+              // 기록이고, 다른 점은 "언제까지 무엇을 할 것인가"가 붙느냐뿐이다
+              // (#869). 메모는 줄의 오른쪽 끝을 계속 지킨다(#729).
+              ActionButton(
+                key: const ValueKey<String>('client-detail-follow-up'),
+                label: l.followUp,
+                icon: Icons.event_available_outlined,
+                onPressed: () => showClientFollowUpDialog(
+                  context,
+                  clientId: client.id,
+                  clientName: client.name,
                 ),
               ),
               ActionButton(
