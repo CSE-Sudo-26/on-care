@@ -94,6 +94,17 @@ abstract interface class ScheduleRepository {
   /// Marks an 예정 session 완료 with the trainer's [note].
   Future<void> completeSession(String id, {String note});
 
+  /// 예정 세션을 `취소` 로 남긴다. **삭제와 다른 동작이다** — 삭제는 잘못 만든
+  /// 일정을 없애고, 이쪽은 실제로 있었던 약속이 진행되지 않았다는 기록을
+  /// 남긴다(#871).
+  ///
+  /// [source] 는 취소 주체(`CancellationSource`)다. 트레이너 사정의 취소를
+  /// 회원의 미이행으로 읽지 않으려면 주체가 남아야 해서 필수로 받는다.
+  Future<void> cancelSession(String id, {required String source, String reason});
+
+  /// 예정 세션을 `노쇼` 로 남긴다 — 약속은 그대로였고 회원이 오지 않았다.
+  Future<void> markNoShow(String id);
+
   /// 완료한 세션의 프로그램을 그 회원에게 보낸다. (#822)
   ///
   /// [clientRequestId] 는 전송 시도의 멱등키다 — 실패해서 다시 눌러도 회원의
@@ -475,6 +486,32 @@ class DriftScheduleRepository implements ScheduleRepository {
             ),
           );
     });
+  }
+
+  /// 예정 → 취소. 데모에는 취소 시각·주체를 둘 칸(drift 컬럼)이 없어 **상태만**
+  /// 남긴다(#871). 데모가 보여 주려는 것은 "취소가 삭제와 다르다" 이고, 그 사실은
+  /// 행이 남아 `취소` 로 보이는 것으로 전달된다.
+  ///
+  /// 실서버 구현과 같은 상태 규칙을 지킨다 — 예정인 세션만 전이하고, 이미
+  /// 마무리된 세션은 조용히 아무것도 하지 않는다(화면은 그 동작을 내놓지 않는다).
+  @override
+  Future<void> cancelSession(
+    String id, {
+    required String source,
+    String reason = '',
+  }) => _finishSession(id, ScheduleStatus.cancelled);
+
+  /// 예정 → 노쇼. 데모 저장 범위는 [cancelSession] 과 같다.
+  @override
+  Future<void> markNoShow(String id) =>
+      _finishSession(id, ScheduleStatus.noShow);
+
+  Future<void> _finishSession(String id, String status) async {
+    final table = _db.trainerScheduleEntries;
+    await (_db.update(table)..where(
+          (t) => t.id.equals(id) & t.status.equals(ScheduleStatus.upcoming),
+        ))
+        .write(TrainerScheduleEntriesCompanion(status: Value(status)));
   }
 
   ScheduleSession _toEntity(TrainerScheduleRow row) {

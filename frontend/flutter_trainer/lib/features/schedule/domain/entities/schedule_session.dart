@@ -47,6 +47,10 @@ class ScheduleSession {
     required this.note,
     required this.program,
     this.programSent = false,
+    this.cancelledAt,
+    this.cancellationSource = '',
+    this.cancellationReason = '',
+    this.noShowAt,
   });
 
   /// Row id.
@@ -78,8 +82,22 @@ class ScheduleSession {
   /// Duration in minutes (0 for a gap).
   final int durationMinutes;
 
-  /// 완료 | 예정 | 공백.
+  /// 완료 | 예정 | 취소 | 노쇼 | 공백.
   final String status;
+
+  /// 취소·노쇼로 마무리된 세션의 기록(#871). 예정·완료는 전부 비어 있다.
+  ///
+  /// 데모(`USE_MOCK_API=true`)에는 이 값을 둘 칸이 없어 상태만 남는다 — 데모는
+  /// 상태 구분을 보여 주는 자리이고, 감사 기록은 실서버의 몫이다.
+  final DateTime? cancelledAt;
+
+  /// ''(해당 없음) | member | trainer | other.
+  final String cancellationSource;
+
+  /// 트레이너만 보는 짧은 사유. 회원에게는 나가지 않는다.
+  final String cancellationReason;
+
+  final DateTime? noShowAt;
 
   /// Trainer's note for the session (may be empty).
   final String note;
@@ -95,6 +113,15 @@ class ScheduleSession {
 
   /// Whether the session is still upcoming (예정).
   bool get isUpcoming => status == ScheduleStatus.upcoming;
+
+  /// 진행 전에 거두어진 약속.
+  bool get isCancelled => status == ScheduleStatus.cancelled;
+
+  /// 예약된 시간에 회원이 오지 않은 세션.
+  bool get isNoShow => status == ScheduleStatus.noShow;
+
+  /// 결말이 정해진 세션(완료·취소·노쇼) — 더 이상 상태가 바뀌지 않는다.
+  bool get isFinished => ScheduleStatus.finished.contains(status);
 
   /// Whether the card can expand. Every booked session opens: 완료 shows
   /// the finished program, 예정 shows the plan (or a no-plan hint), and

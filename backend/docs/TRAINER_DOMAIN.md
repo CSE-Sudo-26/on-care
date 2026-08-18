@@ -121,6 +121,8 @@
 | POST | `/trainer/clients/{member_id}/memos` | 메모 작성 (`insight_id?` 로 채팅 인사이트 중복 방지) |
 | PUT | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 본문 수정 |
 | DELETE | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 삭제 |
+| POST | `/trainer/schedule/{session_id}/cancel` | 일정 취소 기록(`source`=member\|trainer\|other, `reason?`) |
+| POST | `/trainer/schedule/{session_id}/no-show` | 노쇼 기록 |
 | GET | `/trainer/clients/{member_id}/follow-ups?include_completed=` | 고객 후속 관리 할 일(예정일 순, 기본 미완료) |
 | POST | `/trainer/clients/{member_id}/follow-ups` | 후속 관리 등록 (`client_request_id?` 로 재시도 멱등) |
 | GET | `/trainer/follow-ups?scope=due\|open` | 내 할 일 — `due` 는 오늘 예정 + 기한 지난 미완료 |
@@ -211,6 +213,26 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 `{key}#{index}` 로 나눠 저장하는데, `(trainer, member, client_request_id)` 유니크
 제약이 한 키로 여러 행을 허용하지 않기 때문이다. 재시도는 먼저 배정된 세션들을
 그대로 돌려준다 — 반쯤 겹친 배정이 남지 않는다.
+
+### 일정의 결말 — 완료·취소·노쇼 (#871)
+
+`삭제` 하나가 서로 다른 두 일을 처리하고 있었다 — 잘못 만든 데이터를 없애는 일과,
+실제로 있었던 약속이 진행되지 않았다는 사실. 뒤엣것까지 삭제로 처리하면 "왜 그 PT 가
+진행되지 않았나" 가 사라져, 나중에 회원의 낮은 완료율을 잘못 읽는다.
+
+- 상태값은 DB 계약값이라 한국어 표기를 유지한다: `예정|완료|취소|노쇼|공백`. 앱도 같은
+  문자열로 거르므로(`ScheduleStatus`) 표기 체계를 바꾸면 기존 행이 어느 질의에도
+  걸리지 않는다.
+- 전이는 `예정` 에서만 갈라진다. `완료·취소·노쇼` 는 종료 상태(`SCHEDULE_TERMINAL`)라
+  서로 뒤집히지 않고(409), 수정도 막힌다 — 이미 파생된 회원 운동 기록과 어긋난다.
+- 같은 전이의 반복은 200 이고 시각·주체는 처음 값을 지킨다(중복 클릭·재시도).
+- 취소는 `cancelled_at`·`cancellation_source`(member|trainer|other)·`cancellation_reason`
+  을, 노쇼는 `no_show_at` 을 남긴다. 사유는 트레이너 내부 기록이라 회원 알림에 싣지 않는다.
+- **회원의 예약 취소**는 트레이너 일정을 지우지 않고 `취소`(주체 member)로 남긴다. 좌석
+  복구·예약 삭제는 그대로다. 탈퇴 경로는 계정이 사라지므로 지금처럼 일정을 지운다.
+- 집계: 주간 리포트의 `sessions_booked` 는 `예정+완료` 만 센다. 진행되지 않은 약속을
+  분모에 넣으면 트레이너 사정의 취소가 회원의 낮은 이행률로 보인다. 취소·노쇼에 패널티를
+  주는 지표는 별도 정책이다.
 
 ### 고객 후속 관리 할 일 (#869)
 

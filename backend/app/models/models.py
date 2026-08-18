@@ -1094,7 +1094,17 @@ class TrainerSchedule(Base):
     """트레이너의 일일 타임라인 슬롯 — 프론트 TrainerScheduleEntries 대응.
 
     회원과 매칭된 슬롯은 member_id 를 갖고, 상담/신규/공백은 client_name(표시용)만
-    갖는다. status: 예정|완료|공백. program_json: [{name,sets,reps,weight}].
+    갖는다. status: 예정|완료|취소|노쇼|공백. program_json: [{name,sets,reps,weight}].
+
+    `취소`·`노쇼` 는 삭제와 다르다(#871). 삭제는 **잘못 만든 데이터를 없애는 일**
+    이고, 취소·노쇼는 실제로 있었던 약속이 진행되지 않았다는 **업무 기록**이다.
+    둘을 같은 동작으로 두면 "왜 그 PT 가 진행되지 않았나" 가 사라져, 나중에 회원의
+    낮은 완료율이 본인의 미이행 때문인지 트레이너 사정의 취소 때문인지 구분할 수
+    없다.
+
+    상태값은 **DB 에 저장되는 계약값**이라 한국어 그대로 둔다 — 앱과 서비스가 이
+    문자열로 거르므로(`ScheduleStatus`, `status == "예정"`) 표기 체계를 갈아 끼우면
+    기존 행이 어느 질의에도 걸리지 않는다. 새 상태도 같은 체계를 따른다.
     """
 
     __tablename__ = "trainer_schedule"
@@ -1113,7 +1123,22 @@ class TrainerSchedule(Base):
     )  # 표시용(상담/신규 포함)
     type: Mapped[str] = mapped_column(String(30), default="")  # 1:1 PT|상담|...
     duration_minutes: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[str] = mapped_column(String(10), default="예정")  # 예정|완료|공백
+    status: Mapped[str] = mapped_column(
+        String(10), default="예정"
+    )  # 예정|완료|취소|노쇼|공백
+    # 취소·노쇼는 "그때 무슨 일이 있었나" 를 남기는 기록이라 시각을 함께 둔다.
+    # 미완료 상태는 NULL 이라 상태와 시각이 어긋날 수 없다(#871).
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: 누가 취소했나 — ''(해당 없음)|member|trainer|other. 트레이너 사정의 취소를
+    #: 회원의 미이행으로 읽지 않으려면 주체가 남아 있어야 한다.
+    cancellation_source: Mapped[str] = mapped_column(String(16), default="")
+    #: 트레이너가 남기는 짧은 사유. 회원에게 보내는 문구가 아니라 내부 기록이다.
+    cancellation_reason: Mapped[str] = mapped_column(String(200), default="")
+    no_show_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     note: Mapped[str] = mapped_column(Text, default="")
     program_json: Mapped[str] = mapped_column(Text, default="[]")
     # 완료한 세션의 프로그램을 회원에게 보낸 시각. NULL 은 아직 보내지 않은
@@ -1134,6 +1159,13 @@ class TrainerSchedule(Base):
             "trainer_id",
             "client_request_id",
             name="uq_trainer_schedule_client_request",
+        ),
+        # 응답 스키마(`ScheduleSessionOut.cancellation_source`)가 네 값만 받는다.
+        # 다른 값이 한 행이라도 들어가면 그 트레이너의 **하루 전체**가 검증 실패로
+        # 500 이 된다.
+        CheckConstraint(
+            "cancellation_source IN ('', 'member', 'trainer', 'other')",
+            name="ck_trainer_schedule_cancellation_source",
         ),
     )
 

@@ -12,6 +12,26 @@
   "@scheduleStatusDone": {
     "description": "Display label for a completed session."
   },
+  "scheduleStatusCancelled": "Cancelled",
+  "scheduleStatusNoShow": "No-show",
+  "schedCancel": "Cancel session",
+  "schedNoShow": "Mark no-show",
+  "schedCancelTitle": "Cancel this PT?",
+  "schedCancelConfirm": "The {time} session with {name} will be recorded as cancelled. The entry stays.",
+  "@schedCancelConfirm": {"placeholders": {"time": {"type": "String"}, "name": {"type": "String"}}},
+  "schedCancelSource": "Cancelled by",
+  "schedCancelByMember": "Client",
+  "schedCancelByTrainer": "Trainer",
+  "schedCancelByOther": "Other",
+  "schedCancelReasonHint": "Reason (optional, only you see it)",
+  "schedCancelFailed": "Couldn't cancel the session. Please try again.",
+  "schedNoShowTitle": "Record as a no-show?",
+  "schedNoShowConfirm": "The {time} session with {name} will be recorded as a no-show.",
+  "@schedNoShowConfirm": {"placeholders": {"time": {"type": "String"}, "name": {"type": "String"}}},
+  "schedNoShowFailed": "Couldn't record the no-show. Please try again.",
+  "schedCancelledBy": "{source} · {date}",
+  "@schedCancelledBy": {"placeholders": {"source": {"type": "String"}, "date": {"type": "String"}}},
+  "schedDeleteMeansRemove": "Deleting erases the record. Use cancel or no-show for a PT that didn't happen.",
   "scheduleStatusGap": "Open",
   "@scheduleStatusGap": {
     "description": "Display label for an empty slot in the trainer's day."
