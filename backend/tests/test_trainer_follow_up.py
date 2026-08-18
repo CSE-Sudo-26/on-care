@@ -280,7 +280,9 @@ def test_another_trainer_cannot_read_or_complete_my_task(
         id=f"tc-{uuid4().hex[:12]}",
         trainer_id=other_id,
         member_id=MEMBER_ID,
-        active=True,
+        # 회원 하나에 활성 담당은 한 명뿐이다(`uq_trainer_client_active_member`).
+        # 담당 관계가 있으면 되는 검증이라 지난 담당으로 둔다.
+        active=False,
     )
     db_session.add(link)
     db_session.commit()
