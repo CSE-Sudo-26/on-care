@@ -38,6 +38,7 @@
 | `trainer_clients` | 트레이너↔회원 담당 링크(로스터의 정의) |
 | `trainer_routines` | 트레이너/AI가 회원에게 배정한 루틴 |
 | `trainer_client_memos` | 트레이너가 회원별로 남긴 메모(직접 작성 + 채팅 인사이트, `0036_trainer_memos`) |
+| `trainer_follow_up_tasks` | 트레이너가 고객별로 남긴 후속 관리 할 일(예정일·완료 상태, `0047_trainer_follow_up_task`) |
 | `trainer_program_drafts` | 트레이너가 저장해 둔 프로그램 초안(세션 배열, 회원과 묶이지 않음, `0038`+`0039`) |
 | `routine_history` | 회원 운동 완료 기록(회원 앱·PT 세션 공용 원본) |
 | `chat_messages` | 트레이너↔회원 1:1 채팅 |
@@ -120,6 +121,11 @@
 | POST | `/trainer/clients/{member_id}/memos` | 메모 작성 (`insight_id?` 로 채팅 인사이트 중복 방지) |
 | PUT | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 본문 수정 |
 | DELETE | `/trainer/clients/{member_id}/memos/{memo_id}` | 메모 삭제 |
+| GET | `/trainer/clients/{member_id}/follow-ups?include_completed=` | 고객 후속 관리 할 일(예정일 순, 기본 미완료) |
+| POST | `/trainer/clients/{member_id}/follow-ups` | 후속 관리 등록 (`client_request_id?` 로 재시도 멱등) |
+| GET | `/trainer/follow-ups?scope=due\|open` | 내 할 일 — `due` 는 오늘 예정 + 기한 지난 미완료 |
+| PUT | `/trainer/follow-ups/{task_id}` | 할 일 수정(내용·예정일) |
+| POST | `/trainer/follow-ups/{task_id}/complete` | 완료 처리(반복 요청 멱등) |
 | GET | `/trainer/programs` | 저장한 프로그램 초안 목록(요약, 최근 수정 먼저) |
 | POST | `/trainer/programs` | 프로그램 초안 저장 |
 | GET | `/trainer/programs/{draft_id}` | 초안 상세(편집기로 불러오기) |
@@ -205,6 +211,28 @@ O2O 코칭의 재등록 고리. 세션 수·완료 수는 `trainer_schedule`, �
 `{key}#{index}` 로 나눠 저장하는데, `(trainer, member, client_request_id)` 유니크
 제약이 한 키로 여러 행을 허용하지 않기 때문이다. 재시도는 먼저 배정된 세션들을
 그대로 돌려준다 — 반쯤 겹친 배정이 남지 않는다.
+
+### 고객 후속 관리 할 일 (#869)
+
+트레이너가 "며칠 뒤 다시 확인할 것"을 남겨 두는 최소 업무 큐다. 메모
+(`trainer_client_memos`)와 나누는 까닭은 답하는 질문이 다르기 때문이다 — 메모는
+"이 고객에 대해 무엇을 알아 두었나", 할 일은 "언제까지 무엇을 해야 하나"다.
+
+- **조회 범위를 서버가 정한다.** `scope=due` 는 오늘 예정과 **기한이 지난** 미완료를
+  함께 준다. 지난 항목을 빼면 하루만 지나도 목록에서 사라져, 놓치지 않으려고 만든
+  기능이 놓치는 경로가 된다. 오늘 기준은 `clock.today_iso()`(KST)다.
+- **등록·완료가 모두 멱등하다.** 등록은 `(trainer_id, client_request_id)` 유니크로,
+  완료는 이미 완료된 할 일에 200 을 돌려주고 `completed_at` 을 처음 값으로 지키는
+  방식으로. 중복 클릭에 409 를 주면 화면은 이미 사라진 항목에 대해 오류를 띄운다.
+- **소유권 경계가 두 겹이다.** 등록은 담당 관계(`_require_client`)를 요구하고, 등록
+  뒤의 조회·수정·완료는 `trainer_id` 만 본다 — 담당이 해제돼도 내가 남긴 업무는
+  내 것이라, 여기서 담당을 다시 요구하면 지울 수도 없는 항목이 목록에 남는다.
+- **`context_type` 은 route 힌트**다(`general|diet|exercise|message|program|schedule`).
+  새 deep-link 체계가 아니라 기존 화면 중 하나를 고르는 값이라 CHECK 제약으로 못
+  박고, 앱은 모르는 값을 고객 상세로 떨어뜨린다.
+
+자동 생성(나트륨 초과·unread 메시지 등)은 이 범위가 아니다. 다만 나중에 자동 업무
+큐로 늘릴 수 있도록 특정 기능에 종속된 컬럼은 두지 않았다.
 
 ### 로스터 집계 (`build_roster`)
 

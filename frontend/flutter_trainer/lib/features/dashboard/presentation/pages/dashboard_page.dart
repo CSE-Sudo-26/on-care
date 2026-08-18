@@ -12,6 +12,7 @@ import 'package:oncare_trainer/features/dashboard/domain/dashboard_summary.dart'
 import 'package:oncare_trainer/features/dashboard/presentation/controllers/dashboard_controller.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/ai_summary_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/attention_card.dart';
+import 'package:oncare_trainer/features/dashboard/presentation/widgets/follow_up_card.dart';
 import 'package:oncare_trainer/features/dashboard/presentation/widgets/today_timeline_card.dart';
 import 'package:oncare_trainer/features/search/presentation/widgets/client_search_bar.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
@@ -101,6 +102,11 @@ class DashboardPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  // 파생된 신호(`오늘 할 일`) 아래에 트레이너가 직접 남긴 업무
+                  // 큐를 둔다 — 위는 "무엇이 눈에 띄나", 아래는 "무엇을 하기로
+                  // 했나"다(#869).
+                  const FollowUpCard(),
+                  const SizedBox(height: AppSpacing.lg),
                   AiSummaryCard(
                     summary: coachingSummary,
                     onRetry: () =>
@@ -112,6 +118,8 @@ class DashboardPage extends ConsumerWidget {
                   AttentionCard(entries: summary.attention),
                   const SizedBox(height: AppSpacing.lg),
                   _TodayTasksCard(entries: summary.attention),
+                  const SizedBox(height: AppSpacing.lg),
+                  const FollowUpCard(),
                   const SizedBox(height: AppSpacing.lg),
                   AiSummaryCard(
                     summary: coachingSummary,

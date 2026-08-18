@@ -2255,6 +2255,78 @@ class AppLocalizationsEn extends AppLocalizations {
       'A deleted memo can\'t be restored.';
 
   @override
+  String get followUp => 'Follow-ups';
+
+  @override
+  String followUpTitle(String name) {
+    return 'Follow-ups on $name';
+  }
+
+  @override
+  String get followUpHint => 'Note what you want to check again';
+
+  @override
+  String get followUpAdd => 'Add follow-up';
+
+  @override
+  String get followUpDue => 'Check on';
+
+  @override
+  String followUpDueOn(String date) {
+    return 'Check on $date';
+  }
+
+  @override
+  String get followUpOverdue => 'Overdue';
+
+  @override
+  String get followUpContext => 'Opens';
+
+  @override
+  String get followUpContextGeneral => 'Client detail';
+
+  @override
+  String get followUpContextDiet => 'Diet';
+
+  @override
+  String get followUpContextExercise => 'Workout';
+
+  @override
+  String get followUpContextMessage => 'Messages';
+
+  @override
+  String get followUpContextProgram => 'Program';
+
+  @override
+  String get followUpContextSchedule => 'Schedule';
+
+  @override
+  String get followUpComplete => 'Done';
+
+  @override
+  String followUpCount(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get followUpEmpty => 'No follow-ups left.';
+
+  @override
+  String get followUpDashboardEmpty => 'Nothing to follow up on today.';
+
+  @override
+  String get followUpLoadFailed =>
+      'Couldn\'t load follow-ups. Please try again.';
+
+  @override
+  String get followUpSaveFailed =>
+      'Couldn\'t save the follow-up. Please try again.';
+
+  @override
+  String get followUpCompleteFailed =>
+      'Couldn\'t mark it done. Please try again.';
+
+  @override
   String get dashTaskReply => 'Reply';
 
   @override
