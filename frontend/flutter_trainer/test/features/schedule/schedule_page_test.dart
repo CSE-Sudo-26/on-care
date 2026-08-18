@@ -8,6 +8,7 @@ import 'package:oncare_trainer/app/router/routes.dart';
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
+import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/features/consultations/data/repositories/consultation_repository.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/features/schedule/data/repositories/schedule_repository.dart';
@@ -928,6 +929,58 @@ void main() {
       await settle(tester);
       expect(find.text('김민수'), findsOneWidget);
       expect(find.text('오늘'), findsNothing);
+    });
+
+    // 일↔주를 오가도 날짜 정보가 같은 자리에서 시작해야 한다(#859).
+    testWidgets('일 보기 날짜 헤더가 주 보기와 같은 왼쪽 자리에 놓인다', (tester) async {
+      final today = DateTime.now();
+      final anchor = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(const Duration(days: 3));
+      final end = anchor.add(const Duration(days: 6));
+      // 두 보기가 같은 창(window)을 가리키므로 라벨 문구도 같다.
+      final label =
+          '${anchor.month}월 ${anchor.day}일 – ${end.month}월 ${end.day}일';
+
+      await openSchedule(tester);
+      expect(find.text(label), findsOneWidget);
+      final dayLeft = tester.getTopLeft(find.text(label)).dx;
+
+      await goTo(tester, AppRoutes.scheduleView('week', date: ymd(today)));
+      expect(find.text(label), findsOneWidget);
+      final weekLeft = tester.getTopLeft(find.text(label)).dx;
+
+      expect(dayLeft, weekLeft);
+    });
+
+    testWidgets('일 보기 스트립은 화면 폭 전체로 퍼지지 않는다', (tester) async {
+      // 1440px 콘솔에서 요일 7칸이 균등 분산되면 칸 간격이 200px씩 벌어져
+      // 한 주가 한 덩어리로 읽히지 않는다.
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await openSchedule(tester);
+
+      final today = DateTime.now();
+      final anchor = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(const Duration(days: 3));
+      final first = find.byKey(ValueKey<String>('schedule-day-${ymd(anchor)}'));
+      final last = find.byKey(
+        ValueKey<String>(
+          'schedule-day-${ymd(anchor.add(const Duration(days: 6)))}',
+        ),
+      );
+
+      final spanned =
+          tester.getBottomRight(last).dx - tester.getTopLeft(first).dx;
+      expect(spanned, lessThanOrEqualTo(AppLayout.calendarStripMaxWidth));
     });
 
     testWidgets('the week strip fits a narrow column without overflowing', (
