@@ -33,9 +33,9 @@ jobs:
   e2e:
     name: Real-API E2E (member app + trainer web)
     runs-on: ubuntu-latest
-    # 스위트 세 개가 순서대로 돌고 각각 단계마다 앱을 새로 부팅한다. 기본 360분은
-    # 과하고, 30분이면 여유가 충분하면서 매달림은 확실히 끊는다.
-    timeout-minutes: 30
+    # 스위트마다 상한(E2E_SUITE_TIMEOUT)이 걸려 있으므로 잡 전체가 달아날 일은 없다.
+    # 3개 × 15분 + 준비 2분이 최악이고, 여기에 여유를 더해 잡는다.
+    timeout-minutes: 50
 
     services:
       db:
@@ -71,6 +71,10 @@ jobs:
       #
       # 격리를 풀 때는 여기서 이름만 지운다.
       E2E_QUARANTINE: "run_consultation_e2e.sh"
+      # 스위트 하나당 상한. 실패가 아니라 **매달림**을 끊는 장치다 — 격리한 스위트가
+      # 27분을 붙잡고 있다가 잡 타임아웃에 걸리면, 격리해 둔 의미가 없어진다.
+      # 정상 실행은 채팅 기준 90초 남짓이라 15분이면 충분히 여유롭다.
+      E2E_SUITE_TIMEOUT: 15m
 
     steps:
       - name: Checkout repository
@@ -158,17 +162,22 @@ jobs:
             echo "::group::$r${quarantined:+ (격리)}"
             # 하나가 실패해도 나머지를 마저 돌린다. 첫 실패에서 멈추면 한 번의 CI 로
             # 얻을 수 있는 정보가 스위트 하나로 줄어든다.
-            if bash "$r"; then
+            #
+            # `timeout` 으로 감싸는 이유: 스위트가 매달리면 뒤의 스위트가 아예 돌지
+            # 못한다. 실제로 상담이 27분을 붙잡아 예약이 한 번도 실행되지 않았다.
+            if timeout --signal=TERM --kill-after=30s "$E2E_SUITE_TIMEOUT" bash "$r"; then
               if [ "$quarantined" = true ]; then
                 quarantined_passed+=("$name")
               else
                 echo "✅ $r"
               fi
             else
+              rc=$?
+              [ "$rc" -ge 124 ] && echo "::warning::$name 이 $E2E_SUITE_TIMEOUT 안에 끝나지 않아 중단했습니다."
               if [ "$quarantined" = true ]; then
                 quarantined_failed+=("$name")
               else
-                echo "::error::$r 실패"
+                echo "::error::$r 실패 (exit $rc)"
                 failed+=("$r")
               fi
             fi
