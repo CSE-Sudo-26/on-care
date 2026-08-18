@@ -4010,6 +4010,132 @@ abstract class AppLocalizations {
   /// **'A deleted memo can\'t be restored.'**
   String get clientTrainerMemoDeleteBody;
 
+  /// No description provided for @followUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get followUp;
+
+  /// No description provided for @followUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups on {name}'**
+  String followUpTitle(String name);
+
+  /// No description provided for @followUpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note what you want to check again'**
+  String get followUpHint;
+
+  /// No description provided for @followUpAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add follow-up'**
+  String get followUpAdd;
+
+  /// No description provided for @followUpDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Check on'**
+  String get followUpDue;
+
+  /// No description provided for @followUpDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check on {date}'**
+  String followUpDueOn(String date);
+
+  /// No description provided for @followUpOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get followUpOverdue;
+
+  /// No description provided for @followUpContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens'**
+  String get followUpContext;
+
+  /// No description provided for @followUpContextGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Client detail'**
+  String get followUpContextGeneral;
+
+  /// No description provided for @followUpContextDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet'**
+  String get followUpContextDiet;
+
+  /// No description provided for @followUpContextExercise.
+  ///
+  /// In en, this message translates to:
+  /// **'Workout'**
+  String get followUpContextExercise;
+
+  /// No description provided for @followUpContextMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get followUpContextMessage;
+
+  /// No description provided for @followUpContextProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get followUpContextProgram;
+
+  /// No description provided for @followUpContextSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get followUpContextSchedule;
+
+  /// No description provided for @followUpComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get followUpComplete;
+
+  /// No description provided for @followUpCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String followUpCount(int count);
+
+  /// No description provided for @followUpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-ups left.'**
+  String get followUpEmpty;
+
+  /// No description provided for @followUpDashboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to follow up on today.'**
+  String get followUpDashboardEmpty;
+
+  /// No description provided for @followUpLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load follow-ups. Please try again.'**
+  String get followUpLoadFailed;
+
+  /// No description provided for @followUpSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the follow-up. Please try again.'**
+  String get followUpSaveFailed;
+
+  /// No description provided for @followUpCompleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark it done. Please try again.'**
+  String get followUpCompleteFailed;
+
   /// No description provided for @dashTaskReply.
   ///
   /// In en, this message translates to:
