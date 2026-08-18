@@ -2,8 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
@@ -12,6 +10,7 @@ import 'package:oncare_trainer/features/coaching/data/dtos/program_draft_dtos.da
 import 'package:oncare_trainer/features/coaching/data/repositories/dio_trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_program_draft_repository.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -87,7 +86,6 @@ void main() {
               rest: '90',
               rpe: '8',
               memo: '무릎 각도 확인',
-              type: '근력',
               source: 'ai',
             ),
           ],

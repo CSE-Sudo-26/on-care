@@ -3,29 +3,28 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare_trainer/app/router/routes.dart';
+// Session은 앱 전역 상태라 예외적으로 auth feature 의 provider 를 직접
+// 사용한다 (라우터의 인증 게이트와 동일한 소비자). TODO: 실 백엔드
+// 도입 시 세션 계층을 core/session 으로 승격해 이 의존을 정리한다.
+import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/utils/server_message.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/elevation.dart';
 import 'package:oncare_trainer/design_system/tokens/layout.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
-// Session은 앱 전역 상태라 예외적으로 auth feature 의 provider 를 직접
-// 사용한다 (라우터의 인증 게이트와 동일한 소비자). TODO: 실 백엔드
-// 도입 시 세션 계층을 core/session 으로 승격해 이 의존을 정리한다.
-import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/auth/presentation/controllers/session_controller.dart';
 import 'package:oncare_trainer/features/my/data/trainer_account_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_profile_repository.dart';
 import 'package:oncare_trainer/features/my/data/trainer_settings.dart';
-import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
+import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/models/trainer_profile.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/page_scaffold.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
-import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
+import 'package:oncare_trainer/shared/widgets/status_dot_label.dart';
 
 /// 내 정보 / 설정 — reached from the sidebar footer, not the nav list.
 ///
@@ -350,7 +349,7 @@ class _MyPageState extends ConsumerState<MyPage> {
             ),
             child: Text(
               l.mySaved,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.success,
@@ -453,7 +452,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                     Expanded(
                       child: Text(
                         l.myReminderLead,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
@@ -494,7 +493,7 @@ class _MyPageState extends ConsumerState<MyPage> {
                       children: <Widget>[
                         Text(
                           l.myChangePassword,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.mutedForeground,
@@ -606,7 +605,7 @@ class _DeleteAccountRow extends StatelessWidget {
             children: <Widget>[
               Text(
                 l.myDeleteAccount,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
@@ -953,15 +952,15 @@ class _EditField extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: AppColors.foreground,
             ),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               isDense: true,
               filled: true,
               fillColor: AppColors.background,
-              contentPadding: const EdgeInsets.symmetric(
+              contentPadding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              border: const OutlineInputBorder(
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.all(AppRadius.md),
                 borderSide: BorderSide.none,
               ),
@@ -1330,7 +1329,7 @@ class _GymChoiceField extends StatelessWidget {
         children: <Widget>[
           Text(
             l.myGym,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               color: AppColors.subtleForeground,
@@ -1341,7 +1340,7 @@ class _GymChoiceField extends StatelessWidget {
             loading: () => const LinearProgressIndicator(minHeight: 2),
             error: (_, _) => Text(
               l.myGymListFailed,
-              style: TextStyle(color: AppColors.destructive, fontSize: 12),
+              style: const TextStyle(color: AppColors.destructive, fontSize: 12),
             ),
             data: (items) {
               final currentId = selectedGymId;
@@ -1450,11 +1449,11 @@ class _LogoutButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Icon(Icons.logout, size: 16, color: AppColors.destructive),
-              SizedBox(width: AppSpacing.sm),
+              const Icon(Icons.logout, size: 16, color: AppColors.destructive),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 l.mySignOut,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.destructive,
@@ -1660,7 +1659,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
         children: <Widget>[
           Text(
             l.myChangePassword,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.foreground,

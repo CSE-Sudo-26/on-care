@@ -61,6 +61,17 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # `flutter analyze` 는 analysis_options.yaml 의 custom_lint 플러그인을
+      # 실행하지 않는다(분석 서버 경로에서만 동작). riverpod_lint 규칙이
+      # 여기서만 걸리므로 별도 단계로 돌린다 — 회원 앱 CI 와 같은 구성이다.
+      - name: Custom lint (riverpod_lint)
+        # 회원 앱 쪽에서 이 단계가 실패보다 **매달리는** 쪽으로 깨진 적이 있다 —
+        # 플러그인이 분석 중 예외를 던지고도 프로세스가 끝나지 않아 러너가 죽을
+        # 때까지 붙잡혔다(#659). 정상 실행은 1분 남짓이라 여유를 두고도 매달림은
+        # 확실히 끊는다.
+        timeout-minutes: 10
+        run: dart run custom_lint
+
       - name: Test
         run: flutter test
 
