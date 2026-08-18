@@ -1845,6 +1845,12 @@ class _WeekChip extends ConsumerWidget {
 /// strip: chevrons shift the window a week at a time, the selected day
 /// fills primary, today reads primary. A dot marks days with booked
 /// sessions. Cells are flexible so the row never overflows.
+/// 일 보기 상단의 날짜 스트립 — 왼쪽 정렬 날짜 내비게이션 + 7일 셀. (#859)
+///
+/// 주 보기의 [_WeekNav] 와 같은 모양·같은 자리에서 시작한다. 예전에는 셰브런이
+/// 화면 양 끝으로 밀리고 셀이 폭 전체에 퍼져 있었고, 지금 보고 있는 주가
+/// 며칠~며칠인지 알려 주는 문구가 아예 없었다. 일↔주를 오갈 때마다 날짜
+/// 정보가 자리를 옮기니 눈이 매번 다시 찾아야 했다.
 class _ScheduleWeekStrip extends StatelessWidget {
   const _ScheduleWeekStrip({
     required this.weekAnchor,
@@ -1882,25 +1888,71 @@ class _ScheduleWeekStrip extends StatelessWidget {
     final week = <DateTime>[
       for (var i = 0; i < 7; i++) weekAnchor.add(Duration(days: i)),
     ];
+    final end = weekAnchor.add(const Duration(days: 6));
 
-    return Row(
-      children: <Widget>[
-        _ChevronButton(icon: Icons.chevron_left, onTap: () => onShiftWeek(-1)),
-        // Flexible cells share the middle space evenly — no fixed widths
-        // that could overflow a narrow column.
-        for (final d in week)
-          Expanded(
-            child: _DayCell(
-              date: d,
-              label: _weekdayShort(l)[d.weekday - 1],
-              selected: _isSameDay(d, selectedDay),
-              isToday: _isSameDay(d, today),
-              hasDot: bookedDates.contains(ymd(d)),
-              onTap: () => onSelect(d),
+    // 왼쪽 정렬 + 폭 상한. 주 보기의 [_WeekNav] 가 날짜를 화면 왼쪽 끝에
+    // 두는데 일 보기만 화면 폭 전체에 퍼져, 보기를 바꿀 때마다 날짜 정보가
+    // 자리를 옮겼다(#859).
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: AppLayout.calendarStripMaxWidth,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // 주 보기의 날짜 내비게이션과 같은 모양·같은 자리. 셰브런도
+            // 여기로 올라온다 — 스트립에 한 쌍 더 두면 화면에 같은 일을
+            // 하는 버튼이 둘이 된다.
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _ChevronButton(
+                  icon: Icons.chevron_left,
+                  onTap: () => onShiftWeek(-1),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  l.dateRange(
+                    l.dateMonthDay(weekAnchor.month, weekAnchor.day),
+                    l.dateMonthDay(end.month, end.day),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _ChevronButton(
+                  icon: Icons.chevron_right,
+                  onTap: () => onShiftWeek(1),
+                ),
+              ],
             ),
-          ),
-        _ChevronButton(icon: Icons.chevron_right, onTap: () => onShiftWeek(1)),
-      ],
+            const SizedBox(height: AppSpacing.xs),
+            // Flexible cells share the row evenly — no fixed widths that
+            // could overflow a narrow column.
+            Row(
+              children: <Widget>[
+                for (final d in week)
+                  Expanded(
+                    child: _DayCell(
+                      date: d,
+                      label: _weekdayShort(l)[d.weekday - 1],
+                      selected: _isSameDay(d, selectedDay),
+                      isToday: _isSameDay(d, today),
+                      hasDot: bookedDates.contains(ymd(d)),
+                      onTap: () => onSelect(d),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
