@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/features/account/data/repositories/mock_account_repository.dart';
 import 'package:oncare/features/account/domain/entities/user_profile.dart';
@@ -64,7 +64,7 @@ class _PastDateDietRepository extends FakeDietRepository {
 }
 
 Future<void> _selectDaysAgo(WidgetTester tester, [int days = 1]) async {
-  final selectedDate = DateTime.now().subtract(Duration(days: days));
+  final selectedDate = nowKst().subtract(Duration(days: days));
   await tester.tap(find.text('${selectedDate.day}'));
   await tester.pumpAndSettle();
 }
@@ -476,5 +476,116 @@ void main() {
       reason: '정상 범위의 나트륨과 당류가 다른 색이면 안 된다',
     );
     expect(barColor(l.dietSodium), FigmaColors.greenText);
+  });
+
+  testWidgets('목표를 넘기면 달성률이 100% 를 넘어 적힌다 (#846)', (
+    WidgetTester tester,
+  ) async {
+    // 기본 목표는 2,000 kcal. 2,500 kcal 은 125% 다 — 여기가 100% 로 적히면
+    // 같은 카드의 "목표보다 500 kcal 많아요" 와 어긋난다.
+    const DietDay day = DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'over',
+          mealType: MealType.dinner,
+          timeLabel: '19:00',
+          foods: <FoodItem>[
+            FoodItem(name: '삼겹살 정식', calories: 2500, sodiumMg: 900, sugarG: 8),
+          ],
+          totalCalories: 2500,
+          sodiumMg: 900,
+          sugarG: 8,
+          carbsG: 120,
+          proteinG: 90,
+          fatG: 130,
+        ),
+      ],
+      totalCalories: 2500,
+      totalSodiumMg: 900,
+      totalSugarG: 8,
+      macros: DietMacros(
+        carbsPct: 35,
+        proteinPct: 25,
+        fatPct: 40,
+        carbsG: 120,
+        proteinG: 90,
+        fatG: 130,
+      ),
+      aiCoachMessage: '',
+    );
+
+    await tester.pumpWidget(
+      _app(
+        const Scaffold(
+          body: SingleChildScrollView(child: NutritionSummary(day: day)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('125%'), findsOneWidget);
+    expect(
+      find.text('100%'),
+      findsNothing,
+      reason: '초과인데 100% 로 멈추면 안 된다',
+    );
+
+    // 링은 1.0 을 넘으면 눈금이 깨진다. 라벨과 달리 잘린 값을 받아야 한다.
+    final CircularProgressIndicator ring = tester
+        .widget<CircularProgressIndicator>(
+          find.byKey(const Key('nutrition-calorie-progress')),
+        );
+    expect(ring.value, 1.0);
+  });
+
+  testWidgets('목표 안쪽이면 달성률이 실제 비율 그대로 적힌다 (#846)', (
+    WidgetTester tester,
+  ) async {
+    const DietDay day = DietDay(
+      entries: <DietEntry>[
+        DietEntry(
+          id: 'under',
+          mealType: MealType.lunch,
+          timeLabel: '12:00',
+          foods: <FoodItem>[
+            FoodItem(name: '비빔밥', calories: 1000, sodiumMg: 800, sugarG: 6),
+          ],
+          totalCalories: 1000,
+          sodiumMg: 800,
+          sugarG: 6,
+          carbsG: 60,
+          proteinG: 30,
+          fatG: 20,
+        ),
+      ],
+      totalCalories: 1000,
+      totalSodiumMg: 800,
+      totalSugarG: 6,
+      macros: DietMacros(
+        carbsPct: 50,
+        proteinPct: 25,
+        fatPct: 25,
+        carbsG: 60,
+        proteinG: 30,
+        fatG: 20,
+      ),
+      aiCoachMessage: '',
+    );
+
+    await tester.pumpWidget(
+      _app(
+        const Scaffold(
+          body: SingleChildScrollView(child: NutritionSummary(day: day)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('50%'), findsOneWidget);
+    final CircularProgressIndicator ring = tester
+        .widget<CircularProgressIndicator>(
+          find.byKey(const Key('nutrition-calorie-progress')),
+        );
+    expect(ring.value, 0.5);
   });
 }

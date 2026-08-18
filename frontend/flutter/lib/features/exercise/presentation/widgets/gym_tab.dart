@@ -563,6 +563,7 @@ class _TrainerChatButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final String unreadLabel = unread > 99 ? '99+' : '$unread';
 
+    final AppLocalizations l = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -572,7 +573,7 @@ class _TrainerChatButton extends StatelessWidget {
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Text('트레이너와 채팅'),
+            Text(l.coachChatWithTrainer),
             if (unread > 0) ...<Widget>[
               const SizedBox(width: 8),
               Container(

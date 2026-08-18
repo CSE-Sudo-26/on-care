@@ -24,7 +24,7 @@ import 'support/e2e_harness.dart';
 /// 도 같은 경로를 쓴다(#692).
 Future<void> _openClientChat(WidgetTester tester) async {
   await tester.tap(
-    find.byKey(ValueKey<String>('sidebar-${AppRoutes.messages}')),
+    find.byKey(const ValueKey<String>('sidebar-${AppRoutes.messages}')),
   );
   await pumpUntil(tester, find.byType(MessagesPage), step: '메시지 화면');
   final Finder conversation = find.byKey(

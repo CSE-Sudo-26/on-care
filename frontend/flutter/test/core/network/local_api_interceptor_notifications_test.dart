@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 
 import 'package:oncare/core/network/interceptors/local_api_interceptor.dart';
 import 'package:oncare/core/storage/app_database.dart';
+import 'package:oncare/core/utils/clock.dart';
 
 void main() {
   late AppDatabase db;
@@ -16,7 +17,10 @@ void main() {
     dio = Dio(BaseOptions(baseUrl: 'https://example.test'));
     dio.interceptors.add(LocalApiInterceptor(db, Logger(level: Level.off)));
 
-    final now = DateTime.now();
+    // 인터셉터가 상대 시각("10분 전")을 KST 기준으로 셈한다(#850). 시드도 같은
+    // 시계를 써야 한다 — `DateTime.now()` 를 섞으면 기기가 KST 가 아닌 환경(CI 는
+    // UTC)에서 두 값이 9시간 어긋난다.
+    final now = nowKst();
     await db.batch((b) {
       b.insertAll(db.notificationItems, <NotificationItemsCompanion>[
         NotificationItemsCompanion.insert(

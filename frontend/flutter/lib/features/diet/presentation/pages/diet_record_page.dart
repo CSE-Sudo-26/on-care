@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:oncare/app/router/routes.dart';
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/design_system/charts/chart_reveal.dart';
 import 'package:oncare/design_system/figma/figma_kit.dart';
 import 'package:oncare/design_system/tokens/colors.dart';
@@ -142,7 +142,7 @@ class _DietRecordPageState extends ConsumerState<DietRecordPage> {
   DietPeriodTab _period = DietPeriodTab.day;
 
   DateTime get _today {
-    final DateTime n = DateTime.now();
+    final DateTime n = nowKst();
     return DateTime(n.year, n.month, n.day);
   }
 
@@ -754,9 +754,14 @@ class NutritionSummary extends StatelessWidget {
   }
 }
 
+/// 목표 대비 실제 비율. **자르지 않는다** — 목표를 넘기면 1.0 을 넘는다.
+///
+/// 게이지에 넣을 때만 [_NutritionSummaryItem.gaugeValue] 로 자른다. 여기서 잘라
+/// 두면 달성률 라벨도 100% 에서 멈춰, 같은 카드의 "목표보다 N kcal 많아요" 와
+/// 어긋난다(#846).
 double _nutritionRatio(num current, num goal) {
   if (goal <= 0) return 0;
-  return (current / goal).clamp(0.0, 1.0).toDouble();
+  return current / goal;
 }
 
 class _NutritionSummaryItem {
@@ -773,7 +778,14 @@ class _NutritionSummaryItem {
   final String value;
   final String goal;
   final String unit;
+
+  /// 목표 대비 실제 비율. 초과하면 1.0 을 넘는다 — 달성률 라벨이 쓰는 값이다.
   final double ratio;
+
+  /// 게이지에 넣을 값. `CircularProgressIndicator.value` 와 막대는 1.0 을 넘으면
+  /// 눈금이 깨지므로 그릴 때만 자른다.
+  double get gaugeValue => ratio.clamp(0.0, 1.0).toDouble();
+
   final bool isOverGoal;
 }
 
@@ -933,7 +945,7 @@ class _CalorieCircularProgress extends StatelessWidget {
             dimension: 92,
             child: CircularProgressIndicator(
               key: const Key('nutrition-calorie-progress'),
-              value: calories.ratio,
+              value: calories.gaugeValue,
               strokeWidth: 9,
               strokeCap: StrokeCap.round,
               backgroundColor: FigmaColors.track,
@@ -1032,7 +1044,7 @@ class _MacroProgressItem extends StatelessWidget {
         const SizedBox(height: 7),
         _NutritionProgressBar(
           key: Key('nutrition-macro-progress-${macro.item.label}'),
-          progress: macro.item.ratio,
+          progress: macro.item.gaugeValue,
           color: macro.color,
         ),
       ],
@@ -1183,7 +1195,7 @@ class _NutritionStatusCard extends StatelessWidget {
         children: <Widget>[
           _VerticalNutritionProgressBar(
             key: Key('nutrition-status-vertical-progress-${item.label}'),
-            progress: item.ratio,
+            progress: item.gaugeValue,
             color: progressColor,
           ),
           const SizedBox(width: 10),

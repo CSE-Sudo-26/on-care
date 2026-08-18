@@ -1,9 +1,8 @@
 import 'package:dio/dio.dart';
-
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
-import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 import 'package:oncare_trainer/features/coaching/data/repositories/trainer_routine_repository.dart';
+import 'package:oncare_trainer/features/coaching/domain/entities/assigned_routine.dart';
 
 /// Assigns/reads a member's routines against the FastAPI backend. A routine
 /// assigned here is what the member app receives via `/me/coach/routines`.

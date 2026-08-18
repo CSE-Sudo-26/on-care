@@ -142,6 +142,9 @@ void main() {
           coachUnreadProvider.overrideWith((ref) async => 0),
         ],
         child: const MaterialApp(
+          locale: Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
               child: Column(
@@ -240,6 +243,9 @@ void main() {
           coachUnreadProvider.overrideWith((ref) async => 0),
         ],
         child: const MaterialApp(
+          locale: Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
               child: AiCoachingCard(coachingPoint: _coachingPoint),
@@ -376,7 +382,12 @@ void main() {
           myTrainerProvider.overrideWith((ref) async => _assignedTrainer),
         ],
         child: const MaterialApp(
-          home: Scaffold(body: AiCoachingCard(coachingPoint: _coachingPoint)),
+          locale: Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: AiCoachingCard(coachingPoint: _coachingPoint),
+          ),
         ),
       ),
     );
@@ -446,7 +457,12 @@ void main() {
           coachUnreadProvider.overrideWith((ref) async => 0),
           myTrainerProvider.overrideWith((ref) async => _assignedTrainer),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
       ),
     );
     await tester.pumpAndSettle();

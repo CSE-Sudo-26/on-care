@@ -24,16 +24,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navMyHealth => 'MY';
 
   @override
-  String get pageDashboardTitle => '홈';
-
-  @override
   String get pageDietTitle => '식단';
 
   @override
   String get pageExerciseTitle => '운동';
-
-  @override
-  String get pageMyHealthTitle => 'My';
 
   @override
   String get pageAiCoachTitle => 'AI 코치';
@@ -42,46 +36,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pageNotificationTitle => '알림';
 
   @override
-  String get pagePlaceTitle => '장소';
-
-  @override
-  String get pageSignInTitle => '로그인';
-
-  @override
-  String get actionOpenAiCoach => 'AI 코치 열기';
-
-  @override
-  String get actionFindPlace => '장소 찾기';
-
-  @override
-  String get actionSignInPlaceholder => '로그인 (placeholder)';
-
-  @override
   String get actionRetry => '다시 시도';
-
-  @override
-  String get placeholderDashboard => '대시보드 (placeholder)';
-
-  @override
-  String get placeholderDiet => '식단 기록 (placeholder)';
-
-  @override
-  String get placeholderExercise => '운동 (placeholder)';
-
-  @override
-  String get placeholderMyHealth => '내 건강 (placeholder)';
-
-  @override
-  String get placeholderAiCoach => 'AI 코치 (placeholder, mock 응답)';
-
-  @override
-  String get placeholderNotification => '알림 (placeholder)';
-
-  @override
-  String get placeholderPlace => '장소 (placeholder, Stage 4에서 Google Maps)';
-
-  @override
-  String get placeholderSignIn => '로그인 (placeholder, Stage 4에서 소셜 SDK)';
 
   @override
   String get errorNetwork => '네트워크 문제';
@@ -102,37 +57,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get errorUnknown => '알 수 없는 오류';
 
   @override
-  String get dashboardSectionToday => '오늘의 요약';
-
-  @override
   String get dashboardMetricCalories => '칼로리';
 
   @override
   String get dashboardMetricExercise => '주간 운동';
-
-  @override
-  String get dashboardMetricWeight => '체중';
-
-  @override
-  String get dashboardChartWeightWeek => '주간 체중';
-
-  @override
-  String dashboardCaloriesProgress(int pct, int goal) {
-    return '$pct% / $goal';
-  }
-
-  @override
-  String dashboardWeightDelta(String sign, String delta) {
-    return '$sign$delta (지난주 대비)';
-  }
-
-  @override
-  String homeGreeting(String name) {
-    return '$name님, 오늘도 가볍게 시작해요 👋';
-  }
-
-  @override
-  String get homeGreetingGeneric => '오늘도 가볍게 시작해요 👋';
 
   @override
   String get homeDashboardLoadError => '대시보드 정보를 불러오지 못했어요.';
@@ -141,27 +69,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeDashboardEmpty => '아직 오늘 기록이 없어요. 식단이나 운동을 기록해 보세요.';
 
   @override
-  String homeDietRecordCount(int count) {
-    return '오늘 식단 기록 $count개';
-  }
-
-  @override
   String get homeScheduleEmpty => '오늘 예정된 일정이 없어요.';
-
-  @override
-  String get homeCoachingPill => '✦ AI 코칭';
-
-  @override
-  String get homeCoachingTitle => '오늘의 맞춤 조언';
-
-  @override
-  String get homeCoachingBody => '저녁은 나트륨을 줄이고\n20분 정도 걸어보세요';
-
-  @override
-  String get homeCoachingReady => 'AI가 오늘 3개의 맞춤 조언을 준비했어요';
-
-  @override
-  String get homeDietSodiumAlert => '나트륨 초과 감지됨';
 
   @override
   String get homeAiAdviceTitle => '오늘의 AI 통합 조언';
@@ -183,66 +91,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeMacroFat => '지방';
 
   @override
-  String get homeDietRecBadge => '✦ AI 추천 저녁 식단';
-
-  @override
   String get homeMealChickenSalad => '닭가슴살 샐러드';
-
-  @override
-  String get homeDietRecRice => '현미밥 반 공기';
-
-  @override
-  String get homeDietLogButton => '식단 기록 →';
-
-  @override
-  String get homeExerciseRoutineProgress => 'AI 추천 루틴 1/3 완료';
-
-  @override
-  String homeExerciseBurnGoal(String unit, int goal) {
-    return '$unit 소모 · 목표 $goal';
-  }
-
-  @override
-  String get homeExerciseBrisk => '빠르게 걷기';
-
-  @override
-  String get homeExerciseLegStretch => '하체 스트레칭';
-
-  @override
-  String get homeExerciseRecBadge => '✦ AI 추천 남은 루틴';
-
-  @override
-  String get homeExerciseRecStretch => '하체 스트레칭 10분';
-
-  @override
-  String get homeExerciseRecStrength => '저강도 근력 15분';
-
-  @override
-  String get homeExerciseLogButton => '운동 기록 →';
-
-  @override
-  String get homeSummaryToday => '오늘 종합';
-
-  @override
-  String get homeVsGoal => '목표 대비';
-
-  @override
-  String get homeNutritionTitle => '영양 현황';
 
   @override
   String get homeAiAnalysisPill => '✦ AI 분석';
 
   @override
-  String get homeNutritionSubtitle => '주간 누적 추이 · 지난주 대비';
-
-  @override
   String get homeDetails => '자세히';
-
-  @override
-  String get homeThisWeekAvg => '이번주 평균';
-
-  @override
-  String get homeLastWeekAvg => '지난주 평균';
 
   @override
   String get homeGoal => '목표';
@@ -255,9 +110,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeAchieveRate => '달성률';
-
-  @override
-  String get homeWeeklyTrend => '주간 추이';
 
   @override
   String homeWeeklyMetricTrend(String metric) {
@@ -290,42 +142,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeExerciseBurned => '소모 칼로리';
 
   @override
-  String get homeExerciseCount => '주간 운동 횟수';
-
-  @override
   String get homeExerciseDays => '운동 일수';
-
-  @override
-  String get homeExerciseBurnProgress => '주간 칼로리 소모 목표';
-
-  @override
-  String get unitTimes => '회';
-
-  @override
-  String get homeVsLastWeek => '지난주 대비';
-
-  @override
-  String homeSodiumInsight(String trend, String alert) {
-    return '나트륨 섭취가 $trend 추세예요. 소금 사용량을 줄이고, $alert을 켜볼까요?';
-  }
-
-  @override
-  String get homeSodiumInsightTrend => '2주 연속 증가';
-
-  @override
-  String get homeSodiumInsightAlert => '고염분 식단 알림';
-
-  @override
-  String get homeAiPill => '✦ AI';
-
-  @override
-  String get homeLegendThisWeek => '이번 주';
-
-  @override
-  String get homeLegendLastWeek => '지난 주';
-
-  @override
-  String get homeLegendToday => '오늘';
 
   @override
   String get homeMealReasonSodium => '나트륨 조절에 좋아요';
@@ -392,12 +209,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeScheduleTitle => '오늘의 일정';
 
   @override
-  String get homeScheduleEveningWalk => '저녁 산책';
-
-  @override
-  String get homeScheduleWalkDetail => '집 주변 · 20분';
-
-  @override
   String get unitKcal => 'kcal';
 
   @override
@@ -423,9 +234,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
     return '$countString분';
   }
-
-  @override
-  String get unitKg => 'kg';
 
   @override
   String get dietTitle => '식단';
@@ -490,9 +298,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dietEmptyLog => '기록된 식단이 없어요.\n사진으로 끼니를 추가해 보세요!';
 
   @override
-  String get dietPhotoAnalysis => '사진 분석';
-
-  @override
   String get dietLoadError => '식단 정보를 불러오지 못했어요.';
 
   @override
@@ -517,16 +322,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String otherDateEmpty(Object section) {
     return '선택한 날짜에 기록된 $section이 없어요.';
-  }
-
-  @override
-  String dietTagSodium(int mg) {
-    return '나트륨 ${mg}mg';
-  }
-
-  @override
-  String dietTagSugar(int g) {
-    return '당류 ${g}g';
   }
 
   @override
@@ -733,13 +528,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exTypeStretching => '스트레칭';
 
   @override
-  String get exTypeOther => '운동';
-
-  @override
   String get exTypeOtherChip => '기타';
-
-  @override
-  String get exSourceTrainerPt => '트레이너 PT';
 
   @override
   String get exLevelLight => '가벼움';
@@ -844,12 +633,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exAiRecommendedExercise => 'AI 추천 운동';
 
   @override
-  String get exAiRoutineToday => 'AI 맞춤 루틴 · 오늘';
-
-  @override
-  String get exStatDays => '일수';
-
-  @override
   String get exStatTime => '시간';
 
   @override
@@ -857,9 +640,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exStatStreak => '연속';
-
-  @override
-  String get exUnitCount => '회';
 
   @override
   String get exUnitStreakDays => '일 연속';
@@ -892,39 +672,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get exEmptyLog => '이번 주 운동 기록이 없어요.\n운동을 추가해 기록을 남겨 보세요!';
-
-  @override
-  String get exAiFeedback => 'AI 맞춤 조언';
-
-  @override
   String get exAddExercise => '운동 추가';
-
-  @override
-  String get exRoutineBriskTitle => '빠르게 걷기 30분';
-
-  @override
-  String get exRoutineBriskSub => '유산소 · 혈압 관리';
-
-  @override
-  String get exRoutineStretchTitle => '하체 스트레칭';
-
-  @override
-  String get exRoutineStretchSub => '스트레칭 · 유연성';
-
-  @override
-  String get exRoutineStrengthTitle => '저강도 근력';
-
-  @override
-  String get exRoutineStrengthSub => '근력 · 근지구력';
-
-  @override
-  String get exMissionComplete => '미션 완료!';
-
-  @override
-  String exMinutesExercise(int minutes) {
-    return '$minutes분 운동';
-  }
 
   @override
   String exDurationMinutes(int minutes) {
@@ -1067,12 +815,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get exTrainer => '트레이너';
-
-  @override
-  String get exMyGym => '내 헬스장';
-
-  @override
   String get exTrainerDedicated => '전담 트레이너';
 
   @override
@@ -1125,15 +867,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exConsultButton => '💬 1:1 상담';
 
   @override
-  String get exGymLoadError => '헬스장 정보를 불러오지 못했어요.';
-
-  @override
-  String get exNoGymTitle => '등록된 헬스장이 없어요';
-
-  @override
-  String get exNoGymSub => '헬스장 찾기로 주변 헬스장을 등록해 보세요';
-
-  @override
   String get exAddress => '주소';
 
   @override
@@ -1153,11 +886,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get myDefaultUserName => '사용자';
-
-  @override
-  String myRank(int rank) {
-    return '$rank위 랭킹';
-  }
 
   @override
   String get mySettingsTitle => '설정';
@@ -1337,11 +1065,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myAppVersion => 'On-Care · 버전 1.0.0';
 
   @override
-  String myComingSoon(String label) {
-    return '$label 기능은 준비 중이에요';
-  }
-
-  @override
   String get coachHeaderPill => 'AI 건강 도우미';
 
   @override
@@ -1369,20 +1092,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachCardWaterTag => '수분';
-
-  @override
-  String get coachCardWaterTitle => '물 한 잔 더 마시기.';
-
-  @override
-  String get coachCardWaterBody => '오늘 활동량이 많았어요.';
-
-  @override
-  String get coachProgressLabel => '오늘의 추천 진행도';
-
-  @override
-  String coachProgressDone(int done, int total) {
-    return '$done/$total 완료';
-  }
 
   @override
   String get coachChatSubtitle => '담당 트레이너 · 상담 가능';
@@ -1793,4 +1502,308 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get onboardConditionObesity => '비만';
+
+  @override
+  String get aiCoachWelcome =>
+      '안녕하세요, AI 건강 코치 온이예요 🙂\n고혈압·당뇨 관리를 위한 식단·운동·혈압·혈당 무엇이든 편하게 물어보세요.';
+
+  @override
+  String get aiCoachFailure => '앗, 잠시 문제가 생겼어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get actionCancel => '취소';
+
+  @override
+  String get actionDelete => '삭제';
+
+  @override
+  String get actionEdit => '수정';
+
+  @override
+  String get actionConfirm => '확인';
+
+  @override
+  String get scheduleCategoryHospital => '병원';
+
+  @override
+  String get scheduleCategoryExercise => '운동';
+
+  @override
+  String get scheduleCategoryMeal => '식사';
+
+  @override
+  String get scheduleCategoryMedication => '약 복용';
+
+  @override
+  String get scheduleCategoryOther => '기타';
+
+  @override
+  String get eventAddTitle => '일정 추가';
+
+  @override
+  String get eventEditTitle => '일정 수정';
+
+  @override
+  String get eventTitleLabel => '일정 제목';
+
+  @override
+  String get eventTitleHint => '예: 병원 정기검진';
+
+  @override
+  String get eventDateLabel => '날짜';
+
+  @override
+  String get eventTimeLabel => '시간';
+
+  @override
+  String get eventTimeNone => '시간 없음';
+
+  @override
+  String get eventTitleRequired => '일정 제목을 입력해 주세요';
+
+  @override
+  String get eventAddFailed => '일정 추가에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get eventEditFailed => '일정 수정에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get eventSaving => '저장 중...';
+
+  @override
+  String get eventAdding => '추가 중...';
+
+  @override
+  String get eventSave => '저장하기';
+
+  @override
+  String get eventAdd => '추가하기';
+
+  @override
+  String eventClearField(String label) {
+    return '$label 지우기';
+  }
+
+  @override
+  String get eventDeleteTitle => '일정 삭제';
+
+  @override
+  String eventDeleteConfirm(String title) {
+    return '‘$title’ 일정을 삭제할까요? 되돌릴 수 없어요.';
+  }
+
+  @override
+  String get eventDeleteFailed => '일정 삭제에 실패했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get eventDeleted => '일정을 삭제했어요';
+
+  @override
+  String get eventsEmptyForDay => '이 날에는 일정이 없어요';
+
+  @override
+  String get eventAddForDay => '이 날에 일정 추가';
+
+  @override
+  String get eventTimeUnset => '시간 미정';
+
+  @override
+  String get scheduleSheetTitle => '일정 관리';
+
+  @override
+  String get eventsLoadFailed => '일정을 불러오지 못했어요';
+
+  @override
+  String get coachCardSleepTag => '수면';
+
+  @override
+  String get myHealthGoalsTitle => '건강 목표';
+
+  @override
+  String get myGoalsDietSection => '식단 일일 목표';
+
+  @override
+  String get myGoalsExerciseSection => '주간 운동 목표';
+
+  @override
+  String get myGoalCalories => '일일 칼로리 제한 (kcal)';
+
+  @override
+  String get myGoalSodium => '일일 나트륨 제한 (mg)';
+
+  @override
+  String get myGoalSugar => '일일 당류 제한 (g)';
+
+  @override
+  String get myGoalCarbs => '일일 탄수화물 제한 (g)';
+
+  @override
+  String get myGoalProtein => '일일 단백질 제한 (g)';
+
+  @override
+  String get myGoalFat => '일일 지방 제한 (g)';
+
+  @override
+  String get myGoalWorkoutCount => '주간 운동 횟수 목표 (회)';
+
+  @override
+  String get myGoalWorkoutMinutes => '주간 운동 시간 목표 (분)';
+
+  @override
+  String get myGoalWorkoutCalories => '주간 소모 칼로리 목표 (kcal)';
+
+  @override
+  String get myGoalsSaved => '건강 목표가 저장되었어요';
+
+  @override
+  String get mySettingsLoadFailed => '설정을 불러오지 못했어요';
+
+  @override
+  String get mySettingsLoadFailedBody => '지금 저장하면 기존 설정이 지워질 수 있어 편집을 잠갔어요.';
+
+  @override
+  String get myNotificationSaveFailed => '알림 설정을 저장하지 못했어요';
+
+  @override
+  String get myPointsGuideTitle => '포인트 적립 안내';
+
+  @override
+  String get myPointsDietAdd => '식단 추가';
+
+  @override
+  String get myPointsAiExercise => 'AI 추천 운동 완료';
+
+  @override
+  String get myPointsExerciseAdd => '운동 직접 추가';
+
+  @override
+  String get coachAssignedTrainer => '담당 트레이너';
+
+  @override
+  String get coachAiCoaching => 'AI 코칭';
+
+  @override
+  String get coachPointsTitle => '이번 코칭 포인트';
+
+  @override
+  String get coachRoutineTitle => '추천 개인운동';
+
+  @override
+  String get coachRoutineSubtitle => 'PT 와 다음 PT 사이에 스스로 하는 운동이에요';
+
+  @override
+  String get coachRoutineByTrainer => '트레이너 직접 추천';
+
+  @override
+  String coachRoutineAiChecked(String name) {
+    return 'AI 추천 · $name 확인';
+  }
+
+  @override
+  String get coachRoutineAiAuto => 'AI 자동 추천';
+
+  @override
+  String get coachRoutineLogged => '운동 기록에 반영했어요';
+
+  @override
+  String get coachRoutineGone => '이 루틴은 더 이상 없어요. 목록을 새로 불러와 주세요';
+
+  @override
+  String get coachRoutineNetworkError => '네트워크 연결을 확인하고 다시 시도해 주세요';
+
+  @override
+  String get coachRoutineLogFailed => '완료 기록에 실패했어요.';
+
+  @override
+  String get coachRoutineDone => '수행 완료';
+
+  @override
+  String coachRoutineMyNote(String note) {
+    return '내 메모: $note';
+  }
+
+  @override
+  String coachRoutineTrainerFeedback(String feedback) {
+    return '트레이너 피드백: $feedback';
+  }
+
+  @override
+  String get coachRoutineCompleteTitle => '루틴 수행 완료';
+
+  @override
+  String get coachRoutineMinutesLabel => '실제 수행 시간(분)';
+
+  @override
+  String get coachRoutineMinutesError => '1~600분 사이로 입력해 주세요';
+
+  @override
+  String get coachRoutineIntensity => '수행 강도';
+
+  @override
+  String get coachIntensityLight => '가벼움';
+
+  @override
+  String get coachIntensityModerate => '보통';
+
+  @override
+  String get coachIntensityHigh => '높음';
+
+  @override
+  String get coachRoutineNoteLabel => '메모(선택)';
+
+  @override
+  String get coachRoutineNoteHint => '힘들었던 점이나 몸 상태를 남겨 보세요';
+
+  @override
+  String get coachRoutineSubmit => '완료 기록';
+
+  @override
+  String get coachChatWithTrainer => '트레이너와 채팅';
+
+  @override
+  String get coachTrainerLoading => '담당 트레이너를 불러오는 중이에요';
+
+  @override
+  String get coachTrainerNone => '담당 트레이너가 아직 없어요. 운동 탭에서 헬스장·트레이너를 연결해 보세요';
+
+  @override
+  String get alertCategoryReminder => '리마인더';
+
+  @override
+  String get alertCategoryHealth => '건강';
+
+  @override
+  String get alertCategoryAchievement => '달성';
+
+  @override
+  String get alertCategorySystem => '시스템';
+
+  @override
+  String get alertMarkAllRead => '모두 읽음';
+
+  @override
+  String get alertEmpty => '알림이 없습니다';
+
+  @override
+  String get alertLoadFailed => '최신 알림을 불러오지 못했어요';
+
+  @override
+  String get alertSimulatedTitle => '시뮬레이션 알림';
+
+  @override
+  String get alertSimulatedBody => '지금 막 가상 푸시가 도착했어요.';
+
+  @override
+  String get alertJustNow => '방금';
+
+  @override
+  String get exPtLogTitle => '오늘 완료한 PT';
+
+  @override
+  String get exPtFeedbackTitle => '오늘의 피드백';
+
+  @override
+  String exDatedTitle(int month, int day, String title) {
+    return '$month월 $day일 $title';
+  }
 }

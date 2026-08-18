@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/design_system/tokens/colors.dart';
 import 'package:oncare_trainer/design_system/tokens/radius.dart';
 import 'package:oncare_trainer/design_system/tokens/spacing.dart';
+import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/features/coaching/domain/entities/ai_routine_item.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_editor_state.dart';
 import 'package:oncare_trainer/features/coaching/domain/program_template.dart';
-import 'package:oncare_trainer/features/coaching/data/dtos/routine_dtos.dart';
 import 'package:oncare_trainer/gen/l10n/app_localizations.dart';
 import 'package:oncare_trainer/shared/widgets/action_button.dart';
 import 'package:oncare_trainer/shared/widgets/section_card.dart';
@@ -461,7 +461,7 @@ class _ProgramEditorWorkspaceState extends State<ProgramEditorWorkspace> {
 String _dayLabel(AppLocalizations l, int offset) {
   if (offset == 0) return l.labelToday;
   if (offset == 1) return l.labelTomorrow;
-  final date = DateTime.now().add(Duration(days: offset));
+  final date = nowKst().add(Duration(days: offset));
   return '${date.month}/${date.day}';
 }
 
@@ -735,7 +735,7 @@ class _SessionEditorState extends State<_SessionEditor> {
               child: Text(
                 l.programEditorSessionEmpty,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.subtleForeground,
                   fontSize: 12,
                 ),

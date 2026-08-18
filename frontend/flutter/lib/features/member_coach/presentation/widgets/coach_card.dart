@@ -10,6 +10,7 @@ import 'package:oncare/features/exercise/presentation/controllers/exercise_contr
 import 'package:oncare/features/member_coach/domain/entities/member_coach.dart';
 import 'package:oncare/features/member_coach/presentation/controllers/member_coach_providers.dart';
 import 'package:oncare/features/member_coach/presentation/widgets/coach_chat_sheet.dart';
+import 'package:oncare/gen/l10n/app_localizations.dart';
 
 /// 담당 트레이너 관계와 소통만 담는다 — 이름·전문 분야·프로필 이동·채팅.
 ///
@@ -22,6 +23,7 @@ class CoachCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final coachAsync = ref.watch(memberCoachProvider);
     final coach = coachAsync.valueOrNull;
     if (coach == null) return const SizedBox.shrink();
@@ -73,9 +75,9 @@ class CoachCard extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Text(
-                            '담당 트레이너',
-                            style: TextStyle(
+                          Text(
+                            l.coachAssignedTrainer,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppColors.mutedForeground,
@@ -137,6 +139,7 @@ class AiCoachingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l = AppLocalizations.of(context);
     // 트레이너 추천과 AI 추천을 한 목록으로 합친다. 회원에게는 "지금 무엇을
     // 하면 되는가" 라는 한 가지 질문이고, 누가 정했는지는 각 줄의 출처가 말한다.
     final List<CoachRoutine> routines =
@@ -159,17 +162,21 @@ class AiCoachingCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
-              Icon(Icons.auto_awesome, size: 16, color: FigmaColors.primary),
-              SizedBox(width: 6),
+              const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: FigmaColors.primary,
+              ),
+              const SizedBox(width: 6),
               // 큰 글자 배율에서 제목이 카드를 넘겼다(#766).
               Flexible(
                 child: Text(
-                  'AI 코칭',
+                  l.coachAiCoaching,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: FigmaColors.ink,
@@ -180,9 +187,9 @@ class AiCoachingCard extends ConsumerWidget {
           ),
           if (point.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
-            const Text(
-              '이번 코칭 포인트',
-              style: TextStyle(
+            Text(
+              l.coachPointsTitle,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.primary,
@@ -201,18 +208,18 @@ class AiCoachingCard extends ConsumerWidget {
           ],
           if (routines.isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
-            const Text(
-              '추천 개인운동',
-              style: TextStyle(
+            Text(
+              l.coachRoutineTitle,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: FigmaColors.primary,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'PT 와 다음 PT 사이에 스스로 하는 운동이에요',
-              style: TextStyle(
+            Text(
+              l.coachRoutineSubtitle,
+              style: const TextStyle(
                 fontSize: 12.5,
                 height: 1.4,
                 color: AppColors.mutedForeground,
@@ -230,7 +237,7 @@ class AiCoachingCard extends ConsumerWidget {
                 _ProgramHeading(name: routine.programName),
               _RecommendedExerciseRow(
                 routine: routine,
-                sourceLabel: routineSourceLabel(routine, coach),
+                sourceLabel: routineSourceLabel(l, routine, coach),
               ),
               const SizedBox(height: 10),
             ],
@@ -248,10 +255,14 @@ class AiCoachingCard extends ConsumerWidget {
 ///
 /// 담당 트레이너가 있으면 AI 추천은 승인된 것만 내려온다(#790). 그래서 여기
 /// 도착한 AI 추천에 `트레이너 확인` 을 붙이는 것이 사실이다.
-String routineSourceLabel(CoachRoutine routine, MemberCoach? coach) {
-  if (routine.isTrainerRecommended) return '트레이너 직접 추천';
-  if (coach != null) return 'AI 추천 · ${coach.name} 확인';
-  return 'AI 자동 추천';
+String routineSourceLabel(
+  AppLocalizations l,
+  CoachRoutine routine,
+  MemberCoach? coach,
+) {
+  if (routine.isTrainerRecommended) return l.coachRoutineByTrainer;
+  if (coach != null) return l.coachRoutineAiChecked(coach.name);
+  return l.coachRoutineAiAuto;
 }
 
 class _RecommendedExerciseRow extends ConsumerStatefulWidget {
@@ -275,6 +286,7 @@ class _RecommendedExerciseRowState
   bool _saving = false;
 
   Future<void> _complete() async {
+    final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
     final _RoutineCompletionInput? input =
         await showDialog<_RoutineCompletionInput>(
@@ -300,7 +312,7 @@ class _RecommendedExerciseRowState
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('운동 기록에 반영했어요')));
+        ).showSnackBar(SnackBar(content: Text(l.coachRoutineLogged)));
       }
     } catch (error, stackTrace) {
       debugPrint('completeRoutine failed: $error\n$stackTrace');
@@ -309,9 +321,9 @@ class _RecommendedExerciseRowState
           ref.invalidate(coachRoutinesProvider);
         }
         final String message = switch (error) {
-          NotFoundError() => '이 루틴은 더 이상 없어요. 목록을 새로 불러와 주세요',
-          NetworkError() => '네트워크 연결을 확인하고 다시 시도해 주세요',
-          _ => '완료 기록에 실패했어요.',
+          NotFoundError() => l.coachRoutineGone,
+          NetworkError() => l.coachRoutineNetworkError,
+          _ => l.coachRoutineLogFailed,
         };
         ScaffoldMessenger.of(
           context,
@@ -324,6 +336,7 @@ class _RecommendedExerciseRowState
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final CoachRoutine routine = widget.routine;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -401,7 +414,7 @@ class _RecommendedExerciseRowState
                   children: <Widget>[
                     Text(
                       '${routine.type} · '
-                      '${routine.completedMinutes ?? routine.minutes}분',
+                      '${l.unitMinutesValue(routine.completedMinutes ?? routine.minutes)}',
                       textAlign: TextAlign.end,
                       style: const TextStyle(
                         fontSize: 12.5,
@@ -411,16 +424,16 @@ class _RecommendedExerciseRowState
                     ),
                     const SizedBox(height: 4),
                     if (routine.completed)
-                      const Row(
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Icon(
+                          const Icon(
                             Icons.check_circle,
                             size: 16,
                             color: Colors.green,
                           ),
-                          SizedBox(width: 4),
-                          Flexible(child: Text('수행 완료')),
+                          const SizedBox(width: 4),
+                          Flexible(child: Text(l.coachRoutineDone)),
                         ],
                       )
                     else
@@ -439,8 +452,8 @@ class _RecommendedExerciseRowState
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text(
-                                  '수행 완료',
+                              : Text(
+                                  l.coachRoutineDone,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -453,7 +466,7 @@ class _RecommendedExerciseRowState
           ),
           if (routine.memberNote.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            Text('내 메모: ${routine.memberNote}'),
+            Text(l.coachRoutineMyNote(routine.memberNote)),
           ],
           if (routine.trainerFeedback.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
@@ -466,7 +479,7 @@ class _RecommendedExerciseRowState
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                '트레이너 피드백: ${routine.trainerFeedback}',
+                l.coachRoutineTrainerFeedback(routine.trainerFeedback),
                 style: const TextStyle(
                   fontSize: 12.5,
                   height: 1.4,
@@ -526,8 +539,9 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('루틴 수행 완료'),
+      title: Text(l.coachRoutineCompleteTitle),
       content: Form(
         key: _formKey,
         child: Column(
@@ -537,23 +551,37 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               key: const Key('routineCompletionMinutes'),
               controller: _minutesController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: '실제 수행 시간(분)'),
+              decoration: InputDecoration(labelText: l.coachRoutineMinutesLabel),
               validator: (String? value) {
                 final int? minutes = int.tryParse(value ?? '');
                 return minutes == null || minutes < 1 || minutes > 600
-                    ? '1~600분 사이로 입력해 주세요'
+                    ? l.coachRoutineMinutesError
                     : null;
               },
             ),
             const SizedBox(height: 12),
-            const Align(alignment: Alignment.centerLeft, child: Text('수행 강도')),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(l.coachRoutineIntensity),
+            ),
             const SizedBox(height: 6),
             SegmentedButton<String>(
               key: const Key('routineCompletionIntensity'),
-              segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(value: 'light', label: Text('가벼움')),
-                ButtonSegment<String>(value: 'moderate', label: Text('보통')),
-                ButtonSegment<String>(value: 'high', label: Text('높음')),
+              // value 는 서버로 나가는 계약이라 그대로 두고, 라벨만 로케일을
+              // 따른다(#847).
+              segments: <ButtonSegment<String>>[
+                ButtonSegment<String>(
+                  value: 'light',
+                  label: Text(l.coachIntensityLight),
+                ),
+                ButtonSegment<String>(
+                  value: 'moderate',
+                  label: Text(l.coachIntensityModerate),
+                ),
+                ButtonSegment<String>(
+                  value: 'high',
+                  label: Text(l.coachIntensityHigh),
+                ),
               ],
               selected: <String>{_intensity},
               onSelectionChanged: (Set<String> selected) {
@@ -566,9 +594,9 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               controller: _noteController,
               maxLength: 1000,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: '메모(선택)',
-                hintText: '힘들었던 점이나 몸 상태를 남겨 보세요',
+              decoration: InputDecoration(
+                labelText: l.coachRoutineNoteLabel,
+                hintText: l.coachRoutineNoteHint,
               ),
             ),
           ],
@@ -577,7 +605,7 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text(l.actionCancel),
         ),
         FilledButton(
           key: const Key('confirmRoutineCompletion'),
@@ -591,7 +619,7 @@ class _RoutineCompletionDialogState extends State<_RoutineCompletionDialog> {
               ),
             );
           },
-          child: const Text('완료 기록'),
+          child: Text(l.coachRoutineSubmit),
         ),
       ],
     );
@@ -606,6 +634,7 @@ class _ChatButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l = AppLocalizations.of(context);
     final String unreadLabel = unread > 99 ? '99+' : '$unread';
 
     return Material(
@@ -628,12 +657,12 @@ class _ChatButton extends StatelessWidget {
               const SizedBox(width: 8),
               // 큰 글자 배율에서 라벨이 버튼을 넘겼다. 안 읽은 개수 배지는
               // 접지 않는다 — 몇 건인지가 이 버튼을 누를 이유다(#766).
-              const Flexible(
+              Flexible(
                 child: Text(
-                  '트레이너와 채팅',
+                  l.coachChatWithTrainer,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: FigmaColors.primary,

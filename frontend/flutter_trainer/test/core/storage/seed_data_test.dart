@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/storage/seed_data.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 
 /// 시드가 읽는 것과 같은 픽스처. 사용자 앱 테스트도 같은 파일을 본다 — 두 앱의
 /// 단정이 같은 원본을 가리켜야 "같은 날짜, 같은 숫자"가 실제로 지켜진다(#757).
@@ -15,7 +16,7 @@ final DemoFixture _fixture = DemoFixture.parse(
 );
 
 String _todayString() {
-  final now = DateTime.now();
+  final now = nowKst();
   return '${now.year.toString().padLeft(4, '0')}-'
       '${now.month.toString().padLeft(2, '0')}-'
       '${now.day.toString().padLeft(2, '0')}';
@@ -82,7 +83,7 @@ void main() {
       await seedIfEmpty(db);
 
       final Map<String, FixtureDay> byDate = <String, FixtureDay>{
-        for (final FixtureDay day in _fixture.daysFor(DateTime.now()))
+        for (final FixtureDay day in _fixture.daysFor(nowKst()))
           day.date: day,
       };
 
@@ -307,7 +308,7 @@ void main() {
 
         // All seed messages must predate "now" (they use past timestamps),
         // otherwise a reply added right after boot could interleave.
-        final now = DateTime.now();
+        final now = nowKst();
         final all = await db.select(db.clientChatMessages).get();
         final seeded = all.where((m) => m.id.startsWith('seed-')).toList();
         expect(seeded, isNotEmpty);
@@ -327,7 +328,7 @@ void main() {
                 sender: 'trainer',
                 body: '방금 보낸 답장',
                 timeLabel: '21:30',
-                createdAt: DateTime.now(),
+                createdAt: nowKst(),
               ),
             );
 
@@ -437,7 +438,7 @@ void main() {
               sender: 'trainer',
               body: '다음 세션 때 봐요!',
               timeLabel: '21:00',
-              createdAt: DateTime.now(),
+              createdAt: nowKst(),
             ),
           );
 

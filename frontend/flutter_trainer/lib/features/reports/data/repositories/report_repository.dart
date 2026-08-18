@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
-import 'package:oncare_trainer/core/storage/app_database.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/storage/app_database.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/core/utils/date_format.dart';
 import 'package:oncare_trainer/features/reports/domain/report_summary.dart';
 import 'package:oncare_trainer/features/reports/domain/weekly_report.dart';
@@ -208,7 +208,7 @@ class LocalReportRepository implements ReportRepository {
             clientId: clientId,
             weekStart: ymd(weekStartOf(weekStart)),
             body: Value<String>(body),
-            updatedAt: DateTime.now(),
+            updatedAt: nowKst(),
           ),
         );
     return ReportFeedbackDraft(body: body, saved: true);
@@ -361,11 +361,11 @@ WeeklyReport weeklyReportFromJson(
           .toList(growable: false);
   final weekStart =
       DateTime.tryParse(json['week_start'] as String? ?? '') ??
-      weekStartOf(DateTime.now());
+      weekStartOf(nowKst());
   return WeeklyReport(
     client: client,
     weekStart: weekStart,
-    isCurrentWeek: weekStartOf(weekStart) == weekStartOf(DateTime.now()),
+    isCurrentWeek: weekStartOf(weekStart) == weekStartOf(nowKst()),
     sessionsBooked: optInt('sessions_booked') ?? 0,
     sessionsDone: optInt('sessions_done') ?? 0,
     completionAvg: optInt('completion_avg'),

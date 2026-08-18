@@ -5,10 +5,10 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart'
     show OrderClauseGenerator, OrderingMode, OrderingTerm, Value;
 import 'package:logger/logger.dart';
-
 import 'package:oncare/core/demo/demo_ai_advice.dart';
 import 'package:oncare/core/storage/app_database.dart';
 import 'package:oncare/core/storage/seed_data.dart' show kDietDayMessagesKey;
+import 'package:oncare/core/utils/clock.dart';
 import 'package:oncare/features/diet/domain/entities/meal_recommendation.dart';
 import 'package:oncare/features/schedule/domain/schedule_format.dart';
 
@@ -125,7 +125,7 @@ class LocalApiInterceptor extends Interceptor {
     final (String mealType, String? idempotencyKey) = _analyzeRequestFields(
       options,
     );
-    final DateTime now = DateTime.now();
+    final DateTime now = nowKst();
 
     // 서버가 준 id 를 그대로 쓴다 — 이어지는 수정·삭제가 같은 행을 가리킨다.
     // 같은 응답이 두 번 들어와도(재시도) 덮어쓰기라 중복 행이 생기지 않는다.
@@ -443,7 +443,7 @@ class LocalApiInterceptor extends Interceptor {
         <String, Object?>{'time': r.time, 'title': r.title, 'emoji': r.emoji},
     ];
 
-    final now = DateTime.now();
+    final now = nowKst();
     final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final nutritionByDate = <String, Map<String, num>>{
       for (var index = 0; index < 7; index++)
@@ -735,7 +735,7 @@ class LocalApiInterceptor extends Interceptor {
     // 옮겨 오면서 문구가 달라지면 시연 화면이 바뀐다.
     const String coach = '비빔밥은 채소가 풍부해 좋아요. 나트륨이 다소 높으니 장을 줄여보세요.';
 
-    final now = DateTime.now();
+    final now = nowKst();
     final id = 'diet-${now.microsecondsSinceEpoch}';
     await _db
         .into(_db.dietEntries)
@@ -794,7 +794,7 @@ class LocalApiInterceptor extends Interceptor {
   }
 
   String _todayDateString() {
-    return _dateString(DateTime.now());
+    return _dateString(nowKst());
   }
 
   String _dateString(DateTime date) =>
@@ -971,7 +971,7 @@ class LocalApiInterceptor extends Interceptor {
     if (dayIdx < 0 || monday == null) return dayLabel;
     // Duration 이 아니라 날짜 성분으로 더한다(서머타임 안전).
     final date = DateTime(monday.year, monday.month, monday.day + dayIdx);
-    final now = DateTime.now();
+    final now = nowKst();
     final today = DateTime(now.year, now.month, now.day);
     final delta = today.difference(DateTime(date.year, date.month, date.day)).inDays;
     if (delta == 0) return '오늘';
@@ -1019,7 +1019,7 @@ class LocalApiInterceptor extends Interceptor {
     final intensity = (payload['intensity'] as String?) ?? 'moderate';
     final dayLabel =
         (payload['day_label'] as String?) ??
-        _weekdayLabels[DateTime.now().weekday - 1];
+        _weekdayLabels[nowKst().weekday - 1];
 
     final id = 'ex-${DateTime.now().microsecondsSinceEpoch}';
     await _db
@@ -1222,7 +1222,7 @@ class LocalApiInterceptor extends Interceptor {
       ]);
     final rows = await query.get();
 
-    final now = DateTime.now();
+    final now = nowKst();
     final list = <Map<String, Object?>>[
       for (final r in rows)
         <String, Object?>{
@@ -1695,7 +1695,7 @@ class LocalApiInterceptor extends Interceptor {
     return '${d.inDays}일 전';
   }
 
-  String _mondayOfThisWeekString() => _mondayOf(DateTime.now());
+  String _mondayOfThisWeekString() => _mondayOf(nowKst());
 
   /// `YYYY-MM-DD` 가 속한 주의 월요일. FastAPI `monday_of_str` 과 같은 규칙이다.
   /// 형식은 호출 전에 검사한다([_isDateString]).

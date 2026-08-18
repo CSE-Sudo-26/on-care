@@ -44,7 +44,7 @@ class StatusDotLabel extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: AppColors.foreground,

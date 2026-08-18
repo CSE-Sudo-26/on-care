@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:oncare_trainer/core/config/app_config.dart';
 import 'package:oncare_trainer/core/errors/app_error.dart';
 import 'package:oncare_trainer/core/network/dio_client.dart';
+import 'package:oncare_trainer/core/utils/clock.dart';
 import 'package:oncare_trainer/features/consultations/data/dtos/consultation_dtos.dart';
 import 'package:oncare_trainer/features/consultations/domain/entities/consultation_request.dart';
 import 'package:oncare_trainer/shared/services/client_repository.dart';
@@ -68,7 +68,7 @@ class DemoConsultationRepository implements ConsultationRepository {
               memberName: '김하늘',
               goalCode: 'fitness',
               purposeCode: 'general',
-              preferredDate: DateTime.now().add(const Duration(days: 1)),
+              preferredDate: nowKst().add(const Duration(days: 1)),
               preferredTimeCode: 'evening',
               status: 'pending',
               message: '퇴근 후 가능한 시간으로 첫 상담을 받고 싶어요.',

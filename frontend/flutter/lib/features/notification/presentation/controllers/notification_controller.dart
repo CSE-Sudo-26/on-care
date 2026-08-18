@@ -96,14 +96,19 @@ class NotificationController extends StateNotifier<NotificationState> {
   /// Q9: in-app panel + simulated push. Inserts a new unread item
   /// at the top, as if a real FCM notification had landed. 목/데모 모드
   /// 전용(개발용) — 실모드에서는 서버에 없는 팬텀을 만들지 않도록 무시한다.
-  void simulatePush() {
+  /// 문구는 부른 쪽이 넘긴다 — 컨트롤러에는 로케일이 없다(#847).
+  void simulatePush({
+    required String title,
+    required String body,
+    required String timeAgo,
+  }) {
     if (!_allowSimulatePush) return;
     final id = 'sim-${DateTime.now().millisecondsSinceEpoch}';
     final injected = AlertItem(
       id: id,
-      title: '시뮬레이션 알림',
-      body: '지금 막 가상 푸시가 도착했어요.',
-      timeAgo: '방금',
+      title: title,
+      body: body,
+      timeAgo: timeAgo,
       category: AlertCategory.reminder,
     );
     state = NotificationState(items: <AlertItem>[injected, ...state.items]);
